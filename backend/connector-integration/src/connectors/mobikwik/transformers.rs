@@ -432,7 +432,7 @@ impl TryFrom<&ConnectorAuthType> for MobikwikAuthType {
             ConnectorAuthType::SignatureKey { api_key, .. } => {
                 let auth: MobikwikAuthType = api_key
                     .to_owned()
-                    .parse_value("MobikwikAuthType")
+                    .parse_str("MobikwikAuthType")
                     .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
                 Ok(auth)
             }
