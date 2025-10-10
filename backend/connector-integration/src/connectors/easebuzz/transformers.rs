@@ -450,7 +450,7 @@ impl TryFrom<EaseBuzzPaymentsSyncResponse> for PaymentsResponseData {
             EaseBuzzSyncMessage::Error(_) => (AttemptStatus::Failure, None),
         };
 
-        let response_id = payment_data.as_ref().map(|data| ResponseId {
+        let response_id = payment_data.as_ref().map(|data| domain_types::connector_types::ResponseId {
             gateway_payment_id: Some(data.easebuzz_id.clone()),
             transaction_id: Some(data.txnid.clone()),
             ..Default::default()
