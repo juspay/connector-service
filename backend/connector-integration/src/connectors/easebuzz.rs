@@ -111,32 +111,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         "1.0.0".to_string()
     }
 
-    fn get_api_tag(&self) -> String {
-        match self.flow_type {
-            api::FlowType::Authorize => "payment_initiate".to_string(),
-            api::FlowType::PSync => "payment_sync".to_string(),
-            api::FlowType::RSync => "refund_sync".to_string(),
-            _ => "default".to_string(),
-        }
-    }
-
     fn get_webhook_secret(&self) -> Option<&ConnectorWebhookSecrets> {
         None
-    }
-
-    fn get_connector_specifications(&self) -> ConnectorSpecifications {
-        ConnectorSpecifications {
-            connector_name: "EaseBuzz".to_string(),
-            supported_payment_methods: vec![PaymentMethodType::Upi],
-            supported_flows: vec![
-                api::FlowType::Authorize,
-                api::FlowType::PSync,
-                api::FlowType::RSync,
-            ],
-            supported_currencies: vec!["INR".to_string()],
-            supported_countries: vec!["IN".to_string()],
-            ..Default::default()
-        }
     }
 }
 
