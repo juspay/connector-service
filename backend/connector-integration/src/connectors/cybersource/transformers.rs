@@ -1303,50 +1303,6 @@ impl<
     }
 }
 
-// for cybersource each item in Billing is mandatory
-// fn build_bill_to(
-//     address_details: &payments::Address,
-//     email: pii::Email,
-// ) -> Result<BillTo, error_stack::Report<errors::ConnectorError>> {
-//     let address = address_details
-//         .address
-//         .as_ref()
-//         .ok_or_else(utils::missing_field_err("billing.address"))?;
-
-//     let country = address.get_country()?.to_owned();
-//     let first_name = address.get_first_name()?;
-
-//     let (administrative_area, postal_code) =
-//         if country == api_enums::CountryAlpha2::US || country == api_enums::CountryAlpha2::CA {
-//             let mut state = address.to_state_code()?.peek().clone();
-//             state.truncate(20);
-//             (
-//                 Some(Secret::from(state)),
-//                 Some(address.get_zip()?.to_owned()),
-//             )
-//         } else {
-//             let zip = address.zip.clone();
-//             let mut_state = address.state.clone().map(|state| state.expose());
-//             match mut_state {
-//                 Some(mut state) => {
-//                     state.truncate(20);
-//                     (Some(Secret::from(state)), zip)
-//                 }
-//                 None => (None, zip),
-//             }
-//         };
-//     Ok(BillTo {
-//         first_name: first_name.clone(),
-//         last_name: address.get_last_name().unwrap_or(first_name).clone(),
-//         address1: address.get_line1()?.to_owned(),
-//         locality: address.get_city()?.to_owned(),
-//         administrative_area,
-//         postal_code,
-//         country,
-//         email,
-//     })
-// }
-
 fn truncate_string(state: &Secret<String>, max_len: usize) -> Secret<String> {
     let exposed = state.clone().expose();
     let truncated = exposed.get(..max_len).unwrap_or(&exposed);
@@ -1402,25 +1358,6 @@ fn convert_metadata_to_merchant_defined_info(metadata: Value) -> Vec<MerchantDef
     }
     vector
 }
-
-/*
-Example Message Extension:
-
-[
-    MessageExtensionAttribute {
-        name: "CB-SCORE".to_string(),
-        id: "A000000042_CB-SCORE".to_string(),
-        criticality_indicator: false,
-        data: "some value".to_string(),
-    },
-]
-
-In this case, the **network score** is `42`, which should be extracted from the `id` field.
-The score is encoded in the numeric part of the `id` (after removing the leading 'A' and before the underscore).
-
-Note: This field represents the score calculated by the 3D Securing platform.
-It is only supported for secure transactions in France.
-*/
 
 fn extract_score_id(message_extensions: &[MessageExtensionAttribute]) -> Option<u32> {
     message_extensions.iter().find_map(|attr| {
@@ -1569,16 +1506,7 @@ impl<
                     } else {
                         (None, Some(authn_data.cavv.clone()), None)
                     };
-                let authentication_date = authn_data.created_at.clone();
-                let effective_authentication_type =
-                    authn_data.authentication_type.map(|auth_type_i32| {
-                        match auth_type_i32 {
-                            0 => EffectiveAuthenticationType::CH, // Challenge
-                            1 => EffectiveAuthenticationType::FR, // Frictionless
-                            _ => EffectiveAuthenticationType::CH, // Default to Challenge for unknown values
-                        }
-                    });
-                // let effective_authentication_type = None;
+                let authentication_date = authn_data.message_version.clone();
                 let network_score = (ccard.card_network
                     == Some(common_enums::CardNetwork::CartesBancaires))
                 .then_some(authn_data.message_version.as_ref())
@@ -1621,12 +1549,12 @@ impl<
                     veres_enrolled: Some("Y".to_string()),
                     eci_raw: authn_data.eci.clone(),
                     authentication_date,
-                    effective_authentication_type,
-                    challenge_code: authn_data.challenge_code.clone(),
-                    signed_pares_status_reason: authn_data.challenge_code_reason.clone(),
-                    challenge_cancel_code: authn_data.challenge_cancel.clone(),
+                    effective_authentication_type: None,
+                    challenge_code: None,
+                    signed_pares_status_reason: None,
+                    challenge_cancel_code: None,
                     network_score,
-                    acs_transaction_id: authn_data.acs_trans_id.clone(),
+                    acs_transaction_id: authn_data.ds_transaction_id.clone(),
                     cavv_algorithm,
                 }
             });
@@ -1732,22 +1660,13 @@ impl<
             .authentication_data
             .as_ref()
             .map(|authn_data| {
-                let effective_authentication_type =
-                    authn_data.authentication_type.map(|auth_type_i32| {
-                        match auth_type_i32 {
-                            0 => EffectiveAuthenticationType::CH, // Challenge
-                            1 => EffectiveAuthenticationType::FR, // Frictionless
-                            _ => EffectiveAuthenticationType::CH, // Default to Challenge for unknown values
-                        }
-                    });
-                // let effective_authentication_type = None;
                 let (ucaf_authentication_data, cavv, ucaf_collection_indicator) =
                     if ccard.card_network == Some(common_enums::CardNetwork::Mastercard) {
                         (Some(authn_data.cavv.clone()), None, Some("2".to_string()))
                     } else {
                         (None, Some(authn_data.cavv.clone()), None)
                     };
-                let authentication_date = authn_data.created_at.clone();
+                let authentication_date = authn_data.message_version.clone();
                 let network_score = (ccard.card_network
                     == Some(common_enums::CardNetwork::CartesBancaires))
                 .then_some(authn_data.message_version.as_ref())
@@ -1788,12 +1707,12 @@ impl<
                     veres_enrolled: Some("Y".to_string()),
                     eci_raw: authn_data.eci.clone(),
                     authentication_date,
-                    effective_authentication_type,
-                    challenge_code: authn_data.challenge_code.clone(),
-                    signed_pares_status_reason: authn_data.challenge_code_reason.clone(),
-                    challenge_cancel_code: authn_data.challenge_cancel.clone(),
+                    effective_authentication_type: None,
+                    challenge_code: None,
+                    signed_pares_status_reason: None,
+                    challenge_cancel_code: None,
                     network_score,
-                    acs_transaction_id: authn_data.acs_trans_id.clone(),
+                    acs_transaction_id: authn_data.ds_transaction_id.clone(),
                     cavv_algorithm,
                 }
             });
@@ -1896,22 +1815,13 @@ impl<
             .authentication_data
             .as_ref()
             .map(|authn_data| {
-                let effective_authentication_type =
-                    authn_data.authentication_type.map(|auth_type_i32| {
-                        match auth_type_i32 {
-                            0 => EffectiveAuthenticationType::CH, // Challenge
-                            1 => EffectiveAuthenticationType::FR, // Frictionless
-                            _ => EffectiveAuthenticationType::CH, // Default to Challenge for unknown values
-                        }
-                    });
-                // let effective_authentication_type = None;
                 let (ucaf_authentication_data, cavv, ucaf_collection_indicator) =
                     if token_data.card_network == Some(common_enums::CardNetwork::Mastercard) {
                         (Some(authn_data.cavv.clone()), None, Some("2".to_string()))
                     } else {
                         (None, Some(authn_data.cavv.clone()), None)
                     };
-                let authentication_date = authn_data.created_at.clone();
+                let authentication_date = authn_data.message_version.clone();
                 let network_score = (token_data.card_network
                     == Some(common_enums::CardNetwork::CartesBancaires))
                 .then_some(authn_data.message_version.as_ref())
@@ -1952,12 +1862,12 @@ impl<
                     veres_enrolled: Some("Y".to_string()),
                     eci_raw: authn_data.eci.clone(),
                     authentication_date,
-                    effective_authentication_type,
-                    challenge_code: authn_data.challenge_code.clone(),
-                    signed_pares_status_reason: authn_data.challenge_code_reason.clone(),
-                    challenge_cancel_code: authn_data.challenge_cancel.clone(),
+                    effective_authentication_type: None,
+                    challenge_code: None,
+                    signed_pares_status_reason: None,
+                    challenge_cancel_code: None,
                     network_score,
-                    acs_transaction_id: authn_data.acs_trans_id.clone(),
+                    acs_transaction_id: authn_data.ds_transaction_id.clone(),
                     cavv_algorithm,
                 }
             });
