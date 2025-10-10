@@ -133,7 +133,7 @@ macros::macro_connector_implementation!(
         fn build_request_v2(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Option<services::Request>, errors::ConnectorError> {
+        ) -> CustomResult<Option<interfaces::api::Request>, errors::ConnectorError> {
             let auth = easebuzz::EaseBuzzAuthType::try_from(&req.connector_auth_type)?;
             let request = easebuzz::EaseBuzzPaymentsRequest::try_from(req)?;
             
@@ -144,15 +144,15 @@ macros::macro_connector_implementation!(
             };
 
             Ok(Some(
-                services::RequestBuilder::new()
-                    .method(services::Method::Post)
+                interfaces::api::RequestBuilder::new()
+                    .method(interfaces::api::Method::Post)
                     .url(&url)
                     .attach_default_headers()
                     .headers(vec![(
                         "Authorization".to_string(),
                         format!("Basic {}", auth.get_auth_header()),
                     )])
-                    .set_body(services::RequestBody::Form(request))
+                    .set_body(interfaces::api::RequestBody::Form(request))
                     .build(),
             ))
         }
@@ -160,15 +160,14 @@ macros::macro_connector_implementation!(
         fn handle_response_v2(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            res: &common_utils::types::Response,
-        ) -> CustomResult<domain_types::PaymentsResponseData, errors::ConnectorError> {
+            res: &Response,
+        ) -> CustomResult<PaymentsResponseData, errors::ConnectorError> {
             let response: easebuzz::EaseBuzzPaymentsResponse = res
                 .response
                 .parse_struct("EaseBuzzPaymentsResponse")
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
             easebuzz::EaseBuzzPaymentsResponse::try_from(response)
-                .and_then(|response| domain_types::PaymentsResponseData::try_from(response))
                 .change_context(errors::ConnectorError::ResponseHandlingFailed)
         }
     }
