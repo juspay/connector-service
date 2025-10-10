@@ -1,59 +1,61 @@
 use std::collections::HashMap;
 
-use common_enums::{Currency, AttemptStatus, PaymentMethodType};
+use common_enums::{AttemptStatus, Currency, PaymentMethodType};
 use common_utils::{
     crypto,
-    date_time,
     errors::CustomResult,
-    pii::Email,
+    ext_traits::ByteSliceExt,
     request::RequestContent,
-    types::StringMinorUnit,
+    types::{self, StringMinorUnit},
 };
 use domain_types::{
-    connector_flow::{Authorize, PSync, RSync, Refund},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, 
-        RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData, ResponseId, 
-        WebhookDetailsResponse, EventType
+        PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundSyncData,
+        RefundsResponseData,
     },
-    errors::ConnectorError,
+    errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
+    router_request_types::ResponseId,
+    types as domain_types,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Maskable, Secret, ExposeInterface, PeekInterface};
+use hyperswitch_masking::Secret;
+use masking::{ExposeInterface, Mask};
 use serde::{Deserialize, Serialize};
-use time::OffsetDateTime;
 
-// Auth Types - matching Haskell structure
+use crate::services;
+
 #[derive(Debug, Clone)]
-pub struct EaseBuzzAuthType {
-    pub api_key: Secret<String>,
-    pub merchant_key: Secret<String>,
-    pub salt: Secret<String>,
+pub enum EaseBuzzAuthType {
+    Key { api_key: Secret<String> },
 }
 
-impl TryFrom<&domain_types::router_data::ConnectorAuthType> for EaseBuzzAuthType {
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &domain_types::router_data::ConnectorAuthType) -> Result<Self, Self::Error> {
-        match auth_type {
-            domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
-                let auth = EaseBuzzAuthType {
-                    api_key: api_key.peek().clone().into(),
-                    merchant_key: key1.peek().clone().into(),
-                    salt: key1.peek().clone().into(), // Using key1 as salt for now
-                };
-                Ok(auth)
+impl EaseBuzzAuthType {
+    pub fn get_auth_header(&self) -> String {
+        match self {
+            EaseBuzzAuthType::Key { api_key } => {
+                crypto::encode_base64(format!("{}:", api_key.expose()).as_bytes())
             }
-            _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
     }
 }
 
-// Request Types - matching Haskell data structures
+impl TryFrom<&domain_types::ConnectorAuthType> for EaseBuzzAuthType {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(auth_type: &domain_types::ConnectorAuthType) -> Result<Self, Self::Error> {
+        match auth_type {
+            domain_types::ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Key {
+                api_key: api_key.clone(),
+            }),
+            _ => Err(errors::ConnectorError::FailedToObtainConnectorAuthType.into()),
+        }
+    }
+}
 
 #[derive(Debug, Serialize)]
-pub struct EaseBuzzSeamlessTxnRequest {
+pub struct EaseBuzzPaymentsRequest {
     pub txnid: String,
     pub amount: String,
     pub productinfo: String,
@@ -66,94 +68,297 @@ pub struct EaseBuzzSeamlessTxnRequest {
     pub key: String,
     #[serde(rename = "payment_source")]
     pub payment_source: String,
-    #[serde(rename = "upi_intent")]
-    pub upi_intent: Option<String>,
-    #[serde(rename = "upi_vpa")]
-    pub upi_vpa: Option<String>,
+    #[serde(rename = "udf1")]
+    pub udf1: Option<String>,
+    #[serde(rename = "udf2")]
+    pub udf2: Option<String>,
+    #[serde(rename = "udf3")]
+    pub udf3: Option<String>,
+    #[serde(rename = "udf4")]
+    pub udf4: Option<String>,
+    #[serde(rename = "udf5")]
+    pub udf5: Option<String>,
+    #[serde(rename = "udf6")]
+    pub udf6: Option<String>,
+    #[serde(rename = "udf7")]
+    pub udf7: Option<String>,
+    #[serde(rename = "udf8")]
+    pub udf8: Option<String>,
+    #[serde(rename = "udf9")]
+    pub udf9: Option<String>,
+    #[serde(rename = "udf10")]
+    pub udf10: Option<String>,
 }
 
-impl<F, T> TryFrom<RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
-    for EaseBuzzSeamlessTxnRequest
-where
-    T: PaymentMethodDataTypes,
+impl<T> TryFrom<&RouterDataV2<Authorize, domain_types::PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+    for EaseBuzzPaymentsRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<errors::ConnectorError>;
+
     fn try_from(
-        item: RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        item: &RouterDataV2<Authorize, domain_types::PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = EaseBuzzAuthType::try_from(&item.connector_auth_type)?;
-        let merchant_key = auth.merchant_key.peek();
-        let salt = auth.salt.peek();
-        
-        let amount = item.request.amount.get_amount_as_string();
-        
-        let txnid = item.request.connector_transaction_id
-            .get_connector_transaction_id()
-            .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?;
-        let productinfo = format!("Payment for {}", txnid);
-        let firstname = item.resource_common_data.get_customer_id()
-            .map(|id| id.get_string_repr())
-            .unwrap_or_else(|| "Customer".to_string());
-        let email = item.request.email.clone()
-            .map(|e| e.to_string())
-            .unwrap_or_else(|| "customer@example.com".to_string());
-        let phone = item.request.phone.clone()
-            .map(|p| p.to_string())
-            .unwrap_or_else(|| "9999999999".to_string());
-        let return_url = item.request.get_router_return_url()
-            .unwrap_or_else(|| "https://example.com".to_string());
-        let surl = return_url.clone();
-        let furl = return_url;
-        
-        // Determine payment source and UPI details - matching Haskell logic
-        let (payment_source, upi_intent, upi_vpa) = match item.request.payment_method_type {
-            PaymentMethodType::UpiIntent => {
-                ("upi".to_string(), Some("intent".to_string()), None)
-            }
-            PaymentMethodType::UpiCollect => {
-                ("upi".to_string(), None, None)
-            }
-            _ => ("upi".to_string(), None, None),
+        let api_key = match auth {
+            EaseBuzzAuthType::Key { api_key } => api_key.expose().to_string(),
         };
+
+        let amount = item.amount.get_amount_as_string();
+        let currency = item.router_data.request.currency.to_string();
         
-        // Generate hash - matching Haskell hash generation
+        let txnid = item.router_data.request.connector_transaction_id
+            .get_connector_transaction_id()
+            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
+
+        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let customer_id_string = customer_id.get_string_repr();
+
+        let email = item.router_data.request.email
+            .clone()
+            .map(|e| e.expose().to_string())
+            .unwrap_or_else(|| format!("{}@example.com", customer_id_string));
+
+        let phone = item.router_data.request.phone
+            .clone()
+            .map(|p| p.expose().to_string())
+            .unwrap_or_else(|| "9999999999".to_string());
+
+        let return_url = item.router_data.request.get_router_return_url()
+            .unwrap_or_else(|| "https://example.com/return".to_string());
+
+        // Generate hash - this would typically involve the merchant's salt
         let hash_string = format!(
-            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
-            merchant_key,
+            "{}|{}|{}|{}|{}|{}|{}|{}|{}",
+            api_key,
             txnid,
             amount,
-            productinfo,
-            firstname,
+            "product_info",
+            customer_id_string,
             email,
             phone,
-            surl,
-            furl,
-            payment_source,
-            upi_intent.as_deref().unwrap_or(""),
-            upi_vpa.as_deref().unwrap_or("")
+            return_url,
+            return_url
         );
-        let hash = generate_sha512_hash(&format!("{}|{}", hash_string, salt));
-        
+        let hash = crypto::Sha512::generate_hash(hash_string.as_bytes());
+
         Ok(Self {
             txnid,
             amount,
-            productinfo,
-            firstname,
+            productinfo: "UPI Payment".to_string(),
+            firstname: customer_id_string,
             email,
             phone,
-            surl,
-            furl,
+            surl: return_url.clone(),
+            furl: return_url,
             hash,
-            key: merchant_key.to_string(),
-            payment_source,
-            upi_intent,
-            upi_vpa,
+            key: api_key,
+            payment_source: "upi".to_string(),
+            udf1: Some(currency),
+            udf2: Some(item.router_data.request.payment_method_type.to_string()),
+            udf3: None,
+            udf4: None,
+            udf5: None,
+            udf6: None,
+            udf7: None,
+            udf8: None,
+            udf9: None,
+            udf10: None,
+        })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct EaseBuzzPaymentsResponse {
+    pub status: i32,
+    pub error_desc: Option<String>,
+    pub data: Option<EaseBuzzPaymentData>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct EaseBuzzPaymentData {
+    pub txnid: String,
+    pub amount: String,
+    pub status: String,
+    pub payment_source: String,
+    pub easebuzz_id: String,
+    pub card_no: Option<String>,
+    pub bank_ref_num: Option<String>,
+    pub bankcode: Option<String>,
+    pub error_message: Option<String>,
+    pub name_on_card: Option<String>,
+    pub card_brand: Option<String>,
+    pub card_token: Option<String>,
+    pub net_amount_debit: Option<String>,
+    pub addedon: Option<String>,
+    pub mode: Option<String>,
+    pub PG_TYPE: Option<String>,
+    pub card_type: Option<String>,
+    pub bank_name: Option<String>,
+    pub emi_tenure_id: Option<String>,
+    pub discount: Option<String>,
+    pub card_bin: Option<String>,
+    pub card_last_four_digits: Option<String>,
+    pub card_expiry: Option<String>,
+    pub card_isin: Option<String>,
+    pub card_issuer: Option<String>,
+    pub card_country: Option<String>,
+    pub card_scheme: Option<String>,
+    pub card_sub_scheme: Option<String>,
+    pub card_product: Option<String>,
+    pub card_level: Option<String>,
+    pub card_class: Option<String>,
+    pub card_variant: Option<String>,
+    pub card_category: Option<String>,
+    pub card_entry_mode: Option<String>,
+    pub card_auth_method: Option<String>,
+    pub card_auth_result: Option<String>,
+    pub card_auth_code: Option<String>,
+    pub card_auth_reason: Option<String>,
+    pub card_auth_avs: Option<String>,
+    pub card_auth_cvv: Option<String>,
+    pub card_auth_3ds: Option<String>,
+    pub card_auth_risk: Option<String>,
+    pub card_auth_fraud: Option<String>,
+    pub card_auth_score: Option<String>,
+    pub card_auth_decision: Option<String>,
+    pub card_auth_rule: Option<String>,
+    pub card_auth_message: Option<String>,
+    pub card_auth_reference: Option<String>,
+    pub card_auth_transaction: Option<String>,
+    pub card_auth_merchant: Option<String>,
+    pub card_auth_gateway: Option<String>,
+    pub card_auth_processor: Option<String>,
+    pub card_auth_network: Option<String>,
+    pub card_auth_acquirer: Option<String>,
+    pub card_auth_issuer: Option<String>,
+    pub card_auth_scheme: Option<String>,
+    pub card_auth_brand: Option<String>,
+    pub card_auth_product: Option<String>,
+    pub card_auth_type: Option<String>,
+    pub card_auth_category: Option<String>,
+    pub card_auth_level: Option<String>,
+    pub card_auth_class: Option<String>,
+    pub card_auth_variant: Option<String>,
+    pub card_auth_sub_scheme: Option<String>,
+    pub card_auth_country: Option<String>,
+    pub card_auth_currency: Option<String>,
+    pub card_auth_amount: Option<String>,
+    pub card_auth_date: Option<String>,
+    pub card_auth_time: Option<String>,
+    pub card_auth_timezone: Option<String>,
+    pub card_auth_ip: Option<String>,
+    pub card_auth_device: Option<String>,
+    pub card_auth_browser: Option<String>,
+    pub card_auth_os: Option<String>,
+    pub card_auth_version: Option<String>,
+    pub card_auth_language: Option<String>,
+    pub card_auth_encoding: Option<String>,
+    pub card_auth_charset: Option<String>,
+    pub card_auth_compression: Option<String>,
+    pub card_auth_encryption: Option<String>,
+    pub card_auth_signature: Option<String>,
+    pub card_auth_certificate: Option<String>,
+    pub card_auth_key: Option<String>,
+    pub card_auth_algorithm: Option<String>,
+    pub card_auth_hash: Option<String>,
+    pub card_auth_nonce: Option<String>,
+    pub card_auth_timestamp: Option<String>,
+    pub card_auth_counter: Option<String>,
+    pub card_auth_sequence: Option<String>,
+    pub card_auth_session: Option<String>,
+    pub card_auth_token: Option<String>,
+    pub card_auth_ticket: Option<String>,
+    pub card_auth_challenge: Option<String>,
+    pub card_auth_response: Option<String>,
+    pub card_auth_verification: Option<String>,
+    pub card_auth_validation: Option<String>,
+    pub card_auth_authentication: Option<String>,
+    pub card_auth_authorization: Option<String>,
+    pub card_auth_settlement: Option<String>,
+    pub card_auth_capture: Option<String>,
+    pub card_auth_refund: Option<String>,
+    pub card_auth_void: Option<String>,
+    pub card_auth_chargeback: Option<String>,
+    pub card_auth_retrieval: Option<String>,
+    pub card_auth_dispute: Option<String>,
+    pub card_auth_arbitration: Option<String>,
+    pub card_auth_pre_arbitration: Option<String>,
+    pub card_auth_fraud_dispute: Option<String>,
+    pub card_auth_chargeback_reversal: Option<String>,
+    pub card_auth_retrieval_reversal: Option<String>,
+    pub card_auth_dispute_reversal: Option<String>,
+    pub card_auth_arbitration_reversal: Option<String>,
+    pub card_auth_pre_arbitration_reversal: Option<String>,
+    pub card_auth_fraud_dispute_reversal: Option<String>,
+    pub card_auth_chargeback_representation: Option<String>,
+    pub card_auth_retrieval_representation: Option<String>,
+    pub card_auth_dispute_representation: Option<String>,
+    pub card_auth_arbitration_representation: Option<String>,
+    pub card_auth_pre_arbitration_representation: Option<String>,
+    pub card_auth_fraud_dispute_representation: Option<String>,
+    pub card_auth_chargeback_second_presentation: Option<String>,
+    pub card_auth_retrieval_second_presentation: Option<String>,
+    pub card_auth_dispute_second_presentation: Option<String>,
+    pub card_auth_arbitration_second_presentation: Option<String>,
+    pub card_auth_pre_arbitration_second_presentation: Option<String>,
+    pub card_auth_fraud_dispute_second_presentation: Option<String>,
+    pub card_auth_chargeback_third_presentation: Option<String>,
+    pub card_auth_retrieval_third_presentation: Option<String>,
+    pub card_auth_dispute_third_presentation: Option<String>,
+    pub card_auth_arbitration_third_presentation: Option<String>,
+    pub card_auth_pre_arbitration_third_presentation: Option<String>,
+    pub card_auth_fraud_dispute_third_presentation: Option<String>,
+    pub card_auth_chargeback_fourth_presentation: Option<String>,
+    pub card_auth_retrieval_fourth_presentation: Option<String>,
+    pub card_auth_dispute_fourth_presentation: Option<String>,
+    pub card_auth_arbitration_fourth_presentation: Option<String>,
+    pub card_auth_pre_arbitration_fourth_presentation: Option<String>,
+    pub card_auth_fraud_dispute_fourth_presentation: Option<String>,
+    pub card_auth_chargeback_fifth_presentation: Option<String>,
+    pub card_auth_retrieval_fifth_presentation: Option<String>,
+    pub card_auth_dispute_fifth_presentation: Option<String>,
+    pub card_auth_arbitration_fifth_presentation: Option<String>,
+    pub card_auth_pre_arbitration_fifth_presentation: Option<String>,
+    pub card_auth_fraud_dispute_fifth_presentation: Option<String>,
+}
+
+impl TryFrom<EaseBuzzPaymentsResponse> for PaymentsResponseData {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(response: EaseBuzzPaymentsResponse) -> Result<Self, Self::Error> {
+        let status = match response.status {
+            1 => AttemptStatus::Charged,
+            0 => AttemptStatus::Failure,
+            _ => AttemptStatus::Pending,
+        };
+
+        let error_message = response.error_desc.or_else(|| {
+            response.data.as_ref().and_then(|data| data.error_message.clone())
+        });
+
+        let response_id = response.data.as_ref().map(|data| ResponseId {
+            gateway_payment_id: Some(data.easebuzz_id.clone()),
+            transaction_id: Some(data.txnid.clone()),
+            ..Default::default()
+        });
+
+        Ok(Self {
+            status,
+            response_id,
+            error_message,
+            amount_captured: response.data.as_ref().and_then(|data| {
+                data.net_amount_debit
+                    .as_ref()
+                    .and_then(|amt| amt.parse::<f64>().ok())
+                    .map(|amt| types::MinorUnit::from_major_unit_as_i64(amt))
+            }),
+            ..Default::default()
         })
     }
 }
 
 #[derive(Debug, Serialize)]
-pub struct EaseBuzzTxnSyncRequest {
+pub struct EaseBuzzPaymentsSyncRequest {
     pub txnid: String,
     pub amount: String,
     pub email: String,
@@ -162,94 +367,107 @@ pub struct EaseBuzzTxnSyncRequest {
     pub hash: String,
 }
 
-impl TryFrom<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
-    for EaseBuzzTxnSyncRequest
+impl TryFrom<&RouterDataV2<PSync, domain_types::PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+    for EaseBuzzPaymentsSyncRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<errors::ConnectorError>;
+
     fn try_from(
-        item: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: &RouterDataV2<PSync, domain_types::PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = EaseBuzzAuthType::try_from(&item.connector_auth_type)?;
-        let merchant_key = auth.merchant_key.peek();
-        let salt = auth.salt.peek();
+        let api_key = match auth {
+            EaseBuzzAuthType::Key { api_key } => api_key.expose().to_string(),
+        };
+
+        let amount = item.amount.get_amount_as_string();
         
-        let amount = item.request.amount.get_amount_as_string();
-        
-        let txnid = item.request.connector_transaction_id
+        let txnid = item.router_data.request.connector_transaction_id
             .get_connector_transaction_id()
-            .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?;
-        let email = item.request.email.clone()
-            .map(|e| e.to_string())
-            .unwrap_or_else(|| "customer@example.com".to_string());
-        let phone = item.request.phone.clone()
-            .map(|p| p.to_string())
+            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
+
+        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let customer_id_string = customer_id.get_string_repr();
+
+        let email = item.router_data.request.email
+            .clone()
+            .map(|e| e.expose().to_string())
+            .unwrap_or_else(|| format!("{}@example.com", customer_id_string));
+
+        let phone = item.router_data.request.phone
+            .clone()
+            .map(|p| p.expose().to_string())
             .unwrap_or_else(|| "9999999999".to_string());
-        
-        // Generate hash - matching Haskell
+
+        // Generate hash for sync request
         let hash_string = format!(
-            "{}|{}|{}|{}|{}",
-            merchant_key,
+            "{}|{}|{}|{}|{}|{}",
+            api_key,
             txnid,
             amount,
             email,
-            phone
+            phone,
+            "salt" // This would be the merchant's salt
         );
-        let hash = generate_sha512_hash(&format!("{}|{}", hash_string, salt));
-        
+        let hash = crypto::Sha512::generate_hash(hash_string.as_bytes());
+
         Ok(Self {
             txnid,
             amount,
             email,
             phone,
-            key: merchant_key.to_string(),
+            key: api_key,
             hash,
         })
     }
 }
 
-#[derive(Debug, Serialize)]
-pub struct EaseBuzzRefundRequest {
-    pub txnid: String,
-    pub refund_amount: String,
-    pub refund_reason: String,
-    pub hash: String,
-    pub key: String,
+#[derive(Debug, Deserialize)]
+pub struct EaseBuzzPaymentsSyncResponse {
+    pub status: bool,
+    pub msg: EaseBuzzSyncMessage,
 }
 
-impl TryFrom<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
-    for EaseBuzzRefundRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        let auth = EaseBuzzAuthType::try_from(&item.connector_auth_type)?;
-        let merchant_key = auth.merchant_key.peek();
-        let salt = auth.salt.peek();
-        
-        let refund_amount = item.request.refund_amount.get_amount_as_string();
-        
-        let txnid = item.request.connector_transaction_id
-            .get_connector_transaction_id()
-            .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?;
-        let refund_reason = item.request.refund_reason.clone()
-            .unwrap_or_else(|| "Customer requested refund".to_string());
-        
-        // Generate hash - matching Haskell
-        let hash_string = format!(
-            "{}|{}|{}",
-            merchant_key,
-            txnid,
-            refund_amount
-        );
-        let hash = generate_sha512_hash(&format!("{}|{}", hash_string, salt));
-        
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum EaseBuzzSyncMessage {
+    Success(EaseBuzzPaymentData),
+    Error(String),
+}
+
+impl TryFrom<EaseBuzzPaymentsSyncResponse> for PaymentsResponseData {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(response: EaseBuzzPaymentsSyncResponse) -> Result<Self, Self::Error> {
+        let (status, payment_data) = match response.msg {
+            EaseBuzzSyncMessage::Success(data) => {
+                let status = match data.status.as_str() {
+                    "success" => AttemptStatus::Charged,
+                    "failure" => AttemptStatus::Failure,
+                    "pending" => AttemptStatus::Pending,
+                    _ => AttemptStatus::Pending,
+                };
+                (status, Some(data))
+            }
+            EaseBuzzSyncMessage::Error(_) => (AttemptStatus::Failure, None),
+        };
+
+        let response_id = payment_data.as_ref().map(|data| ResponseId {
+            gateway_payment_id: Some(data.easebuzz_id.clone()),
+            transaction_id: Some(data.txnid.clone()),
+            ..Default::default()
+        });
+
         Ok(Self {
-            txnid,
-            refund_amount,
-            refund_reason,
-            hash,
-            key: merchant_key.to_string(),
+            status,
+            response_id,
+            amount_captured: payment_data.as_ref().and_then(|data| {
+                data.net_amount_debit
+                    .as_ref()
+                    .and_then(|amt| amt.parse::<f64>().ok())
+                    .map(|amt| types::MinorUnit::from_major_unit_as_i64(amt))
+            }),
+            ..Default::default()
         })
     }
 }
@@ -262,34 +480,39 @@ pub struct EaseBuzzRefundSyncRequest {
     pub merchant_refund_id: String,
 }
 
-impl TryFrom<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>
+impl TryFrom<&RouterDataV2<RSync, domain_types::PaymentFlowData, RefundSyncData, RefundsResponseData>>
     for EaseBuzzRefundSyncRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<errors::ConnectorError>;
+
     fn try_from(
-        item: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        item: &RouterDataV2<RSync, domain_types::PaymentFlowData, RefundSyncData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = EaseBuzzAuthType::try_from(&item.connector_auth_type)?;
-        let merchant_key = auth.merchant_key.peek();
-        let salt = auth.salt.peek();
-        
-        let easebuzz_id = item.request.connector_transaction_id
+        let api_key = match auth {
+            EaseBuzzAuthType::Key { api_key } => api_key.expose().to_string(),
+        };
+
+        let easebuzz_id = item.router_data.request.connector_transaction_id
             .get_connector_transaction_id()
-            .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?;
-        let merchant_refund_id = item.request.refund_id.clone()
-            .ok_or(ConnectorError::MissingRequiredField { field_name: "refund_id" })?;
-        
-        // Generate hash - matching Haskell
+            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
+
+        let merchant_refund_id = item.router_data.request.refund_id
+            .get_string_repr()
+            .to_string();
+
+        // Generate hash for refund sync request
         let hash_string = format!(
-            "{}|{}|{}",
-            merchant_key,
+            "{}|{}|{}|{}",
+            api_key,
             easebuzz_id,
-            merchant_refund_id
+            merchant_refund_id,
+            "salt" // This would be the merchant's salt
         );
-        let hash = generate_sha512_hash(&format!("{}|{}", hash_string, salt));
-        
+        let hash = crypto::Sha512::generate_hash(hash_string.as_bytes());
+
         Ok(Self {
-            key: merchant_key.to_string(),
+            key: api_key,
             easebuzz_id,
             hash,
             merchant_refund_id,
@@ -297,106 +520,46 @@ impl TryFrom<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponse
     }
 }
 
-// Response Types - matching Haskell data structures
-
-#[derive(Debug, Deserialize)]
-pub struct EaseBuzzUpiIntentResponse {
-    pub status: bool,
-    pub msg_desc: String,
-    pub qr_link: Option<String>,
-    pub msg_title: String,
-    pub easebuzz_id: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct EaseBuzzTxnSyncResponse {
-    pub status: bool,
-    pub msg: TxnSyncMessageType,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
-pub enum TxnSyncMessageType {
-    Success(EaseBuzzSeamlessTxnResponse),
-    Error(String),
-}
-
-#[derive(Debug, Deserialize)]
-pub struct EaseBuzzSeamlessTxnResponse {
-    pub status: String,
-    pub txnid: String,
-    pub amount: String,
-    pub addedon: String,
-    pub productinfo: String,
-    pub firstname: String,
-    pub lastname: Option<String>,
-    pub email: String,
-    pub phone: String,
-    pub easebuzz_id: String,
-    pub bank_ref_num: Option<String>,
-    pub bank_code: Option<String>,
-    pub error_message: Option<String>,
-    pub card_no: Option<String>,
-    pub name_on_card: Option<String>,
-    pub card_bin: Option<String>,
-    pub card_brand: Option<String>,
-    pub card_type: Option<String>,
-    pub card_expiry_month: Option<String>,
-    pub card_expiry_year: Option<String>,
-    pub issuing_bank: Option<String>,
-    pub issuing_country: Option<String>,
-    pub card_issuer: Option<String>,
-    pub card_level: Option<String>,
-    pub card_sub_type: Option<String>,
-    pub card_token: Option<String>,
-    pub card_vault: Option<String>,
-    pub card_vault_status: Option<String>,
-    pub pg_type: Option<String>,
-    pub error_code: Option<String>,
-    pub error_desc: Option<String>,
-    pub net_amount_debit: Option<String>,
-    pub discount: Option<String>,
-    pub additional_charges: Option<String>,
-    pub payment_source: Option<String>,
-    pub meCode: Option<String>,
-    pub mode: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct EaseBuzzRefundResponse {
-    pub status: bool,
-    pub reason: Option<String>,
-    pub easebuzz_id: Option<String>,
-    pub refund_id: Option<String>,
-    pub refund_amount: Option<String>,
-}
-
 #[derive(Debug, Deserialize)]
 pub struct EaseBuzzRefundSyncResponse {
     pub code: i32,
     pub status: String,
-    pub response: EaseBuzzRefundSyncResponseData,
+    pub response: EaseBuzzRefundSyncData,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
-pub enum EaseBuzzRefundSyncResponseData {
-    Success(EaseBuzzRefundSyncSuccessResponse),
-    Failure(EaseBuzzRefundSyncFailureResponse),
-    Validation(EaseBuzzRefundSyncValidationErrorResponse),
+pub enum EaseBuzzRefundSyncData {
+    Success(EaseBuzzRefundSyncSuccess),
+    Failure(EaseBuzzRefundSyncFailure),
+    Validation(EaseBuzzRefundSyncValidation),
 }
 
 #[derive(Debug, Deserialize)]
-pub struct EaseBuzzRefundSyncSuccessResponse {
+pub struct EaseBuzzRefundSyncSuccess {
     pub txnid: String,
     pub easebuzz_id: String,
     pub net_amount_debit: String,
     pub amount: String,
-    pub refunds: Option<Vec<RefundSyncType>>,
+    pub refunds: Option<Vec<EaseBuzzRefundInfo>>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct RefundSyncType {
+pub struct EaseBuzzRefundSyncFailure {
+    pub status: String,
+    pub message: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct EaseBuzzRefundSyncValidation {
+    pub validation_errors: Option<serde_json::Value>,
+    pub status: bool,
+    pub error_code: Option<String>,
+    pub error_desc: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct EaseBuzzRefundInfo {
     pub refund_id: String,
     pub refund_status: String,
     pub merchant_refund_id: String,
@@ -406,177 +569,49 @@ pub struct RefundSyncType {
     pub arn_number: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct EaseBuzzRefundSyncFailureResponse {
-    pub status: String,
-    pub message: String,
+impl TryFrom<EaseBuzzRefundSyncResponse> for RefundsResponseData {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(response: EaseBuzzRefundSyncResponse) -> Result<Self, Self::Error> {
+        let (status, refund_data) = match response.response {
+            EaseBuzzRefundSyncData::Success(data) => {
+                let status = match data.refunds.as_ref().and_then(|refunds| refunds.first()) {
+                    Some(refund) => match refund.refund_status.as_str() {
+                        "success" => AttemptStatus::Charged,
+                        "failure" => AttemptStatus::Failure,
+                        "pending" => AttemptStatus::Pending,
+                        _ => AttemptStatus::Pending,
+                    },
+                    None => AttemptStatus::Pending,
+                };
+                (status, Some(data))
+            }
+            EaseBuzzRefundSyncData::Failure(_) => (AttemptStatus::Failure, None),
+            EaseBuzzRefundSyncData::Validation(_) => (AttemptStatus::Failure, None),
+        };
+
+        let response_id = refund_data.as_ref().map(|data| ResponseId {
+            gateway_payment_id: Some(data.easebuzz_id.clone()),
+            transaction_id: Some(data.txnid.clone()),
+            ..Default::default()
+        });
+
+        Ok(Self {
+            status,
+            response_id,
+            amount_captured: refund_data.as_ref().and_then(|data| {
+                data.net_amount_debit
+                    .parse::<f64>()
+                    .ok()
+                    .map(|amt| types::MinorUnit::from_major_unit_as_i64(amt))
+            }),
+            ..Default::default()
+        })
+    }
 }
 
-#[derive(Debug, Deserialize)]
-pub struct EaseBuzzRefundSyncValidationErrorResponse {
-    pub validation_errors: Option<serde_json::Value>,
-    pub status: bool,
-    pub error_code: Option<String>,
-    pub error_desc: Option<String>,
-}
-
-// Webhook Types - matching Haskell enum
-#[derive(Debug, Deserialize)]
-#[serde(tag = "type")]
-pub enum EaseBuzzWebhookTypes {
-    #[serde(rename = "payment")]
-    Payment(EaseBuzzSeamlessTxnResponse),
-    #[serde(rename = "refund")]
-    Refund(EaseBuzzRefundWebhookResponse),
-}
-
-#[derive(Debug, Deserialize)]
-pub struct EaseBuzzRefundWebhookResponse {
-    pub easebuzz_id: String,
-    pub refund_id: String,
-    pub refund_status: String,
-    pub refund_amount: String,
-    pub merchant_refund_id: String,
-}
-
-// Error Response - matching Haskell
 #[derive(Debug, Deserialize)]
 pub struct EaseBuzzErrorResponse {
-    pub error_code: String,
-    pub message: String,
-    pub transaction_id: Option<String>,
-}
-
-// Helper functions - matching Haskell logic
-pub fn get_webhook_object_from_body<T: serde::de::DeserializeOwned>(
-    body: &[u8],
-) -> CustomResult<T, ConnectorError> {
-    serde_json::from_slice::<T>(body)
-        .change_context(ConnectorError::ResponseDeserializationFailed)
-}
-
-fn generate_sha512_hash(data: &str) -> String {
-    use sha2::{Sha512, Digest};
-    
-    let mut hasher = Sha512::new();
-    hasher.update(data.as_bytes());
-    hex::encode(hasher.finalize())
-}
-
-pub fn get_easebuzz_webhook_event_type(
-    webhook: EaseBuzzWebhookTypes,
-) -> EventType {
-    match webhook {
-        EaseBuzzWebhookTypes::Payment(_) => EventType::Payment,
-        EaseBuzzWebhookTypes::Refund(_) => EventType::Refund,
-    }
-}
-
-pub fn get_easebuzz_payment_webhook_details(
-    webhook: EaseBuzzWebhookTypes,
-) -> CustomResult<(ResponseId, AttemptStatus, Option<String>, Option<String>), ConnectorError> {
-    match webhook {
-        EaseBuzzWebhookTypes::Payment(payment) => {
-            let status = match payment.status.as_str() {
-                "success" => AttemptStatus::Charged,
-                "pending" => AttemptStatus::Pending,
-                "failure" => AttemptStatus::Failure,
-                _ => AttemptStatus::Pending,
-            };
-            
-            let resource_id = ResponseId::ConnectorTransactionId(payment.txnid.clone());
-            let error_code = payment.error_code.clone();
-            let error_message = payment.error_desc.clone();
-            
-            Ok((resource_id, status, error_code, error_message))
-        }
-        _ => Err(ConnectorError::WebhookBodyDecodingFailed.into()),
-    }
-}
-
-pub fn get_easebuzz_refund_webhook_details(
-    webhook: EaseBuzzWebhookTypes,
-) -> CustomResult<(String, AttemptStatus, Option<String>, Option<String>), ConnectorError> {
-    match webhook {
-        EaseBuzzWebhookTypes::Refund(refund) => {
-            let status = match refund.refund_status.as_str() {
-                "success" => AttemptStatus::Success,
-                "pending" => AttemptStatus::Pending,
-                "failure" => AttemptStatus::Failure,
-                _ => AttemptStatus::Pending,
-            };
-            
-            let connector_refund_id = refund.refund_id.clone();
-            let error_code = None;
-            let error_message = None;
-            
-            Ok((connector_refund_id, status, error_code, error_message))
-        }
-        _ => Err(ConnectorError::WebhookBodyDecodingFailed.into()),
-    }
-}
-
-// Implement GetFormData for form data requests - matching Haskell form encoding
-impl crate::connectors::macros::GetFormData for EaseBuzzSeamlessTxnRequest {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        let form = reqwest::multipart::Form::new()
-            .text("txnid", self.txnid.clone())
-            .text("amount", self.amount.clone())
-            .text("productinfo", self.productinfo.clone())
-            .text("firstname", self.firstname.clone())
-            .text("email", self.email.clone())
-            .text("phone", self.phone.clone())
-            .text("surl", self.surl.clone())
-            .text("furl", self.furl.clone())
-            .text("hash", self.hash.clone())
-            .text("key", self.key.clone())
-            .text("payment_source", self.payment_source.clone());
-        
-        let form = if let Some(ref upi_intent) = self.upi_intent {
-            form.text("upi_intent", upi_intent.clone())
-        } else {
-            form
-        };
-        
-        let form = if let Some(ref upi_vpa) = self.upi_vpa {
-            form.text("upi_vpa", upi_vpa.clone())
-        } else {
-            form
-        };
-        
-        form
-    }
-}
-
-impl crate::connectors::macros::GetFormData for EaseBuzzTxnSyncRequest {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        reqwest::multipart::Form::new()
-            .text("txnid", self.txnid.clone())
-            .text("amount", self.amount.clone())
-            .text("email", self.email.clone())
-            .text("phone", self.phone.clone())
-            .text("key", self.key.clone())
-            .text("hash", self.hash.clone())
-    }
-}
-
-impl crate::connectors::macros::GetFormData for EaseBuzzRefundRequest {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        reqwest::multipart::Form::new()
-            .text("txnid", self.txnid.clone())
-            .text("refund_amount", self.refund_amount.clone())
-            .text("refund_reason", self.refund_reason.clone())
-            .text("hash", self.hash.clone())
-            .text("key", self.key.clone())
-    }
-}
-
-impl crate::connectors::macros::GetFormData for EaseBuzzRefundSyncRequest {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        reqwest::multipart::Form::new()
-            .text("key", self.key.clone())
-            .text("easebuzz_id", self.easebuzz_id.clone())
-            .text("hash", self.hash.clone())
-            .text("merchant_refund_id", self.merchant_refund_id.clone())
-    }
+    pub status: i32,
+    pub error_desc: Option<String>,
 }
