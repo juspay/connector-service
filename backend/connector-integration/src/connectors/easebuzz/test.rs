@@ -222,7 +222,6 @@ mod tests {
         _ => panic!("Expected payment webhook"),
     }
     }
-}
 
 #[test]
     fn test_easebuzz_refund_webhook_parsing() {
