@@ -8,17 +8,18 @@ use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
         Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken,
-        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund, RepeatPayment,
-        SetupMandate, Void,
+        MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund,
+        RepeatPayment, SetupMandate, Void,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorResponseHeaders,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
+        RawConnectorRequestResponse, RefundFlowData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData,
     },
     errors::{ApiError, ApplicationErrorResponse},
@@ -45,8 +46,9 @@ use grpc_api_types::payments::{
     PaymentServicePreAuthenticateResponse, PaymentServiceRefundRequest,
     PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
     PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
-    PaymentServiceTransformRequest, PaymentServiceTransformResponse, PaymentServiceVoidRequest,
-    PaymentServiceVoidResponse, RefundResponse, WebhookTransformationStatus,
+    PaymentServiceRevokeRequest, PaymentServiceRevokeResponse, PaymentServiceTransformRequest,
+    PaymentServiceTransformResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
+    RefundResponse, WebhookTransformationStatus,
 };
 use hyperswitch_masking::ExposeInterface;
 use injector::{TokenData, VaultConnectors};
@@ -2069,6 +2071,128 @@ impl PaymentService for Payments {
     }
 
     #[tracing::instrument(
+        name = "mandate_revoke",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = FlowName::MandateRevoke.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::MandateRevoke.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn revoke(
+        &self,
+        request: tonic::Request<PaymentServiceRevokeRequest>,
+    ) -> Result<tonic::Response<PaymentServiceRevokeResponse>, tonic::Status> {
+        info!("MANDATE_REVOKE_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            FlowName::MandateRevoke,
+            |request_data| {
+                let service_name = service_name.clone();
+                Box::pin(async move {
+                    let payload = request_data.payload;
+                    let metadata_payload = request_data.extracted_metadata;
+                    let (connector, request_id, lineage_ids) = (
+                        metadata_payload.connector,
+                        metadata_payload.request_id,
+                        metadata_payload.lineage_ids,
+                    );
+                    let connector_auth_details = &metadata_payload.connector_auth_type;
+
+                    //get connector data
+                    let connector_data: ConnectorData<DefaultPCIHolder> =
+                        ConnectorData::get_connector_by_name(&connector);
+
+                    // Get connector integration
+                    let connector_integration: BoxedConnectorIntegrationV2<
+                        '_,
+                        MandateRevoke,
+                        PaymentFlowData,
+                        MandateRevokeRequestData,
+                        MandateRevokeResponseData,
+                    > = connector_data.connector.get_connector_integration_v2();
+
+                    // Create payment flow data
+                    let payment_flow_data = PaymentFlowData::foreign_try_from((
+                        payload.clone(),
+                        self.config.connectors.clone(),
+                        &request_data.masked_metadata,
+                    ))
+                    .map_err(|e| e.into_grpc_status())?;
+
+                    // Create mandate revoke data
+                    let mandate_revoke_data =
+                        MandateRevokeRequestData::foreign_try_from(payload.clone())
+                            .map_err(|e| e.into_grpc_status())?;
+
+                    // Create router data
+                    let router_data: RouterDataV2<
+                        MandateRevoke,
+                        PaymentFlowData,
+                        MandateRevokeRequestData,
+                        MandateRevokeResponseData,
+                    > = RouterDataV2 {
+                        flow: std::marker::PhantomData,
+                        resource_common_data: payment_flow_data,
+                        connector_auth_type: connector_auth_details.clone(),
+                        request: mandate_revoke_data,
+                        response: Err(ErrorResponse::default()),
+                    };
+                    let event_params = EventProcessingParams {
+                        connector_name: &connector.to_string(),
+                        service_name: &service_name,
+                        flow_name: FlowName::MandateRevoke,
+                        event_config: &self.config.events,
+                        request_id: &request_id,
+                        lineage_ids: &lineage_ids,
+                        reference_id: &metadata_payload.reference_id,
+                        shadow_mode: metadata_payload.shadow_mode,
+                    };
+
+                    let response = external_services::service::execute_connector_processing_step(
+                        &self.config.proxy,
+                        connector_integration,
+                        router_data,
+                        None,
+                        event_params,
+                        None, // token_data - None for non-proxy payments
+                        common_enums::CallConnectorAction::Trigger,
+                    )
+                    .await
+                    .switch()
+                    .map_err(|e| e.into_grpc_status())?;
+
+                    // Generate response
+                    let mandate_revoke_response = generate_mandate_revoke_response(response)
+                        .map_err(|e| e.into_grpc_status())?;
+
+                    Ok(tonic::Response::new(mandate_revoke_response))
+                })
+            },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
         name = "pre_authenticate",
         fields(
             name = common_utils::consts::NAME,
@@ -2912,4 +3036,81 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
         }
     };
     Ok(response)
+}
+
+pub fn generate_mandate_revoke_response(
+    router_data_v2: RouterDataV2<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
+    >,
+) -> Result<PaymentServiceRevokeResponse, error_stack::Report<ApplicationErrorResponse>> {
+    let mandate_revoke_response = router_data_v2.response;
+    let raw_connector_response = router_data_v2
+        .resource_common_data
+        .get_raw_connector_response();
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
+    let response_headers = router_data_v2
+        .resource_common_data
+        .get_connector_response_headers_as_map();
+
+    match mandate_revoke_response {
+        Ok(response) => Ok(PaymentServiceRevokeResponse {
+            request_ref_id: Some(grpc_api_types::payments::Identifier {
+                id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
+                    router_data_v2
+                        .resource_common_data
+                        .merchant_id
+                        .get_string_repr()
+                        .to_string(),
+                )),
+            }),
+            status: match response.mandate_status {
+                common_enums::MandateStatus::Active => {
+                    grpc_api_types::payments::MandateStatus::Active
+                }
+                common_enums::MandateStatus::Inactive => {
+                    grpc_api_types::payments::MandateStatus::MandateInactive
+                }
+                common_enums::MandateStatus::Pending => {
+                    grpc_api_types::payments::MandateStatus::MandatePending
+                }
+                common_enums::MandateStatus::Revoked => {
+                    grpc_api_types::payments::MandateStatus::Revoked
+                }
+            }
+            .into(),
+            error_code: None,
+            error_message: None,
+            status_code: 200,
+            response_headers,
+            network_txn_id: None,
+            response_ref_id: None,
+            raw_connector_response,
+            raw_connector_request,
+        }),
+        Err(e) => Ok(PaymentServiceRevokeResponse {
+            request_ref_id: Some(grpc_api_types::payments::Identifier {
+                id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
+                    router_data_v2
+                        .resource_common_data
+                        .merchant_id
+                        .get_string_repr()
+                        .to_string(),
+                )),
+            }),
+            status: grpc_api_types::payments::MandateStatus::Unspecified.into(), // Default status for failed revoke
+            error_code: Some(e.code),
+            error_message: Some(e.message),
+            status_code: e.status_code.into(),
+            response_headers,
+            network_txn_id: None,
+            response_ref_id: None,
+            raw_connector_response,
+            raw_connector_request,
+        }),
+    }
 }

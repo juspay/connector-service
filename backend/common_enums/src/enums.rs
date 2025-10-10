@@ -1731,3 +1731,13 @@ pub enum CallConnectorAction {
     Trigger,
     HandleResponse(Vec<u8>),
 }
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MandateStatus {
+    #[default]
+    Active,
+    Inactive,
+    Pending,
+    Revoked,
+}
