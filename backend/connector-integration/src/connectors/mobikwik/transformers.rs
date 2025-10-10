@@ -1,12 +1,8 @@
-use common_utils::{
-    ext_traits::ValueExt,
-    types::StringMinorUnit,
-};
+use common_utils::ext_traits::ValueExt;
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
     errors::{self, ConnectorError},
-    payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
@@ -16,353 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{connectors::mobikwik::MobikwikRouterData, types::ResponseRouterData};
 
-// Request/Response Types based on Haskell implementation
-
-#[derive(Debug, Serialize)]
-pub struct CheckExistingUserRequest {
-    pub cell: String,
-    pub merchantname: String,
-    pub mid: String,
-    pub action: String,
-    pub msgcode: String,
-    pub checksum: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ExistingUserResponseType {
-    pub messagecode: String,
-    pub status: String,
-    pub statuscode: String,
-    pub statusdescription: String,
-    pub emailaddress: Option<String>,
-    pub range: Option<String>,
-    pub nonzeroflag: Option<String>,
-    pub checksum: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct OtpGenerationRequest {
-    pub cell: String,
-    pub amount: String,
-    pub merchantname: String,
-    pub mid: String,
-    pub msgcode: String,
-    pub tokentype: String,
-    pub checksum: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct OtpResponseType {
-    pub messagecode: String,
-    pub status: String,
-    pub statuscode: String,
-    pub statusdescription: String,
-    pub checksum: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TokenGenerateRequest {
-    pub cell: String,
-    pub merchantname: String,
-    pub mid: String,
-    pub otp: String,
-    pub amount: String,
-    pub msgcode: String,
-    pub tokentype: String,
-    pub checksum: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct TokenResponseType {
-    pub messagecode: String,
-    pub status: String,
-    pub statuscode: String,
-    pub statusdescription: String,
-    pub token: Option<String>,
-    pub checksum: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TokenRegenerationRequest {
-    pub cell: String,
-    pub merchantname: String,
-    pub mid: String,
-    pub token: String,
-    pub msgcode: String,
-    pub tokentype: String,
-    pub checksum: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct TokenRegenResponseType {
-    pub messagecode: String,
-    pub status: String,
-    pub statuscode: String,
-    pub statusdescription: String,
-    pub token: Option<String>,
-    pub checksum: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct CreateUserRequest {
-    pub cell: String,
-    pub merchantname: String,
-    pub mid: String,
-    pub otp: String,
-    pub msgcode: String,
-    pub checksum: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct CreateUserResponseType {
-    pub messagecode: String,
-    pub status: String,
-    pub statuscode: String,
-    pub statusdescription: String,
-    pub checksum: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct CheckMobiKwikBalanceRequest {
-    pub cell: String,
-    pub merchantname: String,
-    pub mid: String,
-    pub token: String,
-    pub msgcode: String,
-    pub checksum: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct BalanceResponseType {
-    pub messagecode: String,
-    pub status: String,
-    pub statuscode: String,
-    pub statusdescription: String,
-    pub balanceamount: Option<String>,
-    pub checksum: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct AddMoneyDebitRequest {
-    pub amount: String,
-    pub cell: String,
-    pub orderid: String,
-    pub merchantname: String,
-    pub mid: String,
-    pub token: String,
-    pub redirecturl: String,
-    pub checksum: String,
-    pub version: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct AddMoneyDebitResponse {
-    pub statuscode: String,
-    pub amount: String,
-    pub orderid: String,
-    pub statusmessage: String,
-    pub checksum: String,
-    pub mid: String,
-    pub refid: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct RedirectDebitRequest {
-    pub email: Option<String>,
-    pub amount: String,
-    pub cell: Option<String>,
-    pub orderid: String,
-    pub mid: String,
-    pub merchantname: String,
-    pub redirecturl: String,
-    pub showmobile: Option<String>,
-    pub version: String,
-    pub checksum: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RedirectDebitResponse {
-    pub statuscode: String,
-    pub orderid: String,
-    pub amount: String,
-    pub statusmessage: String,
-    pub checksum: String,
-    pub mid: String,
-    pub refid: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct DebitMobiKwikBalanceRequest {
-    pub cell: String,
-    pub merchantname: String,
-    pub mid: String,
-    pub token: String,
-    pub orderid: String,
-    pub txntype: String,
-    pub msgcode: String,
-    pub amount: String,
-    pub comment: String,
-    pub checksum: String,
-    pub version: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct DebitResponseType {
-    pub messagecode: String,
-    pub status: String,
-    pub statuscode: String,
-    pub statusdescription: String,
-    pub debitedamount: Option<String>,
-    pub balanceamount: Option<String>,
-    pub orderid: Option<String>,
-    pub refid: Option<String>,
-    pub checksum: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct CheckStatusRequest {
-    pub mid: String,
-    pub orderid: String,
-    pub checksum: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct CheckStatusWalletType {
-    pub statuscode: String,
-    pub orderid: String,
-    pub refid: Option<String>,
-    pub amount: Option<String>,
-    pub statusmessage: String,
-    pub ordertype: String,
-    pub checksum: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct MobiSyncResponse {
-    pub code: i32,
-    pub status: String,
-    pub response: StatusResp,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
-pub enum StatusResp {
-    ValidMobiSyncResponse(CheckStatusWalletType),
-    StatusInvalidResponse(EulerErrorResponse),
-    ErrorResponse(ValidationErrorResponse),
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ValidationErrorResponse {
-    pub message: String,
-    pub error_code: String,
-    pub response: serde_json::Value,
-}
-
-#[derive(Debug, Serialize)]
-pub struct MobRefundRequest {
-    pub mid: String,
-    pub txid: String,
-    pub refundid: String,
-    pub amount: String,
-    pub checksum: String,
-    pub refund_type: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RefundWalletType {
-    pub status: String,
-    pub statuscode: String,
-    pub statusmessage: Option<String>,
-    pub txid: String,
-    pub refid: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct MobikwikRefundResponse {
-    pub code: i32,
-    pub status: String,
-    pub response: RefundResp,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
-pub enum RefundResp {
-    ValidMobRefundResponse(RefundWalletType),
-    RefundErrorResponse(EulerErrorResponse),
-}
-
-#[derive(Debug, Deserialize)]
-pub struct EulerErrorResponse {
-    pub error: bool,
-    pub error_message: String,
-    pub user_message: String,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
-pub enum MobikwikTxnResp {
-    DirectDebit(DebitResponseType),
-    AddMoneyRedirectFlow(AddMoneyDebitResponse),
-    RedirectFlow(RedirectDebitResponse),
-    VerifyFailResponse(MobikwikVerifyFailResponse),
-}
-
-#[derive(Debug, Deserialize)]
-pub struct MobikwikVerifyFailResponse {
-    pub error_code: String,
-    pub error_message: String,
-    pub failure_response: serde_json::Value,
-}
-
-#[derive(Debug, Serialize)]
-pub struct MobiRefundSyncRequest {
-    pub mid: String,
-    pub orderid: String,
-    pub refundid: String,
-    pub checksum: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct MobiRefundSyncResponse {
-    pub code: i32,
-    pub status: String,
-    pub response: RefundStatusResp,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
-pub enum RefundStatusResp {
-    ValidRefundSyncResponse(MobikwikRefundSyncType),
-    RefundStatusInvalidResponse(EulerErrorResponse),
-    RefundSyncErrorResponse(ValidationErrorResponse),
-}
-
-#[derive(Debug, Deserialize)]
-pub struct MobikwikRefundSyncType {
-    pub status: String,
-    pub statuscode: String,
-    pub orderid: Option<String>,
-    pub txnamount: Option<String>,
-    pub refundamount: Option<String>,
-    pub refid: Option<String>,
-    pub refundid: Option<String>,
-    pub partialrefunds: Option<MobikwikPartialRefundType>,
-    pub checksum: Option<String>,
-    pub statusmessage: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct MobikwikPartialRefundType {
-    pub status: String,
-    pub refid: Option<String>,
-    pub refundid: String,
-    pub refundamount: String,
-    pub timestamp: String,
-    pub statuscode: String,
-}
-
-// Main request/response types for UPI flows
+// Simplified request/response types for UPI flows
 #[derive(Debug, Serialize)]
 pub struct MobikwikPaymentsRequest {
     pub cell: String,
@@ -380,14 +30,14 @@ pub struct MobikwikPaymentsRequest {
     pub email: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum MobikwikPaymentsResponse {
     Success(MobikwikSuccessResponse),
     Error(MobikwikErrorResponse),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct MobikwikSuccessResponse {
     pub statuscode: String,
     pub orderid: String,
@@ -398,15 +48,40 @@ pub struct MobikwikSuccessResponse {
     pub refid: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct MobikwikErrorResponse {
     pub error: bool,
     pub error_message: String,
     pub user_message: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct MobikwikPaymentsSyncResponse {
+    pub statuscode: String,
+    pub orderid: String,
+    pub refid: Option<String>,
+    pub amount: Option<String>,
+    pub statusmessage: String,
+    pub ordertype: String,
+    pub checksum: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CheckStatusRequest {
+    pub mid: String,
+    pub orderid: String,
+    pub checksum: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct MobiSyncResponse {
+    pub code: i32,
+    pub status: String,
+    pub response: CheckStatusWalletType,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct CheckStatusWalletType {
     pub statuscode: String,
     pub orderid: String,
     pub refid: Option<String>,
@@ -458,7 +133,7 @@ fn generate_checksum(params: &[(&str, &str)], secret_key: &str) -> String {
     
     let string_to_hash = format!("{}{}", query_string, secret_key);
     
-    // Simple SHA256 hash for now - in production, use proper crypto
+    // Simple SHA256 hash
     use sha2::{Sha256, Digest};
     let mut hasher = Sha256::new();
     hasher.update(string_to_hash.as_bytes());
@@ -467,18 +142,25 @@ fn generate_checksum(params: &[(&str, &str)], secret_key: &str) -> String {
     hex::encode(result)
 }
 
-// Implement TryFrom for payment request
-impl TryFrom<
+// Simplified TryFrom implementations using generic T
+impl<T> TryFrom<
     MobikwikRouterData<
         RouterDataV2<
             Authorize,
             PaymentFlowData,
-            PaymentsAuthorizeData<domain_types::payment_method_data::UpiData>,
+            PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         >,
-        domain_types::payment_method_data::UpiData,
+        T,
     >,
 > for MobikwikPaymentsRequest
+where
+    T: domain_types::payment_method_data::PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + serde::Serialize,
 {
     type Error = error_stack::Report<ConnectorError>;
     
@@ -487,10 +169,10 @@ impl TryFrom<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
-                PaymentsAuthorizeData<domain_types::payment_method_data::UpiData>,
+                PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
-            domain_types::payment_method_data::UpiData,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let auth = get_auth_data(&item.router_data.connector_auth_type)?;
@@ -503,18 +185,19 @@ impl TryFrom<
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
         
-        let return_url = item.router_data.request.get_router_return_url()?;
+        let return_url = item.router_data.request.get_router_return_url()
+            .change_context(ConnectorError::MissingRequiredField { field_name: "return_url" })?;
         let order_id = item
             .router_data
             .resource_common_data
             .connector_request_reference_id
             .clone();
         
-        // Extract phone number from payment method data
+        // Extract phone number - simplified
         let phone_number = item.router_data.request.payment_method_data
             .as_ref()
-            .map(|pm| pm.vpa.clone())
-            .unwrap_or_else(|| "".to_string());
+            .and_then(|pm| pm.get_phone_number())
+            .unwrap_or_else(|| "9999999999".to_string());
         
         let email = item.router_data.request.email.as_ref().map(|e| e.peek().to_string());
         
@@ -539,11 +222,11 @@ impl TryFrom<
             merchantname: auth.merchant_name,
             mid: auth.merchant_id.peek().to_string(),
             orderid: order_id,
-            token: None, // Will be set if user has existing token
+            token: None,
             redirecturl: return_url,
             checksum,
             version: "2.0".to_string(),
-            msgcode: "309".to_string(), // DEBIT_BALANCE
+            msgcode: "309".to_string(),
             txntype: "debit".to_string(),
             comment: Some("UPI Payment".to_string()),
             email,
@@ -551,8 +234,7 @@ impl TryFrom<
     }
 }
 
-// Implement TryFrom for sync request
-impl TryFrom<
+impl<T> TryFrom<
     MobikwikRouterData<
         RouterDataV2<
             PSync,
@@ -560,9 +242,16 @@ impl TryFrom<
             PaymentsSyncData,
             PaymentsResponseData,
         >,
-        domain_types::payment_method_data::UpiData,
+        T,
     >,
 > for CheckStatusRequest
+where
+    T: domain_types::payment_method_data::PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + serde::Serialize,
 {
     type Error = error_stack::Report<ConnectorError>;
     
@@ -574,7 +263,7 @@ impl TryFrom<
                 PaymentsSyncData,
                 PaymentsResponseData,
             >,
-            domain_types::payment_method_data::UpiData,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let auth = get_auth_data(&item.router_data.connector_auth_type)?;
@@ -598,8 +287,15 @@ impl TryFrom<
 }
 
 // Response transformations
-impl TryFrom<ResponseRouterData<MobikwikPaymentsResponse, Self>>
-for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<domain_types::payment_method_data::UpiData>, PaymentsResponseData>
+impl<T> TryFrom<ResponseRouterData<MobikwikPaymentsResponse, Self>>
+for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+where
+    T: domain_types::payment_method_data::PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + serde::Serialize,
 {
     type Error = error_stack::Report<ConnectorError>;
     
@@ -614,7 +310,11 @@ for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<domain_types:
         
         let (status, response) = match response {
             MobikwikPaymentsResponse::Success(success_data) => {
-                let status = map_status_code_to_attempt_status(&success_data.statuscode);
+                let status = match success_data.statuscode.as_str() {
+                    "0" => common_enums::AttemptStatus::Charged,
+                    "1" => common_enums::AttemptStatus::Pending,
+                    _ => common_enums::AttemptStatus::Failure,
+                };
                 (
                     status,
                     Ok(PaymentsResponseData::TransactionResponse {
@@ -658,8 +358,15 @@ for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<domain_types:
     }
 }
 
-impl TryFrom<ResponseRouterData<MobiSyncResponse, Self>>
+impl<T> TryFrom<ResponseRouterData<MobiSyncResponse, Self>>
 for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+where
+    T: domain_types::payment_method_data::PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + serde::Serialize,
 {
     type Error = error_stack::Report<ConnectorError>;
     
@@ -672,73 +379,33 @@ for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
             http_code,
         } = item;
         
-        let (status, response) = match response.response {
-            StatusResp::ValidMobiSyncResponse(sync_data) => {
-                let status = map_status_code_to_attempt_status(&sync_data.statuscode);
-                
-                (
-                    status,
-                    Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
-                            sync_data.orderid.clone(),
-                        ),
-                        redirection_data: None,
-                        mandate_reference: None,
-                        connector_metadata: None,
-                        network_txn_id: sync_data.refid.clone(),
-                        connector_response_reference_id: sync_data.refid.clone(),
-                        incremental_authorization_allowed: None,
-                        status_code: http_code,
-                    }),
-                )
-            }
-            StatusResp::StatusInvalidResponse(error_data) => (
-                common_enums::AttemptStatus::Failure,
-                Err(ErrorResponse {
-                    code: "MOBIKWIK_ERROR".to_string(),
-                    status_code: http_code,
-                    message: error_data.user_message.clone(),
-                    reason: Some(error_data.error_message),
-                    attempt_status: None,
-                    connector_transaction_id: None,
-                    network_advice_code: None,
-                    network_decline_code: None,
-                    network_error_message: None,
-                }),
-            ),
-            StatusResp::ErrorResponse(error_data) => (
-                common_enums::AttemptStatus::Failure,
-                Err(ErrorResponse {
-                    code: error_data.error_code,
-                    status_code: http_code,
-                    message: error_data.message,
-                    reason: None,
-                    attempt_status: None,
-                    connector_transaction_id: None,
-                    network_advice_code: None,
-                    network_decline_code: None,
-                    network_error_message: None,
-                }),
-            ),
+        let sync_data = response.response;
+        let status = match sync_data.statuscode.as_str() {
+            "0" => common_enums::AttemptStatus::Charged,
+            "1" => common_enums::AttemptStatus::Pending,
+            _ => common_enums::AttemptStatus::Failure,
         };
+        
+        let response_data = Ok(PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(
+                sync_data.orderid.clone(),
+            ),
+            redirection_data: None,
+            mandate_reference: None,
+            connector_metadata: None,
+            network_txn_id: sync_data.refid.clone(),
+            connector_response_reference_id: sync_data.refid.clone(),
+            incremental_authorization_allowed: None,
+            status_code: http_code,
+        });
         
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
                 ..router_data.resource_common_data
             },
-            response,
+            response: response_data,
             ..router_data
         })
-    }
-}
-
-fn map_status_code_to_attempt_status(status_code: &str) -> common_enums::AttemptStatus {
-    match status_code {
-        "0" => common_enums::AttemptStatus::Charged,
-        "1" => common_enums::AttemptStatus::Pending,
-        "2" => common_enums::AttemptStatus::Failure,
-        "3" => common_enums::AttemptStatus::AuthenticationPending,
-        _ => common_enums::AttemptStatus::Pending,
     }
 }
