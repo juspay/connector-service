@@ -79,3 +79,6 @@ pub use self::aci::Aci;
 
 pub mod trustpay;
 pub use self::trustpay::Trustpay;
+
+pub mod cybersource;
+pub use self::cybersource::Cybersource;

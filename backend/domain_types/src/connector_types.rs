@@ -12,6 +12,7 @@ use common_utils::{
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
 use error_stack::ResultExt;
+use grpc_api_types::payments::AuthenticationData;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
@@ -70,6 +71,7 @@ pub enum ConnectorEnum {
     Rapyd,
     Aci,
     Trustpay,
+    Cybersource,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -106,6 +108,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Rapyd => Ok(Self::Rapyd),
             grpc_api_types::payments::Connector::Aci => Ok(Self::Aci),
             grpc_api_types::payments::Connector::Trustpay => Ok(Self::Trustpay),
+            grpc_api_types::payments::Connector::Cybersource => Ok(Self::Cybersource),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -871,6 +874,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub integrity_object: Option<AuthoriseIntegrityObject>,
     pub merchant_config_currency: Option<common_enums::Currency>,
     pub all_keys_required: Option<bool>,
+    pub authentication_data: Option<AuthenticationData>,
 }
 
 impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
@@ -1069,6 +1073,42 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
 
     pub fn get_access_token_optional(&self) -> Option<&String> {
         self.access_token.as_ref()
+    }
+    pub fn requires_authentication(&self) -> bool {
+        self.enrolled_for_3ds || self.authentication_data.is_some()
+    }
+
+    pub fn get_authentication_data(&self) -> Option<&AuthenticationData> {
+        self.authentication_data.as_ref()
+    }
+
+    pub fn force_3ds_challenge(&self) -> bool {
+        // Implementation based on business logic
+        false
+    }
+
+    pub fn get_three_ds_version(&self) -> Option<String> {
+        self.authentication_data
+            .as_ref()
+            .and_then(|auth| auth.message_version.clone())
+    }
+
+    pub fn get_eci(&self) -> Option<String> {
+        self.authentication_data
+            .as_ref()
+            .and_then(|auth| auth.eci.clone())
+    }
+
+    pub fn get_cavv(&self) -> Option<String> {
+        self.authentication_data
+            .as_ref()
+            .map(|auth| auth.cavv.clone())
+    }
+
+    pub fn get_ds_transaction_id(&self) -> Option<String> {
+        self.authentication_data
+            .as_ref()
+            .and_then(|auth| auth.ds_transaction_id.clone())
     }
 }
 
