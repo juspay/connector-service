@@ -421,7 +421,7 @@ enum Connector {
   MOBIKWIK = 57;
   NUVEI = 58;
   OPENNODE = 59;
-  PAYBOX = 59;
+  PAYBOX = 60;
   PAYME = 60;
   PAYONE = 61;
   PAYPAL = 62;
