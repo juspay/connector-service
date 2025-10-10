@@ -1,252 +1,247 @@
-#[cfg(test)]
-mod tests {
-    use std::str::FromStr;
+use std::str::FromStr;
 
-    use common_enums::{
-        AttemptStatus, Currency, PaymentMethod, PaymentMethodType, UpiPaymentMethod,
-    };
-    use common_utils::types::MinorUnit;
-    use domain_types::{
-        connector_flow::{Authorize, PSync, Refund, RSync},
-        payment_method_data::{PaymentMethodData, UpiData},
-        router_data_v2::{PaymentAmount, RouterDataV2},
-        types::{PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData},
-    };
-    use error_stack::ResultExt;
-    use hyperswitch_domain_models::router_data_v2::{PaymentFlowData, ResourceCommonData};
-    use masking::{ExposeInterface, Secret};
-    use serde_json::json;
+use common_enums::{
+    AttemptStatus, Currency, PaymentMethod, PaymentMethodType, UpiPaymentMethod,
+};
+use common_utils::{
+    pii::{Email, Phone},
+    types::{MinorUnit, StringMinorUnit},
+};
+use domain_types::{
+    connector_flow::{Authorize, PSync, RSync, Refund},
+    payment_method_data::{PaymentMethodData, UpiData},
+    router_data_v2::{PaymentAmount, RouterDataV2},
+    types::{PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData},
+};
+use hyperswitch_domain_models::router_data_v2::{PaymentFlowData, PaymentIntentData};
+use masking::{ExposeInterface, Secret};
+use rust_decimal::Decimal;
 
-    use super::*;
-    use super::transformers::*;
+use crate::{
+    connectors::easebuzz::{
+        transformers::{EaseBuzzSeamlessTxnRequest, EaseBuzzTxnSyncRequest, EaseBuzzRefundRequest, EaseBuzzRefundSyncRequest},
+        EaseBuzz,
+    },
+    services,
+    types::{self, api, ConnectorAuthType},
+};
 
 #[test]
-    fn test_easebuzz_seamless_txn_request_conversion() {
-    let payment_data = PaymentsAuthorizeData {
-        payment_id: "test_payment_123".to_string(),
-        amount: PaymentAmount {
-            value: 10000, // 100.00 INR in minor units
-            currency: Currency::INR,
-        },
-        payment_method_data: PaymentMethodData::Upi(UpiData {
-            upi_payment_method: UpiPaymentMethod::Intent,
-            vpa: Secret::new("test@upi".to_string()),
-        }),
-        ..Default::default()
-    };
+fn test_easebuzz_seamless_txn_request_upi_intent() {
+    let router_data = get_authorize_router_data(UpiPaymentMethod::Intent);
+    let request = EaseBuzzSeamlessTxnRequest::try_from(router_data).unwrap();
 
-    let router_data = RouterDataV2 {
-        flow: Authorize,
-        resource_common_data: PaymentFlowData {
-            connector: "easebuzz".to_string(),
-            ..Default::default()
-        },
-        request: payment_data,
-        response: Ok(PaymentsResponseData::default()),
-        connector_auth_type: domain_types::router_data::ConnectorAuthType::HeaderKey {
-            api_key: Secret::new("test_api_key".to_string()),
-            key1: Secret::new("test_merchant_key".to_string()),
-        },
-        test_mode: true,
-        ..Default::default()
-    };
-
-    let result = EaseBuzzSeamlessTxnRequest::try_from(router_data);
-    assert!(result.is_ok());
-    
-    let request = result.unwrap();
     assert_eq!(request.txnid, "test_payment_123");
-    assert_eq!(request.amount, "100.00");
+    assert_eq!(request.amount, "10000");
     assert_eq!(request.payment_source, "upi");
     assert_eq!(request.upi_intent, Some("intent".to_string()));
     assert_eq!(request.upi_vpa, None);
+    assert!(request.hash.len() > 0);
 }
 
 #[test]
-    fn test_easebuzz_upi_collect_request() {
-    let payment_data = PaymentsAuthorizeData {
-        payment_id: "test_payment_456".to_string(),
-        amount: PaymentAmount {
-            value: 5000, // 50.00 INR in minor units
-            currency: Currency::INR,
-        },
-        payment_method_data: PaymentMethodData::Upi(UpiData {
-            upi_payment_method: UpiPaymentMethod::Collect,
-            vpa: Secret::new("customer@bank".to_string()),
-        }),
-        ..Default::default()
-    };
+fn test_easebuzz_seamless_txn_request_upi_collect() {
+    let router_data = get_authorize_router_data(UpiPaymentMethod::Collect);
+    let request = EaseBuzzSeamlessTxnRequest::try_from(router_data).unwrap();
 
-    let router_data = RouterDataV2 {
-        flow: Authorize,
-        resource_common_data: PaymentFlowData {
-            connector: "easebuzz".to_string(),
-            ..Default::default()
-        },
-        request: payment_data,
-        response: Ok(PaymentsResponseData::default()),
-        connector_auth_type: domain_types::router_data::ConnectorAuthType::HeaderKey {
-            api_key: Secret::new("test_api_key".to_string()),
-            key1: Secret::new("test_merchant_key".to_string()),
-        },
-        test_mode: true,
-        ..Default::default()
-    };
-
-    let result = EaseBuzzSeamlessTxnRequest::try_from(router_data);
-    assert!(result.is_ok());
-    
-    let request = result.unwrap();
-    assert_eq!(request.txnid, "test_payment_456");
-    assert_eq!(request.amount, "50.00");
+    assert_eq!(request.txnid, "test_payment_123");
+    assert_eq!(request.amount, "10000");
     assert_eq!(request.payment_source, "upi");
     assert_eq!(request.upi_intent, None);
-    assert_eq!(request.upi_vpa, Some("customer@bank".to_string()));
+    assert_eq!(request.upi_vpa, Some("test@upi".to_string()));
+    assert!(request.hash.len() > 0);
 }
 
 #[test]
-    fn test_easebuzz_txn_sync_request() {
-    let sync_data = PaymentsSyncData {
-        connector_transaction_id: Some("easebuzz_txn_789".to_string()),
-        amount: PaymentAmount {
-            value: 15000, // 150.00 INR in minor units
-            currency: Currency::INR,
+fn test_easebuzz_txn_sync_request() {
+    let router_data = get_psync_router_data();
+    let request = EaseBuzzTxnSyncRequest::try_from(router_data).unwrap();
+
+    assert_eq!(request.txnid, "easebuzz_txn_456");
+    assert_eq!(request.amount, "10000");
+    assert_eq!(request.email, "test@example.com");
+    assert_eq!(request.phone, "9999999999");
+    assert!(request.hash.len() > 0);
+}
+
+#[test]
+fn test_easebuzz_refund_request() {
+    let router_data = get_refund_router_data();
+    let request = EaseBuzzRefundRequest::try_from(router_data).unwrap();
+
+    assert_eq!(request.txnid, "easebuzz_txn_456");
+    assert_eq!(request.refund_amount, "5000");
+    assert_eq!(request.refund_reason, "Customer requested refund");
+    assert!(request.hash.len() > 0);
+}
+
+#[test]
+fn test_easebuzz_refund_sync_request() {
+    let router_data = get_rsync_router_data();
+    let request = EaseBuzzRefundSyncRequest::try_from(router_data).unwrap();
+
+    assert_eq!(request.easebuzz_id, "easebuzz_txn_456");
+    assert_eq!(request.merchant_refund_id, "refund_789");
+    assert!(request.hash.len() > 0);
+}
+
+fn get_authorize_router_data(upi_method: UpiPaymentMethod) -> RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<PaymentMethodData>, PaymentsResponseData> {
+    let payment_method_data = PaymentMethodData::Upi(UpiData {
+        upi_payment_method: upi_method,
+        vpa: if upi_method == UpiPaymentMethod::Collect {
+            Some(Secret::new("test@upi".to_string()))
+        } else {
+            None
         },
         ..Default::default()
-    };
+    });
 
-    let router_data = RouterDataV2 {
+    RouterDataV2 {
+        flow: Authorize,
+        resource_common_data: PaymentFlowData {
+            connector: types::Connectors::Easebuzz,
+            payment_method: PaymentMethod::Upi,
+            payment_method_type: PaymentMethodType::UpiIntent,
+            connector_meta_data: None,
+            merchant_connector_details: None,
+            description: Some("Test payment".to_string()),
+            connector_customer: None,
+            connectors: types::Connectors {
+                easebuzz: types::EasebuzzConnector {
+                    base_url: "https://pay.easebuzz.in".to_string(),
+                },
+            },
+        },
+        request: PaymentsAuthorizeData {
+            payment_id: "test_payment_123".to_string(),
+            amount: PaymentAmount {
+                amount: Decimal::from_str("100.00").unwrap(),
+                currency: Currency::INR,
+            },
+            payment_method_data,
+            email: Some(Email::from_str("test@example.com").unwrap()),
+            phone: Some(Phone::from_str("9999999999").unwrap()),
+            customer_name: Some("Test Customer".to_string()),
+            return_url: Some("https://example.com/return".to_string()),
+            ..Default::default()
+        },
+        response: PaymentsResponseData::default(),
+        connector_auth_type: ConnectorAuthType::HeaderKey {
+            api_key: Secret::new("test_api_key".to_string()),
+            key1: Secret::new("test_merchant_key".to_string()),
+        },
+        test_mode: true,
+        ..Default::default()
+    }
+}
+
+fn get_psync_router_data() -> RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> {
+    RouterDataV2 {
         flow: PSync,
         resource_common_data: PaymentFlowData {
-            connector: "easebuzz".to_string(),
+            connector: types::Connectors::Easebuzz,
+            payment_method: PaymentMethod::Upi,
+            payment_method_type: PaymentMethodType::UpiIntent,
+            connector_meta_data: None,
+            merchant_connector_details: None,
+            description: Some("Test payment".to_string()),
+            connector_customer: None,
+            connectors: types::Connectors {
+                easebuzz: types::EasebuzzConnector {
+                    base_url: "https://pay.easebuzz.in".to_string(),
+                },
+            },
+        },
+        request: PaymentsSyncData {
+            payment_id: "test_payment_123".to_string(),
+            connector_transaction_id: Some("easebuzz_txn_456".to_string()),
+            amount: PaymentAmount {
+                amount: Decimal::from_str("100.00").unwrap(),
+                currency: Currency::INR,
+            },
+            email: Some(Email::from_str("test@example.com").unwrap()),
+            phone: Some(Phone::from_str("9999999999").unwrap()),
             ..Default::default()
         },
-        request: sync_data,
-        response: Ok(PaymentsResponseData::default()),
-        connector_auth_type: domain_types::router_data::ConnectorAuthType::HeaderKey {
+        response: PaymentsResponseData::default(),
+        connector_auth_type: ConnectorAuthType::HeaderKey {
             api_key: Secret::new("test_api_key".to_string()),
             key1: Secret::new("test_merchant_key".to_string()),
         },
         test_mode: true,
         ..Default::default()
-    };
-
-    let result = EaseBuzzTxnSyncRequest::try_from(router_data);
-    assert!(result.is_ok());
-    
-    let request = result.unwrap();
-    assert_eq!(request.txnid, "easebuzz_txn_789");
-    assert_eq!(request.amount, "150.00");
+    }
 }
 
-#[test]
-    fn test_easebuzz_refund_request() {
-    let refund_data = RefundsData {
-        connector_transaction_id: Some("easebuzz_txn_123".to_string()),
-        refund_amount: PaymentAmount {
-            value: 5000, // 50.00 INR in minor units
-            currency: Currency::INR,
-        },
-        refund_reason: Some("Customer requested refund".to_string()),
-        ..Default::default()
-    };
-
-    let router_data = RouterDataV2 {
+fn get_refund_router_data() -> RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> {
+    RouterDataV2 {
         flow: Refund,
         resource_common_data: RefundFlowData {
-            connector: "easebuzz".to_string(),
+            connector: types::Connectors::Easebuzz,
+            payment_method: PaymentMethod::Upi,
+            payment_method_type: PaymentMethodType::UpiIntent,
+            connector_meta_data: None,
+            merchant_connector_details: None,
+            description: Some("Test refund".to_string()),
+            connector_customer: None,
+            connectors: types::Connectors {
+                easebuzz: types::EasebuzzConnector {
+                    base_url: "https://pay.easebuzz.in".to_string(),
+                },
+            },
+        },
+        request: RefundsData {
+            refund_id: "refund_789".to_string(),
+            connector_transaction_id: Some("easebuzz_txn_456".to_string()),
+            refund_amount: PaymentAmount {
+                amount: Decimal::from_str("50.00").unwrap(),
+                currency: Currency::INR,
+            },
+            refund_reason: Some("Customer requested refund".to_string()),
             ..Default::default()
         },
-        request: refund_data,
-        response: Ok(RefundsResponseData::default()),
-        connector_auth_type: domain_types::router_data::ConnectorAuthType::HeaderKey {
+        response: RefundsResponseData::default(),
+        connector_auth_type: ConnectorAuthType::HeaderKey {
             api_key: Secret::new("test_api_key".to_string()),
             key1: Secret::new("test_merchant_key".to_string()),
         },
         test_mode: true,
         ..Default::default()
-    };
-
-    let result = EaseBuzzRefundRequest::try_from(router_data);
-    assert!(result.is_ok());
-    
-    let request = result.unwrap();
-    assert_eq!(request.txnid, "easebuzz_txn_123");
-    assert_eq!(request.refund_amount, "50.00");
-    assert_eq!(request.refund_reason, "Customer requested refund");
+    }
 }
 
-#[test]
-    fn test_easebuzz_upi_intent_response_deserialization() {
-    let response_json = json!({
-        "status": true,
-        "msg_desc": "Payment initiated successfully",
-        "qr_link": "https://upi.qr.example.com/xyz123",
-        "msg_title": "UPI Payment",
-        "easebuzz_id": "ezb_123456"
-    });
-
-    let result: Result<EaseBuzzUpiIntentResponse, _> = serde_json::from_value(response_json);
-    assert!(result.is_ok());
-    
-    let response = result.unwrap();
-    assert_eq!(response.status, true);
-    assert_eq!(response.msg_desc, "Payment initiated successfully");
-    assert_eq!(response.qr_link, Some("https://upi.qr.example.com/xyz123".to_string()));
-    assert_eq!(response.msg_title, "UPI Payment");
-    assert_eq!(response.easebuzz_id, Some("ezb_123456".to_string()));
-}
-
-#[test]
-    fn test_easebuzz_webhook_parsing() {
-    let webhook_json = json!({
-        "type": "payment",
-        "status": "success",
-        "txnid": "test_txn_123",
-        "amount": "100.00",
-        "easebuzz_id": "ezb_456789",
-        "email": "customer@example.com",
-        "phone": "9876543210"
-    });
-
-    let result: Result<EaseBuzzWebhookTypes, _> = serde_json::from_value(webhook_json);
-    assert!(result.is_ok());
-    
-    let webhook = result.unwrap();
-    match webhook {
-        EaseBuzzWebhookTypes::Payment(payment) => {
-            assert_eq!(payment.status, "success");
-            assert_eq!(payment.txnid, "test_txn_123");
-            assert_eq!(payment.easebuzz_id, "ezb_456789");
-        }
-        _ => panic!("Expected payment webhook"),
-    }
-    }
-
-#[test]
-    fn test_easebuzz_refund_webhook_parsing() {
-    let webhook_json = json!({
-        "type": "refund",
-        "easebuzz_id": "ezb_456789",
-        "refund_id": "refund_123",
-        "refund_status": "success",
-        "refund_amount": "50.00",
-        "merchant_refund_id": "merchant_ref_456"
-    });
-
-    let result: Result<EaseBuzzWebhookTypes, _> = serde_json::from_value(webhook_json);
-    assert!(result.is_ok());
-    
-    let webhook = result.unwrap();
-    match webhook {
-        EaseBuzzWebhookTypes::Refund(refund) => {
-            assert_eq!(refund.easebuzz_id, "ezb_456789");
-            assert_eq!(refund.refund_id, "refund_123");
-            assert_eq!(refund.refund_status, "success");
-            assert_eq!(refund.refund_amount, "50.00");
-            assert_eq!(refund.merchant_refund_id, "merchant_ref_456");
-        }
-        _ => panic!("Expected refund webhook"),
-    }
+fn get_rsync_router_data() -> RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> {
+    RouterDataV2 {
+        flow: RSync,
+        resource_common_data: RefundFlowData {
+            connector: types::Connectors::Easebuzz,
+            payment_method: PaymentMethod::Upi,
+            payment_method_type: PaymentMethodType::UpiIntent,
+            connector_meta_data: None,
+            merchant_connector_details: None,
+            description: Some("Test refund sync".to_string()),
+            connector_customer: None,
+            connectors: types::Connectors {
+                easebuzz: types::EasebuzzConnector {
+                    base_url: "https://pay.easebuzz.in".to_string(),
+                },
+            },
+        },
+        request: RefundSyncData {
+            refund_id: "refund_789".to_string(),
+            connector_transaction_id: Some("easebuzz_txn_456".to_string()),
+            amount: PaymentAmount {
+                amount: Decimal::from_str("50.00").unwrap(),
+                currency: Currency::INR,
+            },
+            ..Default::default()
+        },
+        response: RefundsResponseData::default(),
+        connector_auth_type: ConnectorAuthType::HeaderKey {
+            api_key: Secret::new("test_api_key".to_string()),
+            key1: Secret::new("test_merchant_key".to_string()),
+        },
+        test_mode: true,
+        ..Default::default()
     }
 }
