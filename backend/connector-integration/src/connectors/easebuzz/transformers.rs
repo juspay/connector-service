@@ -88,13 +88,13 @@ pub struct EaseBuzzPaymentsRequest {
     pub udf10: Option<String>,
 }
 
-impl<T> TryFrom<&RouterDataV2<Authorize, domain_types::PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+impl<T> TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
     for EaseBuzzPaymentsRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<Authorize, domain_types::PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = EaseBuzzAuthType::try_from(&item.connector_auth_type)?;
         let api_key = match auth {
