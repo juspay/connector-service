@@ -1,0 +1,597 @@
+use std::collections::HashMap;
+
+use common_enums::{Currency, AttemptStatus, PaymentMethodType};
+use common_utils::{
+    crypto::generate_sha512_hash,
+    date_time,
+    errors::CustomResult,
+    pii::Secret,
+    request::RequestContent,
+    types::{StringMinorUnit, TryIntoMinorUnit},
+};
+use domain_types::{
+    errors::ConnectorError,
+    payment_method_data::PaymentMethodData,
+    router_data_v2::RouterDataV2,
+    router_response_types::{ResponseId, WebhookDetailsResponse},
+    types::{PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundsData, RefundsResponseData, RefundSyncData},
+};
+use error_stack::ResultExt;
+use hyperswitch_masking::Maskable;
+use hyperswitch_domain_models::{
+    router_data_v2::{self, PaymentAmount},
+    router_request_types::ResponseId,
+};
+use masking::{ExposeInterface, PeekInterface, SecretMaskable};
+use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
+
+use crate::{
+    connectors::utils::{self, RouterData},
+    services,
+    types::{self, api, transformers::ForeignFrom},
+};
+
+// Auth Types
+#[derive(Debug, Clone)]
+pub struct EaseBuzzAuthType {
+    pub api_key: Secret<String>,
+    pub merchant_key: Secret<String>,
+    pub salt: Secret<String>,
+}
+
+impl TryFrom<&domain_types::router_data::ConnectorAuthType> for EaseBuzzAuthType {
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(auth_type: &domain_types::router_data::ConnectorAuthType) -> Result<Self, Self::Error> {
+        match auth_type {
+            domain_types::router_data::ConnectorAuthType::HeaderKey { api_key, key1 } => {
+                let auth = EaseBuzzAuthType {
+                    api_key: api_key.peek().clone().into(),
+                    merchant_key: key1.peek().clone().into(),
+                    salt: key1.peek().clone().into(), // Using key1 as salt for now
+                };
+                Ok(auth)
+            }
+            _ => Err(ConnectorError::FailedToObtainAuthType.into()),
+        }
+    }
+}
+
+// Request Types
+#[derive(Debug, Serialize)]
+pub struct EaseBuzzSeamlessTxnRequest {
+    pub txnid: String,
+    pub amount: String,
+    pub productinfo: String,
+    pub firstname: String,
+    pub email: String,
+    pub phone: String,
+    pub surl: String,
+    pub furl: String,
+    pub hash: String,
+    pub key: String,
+    #[serde(rename = "payment_source")]
+    pub payment_source: String,
+    #[serde(rename = "upi_intent")]
+    pub upi_intent: Option<String>,
+    #[serde(rename = "upi_vpa")]
+    pub upi_vpa: Option<String>,
+}
+
+impl<F, T> TryFrom<RouterDataV2<F, types::PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+    for EaseBuzzSeamlessTxnRequest
+where
+    T: PaymentMethodData,
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: RouterDataV2<F, types::PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    ) -> Result<Self, Self::Error> {
+        let auth = EaseBuzzAuthType::try_from(&item.connector_auth_type)?;
+        let merchant_key = auth.merchant_key.peek();
+        let salt = auth.salt.peek();
+        
+        let amount = utils::convert_amount(
+            &item.request.amount,
+            item.request.currency,
+        )?;
+        
+        let txnid = item.request.payment_id.clone();
+        let productinfo = format!("Payment for {}", item.request.payment_id);
+        let firstname = item.request.get_customer_name().unwrap_or_else(|| "Customer".to_string());
+        let email = item.request.get_customer_email().unwrap_or_else(|| "customer@example.com".to_string());
+        let phone = item.request.get_customer_phone().unwrap_or_else(|| "9999999999".to_string());
+        let surl = item.request.get_return_url().unwrap_or_else(|| "https://example.com/success".to_string());
+        let furl = item.request.get_return_url().unwrap_or_else(|| "https://example.com/failure".to_string());
+        
+        // Determine payment source and UPI details
+        let (payment_source, upi_intent, upi_vpa) = match item.request.payment_method_data {
+            PaymentMethodData::Upi(upi_data) => {
+                match upi_data.upi_payment_method {
+                    common_enums::UpiPaymentMethod::Intent => {
+                        ("upi".to_string(), Some("intent".to_string()), None)
+                    }
+                    common_enums::UpiPaymentMethod::Collect => {
+                        ("upi".to_string(), None, upi_data.vpa.peek().map(|vpa| vpa.to_string()))
+                    }
+                    common_enums::UpiPaymentMethod::Qr => {
+                        ("upi".to_string(), Some("qr".to_string()), None)
+                    }
+                }
+            }
+            _ => ("upi".to_string(), None, None),
+        };
+        
+        // Generate hash
+        let hash_string = format!(
+            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
+            merchant_key,
+            txnid,
+            amount,
+            productinfo,
+            firstname,
+            email,
+            phone,
+            surl,
+            furl,
+            payment_source,
+            upi_intent.as_deref().unwrap_or(""),
+            upi_vpa.as_deref().unwrap_or("")
+        );
+        let hash = generate_sha512_hash(&format!("{}|{}", hash_string, salt));
+        
+        Ok(Self {
+            txnid,
+            amount,
+            productinfo,
+            firstname,
+            email,
+            phone,
+            surl,
+            furl,
+            hash,
+            key: merchant_key.to_string(),
+            payment_source,
+            upi_intent,
+            upi_vpa,
+        })
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct EaseBuzzTxnSyncRequest {
+    pub txnid: String,
+    pub amount: String,
+    pub email: String,
+    pub phone: String,
+    pub key: String,
+    pub hash: String,
+}
+
+impl TryFrom<RouterDataV2<types::PSync, types::PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+    for EaseBuzzTxnSyncRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: RouterDataV2<types::PSync, types::PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    ) -> Result<Self, Self::Error> {
+        let auth = EaseBuzzAuthType::try_from(&item.connector_auth_type)?;
+        let merchant_key = auth.merchant_key.peek();
+        let salt = auth.salt.peek();
+        
+        let amount = utils::convert_amount(
+            &item.request.amount,
+            item.request.currency,
+        )?;
+        
+        let txnid = item.request.connector_transaction_id.clone();
+        let email = item.request.get_customer_email().unwrap_or_else(|| "customer@example.com".to_string());
+        let phone = item.request.get_customer_phone().unwrap_or_else(|| "9999999999".to_string());
+        
+        // Generate hash
+        let hash_string = format!(
+            "{}|{}|{}|{}|{}",
+            merchant_key,
+            txnid,
+            amount,
+            email,
+            phone
+        );
+        let hash = generate_sha512_hash(&format!("{}|{}", hash_string, salt));
+        
+        Ok(Self {
+            txnid,
+            amount,
+            email,
+            phone,
+            key: merchant_key.to_string(),
+            hash,
+        })
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct EaseBuzzRefundRequest {
+    pub txnid: String,
+    pub refund_amount: String,
+    pub refund_reason: String,
+    pub hash: String,
+    pub key: String,
+}
+
+impl TryFrom<RouterDataV2<types::Refund, types::RefundFlowData, RefundsData, RefundsResponseData>>
+    for EaseBuzzRefundRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: RouterDataV2<types::Refund, types::RefundFlowData, RefundsData, RefundsResponseData>,
+    ) -> Result<Self, Self::Error> {
+        let auth = EaseBuzzAuthType::try_from(&item.connector_auth_type)?;
+        let merchant_key = auth.merchant_key.peek();
+        let salt = auth.salt.peek();
+        
+        let refund_amount = utils::convert_amount(
+            &item.request.refund_amount,
+            item.request.currency,
+        )?;
+        
+        let txnid = item.request.connector_transaction_id.clone();
+        let refund_reason = item.request.refund_reason.clone().unwrap_or_else(|| "Customer requested refund".to_string());
+        
+        // Generate hash
+        let hash_string = format!(
+            "{}|{}|{}",
+            merchant_key,
+            txnid,
+            refund_amount
+        );
+        let hash = generate_sha512_hash(&format!("{}|{}", hash_string, salt));
+        
+        Ok(Self {
+            txnid,
+            refund_amount,
+            refund_reason,
+            hash,
+            key: merchant_key.to_string(),
+        })
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct EaseBuzzRefundSyncRequest {
+    pub key: String,
+    pub easebuzz_id: String,
+    pub hash: String,
+    pub merchant_refund_id: String,
+}
+
+impl TryFrom<RouterDataV2<types::RSync, types::RefundFlowData, RefundSyncData, RefundsResponseData>>
+    for EaseBuzzRefundSyncRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: RouterDataV2<types::RSync, types::RefundFlowData, RefundSyncData, RefundsResponseData>,
+    ) -> Result<Self, Self::Error> {
+        let auth = EaseBuzzAuthType::try_from(&item.connector_auth_type)?;
+        let merchant_key = auth.merchant_key.peek();
+        let salt = auth.salt.peek();
+        
+        let easebuzz_id = item.request.connector_transaction_id.clone();
+        let merchant_refund_id = item.request.refund_id.clone();
+        
+        // Generate hash
+        let hash_string = format!(
+            "{}|{}|{}",
+            merchant_key,
+            easebuzz_id,
+            merchant_refund_id
+        );
+        let hash = generate_sha512_hash(&format!("{}|{}", hash_string, salt));
+        
+        Ok(Self {
+            key: merchant_key.to_string(),
+            easebuzz_id,
+            hash,
+            merchant_refund_id,
+        })
+    }
+}
+
+// Response Types
+#[derive(Debug, Deserialize)]
+pub struct EaseBuzzUpiIntentResponse {
+    pub status: bool,
+    pub msg_desc: String,
+    pub qr_link: Option<String>,
+    pub msg_title: String,
+    pub easebuzz_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct EaseBuzzTxnSyncResponse {
+    pub status: bool,
+    pub msg: TxnSyncMessageType,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum TxnSyncMessageType {
+    Success(EaseBuzzSeamlessTxnResponse),
+    Error(String),
+}
+
+#[derive(Debug, Deserialize)]
+pub struct EaseBuzzSeamlessTxnResponse {
+    pub status: String,
+    pub txnid: String,
+    pub amount: String,
+    pub addedon: String,
+    pub productinfo: String,
+    pub firstname: String,
+    pub lastname: Option<String>,
+    pub email: String,
+    pub phone: String,
+    pub easebuzz_id: String,
+    pub bank_ref_num: Option<String>,
+    pub bank_code: Option<String>,
+    pub error_message: Option<String>,
+    pub card_no: Option<String>,
+    pub name_on_card: Option<String>,
+    pub card_bin: Option<String>,
+    pub card_brand: Option<String>,
+    pub card_type: Option<String>,
+    pub card_expiry_month: Option<String>,
+    pub card_expiry_year: Option<String>,
+    pub issuing_bank: Option<String>,
+    pub issuing_country: Option<String>,
+    pub card_issuer: Option<String>,
+    pub card_level: Option<String>,
+    pub card_sub_type: Option<String>,
+    pub card_token: Option<String>,
+    pub card_vault: Option<String>,
+    pub card_vault_status: Option<String>,
+    pg_type: Option<String>,
+    error_code: Option<String>,
+    error_desc: Option<String>,
+    net_amount_debit: Option<String>,
+    discount: Option<String>,
+    additional_charges: Option<String>,
+    payment_source: Option<String>,
+    meCode: Option<String>,
+    mode: Option<String>,
+    card_no: Option<String>,
+    name_on_card: Option<String>,
+    card_bin: Option<String>,
+    card_brand: Option<String>,
+    card_type: Option<String>,
+    card_expiry_month: Option<String>,
+    card_expiry_year: Option<String>,
+    issuing_bank: Option<String>,
+    issuing_country: Option<String>,
+    card_issuer: Option<String>,
+    card_level: Option<String>,
+    card_sub_type: Option<String>,
+    card_token: Option<String>,
+    card_vault: Option<String>,
+    card_vault_status: Option<String>,
+    pg_type: Option<String>,
+    error_code: Option<String>,
+    error_desc: Option<String>,
+    net_amount_debit: Option<String>,
+    discount: Option<String>,
+    additional_charges: Option<String>,
+    payment_source: Option<String>,
+    meCode: Option<String>,
+    mode: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct EaseBuzzRefundResponse {
+    pub status: bool,
+    pub reason: Option<String>,
+    pub easebuzz_id: Option<String>,
+    pub refund_id: Option<String>,
+    pub refund_amount: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct EaseBuzzRefundSyncResponse {
+    pub code: i32,
+    pub status: String,
+    pub response: EaseBuzzRefundSyncResponseData,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum EaseBuzzRefundSyncResponseData {
+    Success(EaseBuzzRefundSyncSuccessResponse),
+    Failure(EaseBuzzRefundSyncFailureResponse),
+    Validation(EaseBuzzRefundSyncValidationErrorResponse),
+}
+
+#[derive(Debug, Deserialize)]
+pub struct EaseBuzzRefundSyncSuccessResponse {
+    pub txnid: String,
+    pub easebuzz_id: String,
+    pub net_amount_debit: String,
+    pub amount: String,
+    pub refunds: Option<Vec<RefundSyncType>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RefundSyncType {
+    pub refund_id: String,
+    pub refund_status: String,
+    pub merchant_refund_id: String,
+    pub merchant_refund_date: String,
+    pub refund_settled_date: Option<String>,
+    pub refund_amount: String,
+    pub arn_number: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct EaseBuzzRefundSyncFailureResponse {
+    pub status: String,
+    pub message: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct EaseBuzzRefundSyncValidationErrorResponse {
+    pub validation_errors: Option<serde_json::Value>,
+    pub status: bool,
+    pub error_code: Option<String>,
+    pub error_desc: Option<String>,
+}
+
+// Webhook Types
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type")]
+pub enum EaseBuzzWebhookTypes {
+    #[serde(rename = "payment")]
+    Payment(EaseBuzzSeamlessTxnResponse),
+    #[serde(rename = "refund")]
+    Refund(EaseBuzzRefundWebhookResponse),
+}
+
+#[derive(Debug, Deserialize)]
+pub struct EaseBuzzRefundWebhookResponse {
+    pub easebuzz_id: String,
+    pub refund_id: String,
+    pub refund_status: String,
+    pub refund_amount: String,
+    pub merchant_refund_id: String,
+}
+
+// Error Response
+#[derive(Debug, Deserialize)]
+pub struct EaseBuzzErrorResponse {
+    pub error_code: String,
+    pub message: String,
+    pub transaction_id: Option<String>,
+}
+
+// Helper functions
+pub fn get_webhook_object_from_body<T: serde::de::DeserializeOwned>(
+    body: &[u8],
+) -> CustomResult<T, ConnectorError> {
+    serde_json::from_slice::<T>(body)
+        .change_context(ConnectorError::ResponseDeserializationFailed)
+}
+
+pub fn get_easebuzz_webhook_event_type(
+    webhook: EaseBuzzWebhookTypes,
+) -> domain_types::connector_types::EventType {
+    match webhook {
+        EaseBuzzWebhookTypes::Payment(_) => domain_types::connector_types::EventType::Payment,
+        EaseBuzzWebhookTypes::Refund(_) => domain_types::connector_types::EventType::Refund,
+    }
+}
+
+pub fn get_easebuzz_payment_webhook_details(
+    webhook: EaseBuzzWebhookTypes,
+) -> CustomResult<(ResponseId, AttemptStatus, Option<String>, Option<String>), ConnectorError> {
+    match webhook {
+        EaseBuzzWebhookTypes::Payment(payment) => {
+            let status = match payment.status.as_str() {
+                "success" => AttemptStatus::Charged,
+                "pending" => AttemptStatus::Pending,
+                "failure" => AttemptStatus::Failure,
+                _ => AttemptStatus::Pending,
+            };
+            
+            let resource_id = ResponseId::ConnectorTransactionId(payment.txnid.clone());
+            let error_code = payment.error_code.clone();
+            let error_message = payment.error_desc.clone();
+            
+            Ok((resource_id, status, error_code, error_message))
+        }
+        _ => Err(ConnectorError::WebhookBodyDecodingFailed),
+    }
+}
+
+pub fn get_easebuzz_refund_webhook_details(
+    webhook: EaseBuzzWebhookTypes,
+) -> CustomResult<(String, AttemptStatus, Option<String>, Option<String>), ConnectorError> {
+    match webhook {
+        EaseBuzzWebhookTypes::Refund(refund) => {
+            let status = match refund.refund_status.as_str() {
+                "success" => AttemptStatus::Success,
+                "pending" => AttemptStatus::Pending,
+                "failure" => AttemptStatus::Failure,
+                _ => AttemptStatus::Pending,
+            };
+            
+            let connector_refund_id = refund.refund_id.clone();
+            let error_code = None;
+            let error_message = None;
+            
+            Ok((connector_refund_id, status, error_code, error_message))
+        }
+        _ => Err(ConnectorError::WebhookBodyDecodingFailed),
+    }
+}
+
+// Implement GetFormData for form data requests
+impl crate::connectors::macros::GetFormData for EaseBuzzSeamlessTxnRequest {
+    fn get_form_data(&self) -> reqwest::multipart::Form {
+        let form = reqwest::multipart::Form::new()
+            .text("txnid", self.txnid.clone())
+            .text("amount", self.amount.clone())
+            .text("productinfo", self.productinfo.clone())
+            .text("firstname", self.firstname.clone())
+            .text("email", self.email.clone())
+            .text("phone", self.phone.clone())
+            .text("surl", self.surl.clone())
+            .text("furl", self.furl.clone())
+            .text("hash", self.hash.clone())
+            .text("key", self.key.clone())
+            .text("payment_source", self.payment_source.clone());
+        
+        let form = if let Some(ref upi_intent) = self.upi_intent {
+            form.text("upi_intent", upi_intent.clone())
+        } else {
+            form
+        };
+        
+        let form = if let Some(ref upi_vpa) = self.upi_vpa {
+            form.text("upi_vpa", upi_vpa.clone())
+        } else {
+            form
+        };
+        
+        form
+    }
+}
+
+impl crate::connectors::macros::GetFormData for EaseBuzzTxnSyncRequest {
+    fn get_form_data(&self) -> reqwest::multipart::Form {
+        reqwest::multipart::Form::new()
+            .text("txnid", self.txnid.clone())
+            .text("amount", self.amount.clone())
+            .text("email", self.email.clone())
+            .text("phone", self.phone.clone())
+            .text("key", self.key.clone())
+            .text("hash", self.hash.clone())
+    }
+}
+
+impl crate::connectors::macros::GetFormData for EaseBuzzRefundRequest {
+    fn get_form_data(&self) -> reqwest::multipart::Form {
+        reqwest::multipart::Form::new()
+            .text("txnid", self.txnid.clone())
+            .text("refund_amount", self.refund_amount.clone())
+            .text("refund_reason", self.refund_reason.clone())
+            .text("hash", self.hash.clone())
+            .text("key", self.key.clone())
+    }
+}
+
+impl crate::connectors::macros::GetFormData for EaseBuzzRefundSyncRequest {
+    fn get_form_data(&self) -> reqwest::multipart::Form {
+        reqwest::multipart::Form::new()
+            .text("key", self.key.clone())
+            .text("easebuzz_id", self.easebuzz_id.clone())
+            .text("hash", self.hash.clone())
+            .text("merchant_refund_id", self.merchant_refund_id.clone())
+    }
+}
