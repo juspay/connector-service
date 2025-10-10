@@ -1,8 +1,6 @@
 use common_utils::{
-    errors::CustomResult,
     ext_traits::ValueExt,
     types::StringMinorUnit,
-    Email,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
@@ -11,11 +9,9 @@ use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
-    router_response_types::RedirectForm,
-    utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::mobikwik::MobikwikRouterData, types::ResponseRouterData};
