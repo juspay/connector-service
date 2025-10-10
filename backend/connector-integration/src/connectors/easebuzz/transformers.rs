@@ -466,10 +466,10 @@ fn generate_sha512_hash(data: &[u8]) -> Result<Vec<u8>, ConnectorError> {
 
 pub fn get_easebuzz_webhook_event_type(
     webhook: EaseBuzzWebhookTypes,
-) -> domain_types::connector_types::EventType {
+) -> EventType {
     match webhook {
-        EaseBuzzWebhookTypes::Payment(_) => domain_types::connector_types::EventType::Payment,
-        EaseBuzzWebhookTypes::Refund(_) => domain_types::connector_types::EventType::Refund,
+        EaseBuzzWebhookTypes::Payment(_) => EventType::Payment,
+        EaseBuzzWebhookTypes::Refund(_) => EventType::Refund,
     }
 }
 
