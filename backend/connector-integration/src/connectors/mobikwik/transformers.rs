@@ -442,13 +442,11 @@ impl TryFrom<&ConnectorAuthType> for MobikwikAuthType {
 }
 
 // Helper functions
-fn get_auth_data(connector_auth_type: &ConnectorAuthType) -> Result<MobikwikAuthType, ConnectorError> {
+fn get_auth_data(connector_auth_type: &ConnectorAuthType) -> Result<MobikwikAuthType, error_stack::Report<ConnectorError>> {
     MobikwikAuthType::try_from(connector_auth_type)
 }
 
 fn generate_checksum(params: &[(&str, &str)], secret_key: &str) -> String {
-    use std::collections::HashMap;
-    
     let mut sorted_params: Vec<_> = params.iter().collect();
     sorted_params.sort_by_key(|&(k, _)| *k);
     
