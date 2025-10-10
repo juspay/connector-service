@@ -220,7 +220,7 @@ impl<
         error_stack::Report<domain_types::errors::ConnectorError>,
     > {
         // TODO: Implement webhook processing when needed
-        Err(errors::ConnectorError::WebhookNotImplemented.into())
+        Err(errors::ConnectorError::NotImplemented("Webhook processing".to_string()).into())
     }
 }
 
