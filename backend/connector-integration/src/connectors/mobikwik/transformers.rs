@@ -145,7 +145,12 @@ impl<T> TryFrom<
     >,
 > for CheckStatusRequest
 where
-    T: serde::Serialize,
+    T: domain_types::payment_method_data::PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + serde::Serialize,
 {
     type Error = error_stack::Report<domain_types::errors::ConnectorError>;
     
