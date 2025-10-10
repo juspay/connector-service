@@ -317,16 +317,11 @@ impl AddressDetails {
     }
 
     pub fn to_state_code_as_optional(&self) -> Result<Option<Secret<String>>, Error> {
-        self.state
-            .as_ref()
-            .map(|state| {
-                if state.peek().len() == 2 {
-                    Ok(state.to_owned())
-                } else {
-                    self.to_state_code()
-                }
-            })
-            .transpose()
+        match self.state.as_ref() {
+            Some(state) if state.peek().len() == 2 => Ok(Some(state.clone())),
+            Some(_) => self.to_state_code().map(Some),
+            None => Ok(None),
+        }
     }
 }
 

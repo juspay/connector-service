@@ -49,6 +49,8 @@ dlocal.base_url = "https://sandbox.dlocal.com/"
 placetopay.base_url = "https://test.placetopay.com/rest/gateway"
 rapyd.base_url = "https://sandboxapi.rapyd.net"
 aci.base_url = "https://eu-test.oppwa.com/"
+trustpay.base_url = "https://test-tpgw.trustpay.eu/"
+trustpay.base_url_bank_redirects = "https://aapi.trustpay.eu/"
 cybersource.base_url = "https://apitest.cybersource.com/"
 
 # Generic Events Configuration

@@ -118,6 +118,7 @@ pub struct Connectors {
     pub placetopay: ConnectorParams,
     pub rapyd: ConnectorParams,
     pub aci: ConnectorParams,
+    pub trustpay: ConnectorParamsWithMoreUrls,
     pub cybersource: ConnectorParams,
 }
 
@@ -126,6 +127,14 @@ pub struct ConnectorParams {
     /// base url
     pub base_url: String,
     pub dispute_base_url: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize, Clone, Default)]
+pub struct ConnectorParamsWithMoreUrls {
+    /// base url
+    pub base_url: String,
+    /// base url for bank redirects
+    pub base_url_bank_redirects: String,
 }
 
 #[derive(Debug, serde::Deserialize, Clone)]

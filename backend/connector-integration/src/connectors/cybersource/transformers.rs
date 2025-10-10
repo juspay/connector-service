@@ -950,10 +950,7 @@ impl<
                 PaymentSolution::ApplePay | PaymentSolution::SamsungPay => network
                     .as_ref()
                     .map(|card_network| match card_network.to_lowercase().as_str() {
-                        "amex" => "internet",
-                        "discover" => "internet",
                         "mastercard" => "spa",
-                        "visa" => "internet",
                         _ => "internet",
                     })
                     .unwrap_or("internet"),
@@ -1231,9 +1228,9 @@ fn get_commerce_indicator_for_external_authentication(
         "07" => match card_network_lower_case.as_deref() {
             Some("amex") => "internet",
             Some("discover") => "internet",
+            Some("diners") => "internet",
             Some("mastercard") => "spa",
             Some("visa") => "vbv_failure",
-            Some("diners") => "internet",
             Some("upi") => "up3ds_failure",
             _ => "internet",
         },
