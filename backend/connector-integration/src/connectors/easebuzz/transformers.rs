@@ -85,28 +85,28 @@ where
         let merchant_key = auth.merchant_key.peek();
         let salt = auth.salt.peek();
         
-        let amount = item.amount.get_amount_as_string();
+        let amount = item.request.amount.get_amount_as_string();
         
-        let txnid = item.router_data.request.connector_transaction_id
+        let txnid = item.request.connector_transaction_id
             .get_connector_transaction_id()
             .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?;
         let productinfo = format!("Payment for {}", txnid);
-        let firstname = item.router_data.resource_common_data.get_customer_id()
+        let firstname = item.resource_common_data.get_customer_id()
             .map(|id| id.get_string_repr())
             .unwrap_or_else(|| "Customer".to_string());
-        let email = item.router_data.request.email.clone()
+        let email = item.request.email.clone()
             .map(|e| e.to_string())
             .unwrap_or_else(|| "customer@example.com".to_string());
-        let phone = item.router_data.request.phone.clone()
+        let phone = item.request.phone.clone()
             .map(|p| p.to_string())
             .unwrap_or_else(|| "9999999999".to_string());
-        let return_url = item.router_data.request.get_router_return_url()
+        let return_url = item.request.get_router_return_url()
             .unwrap_or_else(|| "https://example.com".to_string());
         let surl = return_url.clone();
         let furl = return_url;
         
         // Determine payment source and UPI details - matching Haskell logic
-        let (payment_source, upi_intent, upi_vpa) = match item.router_data.request.payment_method_type {
+        let (payment_source, upi_intent, upi_vpa) = match item.request.payment_method_type {
             PaymentMethodType::UpiIntent => {
                 ("upi".to_string(), Some("intent".to_string()), None)
             }
