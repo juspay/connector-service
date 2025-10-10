@@ -7,7 +7,7 @@ use std::{
 };
 
 use common_enums::{
-    AttemptStatus, Currency, PaymentMethod, PaymentMethodType,
+    AttemptStatus, CaptureMethod, Currency, EventClass, PaymentMethod, PaymentMethodType,
 };
 use common_utils::{
     errors::CustomResult, ext_traits::ByteSliceExt, pii::SecretSerdeValue, types::StringMinorUnit,
@@ -17,7 +17,7 @@ use domain_types::{
         Authorize, PSync, RSync, Refund,
     },
     connector_types::{
-        ConnectorSpecifications, ConnectorWebhookSecrets, PaymentFlowData,
+        ConnectorSpecifications, ConnectorWebhookSecrets, EventType, PaymentFlowData,
         PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
         RequestDetails, ResponseId, SupportedPaymentMethodsExt, WebhookDetailsResponse,
@@ -44,9 +44,8 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as easebuzz, EaseBuzzInitiatePaymentRequest, EaseBuzzInitiatePaymentResponse,
-    EaseBuzzSeamlessTxnRequest, EaseBuzzSeamlessTxnResponse, EaseBuzzTxnSyncRequest,
-    EaseBuzzTxnSyncResponse, EaseBuzzRefundRequest, EaseBuzzRefundResponse,
+    self as easebuzz, EaseBuzzSeamlessTxnRequest, EaseBuzzSeamlessTxnResponse, 
+    EaseBuzzTxnSyncRequest, EaseBuzzTxnSyncResponse, EaseBuzzRefundRequest, EaseBuzzRefundResponse,
     EaseBuzzRefundSyncRequest, EaseBuzzRefundSyncResponse, EaseBuzzUpiIntentResponse,
 };
 
