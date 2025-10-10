@@ -418,6 +418,7 @@ enum Connector {
   NOMUPAY = 54;
   NOON = 55;
   NOVALNET = 56;
+  MOBIKWIK = 57;
   NUVEI = 57;
   OPENNODE = 58;
   PAYBOX = 59;
