@@ -57,28 +57,7 @@ pub(crate) mod headers {
     pub(crate) const X_API_KEY: &str = "X-Api-Key";
 }
 
-// Type alias for non-generic trait implementations
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ConnectorServiceTrait<T> for EaseBuzz<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthorizeV2<T> for EaseBuzz<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSyncV2 for EaseBuzz<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundV2 for EaseBuzz<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundSyncV2 for EaseBuzz<T>
-{
-}
-
+// MANDATORY: Use UCS v2 macro framework for all setup
 macros::create_all_prerequisites!(
     connector_name: EaseBuzz,
     generic_type: T,
@@ -149,6 +128,23 @@ macros::create_all_prerequisites!(
     }
 );
 
+// Type alias for non-generic trait implementations
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ConnectorServiceTrait<T> for EaseBuzz<T>
+{}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAuthorizeV2<T> for EaseBuzz<T>
+{}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSyncV2 for EaseBuzz<T>
+{}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundV2 for EaseBuzz<T>
+{}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundSyncV2 for EaseBuzz<T>
+{}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for EaseBuzz<T>
 {
@@ -199,6 +195,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 }
 
+// MANDATORY: Use macro_connector_implementation for all trait implementations
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: EaseBuzz,
@@ -251,6 +248,62 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}/transaction/v1/retrieve", self.connector_base_url_payments(req)))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: EaseBuzz,
+    curl_request: FormData(EaseBuzzRefundRequest),
+    curl_response: EaseBuzzRefundResponse,
+    flow_name: Refund,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundsData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/transaction/v1/refund", self.connector_base_url_refunds(req)))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: EaseBuzz,
+    curl_request: FormData(EaseBuzzRefundSyncRequest),
+    curl_response: EaseBuzzRefundSyncResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/transaction/v1/refundStatus", self.connector_base_url_refunds(req)))
         }
     }
 );
@@ -378,62 +431,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: EaseBuzz,
-    curl_request: FormData(EaseBuzzRefundRequest),
-    curl_response: EaseBuzzRefundResponse,
-    flow_name: Refund,
-    resource_common_data: RefundFlowData,
-    flow_request: RefundsData,
-    flow_response: RefundsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/transaction/v1/refund", self.connector_base_url_refunds(req)))
-        }
-    }
-);
-
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: EaseBuzz,
-    curl_request: FormData(EaseBuzzRefundSyncRequest),
-    curl_response: EaseBuzzRefundSyncResponse,
-    flow_name: RSync,
-    resource_common_data: RefundFlowData,
-    flow_request: RefundSyncData,
-    flow_response: RefundsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/transaction/v1/refundStatus", self.connector_base_url_refunds(req)))
-        }
-    }
-);
-
+// UPI-only payment methods as specified in requirements
 static EASEBUZZ_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyLock::new(|| {
     let easebuzz_supported_capture_methods = vec![
         CaptureMethod::Automatic,
@@ -469,7 +467,7 @@ static EASEBUZZ_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = L
     easebuzz_supported_payment_methods
 });
 
-static EASEBUZZ_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
+static EASEBUZZ_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo { 
     display_name: "EaseBuzz", 
     description: "EaseBuzz is a payment gateway that provides UPI payment processing and other payment solutions for businesses in India.",
     connector_type: types::PaymentConnectorCategory::PaymentGateway,
