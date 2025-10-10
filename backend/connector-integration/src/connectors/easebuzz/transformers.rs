@@ -8,6 +8,7 @@ use common_utils::{
     request::RequestContent,
     types::{self, StringMinorUnit},
 };
+use base64::Engine;
 use domain_types::{
     connector_types::{
         PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundSyncData,
