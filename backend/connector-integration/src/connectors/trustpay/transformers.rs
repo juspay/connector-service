@@ -1,5 +1,5 @@
-use crate::types::ResponseRouterData;
 use crate::utils;
+use crate::{connectors::trustpay::TrustpayRouterData, types::ResponseRouterData};
 use common_enums::enums;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
@@ -9,14 +9,18 @@ use common_utils::{
     Email,
 };
 use domain_types::{
-    connector_types::{PaymentFlowData, PaymentsResponseData, ResponseId},
+    connector_flow::CreateAccessToken,
+    connector_types::{
+        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentsResponseData,
+        ResponseId,
+    },
     errors::{self, ConnectorError},
-    payment_method_data::{BankRedirectData, BankTransferData},
+    payment_method_data::{BankRedirectData, BankTransferData, PaymentMethodDataTypes},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use reqwest::Url;
@@ -50,6 +54,8 @@ impl TryFrom<&ConnectorAuthType> for TrustpayAuthType {
         }
     }
 }
+
+const CLIENT_CREDENTIAL: &str = "client_credentials";
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum TrustpayPaymentMethod {
@@ -888,4 +894,117 @@ pub struct WebhookPaymentInformation {
     pub status: WebhookStatus,
     pub amount: WebhookAmount,
     pub status_reason_information: Option<StatusReasonInformation>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct TrustpayAuthUpdateRequest {
+    pub grant_type: String,
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        TrustpayRouterData<
+            RouterDataV2<
+                CreateAccessToken,
+                PaymentFlowData,
+                AccessTokenRequestData,
+                AccessTokenResponseData,
+            >,
+            T,
+        >,
+    > for TrustpayAuthUpdateRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        _item: TrustpayRouterData<
+            RouterDataV2<
+                CreateAccessToken,
+                PaymentFlowData,
+                AccessTokenRequestData,
+                AccessTokenResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            grant_type: CLIENT_CREDENTIAL.to_string(),
+        })
+    }
+}
+
+#[derive(Default, Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub struct TrustpayAuthUpdateResponse {
+    pub access_token: Option<Secret<String>>,
+    pub token_type: Option<String>,
+    pub expires_in: Option<i64>,
+    #[serde(rename = "ResultInfo")]
+    pub result_info: ResultInfo,
+}
+
+impl
+    TryFrom<
+        ResponseRouterData<
+            TrustpayAuthUpdateResponse,
+            RouterDataV2<
+                CreateAccessToken,
+                PaymentFlowData,
+                AccessTokenRequestData,
+                AccessTokenResponseData,
+            >,
+        >,
+    >
+    for RouterDataV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            TrustpayAuthUpdateResponse,
+            RouterDataV2<
+                CreateAccessToken,
+                PaymentFlowData,
+                AccessTokenRequestData,
+                AccessTokenResponseData,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        match (item.response.access_token, item.response.expires_in) {
+            (Some(access_token), Some(expires_in)) => Ok(Self {
+                response: Ok(AccessTokenResponseData {
+                    access_token: access_token.expose(),
+                    expires_in: Some(expires_in),
+                    token_type: Some(item.router_data.request.grant_type.clone()),
+                }),
+                ..item.router_data
+            }),
+            _ => Ok(Self {
+                response: Err(ErrorResponse {
+                    code: item.response.result_info.result_code.to_string(),
+                    // message vary for the same code, so relying on code alone as it is unique
+                    message: item.response.result_info.result_code.to_string(),
+                    reason: item.response.result_info.additional_info,
+                    status_code: item.http_code,
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    network_error_message: None,
+                }),
+                ..item.router_data
+            }),
+        }
+    }
 }
