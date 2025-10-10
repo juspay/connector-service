@@ -17,6 +17,7 @@ use router_env::test;
 use serde_json::json;
 
 use super::*;
+use super::transformers::*;
 
 #[test]
 fn test_easebuzz_seamless_txn_request_conversion() {
