@@ -355,12 +355,7 @@ where
 impl<T> TryFrom<ResponseRouterData<MobiSyncResponse, Self>>
 for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 where
-    T: domain_types::payment_method_data::PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + serde::Serialize,
+    T: serde::Serialize,
 {
     type Error = error_stack::Report<ConnectorError>;
     
