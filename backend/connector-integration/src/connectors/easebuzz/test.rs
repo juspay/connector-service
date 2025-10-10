@@ -140,7 +140,7 @@ mod tests {
 }
 
 #[test]
-fn test_easebuzz_refund_request() {
+    fn test_easebuzz_refund_request() {
     let refund_data = RefundsData {
         connector_transaction_id: Some("easebuzz_txn_123".to_string()),
         refund_amount: PaymentAmount {
