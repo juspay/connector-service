@@ -552,14 +552,7 @@ impl TryFrom<
 }
 
 // Implement TryFrom for sync request
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> TryFrom<
+impl TryFrom<
     MobikwikRouterData<
         RouterDataV2<
             PSync,
@@ -567,7 +560,7 @@ impl<
             PaymentsSyncData,
             PaymentsResponseData,
         >,
-        T,
+        domain_types::payment_method_data::UpiData,
     >,
 > for CheckStatusRequest
 {
@@ -581,11 +574,12 @@ impl<
                 PaymentsSyncData,
                 PaymentsResponseData,
             >,
-            T,
+            domain_types::payment_method_data::UpiData,
         >,
     ) -> Result<Self, Self::Error> {
         let auth = get_auth_data(&item.router_data.connector_auth_type)?;
-        let order_id = item.router_data.request.connector_transaction_id.to_string();
+        let order_id = item.router_data.request.connector_transaction_id.get_connector_transaction_id()
+            .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?;
         
         // Prepare checksum parameters
         let checksum_params = vec![
