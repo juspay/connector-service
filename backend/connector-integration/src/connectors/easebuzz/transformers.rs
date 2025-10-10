@@ -227,12 +227,12 @@ impl TryFrom<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseDa
         let merchant_key = auth.merchant_key.peek();
         let salt = auth.salt.peek();
         
-        let refund_amount = item.amount.get_amount_as_string();
+        let refund_amount = item.request.refund_amount.get_amount_as_string();
         
-        let txnid = item.router_data.request.connector_transaction_id
+        let txnid = item.request.connector_transaction_id
             .get_connector_transaction_id()
             .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?;
-        let refund_reason = item.router_data.request.refund_reason.clone()
+        let refund_reason = item.request.refund_reason.clone()
             .unwrap_or_else(|| "Customer requested refund".to_string());
         
         // Generate hash - matching Haskell
