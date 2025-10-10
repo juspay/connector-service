@@ -49,20 +49,20 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: Authorize,
-            request_body: easebuzz::EaseBuzzPaymentsRequest,
-            response_body: easebuzz::EaseBuzzPaymentsResponse,
+            request_body: EaseBuzzPaymentsRequest,
+            response_body: EaseBuzzPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: PSync,
-            request_body: easebuzz::EaseBuzzPaymentsSyncRequest,
-            response_body: easebuzz::EaseBuzzPaymentsSyncResponse,
+            request_body: EaseBuzzPaymentsSyncRequest,
+            response_body: EaseBuzzPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
             flow: RSync,
-            request_body: easebuzz::EaseBuzzRefundSyncRequest,
-            response_body: easebuzz::EaseBuzzRefundSyncResponse,
+            request_body: EaseBuzzRefundSyncRequest,
+            response_body: EaseBuzzRefundSyncResponse,
             router_data: RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
