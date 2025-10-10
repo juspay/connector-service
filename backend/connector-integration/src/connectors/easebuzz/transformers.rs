@@ -1,36 +1,29 @@
 use std::collections::HashMap;
 
-use common_enums::{Currency, AttemptStatus, PaymentMethodType, UpiPaymentMethod};
+use common_enums::{Currency, AttemptStatus, PaymentMethodType};
 use common_utils::{
-    crypto::generate_sha512_hash,
+    crypto,
     date_time,
     errors::CustomResult,
-    pii::{Email, Secret},
+    pii::Email,
     request::RequestContent,
-    types::{StringMinorUnit, TryIntoMinorUnit},
+    types::StringMinorUnit,
 };
 use domain_types::{
+    connector_flow::{Authorize, PSync, RSync, Refund},
+    connector_types::{
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, 
+        RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData, ResponseId, 
+        WebhookDetailsResponse, EventType
+    },
     errors::ConnectorError,
-    payment_method_data::PaymentMethodData,
+    payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
-    router_response_types::{ResponseId, WebhookDetailsResponse},
-    types::{PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundsData, RefundsResponseData, RefundSyncData},
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Maskable;
-use hyperswitch_domain_models::{
-    router_data_v2::{self, PaymentAmount},
-    router_request_types::ResponseId,
-};
-use masking::{ExposeInterface, PeekInterface, SecretMaskable};
+use hyperswitch_masking::{Maskable, Secret, ExposeInterface, PeekInterface};
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
-
-use crate::{
-    connectors::utils::{self, RouterData},
-    services,
-    types::{self, api, transformers::ForeignFrom},
-};
 
 // Auth Types - matching Haskell structure
 #[derive(Debug, Clone)]
