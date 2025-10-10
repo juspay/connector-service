@@ -468,22 +468,15 @@ fn generate_checksum(params: &[(&str, &str)], secret_key: &str) -> String {
 }
 
 // Implement TryFrom for payment request
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> TryFrom<
+impl TryFrom<
     MobikwikRouterData<
         RouterDataV2<
             Authorize,
             PaymentFlowData,
-            PaymentsAuthorizeData<T>,
+            PaymentsAuthorizeData<domain_types::payment_method_data::UpiData>,
             PaymentsResponseData,
         >,
-        T,
+        domain_types::payment_method_data::UpiData,
     >,
 > for MobikwikPaymentsRequest
 {
@@ -494,10 +487,10 @@ impl<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
-                PaymentsAuthorizeData<T>,
+                PaymentsAuthorizeData<domain_types::payment_method_data::UpiData>,
                 PaymentsResponseData,
             >,
-            T,
+            domain_types::payment_method_data::UpiData,
         >,
     ) -> Result<Self, Self::Error> {
         let auth = get_auth_data(&item.router_data.connector_auth_type)?;
@@ -520,14 +513,14 @@ impl<
         // Extract phone number from payment method data
         let phone_number = item.router_data.request.payment_method_data
             .as_ref()
-            .and_then(|pm| pm.get_phone_number())
+            .map(|pm| pm.vpa.clone())
             .unwrap_or_else(|| "".to_string());
         
-        let email = item.router_data.request.email.as_ref().map(|e| e.to_string());
+        let email = item.router_data.request.email.as_ref().map(|e| e.peek().to_string());
         
         // Prepare checksum parameters
         let checksum_params = vec![
-            ("amount", &amount),
+            ("amount", &amount.to_string()),
             ("cell", &phone_number),
             ("merchantname", &auth.merchant_name),
             ("mid", &auth.merchant_id.peek()),
@@ -542,7 +535,7 @@ impl<
         
         Ok(Self {
             cell: phone_number,
-            amount,
+            amount: amount.to_string(),
             merchantname: auth.merchant_name,
             mid: auth.merchant_id.peek().to_string(),
             orderid: order_id,
