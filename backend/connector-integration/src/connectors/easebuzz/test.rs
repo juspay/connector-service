@@ -198,7 +198,7 @@ mod tests {
 }
 
 #[test]
-fn test_easebuzz_webhook_parsing() {
+    fn test_easebuzz_webhook_parsing() {
     let webhook_json = json!({
         "type": "payment",
         "status": "success",
