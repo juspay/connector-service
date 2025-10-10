@@ -1,23 +1,24 @@
-use std::str::FromStr;
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
 
-use common_enums::{
-    AttemptStatus, Currency, PaymentMethod, PaymentMethodType, UpiPaymentMethod,
-};
-use common_utils::types::MinorUnit;
-use domain_types::{
-    connector_flow::{Authorize, PSync, Refund, RSync},
-    payment_method_data::{PaymentMethodData, UpiData},
-    router_data_v2::{PaymentAmount, RouterDataV2},
-    types::{PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData},
-};
-use error_stack::ResultExt;
-use hyperswitch_domain_models::router_data_v2::{PaymentFlowData, ResourceCommonData};
-use masking::{ExposeInterface, Secret};
-use router_env::test;
-use serde_json::json;
+    use common_enums::{
+        AttemptStatus, Currency, PaymentMethod, PaymentMethodType, UpiPaymentMethod,
+    };
+    use common_utils::types::MinorUnit;
+    use domain_types::{
+        connector_flow::{Authorize, PSync, Refund, RSync},
+        payment_method_data::{PaymentMethodData, UpiData},
+        router_data_v2::{PaymentAmount, RouterDataV2},
+        types::{PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData},
+    };
+    use error_stack::ResultExt;
+    use hyperswitch_domain_models::router_data_v2::{PaymentFlowData, ResourceCommonData};
+    use masking::{ExposeInterface, Secret};
+    use serde_json::json;
 
-use super::*;
-use super::transformers::*;
+    use super::*;
+    use super::transformers::*;
 
 #[test]
 fn test_easebuzz_seamless_txn_request_conversion() {
