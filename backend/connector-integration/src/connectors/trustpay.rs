@@ -1,3 +1,4 @@
+use base64::Engine;
 use common_utils::{consts, errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{
@@ -37,7 +38,7 @@ pub mod transformers;
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 use transformers::{
-    self as trustpay, TrustpayErrorResponse,
+    self as trustpay, TrustpayAuthUpdateRequest, TrustpayAuthUpdateResponse, TrustpayErrorResponse,
     TrustpayPaymentsResponse as TrustpayPaymentsSyncResponse,
 };
 
@@ -82,6 +83,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Trustpay<T>
 {
+    fn should_do_access_token(&self) -> bool {
+        true
+    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentOrderCreate for Trustpay<T>
@@ -145,6 +149,12 @@ macros::create_all_prerequisites!(
             flow: PSync,
             response_body: TrustpayPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
+            flow: CreateAccessToken,
+            request_body: TrustpayAuthUpdateRequest,
+            response_body: TrustpayAuthUpdateResponse,
+            router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         )
     ],
     amount_converters: [
@@ -323,6 +333,55 @@ macros::macro_connector_implementation!(
     }
 );
 
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Trustpay,
+    curl_request: FormUrlEncoded(TrustpayAuthUpdateRequest),
+    curl_response: TrustpayAuthUpdateResponse,
+    flow_name: CreateAccessToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: AccessTokenRequestData,
+    flow_response: AccessTokenResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let auth = trustpay::TrustpayAuthType::try_from(&req.connector_auth_type)
+            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            let auth_value = auth
+                .project_id
+                .zip(auth.secret_key)
+                .map(|(project_id, secret_key)| {
+                    format!(
+                        "Basic {}",
+                        BASE64_ENGINE
+                            .encode(format!("{project_id}:{secret_key}"))
+                    )
+                });
+            Ok(vec![
+                (
+                    headers::CONTENT_TYPE.to_string(),
+                    self.common_get_content_type().to_string().into(),
+                ),
+                (headers::AUTHORIZATION.to_string(), auth_value.into_masked()),
+            ])
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+            "{}{}",
+            self.connector_base_url_bank_redirects_payments(req), "api/oauth2/token"
+        ))
+        }
+    }
+);
+
 // Implementation for empty stubs - these will need to be properly implemented later
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -353,16 +412,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Trustpay<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
     > for Trustpay<T>
 {
 }
