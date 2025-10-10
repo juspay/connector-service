@@ -173,15 +173,17 @@ impl TryFrom<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResp
         let merchant_key = auth.merchant_key.peek();
         let salt = auth.salt.peek();
         
-        let amount = utils::convert_amount(
-            &item.request.amount,
-            item.request.currency,
-        )?;
+        let amount = item.amount.get_amount_as_string();
         
-        let txnid = item.request.connector_transaction_id.clone()
-            .ok_or(ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?;
-        let email = item.request.get_customer_email().unwrap_or_else(|| "customer@example.com".to_string());
-        let phone = item.request.get_customer_phone().unwrap_or_else(|| "9999999999".to_string());
+        let txnid = item.router_data.request.connector_transaction_id
+            .get_connector_transaction_id()
+            .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?;
+        let email = item.router_data.request.email.clone()
+            .map(|e| e.to_string())
+            .unwrap_or_else(|| "customer@example.com".to_string());
+        let phone = item.router_data.request.phone.clone()
+            .map(|p| p.to_string())
+            .unwrap_or_else(|| "9999999999".to_string());
         
         // Generate hash - matching Haskell
         let hash_string = format!(
