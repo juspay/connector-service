@@ -34,7 +34,7 @@ impl EaseBuzzAuthType {
     pub fn get_auth_header(&self) -> String {
         match self {
             EaseBuzzAuthType::Key { api_key } => {
-                crypto::encode_base64(format!("{}:", api_key.expose()).as_bytes())
+                base64::engine::general_purpose::STANDARD.encode(format!("{}:", api_key.expose()).as_bytes())
             }
         }
     }
