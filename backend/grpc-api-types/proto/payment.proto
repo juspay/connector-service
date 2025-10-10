@@ -1629,7 +1629,7 @@ message PaymentServiceRevokeRequest {
   Identifier request_ref_id = 1; // Reference ID for tracking
   
   // Mandate Details
-  string mandate_id = 2; // Reason for cancelling/voiding the payment
+  string mandate_id = 2; // unique identifier for the mandate.
   optional string connector_mandate_id = 3;
 }
 
@@ -1640,13 +1640,13 @@ message PaymentServiceRevokeResponse {
   
   // Status Information
   MandateStatus status = 2; // Current status of the mandate
-  optional string error_code = 3; // Error code if the payment failed
-  optional string error_message = 4; // Error message if the payment failed
+  optional string error_code = 3; // Error code if the mandate failed
+  optional string error_message = 4; // Error message if the mandate failed
   uint32 status_code = 5; // HTTP status code from the connector
   map<string, string> response_headers = 6; // Optional HTTP response headers from the connector
 
   // Transaction Details
-  optional string network_txn_id = 7; // Transaction ID from the payment network
+  optional string network_txn_id = 7; // Transaction ID from the mandate network
   optional Identifier response_ref_id = 8; // Reference ID from the connector response
 
   // Raw Response
