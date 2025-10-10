@@ -453,6 +453,15 @@ pub fn get_webhook_object_from_body<T: serde::de::DeserializeOwned>(
         .change_context(ConnectorError::ResponseDeserializationFailed)
 }
 
+fn generate_sha512_hash(data: &[u8]) -> Result<Vec<u8>, ConnectorError> {
+    use crypto::digest::Digest;
+    use crypto::sha2::Sha512;
+    
+    let mut hasher = Sha512::new();
+    hasher.update(data);
+    Ok(hasher.finalize().to_vec())
+}
+
 pub fn get_easebuzz_webhook_event_type(
     webhook: EaseBuzzWebhookTypes,
 ) -> domain_types::connector_types::EventType {
