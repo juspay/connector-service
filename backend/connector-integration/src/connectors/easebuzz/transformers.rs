@@ -262,12 +262,12 @@ pub struct EaseBuzzRefundSyncRequest {
     pub merchant_refund_id: String,
 }
 
-impl TryFrom<RouterDataV2<types::RSync, types::RefundFlowData, RefundSyncData, RefundsResponseData>>
+impl TryFrom<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>
     for EaseBuzzRefundSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: RouterDataV2<types::RSync, types::RefundFlowData, RefundSyncData, RefundsResponseData>,
+        item: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = EaseBuzzAuthType::try_from(&item.connector_auth_type)?;
         let merchant_key = auth.merchant_key.peek();
