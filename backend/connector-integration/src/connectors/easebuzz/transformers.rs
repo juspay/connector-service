@@ -162,12 +162,12 @@ pub struct EaseBuzzTxnSyncRequest {
     pub hash: String,
 }
 
-impl TryFrom<RouterDataV2<types::PSync, types::PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+impl TryFrom<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
     for EaseBuzzTxnSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: RouterDataV2<types::PSync, types::PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = EaseBuzzAuthType::try_from(&item.connector_auth_type)?;
         let merchant_key = auth.merchant_key.peek();
