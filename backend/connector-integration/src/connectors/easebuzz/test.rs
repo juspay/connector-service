@@ -63,7 +63,7 @@ mod tests {
 }
 
 #[test]
-fn test_easebuzz_upi_collect_request() {
+    fn test_easebuzz_upi_collect_request() {
     let payment_data = PaymentsAuthorizeData {
         payment_id: "test_payment_456".to_string(),
         amount: PaymentAmount {
