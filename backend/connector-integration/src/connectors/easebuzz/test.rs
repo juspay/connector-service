@@ -21,7 +21,7 @@ mod tests {
     use super::transformers::*;
 
 #[test]
-fn test_easebuzz_seamless_txn_request_conversion() {
+    fn test_easebuzz_seamless_txn_request_conversion() {
     let payment_data = PaymentsAuthorizeData {
         payment_id: "test_payment_123".to_string(),
         amount: PaymentAmount {
