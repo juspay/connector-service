@@ -183,7 +183,12 @@ for domain_types::router_data_v2::RouterDataV2<
     domain_types::connector_types::PaymentsResponseData,
 >
 where
-    T: serde::Serialize,
+    T: domain_types::payment_method_data::PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + serde::Serialize,
 {
     type Error = error_stack::Report<domain_types::errors::ConnectorError>;
     
