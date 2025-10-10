@@ -334,7 +334,7 @@ impl TryFrom<EaseBuzzPaymentsResponse> for PaymentsResponseData {
             response.data.as_ref().and_then(|data| data.error_message.clone())
         });
 
-        let response_id = response.data.as_ref().map(|data| ResponseId {
+        let response_id = response.data.as_ref().map(|data| domain_types::connector_types::ResponseId {
             gateway_payment_id: Some(data.easebuzz_id.clone()),
             transaction_id: Some(data.txnid.clone()),
             ..Default::default()
