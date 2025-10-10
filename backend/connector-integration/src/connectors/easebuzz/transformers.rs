@@ -15,16 +15,14 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
+    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
-    router_request_types::ResponseId,
-    types as domain_types,
+    router_response_types::Response,
+    types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
-use masking::{ExposeInterface, Mask};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-
-use crate::services;
 
 #[derive(Debug, Clone)]
 pub enum EaseBuzzAuthType {
