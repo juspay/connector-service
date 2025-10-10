@@ -251,20 +251,13 @@ where
     }
 }
 
-impl<T> TryFrom<ResponseRouterData<MobiSyncResponse, Self>>
+impl TryFrom<ResponseRouterData<MobiSyncResponse, Self>>
 for domain_types::router_data_v2::RouterDataV2<
     domain_types::connector_flow::PSync,
     domain_types::connector_types::PaymentFlowData,
     domain_types::connector_types::PaymentsSyncData,
     domain_types::connector_types::PaymentsResponseData,
 >
-where
-    T: domain_types::payment_method_data::PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + serde::Serialize,
 {
     type Error = error_stack::Report<domain_types::errors::ConnectorError>;
     
