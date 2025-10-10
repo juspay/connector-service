@@ -247,7 +247,7 @@ macros::macro_connector_implementation!(
         fn build_request_v2(
             &self,
             req: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Option<services::Request>, errors::ConnectorError> {
+        ) -> CustomResult<Option<interfaces::api::Request>, errors::ConnectorError> {
             let auth = easebuzz::EaseBuzzAuthType::try_from(&req.connector_auth_type)?;
             let request = easebuzz::EaseBuzzRefundSyncRequest::try_from(req)?;
             
@@ -258,15 +258,15 @@ macros::macro_connector_implementation!(
             };
 
             Ok(Some(
-                services::RequestBuilder::new()
-                    .method(services::Method::Post)
+                interfaces::api::RequestBuilder::new()
+                    .method(interfaces::api::Method::Post)
                     .url(&url)
                     .attach_default_headers()
                     .headers(vec![(
                         "Authorization".to_string(),
                         format!("Basic {}", auth.get_auth_header()),
                     )])
-                    .set_body(services::RequestBody::Form(request))
+                    .set_body(interfaces::api::RequestBody::Form(request))
                     .build(),
             ))
         }
@@ -274,15 +274,14 @@ macros::macro_connector_implementation!(
         fn handle_response_v2(
             &self,
             req: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
-            res: &common_utils::types::Response,
-        ) -> CustomResult<domain_types::RefundsResponseData, errors::ConnectorError> {
+            res: &Response,
+        ) -> CustomResult<RefundsResponseData, errors::ConnectorError> {
             let response: easebuzz::EaseBuzzRefundSyncResponse = res
                 .response
                 .parse_struct("EaseBuzzRefundSyncResponse")
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
             easebuzz::EaseBuzzRefundSyncResponse::try_from(response)
-                .and_then(|response| domain_types::RefundsResponseData::try_from(response))
                 .change_context(errors::ConnectorError::ResponseHandlingFailed)
         }
     }
