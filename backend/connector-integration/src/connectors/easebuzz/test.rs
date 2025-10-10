@@ -105,7 +105,7 @@ mod tests {
 }
 
 #[test]
-fn test_easebuzz_txn_sync_request() {
+    fn test_easebuzz_txn_sync_request() {
     let sync_data = PaymentsSyncData {
         connector_transaction_id: Some("easebuzz_txn_789".to_string()),
         amount: PaymentAmount {
