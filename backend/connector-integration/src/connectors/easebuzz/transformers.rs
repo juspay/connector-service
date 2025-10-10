@@ -72,14 +72,14 @@ pub struct EaseBuzzSeamlessTxnRequest {
     pub upi_vpa: Option<String>,
 }
 
-impl<F, T> TryFrom<RouterDataV2<F, types::PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+impl<F, T> TryFrom<RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
     for EaseBuzzSeamlessTxnRequest
 where
-    T: PaymentMethodData,
+    T: PaymentMethodDataTypes,
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: RouterDataV2<F, types::PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        item: RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = EaseBuzzAuthType::try_from(&item.connector_auth_type)?;
         let merchant_key = auth.merchant_key.peek();
