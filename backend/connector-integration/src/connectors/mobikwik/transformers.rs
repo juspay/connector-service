@@ -598,16 +598,8 @@ impl TryFrom<
 }
 
 // Response transformations
-impl<
-    F,
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> TryFrom<ResponseRouterData<MobikwikPaymentsResponse, Self>>
-for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<MobikwikPaymentsResponse, Self>>
+for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<domain_types::payment_method_data::UpiData>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     
@@ -666,14 +658,7 @@ for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseD
     }
 }
 
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> TryFrom<ResponseRouterData<MobiSyncResponse, Self>>
+impl TryFrom<ResponseRouterData<MobiSyncResponse, Self>>
 for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -690,10 +675,6 @@ for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
         let (status, response) = match response.response {
             StatusResp::ValidMobiSyncResponse(sync_data) => {
                 let status = map_status_code_to_attempt_status(&sync_data.statuscode);
-                let amount_received = sync_data.amount
-                    .as_ref()
-                    .and_then(|amt| amt.parse::<i64>().ok())
-                    .map(common_utils::types::MinorUnit);
                 
                 (
                     status,
