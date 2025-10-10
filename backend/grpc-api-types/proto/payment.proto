@@ -452,10 +452,10 @@ enum Connector {
   RISKIFIED = 88;
   XENDIT = 89;
   ZEN = 90;
-  ZSL = 90;
-  PHONEPE = 91;
-  CASHFREE = 92;
-  PAYTM = 93;
+  ZSL = 91;
+  PHONEPE = 92;
+  CASHFREE = 93;
+  PAYTM = 94;
 }
 
 // Payment method types.
