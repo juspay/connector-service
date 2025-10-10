@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use common_enums::{Currency, AttemptStatus, PaymentMethodType};
+use common_enums::{Currency, AttemptStatus, PaymentMethodType, UpiPaymentMethod};
 use common_utils::{
     crypto::generate_sha512_hash,
     date_time,
     errors::CustomResult,
-    pii::Secret,
+    pii::{Email, Secret},
     request::RequestContent,
     types::{StringMinorUnit, TryIntoMinorUnit},
 };
@@ -32,7 +32,7 @@ use crate::{
     types::{self, api, transformers::ForeignFrom},
 };
 
-// Auth Types
+// Auth Types - matching Haskell structure
 #[derive(Debug, Clone)]
 pub struct EaseBuzzAuthType {
     pub api_key: Secret<String>,
@@ -57,7 +57,8 @@ impl TryFrom<&domain_types::router_data::ConnectorAuthType> for EaseBuzzAuthType
     }
 }
 
-// Request Types
+// Request Types - matching Haskell data structures
+
 #[derive(Debug, Serialize)]
 pub struct EaseBuzzSeamlessTxnRequest {
     pub txnid: String,
@@ -104,17 +105,17 @@ where
         let surl = item.request.get_return_url().unwrap_or_else(|| "https://example.com/success".to_string());
         let furl = item.request.get_return_url().unwrap_or_else(|| "https://example.com/failure".to_string());
         
-        // Determine payment source and UPI details
+        // Determine payment source and UPI details - matching Haskell logic
         let (payment_source, upi_intent, upi_vpa) = match item.request.payment_method_data {
             PaymentMethodData::Upi(upi_data) => {
                 match upi_data.upi_payment_method {
-                    common_enums::UpiPaymentMethod::Intent => {
+                    UpiPaymentMethod::Intent => {
                         ("upi".to_string(), Some("intent".to_string()), None)
                     }
-                    common_enums::UpiPaymentMethod::Collect => {
+                    UpiPaymentMethod::Collect => {
                         ("upi".to_string(), None, upi_data.vpa.peek().map(|vpa| vpa.to_string()))
                     }
-                    common_enums::UpiPaymentMethod::Qr => {
+                    UpiPaymentMethod::Qr => {
                         ("upi".to_string(), Some("qr".to_string()), None)
                     }
                 }
@@ -122,7 +123,7 @@ where
             _ => ("upi".to_string(), None, None),
         };
         
-        // Generate hash
+        // Generate hash - matching Haskell hash generation
         let hash_string = format!(
             "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
             merchant_key,
@@ -184,11 +185,12 @@ impl TryFrom<RouterDataV2<types::PSync, types::PaymentFlowData, PaymentsSyncData
             item.request.currency,
         )?;
         
-        let txnid = item.request.connector_transaction_id.clone();
+        let txnid = item.request.connector_transaction_id.clone()
+            .ok_or(ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?;
         let email = item.request.get_customer_email().unwrap_or_else(|| "customer@example.com".to_string());
         let phone = item.request.get_customer_phone().unwrap_or_else(|| "9999999999".to_string());
         
-        // Generate hash
+        // Generate hash - matching Haskell
         let hash_string = format!(
             "{}|{}|{}|{}|{}",
             merchant_key,
@@ -235,10 +237,11 @@ impl TryFrom<RouterDataV2<types::Refund, types::RefundFlowData, RefundsData, Ref
             item.request.currency,
         )?;
         
-        let txnid = item.request.connector_transaction_id.clone();
+        let txnid = item.request.connector_transaction_id.clone()
+            .ok_or(ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?;
         let refund_reason = item.request.refund_reason.clone().unwrap_or_else(|| "Customer requested refund".to_string());
         
-        // Generate hash
+        // Generate hash - matching Haskell
         let hash_string = format!(
             "{}|{}|{}",
             merchant_key,
@@ -276,10 +279,12 @@ impl TryFrom<RouterDataV2<types::RSync, types::RefundFlowData, RefundSyncData, R
         let merchant_key = auth.merchant_key.peek();
         let salt = auth.salt.peek();
         
-        let easebuzz_id = item.request.connector_transaction_id.clone();
-        let merchant_refund_id = item.request.refund_id.clone();
+        let easebuzz_id = item.request.connector_transaction_id.clone()
+            .ok_or(ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?;
+        let merchant_refund_id = item.request.refund_id.clone()
+            .ok_or(ConnectorError::MissingRequiredField { field_name: "refund_id" })?;
         
-        // Generate hash
+        // Generate hash - matching Haskell
         let hash_string = format!(
             "{}|{}|{}",
             merchant_key,
@@ -297,7 +302,8 @@ impl TryFrom<RouterDataV2<types::RSync, types::RefundFlowData, RefundSyncData, R
     }
 }
 
-// Response Types
+// Response Types - matching Haskell data structures
+
 #[derive(Debug, Deserialize)]
 pub struct EaseBuzzUpiIntentResponse {
     pub status: bool,
@@ -350,39 +356,15 @@ pub struct EaseBuzzSeamlessTxnResponse {
     pub card_token: Option<String>,
     pub card_vault: Option<String>,
     pub card_vault_status: Option<String>,
-    pg_type: Option<String>,
-    error_code: Option<String>,
-    error_desc: Option<String>,
-    net_amount_debit: Option<String>,
-    discount: Option<String>,
-    additional_charges: Option<String>,
-    payment_source: Option<String>,
-    meCode: Option<String>,
-    mode: Option<String>,
-    card_no: Option<String>,
-    name_on_card: Option<String>,
-    card_bin: Option<String>,
-    card_brand: Option<String>,
-    card_type: Option<String>,
-    card_expiry_month: Option<String>,
-    card_expiry_year: Option<String>,
-    issuing_bank: Option<String>,
-    issuing_country: Option<String>,
-    card_issuer: Option<String>,
-    card_level: Option<String>,
-    card_sub_type: Option<String>,
-    card_token: Option<String>,
-    card_vault: Option<String>,
-    card_vault_status: Option<String>,
-    pg_type: Option<String>,
-    error_code: Option<String>,
-    error_desc: Option<String>,
-    net_amount_debit: Option<String>,
-    discount: Option<String>,
-    additional_charges: Option<String>,
-    payment_source: Option<String>,
-    meCode: Option<String>,
-    mode: Option<String>,
+    pub pg_type: Option<String>,
+    pub error_code: Option<String>,
+    pub error_desc: Option<String>,
+    pub net_amount_debit: Option<String>,
+    pub discount: Option<String>,
+    pub additional_charges: Option<String>,
+    pub payment_source: Option<String>,
+    pub meCode: Option<String>,
+    pub mode: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -443,7 +425,7 @@ pub struct EaseBuzzRefundSyncValidationErrorResponse {
     pub error_desc: Option<String>,
 }
 
-// Webhook Types
+// Webhook Types - matching Haskell enum
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type")]
 pub enum EaseBuzzWebhookTypes {
@@ -462,7 +444,7 @@ pub struct EaseBuzzRefundWebhookResponse {
     pub merchant_refund_id: String,
 }
 
-// Error Response
+// Error Response - matching Haskell
 #[derive(Debug, Deserialize)]
 pub struct EaseBuzzErrorResponse {
     pub error_code: String,
@@ -470,7 +452,7 @@ pub struct EaseBuzzErrorResponse {
     pub transaction_id: Option<String>,
 }
 
-// Helper functions
+// Helper functions - matching Haskell logic
 pub fn get_webhook_object_from_body<T: serde::de::DeserializeOwned>(
     body: &[u8],
 ) -> CustomResult<T, ConnectorError> {
@@ -531,7 +513,7 @@ pub fn get_easebuzz_refund_webhook_details(
     }
 }
 
-// Implement GetFormData for form data requests
+// Implement GetFormData for form data requests - matching Haskell form encoding
 impl crate::connectors::macros::GetFormData for EaseBuzzSeamlessTxnRequest {
     fn get_form_data(&self) -> reqwest::multipart::Form {
         let form = reqwest::multipart::Form::new()
