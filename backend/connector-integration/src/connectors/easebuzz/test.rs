@@ -221,6 +221,7 @@ mod tests {
         }
         _ => panic!("Expected payment webhook"),
     }
+    }
 }
 
 #[test]
