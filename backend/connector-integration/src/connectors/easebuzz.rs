@@ -76,7 +76,7 @@ macros::create_all_prerequisites!(
 
         fn get_error_response_v2(
             &self,
-            res: &common_utils::types::Response,
+            res: &Response,
         ) -> CustomResult<errors::ConnectorError, errors::ConnectorError> {
             let response: easebuzz::EaseBuzzErrorResponse = res
                 .response
