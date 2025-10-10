@@ -177,7 +177,7 @@ mod tests {
 }
 
 #[test]
-fn test_easebuzz_upi_intent_response_deserialization() {
+    fn test_easebuzz_upi_intent_response_deserialization() {
     let response_json = json!({
         "status": true,
         "msg_desc": "Payment initiated successfully",
