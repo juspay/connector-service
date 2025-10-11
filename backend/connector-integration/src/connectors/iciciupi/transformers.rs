@@ -32,7 +32,7 @@ impl TryFrom<&ConnectorAuthType> for IciciUpiAuth {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, .. } => {
                 let auth_data: IciciUpiAuth = api_key
-                    .parse_value("IciciUpiAuth")
+                    .parse_str::<IciciUpiAuth>()
                     .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
                 Ok(auth_data)
             }
