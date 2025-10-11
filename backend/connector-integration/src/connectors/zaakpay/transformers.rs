@@ -2,10 +2,10 @@ use std::fmt::Debug;
 
 use common_enums::{AttemptStatus, PaymentMethodType};
 use common_utils::{
-    types::{StringMinorUnit, MinorUnit},
+    types::MinorUnit,
 };
 use domain_types::{
-    connector_types::{PaymentsResponseData, RefundsResponseData},
+    connector_types::PaymentsResponseData,
     errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
@@ -34,7 +34,7 @@ pub struct TransactDataRequest {
     pub paymentInstrument: PaymentInstrumentTransType,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrderDetailTransType {
     pub orderId: String,
     pub amount: String,
@@ -129,7 +129,7 @@ impl<T: PaymentMethodDataTypes + Debug> TryFrom<&RouterDataV2<domain_types::conn
 
     fn try_from(item: &RouterDataV2<domain_types::connector_flow::Authorize, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsAuthorizeData<T>, PaymentsResponseData>) -> Result<Self, Self::Error> {
         // Extract amount using amount converter
-        let amount = item.request.amount.get_amount_as_string();
+        let amount = item.request.amount.to_string();
         let currency = item.request.currency.to_string();
         
         // Extract customer data
@@ -137,9 +137,7 @@ impl<T: PaymentMethodDataTypes + Debug> TryFrom<&RouterDataV2<domain_types::conn
         let customer_id_string = customer_id.get_string_repr();
         
         // Extract transaction ID
-        let transaction_id = item.request.connector_transaction_id
-            .get_connector_transaction_id()
-            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
+        let transaction_id = item.request.payment_id.clone();
         
         // Extract return URL
         let return_url = item.request.get_router_return_url()?;
@@ -147,22 +145,19 @@ impl<T: PaymentMethodDataTypes + Debug> TryFrom<&RouterDataV2<domain_types::conn
         // Extract email
         let email = item.request.email.clone().unwrap_or_default();
         
-        // Extract phone
-        let phone = item.request.phone.clone().unwrap_or_default();
+        // Extract phone - not available in PaymentsAuthorizeData
+        let phone = String::new();
         
-        // Extract billing address
-        let billing_address = item.request.billing_address.as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "billing_address",
-            })?;
+        // Extract billing address from address details
+        let billing_address = &item.request.address.billing;
         
         // Create order detail
         let order_detail = OrderDetailTransType {
             orderId: transaction_id,
             amount,
             currency,
-            productDescription: item.request.description.clone().unwrap_or_default(),
-            email: email.to_string(),
+            productDescription: item.request.order_description.clone().unwrap_or_default(),
+            email: email.peek().clone(),
             phone: phone.to_string(),
         };
         
@@ -176,7 +171,7 @@ impl<T: PaymentMethodDataTypes + Debug> TryFrom<&RouterDataV2<domain_types::conn
         };
         
         // Create shipping address (optional)
-        let shipping_address_type = item.request.shipping_address.as_ref().map(|addr| {
+        let shipping_address_type = item.request.address.shipping.as_ref().map(|addr| {
             ShippingAddressType {
                 address: addr.address.clone(),
                 city: addr.city.clone(),
@@ -188,13 +183,13 @@ impl<T: PaymentMethodDataTypes + Debug> TryFrom<&RouterDataV2<domain_types::conn
         
         // Create payment instrument based on payment method type
         let payment_instrument = match item.request.payment_method_type {
-            PaymentMethodType::Upi => {
+            PaymentMethodType::Wallet => {
                 PaymentInstrumentTransType {
                     paymentMode: "upi".to_string(),
                     card: None,
                     netbanking: None,
                     upi: Some(UpiTransType {
-                        bankid: customer_id_string,
+                        bankid: customer_id_string.to_string(),
                     }),
                 }
             }
@@ -205,7 +200,7 @@ impl<T: PaymentMethodDataTypes + Debug> TryFrom<&RouterDataV2<domain_types::conn
         
         // Create transact data
         let transact_data = TransactDataRequest {
-            merchantIdentifier: customer_id_string,
+            merchantIdentifier: customer_id_string.to_string(),
             encryptionKeyId: None,
             showMobile: None,
             mode: if item.resource_common_data.test_mode.unwrap_or(false) { "test" } else { "live" }.to_string(),
@@ -237,10 +232,10 @@ impl TryFrom<ZaakPayPaymentsResponse> for PaymentsResponseData {
             _ => AttemptStatus::Failure,
         };
 
-        Ok(Self {
+        Ok(PaymentsResponseData {
             status,
-            amount: response.orderDetail.amount.parse().ok().map(|amt: f64| {
-                MinorUnit::from_major_unit_as_i64(amt)
+            amount: response.orderDetail.amount.parse().ok().map(|amt: i64| {
+                MinorUnit::new(amt)
             }),
             currency: Some(response.orderDetail.currency.parse().unwrap_or(common_enums::Currency::USD)),
             connector_transaction_id: Some(response.orderDetail.orderId),
