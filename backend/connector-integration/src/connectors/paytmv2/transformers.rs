@@ -21,7 +21,7 @@ use crate::{connectors::paytmv2::PayTMv2RouterData, types::ResponseRouterData};
 
 // Request Types
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PayTMv2InitiateRequestHead {
     client_id: String,
