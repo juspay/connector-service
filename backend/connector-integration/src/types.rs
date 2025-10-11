@@ -45,7 +45,6 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Novalnet => Box::new(Novalnet::new()),
             ConnectorEnum::Nexinets => Box::new(Nexinets::new()),
             ConnectorEnum::Noon => Box::new(Noon::new()),
-            ConnectorEnum::Paytmv2 => Box::new(PayTMv2::new()),
         }
     }
 }
