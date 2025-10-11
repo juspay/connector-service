@@ -178,7 +178,7 @@ pub struct PayTMv2InitiateResponseBody {
     authenticated: Option<bool>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct PayTMv2InitiateTransactionResponse {
     head: PayTMv2ResponseHead,
     body: PayTMv2InitiateResponseBody,
