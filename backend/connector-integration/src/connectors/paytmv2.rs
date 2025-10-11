@@ -253,13 +253,13 @@ macros::create_all_prerequisites!(
         (
             flow: Authorize,
             request_body: PayTMv2InitiateTransactionRequest,
-            response_body: PayTMv2InitiateTransactionRequest,
+            response_body: PayTMv2InitiateTransactionResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: PSync,
             request_body: PayTMv2TransactionStatusRequest,
-            response_body: PayTMv2TransactionStatusRequest,
+            response_body: PayTMv2TransactionStatusResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         )
     ],
