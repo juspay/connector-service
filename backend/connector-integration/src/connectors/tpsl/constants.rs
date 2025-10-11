@@ -14,3 +14,14 @@ pub const TPSL_PAYNIMO_BASE_URL: &str = "https://www.paynimo.com";
 // Headers
 pub const CONTENT_TYPE: &str = "Content-Type";
 pub const AUTHORIZATION: &str = "Authorization";
+
+// Payment method types
+pub const PAYMENT_METHOD_UPI: &str = "UPI";
+pub const PAYMENT_TYPE_SALE: &str = "SALE";
+pub const RESPONSE_TYPE_URL: &str = "URL";
+pub const WEBHOOK_TYPE_HTTP: &str = "HTTP";
+
+// Default values
+pub const DEFAULT_CURRENCY: &str = "INR";
+pub const DEFAULT_COUNTRY: &str = "IN";
+pub const DEFAULT_DESCRIPTION: &str = "Payment Transaction";
