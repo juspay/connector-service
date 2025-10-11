@@ -22,7 +22,7 @@ use time::OffsetDateTime;
 
 use crate::{connectors::tpsl::TPSLRouterData, types::ResponseRouterData};
 
-#[derive(Default, Debug, Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslPaymentsRequest {
     pub merchant: TpslMerchantPayload,
