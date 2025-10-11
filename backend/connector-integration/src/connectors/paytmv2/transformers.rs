@@ -1,8 +1,7 @@
-use std::collections::HashMap;
+use hyperswitch_masking::{ExposeInterface, Secret};
+use serde::{Deserialize, Serialize};
 
 use common_utils::{
-    errors::CustomResult,
-    ext_traits::ValueExt,
     request::Method,
     types::StringMinorUnit,
     Email,
@@ -15,11 +14,8 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
-use serde::{Deserialize, Serialize};
 
 use crate::{connectors::paytmv2::PayTMv2RouterData, types::ResponseRouterData};
 
