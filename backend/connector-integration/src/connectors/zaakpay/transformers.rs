@@ -2,18 +2,14 @@ use std::fmt::Debug;
 
 use common_enums::{AttemptStatus, PaymentMethodType};
 use common_utils::{
-    errors::CustomResult,
-    ext_traits::ByteSliceExt,
-    types::{FloatMajorUnit, StringMinorUnit, MinorUnit},
+    types::{StringMinorUnit, MinorUnit},
 };
 use domain_types::{
     errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
-    types::{PaymentsResponseData, RefundsResponseData},
 };
-use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 // Request/Response types based on Haskell implementation
