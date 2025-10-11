@@ -420,7 +420,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             },
             body: PayTMv2InitiateRequestBody {
                 request_type: "PAYMENT".to_string(),
-                mid: auth.mid.clone(),
+                mid: auth.mid.expose().clone(),
                 order_id: item.router_data.resource_common_data.connector_request_reference_id.clone(),
                 website_name: auth.website_name,
                 txn_amount: PayTMv2Amount {
@@ -461,7 +461,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 signature: auth.client_secret,
             },
             body: PayTMv2StatusRequestBody {
-                mid: auth.mid.clone(),
+                mid: auth.mid.expose().clone(),
                 order_id: item.router_data.request.connector_transaction_id.get_connector_transaction_id()
                     .map_err(|_e| ConnectorError::RequestEncodingFailed)?,
             },
