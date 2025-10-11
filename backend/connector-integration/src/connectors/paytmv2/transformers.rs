@@ -168,7 +168,7 @@ pub struct PayTMv2ResultInfo {
     auth_ref_id: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PayTMv2InitiateResponseBody {
     txn_token: String,
