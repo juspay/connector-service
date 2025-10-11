@@ -240,7 +240,91 @@ impl From<IciciUpiPaymentsSyncResponse> for common_enums::AttemptStatus {
     }
 }
 
-// Response transformations will be handled by the macro framework
+// Response transformations for Authorize flow
+impl<T> TryFrom<crate::types::ResponseRouterData<IciciUpiPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: crate::types::ResponseRouterData<IciciUpiPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let crate::types::ResponseRouterData {
+            response,
+            mut router_data,
+            http_code,
+        } = item;
+
+        let attempt_status = response.clone().into();
+        let connector_request_reference_id = router_data.resource_common_data.connector_request_reference_id.clone();
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: attempt_status,
+                ..router_data.resource_common_data
+            },
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    response.merchant_tran_id.unwrap_or(connector_request_reference_id),
+                ),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: response.bank_rrn,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                status_code: http_code,
+            }),
+            ..router_data
+        })
+    }
+}
+
+// Response transformations for PSync flow
+impl<T> TryFrom<crate::types::ResponseRouterData<IciciUpiPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: crate::types::ResponseRouterData<IciciUpiPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let crate::types::ResponseRouterData {
+            response,
+            mut router_data,
+            http_code,
+        } = item;
+
+        let attempt_status = response.clone().into();
+        let connector_transaction_id = router_data.request.connector_transaction_id
+            .get_connector_transaction_id()
+            .unwrap_or_default();
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: attempt_status,
+                ..router_data.resource_common_data
+            },
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    response.merchant_tran_id.unwrap_or(connector_transaction_id),
+                ),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: response.bank_rrn,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                status_code: http_code,
+            }),
+            ..router_data
+        })
+    }
+}
 
 // Stub types for unsupported flows
 #[derive(Debug, Clone, Serialize)]
