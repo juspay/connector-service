@@ -115,6 +115,14 @@ pub struct ConnectorParams {
     pub dispute_base_url: Option<String>,
 }
 
+#[derive(Clone, serde::Deserialize, Debug, Default)]
+pub struct TpslConnectorParams {
+    /// base url
+    pub base_url: String,
+    pub test_base_url: String,
+    pub dispute_base_url: Option<String>,
+}
+
 #[derive(Debug, serde::Deserialize, Clone)]
 pub struct Proxy {
     pub http_url: Option<String>,
