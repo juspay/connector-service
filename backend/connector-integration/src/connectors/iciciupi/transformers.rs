@@ -241,19 +241,17 @@ impl From<IciciUpiPaymentsSyncResponse> for common_enums::AttemptStatus {
 }
 
 // Response transformations for Authorize flow
-impl<T> TryFrom<crate::types::ResponseRouterData<IciciUpiPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
-    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-where
-    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+impl TryFrom<crate::types::ResponseRouterData<IciciUpiPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<domain_types::payment_method_data::DefaultPCIHolder>, PaymentsResponseData>>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<domain_types::payment_method_data::DefaultPCIHolder>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: crate::types::ResponseRouterData<IciciUpiPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
+        item: crate::types::ResponseRouterData<IciciUpiPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<domain_types::payment_method_data::DefaultPCIHolder>, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let crate::types::ResponseRouterData {
             response,
-            mut router_data,
+            router_data,
             http_code,
         } = item;
 
