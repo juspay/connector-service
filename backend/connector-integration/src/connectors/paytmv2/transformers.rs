@@ -412,7 +412,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         
         Ok(Self {
             head: PayTMv2InitiateRequestHead {
-                client_id: auth.client_id.expose().clone(),
+                client_id: auth.client_id.clone(),
                 version: "v1".to_string(),
                 request_timestamp: timestamp,
                 channel_id: "WEB".to_string(),
