@@ -408,7 +408,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
-        let timestamp = time::OffsetDateTime::now().unix_timestamp().to_string();
+        let timestamp = time::OffsetDateTime::now_utc().unix_timestamp().to_string();
         
         Ok(Self {
             head: PayTMv2InitiateRequestHead {
@@ -451,7 +451,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         item: PayTMv2RouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = PayTMv2Auth::try_from(&item.router_data.connector_auth_type)?;
-        let timestamp = time::OffsetDateTime::now().unix_timestamp().to_string();
+        let timestamp = time::OffsetDateTime::now_utc().unix_timestamp().to_string();
         
         Ok(Self {
             head: PayTMv2StatusRequestHead {
