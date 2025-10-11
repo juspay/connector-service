@@ -623,7 +623,7 @@ TryFrom<
                     tenure_id: "".to_string(),
                 },
                 consumer: TpslConsumerPayload {
-                    mobile_number: item.router_data.request.get_phone_number_as_optional()
+                    mobile_number: item.router_data.request.phone_number.clone()
                         .map(|phone| phone.to_string())
                         .unwrap_or_default(),
                     email_i_d: item.router_data.request.email.clone().unwrap_or_else(|| Email::from_str("test@example.com").unwrap()),
