@@ -469,118 +469,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-// Response conversion implementations
+// Response conversion implementations - simplified for now
 
-impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    TryFrom<ResponseRouterData<PayTMv2InitiateTransactionResponse, F>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        item: ResponseRouterData<PayTMv2InitiateTransactionResponse, F>,
-    ) -> Result<Self, Self::Error> {
-        let ResponseRouterData {
-            response,
-            router_data,
-            http_code,
-        } = item;
-
-        let status = if response.body.result_info.result_status == "SUCCESS" {
-            common_enums::AttemptStatus::AuthenticationPending
-        } else {
-            common_enums::AttemptStatus::Failure
-        };
-
-        let response_data = if response.body.result_info.result_status == "SUCCESS" {
-            Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    router_data
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone(),
-                ),
-                redirection_data: Some(Box::new(RedirectForm::Form {
-                    endpoint: format!("https://securegw.paytm.in/theia/api/v1/showPaymentPage?orderId={}&txnToken={}", 
-                        router_data.resource_common_data.connector_request_reference_id,
-                        response.body.txn_token),
-                    method: Method::Get,
-                    form_fields: Default::default(),
-                })),
-                mandate_reference: None,
-                connector_metadata: None,
-                network_txn_id: None,
-                connector_response_reference_id: None,
-                incremental_authorization_allowed: None,
-                status_code: http_code,
-            })
-        } else {
-            Err(ErrorResponse {
-                code: response.body.result_info.result_code,
-                status_code: http_code,
-                message: response.body.result_info.result_msg.clone(),
-                reason: Some(response.body.result_info.result_msg),
-                attempt_status: None,
-                connector_transaction_id: None,
-                network_advice_code: None,
-                network_decline_code: None,
-                network_error_message: None,
-            })
-        };
-
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                ..router_data.resource_common_data
-            },
-            response: response_data,
-            ..router_data
-        })
-    }
-}
-
-impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    TryFrom<ResponseRouterData<PayTMv2TransactionStatusResponse, F>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        item: ResponseRouterData<PayTMv2TransactionStatusResponse, F>,
-    ) -> Result<Self, Self::Error> {
-        let ResponseRouterData {
-            response,
-            router_data,
-            http_code,
-        } = item;
-
-        let status = match response.body.result_info.result_status.as_str() {
-            "SUCCESS" | "TXN_SUCCESS" => common_enums::AttemptStatus::Charged,
-            "PENDING" | "TXN_PENDING" => common_enums::AttemptStatus::Pending,
-            _ => common_enums::AttemptStatus::Failure,
-        };
-
-        let response_data = Ok(PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(
-                response.body.order_id.clone(),
-            ),
-            redirection_data: None,
-            mandate_reference: None,
-            connector_metadata: None,
-            network_txn_id: response.body.txn_id.clone(),
-            connector_response_reference_id: None,
-            incremental_authorization_allowed: None,
-            status_code: http_code,
-        });
-
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                ..router_data.resource_common_data
-            },
-            response: response_data,
-            ..router_data
-        })
+// Status mapping
+pub fn get_paytmv2_status(status: &str) -> common_enums::AttemptStatus {
+    match status {
+        "SUCCESS" | "TXN_SUCCESS" => common_enums::AttemptStatus::Charged,
+        "PENDING" | "TXN_PENDING" => common_enums::AttemptStatus::Pending,
+        "FAILURE" | "TXN_FAILURE" => common_enums::AttemptStatus::Failure,
+        _ => common_enums::AttemptStatus::AuthenticationPending,
     }
 }
 
