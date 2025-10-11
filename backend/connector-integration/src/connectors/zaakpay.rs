@@ -138,11 +138,7 @@ macros::macro_connector_implementation!(
 
             let router_response = PaymentsResponseData::try_from(response)?;
 
-            Ok(crate::types::ResponseRouterData {
-                response: router_response,
-                router_data: req.clone(),
-                http_code: res.status_code,
-            })
+            Ok(req.clone().with_response(router_response))
         }
     }
 );
