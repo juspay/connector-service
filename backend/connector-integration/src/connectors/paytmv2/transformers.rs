@@ -148,7 +148,7 @@ pub struct PayTMv2ValidateVpaRequest {
 
 // Response Types
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PayTMv2ResponseHead {
     response_timestamp: Option<String>,
