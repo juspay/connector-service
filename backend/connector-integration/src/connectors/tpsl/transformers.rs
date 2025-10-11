@@ -783,7 +783,9 @@ TryFrom<
                 instruction: serde_json::Value::Null,
             },
             transaction: TpslTransactionUPITxnType {
-                device_identifier: item.router_data.request.get_ip_address_as_optional()
+                device_identifier: item.router_data.request.browser_info
+                    .as_ref()
+                    .and_then(|info| info.ip_address.clone())
                     .map(|ip| ip.expose())
                     .unwrap_or_else(|| "127.0.0.1".to_string()),
                 transaction_type: Some("SALE".to_string()),
