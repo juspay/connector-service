@@ -550,7 +550,7 @@ TryFrom<
                         provider: "UPI".to_string(),
                         i_fsc: "".to_string(),
                         holder: TpslHolderPayload {
-                            name: customer_id.get_string_repr(),
+                            name: customer_id.get_string_repr().to_string(),
                             address: TpslAddressPayload {
                                 country: "IN".to_string(),
                                 street: "".to_string(),
@@ -632,7 +632,7 @@ TryFrom<
                     identifier: customer_id.get_string_repr(),
                     account_no: "".to_string(),
                     account_type: "".to_string(),
-                    account_holder_name: customer_id.get_string_repr(),
+                    account_holder_name: customer_id.get_string_repr().to_string(),
                     aadhar_no: "".to_string(),
                 },
                 merchant_input_flags: TpslFlagsType {
