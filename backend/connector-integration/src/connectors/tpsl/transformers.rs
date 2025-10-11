@@ -74,7 +74,7 @@ pub struct TpslPaymentPayload {
     pub instruction: TpslInstructionPayload,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslMethodPayload {
     pub token: String,
@@ -83,7 +83,7 @@ pub struct TpslMethodPayload {
     pub code: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslInstrumentPayload {
     pub expiry: TpslExpiryPayload,
@@ -123,7 +123,7 @@ pub struct TpslHolderPayload {
     pub address: TpslAddressPayload,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslAddressPayload {
     pub country: String,
@@ -143,7 +143,7 @@ pub struct TpslAuthenticationPayload {
     pub sub_type: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslInstructionPayload {
     pub occurrence: String,
@@ -245,7 +245,7 @@ pub struct TpslUPIPaymentPayload {
     pub payment_mode: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslAcsPayload {
     pub bank_acs_form_name: String,
