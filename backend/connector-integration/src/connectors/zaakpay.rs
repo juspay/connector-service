@@ -39,6 +39,19 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
+#[derive(Debug, Clone)]
+pub struct ZaakPay<T: PaymentMethodDataTypes> {
+    phantom: std::marker::PhantomData<T>,
+}
+
+impl<T: PaymentMethodDataTypes> ZaakPay<T> {
+    pub fn new() -> Self {
+        Self {
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
 // Trait implementations with generic type parameters
 impl<
         T: PaymentMethodDataTypes
