@@ -58,7 +58,7 @@ pub struct PayTMv2ExtendInfo {
     comments: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PayTMv2InitiateRequestBody {
     request_type: String,
