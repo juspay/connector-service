@@ -108,7 +108,7 @@ pub struct TpslInstrumentPayload {
     pub acquirer: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslExpiryPayload {
     pub year: String,
@@ -116,7 +116,7 @@ pub struct TpslExpiryPayload {
     pub date_time: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslHolderPayload {
     pub name: String,
@@ -134,7 +134,7 @@ pub struct TpslAddressPayload {
     pub county: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslAuthenticationPayload {
     pub token: String,
