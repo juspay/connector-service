@@ -183,7 +183,7 @@ impl<T: PaymentMethodDataTypes + Debug> TryFrom<&RouterDataV2<domain_types::conn
         
         // Create payment instrument based on payment method type
         let payment_instrument = match item.request.payment_method_type {
-            PaymentMethodType::Wallet => {
+            PaymentMethodType::UpiCollect => {
                 PaymentInstrumentTransType {
                     paymentMode: "upi".to_string(),
                     card: None,
