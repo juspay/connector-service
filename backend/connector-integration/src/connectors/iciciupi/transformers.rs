@@ -73,11 +73,30 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let auth = IciciUpiAuth::try_from(&item.router_data.connector_auth_type)?;
         
         // Extract UPI virtual address from payment method data
-        let payer_va = item.router_data.request.payment_method_data
-            .get_upi_vpa()
-            .change_context(ConnectorError::MissingRequiredField {
-                field_name: "payer_va",
-            })?;
+        let payer_va = match &item.router_data.request.payment_method_data {
+            domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
+                match upi_data {
+                    domain_types::payment_method_data::UpiData::UpiCollect(upi_collect) => {
+                        upi_collect.vpa_id.as_ref()
+                            .ok_or(ConnectorError::MissingRequiredField {
+                                field_name: "vpa_id",
+                            })?
+                            .expose()
+                            .clone()
+                    }
+                    domain_types::payment_method_data::UpiData::UpiIntent(_) => {
+                        return Err(ConnectorError::MissingRequiredField {
+                            field_name: "vpa_id for UPI Intent",
+                        }.into());
+                    }
+                }
+            }
+            _ => {
+                return Err(ConnectorError::MissingRequiredField {
+                    field_name: "UPI payment method data",
+                }.into());
+            }
+        };
 
         let amount = item.amount.get_amount_as_string();
         
