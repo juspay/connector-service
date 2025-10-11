@@ -19,7 +19,10 @@ use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 use chrono;
 
-use crate::{connectors::tpsl::TpslRouterData, types::ResponseRouterData};
+use crate::types::ResponseRouterData;
+
+// Router data type alias for TPSL
+pub type TpslRouterData<T, U> = crate::connectors::macros::ConnectorRouterData<T, U>;
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
