@@ -70,7 +70,9 @@ impl<
                 headers::AUTHORIZATION.to_string(),
                 format!("Bearer {}", api_key.peek()).into(),
             )]),
-            _ => Err(errors::ConnectorError::AuthenticationFailed.into()),
+            _ => Err(errors::ConnectorError::MissingRequiredField {
+                field_name: "api_key"
+            }.into()),
         }
     }
 }
