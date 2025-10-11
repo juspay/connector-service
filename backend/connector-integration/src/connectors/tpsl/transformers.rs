@@ -214,7 +214,7 @@ pub enum TpslPaymentsResponse {
     TpslErrorResponse(TpslErrorResponse),
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslUPITxnResponse {
     pub merchant_code: String,
@@ -253,7 +253,7 @@ pub struct TpslAcsPayload {
     pub bank_acs_url: serde_json::Value,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslPaymentTxnPayload {
     pub amount: StringMinorUnit,
@@ -269,7 +269,7 @@ pub struct TpslPaymentTxnPayload {
     pub reference: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslPaymentMethodErrorPayload {
     pub code: String,
