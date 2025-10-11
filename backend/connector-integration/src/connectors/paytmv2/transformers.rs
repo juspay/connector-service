@@ -341,11 +341,11 @@ pub struct PayTMv2ValidateVpaResponse {
 
 // Error Response Types
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct PayTMv2ErrorResponse {
-    error: String,
-    error_description: Option<String>,
-    gateway_response: serde_json::Value,
+    pub error: String,
+    pub error_description: Option<String>,
+    pub gateway_response: serde_json::Value,
 }
 
 // Auth Types
