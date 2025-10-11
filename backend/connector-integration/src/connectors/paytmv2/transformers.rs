@@ -480,13 +480,3 @@ pub fn get_paytmv2_status(status: &str) -> common_enums::AttemptStatus {
         _ => common_enums::AttemptStatus::AuthenticationPending,
     }
 }
-
-// Status mapping
-pub fn get_paytmv2_status(status: &str) -> common_enums::AttemptStatus {
-    match status {
-        "SUCCESS" | "TXN_SUCCESS" => common_enums::AttemptStatus::Charged,
-        "PENDING" | "TXN_PENDING" => common_enums::AttemptStatus::Pending,
-        "FAILURE" | "TXN_FAILURE" => common_enums::AttemptStatus::Failure,
-        _ => common_enums::AttemptStatus::AuthenticationPending,
-    }
-}
