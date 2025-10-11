@@ -365,12 +365,12 @@ impl TryFrom<&ConnectorAuthType> for PayTMv2Auth {
         match auth_type {
             ConnectorAuthType::SignatureKey {
                 api_key,
-                key,
+                key1,
                 api_secret,
             } => {
                 let auth = PayTMv2Auth {
-                    mid: Secret::new(api_key.clone()),
-                    client_id: key.clone(),
+                    mid: api_key.clone(),
+                    client_id: key1.clone(),
                     client_secret: api_secret.clone(),
                     website_name: "DEFAULT".to_string(),
                 };
