@@ -45,7 +45,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Novalnet => Box::new(Novalnet::new()),
             ConnectorEnum::Nexinets => Box::new(Nexinets::new()),
             ConnectorEnum::Noon => Box::new(Noon::new()),
-            ConnectorEnum::ZaakPay => Box::new(ZaakPay::new()) as Box<dyn connector_types::ConnectorServiceTrait<T>>,
+            ConnectorEnum::ZaakPay => Box::new(ZaakPay::new()),
         }
     }
 }
