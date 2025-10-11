@@ -94,7 +94,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             }
         };
 
-        let amount = item.amount.get_amount_as_string();
+        let amount = item.connector.amount_converter.convert(
+            item.router_data.request.minor_amount,
+            item.router_data.request.currency,
+        ).change_context(ConnectorError::RequestEncodingFailed)?;
         
         let merchant_id = auth.merchant_id
             .ok_or(ConnectorError::MissingRequiredField {
