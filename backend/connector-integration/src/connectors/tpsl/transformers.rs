@@ -4,7 +4,7 @@ use common_utils::{
     errors::CustomResult, request::Method, types::StringMinorUnit,
     Email,
 };
-use common_enums::PaymentMethod;
+
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
