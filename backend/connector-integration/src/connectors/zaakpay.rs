@@ -267,7 +267,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Option<interfaces::api::Request>, errors::ConnectorError> {
-            let connector_request = zaakpay::ZaakPayPaymentsSyncRequest::try_from(req)?;
+            let connector_request = ZaakPayPaymentsSyncRequest::try_from(req)?;
             let auth_header = self.get_auth_header(&req.connector_auth_type)?;
             
             let request = interfaces::api::RequestBuilder::new()
