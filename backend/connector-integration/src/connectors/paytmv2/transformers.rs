@@ -308,7 +308,7 @@ pub struct PayTMv2StatusResponseBody {
     vpa: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct PayTMv2TransactionStatusResponse {
     head: PayTMv2ResponseHead,
     body: PayTMv2StatusResponseBody,
