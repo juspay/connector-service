@@ -390,15 +390,28 @@ TryFrom<
         let transaction_id = item.router_data.resource_common_data.connector_request_reference_id;
 
         // Build request message based on HDFC UPI format
+        let payer_va = match &item.router_data.request.payment_method_data {
+            domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
+                match upi_data {
+                    domain_types::payment_method_data::UpiData::UpiCollect(collect_data) => {
+                        collect_data.vpa_id.as_ref().map(|vpa| vpa.peek().to_string())
+                    }
+                    domain_types::payment_method_data::UpiData::UpiIntent(_) => {
+                        // UPI Intent doesn't have VPA, return None
+                        None
+                    }
+                }
+            }
+            _ => None,
+        };
+
         let request_msg = serde_json::json!({
             "txnId": transaction_id,
             "amount": amount,
-            "payerVA": item.router_data.request.payment_method_data
-                .get_upi_data()
-                .and_then(|upi| upi.vpa.clone()),
+            "payerVA": payer_va,
             "payeeVA": auth_type.merchant_id.peek(),
             "custRefNo": customer_id.get_string_repr(),
-            "remarks": item.router_data.request.order_details.clone().unwrap_or_default()
+            "remarks": item.router_data.request.statement_descriptor.clone().unwrap_or_default()
         }).to_string();
 
         match item.router_data.resource_common_data.payment_method {
