@@ -253,8 +253,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: ZaakPay,
-    curl_request: Json(zaakpay::ZaakPayPaymentsSyncRequest),
-    curl_response: zaakpay::ZaakPayPaymentsSyncResponse,
+    curl_request: Json(ZaakPayPaymentsSyncRequest),
+    curl_response: ZaakPayPaymentsSyncResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
