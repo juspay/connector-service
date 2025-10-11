@@ -429,7 +429,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 },
                 user_info: PayTMv2UserInfo {
                     cust_id: customer_id.get_string_repr().to_string(),
-                    mobile: item.router_data.request.phone.clone().map(|p| p.to_string()),
+                    mobile: None,
                     email: item.router_data.request.email.clone(),
                     first_name: None,
                     last_name: None,
