@@ -143,29 +143,37 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Implement all required connector traits
+// Implement ConnectorServiceTrait for ZaakPay
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + std::default::Default>
-    connector_types::PaymentOrderCreate for crate::types::ConnectorData<T> {}
+    connector_types::ConnectorServiceTrait<T> for ZaakPay<T>
+{}
+
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + std::default::Default>
-    connector_types::PaymentSessionToken for crate::types::ConnectorData<T> {}
+    connector_types::PaymentAuthorizeV2<T> for ZaakPay<T>
+{}
+
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + std::default::Default>
-    connector_types::PaymentVoidV2 for crate::types::ConnectorData<T> {}
+    connector_types::PaymentOrderCreate for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + std::default::Default>
-    connector_types::PaymentCapture for crate::types::ConnectorData<T> {}
+    connector_types::PaymentSessionToken for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + std::default::Default>
-    connector_types::RefundV2 for crate::types::ConnectorData<T> {}
+    connector_types::PaymentVoidV2 for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + std::default::Default>
-    connector_types::RefundSyncV2 for crate::types::ConnectorData<T> {}
+    connector_types::PaymentCapture for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + std::default::Default>
-    connector_types::SetupMandateV2<T> for crate::types::ConnectorData<T> {}
+    connector_types::RefundV2 for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + std::default::Default>
-    connector_types::RepeatPaymentV2 for crate::types::ConnectorData<T> {}
+    connector_types::RefundSyncV2 for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + std::default::Default>
-    connector_types::AcceptDispute for crate::types::ConnectorData<T> {}
+    connector_types::SetupMandateV2<T> for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + std::default::Default>
-    connector_types::DisputeDefend for crate::types::ConnectorData<T> {}
+    connector_types::RepeatPaymentV2 for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + std::default::Default>
-    connector_types::SubmitEvidenceV2 for crate::types::ConnectorData<T> {}
+    connector_types::AcceptDispute for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + std::default::Default>
+    connector_types::DisputeDefend for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + std::default::Default>
+    connector_types::SubmitEvidenceV2 for ZaakPay<T> {}
 
 // Implement not-implemented flows with proper error handling
 macro_rules! impl_not_implemented_flow {
