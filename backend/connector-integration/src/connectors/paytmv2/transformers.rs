@@ -38,7 +38,7 @@ pub struct PayTMv2Amount {
     currency: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PayTMv2UserInfo {
     cust_id: String,
