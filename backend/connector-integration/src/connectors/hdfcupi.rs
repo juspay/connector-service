@@ -217,7 +217,7 @@ impl<
         Ok(domain_types::connector_types::WebhookDetailsResponse {
             resource_id: Some(
                 domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                    webhook.upi_txn_id.clone(),
+                    webhook.upiTxnId.clone(),
                 ),
             ),
             status: common_enums::AttemptStatus::Charged,
