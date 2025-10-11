@@ -59,6 +59,7 @@ pub enum ConnectorEnum {
     Novalnet,
     Nexinets,
     Noon,
+    Tpsl,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
