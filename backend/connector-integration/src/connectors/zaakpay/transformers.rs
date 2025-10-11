@@ -2,36 +2,21 @@ use std::fmt::Debug;
 
 use common_enums::{AttemptStatus, PaymentMethodType};
 use common_utils::{
-    consts,
-    crypto::OptionalEncryptable,
     errors::CustomResult,
     ext_traits::ByteSliceExt,
-    request::RequestContent,
-    types::{FloatMajorUnit, StringMinorUnit},
+    types::{FloatMajorUnit, StringMinorUnit, MinorUnit},
 };
 use domain_types::{
     errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
-    router_request_types::ResponseIdType,
-    types::{
-        self, AccessToken, AmountConverter, AmountConverterTrait, ConnectorAuthType,
-        ConnectorCommonData, ConnectorCommonV2, ConnectorConfig, ConnectorData,
-        ConnectorIntegrationV2, ConnectorRedirectResponse, ConnectorRequestHeaders,
-        ConnectorResponseData, ConnectorValidation, CurrencyUnit, PaymentAddress,
-        PaymentMethodDataType, RedirectForm, RefundResponseData, RouterData,
-    },
-    webhooks::{IncomingWebhook, IncomingWebhookRequest},
+    router_response_types::{RedirectResponse, RedirectMethod},
+    types::{PaymentsResponseData, RefundsResponseData},
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
-use masking::{ExposeInterface, PeekInterface};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use masking::ExposeInterface;
 use serde::{Deserialize, Serialize};
-
-use crate::{
-    services,
-    utils::{self, ConnectorErrorType},
-};
 
 // Request/Response types based on Haskell implementation
 
@@ -320,12 +305,12 @@ pub struct ZaakPaySubmitEvidenceResponse;
 
 // Transformer implementations
 
-impl<T: PaymentMethodDataTypes + Debug> TryFrom<&RouterDataV2<types::Authorize, types::PaymentFlowData, types::PaymentsAuthorizeData<T>, types::PaymentsResponseData>>
+impl<T: PaymentMethodDataTypes + Debug> TryFrom<&RouterDataV2<domain_types::connector_flow::Authorize, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsAuthorizeData<T>, PaymentsResponseData>>
     for ZaakPayPaymentsRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: &RouterDataV2<types::Authorize, types::PaymentFlowData, types::PaymentsAuthorizeData<T>, types::PaymentsResponseData>) -> Result<Self, Self::Error> {
+    fn try_from(item: &RouterDataV2<domain_types::connector_flow::Authorize, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsAuthorizeData<T>, PaymentsResponseData>) -> Result<Self, Self::Error> {
         // Extract amount using amount converter
         let amount = item.amount.get_amount_as_string();
         let currency = item.router_data.request.currency.to_string();
@@ -353,9 +338,6 @@ impl<T: PaymentMethodDataTypes + Debug> TryFrom<&RouterDataV2<types::Authorize, 
             .ok_or(errors::ConnectorError::MissingRequiredField {
                 field_name: "billing_address",
             })?;
-        
-        // Extract payment method data
-        let payment_method_data = item.router_data.request.payment_method_data.clone();
         
         // Create order detail
         let order_detail = OrderDetailTransType {
@@ -427,7 +409,7 @@ impl<T: PaymentMethodDataTypes + Debug> TryFrom<&RouterDataV2<types::Authorize, 
     }
 }
 
-impl TryFrom<ZaakPayPaymentsResponse> for types::PaymentsResponseData {
+impl TryFrom<ZaakPayPaymentsResponse> for PaymentsResponseData {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(response: ZaakPayPaymentsResponse) -> Result<Self, Self::Error> {
@@ -439,9 +421,9 @@ impl TryFrom<ZaakPayPaymentsResponse> for types::PaymentsResponseData {
         };
 
         let redirect_response = if response.doRedirect == "true" {
-            Some(types::RedirectResponse {
+            Some(RedirectResponse {
                 url: response.postUrl.unwrap_or_default(),
-                method: types::RedirectMethod::Post,
+                method: RedirectMethod::Post,
                 form_data: response.bankPostData.map(|data| {
                     data.as_object()
                         .unwrap_or(&serde_json::Map::new())
@@ -457,7 +439,7 @@ impl TryFrom<ZaakPayPaymentsResponse> for types::PaymentsResponseData {
         Ok(Self {
             status,
             amount: response.orderDetail.amount.parse().ok().map(|amt: f64| {
-                types::MinorUnit::from_major_unit_as_i64(amt)
+                MinorUnit::from_major_unit_as_i64(amt)
             }),
             currency: Some(response.orderDetail.currency.parse().unwrap_or(common_enums::Currency::USD)),
             connector_transaction_id: Some(response.orderDetail.orderId),
@@ -469,12 +451,12 @@ impl TryFrom<ZaakPayPaymentsResponse> for types::PaymentsResponseData {
     }
 }
 
-impl TryFrom<&RouterDataV2<types::PSync, types::PaymentFlowData, types::PaymentsSyncData, types::PaymentsResponseData>>
+impl TryFrom<&RouterDataV2<domain_types::connector_flow::PSync, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>>
     for ZaakPayPaymentsSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: &RouterDataV2<types::PSync, types::PaymentFlowData, types::PaymentsSyncData, types::PaymentsResponseData>) -> Result<Self, Self::Error> {
+    fn try_from(item: &RouterDataV2<domain_types::connector_flow::PSync, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>) -> Result<Self, Self::Error> {
         // Extract customer data
         let customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let customer_id_string = customer_id.get_string_repr();
@@ -508,7 +490,7 @@ impl TryFrom<&RouterDataV2<types::PSync, types::PaymentFlowData, types::Payments
     }
 }
 
-impl TryFrom<ZaakPayPaymentsSyncResponse> for types::PaymentsResponseData {
+impl TryFrom<ZaakPayPaymentsSyncResponse> for PaymentsResponseData {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(response: ZaakPayPaymentsSyncResponse) -> Result<Self, Self::Error> {
@@ -526,7 +508,7 @@ impl TryFrom<ZaakPayPaymentsSyncResponse> for types::PaymentsResponseData {
         let amount = order.orderDetail.as_ref()
             .and_then(|od| od.amount.as_ref())
             .and_then(|amt| amt.parse().ok())
-            .map(|amt: f64| types::MinorUnit::from_major_unit_as_i64(amt));
+            .map(|amt: f64| MinorUnit::from_major_unit_as_i64(amt));
 
         let currency = order.orderDetail.as_ref()
             .and_then(|od| od.currency.as_ref())
@@ -544,12 +526,12 @@ impl TryFrom<ZaakPayPaymentsSyncResponse> for types::PaymentsResponseData {
     }
 }
 
-impl TryFrom<&RouterDataV2<types::RSync, types::RefundFlowData, types::RefundSyncData, types::RefundsResponseData>>
+impl TryFrom<&RouterDataV2<domain_types::connector_flow::RSync, domain_types::connector_types::RefundFlowData, domain_types::connector_types::RefundSyncData, RefundsResponseData>>
     for ZaakPayRefundSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: &RouterDataV2<types::RSync, types::RefundFlowData, types::RefundSyncData, types::RefundsResponseData>) -> Result<Self, Self::Error> {
+    fn try_from(item: &RouterDataV2<domain_types::connector_flow::RSync, domain_types::connector_types::RefundFlowData, domain_types::connector_types::RefundSyncData, RefundsResponseData>) -> Result<Self, Self::Error> {
         // Extract customer data
         let customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let customer_id_string = customer_id.get_string_repr();
@@ -593,7 +575,7 @@ impl TryFrom<&RouterDataV2<types::RSync, types::RefundFlowData, types::RefundSyn
     }
 }
 
-impl TryFrom<ZaakPayRefundSyncResponse> for types::RefundsResponseData {
+impl TryFrom<ZaakPayRefundSyncResponse> for RefundsResponseData {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(response: ZaakPayRefundSyncResponse) -> Result<Self, Self::Error> {
@@ -611,7 +593,7 @@ impl TryFrom<ZaakPayRefundSyncResponse> for types::RefundsResponseData {
         let refund_amount = order.refundDetails.as_ref()
             .and_then(|refunds| refunds.first())
             .and_then(|refund| refund.amount.parse().ok())
-            .map(|amt: f64| types::MinorUnit::from_major_unit_as_i64(amt));
+            .map(|amt: f64| MinorUnit::from_major_unit_as_i64(amt));
 
         Ok(Self {
             refund_id: order.refundDetails.as_ref()
