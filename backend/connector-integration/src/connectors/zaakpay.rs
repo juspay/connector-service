@@ -193,7 +193,7 @@ macros::create_all_prerequisites!(
 
 // Implement Authorize flow using macro framework
 macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response],
+    connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: ZaakPay,
     curl_request: Json(ZaakPayPaymentsRequest),
     curl_response: ZaakPayPaymentsResponse,
@@ -251,7 +251,7 @@ macros::macro_connector_implementation!(
 
 // Implement PSync flow using macro framework
 macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response],
+    connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: ZaakPay,
     curl_request: Json(zaakpay::ZaakPayPaymentsSyncRequest),
     curl_response: zaakpay::ZaakPayPaymentsSyncResponse,
@@ -309,7 +309,7 @@ macros::macro_connector_implementation!(
 
 // Implement RSync flow using macro framework
 macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response],
+    connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: ZaakPay,
     curl_request: Json(zaakpay::ZaakPayRefundSyncRequest),
     curl_response: zaakpay::ZaakPayRefundSyncResponse,
