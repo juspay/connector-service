@@ -33,7 +33,7 @@ pub struct TpslPaymentsRequest {
     pub merchant_input_flags: TpslFlagsType,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslMerchantPayload {
     pub webhook_endpoint_url: String,
