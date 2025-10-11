@@ -245,3 +245,23 @@ impl TryFrom<ZaakPayPaymentsResponse> for PaymentsResponseData {
         })
     }
 }
+
+impl<T: PaymentMethodDataTypes + Debug> 
+    TryFrom<crate::types::ResponseRouterData<ZaakPayPaymentsResponse, RouterDataV2<domain_types::connector_flow::Authorize, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsAuthorizeData<T>, PaymentsResponseData>>>
+    for RouterDataV2<domain_types::connector_flow::Authorize, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsAuthorizeData<T>, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        value: crate::types::ResponseRouterData<ZaakPayPaymentsResponse, RouterDataV2<domain_types::connector_flow::Authorize, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsAuthorizeData<T>, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let crate::types::ResponseRouterData {
+            response,
+            router_data,
+            http_code: _,
+        } = value;
+        
+        let payments_response = PaymentsResponseData::try_from(response)?;
+        Ok(router_data.with_response(payments_response))
+    }
+}
