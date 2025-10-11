@@ -5,6 +5,7 @@ use common_utils::{
     types::{StringMinorUnit, MinorUnit},
 };
 use domain_types::{
+    connector_types::{PaymentsResponseData, RefundsResponseData},
     errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
