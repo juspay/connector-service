@@ -270,7 +270,7 @@ macros::create_all_prerequisites!(
             request_body: IciciUpiPaymentsSyncRequest,
             response_body: IciciUpiPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ),
+        )
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
