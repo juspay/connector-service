@@ -516,7 +516,7 @@ TryFrom<
                     webhook_endpoint_url: return_url.clone(),
                     response_type: "URL".to_string(),
                     response_endpoint_url: return_url.clone(),
-                    description: item.router_data.request.description.clone().unwrap_or_default(),
+                    description: "UPI Payment".to_string(),
                     identifier: auth.merchant_code.ok_or(ConnectorError::FailedToObtainAuthType)?,
                     webhook_type: "HTTP".to_string(),
                 },
@@ -533,7 +533,7 @@ TryFrom<
                     }],
                     reference: item.router_data.resource_common_data.connector_request_reference_id.clone(),
                     identifier: item.router_data.resource_common_data.connector_request_reference_id.clone(),
-                    description: item.router_data.request.description.clone().unwrap_or_default(),
+                    description: "UPI Payment".to_string(),
                 },
                 payment: TpslPaymentPayload {
                     method: TpslMethodPayload {
@@ -611,7 +611,7 @@ TryFrom<
                     amount: amount.clone(),
                     forced_3_d_s_call: "N".to_string(),
                     transaction_type: "SALE".to_string(),
-                    description: item.router_data.request.description.clone().unwrap_or_default(),
+                    description: "UPI Payment".to_string(),
                     currency: item.router_data.request.currency.to_string(),
                     is_registration: "N".to_string(),
                     identifier: item.router_data.resource_common_data.connector_request_reference_id.clone(),
