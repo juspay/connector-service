@@ -21,9 +21,6 @@ use chrono;
 
 use crate::types::ResponseRouterData;
 
-// Router data type alias for TPSL
-pub type TpslRouterData<T, U> = crate::connectors::macros::ConnectorRouterData<T, U>;
-
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslPaymentsRequest {
