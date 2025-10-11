@@ -1,11 +1,8 @@
 pub mod transformers;
 
+use base64::Engine;
 use common_enums::CurrencyUnit;
-use common_utils::{
-    errors::CustomResult,
-    ext_traits::ByteSliceExt,
-    types::{FloatMajorUnit, StringMinorUnit},
-};
+use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::FloatMajorUnit};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
@@ -68,28 +65,6 @@ impl<
             _ => Err(errors::ConnectorError::AuthenticationFailed.into()),
         }
     }
-
-    fn get_base_url(&self) -> &'static str {
-        match self.connector_name {
-            Connectors::ZaakPay => "https://zaakpay.com",
-            _ => "https://zaakpay.com",
-        }
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
-    }
-
-    fn get_api_tag(&self) -> &'static str {
-        "default"
-    }
-
-    fn get_error_response(
-        &self,
-        response: &[u8],
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.handle_error_response(response)
-    }
 }
 
 // Create all prerequisites using the mandatory macro framework
@@ -102,79 +77,6 @@ macros::create_all_prerequisites!(
             request_body: ZaakPayPaymentsRequest,
             response_body: ZaakPayPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: PSync,
-            request_body: ZaakPayPaymentsSyncRequest,
-            response_body: ZaakPayPaymentsSyncResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ),
-        (
-            flow: RSync,
-            request_body: ZaakPayRefundSyncRequest,
-            response_body: ZaakPayRefundSyncResponse,
-            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ),
-        // Stub types for unimplemented flows
-        (
-            flow: Void,
-            request_body: ZaakPayVoidRequest,
-            response_body: ZaakPayVoidResponse,
-            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ),
-        (
-            flow: Capture,
-            request_body: ZaakPayCaptureRequest,
-            response_body: ZaakPayCaptureResponse,
-            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ),
-        (
-            flow: Refund,
-            request_body: ZaakPayRefundRequest,
-            response_body: ZaakPayRefundResponse,
-            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ),
-        (
-            flow: CreateOrder,
-            request_body: ZaakPayCreateOrderRequest,
-            response_body: ZaakPayCreateOrderResponse,
-            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
-        ),
-        (
-            flow: CreateSessionToken,
-            request_body: ZaakPaySessionTokenRequest,
-            response_body: ZaakPaySessionTokenResponse,
-            router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
-        ),
-        (
-            flow: SetupMandate,
-            request_body: ZaakPaySetupMandateRequest,
-            response_body: ZaakPaySetupMandateResponse,
-            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
-        ),
-        (
-            flow: RepeatPayment,
-            request_body: ZaakPayRepeatPaymentRequest,
-            response_body: ZaakPayRepeatPaymentResponse,
-            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-        ),
-        (
-            flow: Accept,
-            request_body: ZaakPayAcceptDisputeRequest,
-            response_body: ZaakPayAcceptDisputeResponse,
-            router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
-        ),
-        (
-            flow: DefendDispute,
-            request_body: ZaakPayDefendDisputeRequest,
-            response_body: ZaakPayDefendDisputeResponse,
-            router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
-        ),
-        (
-            flow: SubmitEvidence,
-            request_body: ZaakPaySubmitEvidenceRequest,
-            response_body: ZaakPaySubmitEvidenceResponse,
-            router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
         )
     ],
     amount_converters: [
@@ -214,14 +116,14 @@ macros::macro_connector_implementation!(
             
             let request = interfaces::api::RequestBuilder::new()
                 .method(interfaces::api::Method::Post)
-                .url(&types::UrlType::get_url(
-                    self.get_base_url(),
+                .url(&domain_types::types::UrlType::get_url(
+                    "https://zaakpay.com",
                     "transact",
-                    &types::ConnectorAction::PaymentAuthorize,
+                    &domain_types::types::ConnectorAction::PaymentAuthorize,
                 )?)
                 .attach_default_headers()
                 .headers(auth_header)
-                .body(types::RequestBody::Json(connector_request))
+                .body(domain_types::types::RequestBody::Json(connector_request))
                 .build();
 
             Ok(Some(request))
@@ -249,121 +151,31 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Implement PSync flow using macro framework
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: ZaakPay,
-    curl_request: Json(ZaakPayPaymentsSyncRequest),
-    curl_response: ZaakPayPaymentsSyncResponse,
-    flow_name: PSync,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsSyncData,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
-    other_functions: {
-        fn build_request_v2(
-            &self,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Option<interfaces::api::Request>, errors::ConnectorError> {
-            let connector_request = ZaakPayPaymentsSyncRequest::try_from(req)?;
-            let auth_header = self.get_auth_header(&req.connector_auth_type)?;
-            
-            let request = interfaces::api::RequestBuilder::new()
-                .method(interfaces::api::Method::Post)
-                .url(&types::UrlType::get_url(
-                    self.get_base_url(),
-                    "check",
-                    &types::ConnectorAction::PaymentSync,
-                )?)
-                .attach_default_headers()
-                .headers(auth_header)
-                .body(types::RequestBody::Json(connector_request))
-                .build();
-
-            Ok(Some(request))
-        }
-
-        fn handle_response_v2(
-            &self,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            res: interfaces::api::Response,
-        ) -> CustomResult<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, errors::ConnectorError> {
-            let response: ZaakPayPaymentsSyncResponse = res
-                .response
-                .parse_struct("ZaakPayPaymentsSyncResponse")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-            let router_response = PaymentsResponseData::try_from(response)?;
-
-            Ok(RouterDataV2::from_response(
-                router_response,
-                req.request.clone(),
-                req.resource_common_data.clone(),
-                req.connector_meta_data.clone(),
-            ))
-        }
-    }
-);
-
-// Implement RSync flow using macro framework
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: ZaakPay,
-    curl_request: Json(ZaakPayRefundSyncRequest),
-    curl_response: ZaakPayRefundSyncResponse,
-    flow_name: RSync,
-    resource_common_data: RefundFlowData,
-    flow_request: RefundSyncData,
-    flow_response: RefundsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
-    other_functions: {
-        fn build_request_v2(
-            &self,
-            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Option<interfaces::api::Request>, errors::ConnectorError> {
-            let connector_request = ZaakPayRefundSyncRequest::try_from(req)?;
-            let auth_header = self.get_auth_header(&req.connector_auth_type)?;
-            
-            let request = interfaces::api::RequestBuilder::new()
-                .method(interfaces::api::Method::Post)
-                .url(&types::UrlType::get_url(
-                    self.get_base_url(),
-                    "check",
-                    &types::ConnectorAction::RefundSync,
-                )?)
-                .attach_default_headers()
-                .headers(auth_header)
-                .body(types::RequestBody::Json(connector_request))
-                .build();
-
-            Ok(Some(request))
-        }
-
-        fn handle_response_v2(
-            &self,
-            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            res: interfaces::api::Response,
-        ) -> CustomResult<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, errors::ConnectorError> {
-            let response: ZaakPayRefundSyncResponse = res
-                .response
-                .parse_struct("ZaakPayRefundSyncResponse")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-            let router_response = RefundsResponseData::try_from(response)?;
-
-            Ok(RouterDataV2::from_response(
-                router_response,
-                req.request.clone(),
-                req.resource_common_data.clone(),
-                req.connector_meta_data.clone(),
-            ))
-        }
-    }
-);
+// Implement all required connector traits
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentOrderCreate for crate::types::ConnectorData<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentSessionToken for crate::types::ConnectorData<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentVoidV2 for crate::types::ConnectorData<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentCaptureV2 for crate::types::ConnectorData<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::RefundV2 for crate::types::ConnectorData<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::RefundExecuteV2 for crate::types::ConnectorData<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::RefundSyncV2 for crate::types::ConnectorData<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::MandateSetupV2 for crate::types::ConnectorData<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentRepeatV2 for crate::types::ConnectorData<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::DisputeAcceptV2 for crate::types::ConnectorData<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::DisputeDefendV2 for crate::types::ConnectorData<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::DisputeSubmitEvidenceV2 for crate::types::ConnectorData<T> {}
 
 // Implement not-implemented flows with proper error handling
 macro_rules! impl_not_implemented_flow {
@@ -392,6 +204,8 @@ macro_rules! impl_not_implemented_flow {
 }
 
 // Apply not-implemented macro to all unimplemented flows
+impl_not_implemented_flow!(PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData);
+impl_not_implemented_flow!(RSync, RefundFlowData, RefundSyncData, RefundsResponseData);
 impl_not_implemented_flow!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
 impl_not_implemented_flow!(Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData);
 impl_not_implemented_flow!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
@@ -434,29 +248,3 @@ impl_source_verification_stub!(RepeatPayment, PaymentFlowData, RepeatPaymentData
 impl_source_verification_stub!(Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData);
 impl_source_verification_stub!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
 impl_source_verification_stub!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
-
-// Implement all required connector traits
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate for crate::types::ConnectorData<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for crate::types::ConnectorData<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentVoidV2 for crate::types::ConnectorData<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentCaptureV2 for crate::types::ConnectorData<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::RefundV2 for crate::types::ConnectorData<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::RefundExecuteV2 for crate::types::ConnectorData<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::RefundSyncV2 for crate::types::ConnectorData<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::MandateSetupV2 for crate::types::ConnectorData<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentRepeatV2 for crate::types::ConnectorData<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::DisputeAcceptV2 for crate::types::ConnectorData<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::DisputeDefendV2 for crate::types::ConnectorData<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::DisputeSubmitEvidenceV2 for crate::types::ConnectorData<T> {}
