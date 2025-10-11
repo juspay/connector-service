@@ -186,7 +186,7 @@ pub struct TpslTransactionPayload {
     pub tenure_id: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslConsumerPayload {
     pub mobile_number: String,
