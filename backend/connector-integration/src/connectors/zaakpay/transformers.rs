@@ -96,14 +96,14 @@ pub struct ZaakPayPaymentsResponse {
     pub bankPostData: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct PaymentInstrumentResType {
     pub paymentMode: String,
     pub card: Option<CardResType>,
     pub netbanking: Option<NetBankingRespType>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CardResType {
     pub cardToken: Option<String>,
     pub cardScheme: Option<String>,
@@ -114,7 +114,7 @@ pub struct CardResType {
     pub paymentMethod: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct NetBankingRespType {
     pub bankid: String,
     pub bankName: Option<String>,
