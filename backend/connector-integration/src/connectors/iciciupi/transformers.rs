@@ -242,9 +242,8 @@ impl From<IciciUpiPaymentsSyncResponse> for common_enums::AttemptStatus {
     }
 }
 
-impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    TryFrom<ResponseRouterData<IciciUpiResponse, RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<F> TryFrom<ResponseRouterData<IciciUpiResponse, RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<domain_types::payment_method_data::DefaultPCIHolder>, PaymentsResponseData>>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<domain_types::payment_method_data::DefaultPCIHolder>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
