@@ -266,7 +266,7 @@ pub struct PayTMv2Headers {
     content_type: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PayTMv2StatusResponseBody {
     result_info: PayTMv2ResultInfo,
