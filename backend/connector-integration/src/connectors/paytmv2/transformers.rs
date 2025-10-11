@@ -71,7 +71,7 @@ pub struct PayTMv2InitiateRequestBody {
     extend_info: Option<PayTMv2ExtendInfo>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PayTMv2InitiateTransactionRequest {
     head: PayTMv2InitiateRequestHead,
     body: PayTMv2InitiateRequestBody,
