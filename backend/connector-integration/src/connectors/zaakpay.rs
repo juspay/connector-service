@@ -290,7 +290,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             res: interfaces::api::Response,
         ) -> CustomResult<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, errors::ConnectorError> {
-            let response: zaakpay::ZaakPayPaymentsSyncResponse = res
+            let response: ZaakPayPaymentsSyncResponse = res
                 .response
                 .parse_struct("ZaakPayPaymentsSyncResponse")
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
