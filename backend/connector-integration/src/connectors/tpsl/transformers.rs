@@ -434,7 +434,7 @@ impl TryFrom<&ConnectorAuthType> for TpslAuth {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, .. } => {
                 let auth_data: TpslAuth = api_key
-                    .parse_value("TpslAuth")
+                    .parse_str::<TpslAuth>()
                     .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
                 Ok(auth_data)
             }
