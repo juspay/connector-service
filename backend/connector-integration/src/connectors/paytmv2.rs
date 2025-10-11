@@ -32,7 +32,7 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use transformers::{self as paytmv2, PayTMv2InitiateTransactionRequest, PayTMv2TransactionStatusRequest};
+use transformers::{self as paytmv2, PayTMv2InitiateTransactionRequest, PayTMv2InitiateTransactionResponse, PayTMv2TransactionStatusRequest, PayTMv2TransactionStatusResponse};
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
