@@ -25,7 +25,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::{Mask, Maskable, Secret};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -359,11 +359,8 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode == Some(true) {
-                req.resource_common_data.connectors.tpsl.test_base_url.as_ref()
-            } else {
-                req.resource_common_data.connectors.tpsl.base_url.as_ref()
-            }
+            // TODO: Fix test_mode access when available in RefundFlowData
+            req.resource_common_data.connectors.tpsl.base_url.as_ref()
         }
     }
 );

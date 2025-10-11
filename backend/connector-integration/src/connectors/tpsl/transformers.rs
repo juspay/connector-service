@@ -1,10 +1,11 @@
 use std::{collections::HashMap, str::FromStr};
 
 use common_utils::{
-    errors::CustomResult, ext_traits::ValueExt, id_type, request::Method, types::StringMinorUnit,
+    errors::CustomResult, request::Method, types::StringMinorUnit,
     Email,
 };
-use common_enums::{AttemptStatus, PaymentMethod};
+use masking::ExposeInterface;
+use common_enums::AttemptStatus;
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
@@ -74,7 +75,7 @@ pub struct TpslPaymentPayload {
     pub instruction: TpslInstructionPayload,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslMethodPayload {
     pub token: String,
@@ -83,7 +84,7 @@ pub struct TpslMethodPayload {
     pub code: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslInstrumentPayload {
     pub expiry: TpslExpiryPayload,
@@ -143,7 +144,7 @@ pub struct TpslAuthenticationPayload {
     pub sub_type: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslInstructionPayload {
     pub occurrence: String,
@@ -215,7 +216,7 @@ pub enum TpslPaymentsResponse {
     TpslErrorResponse(TpslErrorResponse),
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslUPITxnResponse {
     pub merchant_code: String,
@@ -412,7 +413,8 @@ impl TryFrom<&ConnectorAuthType> for TpslAuthType {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, .. } => {
                 let auth_data: TpslAuthType = api_key
-                    .parse_str::<TpslAuthType>()
+                    .expose()
+                    .parse::<TpslAuthType>()
                     .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
                 Ok(auth_data)
             }
@@ -434,7 +436,8 @@ impl TryFrom<&ConnectorAuthType> for TpslAuth {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, .. } => {
                 let auth_data: TpslAuth = api_key
-                    .parse_str::<TpslAuth>()
+                    .expose()
+                    .parse::<TpslAuth>()
                     .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
                 Ok(auth_data)
             }
@@ -499,7 +502,7 @@ TryFrom<
     ) -> Result<Self, Self::Error> {
         let customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let return_url = item.router_data.request.router_return_url.clone().unwrap_or_default();
-        let amount = "1000".to_string().parse().unwrap_or_default(); // TODO: Extract from sync data
+        let amount = StringMinorUnit::default(); // TODO: Extract from sync data
 
         let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
         
@@ -517,7 +520,7 @@ TryFrom<
                     item: vec![TpslItemPayload {
                         description: "UPI Payment".to_string(),
                         provider_identifier: "UPI".to_string(),
-                        surcharge_or_discount_amount: "0".to_string().parse().unwrap_or_default(),
+                        surcharge_or_discount_amount: StringMinorUnit::default(),
                         amount: amount.clone(),
                         com_amt: "0".to_string(),
                         s_k_u: "UPI".to_string(),
@@ -620,7 +623,7 @@ TryFrom<
                 consumer: TpslConsumerPayload {
                     mobile_number: "".to_string(), // TODO: Extract from browser info or customer data
                     email_i_d: item.router_data.request.email.clone().unwrap_or_else(|| Email::from_str("test@example.com").unwrap()),
-                    identifier: customer_id.get_string_repr(),
+                    identifier: customer_id.get_string_repr().to_string(),
                     account_no: "".to_string(),
                     account_type: "".to_string(),
                     account_holder_name: customer_id.get_string_repr().to_string(),
@@ -667,7 +670,8 @@ impl<
         
         let (status, response) = match response {
             TpslPaymentsResponse::TpslUPISuccessTxnResponse(response_data) => {
-                let redirection_data = get_redirect_form_data(response_data)?;
+                let network_txn_id = response_data.payment_method.payment_transaction.identifier.clone();
+                let redirection_data = get_redirect_form_data(&response_data)?;
                 (
                     common_enums::AttemptStatus::AuthenticationPending,
                     Ok(PaymentsResponseData::TransactionResponse {
@@ -680,7 +684,7 @@ impl<
                         redirection_data: Some(Box::new(redirection_data)),
                         mandate_reference: None,
                         connector_metadata: None,
-                        network_txn_id: response_data.payment_method.payment_transaction.identifier.clone(),
+                        network_txn_id,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
                         status_code: http_code,
@@ -715,7 +719,7 @@ impl<
 }
 
 fn get_redirect_form_data(
-    response_data: TpslUPITxnResponse,
+    response_data: &TpslUPITxnResponse,
 ) -> CustomResult<RedirectForm, errors::ConnectorError> {
     // Extract redirect URL from ACS payload if available
     if let Some(acs_url) = response_data.payment_method.a_c_s.bank_acs_url.as_str() {
@@ -755,7 +759,7 @@ TryFrom<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = "1000".to_string().parse().unwrap_or_default(); // TODO: Extract from sync data
+        let amount = StringMinorUnit::default(); // TODO: Extract from sync data
 
         let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
 
@@ -767,11 +771,7 @@ TryFrom<
                 instruction: serde_json::Value::Null,
             },
             transaction: TpslTransactionUPITxnType {
-                device_identifier: item.router_data.request.browser_info
-                    .as_ref()
-                    .and_then(|info| info.ip_address.clone())
-                    .map(|ip| ip.to_string())
-                    .unwrap_or_else(|| "127.0.0.1".to_string()),
+                device_identifier: "127.0.0.1".to_string(), // TODO: Extract from proper device info
                 transaction_type: Some("SALE".to_string()),
                 sub_type: Some("UPI".to_string()),
                 amount,
@@ -781,7 +781,7 @@ TryFrom<
                 token: auth.security_token.ok_or(ConnectorError::FailedToObtainAuthType)?.expose(),
             },
             consumer: TpslConsumerDataType {
-                identifier: item.router_data.resource_common_data.get_customer_id()?.get_string_repr(),
+                identifier: item.router_data.resource_common_data.get_customer_id()?.get_string_repr().to_string(),
             },
         })
     }
@@ -794,9 +794,8 @@ impl<
         + std::marker::Sync
         + std::marker::Send
         + 'static
-        + Serialize
         + Serialize,
-> TryFrom<ResponseRouterData<TpslPaymentsSyncResponse, Self>>
+> TryFrom<ResponseRouterData<TpslPaymentsSyncResponse, RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
