@@ -311,8 +311,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: ZaakPay,
-    curl_request: Json(zaakpay::ZaakPayRefundSyncRequest),
-    curl_response: zaakpay::ZaakPayRefundSyncResponse,
+    curl_request: Json(ZaakPayRefundSyncRequest),
+    curl_response: ZaakPayRefundSyncResponse,
     flow_name: RSync,
     resource_common_data: RefundFlowData,
     flow_request: RefundSyncData,
