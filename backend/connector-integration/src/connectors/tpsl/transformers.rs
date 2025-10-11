@@ -4,7 +4,7 @@ use common_utils::{
     errors::CustomResult, ext_traits::ValueExt, id_type, request::Method, types::StringMinorUnit,
     Email,
 };
-use common_enums::{AttemptStatus, PaymentMethod};
+use common_enums::PaymentMethod;
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
@@ -13,10 +13,10 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
+
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
