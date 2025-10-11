@@ -13,7 +13,6 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
