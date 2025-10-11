@@ -283,10 +283,8 @@ where
 }
 
 // Response transformations for PSync flow
-impl<T> TryFrom<crate::types::ResponseRouterData<IciciUpiPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+impl TryFrom<crate::types::ResponseRouterData<IciciUpiPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-where
-    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
 {
     type Error = error_stack::Report<ConnectorError>;
 
@@ -295,7 +293,7 @@ where
     ) -> Result<Self, Self::Error> {
         let crate::types::ResponseRouterData {
             response,
-            mut router_data,
+            router_data,
             http_code,
         } = item;
 
