@@ -129,29 +129,29 @@ impl<T: PaymentMethodDataTypes + Debug> TryFrom<&RouterDataV2<domain_types::conn
 
     fn try_from(item: &RouterDataV2<domain_types::connector_flow::Authorize, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsAuthorizeData<T>, PaymentsResponseData>) -> Result<Self, Self::Error> {
         // Extract amount using amount converter
-        let amount = item.amount.get_amount_as_string();
-        let currency = item.router_data.request.currency.to_string();
+        let amount = item.request.amount.get_amount_as_string();
+        let currency = item.request.currency.to_string();
         
         // Extract customer data
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let customer_id = item.resource_common_data.get_customer_id()?;
         let customer_id_string = customer_id.get_string_repr();
         
         // Extract transaction ID
-        let transaction_id = item.router_data.request.connector_transaction_id
+        let transaction_id = item.request.connector_transaction_id
             .get_connector_transaction_id()
             .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
         
         // Extract return URL
-        let return_url = item.router_data.request.get_router_return_url()?;
+        let return_url = item.request.get_router_return_url()?;
         
         // Extract email
-        let email = item.router_data.request.email.clone().unwrap_or_default();
+        let email = item.request.email.clone().unwrap_or_default();
         
         // Extract phone
-        let phone = item.router_data.request.phone.clone().unwrap_or_default();
+        let phone = item.request.phone.clone().unwrap_or_default();
         
         // Extract billing address
-        let billing_address = item.router_data.request.billing_address.as_ref()
+        let billing_address = item.request.billing_address.as_ref()
             .ok_or(errors::ConnectorError::MissingRequiredField {
                 field_name: "billing_address",
             })?;
@@ -161,7 +161,7 @@ impl<T: PaymentMethodDataTypes + Debug> TryFrom<&RouterDataV2<domain_types::conn
             orderId: transaction_id,
             amount,
             currency,
-            productDescription: item.router_data.request.description.clone().unwrap_or_default(),
+            productDescription: item.request.description.clone().unwrap_or_default(),
             email: email.to_string(),
             phone: phone.to_string(),
         };
@@ -176,7 +176,7 @@ impl<T: PaymentMethodDataTypes + Debug> TryFrom<&RouterDataV2<domain_types::conn
         };
         
         // Create shipping address (optional)
-        let shipping_address_type = item.router_data.request.shipping_address.as_ref().map(|addr| {
+        let shipping_address_type = item.request.shipping_address.as_ref().map(|addr| {
             ShippingAddressType {
                 address: addr.address.clone(),
                 city: addr.city.clone(),
@@ -187,7 +187,7 @@ impl<T: PaymentMethodDataTypes + Debug> TryFrom<&RouterDataV2<domain_types::conn
         });
         
         // Create payment instrument based on payment method type
-        let payment_instrument = match item.router_data.request.payment_method_type {
+        let payment_instrument = match item.request.payment_method_type {
             PaymentMethodType::Upi => {
                 PaymentInstrumentTransType {
                     paymentMode: "upi".to_string(),
@@ -208,7 +208,7 @@ impl<T: PaymentMethodDataTypes + Debug> TryFrom<&RouterDataV2<domain_types::conn
             merchantIdentifier: customer_id_string,
             encryptionKeyId: None,
             showMobile: None,
-            mode: if item.router_data.resource_common_data.test_mode.unwrap_or(false) { "test" } else { "live" }.to_string(),
+            mode: if item.resource_common_data.test_mode.unwrap_or(false) { "test" } else { "live" }.to_string(),
             returnUrl: return_url.to_string(),
             orderDetail: order_detail,
             billingAddress: billing_address_type,
