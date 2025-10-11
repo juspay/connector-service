@@ -485,10 +485,8 @@ where
     }
 }
 
-impl<T> TryFrom<ResponseRouterData<PayTMv2TransactionStatusResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+impl TryFrom<ResponseRouterData<PayTMv2TransactionStatusResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-where
-    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
