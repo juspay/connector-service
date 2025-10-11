@@ -198,7 +198,7 @@ pub struct TpslConsumerPayload {
     pub aadhar_no: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslFlagsType {
     pub account_no: bool,
