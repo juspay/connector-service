@@ -545,13 +545,6 @@ for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseD
 
 impl<
     F,
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize
-        + Serialize,
 > TryFrom<ResponseRouterData<HdfcUpiPaymentsSyncResponse, Self>>
 for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
