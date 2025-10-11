@@ -109,7 +109,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         Ok(Self {
             payer_va,
             amount,
-            note: item.router_data.request.description.clone(),
+            note: None, // Description field not available in PaymentsAuthorizeData
             collect_by_date: None, // Can be set based on business logic
             merchant_id,
             merchant_name: None, // Can be extracted from router data if available
