@@ -309,9 +309,8 @@ impl TryFrom<&ConnectorAuthType> for HdfcUpiAuth {
                     }
                     .into())
                 }
-            } else {
-                Err(errors::ConnectorError::FailedToObtainAuthType.into())
             }
+            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
     }
 }
