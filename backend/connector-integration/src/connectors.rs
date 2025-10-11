@@ -49,3 +49,6 @@ pub use self::nexinets::Nexinets;
 
 pub mod noon;
 pub use self::noon::Noon;
+
+pub mod paytmv2;
+pub use self::paytmv2::PayTMv2;
