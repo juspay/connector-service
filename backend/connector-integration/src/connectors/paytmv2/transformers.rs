@@ -31,7 +31,7 @@ pub struct PayTMv2InitiateRequestHead {
     signature: Secret<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PayTMv2Amount {
     value: StringMinorUnit,
