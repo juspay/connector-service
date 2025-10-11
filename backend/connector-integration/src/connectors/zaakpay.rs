@@ -1,6 +1,7 @@
 pub mod transformers;
 
-use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::{FloatMajorUnit, StringMinorUnit}};
+use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit};
+use error_stack::ResultExt;
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
@@ -19,7 +20,7 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
-    types::{ConnectorInfo, Connectors},
+    types::Connectors,
 };
 use hyperswitch_masking::{Maskable, PeekInterface};
 use interfaces::{
@@ -39,18 +40,7 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
-#[derive(Debug, Clone)]
-pub struct ZaakPay<T: PaymentMethodDataTypes> {
-    phantom: std::marker::PhantomData<T>,
-}
 
-impl<T: PaymentMethodDataTypes> ZaakPay<T> {
-    pub fn new() -> Self {
-        Self {
-            phantom: std::marker::PhantomData,
-        }
-    }
-}
 
 // Trait implementations with generic type parameters
 impl<
@@ -96,19 +86,7 @@ macros::create_all_prerequisites!(
             response_body: ZaakPayPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         )
-    ],
-    amount_converters: [
-        amount_converter: StringMinorUnit
-    ],
-    member_functions: {
-        fn build_checksum(&self, data: &str, salt: &str) -> String {
-            use sha2::{Digest, Sha512};
-            let mut hasher = Sha512::new();
-            hasher.update(data);
-            hasher.update(salt);
-            hex::encode(hasher.finalize())
-        }
-    }
+    ]
 );
 
 // Implement Authorize flow using macro framework
@@ -134,10 +112,10 @@ macros::macro_connector_implementation!(
             
             let request = common_utils::request::RequestBuilder::new()
                 .method(common_utils::request::Method::Post)
-                .url(&format!("{}/transact", self.base_url(&req.connector_meta_data)))
+                .url(&format!("{}/transact", self.base_url(&req.resource_common_data.connector_meta_data)))
                 .attach_default_headers()
                 .headers(auth_header)
-                .body(common_utils::request::RequestContent::Json(Box::new(connector_request)))
+                .set_body(common_utils::request::RequestContent::Json(Box::new(connector_request)))
                 .build();
 
             Ok(Some(request))
@@ -147,6 +125,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             res: Response,
+            event_builder: Option<&mut ConnectorEvent>,
         ) -> CustomResult<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, errors::ConnectorError> {
             let response: ZaakPayPaymentsResponse = res
                 .response
@@ -155,12 +134,11 @@ macros::macro_connector_implementation!(
 
             let router_response = PaymentsResponseData::try_from(response)?;
 
-            Ok(RouterDataV2::from_response(
-                router_response,
-                req.request.clone(),
-                req.resource_common_data.clone(),
-                req.connector_meta_data.clone(),
-            ))
+            Ok(crate::types::ResponseRouterData {
+                response: router_response,
+                router_data: req.clone(),
+                http_code: res.status_code,
+            })
         }
     }
 );
@@ -207,6 +185,7 @@ macro_rules! impl_not_implemented_flow {
                 &self,
                 _req: &RouterDataV2<$flow, $common_data, $req, $resp>,
                 _res: Response,
+                _event_builder: Option<&mut ConnectorEvent>,
             ) -> CustomResult<RouterDataV2<$flow, $common_data, $req, $resp>, errors::ConnectorError> {
                 let flow_name = stringify!($flow);
                 Err(errors::ConnectorError::NotImplemented(flow_name.to_string()).into())
@@ -238,7 +217,7 @@ macro_rules! impl_source_verification_stub {
             fn verify_source(
                 &self,
                 _request: &RouterDataV2<$flow, $common_data, $req, $resp>,
-                _secrets: &ConnectorSourceVerificationSecrets,
+                _business_profile: &domain_types::router_data::BusinessProfile,
             ) -> CustomResult<bool, errors::ConnectorError> {
                 Ok(true)
             }
