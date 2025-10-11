@@ -84,7 +84,7 @@ pub struct UpiTransType {
     pub bankid: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ZaakPayPaymentsResponse {
     pub orderDetail: OrderDetailTransType,
     pub responseCode: String,
