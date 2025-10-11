@@ -278,19 +278,7 @@ macros::create_all_prerequisites!(
             request_body: HdfcUpiPaymentsSyncRequest,
             response_body: HdfcUpiPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ),
-        // Stub implementations for unsupported flows
-        (flow: Void, request_body: HdfcUpiVoidRequest, response_body: HdfcUpiVoidResponse, router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>),
-        (flow: Capture, request_body: HdfcUpiCaptureRequest, response_body: HdfcUpiCaptureResponse, router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>),
-        (flow: Refund, request_body: HdfcUpiRefundRequest, response_body: HdfcUpiRefundResponse, router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>),
-        (flow: RSync, request_body: HdfcUpiRefundSyncRequest, response_body: HdfcUpiRefundSyncResponse, router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>),
-        (flow: CreateOrder, request_body: HdfcUpiCreateOrderRequest, response_body: HdfcUpiCreateOrderResponse, router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>),
-        (flow: CreateSessionToken, request_body: HdfcUpiSessionTokenRequest, response_body: HdfcUpiSessionTokenResponse, router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>),
-        (flow: SetupMandate, request_body: HdfcUpiSetupMandateRequest, response_body: HdfcUpiSetupMandateResponse, router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>),
-        (flow: RepeatPayment, request_body: HdfcUpiRepeatPaymentRequest, response_body: HdfcUpiRepeatPaymentResponse, router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>),
-        (flow: Accept, request_body: HdfcUpiAcceptDisputeRequest, response_body: HdfcUpiAcceptDisputeResponse, router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>),
-        (flow: DefendDispute, request_body: HdfcUpiDefendDisputeRequest, response_body: HdfcUpiDefendDisputeResponse, router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>),
-        (flow: SubmitEvidence, request_body: HdfcUpiSubmitEvidenceRequest, response_body: HdfcUpiSubmitEvidenceResponse, router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>)
+        )
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
