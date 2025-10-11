@@ -163,7 +163,7 @@ pub struct TpslInstructionPayload {
     pub validity: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslTransactionPayload {
     pub device_identifier: String,
