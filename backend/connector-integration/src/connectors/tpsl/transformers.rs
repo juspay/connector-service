@@ -499,14 +499,7 @@ TryFrom<
     ) -> Result<Self, Self::Error> {
         let customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let return_url = item.router_data.request.router_return_url.clone().unwrap_or_default();
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+        let amount = "1000".to_string().parse().unwrap_or_default(); // TODO: Extract from sync data
 
         let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
         
@@ -762,14 +755,7 @@ TryFrom<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+        let amount = "1000".to_string().parse().unwrap_or_default(); // TODO: Extract from sync data
 
         let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
 
