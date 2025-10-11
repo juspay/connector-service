@@ -48,7 +48,7 @@ pub struct PayTMv2UserInfo {
     last_name: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PayTMv2ExtendInfo {
     udf1: Option<serde_json::Value>,
