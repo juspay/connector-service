@@ -625,9 +625,7 @@ TryFrom<
                     tenure_id: "".to_string(),
                 },
                 consumer: TpslConsumerPayload {
-                    mobile_number: item.router_data.request.phone_number.clone()
-                        .map(|phone| phone.to_string())
-                        .unwrap_or_default(),
+                    mobile_number: "".to_string(), // TODO: Extract from browser info or customer data
                     email_i_d: item.router_data.request.email.clone().unwrap_or_else(|| Email::from_str("test@example.com").unwrap()),
                     identifier: customer_id.get_string_repr(),
                     account_no: "".to_string(),
