@@ -75,8 +75,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                             .ok_or(ConnectorError::MissingRequiredField {
                                 field_name: "vpa_id",
                             })?
-                            .expose()
                             .clone()
+                            .expose()
                     }
                     domain_types::payment_method_data::UpiData::UpiIntent(_) => {
                         return Err(ConnectorError::MissingRequiredField {
