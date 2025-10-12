@@ -302,10 +302,11 @@ where
         })
         .transpose()?;
     optional_reference_id
-        .or_else(|| connector_transaction_id.map(transform_fn))
+        .or_else(|| response.transaction_reference.map(&transform_fn))
+        .or_else(|| connector_transaction_id.map(&transform_fn))
         .ok_or_else(|| {
             errors::ConnectorError::MissingRequiredField {
-                field_name: "_links.self.href",
+                field_name: "_links.self.href or transactionReference",
             }
             .into()
         })
@@ -473,9 +474,6 @@ pub enum WorldpayWebhookStatus {
     RefundFailed,
 }
 
-/// Worldpay's unique reference ID for a request
-pub(super) const WP_CORRELATION_ID: &str = "WP-CorrelationId";
-
 // Type aliases to avoid duplicate template structs in macro generation
 pub type WorldpayAuthorizeResponse = WorldpayPaymentsResponse;
 pub type WorldpaySyncResponse = WorldpayEventResponse;
@@ -484,3 +482,5 @@ pub type WorldpayVoidResponse = WorldpayPaymentsResponse;
 pub type WorldpayRefundResponse = WorldpayPaymentsResponse;
 pub type WorldpayRefundSyncResponse = WorldpayEventResponse;
 pub type WorldpayAuthenticateResponse = WorldpayPaymentsResponse;
+pub type WorldpayPreAuthenticateResponse = WorldpayPaymentsResponse;
+pub type WorldpayPostAuthenticateResponse = WorldpayPaymentsResponse;

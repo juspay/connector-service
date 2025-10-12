@@ -5534,6 +5534,24 @@ impl<
         // Clone payment_method to avoid ownership issues
         let payment_method_clone = value.payment_method.clone();
 
+        // Create redirect response from metadata if present
+        // This is used to pass connector-specific data (e.g., collectionReference for Worldpay)
+        let redirect_response = if !value.metadata.is_empty() {
+            let params_string = serde_urlencoded::to_string(&value.metadata)
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_METADATA".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Failed to serialize metadata".to_owned(),
+                    error_object: None,
+                }))?;
+            Some(ContinueRedirectionResponse {
+                params: Some(Secret::new(params_string)),
+                payload: None,
+            })
+        } else {
+            None
+        };
+
         Ok(Self {
             payment_method_data: value
                 .payment_method
@@ -5581,7 +5599,7 @@ impl<
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             enrolled_for_3ds,
-            redirect_response: None,
+            redirect_response,
         })
     }
 }
@@ -5726,14 +5744,30 @@ impl<
         // Clone payment_method to avoid ownership issues
         let payment_method_clone = value.payment_method.clone();
 
-        // Create redirect response from authentication data if present
-        let redirect_response =
+        // Create redirect response from metadata or authentication data
+        // Priority: metadata first, then authentication_data for backward compatibility
+        let redirect_response = if !value.metadata.is_empty() {
+            // Use metadata for connector-specific data (e.g., collectionReference for Worldpay)
+            let params_string = serde_urlencoded::to_string(&value.metadata)
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_METADATA".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Failed to serialize metadata".to_owned(),
+                    error_object: None,
+                }))?;
+            Some(ContinueRedirectionResponse {
+                params: Some(Secret::new(params_string)),
+                payload: None,
+            })
+        } else {
+            // Fallback to authentication_data for backward compatibility
             value
                 .authentication_data
                 .map(|auth_data| ContinueRedirectionResponse {
                     params: auth_data.ds_transaction_id.clone().map(Secret::new),
                     payload: None,
-                });
+                })
+        };
         Ok(Self {
             payment_method_data: value
                 .payment_method

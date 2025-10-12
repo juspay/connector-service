@@ -8,14 +8,16 @@ use common_utils::{
     };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateOrder, DefendDispute,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute,
         PSync, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, CreateSessionToken,
+        PreAuthenticate, PostAuthenticate,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData,
+        PaymentsPreAuthenticateData, PaymentsPostAuthenticateData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         SetupMandateRequestData, SubmitEvidenceData, SessionTokenRequestData, SessionTokenResponseData,
     },
@@ -34,12 +36,12 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use transformers::{self as worldpay};
-use self::requests::{WorldpayAuthenticateRequest, WorldpayPaymentsRequest, WorldpayCaptureRequest, WorldpayRefundRequest};
+use self::requests::{WorldpayAuthorizeRequest, WorldpayCaptureRequest, WorldpayRefundRequest, WorldpayPreAuthenticateRequest, WorldpayPostAuthenticateRequest};
 use self::response::{
     WorldpayErrorResponse,
-    WorldpayAuthenticateResponse, WorldpayAuthorizeResponse, WorldpaySyncResponse,
+    WorldpayAuthorizeResponse, WorldpaySyncResponse,
     WorldpayCaptureResponse, WorldpayVoidResponse, WorldpayRefundResponse,
-    WorldpayRefundSyncResponse
+    WorldpayRefundSyncResponse, WorldpayPreAuthenticateResponse, WorldpayPostAuthenticateResponse
 };
 
 use super::macros;
@@ -136,7 +138,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 pub(crate) mod headers {
-    pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
@@ -146,7 +147,7 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: Authorize,
-            request_body: WorldpayPaymentsRequest<T>,
+            request_body: WorldpayAuthorizeRequest<T>,
             response_body: WorldpayAuthorizeResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
@@ -178,10 +179,16 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ),
         (
-            flow: Authenticate,
-            request_body: WorldpayAuthenticateRequest,
-            response_body: WorldpayAuthenticateResponse,
-            router_data: RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+            flow: PreAuthenticate,
+            request_body: WorldpayPreAuthenticateRequest,
+            response_body: WorldpayPreAuthenticateResponse,
+            router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PostAuthenticate,
+            request_body: WorldpayPostAuthenticateRequest,
+            response_body: WorldpayPostAuthenticateResponse,
+            router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -290,7 +297,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpay,
-    curl_request: Json(WorldpayPaymentsRequest<T>),
+    curl_request: Json(WorldpayAuthorizeRequest<T>),
     curl_response: WorldpayAuthorizeResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
@@ -376,10 +383,19 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let connector_payment_id = req.request.connector_transaction_id.get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+
+            // Use /settlements for full capture, /partialSettlements for partial captures
+            let endpoint = if req.request.is_multiple_capture() {
+                "partialSettlements"
+            } else {
+                "settlements"
+            };
+
             Ok(format!(
-                "{}api/payments/{}/partialSettlements",
+                "{}api/payments/{}/{}",
                 self.connector_base_url_payments(req),
                 urlencoding::encode(&connector_payment_id),
+                endpoint
             ))
         }
     }
@@ -483,11 +499,11 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpay,
-    curl_request: Json(WorldpayAuthenticateRequest),
-    curl_response: WorldpayAuthenticateResponse,
-    flow_name: Authenticate,
+    curl_request: Json(WorldpayPreAuthenticateRequest),
+    curl_response: WorldpayPreAuthenticateResponse,
+    flow_name: PreAuthenticate,
     resource_common_data: PaymentFlowData,
-    flow_request: PaymentsAuthenticateData<T>,
+    flow_request: PaymentsPreAuthenticateData<T>,
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
@@ -495,13 +511,13 @@ macros::macro_connector_implementation!(
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+            req: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
-            req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+            req: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             // Extract metadata object from connector_meta_data
             let metadata_obj = req
@@ -521,30 +537,60 @@ macros::macro_connector_implementation!(
                     field_name: "connector_meta_data.link_data",
                 })?;
 
-            // Select endpoint based on 3ds_stage from metadata (primary) or payment status (fallback)
-            let endpoint = metadata_obj
-                .get("3ds_stage")
-                .and_then(|value| value.as_str())
-                .map(|stage| match stage {
-                    "ddc" => "3dsDeviceData",
-                    "challenge" => "3dsChallenges",
-                    _ => "3dsDeviceData", // Default to DDC for unknown stages
-                })
-                .unwrap_or_else(|| {
-                    // Fallback to status-based selection for stateful environments
-                    match req.resource_common_data.status {
-                        common_enums::AttemptStatus::DeviceDataCollectionPending
-                        | common_enums::AttemptStatus::Pending => "3dsDeviceData",
-                        common_enums::AttemptStatus::AuthenticationPending => "3dsChallenges",
-                        _ => "3dsDeviceData", // Default fallback
-                    }
-                });
-
             Ok(format!(
-                "{}api/payments/{}/{}",
+                "{}api/payments/{}/3dsDeviceData",
                 self.connector_base_url_payments(req),
                 urlencoding::encode(link_data),
-                endpoint
+            ))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Worldpay,
+    curl_request: Json(WorldpayPostAuthenticateRequest),
+    curl_response: WorldpayPostAuthenticateResponse,
+    flow_name: PostAuthenticate,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsPostAuthenticateData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            // Extract metadata object from connector_meta_data
+            let metadata_obj = req
+                .resource_common_data
+                .connector_meta_data
+                .as_ref()
+                .and_then(|metadata| metadata.peek().as_object())
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_meta_data",
+                })?;
+
+            // Extract linkData
+            let link_data = metadata_obj
+                .get("link_data")
+                .and_then(|value| value.as_str())
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_meta_data.link_data",
+                })?;
+
+            Ok(format!(
+                "{}api/payments/{}/3dsChallenges",
+                self.connector_base_url_payments(req),
+                urlencoding::encode(link_data),
             ))
         }
     }
@@ -552,6 +598,23 @@ macros::macro_connector_implementation!(
 
 // Stub implementations for unsupported flows - removed conflicting ones that are now macro-generated
 
+// Authenticate flow is replaced by PreAuthenticate and PostAuthenticate, but we need this stub for trait bounds
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::Authenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Worldpay<T>
+{
+}
 
 impl<
         T: PaymentMethodDataTypes
@@ -654,39 +717,6 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::PostAuthenticate,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Worldpay<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::PreAuthenticate,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Worldpay<T>
-{
-}
 
 impl<
         T: PaymentMethodDataTypes
@@ -855,9 +885,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
-        domain_types::connector_flow::PostAuthenticate,
+        PostAuthenticate,
         PaymentFlowData,
-        domain_types::connector_types::PaymentsPostAuthenticateData<T>,
+        PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
     > for Worldpay<T>
 {
@@ -875,9 +905,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
-        domain_types::connector_flow::PreAuthenticate,
+        PreAuthenticate,
         PaymentFlowData,
-        domain_types::connector_types::PaymentsPreAuthenticateData<T>,
+        PaymentsPreAuthenticateData<T>,
         PaymentsResponseData,
     > for Worldpay<T>
 {

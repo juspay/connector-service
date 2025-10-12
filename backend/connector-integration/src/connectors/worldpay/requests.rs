@@ -1,9 +1,10 @@
+use common_utils::types::MinorUnit;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct WorldpayPaymentsRequest<
+pub struct WorldpayAuthorizeRequest<
     T: domain_types::payment_method_data::PaymentMethodDataTypes
         + std::fmt::Debug
         + std::marker::Sync
@@ -103,7 +104,7 @@ pub enum PaymentInstrument<
 > {
     Card(CardPayment<T>),
     CardToken(CardToken),
-    RawCardForNTI(RawCardDetails<T>),
+    RawCardForNTI(RawCardDetails<domain_types::payment_method_data::DefaultPCIHolder>),
     Googlepay(WalletPayment),
     Applepay(WalletPayment),
 }
@@ -309,13 +310,7 @@ pub enum ThreeDSRequestChannel {
 pub struct ThreeDSRequestChallenge {
     pub return_url: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub preference: Option<ThreeDsPreference>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum ThreeDsPreference {
-    ChallengeMandated,
+    pub preference: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
@@ -335,7 +330,7 @@ pub struct InstructionNarrative {
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct PaymentValue {
-    pub amount: i64,
+    pub amount: MinorUnit,
     pub currency: common_enums::Currency,
 }
 
@@ -364,9 +359,12 @@ pub struct SubMerchant {
 }
 
 #[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WorldpayPartialRequest {
-    pub value: PaymentValue,
-    pub reference: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value: Option<PaymentValue>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reference: Option<String>,
 }
 
 // Type aliases to avoid duplicate template structs in macro generation
@@ -382,6 +380,7 @@ pub struct WorldpayCompleteAuthorizationRequest {
 
 pub(super) const THREE_DS_MODE: &str = "always";
 pub(super) const THREE_DS_TYPE: &str = "integrated";
+pub(super) const THREE_DS_CHALLENGE_PREFERENCE: &str = "challengeMandated";
 
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -390,4 +389,8 @@ pub struct WorldpayAuthenticateRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub collection_reference: Option<String>,
 }
+
+// Type aliases to avoid duplicate template structs in macro generation
+pub type WorldpayPreAuthenticateRequest = WorldpayAuthenticateRequest;
+pub type WorldpayPostAuthenticateRequest = WorldpayAuthenticateRequest;
 
