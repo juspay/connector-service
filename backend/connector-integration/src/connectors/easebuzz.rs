@@ -6,7 +6,7 @@ use common_utils::{
     crypto,
     errors::CustomResult,
     ext_traits::BytesExt,
-    request::RequestContent,
+    request::{Method, RequestContent},
     types::{self, StringMinorUnit},
 };
 use domain_types::{
