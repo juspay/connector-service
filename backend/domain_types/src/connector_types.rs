@@ -1040,7 +1040,7 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     // }
 
     pub fn is_customer_initiated_mandate_payment(&self) -> bool {
-        (self.customer_acceptance.is_some())
+        (self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
             && self.setup_future_usage == Some(common_enums::FutureUsage::OffSession)
     }
 
@@ -1272,6 +1272,8 @@ pub struct RefundSyncData {
     pub all_keys_required: Option<bool>,
     pub integrity_object: Option<RefundSyncIntegrityObject>,
     pub browser_info: Option<BrowserInformation>,
+    /// Charges associated with the payment
+    pub split_refunds: Option<SplitRefundsRequest>,
 }
 
 impl RefundSyncData {
@@ -1789,6 +1791,8 @@ pub struct RefundsData {
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub integrity_object: Option<RefundIntegrityObject>,
     pub browser_info: Option<BrowserInformation>,
+    /// Charges associated with the payment
+    pub split_refunds: Option<SplitRefundsRequest>,
 }
 
 impl RefundsData {
@@ -2444,4 +2448,34 @@ pub struct StripeChargeResponseData {
 
     /// Identifier for the reseller's account where the funds were transferred
     pub transfer_account_id: String,
+}
+
+#[derive(Debug, serde::Deserialize, Clone)]
+pub enum SplitRefundsRequest {
+    StripeSplitRefund(StripeSplitRefund),
+}
+
+#[derive(Debug, serde::Deserialize, Clone)]
+pub struct StripeSplitRefund {
+    pub charge_id: String,
+    pub transfer_account_id: String,
+    pub charge_type: common_enums::PaymentChargeType,
+    pub options: ChargeRefundsOptions,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub enum ChargeRefundsOptions {
+    Destination(DestinationChargeRefund),
+    Direct(DirectChargeRefund),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct DirectChargeRefund {
+    pub revert_platform_fee: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct DestinationChargeRefund {
+    pub revert_platform_fee: bool,
+    pub revert_transfer: bool,
 }

@@ -13,7 +13,8 @@ use domain_types::{
     connector_types::{
         MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        ResponseId, SplitPaymentsRequest,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        SplitPaymentsRequest,
     },
     errors::{self, ConnectorError},
     mandates::AcceptanceType,
@@ -30,7 +31,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_request_types::{
         AuthoriseIntegrityObject, BrowserInformation, CaptureIntegrityObject,
-        PaymentSynIntegrityObject,
+        PaymentSynIntegrityObject, RefundIntegrityObject,
     },
     router_response_types::RedirectForm,
     utils::{get_unimplemented_payment_method_error_message, is_payment_failure},
@@ -47,7 +48,10 @@ use crate::{
         headers::STRIPE_COMPATIBLE_CONNECT_ACCOUNT, StripeAmountConvertor, StripeRouterData,
     },
     types::ResponseRouterData,
-    utils::{convert_uppercase, deserialize_zero_minor_amount_as_none, SplitPaymentData},
+    utils::{
+        convert_uppercase, deserialize_zero_minor_amount_as_none, is_refund_failure,
+        SplitPaymentData,
+    },
 };
 
 pub mod auth_headers {
@@ -4209,6 +4213,212 @@ impl<
         )?;
         Ok(Self {
             amount_to_capture: Some(amount_to_capture),
+        })
+    }
+}
+
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum StripeRefundRequest {
+    RefundRequest(RefundRequest),
+    ChargeRefundRequest(ChargeRefundRequest),
+}
+
+impl<
+        F,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<StripeRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for StripeRefundRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: StripeRouterData<
+            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let refund_amount = StripeAmountConvertor::convert(
+            item.router_data.request.minor_refund_amount,
+            item.router_data.request.currency,
+        )?;
+        match item.router_data.request.split_refunds.as_ref() {
+            Some(domain_types::connector_types::SplitRefundsRequest::StripeSplitRefund(_)) => {
+                Ok(StripeRefundRequest::ChargeRefundRequest(
+                    ChargeRefundRequest::try_from(&item.router_data)?,
+                ))
+            }
+            _ => Ok(StripeRefundRequest::RefundRequest(RefundRequest::try_from(
+                (&item.router_data, refund_amount),
+            )?)),
+        }
+    }
+}
+
+impl<F>
+    TryFrom<(
+        &RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
+        MinorUnit,
+    )> for RefundRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        (item, refund_amount): (
+            &RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
+            MinorUnit,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let payment_intent = item.request.connector_transaction_id.clone();
+        Ok(Self {
+            amount: Some(refund_amount),
+            payment_intent,
+            meta_data: StripeMetadata {
+                order_id: Some(item.request.refund_id.clone()),
+                is_refund_id_as_reference: Some("true".to_string()),
+            },
+        })
+    }
+}
+
+impl<F> TryFrom<&RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>>
+    for ChargeRefundRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: &RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
+    ) -> Result<Self, Self::Error> {
+        let amount = item.request.minor_refund_amount;
+        match item.request.split_refunds.as_ref() {
+            None => Err(ConnectorError::MissingRequiredField {
+                field_name: "split_refunds",
+            }
+            .into()),
+
+            Some(split_refunds) => match split_refunds {
+                domain_types::connector_types::SplitRefundsRequest::StripeSplitRefund(
+                    stripe_refund,
+                ) => {
+                    let (refund_application_fee, reverse_transfer) = match &stripe_refund.options {
+                        domain_types::connector_types::ChargeRefundsOptions::Direct(
+                            domain_types::connector_types::DirectChargeRefund {
+                                revert_platform_fee,
+                            },
+                        ) => (Some(*revert_platform_fee), None),
+                        domain_types::connector_types::ChargeRefundsOptions::Destination(
+                            domain_types::connector_types::DestinationChargeRefund {
+                                revert_platform_fee,
+                                revert_transfer,
+                            },
+                        ) => (Some(*revert_platform_fee), Some(*revert_transfer)),
+                    };
+
+                    Ok(Self {
+                        charge: stripe_refund.charge_id.clone(),
+                        refund_application_fee,
+                        reverse_transfer,
+                        amount: Some(amount),
+                        meta_data: StripeMetadata {
+                            order_id: Some(item.request.refund_id.clone()),
+                            is_refund_id_as_reference: Some("true".to_string()),
+                        },
+                    })
+                }
+            },
+        }
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
+    for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
+        let refund_status = common_enums::RefundStatus::from(item.response.status);
+        let response = if is_refund_failure(refund_status) {
+            Err(domain_types::router_data::ErrorResponse {
+                code: consts::NO_ERROR_CODE.to_string(),
+                message: item
+                    .response
+                    .failure_reason
+                    .clone()
+                    .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
+                reason: item.response.failure_reason,
+                status_code: item.http_code,
+                attempt_status: None,
+                connector_transaction_id: Some(item.response.id),
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+            })
+        } else {
+            Ok(RefundsResponseData {
+                connector_refund_id: item.response.id,
+                refund_status,
+                status_code: item.http_code,
+            })
+        };
+
+        let currency_enum =
+            common_enums::Currency::from_str(item.response.currency.to_uppercase().as_str())
+                .change_context(errors::ConnectorError::ParsingFailed)?;
+
+        let refund_amount_in_minor_unit =
+            StripeAmountConvertor::convert_back(item.response.amount, currency_enum)?;
+
+        let response_integrity_object = RefundIntegrityObject {
+            currency: currency_enum,
+            refund_amount: refund_amount_in_minor_unit,
+        };
+
+        Ok(Self {
+            response,
+            request: RefundsData {
+                integrity_object: Some(response_integrity_object),
+                ..item.router_data.request
+            },
+            ..item.router_data
+        })
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
+    for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
+        let refund_status = common_enums::RefundStatus::from(item.response.status);
+        let response = if is_refund_failure(refund_status) {
+            Err(domain_types::router_data::ErrorResponse {
+                code: consts::NO_ERROR_CODE.to_string(),
+                message: item
+                    .response
+                    .failure_reason
+                    .clone()
+                    .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
+                reason: item.response.failure_reason,
+                status_code: item.http_code,
+                attempt_status: None,
+                connector_transaction_id: Some(item.response.id),
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+            })
+        } else {
+            Ok(RefundsResponseData {
+                connector_refund_id: item.response.id,
+                refund_status,
+                status_code: item.http_code,
+            })
+        };
+
+        Ok(Self {
+            response,
+            ..item.router_data
         })
     }
 }

@@ -16,11 +16,12 @@ use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
         card_payment_method_type, identifier::IdType, payment_method,
-        payment_service_client::PaymentServiceClient, AuthenticationType, CaptureMethod,
-        CardDetails, CardPaymentMethodType, Currency, Identifier, PaymentMethod,
-        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
-        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceVoidRequest,
-        PaymentStatus,
+        payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient,
+        AuthenticationType, CaptureMethod, CardDetails, CardPaymentMethodType, Currency,
+        Identifier, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
+        PaymentServiceVoidRequest, PaymentStatus, RefundResponse, RefundServiceGetRequest,
+        RefundStatus,
     },
 };
 use hyperswitch_masking::Secret;
@@ -94,6 +95,11 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
         },
         None => panic!("Resource ID is None"),
     }
+}
+
+// Helper function to extract connector Refund ID from response
+fn extract_refund_id(response: &RefundResponse) -> &String {
+    &response.refund_id
 }
 
 // Helper function to create a payment authorize request
@@ -185,6 +191,43 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         all_keys_required: None,
         browser_info: None,
         access_token: None,
+    }
+}
+
+// Helper function to create a refund request
+fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
+    PaymentServiceRefundRequest {
+        refund_id: format!("refund_{}", generate_unique_id("test")),
+        transaction_id: Some(Identifier {
+            id_type: Some(IdType::Id(transaction_id.to_string())),
+        }),
+        currency: i32::from(Currency::Usd),
+        payment_amount: TEST_AMOUNT,
+        refund_amount: TEST_AMOUNT,
+        minor_payment_amount: TEST_AMOUNT,
+        minor_refund_amount: TEST_AMOUNT,
+        reason: None,
+        browser_info: None,
+        merchant_account_id: None,
+        capture_method: None,
+        request_ref_id: None,
+        webhook_url: Some(
+            "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),
+        ),
+        ..Default::default()
+    }
+}
+
+// Helper function to create a refund sync request
+fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundServiceGetRequest {
+    RefundServiceGetRequest {
+        transaction_id: Some(Identifier {
+            id_type: Some(IdType::Id(transaction_id.to_string())),
+        }),
+        refund_id: refund_id.to_string(),
+        refund_reason: None,
+        request_ref_id: None,
+        ..Default::default()
     }
 }
 
@@ -393,5 +436,123 @@ async fn test_payment_void() {
             sync_response.status == i32::from(PaymentStatus::Voided),
             "Payment should be in VOIDED state after void sync"
         );
+    });
+}
+
+#[tokio::test]
+async fn test_refund() {
+    grpc_test!(client, PaymentServiceClient<Channel>, {
+        // Create the payment authorization request
+        let request = create_authorize_request(CaptureMethod::Automatic);
+
+        // Add metadata headers
+        let mut grpc_request = Request::new(request);
+        add_stripe_metadata(&mut grpc_request);
+
+        // Send the request
+        let response = client
+            .authorize(grpc_request)
+            .await
+            .expect("gRPC authorize call failed")
+            .into_inner();
+
+        // Extract the transaction ID
+        let transaction_id = extract_transaction_id(&response);
+
+        assert!(
+            response.status == i32::from(PaymentStatus::Charged),
+            "Payment should be in Charged state"
+        );
+
+        // Create refund request
+        let refund_request = create_refund_request(&transaction_id);
+
+        // Add metadata headers for refund request
+        let mut refund_grpc_request = Request::new(refund_request);
+        add_stripe_metadata(&mut refund_grpc_request);
+
+        // Send the refund request
+        let refund_response = client
+            .refund(refund_grpc_request)
+            .await
+            .expect("gRPC refund call failed")
+            .into_inner();
+
+        // Verify the refund response
+        assert!(
+            refund_response.status == i32::from(RefundStatus::RefundSuccess),
+            "Refund should be in RefundSuccess state"
+        );
+    });
+}
+
+#[tokio::test]
+async fn test_refund_sync() {
+    grpc_test!(client, PaymentServiceClient<Channel>, {
+        grpc_test!(refund_client, RefundServiceClient<Channel>, {
+            // Create the payment authorization request
+            let request = create_authorize_request(CaptureMethod::Automatic);
+
+            // Add metadata headers
+            let mut grpc_request = Request::new(request);
+            add_stripe_metadata(&mut grpc_request);
+
+            // Send the request
+            let response = client
+                .authorize(grpc_request)
+                .await
+                .expect("gRPC authorize call failed")
+                .into_inner();
+
+            // Extract the transaction ID
+            let transaction_id = extract_transaction_id(&response);
+
+            assert!(
+                response.status == i32::from(PaymentStatus::Charged),
+                "Payment should be in Charged state"
+            );
+
+            // Create refund request
+            let refund_request = create_refund_request(&transaction_id);
+
+            // Add metadata headers for refund request
+            let mut refund_grpc_request = Request::new(refund_request);
+            add_stripe_metadata(&mut refund_grpc_request);
+
+            // Send the refund request
+            let refund_response = client
+                .refund(refund_grpc_request)
+                .await
+                .expect("gRPC refund call failed")
+                .into_inner();
+
+            // Verify the refund response
+            assert!(
+                refund_response.status == i32::from(RefundStatus::RefundSuccess),
+                "Refund should be in RefundSuccess state"
+            );
+
+            let refund_id = extract_refund_id(&refund_response);
+
+            // Create refund sync request
+            let refund_sync_request = create_refund_sync_request(&transaction_id, refund_id);
+
+            // Add metadata headers for refund sync request
+            let mut refund_sync_grpc_request = Request::new(refund_sync_request);
+            add_stripe_metadata(&mut refund_sync_grpc_request);
+
+            // Send the refund sync request
+            let refund_sync_response = refund_client
+                .get(refund_sync_grpc_request)
+                .await
+                .expect("gRPC refund sync call failed")
+                .into_inner();
+
+            // Verify the refund sync response
+            assert!(
+                refund_sync_response.status == i32::from(RefundStatus::RefundSuccess),
+                "Refund Sync should be in RefundSuccess state"
+            );
+        });
     });
 }

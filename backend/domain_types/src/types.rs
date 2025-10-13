@@ -2617,6 +2617,7 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             }),
             all_keys_required: None, // Field not available in new proto structure
             integrity_object: None,
+            split_refunds: None,
         })
     }
 }
@@ -3352,6 +3353,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             integrity_object: None,
+            split_refunds: None,
         })
     }
 }
