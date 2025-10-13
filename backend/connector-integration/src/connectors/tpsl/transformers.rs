@@ -779,7 +779,7 @@ TryFrom<
     ) -> Result<Self, Self::Error> {
         // CRITICAL: Extract all values dynamically from router data - NO HARDCODING
         let amount = item.connector.amount_converter.convert(
-            item.router_data.request.minor_amount,
+            item.router_data.request.amount,
             item.router_data.request.currency,
         )?;
         let currency = item.router_data.request.currency.to_string();
