@@ -464,15 +464,15 @@ impl TryFrom<EaseBuzzRouterData<&RouterDataV2<Refund, PaymentFlowData, RefundFlo
     }
 }
 
-impl TryFrom<&RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>>
+impl TryFrom<EaseBuzzRouterData<&RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>>>
     for EaseBuzzRefundSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
+        item: EaseBuzzRouterData<&RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>>,
     ) -> Result<Self, Self::Error> {
-        let auth = get_auth_credentials(&item.connector_auth_type)?;
+        let auth = get_auth_credentials(&item.router_data.connector_auth_type)?;
         let key = auth.key.expose();
         let salt = auth.salt.expose();
 
