@@ -76,10 +76,6 @@ impl TryFrom<&ConnectorAuthType> for HsbcUpiAuth {
                 pg_merchant_id: api_key.clone(),
                 api_key: Some(api_key.clone()),
             }),
-            ConnectorAuthType::Key { api_key, .. } => Ok(Self {
-                pg_merchant_id: api_key.clone(),
-                api_key: Some(api_key.clone()),
-            }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
     }
