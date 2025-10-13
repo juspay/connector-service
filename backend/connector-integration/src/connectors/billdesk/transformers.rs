@@ -4,9 +4,8 @@ use common_utils::{
     errors::CustomResult,
     ext_traits::ValueExt,
     request::Method,
-    types::StringMinorUnit,
-    Email,
 };
+use hyperswitch_masking::{Mask, ExposeInterface};
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
