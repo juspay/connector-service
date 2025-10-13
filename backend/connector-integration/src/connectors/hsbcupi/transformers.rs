@@ -343,7 +343,7 @@ impl<
                 Err(ErrorResponse {
                     status_code: http_code,
                     code: error_data.status_code,
-                    message: error_data.status_desc.clone(),
+                    message: error_data.status_desc.clone().unwrap_or_default(),
                     reason: error_data.status_desc,
                     attempt_status: None,
                     connector_transaction_id: None,
@@ -417,7 +417,7 @@ impl<
                 Err(ErrorResponse {
                     status_code: http_code,
                     code: error_data.status_code,
-                    message: error_data.status_desc.clone(),
+                    message: error_data.status_desc.clone().unwrap_or_default(),
                     reason: error_data.status_desc,
                     attempt_status: None,
                     connector_transaction_id: None,
