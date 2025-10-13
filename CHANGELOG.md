@@ -20,16 +20,17 @@
 
 ### Technical Details
 - **Migrated from**: Hyperswitch/Euler Haskell implementation
-- **Framework**: Uses UCS v2 macro framework for all trait implementations
+- **Framework**: Uses UCS v2 macro framework for all trait implementations (mandatory)
 - **Amount Handling**: StringMinorUnit converter for proper monetary value handling
-- **Authentication**: Basic Auth with API key support
+- **Authentication**: SignatureKey authentication with API key and salt
 - **Hash Generation**: SHA512 hash generation for request security
 - **Type Safety**: Full guard rails with Secret<String> for sensitive data, MinorUnit for amounts
 - **Error Handling**: Comprehensive error response parsing and status mapping
-- **Payment Methods**: UPI-only implementation as specified
+- **Payment Methods**: UPI-only implementation as specified (UPI Intent/Collect)
 - **Flows Implemented**: 
   - Authorize: UPI payment initiation
   - PSync: Payment status synchronization
+  - Refund: Refund initiation
   - RSync: Refund status synchronization
 
 ### API Endpoints
