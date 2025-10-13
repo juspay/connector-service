@@ -2,6 +2,7 @@ pub mod transformers;
 
 use common_enums::CurrencyUnit;
 use common_utils::{
+    consts::BASE64_ENGINE,
     errors::CustomResult,
     ext_traits::ByteSliceExt,
     types::StringMinorUnit,
