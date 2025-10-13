@@ -192,7 +192,7 @@ impl<
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HsbcUpiPaymentsResponse {
     pub me_ref_no: String,
