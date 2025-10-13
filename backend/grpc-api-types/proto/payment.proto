@@ -455,6 +455,7 @@ enum Connector {
   PHONEPE = 91;
   CASHFREE = 92;
   PAYTM = 93;
+  HSBCUPI = 94;
 }
 
 // Payment method types.
