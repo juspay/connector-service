@@ -1172,7 +1172,6 @@ impl<
             integrity_object: None,
             merchant_config_currency: Some(merchant_config_currency),
             all_keys_required: None, // Field not available in new proto structure
-            authentication_data: value.authentication_data,
         })
     }
 }

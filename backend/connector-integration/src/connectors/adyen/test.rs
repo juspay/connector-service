@@ -153,7 +153,6 @@ mod tests {
                     all_keys_required: None,
                     access_token: None,
                     customer_acceptance: None,
-                    authentication_data: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -284,7 +283,6 @@ mod tests {
                     all_keys_required: None,
                     access_token: None,
                     customer_acceptance: None,
-                    authentication_data: None,
                 },
                 response: Err(ErrorResponse::default()),
             };

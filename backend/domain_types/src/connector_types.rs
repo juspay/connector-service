@@ -12,7 +12,6 @@ use common_utils::{
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
 use error_stack::ResultExt;
-use grpc_api_types::payments::AuthenticationData;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
@@ -874,7 +873,6 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub integrity_object: Option<AuthoriseIntegrityObject>,
     pub merchant_config_currency: Option<common_enums::Currency>,
     pub all_keys_required: Option<bool>,
-    pub authentication_data: Option<AuthenticationData>,
 }
 
 impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
