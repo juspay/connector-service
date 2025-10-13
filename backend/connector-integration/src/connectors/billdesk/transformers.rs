@@ -250,15 +250,15 @@ impl<
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         match item.router_data.resource_common_data.payment_method {
-            common_enums::PaymentMethod::Upi => {
-                // Build Billdesk UPI request message
+            common_enums::PaymentMethod::Card => {
+                // Build Billdesk Card request message
                 let msg = format!(
-                    "MERCHANTID={}&TXN_REFERENCE_NO={}&AMOUNT={}&CURRENCY={}&CUSTOMER_ID={}&TXN_TYPE=UPI&ITEM_CODE=UPI&TXN_DATE={}",
+                    "MERCHANTID={}&TXN_REFERENCE_NO={}&AMOUNT={}&CURRENCY={}&CUSTOMER_ID={}&TXN_TYPE=CARD&ITEM_CODE=CARD&TXN_DATE={}",
                     extract_merchant_id(&item.router_data.connector_auth_type)?,
                     item.router_data.resource_common_data.connector_request_reference_id,
                     amount,
                     item.router_data.request.currency,
-                    customer_id,
+                    customer_id.get_string_repr(),
                     std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
                         .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?
@@ -276,7 +276,7 @@ impl<
 
                 Ok(Self {
                     msg,
-                    paydata: None, // Will be populated based on UPI specific requirements
+                    paydata: None, // Will be populated based on Card specific requirements
                     ipaddress: Some(ip_address),
                     useragent: Some(user_agent),
                 })
