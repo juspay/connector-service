@@ -394,15 +394,15 @@ where
     }
 }
 
-impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+impl TryFrom<EaseBuzzRouterData<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
     for EaseBuzzPaymentsSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: EaseBuzzRouterData<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
-        let auth = get_auth_credentials(&item.connector_auth_type)?;
+        let auth = get_auth_credentials(&item.router_data.connector_auth_type)?;
         let key = auth.key.expose();
         let salt = auth.salt.expose();
 
@@ -413,8 +413,8 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
             .clone();
         
         let amount = item.amount.get_amount_as_string();
-        let email = item.router_data.request.email.as_deref().unwrap_or("").to_string();
-        let phone = item.router_data.request.phone.as_deref().unwrap_or("").to_string();
+        let email = item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_else(|| "".to_string());
+        let phone = item.router_data.request.phone.as_ref().map(|p| p.to_string()).unwrap_or_else(|| "".to_string());
 
         let hash = generate_sync_hash(&key, &txnid, &amount, &email, &phone, &salt);
 
