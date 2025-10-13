@@ -12,19 +12,17 @@ use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData,
+        RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData, ResponseId,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
+    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
-    types as domain_types,
+    router_response_types::Response,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
-use masking::ExposeInterface;
+use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-
-use crate::utils::ConnectorAuthType;
 
 // Request/Response types for EaseBuzz
 
