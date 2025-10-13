@@ -370,47 +370,47 @@ pub struct EaseBuzzRepeatPaymentResponse;
 
 // Implement all connector types traits (even for unsupported flows)
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::PaymentVoidV2 for EaseBuzz<T>
+    connector_types::PaymentVoidV2 for EaseBuzz<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::PaymentCaptureV2 for EaseBuzz<T>
+    connector_types::PaymentCaptureV2 for EaseBuzz<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::PaymentOrderCreate for EaseBuzz<T>
+    connector_types::PaymentOrderCreate for EaseBuzz<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::PaymentSessionToken for EaseBuzz<T>
+    connector_types::PaymentSessionToken for EaseBuzz<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::PaymentSetupMandate for EaseBuzz<T>
+    connector_types::PaymentSetupMandate for EaseBuzz<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::DisputeAccept for EaseBuzz<T>
+    connector_types::DisputeAccept for EaseBuzz<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::DisputeDefend for EaseBuzz<T>
+    connector_types::DisputeDefend for EaseBuzz<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::DisputeSubmitEvidence for EaseBuzz<T>
+    connector_types::DisputeSubmitEvidence for EaseBuzz<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::PaymentRepeatPayment for EaseBuzz<T>
+    connector_types::PaymentRepeatPayment for EaseBuzz<T>
 {
 }
 
