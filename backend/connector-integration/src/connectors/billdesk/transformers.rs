@@ -192,7 +192,7 @@ fn get_redirect_form_data(
                         .parameters
                         .into_iter()
                         .map(|(k, v)| (k, v.into_masked()))
-                        .collect(),
+                        .collect::<std::collections::HashMap<String, Maskable<String>>>(),
                 })
             } else {
                 Err(errors::ConnectorError::MissingRequiredField {
