@@ -1379,16 +1379,12 @@ fn extract_score_id(message_extensions: &[MessageExtensionAttribute]) -> Option<
             .flatten()
     })
 }
-pub enum DecoupledAuthenticationType {
-    Challenge,
-    Frictionless,
-}
 
-impl From<DecoupledAuthenticationType> for EffectiveAuthenticationType {
-    fn from(auth_type: DecoupledAuthenticationType) -> Self {
+impl From<common_enums::DecoupledAuthenticationType> for EffectiveAuthenticationType {
+    fn from(auth_type: common_enums::DecoupledAuthenticationType) -> Self {
         match auth_type {
-            DecoupledAuthenticationType::Challenge => Self::CH,
-            DecoupledAuthenticationType::Frictionless => Self::FR,
+            common_enums::DecoupledAuthenticationType::Challenge => Self::CH,
+            common_enums::DecoupledAuthenticationType::Frictionless => Self::FR,
         }
     }
 }

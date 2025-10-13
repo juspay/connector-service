@@ -1074,42 +1074,6 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     pub fn get_access_token_optional(&self) -> Option<&String> {
         self.access_token.as_ref()
     }
-    pub fn requires_authentication(&self) -> bool {
-        self.enrolled_for_3ds || self.authentication_data.is_some()
-    }
-
-    pub fn get_authentication_data(&self) -> Option<&AuthenticationData> {
-        self.authentication_data.as_ref()
-    }
-
-    pub fn force_3ds_challenge(&self) -> bool {
-        // Implementation based on business logic
-        false
-    }
-
-    pub fn get_three_ds_version(&self) -> Option<String> {
-        self.authentication_data
-            .as_ref()
-            .and_then(|auth| auth.message_version.clone())
-    }
-
-    pub fn get_eci(&self) -> Option<String> {
-        self.authentication_data
-            .as_ref()
-            .and_then(|auth| auth.eci.clone())
-    }
-
-    pub fn get_cavv(&self) -> Option<String> {
-        self.authentication_data
-            .as_ref()
-            .map(|auth| auth.cavv.clone())
-    }
-
-    pub fn get_ds_transaction_id(&self) -> Option<String> {
-        self.authentication_data
-            .as_ref()
-            .and_then(|auth| auth.ds_transaction_id.clone())
-    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
