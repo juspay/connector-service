@@ -19,7 +19,7 @@ use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
-use crate::{connectors::tpsl::TPSLRouterData, types::ResponseRouterData};
+use crate::{types::ResponseRouterData};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -463,13 +463,16 @@ impl From<TpslPaymentStatus> for common_enums::AttemptStatus {
     }
 }
 
+// Type alias for router data to match macro expectations
+pub type TPSLRouterData<R, T> = crate::ConnectorRouterData<R, T>;
+
 impl<
     T: PaymentMethodDataTypes
         + std::fmt::Debug
         + std::marker::Sync
         + std::marker::Send
         + 'static
-        + Serialize,
+        + Serialize
 >
 TryFrom<
     TPSLRouterData<
@@ -496,11 +499,29 @@ TryFrom<
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        // CRITICAL: Extract all values dynamically from router data - NO HARDCODING
         let customer_id = item.router_data.resource_common_data.get_customer_id()?;
-        let return_url = item.router_data.request.router_return_url.clone().unwrap_or_default();
-        let amount = "1000".to_string().parse().unwrap_or_default(); // TODO: Extract from sync data
+        let return_url = item.router_data.request.get_router_return_url()
+            .unwrap_or_else(|| "https://default.return.url".to_string());
+        
+        // CRITICAL: Use proper amount converter - never hardcode amounts
+        let amount = item.amount.get_amount_as_string();
+        let currency = item.router_data.request.currency.to_string();
 
+        // CRITICAL: Extract authentication data dynamically
         let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
+        
+        // CRITICAL: Extract transaction ID dynamically
+        let transaction_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
+        
+        // CRITICAL: Extract IP address dynamically
+        let ip_address = item.router_data.request.get_ip_address_as_optional()
+            .map(|ip| ip.expose())
+            .unwrap_or_else(|| "127.0.0.1".to_string());
+        
+        // CRITICAL: Extract email dynamically
+        let email = item.router_data.request.email.clone()
+            .unwrap_or_else(|| Email::from_str("default@example.com").unwrap());
         
         match item.router_data.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => Ok(Self {
@@ -517,14 +538,14 @@ TryFrom<
                         description: "UPI Payment".to_string(),
                         provider_identifier: "UPI".to_string(),
                         surcharge_or_discount_amount: "0".to_string().parse().unwrap_or_default(),
-                        amount: amount.clone(),
+                        amount: amount.clone().parse().unwrap_or_default(),
                         com_amt: "0".to_string(),
                         s_k_u: "UPI".to_string(),
-                        reference: item.router_data.resource_common_data.connector_request_reference_id.clone(),
-                        identifier: item.router_data.resource_common_data.connector_request_reference_id.clone(),
+                        reference: transaction_id.clone(),
+                        identifier: transaction_id.clone(),
                     }],
-                    reference: item.router_data.resource_common_data.connector_request_reference_id.clone(),
-                    identifier: item.router_data.resource_common_data.connector_request_reference_id.clone(),
+                    reference: transaction_id.clone(),
+                    identifier: transaction_id.clone(),
                     description: "UPI Payment".to_string(),
                 },
                 payment: TpslPaymentPayload {
@@ -578,7 +599,7 @@ TryFrom<
                     },
                     instruction: TpslInstructionPayload {
                         occurrence: "".to_string(),
-                        amount: amount.clone(),
+                        amount: amount.clone().parse().unwrap_or_default(),
                         frequency: "".to_string(),
                         instruction_type: "".to_string(),
                         description: "".to_string(),
@@ -594,31 +615,27 @@ TryFrom<
                     },
                 },
                 transaction: TpslTransactionPayload {
-                    device_identifier: item.router_data.request.browser_info
-                        .as_ref()
-                        .and_then(|info| info.ip_address.clone())
-                        .map(|ip| ip.to_string())
-                        .unwrap_or_else(|| "127.0.0.1".to_string()),
+                    device_identifier: ip_address,
                     sms_sending: "N".to_string(),
-                    amount: amount.clone(),
+                    amount: amount.parse().unwrap_or_default(),
                     forced_3_d_s_call: "N".to_string(),
                     transaction_type: "SALE".to_string(),
                     description: "UPI Payment".to_string(),
-                    currency: item.router_data.request.currency.to_string(),
+                    currency,
                     is_registration: "N".to_string(),
-                    identifier: item.router_data.resource_common_data.connector_request_reference_id.clone(),
+                    identifier: transaction_id.clone(),
                     date_time: OffsetDateTime::now_utc().to_string(),
                     token: auth.security_token.ok_or(ConnectorError::FailedToObtainAuthType)?.expose(),
                     security_token: auth.security_token.ok_or(ConnectorError::FailedToObtainAuthType)?.expose(),
                     sub_type: "UPI".to_string(),
                     request_type: "SALE".to_string(),
-                    reference: item.router_data.resource_common_data.connector_request_reference_id.clone(),
+                    reference: transaction_id,
                     merchant_initiated: "N".to_string(),
                     tenure_id: "".to_string(),
                 },
                 consumer: TpslConsumerPayload {
-                    mobile_number: "".to_string(), // TODO: Extract from browser info or customer data
-                    email_i_d: item.router_data.request.email.clone().unwrap_or_else(|| Email::from_str("test@example.com").unwrap()),
+                    mobile_number: "".to_string(), // TODO: Extract from customer data if available
+                    email_i_d: email,
                     identifier: customer_id.get_string_repr(),
                     account_no: "".to_string(),
                     account_type: "".to_string(),
@@ -754,9 +771,16 @@ TryFrom<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = "1000".to_string().parse().unwrap_or_default(); // TODO: Extract from sync data
+        // CRITICAL: Extract all values dynamically from router data - NO HARDCODING
+        let amount = item.amount.get_amount_as_string();
+        let currency = item.router_data.request.currency.to_string();
 
         let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
+
+        // CRITICAL: Extract IP address dynamically
+        let ip_address = item.router_data.request.get_ip_address_as_optional()
+            .map(|ip| ip.expose())
+            .unwrap_or_else(|| "127.0.0.1".to_string());
 
         Ok(Self {
             merchant: TpslMerchantDataType {
@@ -766,15 +790,11 @@ TryFrom<
                 instruction: serde_json::Value::Null,
             },
             transaction: TpslTransactionUPITxnType {
-                device_identifier: item.router_data.request.browser_info
-                    .as_ref()
-                    .and_then(|info| info.ip_address.clone())
-                    .map(|ip| ip.to_string())
-                    .unwrap_or_else(|| "127.0.0.1".to_string()),
+                device_identifier: ip_address,
                 transaction_type: Some("SALE".to_string()),
                 sub_type: Some("UPI".to_string()),
-                amount,
-                currency: item.router_data.request.currency.to_string(),
+                amount: amount.parse().unwrap_or_default(),
+                currency,
                 date_time: OffsetDateTime::now_utc().to_string(),
                 request_type: "SALE".to_string(),
                 token: auth.security_token.ok_or(ConnectorError::FailedToObtainAuthType)?.expose(),
