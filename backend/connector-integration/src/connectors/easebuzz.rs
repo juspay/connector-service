@@ -400,7 +400,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentCaptureV2 for EaseBuzz<T>
+    connector_types::PaymentCapture for EaseBuzz<T>
 {
 }
 
@@ -415,12 +415,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentSetupMandate for EaseBuzz<T>
+    connector_types::SetupMandateV2<T> for EaseBuzz<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::DisputeAccept for EaseBuzz<T>
+    connector_types::AcceptDispute for EaseBuzz<T>
 {
 }
 
@@ -430,12 +430,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::DisputeSubmitEvidence for EaseBuzz<T>
+    connector_types::SubmitEvidenceV2 for EaseBuzz<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentRepeatPayment for EaseBuzz<T>
+    connector_types::RepeatPaymentV2 for EaseBuzz<T>
 {
 }
 
