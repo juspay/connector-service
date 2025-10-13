@@ -737,7 +737,7 @@ impl<
 }
 
 fn get_redirect_form_data(
-    response_data: TpslUPITxnResponse,
+    response_data: &TpslUPITxnResponse,
 ) -> CustomResult<RedirectForm, errors::ConnectorError> {
     // Extract redirect URL from ACS payload if available
     if let Some(acs_url) = response_data.payment_method.a_c_s.bank_acs_url.as_str() {
