@@ -51,6 +51,33 @@ use self::transformers::{
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
+// Source verification stub macro
+macro_rules! impl_source_verification_stub {
+    ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
+        impl<
+                T: PaymentMethodDataTypes
+                    + std::fmt::Debug
+                    + std::marker::Sync
+                    + std::marker::Send
+                    + 'static
+                    + Serialize,
+            > SourceVerification<$flow, $common_data, $req, $resp> for EaseBuzz<T>
+        {
+            fn get_secrets(
+                &self,
+                _secrets: ConnectorSourceVerificationSecrets,
+            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+                Ok(Vec::new()) // STUB - will be implemented in Phase 10
+            }
+            fn get_algorithm(
+                &self,
+            ) -> CustomResult<String, errors::ConnectorError> {
+                Ok("SHA256".to_string())
+            }
+        }
+    };
+}
+
 // Create all prerequisites using UCS v2 macro framework
 macros::create_all_prerequisites!(
     connector_name: EaseBuzz,
