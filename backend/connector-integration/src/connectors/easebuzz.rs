@@ -1,46 +1,48 @@
-pub mod constants;
+// EaseBuzz Connector Implementation
 pub mod transformers;
+
+use std::marker::PhantomData;
 
 use common_enums::{AttemptStatus, PaymentMethodType};
 use common_utils::{
+    consts::BASE_URL,
+    crypto,
     errors::CustomResult,
-    ext_traits::ByteSliceExt,
+    ext_traits::BytesExt,
+    request::RequestContent,
     types::{self, StringMinorUnit},
 };
 use domain_types::{
-    connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
-        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
-    },
+    connector_flow::{Authorize, PSync, RSync},
     connector_types::{
-        AcceptDisputeData, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        ConnectorSpecifications, ConnectorWebhookSecrets, PaymentFlowData, PaymentsAuthorizeData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
+        RefundSyncData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
-    router_response_types::Response,
-    types::Connectors,
+    router_request_types::ResponseId,
+    types as domain_types,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
-use interfaces::{
-    api::ConnectorCommon,
-    connector_integration_v2::ConnectorIntegrationV2,
-    connector_types,
-    events::connector_api_logs::ConnectorEvent,
-    verification::{ConnectorSourceVerificationSecrets, SourceVerification},
-};
-use serde::Serialize;
+use hyperswitch_masking::Secret;
+use masking::ExposeInterface;
+use serde::{Deserialize, Serialize};
 
-use self::transformers as easebuzz;
-use super::macros;
-use crate::{types::ResponseRouterData, with_error_response_body};
+use self::transformers::{
+    EaseBuzzPaymentsRequest, EaseBuzzPaymentsResponse, EaseBuzzPaymentsSyncRequest,
+    EaseBuzzPaymentsSyncResponse, EaseBuzzRefundRequest, EaseBuzzRefundResponse,
+    EaseBuzzRefundSyncRequest, EaseBuzzRefundSyncResponse,
+};
+use crate::{
+    impl_source_verification_stub,
+    services::{
+        api::{self, ConnectorCommon, ConnectorCommonExt},
+        ConnectorIntegrationV2,
+    },
+    utils::ConnectorAuthType,
+};
 
 // Create all prerequisites using UCS v2 macro framework
 macros::create_all_prerequisites!(
@@ -64,34 +66,25 @@ macros::create_all_prerequisites!(
             request_body: EaseBuzzRefundSyncRequest,
             response_body: EaseBuzzRefundSyncResponse,
             router_data: RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: Refund,
+            request_body: EaseBuzzRefundRequest,
+            response_body: EaseBuzzRefundResponse,
+            router_data: RouterDataV2<Refund, PaymentFlowData, RefundFlowData, RefundsResponseData>,
         )
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
     ],
     member_functions: {
-        fn get_content_type(&self) -> &'static str {
-            "application/x-www-form-urlencoded"
-        }
-
-        fn get_error_response_v2(
-            &self,
-            res: &Response,
-        ) -> CustomResult<errors::ConnectorError, errors::ConnectorError> {
-            let response: easebuzz::EaseBuzzErrorResponse = res
-                .response
-                .parse_struct("EaseBuzzErrorResponse")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-            match response.status {
-                0 => Ok(errors::ConnectorError::NoResponseBody),
-                _ => Err(errors::ConnectorError::NoResponseBody),
-            }
+        fn get_api_tag(&self) -> &'static str {
+            "EaseBuzz"
         }
     }
 );
 
-// Implement connector common trait
+// Implement connector common traits
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     ConnectorCommon for EaseBuzz<T>
 {
@@ -100,28 +93,34 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 
     fn get_base_url(&self) -> &'static str {
-        constants::BASE_URL
+        match self.connector_name {
+            "EaseBuzz" => "https://pay.easebuzz.in",
+            _ => BASE_URL,
+        }
     }
 
-    fn get_connector_name(&self) -> String {
-        "EaseBuzz".to_string()
+    fn get_test_base_url(&self) -> &'static str {
+        "https://testpay.easebuzz.in"
     }
 
-    fn get_connector_version(&self) -> String {
-        "1.0.0".to_string()
+    fn get_auth_type(&self) -> ConnectorAuthType {
+        ConnectorAuthType::SignatureKey
     }
 
-    fn get_webhook_secret(&self) -> Option<&ConnectorWebhookSecrets> {
-        None
+    fn get_connector_webhook_details(
+        &self,
+        _merchant_id: &str,
+    ) -> CustomResult<Option<ConnectorWebhookSecrets>, errors::ConnectorError> {
+        Ok(None)
     }
 }
 
-// Implement Authorize flow using macro
+// Implement Authorize flow using macro framework
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: EaseBuzz,
-    curl_request: Form(easebuzz::EaseBuzzPaymentsRequest),
-    curl_response: easebuzz::EaseBuzzPaymentsResponse,
+    curl_request: Json(EaseBuzzPaymentsRequest),
+    curl_response: EaseBuzzPaymentsResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthorizeData<T>,
@@ -133,52 +132,42 @@ macros::macro_connector_implementation!(
         fn build_request_v2(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Option<interfaces::api::Request>, errors::ConnectorError> {
-            let auth = easebuzz::EaseBuzzAuthType::try_from(&req.connector_auth_type)?;
-            let request = easebuzz::EaseBuzzPaymentsRequest::try_from(req)?;
-            
-            let url = if req.resource_common_data.test_mode.unwrap_or(false) {
-                constants::TEST_PAYMENT_INITIATE_URL.to_string()
+        ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+            let is_test = req.resource_common_data.test_mode.unwrap_or(false);
+            let base_url = if is_test {
+                self.get_test_base_url()
             } else {
-                constants::PROD_PAYMENT_INITIATE_URL.to_string()
+                self.get_base_url()
             };
 
-            Ok(Some(
-                interfaces::api::RequestBuilder::new()
-                    .method(interfaces::api::Method::Post)
-                    .url(&url)
-                    .attach_default_headers()
-                    .headers(vec![(
-                        "Authorization".to_string(),
-                        format!("Basic {}", auth.get_auth_header()),
-                    )])
-                    .set_body(interfaces::api::RequestBody::Form(request))
-                    .build(),
-            ))
-        }
+            let endpoint = match req.request.payment_method_type {
+                PaymentMethodType::Upi => "/payment/initiateLink",
+                _ => return Err(errors::ConnectorError::NotImplemented("Payment method not supported".to_string()).into()),
+            };
 
-        fn handle_response_v2(
-            &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            res: &Response,
-        ) -> CustomResult<PaymentsResponseData, errors::ConnectorError> {
-            let response: easebuzz::EaseBuzzPaymentsResponse = res
-                .response
-                .parse_struct("EaseBuzzPaymentsResponse")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            let url = format!("{}{}", base_url, endpoint);
+            let request = EaseBuzzPaymentsRequest::try_from(req)?;
 
-            easebuzz::EaseBuzzPaymentsResponse::try_from(response)
-                .change_context(errors::ConnectorError::ResponseHandlingFailed)
+            Ok(Some(common_utils::request::RequestBuilder::new()
+                .method(common_utils::request::RequestMethod::Post)
+                .url(&url)
+                .attach_default_headers()
+                .headers(vec![(
+                    "Content-Type".to_string(),
+                    "application/json".to_string(),
+                )])
+                .body(RequestContent::Json(request))
+                .build()))
         }
     }
 );
 
-// Implement PSync flow using macro
+// Implement PSync flow using macro framework
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: EaseBuzz,
-    curl_request: Form(easebuzz::EaseBuzzPaymentsSyncRequest),
-    curl_response: easebuzz::EaseBuzzPaymentsSyncResponse,
+    curl_request: Json(EaseBuzzPaymentsSyncRequest),
+    curl_response: EaseBuzzPaymentsSyncResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
@@ -190,52 +179,79 @@ macros::macro_connector_implementation!(
         fn build_request_v2(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Option<interfaces::api::Request>, errors::ConnectorError> {
-            let auth = easebuzz::EaseBuzzAuthType::try_from(&req.connector_auth_type)?;
-            let request = easebuzz::EaseBuzzPaymentsSyncRequest::try_from(req)?;
-            
-            let url = if req.resource_common_data.test_mode.unwrap_or(false) {
-                constants::TEST_TXN_SYNC_URL.to_string()
+        ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+            let is_test = req.resource_common_data.test_mode.unwrap_or(false);
+            let base_url = if is_test {
+                self.get_test_base_url()
             } else {
-                constants::PROD_TXN_SYNC_URL.to_string()
+                self.get_base_url()
             };
 
-            Ok(Some(
-                interfaces::api::RequestBuilder::new()
-                    .method(interfaces::api::Method::Post)
-                    .url(&url)
-                    .attach_default_headers()
-                    .headers(vec![(
-                        "Authorization".to_string(),
-                        format!("Basic {}", auth.get_auth_header()),
-                    )])
-                    .set_body(interfaces::api::RequestBody::Form(request))
-                    .build(),
-            ))
-        }
+            let url = format!("{}/payment/txnSync", base_url);
+            let request = EaseBuzzPaymentsSyncRequest::try_from(req)?;
 
-        fn handle_response_v2(
-            &self,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            res: &Response,
-        ) -> CustomResult<PaymentsResponseData, errors::ConnectorError> {
-            let response: easebuzz::EaseBuzzPaymentsSyncResponse = res
-                .response
-                .parse_struct("EaseBuzzPaymentsSyncResponse")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-            easebuzz::EaseBuzzPaymentsSyncResponse::try_from(response)
-                .change_context(errors::ConnectorError::ResponseHandlingFailed)
+            Ok(Some(common_utils::request::RequestBuilder::new()
+                .method(common_utils::request::RequestMethod::Post)
+                .url(&url)
+                .attach_default_headers()
+                .headers(vec![(
+                    "Content-Type".to_string(),
+                    "application/json".to_string(),
+                )])
+                .body(RequestContent::Json(request))
+                .build()))
         }
     }
 );
 
-// Implement RSync flow using macro
+// Implement Refund flow using macro framework
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: EaseBuzz,
-    curl_request: Form(easebuzz::EaseBuzzRefundSyncRequest),
-    curl_response: easebuzz::EaseBuzzRefundSyncResponse,
+    curl_request: Json(EaseBuzzRefundRequest),
+    curl_response: EaseBuzzRefundResponse,
+    flow_name: Refund,
+    resource_common_data: PaymentFlowData,
+    flow_request: RefundFlowData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn build_request_v2(
+            &self,
+            req: &RouterDataV2<Refund, PaymentFlowData, RefundFlowData, RefundsResponseData>,
+        ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+            let is_test = req.resource_common_data.test_mode.unwrap_or(false);
+            let base_url = if is_test {
+                self.get_test_base_url()
+            } else {
+                self.get_base_url()
+            };
+
+            let url = format!("{}/transaction/refund", base_url);
+            let request = EaseBuzzRefundRequest::try_from(req)?;
+
+            Ok(Some(common_utils::request::RequestBuilder::new()
+                .method(common_utils::request::RequestMethod::Post)
+                .url(&url)
+                .attach_default_headers()
+                .headers(vec![(
+                    "Content-Type".to_string(),
+                    "application/json".to_string(),
+                )])
+                .body(RequestContent::Json(request))
+                .build()))
+        }
+    }
+);
+
+// Implement RSync flow using macro framework
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: EaseBuzz,
+    curl_request: Json(EaseBuzzRefundSyncRequest),
+    curl_response: EaseBuzzRefundSyncResponse,
     flow_name: RSync,
     resource_common_data: PaymentFlowData,
     flow_request: RefundSyncData,
@@ -247,63 +263,174 @@ macros::macro_connector_implementation!(
         fn build_request_v2(
             &self,
             req: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Option<interfaces::api::Request>, errors::ConnectorError> {
-            let auth = easebuzz::EaseBuzzAuthType::try_from(&req.connector_auth_type)?;
-            let request = easebuzz::EaseBuzzRefundSyncRequest::try_from(req)?;
-            
-            let url = if req.resource_common_data.test_mode.unwrap_or(false) {
-                constants::TEST_REFUND_SYNC_URL.to_string()
+        ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+            let is_test = req.resource_common_data.test_mode.unwrap_or(false);
+            let base_url = if is_test {
+                self.get_test_base_url()
             } else {
-                constants::PROD_REFUND_SYNC_URL.to_string()
+                self.get_base_url()
             };
 
-            Ok(Some(
-                interfaces::api::RequestBuilder::new()
-                    .method(interfaces::api::Method::Post)
-                    .url(&url)
-                    .attach_default_headers()
-                    .headers(vec![(
-                        "Authorization".to_string(),
-                        format!("Basic {}", auth.get_auth_header()),
-                    )])
-                    .set_body(interfaces::api::RequestBody::Form(request))
-                    .build(),
-            ))
-        }
+            let url = format!("{}/transaction/refundSync", base_url);
+            let request = EaseBuzzRefundSyncRequest::try_from(req)?;
 
-        fn handle_response_v2(
-            &self,
-            req: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
-            res: &Response,
-        ) -> CustomResult<RefundsResponseData, errors::ConnectorError> {
-            let response: easebuzz::EaseBuzzRefundSyncResponse = res
-                .response
-                .parse_struct("EaseBuzzRefundSyncResponse")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-            easebuzz::EaseBuzzRefundSyncResponse::try_from(response)
-                .change_context(errors::ConnectorError::ResponseHandlingFailed)
+            Ok(Some(common_utils::request::RequestBuilder::new()
+                .method(common_utils::request::RequestMethod::Post)
+                .url(&url)
+                .attach_default_headers()
+                .headers(vec![(
+                    "Content-Type".to_string(),
+                    "application/json".to_string(),
+                )])
+                .body(RequestContent::Json(request))
+                .build()))
         }
     }
 );
 
-// Add source verification stubs for implemented flows
+// Add source verification stubs for all flows
 impl_source_verification_stub!(Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData);
 impl_source_verification_stub!(PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData);
+impl_source_verification_stub!(Refund, PaymentFlowData, RefundFlowData, RefundsResponseData);
 impl_source_verification_stub!(RSync, PaymentFlowData, RefundSyncData, RefundsResponseData);
 
 // Implement connector types traits
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentAuthorizeV2 for EaseBuzz<T>
+    domain_types::connector_types::PaymentAuthorizeV2 for EaseBuzz<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentSyncV2 for EaseBuzz<T>
+    domain_types::connector_types::PaymentSyncV2 for EaseBuzz<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::RefundSyncV2 for EaseBuzz<T>
+    domain_types::connector_types::PaymentRefundV2 for EaseBuzz<T>
 {
 }
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    domain_types::connector_types::RefundSyncV2 for EaseBuzz<T>
+{
+}
+
+// Stub implementations for unsupported flows
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzVoidRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzVoidResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzCaptureRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzCaptureResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzCreateOrderRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzCreateOrderResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzSessionTokenRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzSessionTokenResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzSetupMandateRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzSetupMandateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzAcceptDisputeRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzAcceptDisputeResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzDefendDisputeRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzDefendDisputeResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzSubmitEvidenceRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzSubmitEvidenceResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzRepeatPaymentRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzRepeatPaymentResponse;
+
+// Implement all connector types traits (even for unsupported flows)
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    domain_types::connector_types::PaymentVoidV2 for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    domain_types::connector_types::PaymentCaptureV2 for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    domain_types::connector_types::PaymentOrderCreate for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    domain_types::connector_types::PaymentSessionToken for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    domain_types::connector_types::PaymentSetupMandate for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    domain_types::connector_types::DisputeAccept for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    domain_types::connector_types::DisputeDefend for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    domain_types::connector_types::DisputeSubmitEvidence for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    domain_types::connector_types::PaymentRepeatPayment for EaseBuzz<T>
+{
+}
+
+// Macro for not implemented flows
+macro_rules! impl_not_implemented_flow {
+    ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
+        impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+            ConnectorIntegrationV2<$flow, $common_data, $req, $resp> for EaseBuzz<T>
+        {
+            fn build_request_v2(
+                &self,
+                _req: &RouterDataV2<$flow, $common_data, $req, $resp>,
+            ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+                let flow_name = stringify!($flow);
+                Err(errors::ConnectorError::NotImplemented(flow_name.to_string()).into())
+            }
+        }
+    };
+}
+
+// Apply not implemented macro to unsupported flows
+impl_not_implemented_flow!(domain_types::connector_flow::Void, PaymentFlowData, domain_types::connector_types::PaymentVoidData, PaymentsResponseData);
+impl_not_implemented_flow!(domain_types::connector_flow::Capture, PaymentFlowData, domain_types::connector_types::PaymentsCaptureData, PaymentsResponseData);
+impl_not_implemented_flow!(domain_types::connector_flow::CreateOrder, PaymentFlowData, domain_types::connector_types::PaymentCreateOrderData, domain_types::connector_types::PaymentCreateOrderResponse);
+impl_not_implemented_flow!(domain_types::connector_flow::CreateSessionToken, PaymentFlowData, domain_types::connector_types::SessionTokenRequestData, domain_types::connector_types::SessionTokenResponseData);
+impl_not_implemented_flow!(domain_types::connector_flow::SetupMandate, PaymentFlowData, domain_types::connector_types::SetupMandateRequestData, domain_types::connector_types::SetupMandateResponseData);
+impl_not_implemented_flow!(domain_types::connector_flow::Accept, PaymentFlowData, domain_types::connector_types::AcceptDisputeData, domain_types::connector_types::DisputeResponseData);
+impl_not_implemented_flow!(domain_types::connector_flow::DefendDispute, PaymentFlowData, domain_types::connector_types::DisputeDefendData, domain_types::connector_types::DisputeResponseData);
+impl_not_implemented_flow!(domain_types::connector_flow::SubmitEvidence, PaymentFlowData, domain_types::connector_types::SubmitEvidenceData, domain_types::connector_types::DisputeResponseData);
+impl_not_implemented_flow!(domain_types::connector_flow::RepeatPayment, PaymentFlowData, domain_types::connector_types::RepeatPaymentData, PaymentsResponseData);
