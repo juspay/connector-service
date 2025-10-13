@@ -100,6 +100,7 @@ mod tests {
                     vault_headers: None,
                     connector_response_headers: None,
                     raw_connector_request: None,
+                    minor_amount_capturable: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -177,6 +178,10 @@ mod tests {
                     all_keys_required: None,
                     access_token: None,
                     customer_acceptance: None,
+                    split_payments: None,
+                    request_extended_authorization: None,
+                    setup_mandate_details: None,
+                    enable_overcapture: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -270,6 +275,7 @@ mod tests {
                     vault_headers: None,
                     connector_response_headers: None,
                     raw_connector_request: None,
+                    minor_amount_capturable: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -324,6 +330,10 @@ mod tests {
                     all_keys_required: None,
                     access_token: None,
                     customer_acceptance: None,
+                    split_payments: None,
+                    request_extended_authorization: None,
+                    setup_mandate_details: None,
+                    enable_overcapture: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_01".to_string(),
@@ -391,6 +401,7 @@ mod tests {
                     vault_headers: None,
                     connector_response_headers: None,
                     raw_connector_request: None,
+                    minor_amount_capturable: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -445,6 +456,10 @@ mod tests {
                     all_keys_required: None,
                     access_token: None,
                     customer_acceptance: None,
+                    split_payments: None,
+                    request_extended_authorization: None,
+                    setup_mandate_details: None,
+                    enable_overcapture: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_02".to_string(),
@@ -534,6 +549,7 @@ mod tests {
                     vault_headers: None,
                     connector_response_headers: None,
                     raw_connector_request: None,
+                    minor_amount_capturable: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -611,6 +627,10 @@ mod tests {
                     all_keys_required: None,
                     access_token: None,
                     customer_acceptance: None,
+                    split_payments: None,
+                    request_extended_authorization: None,
+                    setup_mandate_details: None,
+                    enable_overcapture: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -845,6 +865,7 @@ mod tests {
                 vault_headers: None,
                 connector_response_headers: None,
                 raw_connector_request: None,
+                minor_amount_capturable: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -918,6 +939,10 @@ mod tests {
                 all_keys_required: None,
                 access_token: None,
                 customer_acceptance: None,
+                split_payments: None,
+                request_extended_authorization: None,
+                setup_mandate_details: None,
+                enable_overcapture: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1022,6 +1047,7 @@ mod tests {
                 vault_headers: None,
                 connector_response_headers: None,
                 raw_connector_request: None,
+                minor_amount_capturable: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1095,6 +1121,10 @@ mod tests {
                 all_keys_required: None,
                 access_token: None,
                 customer_acceptance: None,
+                split_payments: None,
+                request_extended_authorization: None,
+                setup_mandate_details: None,
+                enable_overcapture: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1201,6 +1231,7 @@ mod tests {
                     vault_headers: None,
                     connector_response_headers: None,
                     raw_connector_request: None,
+                    minor_amount_capturable: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1299,6 +1330,7 @@ mod tests {
                     vault_headers: None,
                     connector_response_headers: None,
                     raw_connector_request: None,
+                    minor_amount_capturable: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1402,6 +1434,7 @@ mod tests {
                     vault_headers: None,
                     connector_response_headers: None,
                     raw_connector_request: None,
+                    minor_amount_capturable: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "invalid_key".to_string().into(),
@@ -1456,6 +1489,10 @@ mod tests {
                     all_keys_required: None,
                     access_token: None,
                     customer_acceptance: None,
+                    split_payments: None,
+                    request_extended_authorization: None,
+                    setup_mandate_details: None,
+                    enable_overcapture: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_INVALID".to_string(),
@@ -1544,6 +1581,7 @@ mod tests {
                 vault_headers: None,
                 connector_response_headers: None,
                 raw_connector_request: None,
+                minor_amount_capturable: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1665,6 +1703,7 @@ mod tests {
                 vault_headers: None,
                 connector_response_headers: None,
                 raw_connector_request: None,
+                minor_amount_capturable: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1775,6 +1814,7 @@ mod tests {
                 vault_headers: None,
                 connector_response_headers: None,
                 raw_connector_request: None,
+                minor_amount_capturable: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),

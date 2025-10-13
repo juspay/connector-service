@@ -1566,10 +1566,7 @@ impl<
             } else {
                 None
             },
-            request_extended_authorization: if request_extended_authorization
-                .map(|request_extended_authorization| request_extended_authorization)
-                .unwrap_or(false)
-            {
+            request_extended_authorization: if request_extended_authorization.unwrap_or(false) {
                 Some(StripeRequestExtendedAuthorization::IfAvailable)
             } else {
                 None

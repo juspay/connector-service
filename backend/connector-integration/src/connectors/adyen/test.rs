@@ -70,6 +70,7 @@ mod tests {
                     raw_connector_response: None,
                     vault_headers: None,
                     raw_connector_request: None,
+                    minor_amount_capturable: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
@@ -153,6 +154,10 @@ mod tests {
                     all_keys_required: None,
                     access_token: None,
                     customer_acceptance: None,
+                    split_payments: None,
+                    request_extended_authorization: None,
+                    setup_mandate_details: None,
+                    enable_overcapture: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -242,6 +247,7 @@ mod tests {
                     raw_connector_response: None,
                     vault_headers: None,
                     raw_connector_request: None,
+                    minor_amount_capturable: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
@@ -283,6 +289,10 @@ mod tests {
                     all_keys_required: None,
                     access_token: None,
                     customer_acceptance: None,
+                    split_payments: None,
+                    request_extended_authorization: None,
+                    setup_mandate_details: None,
+                    enable_overcapture: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
