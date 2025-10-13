@@ -801,7 +801,7 @@ TryFrom<
                 instruction: serde_json::Value::Null,
             },
             transaction: TpslTransactionUPITxnType {
-                device_identifier: ip_address,
+                device_identifier: "127.0.0.1".to_string(), // PaymentsSyncData doesn't have browser_info
                 transaction_type: Some("SALE".to_string()),
                 sub_type: Some("UPI".to_string()),
                 amount: amount,
