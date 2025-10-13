@@ -689,7 +689,7 @@ impl<
         
         let (status, response) = match response {
             TpslPaymentsResponse::TpslUPISuccessTxnResponse(response_data) => {
-                let redirection_data = get_redirect_form_data(response_data)?;
+                let redirection_data = get_redirect_form_data(&response_data)?;
                 (
                     common_enums::AttemptStatus::AuthenticationPending,
                     Ok(PaymentsResponseData::TransactionResponse {
