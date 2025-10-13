@@ -294,11 +294,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
-                req.resource_common_data.connectors.hsbcupi.base_url.as_str()
-            } else {
-                req.resource_common_data.connectors.hsbcupi.base_url.as_str()
-            }
+            req.resource_common_data.connectors.hsbcupi.base_url.as_str()
         }
     }
 );
