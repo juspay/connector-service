@@ -632,7 +632,7 @@ TryFrom<
                     is_registration: "N".to_string(),
                     identifier: transaction_id.clone(),
                     date_time: OffsetDateTime::now_utc().to_string(),
-                    token: auth.security_token.ok_or(ConnectorError::FailedToObtainAuthType)?.expose().to_string(),
+                    token: auth.security_token.clone().ok_or(ConnectorError::FailedToObtainAuthType)?.expose().to_string(),
                     security_token: auth.security_token.ok_or(ConnectorError::FailedToObtainAuthType)?.expose().to_string(),
                     sub_type: "UPI".to_string(),
                     request_type: "SALE".to_string(),
