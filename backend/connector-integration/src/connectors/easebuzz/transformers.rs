@@ -1,27 +1,19 @@
-use std::collections::HashMap;
-
-use common_enums::{AttemptStatus, PaymentMethodType};
+use masking::ExposeInterface;
+use hyperswitch_masking::Secret;
 use common_utils::{
-    crypto,
     errors::CustomResult,
-    ext_traits::BytesExt,
-    request::RequestContent,
-    types::{self, StringMinorUnit},
+    types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData, ResponseId,
+        RefundFlowData, RefundsResponseData, RefundSyncData,
     },
-    errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
-    router_response_types::Response,
 };
-use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 // Request/Response types for EaseBuzz
@@ -267,7 +259,7 @@ fn generate_hash(
         "{}|{}|{}|{}|{}|{}|{}",
         key, txnid, amount, productinfo, firstname, email, salt
     );
-    crypto::Sha512::generate_hash(&hash_string)
+    common_utils::crypto::Sha512::generate_digest(&hash_string).unwrap()
 }
 
 fn generate_refund_hash(
@@ -281,7 +273,7 @@ fn generate_refund_hash(
         "{}|{}|{}|{}|{}",
         key, txnid, amount, refund_amount, salt
     );
-    crypto::Sha512::generate_hash(&hash_string)
+    common_utils::crypto::Sha512::generate_digest(&hash_string).unwrap()
 }
 
 fn generate_sync_hash(
@@ -296,7 +288,7 @@ fn generate_sync_hash(
         "{}|{}|{}|{}|{}|{}",
         key, txnid, amount, email, phone, salt
     );
-    crypto::Sha512::generate_hash(&hash_string)
+    common_utils::crypto::Sha512::generate_digest(&hash_string).unwrap()
 }
 
 // Define router data type alias
@@ -323,19 +315,18 @@ where
             .connector_request_reference_id
             .clone();
         
-        let amount = item.amount.get_amount_as_string();
+        let amount = item.router_data.request.amount.get_amount_as_string();
         let productinfo = item
             .router_data
             .request
-            .description
-            .clone()
+            .get_optional_description()
             .unwrap_or_else(|| "Payment".to_string());
         
         let customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let firstname = customer_id.get_string_repr();
         
         let email = item.router_data.request.email.clone();
-        let phone = item.router_data.request.phone.as_ref().map(|p| p.to_string());
+        let phone = item.router_data.request.get_optional_phone().map(|p| p.to_string());
 
         let return_url = item.router_data.request.get_router_return_url()?;
         let surl = return_url.clone();
@@ -347,17 +338,17 @@ where
             &amount,
             &productinfo,
             &firstname,
-            &email.as_ref().map(|e| e.to_string()).unwrap_or_else(|| "".to_string()).as_str(),
+            &email.as_ref().map(|e| e.peek().to_string()).unwrap_or_else(|| "".to_string()).as_str(),
             &salt,
         );
 
         let (payment_source, bank_code, vpa) = match item.router_data.request.payment_method_type {
-            PaymentMethodType::Upi => {
-                if let Some(upi_data) = &item.router_data.request.payment_method_data.upi {
+            PaymentMethodType::UpiCollect | PaymentMethodType::UpiIntent => {
+                if let Some(upi_data) = &item.router_data.request.payment_method_data.get_upi() {
                     (
                         "upi".to_string(),
                         None,
-                        Some(upi_data.upi_id.to_string()),
+                        Some(upi_data.upi_id.peek().to_string()),
                     )
                 } else {
                     ("upi".to_string(), None, None)
@@ -370,8 +361,8 @@ where
             txnid,
             amount,
             productinfo,
-            firstname,
-            email: email.map(|e| e.to_string()),
+            firstname: firstname.to_string(),
+            email: email.map(|e| e.peek().to_string()),
             phone,
             surl,
             furl,
@@ -412,7 +403,7 @@ impl TryFrom<EaseBuzzRouterData<&RouterDataV2<PSync, PaymentFlowData, PaymentsSy
             .connector_request_reference_id
             .clone();
         
-        let amount = item.amount.get_amount_as_string();
+        let amount = item.router_data.request.amount.get_amount_as_string();
         let email = item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_else(|| "".to_string());
         let phone = item.router_data.request.phone.as_ref().map(|p| p.to_string()).unwrap_or_else(|| "".to_string());
 
@@ -447,9 +438,9 @@ impl TryFrom<EaseBuzzRouterData<&RouterDataV2<Refund, PaymentFlowData, RefundFlo
             .connector_request_reference_id
             .clone();
         
-        let amount = item.amount.get_amount_as_string();
-        let refund_amount = item.amount.get_amount_as_string();
-        let refund_note = item.router_data.request.reason.clone();
+        let amount = item.router_data.request.amount.get_amount_as_string();
+        let refund_amount = item.router_data.request.amount.get_amount_as_string();
+        let refund_note = item.router_data.request.get_optional_reason().clone();
 
         let hash = generate_refund_hash(&key, &txnid, &amount, &refund_amount, &salt);
 
@@ -490,7 +481,7 @@ impl TryFrom<EaseBuzzRouterData<&RouterDataV2<RSync, PaymentFlowData, RefundSync
             .clone();
 
         let hash_string = format!("{}|{}|{}", key, easebuzz_id, salt);
-        let hash = crypto::Sha512::generate_hash(&hash_string);
+        let hash = common_utils::crypto::Sha512::generate_digest(&hash_string).unwrap();
 
         Ok(Self {
             key: Secret::new(key),
@@ -515,8 +506,8 @@ impl TryFrom<EaseBuzzPaymentsResponse> for PaymentsResponseData {
         Ok(Self {
             status,
             connector_transaction_id: Some(ResponseId::ConnectorTransactionId(response.data.easebuzz_id)),
-            amount_received: Some(types::MinorUnit::from_major_unit_as_i64(
-                response.data.amount.parse().unwrap_or(0.0),
+            amount_received: Some(common_utils::types::MinorUnit::new(
+                response.data.amount.parse().unwrap_or(0),
             )),
             error_message: response.error_desc,
             ..Default::default()
@@ -544,8 +535,8 @@ impl TryFrom<EaseBuzzPaymentsSyncResponse> for PaymentsResponseData {
                 Ok(Self {
                     status,
                     connector_transaction_id: Some(ResponseId::ConnectorTransactionId(data.easebuzz_id)),
-                    amount_received: Some(types::MinorUnit::from_major_unit_as_i64(
-                        data.amount.parse().unwrap_or(0.0),
+                    amount_received: Some(common_utils::types::MinorUnit::new(
+                        data.amount.parse().unwrap_or(0),
                     )),
                     ..Default::default()
                 })
@@ -567,15 +558,9 @@ impl TryFrom<EaseBuzzRefundResponse> for RefundsResponseData {
         };
 
         Ok(Self {
-            status,
-            connector_refund_id: response.refund_id.map(ResponseId::ConnectorRefundId),
-            refund_amount_received: response.refund_amount.and_then(|amt| {
-                amt.parse::<f64>()
-                    .ok()
-                    .map(|f| types::MinorUnit::from_major_unit_as_i64(f))
-            }),
-            error_message: response.reason,
-            ..Default::default()
+            refund_status: status,
+            connector_refund_id: response.refund_id.unwrap_or_default(),
+            status_code: 200,
         })
     }
 }
@@ -602,18 +587,12 @@ impl TryFrom<EaseBuzzRefundSyncResponse> for RefundsResponseData {
                 };
 
                 Ok(Self {
-                    status,
+                    refund_status: status,
                     connector_refund_id: data
                         .refunds
-                        .and_then(|r| r.first().map(|refund| ResponseId::ConnectorRefundId(refund.refund_id.clone()))),
-                    refund_amount_received: data
-                        .refunds
-                        .and_then(|r| r.first().and_then(|refund| {
-                            refund.refund_amount.parse::<f64>().ok().map(|f| {
-                                types::MinorUnit::from_major_unit_as_i64(f)
-                            })
-                        })),
-                    ..Default::default()
+                        .and_then(|r| r.first().map(|refund| refund.refund_id.clone()))
+                        .unwrap_or_default(),
+                    status_code: 200,
                 })
             }
             EaseBuzzRefundSyncData::Failure(failure) => Err(errors::ConnectorError::RequestEncodingFailed
@@ -633,7 +612,7 @@ pub struct EaseBuzzAuthCredentials {
 
 fn get_auth_credentials(auth_type: &ConnectorAuthType) -> CustomResult<EaseBuzzAuthCredentials, errors::ConnectorError> {
     match auth_type {
-        ConnectorAuthType::SignatureKey { api_key, key1 } => Ok(EaseBuzzAuthCredentials {
+        ConnectorAuthType::SignatureKey { api_key, key1, api_secret: _ } => Ok(EaseBuzzAuthCredentials {
             key: api_key.clone(),
             salt: key1.clone(),
         }),
