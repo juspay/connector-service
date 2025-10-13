@@ -43,9 +43,7 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuth {
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, .. } => {
-                let auth_data: Self = api_key
-                    .to_owned()
-                    .parse_value("BilldeskAuth")
+                let auth_data: Self = serde_json::from_str(api_key.peek())
                     .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
                 Ok(auth_data)
             }
