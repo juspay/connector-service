@@ -461,7 +461,7 @@ impl_not_implemented_flow!(Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
 impl_not_implemented_flow!(Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData);
 impl_not_implemented_flow!(CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse);
 impl_not_implemented_flow!(CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData);
-impl_not_implemented_flow!(SetupMandate, PaymentFlowData, SetupMandateRequestData, SetupMandateResponseData);
+impl_not_implemented_flow!(SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData);
 impl_not_implemented_flow!(Accept, PaymentFlowData, AcceptDisputeData, DisputeResponseData);
 impl_not_implemented_flow!(DefendDispute, PaymentFlowData, DisputeDefendData, DisputeResponseData);
 impl_not_implemented_flow!(SubmitEvidence, PaymentFlowData, SubmitEvidenceData, DisputeResponseData);
