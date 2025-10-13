@@ -6,6 +6,7 @@ use common_utils::{
     request::Method,
     types::StringMinorUnit,
     Email,
+    consts::BASE64_ENGINE,
 };
 use domain_types::{
     connector_flow::Authorize,
