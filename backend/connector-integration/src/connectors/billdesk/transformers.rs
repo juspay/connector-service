@@ -183,7 +183,7 @@ fn get_redirect_form_data(
     response_data: BilldeskRdata,
 ) -> CustomResult<RedirectForm, errors::ConnectorError> {
     match payment_method_type {
-        common_enums::PaymentMethodType::Card => {
+        common_enums::PaymentMethodType::Credit => {
             if let Some(url) = response_data.url {
                 Ok(RedirectForm::Form {
                     endpoint: url,
@@ -192,6 +192,7 @@ fn get_redirect_form_data(
                         .parameters
                         .into_iter()
                         .map(|(k, v)| (k, v.into_masked()))
+                        .map(|(k, v)| (k, v.expose()))
                         .collect(),
                 })
             } else {
