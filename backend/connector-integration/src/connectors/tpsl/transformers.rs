@@ -411,7 +411,7 @@ impl TryFrom<&ConnectorAuthType> for TpslAuthType {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, .. } => {
                 let auth_str = api_key.expose();
-                let auth_data: TpslAuthType = serde_json::from_str(auth_str)
+                let auth_data: TpslAuthType = serde_json::from_str(&auth_str)
                     .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
                 Ok(auth_data)
             }
@@ -433,7 +433,7 @@ impl TryFrom<&ConnectorAuthType> for TpslAuth {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, .. } => {
                 let auth_str = api_key.expose();
-                let auth_data: TpslAuth = serde_json::from_str(auth_str)
+                let auth_data: TpslAuth = serde_json::from_str(&auth_str)
                     .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
                 Ok(auth_data)
             }
@@ -510,7 +510,9 @@ TryFrom<
         let amount = item.connector.amount_converter.convert(
             item.router_data.request.minor_amount,
             item.router_data.request.currency,
-        )?;
+        ).map_err(|e| errors::ConnectorError::ParsingError {
+            error: e.to_string(),
+        })?;
         let currency = item.router_data.request.currency.to_string();
 
         // CRITICAL: Extract authentication data dynamically
@@ -536,15 +538,15 @@ TryFrom<
                     webhook_endpoint_url: return_url.clone(),
                     response_type: "URL".to_string(),
                     response_endpoint_url: return_url.clone(),
-                    description: "UPI Payment",
+                    description: "UPI Payment".to_string(),
                     identifier: auth.merchant_code.ok_or(ConnectorError::FailedToObtainAuthType)?,
                     webhook_type: "HTTP".to_string(),
                 },
                 cart: TpslCartPayload {
                     item: vec![TpslItemPayload {
-                        description: "UPI Payment",
+                        description: "UPI Payment".to_string(),
                         provider_identifier: "UPI".to_string(),
-                        surcharge_or_discount_amount: common_utils::types::StringMinorUnit::from_str("0").unwrap_or_default(),
+                        surcharge_or_discount_amount: common_utils::types::StringMinorUnit::new("0".to_string()),
                         amount: amount.clone(),
                         com_amt: "0".to_string(),
                         s_k_u: "UPI".to_string(),
@@ -553,7 +555,7 @@ TryFrom<
                     }],
                     reference: transaction_id.clone(),
                     identifier: transaction_id.clone(),
-                    description: "UPI Payment",
+                    description: "UPI Payment".to_string(),
                 },
                 payment: TpslPaymentPayload {
                     method: TpslMethodPayload {
@@ -627,7 +629,7 @@ TryFrom<
                     amount: amount,
                     forced_3_d_s_call: "N".to_string(),
                     transaction_type: "SALE".to_string(),
-                    description: "UPI Payment",
+                    description: "UPI Payment".to_string(),
                     currency,
                     is_registration: "N".to_string(),
                     identifier: transaction_id.clone(),
@@ -643,7 +645,7 @@ TryFrom<
                 consumer: TpslConsumerPayload {
                     mobile_number: "".to_string(), // TODO: Extract from customer data if available
                     email_i_d: email,
-                    identifier: customer_id.get_string_repr(),
+                    identifier: customer_id.get_string_repr().to_string(),
                     account_no: "".to_string(),
                     account_type: "".to_string(),
                     account_holder_name: customer_id.get_string_repr().to_string(),
@@ -782,7 +784,9 @@ TryFrom<
         let amount = item.connector.amount_converter.convert(
             item.router_data.request.amount,
             item.router_data.request.currency,
-        )?;
+        ).map_err(|e| errors::ConnectorError::ParsingError {
+            error: e.to_string(),
+        })?;
         let currency = item.router_data.request.currency.to_string();
 
         let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
@@ -805,7 +809,7 @@ TryFrom<
                 token: auth.security_token.ok_or(ConnectorError::FailedToObtainAuthType)?.expose().to_string(),
             },
             consumer: TpslConsumerDataType {
-                identifier: item.router_data.resource_common_data.get_customer_id()?.get_string_repr(),
+                identifier: item.router_data.resource_common_data.get_customer_id()?.get_string_repr().to_string(),
             },
         })
     }
