@@ -410,7 +410,7 @@ impl TryFrom<&ConnectorAuthType> for TpslAuthType {
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, .. } => {
-                let auth_str = api_key.expose();
+                let auth_str = api_key.clone().expose();
                 let auth_data: TpslAuthType = serde_json::from_str(&auth_str)
                     .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
                 Ok(auth_data)
@@ -432,7 +432,7 @@ impl TryFrom<&ConnectorAuthType> for TpslAuth {
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, .. } => {
-                let auth_str = api_key.expose();
+                let auth_str = api_key.clone().expose();
                 let auth_data: TpslAuth = serde_json::from_str(&auth_str)
                     .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
                 Ok(auth_data)
@@ -510,9 +510,7 @@ TryFrom<
         let amount = item.connector.amount_converter.convert(
             item.router_data.request.minor_amount,
             item.router_data.request.currency,
-        ).map_err(|e| errors::ConnectorError::ParsingError {
-            error: e.to_string(),
-        })?;
+        ).map_err(|_| errors::ConnectorError::ParsingError)?;
         let currency = item.router_data.request.currency.to_string();
 
         // CRITICAL: Extract authentication data dynamically
@@ -546,7 +544,7 @@ TryFrom<
                     item: vec![TpslItemPayload {
                         description: "UPI Payment".to_string(),
                         provider_identifier: "UPI".to_string(),
-                        surcharge_or_discount_amount: common_utils::types::StringMinorUnit::new("0".to_string()),
+                        surcharge_or_discount_amount: common_utils::types::StringMinorUnit::from("0"),
                         amount: amount.clone(),
                         com_amt: "0".to_string(),
                         s_k_u: "UPI".to_string(),
@@ -784,9 +782,7 @@ TryFrom<
         let amount = item.connector.amount_converter.convert(
             item.router_data.request.amount,
             item.router_data.request.currency,
-        ).map_err(|e| errors::ConnectorError::ParsingError {
-            error: e.to_string(),
-        })?;
+        ).map_err(|_| errors::ConnectorError::ParsingError)?;
         let currency = item.router_data.request.currency.to_string();
 
         let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
