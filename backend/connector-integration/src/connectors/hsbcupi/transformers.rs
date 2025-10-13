@@ -292,19 +292,20 @@ fn status_code_to_attempt_status(status_code: &str) -> common_enums::AttemptStat
 }
 
 impl<
+        F,
         T: PaymentMethodDataTypes
             + std::fmt::Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
             + Serialize,
-    > TryFrom<ResponseRouterData<HsbcUpiResponseEnum, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
-    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    > TryFrom<ResponseRouterData<HsbcUpiResponseEnum, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<HsbcUpiResponseEnum, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
+        item: ResponseRouterData<HsbcUpiResponseEnum, Self>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
