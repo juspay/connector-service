@@ -544,7 +544,7 @@ TryFrom<
                     item: vec![TpslItemPayload {
                         description: "UPI Payment".to_string(),
                         provider_identifier: "UPI".to_string(),
-                        surcharge_or_discount_amount: common_utils::types::StringMinorUnit::from("0"),
+                        surcharge_or_discount_amount: common_utils::types::StringMinorUnit::default(),
                         amount: amount.clone(),
                         com_amt: "0".to_string(),
                         s_k_u: "UPI".to_string(),
