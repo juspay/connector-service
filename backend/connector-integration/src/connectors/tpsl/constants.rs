@@ -6,7 +6,7 @@ pub const TPSL_UPI_TRANSACTION_ENDPOINT: &str = "/api/PaynimoEncNew.jsp";
 pub const TPSL_UPI_TOKEN_GENERATION_ENDPOINT: &str = "/api/paynimoV2.req";
 pub const TPSL_REFUND_ARN_SYNC_ENDPOINT: &str = "/PaymentGateway/ARNPullAPI.jsp";
 
-// Base URLs
+// Base URLs from Haskell Endpoints.hs
 pub const TPSL_PRODUCTION_BASE_URL: &str = "https://www.tpsl-india.in";
 pub const TPSL_TEST_BASE_URL: &str = "https://www.tekprocess.co.in";
 pub const TPSL_PAYNIMO_BASE_URL: &str = "https://www.paynimo.com";
@@ -25,3 +25,11 @@ pub const WEBHOOK_TYPE_HTTP: &str = "HTTP";
 pub const DEFAULT_CURRENCY: &str = "INR";
 pub const DEFAULT_COUNTRY: &str = "IN";
 pub const DEFAULT_DESCRIPTION: &str = "Payment Transaction";
+
+// API endpoint mappings based on Haskell TPSLEndpoints
+pub const TPSL_ENDPOINT_TRANSACTION: &str = "TransactionDetailsNew";
+pub const TPSL_ENDPOINT_AUTH_CAPTURE: &str = "merchant2.pg";
+pub const TPSL_ENDPOINT_SI_TRANSACTION: &str = "paynimoV2.req";
+pub const TPSL_ENDPOINT_UPI_TRANSACTION: &str = "PaynimoEncNew.jsp";
+pub const TPSL_ENDPOINT_UPI_TOKEN_GENERATION: &str = "paynimoV2.req";
+pub const TPSL_ENDPOINT_REFUND_ARN_SYNC: &str = "ARNPullAPI.jsp";
