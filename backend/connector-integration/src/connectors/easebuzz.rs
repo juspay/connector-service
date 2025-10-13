@@ -1,8 +1,6 @@
 // EaseBuzz Connector Implementation
 pub mod transformers;
 
-use std::marker::PhantomData;
-
 use common_enums::{AttemptStatus, PaymentMethodType};
 use common_utils::{
     crypto,
