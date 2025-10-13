@@ -303,22 +303,22 @@ impl_source_verification_stub!(RSync, PaymentFlowData, RefundSyncData, RefundsRe
 
 // Implement connector types traits
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::PaymentAuthorizeV2 for EaseBuzz<T>
+    connector_types::PaymentAuthorizeV2 for EaseBuzz<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::PaymentSyncV2 for EaseBuzz<T>
+    connector_types::PaymentSyncV2 for EaseBuzz<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::PaymentRefundV2 for EaseBuzz<T>
+    connector_types::PaymentRefundV2 for EaseBuzz<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::RefundSyncV2 for EaseBuzz<T>
+    connector_types::RefundSyncV2 for EaseBuzz<T>
 {
 }
 
