@@ -262,7 +262,10 @@ impl<
                     amount,
                     item.router_data.request.currency,
                     customer_id,
-                    chrono::Utc::now().format("%Y-%m-%d %H:%M:%S")
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?
+                        .as_secs()
                 );
 
                 let ip_address = item.router_data.request.get_ip_address_as_optional()
