@@ -293,73 +293,7 @@ fn status_code_to_attempt_status(status_code: &str) -> common_enums::AttemptStat
 
 
 
-impl<
-        F,
-    > TryFrom<ResponseRouterData<HsbcUpiSyncResponseEnum, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<HsbcUpiSyncResponseEnum, Self>,
-    ) -> Result<Self, Self::Error> {
-        let ResponseRouterData {
-            response,
-            router_data,
-            http_code,
-        } = item;
-
-        let (status, response) = match response {
-            HsbcUpiSyncResponseEnum::Success(response_data) => {
-                let status = status_code_to_attempt_status(&response_data.status_code);
-                
-                (
-                    status,
-                    Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
-                            response_data.trans_id.unwrap_or_else(|| {
-                                router_data
-                                    .resource_common_data
-                                    .connector_request_reference_id
-                                    .clone()
-                            }),
-                        ),
-                        redirection_data: None,
-                        mandate_reference: None,
-                        connector_metadata: None,
-                        network_txn_id: response_data.trans_rrn,
-                        connector_response_reference_id: Some(response_data.me_ref_no),
-                        incremental_authorization_allowed: None,
-                        status_code: http_code,
-                    }),
-                )
-            }
-            HsbcUpiSyncResponseEnum::Error(error_data) => (
-                common_enums::AttemptStatus::Failure,
-                Err(ErrorResponse {
-                    status_code: http_code,
-                    code: error_data.status_code,
-                    message: error_data.status_desc.clone().unwrap_or_default(),
-                    reason: error_data.status_desc,
-                    attempt_status: None,
-                    connector_transaction_id: None,
-                    network_advice_code: None,
-                    network_decline_code: None,
-                    network_error_message: error_data.error_message,
-                }),
-            ),
-        };
-
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                ..router_data.resource_common_data
-            },
-            response,
-            ..router_data
-        })
-    }
-}
 
 // ResponseRouterData TryFrom implementations required by the macro framework
 
