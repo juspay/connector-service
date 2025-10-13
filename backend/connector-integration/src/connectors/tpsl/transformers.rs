@@ -788,7 +788,7 @@ TryFrom<
 
         Ok(Self {
             merchant: TpslMerchantDataType {
-                identifier: auth.merchant_code.ok_or(ConnectorError::FailedToObtainAuthType)?.clone(),
+                identifier: auth.merchant_code.ok_or(ConnectorError::FailedToObtainAuthType)?.expose().to_string(),
             },
             payment: TpslPaymentUPISyncType {
                 instruction: serde_json::Value::Null,
