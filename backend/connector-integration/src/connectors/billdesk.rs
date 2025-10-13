@@ -762,7 +762,7 @@ fn get_billdesk_auth_header(
 ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
     let auth_header = format!(
         "Basic {}",
-        base64::engine::general_purpose::STANDARD.encode(format!(
+        BASE64_ENGINE.encode(format!(
             "{}:{}",
             auth_type.merchant_id.peek(),
             auth_type.check_sum_key.peek()
