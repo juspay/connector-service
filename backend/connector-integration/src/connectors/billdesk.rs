@@ -783,6 +783,12 @@ impl_source_verification_stub!(
     PaymentCreateOrderData,
     PaymentCreateOrderResponse
 );
+impl_source_verification_stub!(
+    CreateSessionToken,
+    PaymentFlowData,
+    SessionTokenRequestData,
+    SessionTokenResponseData
+);
 
 fn get_billdesk_auth_header(
     auth_type: &transformers::BilldeskAuth,
