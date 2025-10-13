@@ -510,7 +510,7 @@ TryFrom<
         let amount = item.connector.amount_converter.convert(
             item.router_data.request.minor_amount,
             item.router_data.request.currency,
-        ).map_err(|_| errors::ConnectorError::ParsingError)?;
+        ).map_err(|_| errors::ConnectorError::ParsingFailed)?;
         let currency = item.router_data.request.currency.to_string();
 
         // CRITICAL: Extract authentication data dynamically
@@ -782,7 +782,7 @@ TryFrom<
         let amount = item.connector.amount_converter.convert(
             item.router_data.request.amount,
             item.router_data.request.currency,
-        ).map_err(|_| errors::ConnectorError::ParsingError)?;
+        ).map_err(|_| errors::ConnectorError::ParsingFailed)?;
         let currency = item.router_data.request.currency.to_string();
 
         let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
