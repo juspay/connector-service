@@ -119,13 +119,7 @@ impl<
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         // Extract UPI VPA from payment method data
-        let payer_vpa = item
-            .router_data
-            .request
-            .payment_method_data
-            .as_ref()
-            .and_then(|pm| pm.get_upi_vpa())
-            .unwrap_or_else(|| "test@upi".to_string());
+        let payer_vpa = get_upi_vpa(&item.router_data.request.payment_method_data);
 
         let me_ref_no = item
             .router_data
