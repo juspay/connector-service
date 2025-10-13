@@ -114,6 +114,11 @@ pub struct BilldeskPaymentsSyncResponse {
     pub error_description: Option<String>,
 }
 
+#[derive(Debug, Default, Serialize)]
+pub struct BilldeskPaymentsSyncRequest {
+    pub msg: String,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BilldeskErrorResponse {
     pub error: serde_json::Value,
