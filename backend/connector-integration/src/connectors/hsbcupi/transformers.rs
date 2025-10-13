@@ -445,20 +445,17 @@ impl<
     }
 }
 
-// Extension trait for PaymentMethodData to get UPI VPA
-pub trait UpiVpaExtractor {
-    fn get_upi_vpa(&self) -> Option<String>;
-}
-
-impl<T: PaymentMethodDataTypes> UpiVpaExtractor for PaymentMethodData<T> {
-    fn get_upi_vpa(&self) -> Option<String> {
-        match self {
+// Helper function to extract UPI VPA from payment method data
+fn get_upi_vpa<T: PaymentMethodDataTypes>(payment_method_data: &Option<PaymentMethodData<T>>) -> String {
+    payment_method_data
+        .as_ref()
+        .and_then(|pm| match pm {
             PaymentMethodData::Upi(upi_data) => {
                 // Extract VPA from UPI data - this depends on the actual structure
                 // For now, return a placeholder that should be implemented based on actual UPI data structure
                 Some("placeholder_vpa@upi".to_string())
             }
             _ => None,
-        }
-    }
+        })
+        .unwrap_or_else(|| "test@upi".to_string())
 }
