@@ -258,26 +258,7 @@ pub struct HsbcUpiErrorResponse {
     pub error_message: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(untagged)]
-pub enum HsbcUpiResponseEnum {
-    Success(HsbcUpiPaymentsResponse),
-    Error(HsbcUpiErrorResponse),
-}
 
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(untagged)]
-pub enum HsbcUpiSyncResponseEnum {
-    Success(HsbcUpiPaymentsSyncResponse),
-    Error(HsbcUpiErrorResponse),
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(untagged)]
-pub enum HsbcUpiIntentResponseEnum {
-    Success(HsbcUpiIntentResponse),
-    Error(HsbcUpiErrorResponse),
-}
 
 fn status_code_to_attempt_status(status_code: &str) -> common_enums::AttemptStatus {
     match status_code {
