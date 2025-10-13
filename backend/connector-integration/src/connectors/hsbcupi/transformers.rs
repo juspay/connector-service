@@ -433,10 +433,149 @@ impl<
     }
 }
 
+// ResponseRouterData TryFrom implementations required by the macro framework
+
+// Authorize response transformation
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> TryFrom<
+    ResponseRouterData<
+        HsbcUpiPaymentsResponse,
+        RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
+    >,
+> for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            HsbcUpiPaymentsResponse,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+        let mut router_data = item.router_data;
+
+        let status = status_code_to_attempt_status(&response.status_code);
+        
+        let response_data = if status == common_enums::AttemptStatus::Charged {
+            Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    response.trans_id.unwrap_or_else(|| {
+                        router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone()
+                    }),
+                ),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: response.trans_rrn.clone(),
+                connector_response_reference_id: Some(response.me_ref_no.clone()),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            })
+        } else {
+            Err(ErrorResponse {
+                status_code: item.http_code,
+                code: response.status_code.clone(),
+                message: response.status_desc.clone(),
+                reason: Some(response.status_desc.clone()),
+                attempt_status: None,
+                connector_transaction_id: response.trans_id.clone(),
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+            })
+        };
+
+        router_data.response = response_data;
+        router_data.resource_common_data.status = status;
+
+        Ok(router_data)
+    }
+}
+
+// PSync response transformation
+impl TryFrom<
+    ResponseRouterData<
+        HsbcUpiPaymentsSyncResponse,
+        RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    >,
+> for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            HsbcUpiPaymentsSyncResponse,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+        let mut router_data = item.router_data;
+
+        let status = status_code_to_attempt_status(&response.status_code);
+        
+        let response_data = if status == common_enums::AttemptStatus::Charged {
+            Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    response.trans_id.unwrap_or_else(|| {
+                        router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone()
+                    }),
+                ),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: response.trans_rrn.clone(),
+                connector_response_reference_id: Some(response.me_ref_no.clone()),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            })
+        } else {
+            Err(ErrorResponse {
+                status_code: item.http_code,
+                code: response.status_code.clone(),
+                message: response.status_desc.clone().unwrap_or_default(),
+                reason: response.status_desc,
+                attempt_status: None,
+                connector_transaction_id: response.trans_id.clone(),
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: response.trans_message,
+            })
+        };
+
+        router_data.response = response_data;
+        router_data.resource_common_data.status = status;
+
+        Ok(router_data)
+    }
+}
+
 // Helper function to extract UPI VPA from payment method data
 fn get_upi_vpa<T: PaymentMethodDataTypes>(payment_method_data: &PaymentMethodData<T>) -> String {
     match payment_method_data {
-        PaymentMethodData::Upi(upi_data) => {
+        PaymentMethodData::Upi(_upi_data) => {
             // Extract VPA from UPI data - this depends on the actual structure
             // For now, return a placeholder that should be implemented based on actual UPI data structure
             "placeholder_vpa@upi".to_string()
