@@ -256,7 +256,7 @@ pub struct HsbcUpiIntentResponse {
     pub status_desc: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HsbcUpiErrorResponse {
     pub status_code: String,
