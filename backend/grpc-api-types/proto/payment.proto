@@ -949,6 +949,7 @@ message Identifier {
 message MandateReference {
   // Connector's unique identifier for the mandate.
   optional string mandate_id = 1;
+  optional string payment_method_id = 2;
 }
 
 // Container for various address types related to a payment.
@@ -1121,7 +1122,8 @@ message PaymentServiceAuthorizeRequest {
   // Customer Information
   optional SecretString email = 9; // Email address of the customer
   optional string customer_name = 10; // Name of the customer
-  optional string connector_customer_id = 11; // Customer ID as recognized by the connector
+  optional string customer_id = 11; // Customer ID
+  optional string connector_customer = 32; // Customer ID as recognized by the connector
   
   // Address Information
   PaymentAddress address = 12; // Billing and shipping address details
@@ -1192,6 +1194,13 @@ message PaymentServiceAuthorizeResponse {
 
   // Raw Request
   optional string raw_connector_request = 14; // Raw request from the connector for debugging
+
+  // Payment Details
+  optional int64 captured_amount = 15; // Amount that has been captured
+  optional int64 minor_captured_amount = 16; // Captured amount in minor currency units
+  optional int64 minor_amount_capturable = 17; // Capturable amount in minor currency units
+
+  optional MandateReference mandate_reference = 18; // Mandate reference, if applicable
 }
 
 // Request message for synchronizing payment status.
@@ -1210,6 +1219,10 @@ message PaymentServiceGetRequest {
 
   // Body of the response.
   optional bytes handle_response = 4;
+
+  // Amount Information
+  int64 amount = 5; // The amount for the payment in minor currency units
+  Currency currency = 6; // The currency for the payment, in ISO 4217 three-letter code
 }
 
 // Response message for a payment status synchronization.

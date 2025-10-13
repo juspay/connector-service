@@ -69,6 +69,7 @@ pub enum ConnectorEnum {
     Placetopay,
     Rapyd,
     Aci,
+    Stripe,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -104,6 +105,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Placetopay => Ok(Self::Placetopay),
             grpc_api_types::payments::Connector::Rapyd => Ok(Self::Rapyd),
             grpc_api_types::payments::Connector::Aci => Ok(Self::Aci),
+            grpc_api_types::payments::Connector::Stripe => Ok(Self::Stripe),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -139,6 +141,7 @@ pub struct ConnectorMandateReferenceId {
     connector_mandate_id: Option<String>,
     payment_method_id: Option<String>,
     update_history: Option<Vec<UpdateHistory>>,
+    mandate_metadata: Option<SecretSerdeValue>,
 }
 
 impl ConnectorMandateReferenceId {
@@ -151,6 +154,7 @@ impl ConnectorMandateReferenceId {
             connector_mandate_id,
             payment_method_id,
             update_history,
+            mandate_metadata: None,
         }
     }
 
@@ -164,6 +168,10 @@ impl ConnectorMandateReferenceId {
 
     pub fn get_update_history(&self) -> Option<&Vec<UpdateHistory>> {
         self.update_history.as_ref()
+    }
+
+    pub fn get_mandate_metadata(&self) -> Option<SecretSerdeValue> {
+        self.mandate_metadata.clone()
     }
 }
 
@@ -244,6 +252,7 @@ pub struct PaymentsSyncData {
     pub amount: MinorUnit,
     pub all_keys_required: Option<bool>,
     pub integrity_object: Option<PaymentSynIntegrityObject>,
+    pub split_payments: Option<SplitPaymentsRequest>,
 }
 
 impl PaymentsSyncData {
@@ -285,6 +294,7 @@ pub struct PaymentFlowData {
     pub amount_captured: Option<i64>,
     // minor amount for amount frameworka
     pub minor_amount_captured: Option<MinorUnit>,
+    pub minor_amount_capturable: Option<MinorUnit>,
     pub access_token: Option<AccessTokenResponseData>,
     pub session_token: Option<String>,
     pub reference_id: Option<String>,
@@ -392,6 +402,12 @@ impl PaymentFlowData {
                 .address
                 .and_then(|shipping_details| shipping_details.state)
         })
+    }
+
+    pub fn get_optional_shipping_full_name(&self) -> Option<Secret<String>> {
+        self.get_optional_shipping()
+            .and_then(|shipping_details| shipping_details.address.as_ref())
+            .and_then(|shipping_address| shipping_address.get_optional_full_name())
     }
 
     pub fn get_optional_shipping_country(&self) -> Option<common_enums::CountryAlpha2> {
@@ -858,6 +874,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub customer_id: Option<common_utils::id_type::CustomerId>,
     pub request_incremental_authorization: bool,
     pub metadata: Option<serde_json::Value>,
+    pub split_payments: Option<SplitPaymentsRequest>,
     // New amount for amount frame work
     pub minor_amount: MinorUnit,
     /// Merchant's identifier for the payment/invoice. This will be sent to the connector
@@ -869,6 +886,9 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub integrity_object: Option<AuthoriseIntegrityObject>,
     pub merchant_config_currency: Option<common_enums::Currency>,
     pub all_keys_required: Option<bool>,
+    pub request_extended_authorization: Option<bool>,
+    pub enable_overcapture: Option<bool>,
+    pub setup_mandate_details: Option<MandateData>,
 }
 
 impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
@@ -1019,10 +1039,10 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     //     })
     // }
 
-    // fn is_customer_initiated_mandate_payment(&self) -> bool {
-    //     (self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
-    //         && self.setup_future_usage == Some(storage_enums::FutureUsage::OffSession)
-    // }
+    pub fn is_customer_initiated_mandate_payment(&self) -> bool {
+        (self.customer_acceptance.is_some())
+            && self.setup_future_usage == Some(common_enums::FutureUsage::OffSession)
+    }
 
     pub fn get_metadata_as_object(&self) -> Option<SecretSerdeValue> {
         self.metadata.clone().and_then(|meta_data| match meta_data {
@@ -1101,6 +1121,7 @@ pub enum PaymentsResponseData {
         network_txn_id: Option<String>,
         connector_response_reference_id: Option<String>,
         incremental_authorization_allowed: Option<bool>,
+        // charges: Option<ConnectorChargeResponseData>,
         status_code: u16,
     },
     SessionResponse {
@@ -1134,6 +1155,7 @@ pub enum PaymentsResponseData {
 pub struct MandateReference {
     pub connector_mandate_id: Option<String>,
     pub payment_method_id: Option<String>,
+    // pub mandate_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
 
 #[derive(Debug, Clone)]
@@ -2374,4 +2396,52 @@ impl SupportedPaymentMethodsExt for SupportedPaymentMethods {
             self.insert(payment_method, payment_method_type_metadata);
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields)]
+/// Fee information for Split Payments to be charged on the payment being collected
+pub enum SplitPaymentsRequest {
+    /// StripeSplitPayment
+    StripeSplitPayment(StripeSplitPaymentRequest),
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+/// Fee information for Split Payments to be charged on the payment being collected for Stripe
+pub struct StripeSplitPaymentRequest {
+    /// Stripe's charge type
+    pub charge_type: common_enums::PaymentChargeType,
+
+    /// Platform fees to be collected on the payment
+    pub application_fees: Option<MinorUnit>,
+
+    /// Identifier for the reseller's account where the funds were transferred
+    pub transfer_account_id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields)]
+pub enum ConnectorChargeResponseData {
+    /// StripeChargeResponseData
+    StripeSplitPayment(StripeChargeResponseData),
+}
+
+/// Fee information to be charged on the payment being collected via Stripe
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct StripeChargeResponseData {
+    /// Identifier for charge created for the payment
+    pub charge_id: Option<String>,
+
+    /// Type of charge (connector specific)
+    pub charge_type: common_enums::PaymentChargeType,
+
+    /// Platform fees collected on the payment
+    pub application_fees: Option<MinorUnit>,
+
+    /// Identifier for the reseller's account where the funds were transferred
+    pub transfer_account_id: String,
 }
