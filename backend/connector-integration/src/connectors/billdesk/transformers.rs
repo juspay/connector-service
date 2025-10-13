@@ -192,7 +192,6 @@ fn get_redirect_form_data(
                         .parameters
                         .into_iter()
                         .map(|(k, v)| (k, v.into_masked()))
-                        .map(|(k, v)| (k, v.expose()))
                         .collect(),
                 })
             } else {
