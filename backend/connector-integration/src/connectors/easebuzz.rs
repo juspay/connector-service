@@ -181,7 +181,7 @@ macros::macro_connector_implementation!(
             let request = EaseBuzzPaymentsRequest::try_from(req)?;
 
             Ok(Some(common_utils::request::RequestBuilder::new()
-                .method(common_utils::request::RequestMethod::Post)
+                .method(Method::Post)
                 .url(&url)
                 .attach_default_headers()
                 .headers(vec![(
@@ -223,7 +223,7 @@ macros::macro_connector_implementation!(
             let request = EaseBuzzPaymentsSyncRequest::try_from(req)?;
 
             Ok(Some(common_utils::request::RequestBuilder::new()
-                .method(common_utils::request::RequestMethod::Post)
+                .method(Method::Post)
                 .url(&url)
                 .attach_default_headers()
                 .headers(vec![(
@@ -265,7 +265,7 @@ macros::macro_connector_implementation!(
             let request = EaseBuzzRefundRequest::try_from(req)?;
 
             Ok(Some(common_utils::request::RequestBuilder::new()
-                .method(common_utils::request::RequestMethod::Post)
+                .method(Method::Post)
                 .url(&url)
                 .attach_default_headers()
                 .headers(vec![(
@@ -307,7 +307,7 @@ macros::macro_connector_implementation!(
             let request = EaseBuzzRefundSyncRequest::try_from(req)?;
 
             Ok(Some(common_utils::request::RequestBuilder::new()
-                .method(common_utils::request::RequestMethod::Post)
+                .method(Method::Post)
                 .url(&url)
                 .attach_default_headers()
                 .headers(vec![(
