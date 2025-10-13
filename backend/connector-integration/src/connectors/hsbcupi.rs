@@ -441,7 +441,7 @@ impl<
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.status_code.to_string(),
-            message: response.status_desc.clone(),
+            message: response.status_desc.clone().unwrap_or_default(),
             reason: response.status_desc,
             attempt_status: None,
             connector_transaction_id: None,
