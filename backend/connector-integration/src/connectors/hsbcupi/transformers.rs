@@ -248,7 +248,7 @@ pub struct HsbcUpiPaymentsSyncResponse {
     pub add_info10: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HsbcUpiIntentResponse {
     pub order_no: Option<String>,
