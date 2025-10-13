@@ -505,7 +505,10 @@ TryFrom<
             .unwrap_or_else(|| "https://default.return.url".to_string());
         
         // CRITICAL: Use proper amount converter - never hardcode amounts
-        let amount = item.amount.get_amount_as_string();
+        let amount = item.connector.amount_converter.convert(
+            item.router_data.request.minor_amount,
+            item.router_data.request.currency,
+        )?;
         let currency = item.router_data.request.currency.to_string();
 
         // CRITICAL: Extract authentication data dynamically
