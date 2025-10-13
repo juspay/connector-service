@@ -365,13 +365,15 @@ impl<
     }
 }
 
-impl TryFrom<ResponseRouterData<HsbcUpiSyncResponseEnum, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
-    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl<
+        F,
+    > TryFrom<ResponseRouterData<HsbcUpiSyncResponseEnum, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<HsbcUpiSyncResponseEnum, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
+        item: ResponseRouterData<HsbcUpiSyncResponseEnum, Self>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
