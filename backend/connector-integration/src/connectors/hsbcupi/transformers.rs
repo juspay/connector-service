@@ -217,7 +217,7 @@ pub struct HsbcUpiPaymentsResponse {
     pub add_info10: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HsbcUpiPaymentsSyncResponse {
     pub me_ref_no: String,
