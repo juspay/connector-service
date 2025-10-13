@@ -260,19 +260,7 @@ macros::create_all_prerequisites!(
             request_body: HsbcUpiPaymentsSyncRequest,
             response_body: HsbcUpiPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ),
-        // Stub types for unsupported flows
-        (flow: Void, request_body: HsbcUpiVoidRequest, response_body: HsbcUpiVoidResponse, router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>),
-        (flow: Capture, request_body: HsbcUpiCaptureRequest, response_body: HsbcUpiCaptureResponse, router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>),
-        (flow: Refund, request_body: HsbcUpiRefundRequest, response_body: HsbcUpiRefundResponse, router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>),
-        (flow: RSync, request_body: HsbcUpiRefundSyncRequest, response_body: HsbcUpiRefundSyncResponse, router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>),
-        (flow: CreateOrder, request_body: HsbcUpiCreateOrderRequest, response_body: HsbcUpiCreateOrderResponse, router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>),
-        (flow: CreateSessionToken, request_body: HsbcUpiSessionTokenRequest, response_body: HsbcUpiSessionTokenResponse, router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>),
-        (flow: SetupMandate, request_body: HsbcUpiSetupMandateRequest, response_body: HsbcUpiSetupMandateResponse, router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>),
-        (flow: RepeatPayment, request_body: HsbcUpiRepeatPaymentRequest, response_body: HsbcUpiRepeatPaymentResponse, router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>),
-        (flow: Accept, request_body: HsbcUpiAcceptDisputeRequest, response_body: HsbcUpiAcceptDisputeResponse, router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>),
-        (flow: DefendDispute, request_body: HsbcUpiDefendDisputeRequest, response_body: HsbcUpiDefendDisputeResponse, router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>),
-        (flow: SubmitEvidence, request_body: HsbcUpiSubmitEvidenceRequest, response_body: HsbcUpiSubmitEvidenceResponse, router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>)
+        )
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
