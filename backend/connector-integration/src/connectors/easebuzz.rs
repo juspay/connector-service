@@ -128,10 +128,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         "https://pay.easebuzz.in"
     }
 
-    fn test_base_url(&self) -> &'static str {
-        "https://testpay.easebuzz.in"
-    }
-
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
