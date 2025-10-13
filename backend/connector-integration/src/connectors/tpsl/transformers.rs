@@ -500,7 +500,8 @@ TryFrom<
         >,
     ) -> Result<Self, Self::Error> {
         // CRITICAL: Extract all values dynamically from router data - NO HARDCODING
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let customer_id = item.router_data.resource_common_data.get_customer_id()
+            .change_context(errors::ConnectorError::MissingRequiredField { field_name: "customer_id" })?;
         let return_url = item.router_data.request.router_return_url
             .clone()
             .unwrap_or_else(|| "https://default.return.url".to_string());
