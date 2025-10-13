@@ -786,13 +786,6 @@ TryFrom<
 
         let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
 
-        // CRITICAL: Extract IP address dynamically
-        let ip_address = item.router_data.request.browser_info
-            .as_ref()
-            .and_then(|info| info.ip_address.clone())
-            .map(|ip| ip.to_string())
-            .unwrap_or_else(|| "127.0.0.1".to_string());
-
         Ok(Self {
             merchant: TpslMerchantDataType {
                 identifier: auth.merchant_code.ok_or(ConnectorError::FailedToObtainAuthType)?.clone(),
