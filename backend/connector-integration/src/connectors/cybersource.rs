@@ -53,7 +53,7 @@ impl HasConnectors for DisputeFlowData {
         &self.connectors
     }
 }
-use hyperswitch_masking::{Mask, Maskable};
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
@@ -62,9 +62,6 @@ use serde::Serialize;
 pub mod transformers;
 use base64::Engine;
 use error_stack::{Report, ResultExt};
-use hyperswitch_masking::{
-    ExposeInterface as HyperswitchExposeInterface, PeekInterface as HyperswitchPeekInterface,
-};
 use ring::{digest, hmac};
 use time::OffsetDateTime;
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
@@ -550,22 +547,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            if req.resource_common_data.is_three_ds()
-            && req.request.is_card()
-            && (req.request.connector_mandate_id().is_none()
-                && req.request.get_optional_network_transaction_id().is_none())
-            && req.request.authentication_data.is_none()
-        {
-            Ok(format!(
-                "{}risk/v1/authentication-setups",
-                self.connector_base_url_payments(req)
-            ))
-        } else {
-            Ok(format!(
-                "{}pts/v2/payments/",
-                self.connector_base_url_payments(req)
-            ))
-        }
+            Ok(format!("{}pts/v2/payments/", self.connector_base_url_payments(req)))
         }
     }
 );
