@@ -321,7 +321,7 @@ impl<
 
         let (status, response) = match response {
             HsbcUpiResponseEnum::Success(response_data) => {
-                let status = common_enums::AttemptStatus::from(response_data.status_code.clone());
+                let status = status_code_to_attempt_status(&response_data.status_code);
                 
                 (
                     status,
