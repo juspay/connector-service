@@ -83,8 +83,6 @@ impl<
                     item.router_data.request.currency,
                 )?;
 
-                print!("{}",item.router_data.request.get_webhook_url()?);
-
                 Ok(Self {
                     price_amount: amount,
                     price_currency: item.router_data.request.currency,
@@ -242,8 +240,8 @@ impl<
             )?),
             None => None,
         };
-        match amount_captured_in_minor_units {
-            Some(minor_amount) => {
+        match (amount_captured_in_minor_units, status) {
+            (Some(minor_amount), common_enums::AttemptStatus::Charged) => {
                 let amount_captured = Some(minor_amount.get_amount_as_i64());
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
@@ -256,7 +254,7 @@ impl<
                     ..router_data
                 })
             }
-            None => Ok(Self {
+            _ => Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status,
                     ..router_data.resource_common_data
@@ -380,8 +378,8 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
             )?),
             None => None,
         };
-        match amount_captured_in_minor_units {
-            Some(minor_amount) => {
+        match (amount_captured_in_minor_units, status) {
+            (Some(minor_amount), common_enums::AttemptStatus::Charged) => {
                 let amount_captured = Some(minor_amount.get_amount_as_i64());
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
@@ -394,7 +392,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                     ..router_data
                 })
             }
-            None => Ok(Self {
+            _ => Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status,
                     ..router_data.resource_common_data
@@ -427,9 +425,9 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                         .clone()
                         .unwrap_or(consts::NO_ERROR_MESSAGE.to_string()),
                 ),
-                //reason: notif.data.status_context.clone(),
+                error_reason: notif.data.status_context.clone(),
                 status_code: 200,
-                status: common_enums::AttemptStatus::Failure,
+                status: common_enums::AttemptStatus::Unknown,
                 resource_id: Some(ResponseId::ConnectorTransactionId(notif.data.id.clone())),
                 connector_response_reference_id: None,
                 mandate_reference: None,
@@ -447,8 +445,8 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                     }
                     _ => None,
                 };
-            match amount_captured_in_minor_units {
-                Some(minor_amount) => {
+            match (amount_captured_in_minor_units, status) {
+                (Some(minor_amount), common_enums::AttemptStatus::Charged) => {
                     let amount_captured = Some(minor_amount.get_amount_as_i64());
                     Ok(Self {
                         amount_captured,
@@ -457,6 +455,7 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                         resource_id: Some(ResponseId::ConnectorTransactionId(
                             notif.data.id.clone(),
                         )),
+                        error_reason: None,
                         mandate_reference: None,
                         status_code: 200,
                         connector_response_reference_id: notif
@@ -470,7 +469,7 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                         transformation_status: common_enums::WebhookTransformationStatus::Complete,
                     })
                 }
-                None => Ok(Self {
+                _ => Ok(Self {
                     status,
                     resource_id: Some(ResponseId::ConnectorTransactionId(notif.data.id.clone())),
                     mandate_reference: None,
@@ -480,9 +479,10 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                     error_message: None,
                     raw_connector_response: None,
                     response_headers: None,
-                    transformation_status: common_enums::WebhookTransformationStatus::Complete,
                     minor_amount_captured: None,
                     amount_captured: None,
+                    error_reason: None,
+                    transformation_status: common_enums::WebhookTransformationStatus::Complete,
                 }),
             }
         }

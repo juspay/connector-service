@@ -461,7 +461,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::ConnectorError>> {
         let base64_signature = request
             .headers
-            .get("X-Cryptopay-Signature")
+            .get("x-cryptopay-signature")
             .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)?;
         hex::decode(base64_signature)
             .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
