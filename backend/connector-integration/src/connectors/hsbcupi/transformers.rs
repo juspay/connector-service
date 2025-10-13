@@ -365,20 +365,19 @@ impl<
 }
 
 impl<
-        F,
         T: PaymentMethodDataTypes
             + std::fmt::Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
             + Serialize,
-    > TryFrom<ResponseRouterData<HsbcUpiSyncResponseEnum, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    > TryFrom<ResponseRouterData<HsbcUpiSyncResponseEnum, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<HsbcUpiSyncResponseEnum, Self>,
+        item: ResponseRouterData<HsbcUpiSyncResponseEnum, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
