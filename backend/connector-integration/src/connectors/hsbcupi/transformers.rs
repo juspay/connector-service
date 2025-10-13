@@ -285,17 +285,15 @@ pub enum HsbcUpiIntentResponseEnum {
     Error(HsbcUpiErrorResponse),
 }
 
-impl From<String> for common_enums::AttemptStatus {
-    fn from(status_code: String) -> Self {
-        match status_code.as_str() {
-            "00" | "0" => Self::Charged,
-            "01" | "1" => Self::AuthenticationPending,
-            "02" | "2" => Self::Pending,
-            "03" | "3" => Self::Failure,
-            "04" | "4" => Self::AuthorizationFailed,
-            "05" | "5" => Self::Voided,
-            _ => Self::Pending,
-        }
+fn status_code_to_attempt_status(status_code: &str) -> common_enums::AttemptStatus {
+    match status_code {
+        "00" | "0" => common_enums::AttemptStatus::Charged,
+        "01" | "1" => common_enums::AttemptStatus::AuthenticationPending,
+        "02" | "2" => common_enums::AttemptStatus::Pending,
+        "03" | "3" => common_enums::AttemptStatus::Failure,
+        "04" | "4" => common_enums::AttemptStatus::AuthorizationFailed,
+        "05" | "5" => common_enums::AttemptStatus::Voided,
+        _ => common_enums::AttemptStatus::Pending,
     }
 }
 
