@@ -544,7 +544,7 @@ TryFrom<
                         description: "UPI Payment".to_string(),
                         provider_identifier: "UPI".to_string(),
                         surcharge_or_discount_amount: "0".to_string().parse().unwrap_or_default(),
-                        amount: amount.clone().parse().unwrap_or_default(),
+                        amount: amount.clone(),
                         com_amt: "0".to_string(),
                         s_k_u: "UPI".to_string(),
                         reference: transaction_id.clone(),
@@ -605,7 +605,7 @@ TryFrom<
                     },
                     instruction: TpslInstructionPayload {
                         occurrence: "".to_string(),
-                        amount: amount.clone().parse().unwrap_or_default(),
+                        amount: amount.clone(),
                         frequency: "".to_string(),
                         instruction_type: "".to_string(),
                         description: "".to_string(),
