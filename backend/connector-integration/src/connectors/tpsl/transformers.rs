@@ -519,8 +519,10 @@ TryFrom<
         let transaction_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
         
         // CRITICAL: Extract IP address dynamically
-        let ip_address = item.router_data.request.get_ip_address_as_optional()
-            .map(|ip| ip.expose())
+        let ip_address = item.router_data.request.browser_info
+            .as_ref()
+            .and_then(|info| info.ip_address.clone())
+            .map(|ip| ip.to_string())
             .unwrap_or_else(|| "127.0.0.1".to_string());
         
         // CRITICAL: Extract email dynamically
@@ -785,8 +787,10 @@ TryFrom<
         let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
 
         // CRITICAL: Extract IP address dynamically
-        let ip_address = item.router_data.request.get_ip_address_as_optional()
-            .map(|ip| ip.expose())
+        let ip_address = item.router_data.request.browser_info
+            .as_ref()
+            .and_then(|info| info.ip_address.clone())
+            .map(|ip| ip.to_string())
             .unwrap_or_else(|| "127.0.0.1".to_string());
 
         Ok(Self {
