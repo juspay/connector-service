@@ -291,16 +291,7 @@ fn status_code_to_attempt_status(status_code: &str) -> common_enums::AttemptStat
     }
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<ResponseRouterData<HsbcUpiResponseEnum, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+// Old implementation removed - replaced with direct ResponseRouterData implementation
 {
     type Error = error_stack::Report<ConnectorError>;
 
