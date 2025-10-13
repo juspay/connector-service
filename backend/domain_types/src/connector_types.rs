@@ -69,6 +69,7 @@ pub enum ConnectorEnum {
     Placetopay,
     Rapyd,
     Aci,
+    Trustpay,
     Stripe,
 }
 
@@ -105,6 +106,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Placetopay => Ok(Self::Placetopay),
             grpc_api_types::payments::Connector::Rapyd => Ok(Self::Rapyd),
             grpc_api_types::payments::Connector::Aci => Ok(Self::Aci),
+            grpc_api_types::payments::Connector::Trustpay => Ok(Self::Trustpay),
             grpc_api_types::payments::Connector::Stripe => Ok(Self::Stripe),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
