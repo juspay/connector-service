@@ -1,13 +1,11 @@
 // EaseBuzz Connector Implementation
 pub mod transformers;
 
-use common_enums::{AttemptStatus, PaymentMethodType};
+use common_enums::PaymentMethodType;
 use common_utils::{
-    crypto,
     errors::CustomResult,
-    ext_traits::BytesExt,
     request::{Method, RequestContent},
-    types::{self, StringMinorUnit},
+    types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -15,22 +13,20 @@ use domain_types::{
         Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        AcceptDisputeData, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId, SessionTokenRequestData, SessionTokenResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
-    router_response_types::Response,
     types::Connectors,
 };
-use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use masking::ExposeInterface;
+use hyperswitch_masking::Secret;
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -47,7 +43,7 @@ use self::transformers::{
 };
 
 use super::macros;
-use crate::{types::ResponseRouterData, with_error_response_body};
+use crate::types::ResponseRouterData;
 
 // Source verification stub macro
 macro_rules! impl_source_verification_stub {
@@ -69,8 +65,8 @@ macro_rules! impl_source_verification_stub {
             }
             fn get_algorithm(
                 &self,
-            ) -> CustomResult<String, errors::ConnectorError> {
-                Ok("SHA256".to_string())
+            ) -> CustomResult<Box<dyn common_utils::crypto::VerifySignature + Send>, errors::ConnectorError> {
+                Ok(Box::new(common_utils::crypto::Sha512))
             }
         }
     };
@@ -124,8 +120,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         "easebuzz"
     }
 
-    fn base_url(&self) -> &'static str {
-        "https://pay.easebuzz.in"
+    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
+        if matches!(connectors, Connectors::EaseBuzz) {
+            "https://pay.easebuzz.in"
+        } else {
+            "https://pay.easebuzz.in"
+        }
     }
 
     fn get_auth_header(
@@ -136,10 +136,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         domain_types::errors::ConnectorError,
     > {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key1 } => {
+            ConnectorAuthType::SignatureKey { api_key, key1, api_secret: _ } => {
                 Ok(vec![(
                     "Authorization".to_string(),
-                    hyperswitch_masking::Maskable::new(format!("Basic {}:{}", api_key.expose(), key1.expose())),
+                    masking::Maskable::new_normal(format!("Basic {}:{}", api_key.expose(), key1.expose())),
                 )])
             }
             _ => Err(domain_types::errors::ConnectorError::FailedToObtainAuthType.into()),
