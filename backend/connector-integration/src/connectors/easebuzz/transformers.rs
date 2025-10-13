@@ -299,8 +299,11 @@ fn generate_sync_hash(
     crypto::Sha512::generate_hash(&hash_string)
 }
 
+// Define router data type alias
+pub type EaseBuzzRouterData<T> = crate::types::ResponseRouterData<EaseBuzzPaymentsRequest, T>;
+
 // Implement TryFrom for request types
-impl<T> TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+impl<T> TryFrom<EaseBuzzRouterData<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
     for EaseBuzzPaymentsRequest
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
@@ -308,9 +311,9 @@ where
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        item: EaseBuzzRouterData<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
-        let auth = get_auth_credentials(&item.connector_auth_type)?;
+        let auth = get_auth_credentials(&item.router_data.connector_auth_type)?;
         let key = auth.key.expose();
         let salt = auth.salt.expose();
 
@@ -328,13 +331,10 @@ where
             .clone()
             .unwrap_or_else(|| "Payment".to_string());
         
-        let firstname = item
-            .router_data
-            .request
-            .get_customer_name()
-            .unwrap_or_else(|| "Customer".to_string());
+        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let firstname = customer_id.get_string_repr();
         
-        let email = item.router_data.request.email.as_ref().map(|e| e.to_string());
+        let email = item.router_data.request.email.clone();
         let phone = item.router_data.request.phone.as_ref().map(|p| p.to_string());
 
         let return_url = item.router_data.request.get_router_return_url()?;
@@ -347,7 +347,7 @@ where
             &amount,
             &productinfo,
             &firstname,
-            &email.as_deref().unwrap_or(""),
+            &email.as_ref().map(|e| e.to_string()).unwrap_or_else(|| "".to_string()).as_str(),
             &salt,
         );
 
@@ -371,7 +371,7 @@ where
             amount,
             productinfo,
             firstname,
-            email,
+            email: email.map(|e| e.to_string()),
             phone,
             surl,
             furl,
