@@ -120,30 +120,34 @@ macros::create_all_prerequisites!(
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     ConnectorCommon for EaseBuzz<T>
 {
-    fn get_id(&self) -> &'static str {
+    fn id(&self) -> &'static str {
         "easebuzz"
     }
 
-    fn get_base_url(&self) -> &'static str {
-        match self.connector_name {
-            "EaseBuzz" => "https://pay.easebuzz.in",
-            _ => BASE_URL,
-        }
+    fn base_url(&self) -> &'static str {
+        "https://pay.easebuzz.in"
     }
 
-    fn get_test_base_url(&self) -> &'static str {
+    fn test_base_url(&self) -> &'static str {
         "https://testpay.easebuzz.in"
     }
 
-    fn get_auth_type(&self) -> ConnectorAuthType {
-        ConnectorAuthType::SignatureKey
-    }
-
-    fn get_connector_webhook_details(
+    fn get_auth_header(
         &self,
-        _merchant_id: &str,
-    ) -> CustomResult<Option<ConnectorWebhookSecrets>, errors::ConnectorError> {
-        Ok(None)
+        auth_type: &ConnectorAuthType,
+    ) -> CustomResult<
+        Vec<(String, hyperswitch_masking::Maskable<String>)>,
+        domain_types::errors::ConnectorError,
+    > {
+        match auth_type {
+            ConnectorAuthType::SignatureKey { api_key, key1 } => {
+                Ok(vec![(
+                    "Authorization".to_string(),
+                    hyperswitch_masking::Maskable::new(format!("Basic {}:{}", api_key.expose(), key1.expose())),
+                )])
+            }
+            _ => Err(domain_types::errors::ConnectorError::FailedToObtainAuthType.into()),
+        }
     }
 }
 
