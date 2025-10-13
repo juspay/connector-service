@@ -37,8 +37,9 @@
 - **Test Environment**: https://testpay.easebuzz.in
 - **Production Environment**: https://pay.easebuzz.in
 - **Payment Initiate**: /payment/initiateLink
-- **Transaction Sync**: /transaction/v1/retrieve
-- **Refund Sync**: /transaction/v1/refundSync
+- **Transaction Sync**: /payment/txnSync
+- **Refund**: /transaction/refund
+- **Refund Sync**: /transaction/refundSync
 
 ### Key Features
 - Dynamic request body value extraction from router data (no hardcoded values)
