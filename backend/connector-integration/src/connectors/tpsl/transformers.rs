@@ -535,13 +535,13 @@ TryFrom<
                     webhook_endpoint_url: return_url.clone(),
                     response_type: "URL".to_string(),
                     response_endpoint_url: return_url.clone(),
-                    description: "UPI Payment".to_string(),
+                    description: "UPI Payment",
                     identifier: auth.merchant_code.ok_or(ConnectorError::FailedToObtainAuthType)?,
                     webhook_type: "HTTP".to_string(),
                 },
                 cart: TpslCartPayload {
                     item: vec![TpslItemPayload {
-                        description: "UPI Payment".to_string(),
+                        description: "UPI Payment",
                         provider_identifier: "UPI".to_string(),
                         surcharge_or_discount_amount: "0".to_string().parse().unwrap_or_default(),
                         amount: amount.clone(),
@@ -552,7 +552,7 @@ TryFrom<
                     }],
                     reference: transaction_id.clone(),
                     identifier: transaction_id.clone(),
-                    description: "UPI Payment".to_string(),
+                    description: "UPI Payment",
                 },
                 payment: TpslPaymentPayload {
                     method: TpslMethodPayload {
@@ -626,7 +626,7 @@ TryFrom<
                     amount: amount,
                     forced_3_d_s_call: "N".to_string(),
                     transaction_type: "SALE".to_string(),
-                    description: "UPI Payment".to_string(),
+                    description: "UPI Payment",
                     currency,
                     is_registration: "N".to_string(),
                     identifier: transaction_id.clone(),
