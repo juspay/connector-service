@@ -623,7 +623,7 @@ TryFrom<
                 transaction: TpslTransactionPayload {
                     device_identifier: ip_address,
                     sms_sending: "N".to_string(),
-                    amount: amount.parse().unwrap_or_default(),
+                    amount: amount,
                     forced_3_d_s_call: "N".to_string(),
                     transaction_type: "SALE".to_string(),
                     description: "UPI Payment".to_string(),
@@ -804,7 +804,7 @@ TryFrom<
                 device_identifier: ip_address,
                 transaction_type: Some("SALE".to_string()),
                 sub_type: Some("UPI".to_string()),
-                amount: amount.parse().unwrap_or_default(),
+                amount: amount,
                 currency,
                 date_time: OffsetDateTime::now_utc().to_string(),
                 request_type: "SALE".to_string(),
