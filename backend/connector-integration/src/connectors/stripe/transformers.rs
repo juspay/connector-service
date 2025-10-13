@@ -518,8 +518,8 @@ pub struct SepaBankTransferData {
 #[derive(Debug, Eq, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum StripeCreditTransferSourceRequest {
-    AchBankTansfer(AchCreditTransferSourceRequest),
-    MultibancoBankTansfer(MultibancoCreditTransferSourceRequest),
+    AchBankTransfer(AchCreditTransferSourceRequest),
+    MultibancoBankTransfer(MultibancoCreditTransferSourceRequest),
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
@@ -2226,7 +2226,7 @@ pub struct StripeSourceResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ach_credit_transfer: Option<AchCreditTransferResponse>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub multibanco: Option<MultibancoCreditTansferResponse>,
+    pub multibanco: Option<MultibancoCreditTransferResponse>,
     pub receiver: AchReceiverDetails,
     pub status: StripePaymentStatus,
 }
@@ -2240,7 +2240,7 @@ pub struct AchCreditTransferResponse {
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
-pub struct MultibancoCreditTansferResponse {
+pub struct MultibancoCreditTransferResponse {
     pub reference: Secret<String>,
     pub entity: Secret<String>,
 }
@@ -3118,7 +3118,7 @@ pub enum StripeNextActionResponse {
     VerifyWithMicrodeposits(StripeVerifyWithMicroDepositsResponse),
     WechatPayDisplayQrCode(WechatPayRedirectToQr),
     DisplayBankTransferInstructions(StripeBankTransferDetails),
-    MultibancoDisplayDetails(MultibancoCreditTansferResponse),
+    MultibancoDisplayDetails(MultibancoCreditTransferResponse),
     NoNextActionBody,
 }
 
