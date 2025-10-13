@@ -188,11 +188,7 @@ fn get_redirect_form_data(
                 Ok(RedirectForm::Form {
                     endpoint: url,
                     method: Method::Post,
-                    form_fields: response_data
-                        .parameters
-                        .into_iter()
-                        .map(|(k, v)| (k, v.into_masked()))
-                        .collect::<std::collections::HashMap<String, Maskable<String>>>(),
+                    form_fields: Default::default(),
                 })
             } else {
                 Err(errors::ConnectorError::MissingRequiredField {
