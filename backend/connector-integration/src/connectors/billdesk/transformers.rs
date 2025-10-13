@@ -191,10 +191,7 @@ fn get_redirect_form_data(
                     form_fields: response_data
                         .parameters
                         .into_iter()
-                        .map(|(k, v)| (k, v.into_masked()))
-                        .collect::<std::collections::HashMap<String, Maskable<String>>>()
-                        .into_iter()
-                        .map(|(k, v)| (k, v.expose()))
+                        .map(|(k, v)| (k, v.into_masked().expose()))
                         .collect(),
                 })
             } else {
