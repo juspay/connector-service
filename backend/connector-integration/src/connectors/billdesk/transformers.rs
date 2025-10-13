@@ -2,10 +2,9 @@ use std::collections::HashMap;
 
 use common_utils::{
     errors::CustomResult,
-    ext_traits::ValueExt,
     request::Method,
 };
-use hyperswitch_masking::{Mask, ExposeInterface};
+use hyperswitch_masking::{Mask, ExposeInterface, PeekInterface};
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
