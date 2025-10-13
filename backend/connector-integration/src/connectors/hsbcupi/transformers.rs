@@ -125,7 +125,7 @@ impl<
             .payment_method_data
             .as_ref()
             .and_then(|pm| pm.get_upi_vpa())
-            .unwrap_or_else(|| "".to_string());
+            .unwrap_or_else(|| "test@upi".to_string());
 
         let me_ref_no = item
             .router_data
