@@ -129,6 +129,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             mandate_reference: None,
             minor_amount_captured: None,
             amount_captured: None,
+            error_reason: None,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
         })
     }

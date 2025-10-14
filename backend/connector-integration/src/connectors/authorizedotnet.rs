@@ -282,6 +282,7 @@ impl<
             response_headers: None,
             minor_amount_captured: None,
             amount_captured: None,
+            error_reason: None,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
         })
     }
