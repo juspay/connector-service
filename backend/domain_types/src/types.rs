@@ -1842,10 +1842,10 @@ impl ForeignTryFrom<ConnectorResponseData> for grpc_api_types::payments::Connect
                             card: Some(grpc_api_types::payments::CardConnectorResponse {
                                 authentication_data: authentication_data
                                     .as_ref()
-                                    .map(|data| serde_json::to_vec(data).unwrap_or_default()),
+                                    .and_then(|data| serde_json::to_vec(data).ok()),
                                 payment_checks: payment_checks
                                     .as_ref()
-                                    .map(|checks| serde_json::to_vec(checks).unwrap_or_default()),
+                                    .and_then(|checks| serde_json::to_vec(checks).ok()),
                                 card_network: card_network.clone(),
                                 domestic_network: domestic_network.clone(),
                             }),
