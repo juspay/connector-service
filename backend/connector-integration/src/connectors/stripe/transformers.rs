@@ -2696,7 +2696,7 @@ where
             })
         };
 
-        let _connector_response_data = item
+        let connector_response_data = item
             .response
             .latest_charge
             .as_ref()
@@ -2716,7 +2716,7 @@ where
                     .amount_received
                     .map(|amount| amount.get_amount_as_i64()),
                 minor_amount_captured: item.response.amount_received,
-                //connector_response: connector_response_data,
+                connector_response: connector_response_data,
                 minor_amount_capturable,
                 ..item.router_data.resource_common_data
             },
@@ -2925,7 +2925,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentIntentSyncResponse, Self>>
 
         let status = common_enums::AttemptStatus::from(item.response.status.to_owned());
 
-        let _connector_response_data = item
+        let connector_response_data = item
             .response
             .latest_charge
             .as_ref()
@@ -2993,7 +2993,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentIntentSyncResponse, Self>>
                     .amount_received
                     .map(|amount| amount.get_amount_as_i64()),
                 minor_amount_captured: item.response.amount_received,
-                //connector_response: connector_response_data,
+                connector_response: connector_response_data,
                 ..item.router_data.resource_common_data
             },
             request: PaymentsSyncData {

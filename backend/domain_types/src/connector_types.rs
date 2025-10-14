@@ -21,7 +21,7 @@ use crate::{
     mandates::{CustomerAcceptance, MandateData},
     payment_address::{self, Address, AddressDetails, PhoneDetails},
     payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::PaymentMethodToken,
+    router_data::{ConnectorResponseData, PaymentMethodToken},
     router_request_types::{
         AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
         CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
@@ -314,6 +314,8 @@ pub struct PaymentFlowData {
     pub raw_connector_response: Option<String>,
     pub raw_connector_request: Option<String>,
     pub vault_headers: Option<std::collections::HashMap<String, Secret<String>>>,
+    /// This field is used to store various data regarding the response from connector
+    pub connector_response: Option<ConnectorResponseData>,
 }
 
 impl PaymentFlowData {

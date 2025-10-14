@@ -1094,6 +1094,31 @@ message EvidenceDocument {
   optional string text_content = 5;
 }
 
+// Extended authorization response data
+message ExtendedAuthorizationResponseData {
+  optional bool extended_authentication_applied = 1; // Whether extended authentication was applied
+  optional int64 capture_before = 2; // Unix timestamp before which capture must occur
+}
+
+// Additional payment method data for card payments
+message CardConnectorResponse {
+  optional bytes authentication_data = 1; // Authentication details as JSON bytes
+  optional bytes payment_checks = 2; // Payment checks as JSON bytes
+  optional string card_network = 3; // Card network returned by the processor
+  optional string domestic_network = 4; // Domestic (co-branded) card network
+}
+
+// Additional payment method connector response
+message AdditionalPaymentMethodConnectorResponse {
+  CardConnectorResponse card = 1; // Card-specific response data
+}
+
+// Connector response data containing various information from the connector
+message ConnectorResponseData {
+  optional AdditionalPaymentMethodConnectorResponse additional_payment_method_data = 1; // Additional payment method specific data
+  optional ExtendedAuthorizationResponseData extended_authorization_response_data = 2; // Extended authorization data
+  optional bool is_overcapture_enabled = 3; // Whether overcapture is enabled
+}
 
 // ============================================================================
 // SERVICE-SPECIFIC MESSAGES
@@ -1201,6 +1226,7 @@ message PaymentServiceAuthorizeResponse {
   optional int64 minor_amount_capturable = 17; // Capturable amount in minor currency units
 
   optional MandateReference mandate_reference = 18; // Mandate reference, if applicable
+  optional ConnectorResponseData connector_response = 19; // Various data regarding the response from connector
 }
 
 // Request message for synchronizing payment status.
@@ -1264,6 +1290,7 @@ message PaymentServiceGetResponse {
   optional string connector_customer_id = 22; // Customer ID as recognized by the connector
   optional string merchant_order_reference_id = 23; // Merchant's internal reference ID
   map<string, string> metadata = 24; // Additional metadata from the connector
+  optional ConnectorResponseData connector_response = 30; // Various data regarding the response from connector
   
   // State Information
   optional ConnectorState state = 28; // State data for access token storage and other connector-specific state
