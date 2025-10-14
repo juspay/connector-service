@@ -435,10 +435,6 @@ impl<
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        // Debug log the raw response
-        println!("DEBUG: WorldpayVantiv Raw Response: {:?}", std::str::from_utf8(&res.response));
-        println!("DEBUG: WorldpayVantiv Status Code: {}", res.status_code);
-        
         let response_str = std::str::from_utf8(&res.response)
             .map_err(|_| ConnectorError::ResponseDeserializationFailed)?;
         let response: transformers::CnpOnlineResponse = deserialize_xml_to_struct(response_str)
@@ -618,9 +614,7 @@ macros::macro_connector_implementation!(
                 .as_ref()
                 .unwrap_or(&req.resource_common_data.connectors.worldpayvantiv.base_url);
             Ok(format!(
-                "{}/reports/dtrPaymentStatus/{}",
-                secondary_base_url,
-                txn_id
+                "{secondary_base_url}/reports/dtrPaymentStatus/{txn_id}"
             ))
         }
     }

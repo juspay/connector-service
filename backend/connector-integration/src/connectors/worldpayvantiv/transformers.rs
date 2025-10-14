@@ -124,9 +124,15 @@ impl<
                     }
                 };
 
+                let year_str = card_data.card_exp_year.peek();
+                let formatted_year = if year_str.len() == 4 {
+                    &year_str[2..]
+                } else {
+                    year_str
+                };
                 let exp_date = format!("{}{}", 
                     card_data.card_exp_month.peek(),
-                    &card_data.card_exp_year.peek()[2..]
+                    formatted_year
                 );
 
                 let worldpay_card = WorldpayvantivCardData {
@@ -167,7 +173,9 @@ impl<
             let sale = Sale {
                 id: format!("sale_{}", merchant_txn_id),
                 report_group: report_group.clone(),
-                customer_id: Some("12345".to_string()),
+                customer_id: item.router_data.resource_common_data.get_customer_id()
+                    .ok()
+                    .map(|id| id.get_string_repr().to_string()),
                 order_id: merchant_txn_id.clone(),
                 amount,
                 order_source,
@@ -183,7 +191,9 @@ impl<
             let authorization = Authorization {
                 id: format!("auth_{}", merchant_txn_id),
                 report_group: report_group.clone(),
-                customer_id: Some("12345".to_string()),
+                customer_id: item.router_data.resource_common_data.get_customer_id()
+                    .ok()
+                    .map(|id| id.get_string_repr().to_string()),
                 order_id: merchant_txn_id.clone(),
                 amount,
                 order_source,
@@ -1232,8 +1242,10 @@ fn get_payment_flow_type(merchant_txn_id: &str) -> Result<WorldpayvantivPaymentF
     } else if merchant_txn_id_lower.contains("capture") {
         Ok(WorldpayvantivPaymentFlow::Capture)
     } else {
-        // Default to Sale if we can't determine the flow type to avoid errors
-        Ok(WorldpayvantivPaymentFlow::Sale)
+        Err(ConnectorError::NotSupported {
+            message: format!("Unable to determine payment flow type from merchant transaction ID: {}", merchant_txn_id),
+            connector: "worldpayvantiv",
+        })
     }
 }
 
@@ -1471,9 +1483,15 @@ where
                 }
             };
 
+            let year_str = card_data.card_exp_year.peek();
+            let formatted_year = if year_str.len() == 4 {
+                &year_str[2..]
+            } else {
+                year_str
+            };
             let exp_date = format!("{}{}", 
                 card_data.card_exp_month.peek(),
-                &card_data.card_exp_year.peek()[2..]
+                formatted_year
             );
 
             let worldpay_card = WorldpayvantivCardData {

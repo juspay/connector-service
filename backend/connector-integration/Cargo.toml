@@ -33,7 +33,6 @@ ring = "0.17"
 aes = "0.8"
 cbc = "0.1"
 quick-xml = { version = "0.31.0", features = ["serialize"] }
-serde-xml-rs = "0.6"
 tracing = { version = "0.1.40" }
 encoding_rs = "0.8"
 hex = "0.4.3"
