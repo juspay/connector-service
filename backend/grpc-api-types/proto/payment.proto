@@ -1277,6 +1277,10 @@ message PaymentServiceVoidRequest {
 
   // Session and Token Information
   optional string access_token = 6; // Access token for secure communication
+
+  // Amount Information
+  optional int64 amount = 7; // Amount to void
+  optional Currency currency = 8; // Currency of the void amount
 }
 
 // Response message for a payment void operation.
@@ -1322,6 +1326,9 @@ message PaymentServiceCaptureRequest {
 
   // Session and Token Information
   optional string access_token = 8; // Access token for secure communication
+
+  // Capture Settings
+  optional CaptureMethod capture_method = 9; // Method for capturing the payment
 }
 
 // Response message for a payment capture operation.

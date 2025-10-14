@@ -785,6 +785,8 @@ pub struct PaymentVoidData {
     pub integrity_object: Option<PaymentVoidIntegrityObject>,
     pub raw_connector_response: Option<String>,
     pub browser_info: Option<BrowserInformation>,
+    pub amount: Option<MinorUnit>,
+    pub currency: Option<Currency>,
 }
 
 impl PaymentVoidData {
@@ -1826,6 +1828,7 @@ pub struct PaymentsCaptureData {
     pub connector_metadata: Option<serde_json::Value>,
     pub integrity_object: Option<CaptureIntegrityObject>,
     pub browser_info: Option<BrowserInformation>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
 }
 
 impl PaymentsCaptureData {

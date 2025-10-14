@@ -301,6 +301,8 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         access_token: None,
         all_keys_required: None,
         browser_info: Some(create_test_browser_info()),
+        amount: None,
+        currency: None,
     }
 }
 

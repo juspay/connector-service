@@ -281,6 +281,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         request_ref_id: None,
         browser_info: None,
         access_token: None,
+        capture_method: None,
     }
 }
 

@@ -3044,26 +3044,11 @@ impl<
             .clone()
             .map(convert_metadata_to_merchant_defined_info);
 
-        // Extract capture_method from metadata and convert to CaptureMethod
-        let capture_method = item
-            .router_data
-            .request
-            .connector_metadata
-            .as_ref()
-            .and_then(|metadata| metadata.as_object())
-            .and_then(|obj| obj.get("capture_method"))
-            .and_then(|val| val.as_str())
-            .and_then(|s| match s {
-                "manual" => Some(common_enums::CaptureMethod::Manual),
-                "automatic" => Some(common_enums::CaptureMethod::Automatic),
-                "manual_multiple" => Some(common_enums::CaptureMethod::ManualMultiple),
-                "scheduled" => Some(common_enums::CaptureMethod::Scheduled),
-                "sequential_automatic" => Some(common_enums::CaptureMethod::SequentialAutomatic),
-                _ => None,
-            });
-
-        let is_final =
-            matches!(capture_method, Some(common_enums::CaptureMethod::Manual)).then_some(true);
+        let is_final = matches!(
+            item.router_data.request.capture_method,
+            Some(common_enums::CaptureMethod::Manual)
+        )
+        .then_some(true);
         let total_amount = item
             .connector
             .amount_converter
@@ -3153,39 +3138,11 @@ impl<
             .map(|secret_value: Secret<serde_json::Value>| {
                 convert_metadata_to_merchant_defined_info(secret_value.expose())
             });
-
-        // Extract currency from connector_meta_data
-        let currency = value
-            .router_data
-            .resource_common_data
-            .connector_meta_data
-            .as_ref()
-            .and_then(|meta_data| {
-                // Parse the JSON value to extract currency field
-                let json_value = meta_data.clone().expose();
-                json_value
-                    .get("currency")
-                    .and_then(|currency_value| currency_value.as_str())
-                    .and_then(|currency_str| {
-                        // Convert string to Currency enum
-                        common_enums::Currency::from_str(currency_str).ok()
-                    })
-            })
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "Currency",
-            })?;
-
+        let currency = value.router_data.request.currency.unwrap();
         let total_amount = value
             .connector
             .amount_converter
-            .convert(
-                value
-                    .router_data
-                    .resource_common_data
-                    .minor_amount_captured
-                    .unwrap(),
-                currency,
-            )
+            .convert(value.router_data.request.amount.unwrap(), currency)
             .change_context(ConnectorError::RequestEncodingFailed)?;
         Ok(Self {
             client_reference_information: ClientReferenceInformation {

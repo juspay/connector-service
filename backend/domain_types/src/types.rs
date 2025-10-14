@@ -3135,6 +3135,8 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
     fn foreign_try_from(
         value: PaymentServiceVoidRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let amount = Some(common_utils::types::MinorUnit::new(value.amount()));
+        let currency = Some(common_enums::Currency::foreign_try_from(value.currency())?);
         Ok(Self {
             browser_info: value
                 .browser_info
@@ -3151,6 +3153,8 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
             cancellation_reason: value.cancellation_reason,
             raw_connector_response: None,
             integrity_object: None,
+            amount,
+            currency,
         })
     }
 }
@@ -3577,6 +3581,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
     fn foreign_try_from(
         value: grpc_api_types::payments::PaymentServiceCaptureRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let capture_method = Some(common_enums::CaptureMethod::foreign_try_from(
+            value.capture_method(),
+        )?);
+
         let connector_transaction_id = ResponseId::ConnectorTransactionId(
             value
                 .transaction_id
@@ -3622,6 +3630,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             integrity_object: None,
+            capture_method,
         })
     }
 }
