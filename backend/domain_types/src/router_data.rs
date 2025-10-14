@@ -345,25 +345,3 @@ pub enum AdditionalPaymentMethodConnectorResponse {
         domestic_network: Option<String>,
     },
 }
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct ConnectorResponseData {
-    pub additional_payment_method_data: Option<AdditionalPaymentMethodConnectorResponse>,
-}
-
-impl ConnectorResponseData {
-    pub fn with_additional_payment_method_data(
-        additional_payment_method_data: AdditionalPaymentMethodConnectorResponse,
-    ) -> Self {
-        Self {
-            additional_payment_method_data: Some(additional_payment_method_data),
-        }
-    }
-    pub fn new(
-        additional_payment_method_data: Option<AdditionalPaymentMethodConnectorResponse>,
-    ) -> Self {
-        Self {
-            additional_payment_method_data,
-        }
-    }
-}

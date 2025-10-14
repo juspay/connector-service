@@ -50,29 +50,17 @@ fn get_card_number_string<T: PaymentMethodDataTypes + 'static>(
 ) -> String {
     use std::any::{Any, TypeId};
 
-    // Use type checking to safely cast to the appropriate type
-    if TypeId::of::<T>() == TypeId::of::<payment_method_data::DefaultPCIHolder>() {
-        // We know this is a DefaultPCIHolder, so we can safely cast
-        let any_ref: &dyn Any = card_number;
-        if let Some(default_card) =
-            any_ref.downcast_ref::<RawCardNumber<payment_method_data::DefaultPCIHolder>>()
-        {
-            default_card.peek().to_string()
-        } else {
-            // Fallback: this should not happen but provides safety
-            "".to_string()
-        }
-    } else {
-        // Assume VaultTokenHolder for any other type
-        let any_ref: &dyn Any = card_number;
-        if let Some(vault_card) =
-            any_ref.downcast_ref::<RawCardNumber<payment_method_data::VaultTokenHolder>>()
-        {
-            vault_card.peek().to_string()
-        } else {
-            // Fallback: this should not happen but provides safety
-            "".to_string()
-        }
+    let any_ref: &dyn Any = card_number;
+
+    match TypeId::of::<T>() {
+        id if id == TypeId::of::<payment_method_data::DefaultPCIHolder>() => any_ref
+            .downcast_ref::<RawCardNumber<payment_method_data::DefaultPCIHolder>>()
+            .map(|c| c.peek().to_string())
+            .unwrap_or_default(),
+        _ => any_ref
+            .downcast_ref::<RawCardNumber<payment_method_data::VaultTokenHolder>>()
+            .map(|c| c.peek().to_string())
+            .unwrap_or_default(),
     }
 }
 
