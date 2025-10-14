@@ -1286,23 +1286,12 @@ impl<
             }
         };
 
-        let security_code = if item
-            .router_data
-            .request
-            .get_optional_network_transaction_id()
-            .is_some()
-        {
-            None
-        } else {
-            Some(ccard.card_cvc)
-        };
-
         let payment_information = PaymentInformation::Cards(Box::new(CardPaymentInformation {
             card: Card {
                 number: ccard.card_number,
                 expiration_month: ccard.card_exp_month,
                 expiration_year: ccard.card_exp_year,
-                security_code,
+                security_code: None,
                 card_type: card_type.clone(),
                 type_selection_indicator: Some("1".to_owned()),
             },
@@ -1313,107 +1302,6 @@ impl<
             None,
             raw_card_type.map(|network| network.to_string()),
         ))?;
-        let client_reference_information = ClientReferenceInformation::from(item);
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .metadata
-            .clone()
-            .map(convert_metadata_to_merchant_defined_info);
-
-        Ok(Self {
-            processing_information,
-            payment_information,
-            order_information,
-            client_reference_information,
-            consumer_authentication_information: None,
-            merchant_defined_information,
-        })
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<(
-        &CybersourceRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-        payment_method_data::CardDetailsForNetworkTransactionId,
-    )> for CybersourcePaymentsRequest<T>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(
-        (item, ccard): (
-            &CybersourceRouterData<
-                RouterDataV2<
-                    Authorize,
-                    PaymentFlowData,
-                    PaymentsAuthorizeData<T>,
-                    PaymentsResponseData,
-                >,
-                T,
-            >,
-            payment_method_data::CardDetailsForNetworkTransactionId,
-        ),
-    ) -> Result<Self, Self::Error> {
-        let email = item
-            .router_data
-            .resource_common_data
-            .get_billing_email()
-            .or(item.router_data.request.get_email())?;
-        let bill_to = build_bill_to(
-            item.router_data.resource_common_data.get_optional_billing(),
-            email,
-        )?;
-        let order_information = OrderInformationWithBill::from((item, Some(bill_to)));
-
-        let card_issuer = domain_types::utils::get_card_issuer(ccard.card_number.peek());
-        let card_type = match card_issuer {
-            Ok(issuer) => Some(card_issuer_to_string(issuer)),
-            Err(_) => None,
-        };
-
-        let raw_card_number = if std::any::TypeId::of::<T>()
-            == std::any::TypeId::of::<payment_method_data::DefaultPCIHolder>()
-        {
-            let default_raw_card =
-                RawCardNumber::<payment_method_data::DefaultPCIHolder>(ccard.card_number);
-            let any_card: &dyn std::any::Any = &default_raw_card;
-            let casted_card = any_card.downcast_ref::<RawCardNumber<T>>().unwrap();
-            casted_card.clone()
-        } else {
-            let card_string = ccard.card_number.peek().to_string();
-            let vault_raw_card =
-                RawCardNumber::<payment_method_data::VaultTokenHolder>(card_string);
-            let any_card: &dyn std::any::Any = &vault_raw_card;
-            let casted_card = any_card.downcast_ref::<RawCardNumber<T>>().unwrap();
-            casted_card.clone()
-        };
-
-        let payment_information = PaymentInformation::Cards(Box::new(CardPaymentInformation {
-            card: Card {
-                number: raw_card_number,
-                expiration_month: ccard.card_exp_month,
-                expiration_year: ccard.card_exp_year,
-                security_code: None,
-                card_type: card_type.clone(),
-                type_selection_indicator: Some("1".to_owned()),
-            },
-        }));
-
-        let processing_information = ProcessingInformation::try_from((item, None, card_type))?;
         let client_reference_information = ClientReferenceInformation::from(item);
         let merchant_defined_information = item
             .router_data
@@ -2465,17 +2353,10 @@ impl<
                 )
                 .into()),
             },
-            // If connector_mandate_id is present MandatePayment will be the PMD, the case will be handled by CybersourceRepeatPaymentRequest.
-            // This is a fallback implementation in the event of catastrophe.
-            PaymentMethodData::MandatePayment => Err(errors::ConnectorError::NotImplemented(
-                "MandatePayment should be handled by CybersourceRepeatPaymentRequest".to_string(),
-            )
-            .into()),
             PaymentMethodData::NetworkToken(token_data) => Self::try_from((&item, token_data)),
-            PaymentMethodData::CardDetailsForNetworkTransactionId(card) => {
-                Self::try_from((&item, card))
-            }
-            PaymentMethodData::CardRedirect(_)
+            PaymentMethodData::MandatePayment
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
+            | PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::PayLater(_)
             | PaymentMethodData::BankRedirect(_)
             | PaymentMethodData::BankDebit(_)
@@ -2496,7 +2377,6 @@ impl<
     }
 }
 
-// TryFrom implementation for CybersourceRepeatPaymentRequest - direct implementation
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
