@@ -36,11 +36,19 @@ pub const X_TENANT_ID: &str = "x-tenant-id";
 /// Header key for request ID
 pub const X_REQUEST_ID: &str = "x-request-id";
 /// Header key for connector identification
-pub const X_CONNECTOR: &str = "x-connector";
+pub const X_CONNECTOR_NAME: &str = "x-connector";
 /// Header key for merchant identification
 pub const X_MERCHANT_ID: &str = "x-merchant-id";
 /// Header key for reference identification
 pub const X_REFERENCE_ID: &str = "x-reference-id";
+
+pub const X_SOURCE_NAME: &str = "x-source";
+
+pub const X_CONNECTOR_SERVICE: &str = "connector-service";
+
+pub const X_FLOW_NAME: &str = "x-flow";
+/// Header key for shadow mode
+pub const X_SHADOW_MODE: &str = "x-shadow-mode";
 
 // =============================================================================
 // Authentication Headers (Internal)
@@ -159,10 +167,7 @@ impl Env {
             |_| default_env,
             |v| {
                 Self::deserialize(v.into_deserializer()).unwrap_or_else(|err: serde_json::Error| {
-                    panic!(
-                        "Invalid value found in environment variable {}: {}",
-                        env_key, err
-                    )
+                    panic!("Invalid value found in environment variable {env_key}: {err}")
                 })
             },
         );

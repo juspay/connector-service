@@ -18,6 +18,7 @@ port = 8080
 [proxy]
 idle_pool_connection_timeout = 90               # Timeout for idle pool connections (defaults to 90s)
 bypass_proxy_urls = ["localhost", "local"]
+mitm_proxy_enabled = false
 
 [connectors]
 adyen.base_url = "https://{{merchant_endpoint_prefix}}-checkout-live.adyenpayments.com/checkout/"
@@ -43,6 +44,13 @@ braintree.base_url = "https://payments.braintree-api.com/graphql"
 volt.base_url = "https://api.volt.io/"
 bluecode.base_url = "https://app.eorder.reloadhero.com/"
 cryptopay.base_url = "https://business.cryptopay.me/"
+helcim.base_url = "https://api.helcim.com/"
+dlocal.base_url = "https://api.dlocal.com/"
+placetopay.base_url = "https://checkout.placetopay.com/rest/gateway"
+rapyd.base_url = "https://api.rapyd.net"
+aci.base_url = "https://eu-prod.oppwa.com/"
+trustpay.base_url = "https://tpgw.trustpay.eu/"
+trustpay.base_url_bank_redirects = "https://aapi.trustpay.eu/"
 
 # Generic Events Configuration
 [events]
@@ -50,3 +58,6 @@ enabled = false
 brokers = ["localhost:9092"]
 topic = "audit-trail-events"
 partition_key_field = "request_id"
+
+[unmasked_headers]
+keys = ["x-request-id","x-merchant-id","x-lineage-ids","x-reference-id","x-connector","x-tenant-id"]

@@ -4,6 +4,135 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.10.14.0
+
+### Features
+
+- **connector:** Added AccessToken flow for trustpay ([#219](https://github.com/juspay/connector-service/pull/219)) ([`d254128`](https://github.com/juspay/connector-service/commit/d254128376ca1dd3d1eab0d2a17fdd1c820b1d63))
+
+**Full Changelog:** [`2025.10.10.1...2025.10.14.0`](https://github.com/juspay/connector-service/compare/2025.10.10.1...2025.10.14.0)
+
+- - -
+
+## 2025.10.10.1
+
+### Refactors
+
+- **connector:** Update phonepe sandbox endpoint ([#218](https://github.com/juspay/connector-service/pull/218)) ([`343fd67`](https://github.com/juspay/connector-service/commit/343fd67743060d4daa5d2e08122113eaab48a24c))
+
+**Full Changelog:** [`2025.10.10.0...2025.10.10.1`](https://github.com/juspay/connector-service/compare/2025.10.10.0...2025.10.10.1)
+
+- - -
+
+## 2025.10.10.0
+
+### Features
+
+- **connector:** [TRUSTPAY] Connector Integration PSync flow ([#217](https://github.com/juspay/connector-service/pull/217)) ([`764aeba`](https://github.com/juspay/connector-service/commit/764aeba435816ce9dd2f21c972142ac4e036c0ef))
+
+**Full Changelog:** [`2025.10.09.0...2025.10.10.0`](https://github.com/juspay/connector-service/compare/2025.10.09.0...2025.10.10.0)
+
+- - -
+
+## 2025.10.09.0
+
+### Miscellaneous Tasks
+
+- Added webhooks support in Noon ([#156](https://github.com/juspay/connector-service/pull/156)) ([`6b24ce3`](https://github.com/juspay/connector-service/commit/6b24ce3550cf384258953143843fc9715978af94))
+
+**Full Changelog:** [`2025.10.08.0...2025.10.09.0`](https://github.com/juspay/connector-service/compare/2025.10.08.0...2025.10.09.0)
+
+- - -
+
+## 2025.10.08.0
+
+### Features
+
+- **connector:** [Aci] Connector Integration ([#212](https://github.com/juspay/connector-service/pull/212)) ([`ccd05e4`](https://github.com/juspay/connector-service/commit/ccd05e47115e33a14c9f4b804b3eafb7922ecc41))
+- **framework:** Run UCS in Shadow mode ([#213](https://github.com/juspay/connector-service/pull/213)) ([`96bce38`](https://github.com/juspay/connector-service/commit/96bce38ad52b0ffcb2b81603e0ac6a9d0a6e11ef))
+
+**Full Changelog:** [`2025.10.02.0...2025.10.08.0`](https://github.com/juspay/connector-service/compare/2025.10.02.0...2025.10.08.0)
+
+- - -
+
+## 2025.10.02.0
+
+### Features
+
+- **connector:** [Rapyd] Connector Integration ([#193](https://github.com/juspay/connector-service/pull/193)) ([`9051b40`](https://github.com/juspay/connector-service/commit/9051b406074d83f048e703488f297e4cac876db7))
+- Emitting lineage id an reference id to kafka metadata in events ([#207](https://github.com/juspay/connector-service/pull/207)) ([`688e2a3`](https://github.com/juspay/connector-service/commit/688e2a368ff42d61ca1419cdbacc683320881295))
+
+**Full Changelog:** [`2025.10.01.0...2025.10.02.0`](https://github.com/juspay/connector-service/compare/2025.10.01.0...2025.10.02.0)
+
+- - -
+
+## 2025.10.01.0
+
+### Refactors
+
+- **connector:** [PHONEPE] refactor phonepe and add UPI_QR support ([#209](https://github.com/juspay/connector-service/pull/209)) ([`8740d83`](https://github.com/juspay/connector-service/commit/8740d8344db63c1fec9c0fbd202035af503a65c1))
+
+**Full Changelog:** [`2025.09.30.0...2025.10.01.0`](https://github.com/juspay/connector-service/compare/2025.09.30.0...2025.10.01.0)
+
+- - -
+
+## 2025.09.30.0
+
+### Features
+
+- **connector:** [Placetopay] Connector Integration ([#192](https://github.com/juspay/connector-service/pull/192)) ([`4d01054`](https://github.com/juspay/connector-service/commit/4d01054fe84c9ccd20a6fcf45c733824ff209348))
+- Add configurable header masking to gRPC metadata with audit event emission ([#190](https://github.com/juspay/connector-service/pull/190)) ([`68ba3d9`](https://github.com/juspay/connector-service/commit/68ba3d9fdc9613cea5631aabc2980e10b79b534d))
+
+**Full Changelog:** [`2025.09.29.0...2025.09.30.0`](https://github.com/juspay/connector-service/compare/2025.09.29.0...2025.09.30.0)
+
+- - -
+
+## 2025.09.29.0
+
+### Miscellaneous Tasks
+
+- Update git tag for hyperswitch repo ([#208](https://github.com/juspay/connector-service/pull/208)) ([`7bf6a22`](https://github.com/juspay/connector-service/commit/7bf6a22786517db253a78840927c33d458233380))
+
+**Full Changelog:** [`2025.09.26.0...2025.09.29.0`](https://github.com/juspay/connector-service/compare/2025.09.26.0...2025.09.29.0)
+
+- - -
+
+## 2025.09.26.0
+
+### Features
+
+- **connector:** [Dlocal] Connector Integration ([#191](https://github.com/juspay/connector-service/pull/191)) ([`1ddd62b`](https://github.com/juspay/connector-service/commit/1ddd62ba6e9b7ccc89921345e3a8339f781d9f3e))
+- **core:** PreAuthenticate, Authenticate and PostAuthenticate flow ([#176](https://github.com/juspay/connector-service/pull/176)) ([`0807495`](https://github.com/juspay/connector-service/commit/0807495b9ea45e925bd96c8695db1104aa325af7))
+
+**Full Changelog:** [`2025.09.25.1...2025.09.26.0`](https://github.com/juspay/connector-service/compare/2025.09.25.1...2025.09.26.0)
+
+- - -
+
+## 2025.09.25.1
+
+### Features
+
+- **connector:** [HELCIM] Connector Integration ([#173](https://github.com/juspay/connector-service/pull/173)) ([`f7ab3e6`](https://github.com/juspay/connector-service/commit/f7ab3e6206a673a4736850df3a67a3bf5224841f))
+
+### Miscellaneous Tasks
+
+- Added OnlineBankingFpx, DuitNow payment methods support ([#198](https://github.com/juspay/connector-service/pull/198)) ([`b42f059`](https://github.com/juspay/connector-service/commit/b42f059f85a7820f16946daaa51ce2e5817cf532))
+
+**Full Changelog:** [`2025.09.25.0...2025.09.25.1`](https://github.com/juspay/connector-service/compare/2025.09.25.0...2025.09.25.1)
+
+- - -
+
+## 2025.09.25.0
+
+### Features
+
+- Added raw_connector_request in ucs response ([#199](https://github.com/juspay/connector-service/pull/199)) ([`284d5cc`](https://github.com/juspay/connector-service/commit/284d5cc313f49d458058664afa39a142495474c0))
+- Emit event for grpc request and refactor event publisher to synchronous ([#187](https://github.com/juspay/connector-service/pull/187)) ([`f077ada`](https://github.com/juspay/connector-service/commit/f077ada286199964a626456a449c1c8cdb1debb9))
+
+**Full Changelog:** [`2025.09.24.0...2025.09.25.0`](https://github.com/juspay/connector-service/compare/2025.09.24.0...2025.09.25.0)
+
+- - -
+
 ## 2025.09.24.0
 
 ### Refactors

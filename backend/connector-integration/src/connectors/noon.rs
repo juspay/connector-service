@@ -2,22 +2,28 @@ use std::fmt::Debug;
 
 use base64::Engine;
 use common_enums::AttemptStatus;
-use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit};
+use common_utils::{
+    crypto::{self, VerifySignature},
+    errors::CustomResult,
+    ext_traits::ByteSliceExt,
+    types::StringMajorUnit,
+};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken,
-        DefendDispute, PSync, PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
+        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
+        PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
-        ConnectorSpecifications, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, EventType, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -33,11 +39,11 @@ use interfaces::{
 };
 use serde::Serialize;
 pub mod transformers;
-
+use error_stack::ResultExt;
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 use transformers::{
-    NoonAuthType, NoonErrorResponse, NoonPaymentsActionRequest,
+    self as noon, NoonAuthType, NoonErrorResponse, NoonPaymentsActionRequest,
     NoonPaymentsActionRequest as NoonPaymentsRefundActionRequest, NoonPaymentsCancelRequest,
     NoonPaymentsRequest, NoonPaymentsResponse, NoonPaymentsResponse as NoonPaymentsSyncResponse,
     NoonPaymentsResponse as NoonPaymentsCaptureResponse,
@@ -113,6 +119,132 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Noon<T>
 {
+    fn get_webhook_source_verification_signature(
+        &self,
+        request: &RequestDetails,
+        _connector_webhook_secret: &ConnectorWebhookSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        let webhook_body: noon::NoonWebhookSignature = request
+            .body
+            .parse_struct("NoonWebhookSignature")
+            .change_context(errors::ConnectorError::WebhookSignatureNotFound)
+            .attach_printable("Missing incoming webhook signature for noon")?;
+        let signature = webhook_body.signature;
+        BASE64_ENGINE
+            .decode(signature)
+            .change_context(errors::ConnectorError::WebhookSignatureNotFound)
+            .attach_printable("Missing incoming webhook signature for noon")
+    }
+
+    fn get_webhook_source_verification_message(
+        &self,
+        request: &RequestDetails,
+        _connector_webhook_secrets: &ConnectorWebhookSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        let webhook_body: noon::NoonWebhookBody = request
+            .body
+            .parse_struct("NoonWebhookBody")
+            .change_context(errors::ConnectorError::WebhookSignatureNotFound)
+            .attach_printable("Missing incoming webhook signature for noon")?;
+        let message = format!(
+            "{},{},{},{},{}",
+            webhook_body.order_id,
+            webhook_body.order_status,
+            webhook_body.event_id,
+            webhook_body.event_type,
+            webhook_body.time_stamp,
+        );
+        Ok(message.into_bytes())
+    }
+
+    fn get_event_type(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<EventType, error_stack::Report<domain_types::errors::ConnectorError>> {
+        let details: noon::NoonWebhookEvent = request
+            .body
+            .parse_struct("NoonWebhookEvent")
+            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)
+            .attach_printable("Failed to parse webhook event type from Noon webhook body")?;
+
+        Ok(match &details.event_type {
+            noon::NoonWebhookEventTypes::Sale | noon::NoonWebhookEventTypes::Capture => {
+                match &details.order_status {
+                    noon::NoonPaymentStatus::Captured => EventType::PaymentIntentSuccess,
+                    _ => Err(errors::ConnectorError::WebhookEventTypeNotFound)?,
+                }
+            }
+            noon::NoonWebhookEventTypes::Fail => EventType::PaymentIntentFailure,
+            noon::NoonWebhookEventTypes::Authorize
+            | noon::NoonWebhookEventTypes::Authenticate
+            | noon::NoonWebhookEventTypes::Refund
+            | noon::NoonWebhookEventTypes::Unknown => EventType::IncomingWebhookEventUnspecified,
+        })
+    }
+
+    fn verify_webhook_source(
+        &self,
+        request: RequestDetails,
+        connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
+        let algorithm = crypto::HmacSha512;
+
+        let connector_webhook_secrets = match connector_webhook_secret {
+            Some(secrets) => secrets,
+            None => Err(domain_types::errors::ConnectorError::WebhookSourceVerificationFailed)?,
+        };
+
+        let signature =
+            self.get_webhook_source_verification_signature(&request, &connector_webhook_secrets)?;
+
+        let message =
+            self.get_webhook_source_verification_message(&request, &connector_webhook_secrets)?;
+
+        algorithm
+            .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Noon webhook signature verification failed")
+    }
+
+    fn process_payment_webhook(
+        &self,
+        _request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<
+        domain_types::connector_types::WebhookDetailsResponse,
+        error_stack::Report<domain_types::errors::ConnectorError>,
+    > {
+        Ok(domain_types::connector_types::WebhookDetailsResponse {
+            resource_id: None,
+            status: common_enums::AttemptStatus::Unknown,
+            connector_response_reference_id: None,
+            error_code: None,
+            error_message: None,
+            raw_connector_response: None,
+            status_code: 200,
+            response_headers: None,
+            mandate_reference: None,
+            transformation_status: common_enums::WebhookTransformationStatus::Incomplete,
+        })
+    }
+
+    fn get_webhook_resource_object(
+        &self,
+        request: RequestDetails,
+    ) -> CustomResult<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, errors::ConnectorError>
+    {
+        let resource: noon::NoonWebhookObject = request
+            .body
+            .parse_struct("NoonWebhookObject")
+            .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)
+            .attach_printable("Failed to parse webhook resource object from Noon webhook body")?;
+
+        Ok(Box::new(noon::NoonPaymentsResponse::from(resource)))
+    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSessionToken for Noon<T>
@@ -124,6 +256,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentTokenV2<T> for Noon<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentPreAuthenticateV2<T> for Noon<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAuthenticateV2<T> for Noon<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentPostAuthenticateV2<T> for Noon<T>
 {
 }
 
@@ -720,6 +864,68 @@ impl<
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
         PaymentMethodTokenResponse,
+    > for Noon<T>
+{
+}
+
+// ConnectorIntegrationV2 implementations for authentication flows
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Noon<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Noon<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Noon<T>
+{
+}
+
+// SourceVerification implementations for authentication flows
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Noon<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Noon<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
     > for Noon<T>
 {
 }
