@@ -2,7 +2,6 @@ use common_enums::Currency;
 use common_utils::{date_time, pii::IpAddress, SecretSerdeValue};
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
-use serde::Serialize;
 use time::PrimitiveDateTime;
 
 use crate::utils::{missing_field_err, Error};
@@ -27,7 +26,7 @@ pub struct OnlineMandate {
     pub user_agent: String,
 }
 
-#[derive(Default, Eq, PartialEq, Debug, Clone, Serialize)]
+#[derive(Default, Eq, PartialEq, Debug, Clone, serde::Serialize)]
 pub struct MandateData {
     /// A way to update the mandate's payment method details
     pub update_mandate_id: Option<String>,

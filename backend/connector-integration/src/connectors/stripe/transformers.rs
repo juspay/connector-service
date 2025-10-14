@@ -11,10 +11,9 @@ use common_utils::{
 use domain_types::{
     connector_flow::{Authorize, Capture, Void},
     connector_types::{
-        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
-        SplitPaymentsRequest,
+        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::{self, ConnectorError},
     mandates::AcceptanceType,
@@ -3044,7 +3043,7 @@ impl<F, T> TryFrom<ResponseRouterData<SetupIntentResponse, Self>>
             }
         });
         let status = common_enums::AttemptStatus::from(item.response.status);
-        let _connector_response_data = item
+        let connector_response_data = item
             .response
             .latest_attempt
             .as_ref()
@@ -3084,6 +3083,7 @@ impl<F, T> TryFrom<ResponseRouterData<SetupIntentResponse, Self>>
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
+                connector_response: connector_response_data,
                 ..item.router_data.resource_common_data
             },
             response,
@@ -3910,91 +3910,17 @@ impl<
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<
+        _item: &RouterDataV2<
             Authorize,
             PaymentFlowData,
             PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        //extracting mandate metadata from CIT call if CIT call was a Split Payment
-        let from_metadata = item
-            .request
-            .mandate_id
-            .as_ref()
-            .and_then(|mandate_id| mandate_id.mandate_reference_id.as_ref())
-            .and_then(|reference_id| match reference_id {
-                MandateReferenceId::ConnectorMandateId(mandate_data) => {
-                    mandate_data.get_mandate_metadata()
-                }
-                _ => None,
-            })
-            .and_then(|secret_value| {
-                let json_value = secret_value.clone().expose();
-                match serde_json::from_value::<Self>(json_value.clone()) {
-                    Ok(val) => Some(val),
-                    Err(err) => {
-                        tracing::info!(
-                            "STRIPE: Picking merchant_account_id and merchant_config_currency from payments request: {:?}", err
-                        );
-                        None
-                    }
-                }
-            });
-
-        // If the Split Payment Request in MIT mismatches with the metadata from CIT, throw an error
-        if from_metadata.is_some() && item.request.split_payments.is_some() {
-            let mut mit_charge_type = None;
-            let mut mit_application_fees = None;
-            let mut mit_transfer_account_id = None;
-            if let Some(SplitPaymentsRequest::StripeSplitPayment(stripe_split_payment)) =
-                item.request.split_payments.as_ref()
-            {
-                mit_charge_type = Some(stripe_split_payment.charge_type.clone());
-                mit_application_fees = stripe_split_payment.application_fees;
-                mit_transfer_account_id = Some(stripe_split_payment.transfer_account_id.clone());
-            }
-
-            if mit_charge_type != from_metadata.as_ref().and_then(|m| m.charge_type.clone())
-                || mit_application_fees != from_metadata.as_ref().and_then(|m| m.application_fees)
-                || mit_transfer_account_id
-                    != from_metadata
-                        .as_ref()
-                        .and_then(|m| m.transfer_account_id.clone())
-            {
-                let mismatched_fields = ["transfer_account_id", "application_fees", "charge_type"];
-
-                let field_str = mismatched_fields.join(", ");
-                return Err(error_stack::Report::from(
-                    ConnectorError::MandatePaymentDataMismatch { fields: field_str },
-                ));
-            }
-        }
-
-        // If Mandate Metadata from CIT call has something, populate it
-        let (charge_type, mut transfer_account_id, application_fees) =
-            if let Some(ref metadata) = from_metadata {
-                (
-                    metadata.charge_type.clone(),
-                    metadata.transfer_account_id.clone(),
-                    metadata.application_fees,
-                )
-            } else {
-                (None, None, None)
-            };
-
-        // If Charge Type is Destination, transfer_account_id need not be appended in headers
-        if charge_type
-            == Some(common_enums::PaymentChargeType::Stripe(
-                common_enums::StripeChargeType::Destination,
-            ))
-        {
-            transfer_account_id = None;
-        }
         Ok(Self {
-            charge_type,
-            transfer_account_id,
-            application_fees,
+            charge_type: None,
+            transfer_account_id: None,
+            application_fees: None,
         })
     }
 }

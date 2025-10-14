@@ -151,12 +151,13 @@ impl ConnectorMandateReferenceId {
         connector_mandate_id: Option<String>,
         payment_method_id: Option<String>,
         update_history: Option<Vec<UpdateHistory>>,
+        mandate_metadata: Option<SecretSerdeValue>,
     ) -> Self {
         Self {
             connector_mandate_id,
             payment_method_id,
             update_history,
-            mandate_metadata: None,
+            mandate_metadata,
         }
     }
 
@@ -1125,7 +1126,6 @@ pub enum PaymentsResponseData {
         network_txn_id: Option<String>,
         connector_response_reference_id: Option<String>,
         incremental_authorization_allowed: Option<bool>,
-        // charges: Option<ConnectorChargeResponseData>,
         status_code: u16,
     },
     SessionResponse {
@@ -1159,7 +1159,6 @@ pub enum PaymentsResponseData {
 pub struct MandateReference {
     pub connector_mandate_id: Option<String>,
     pub payment_method_id: Option<String>,
-    // pub mandate_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
 
 #[derive(Debug, Clone)]
