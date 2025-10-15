@@ -25,9 +25,10 @@ use crate::{
     router_request_types::{
         AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
         CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
-        PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,PaymentVoidPostCaptureIntegrityObject,
-        RefundIntegrityObject, RefundSyncIntegrityObject, RepeatPaymentIntegrityObject,
-        SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject, SyncRequestType,
+        PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
+        PaymentVoidPostCaptureIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
+        RepeatPaymentIntegrityObject, SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
+        SyncRequestType,
     },
     router_response_types::RedirectForm,
     types::{
@@ -867,15 +868,13 @@ impl PaymentsCancelPostCaptureData {
             .clone()
             .ok_or_else(missing_field_err("cancellation_reason"))
     }
-    
+
     pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
         self.browser_info
             .clone()
             .and_then(|browser_info| browser_info.language)
     }
 }
-
-
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {

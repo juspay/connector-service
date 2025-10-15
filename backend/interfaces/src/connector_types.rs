@@ -58,7 +58,12 @@ pub trait PaymentVoidV2:
 }
 
 pub trait PaymentVoidPostCaptureV2:
-    ConnectorIntegrationV2<connector_flow::VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    ConnectorIntegrationV2<
+    connector_flow::VoidPC,
+    PaymentFlowData,
+    PaymentsCancelPostCaptureData,
+    PaymentsResponseData,
+>
 {
 }
 

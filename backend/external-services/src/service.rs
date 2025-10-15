@@ -695,7 +695,7 @@ pub async fn call_connector_api(
                         // The payload implements a custom Serialize that generates XML content
                         let body = serde_json::to_string(&payload)
                             .change_context(ApiClientError::UrlEncodingFailed)?;
-                        
+
                         // Properly deserialize the JSON string to extract clean XML
                         let xml_body = if body.starts_with('"') && body.ends_with('"') {
                             // This is a JSON-encoded string, deserialize it properly

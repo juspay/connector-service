@@ -286,8 +286,12 @@ impl<
             + 'static
             + Serialize,
     >
-    ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
-    for Payu<T>
+    ConnectorIntegrationV2<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Payu<T>
 {
 }
 
@@ -1014,4 +1018,9 @@ impl_source_verification_stub!(
     PaymentsPostAuthenticateData<T>,
     PaymentsResponseData
 );
-impl_source_verification_stub!(VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData);
+impl_source_verification_stub!(
+    VoidPC,
+    PaymentFlowData,
+    PaymentsCancelPostCaptureData,
+    PaymentsResponseData
+);
