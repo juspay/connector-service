@@ -4,6 +4,7 @@ use common_utils::{
     request::Method, types::StringMinorUnit,
     Email,
 };
+use hyperswitch_masking::{ExposeInterface, Secret};
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
