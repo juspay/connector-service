@@ -275,7 +275,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.tpsl.base_url.as_ref()
+        &connectors.tpsl.base_url
     }
 
     fn get_auth_header(
