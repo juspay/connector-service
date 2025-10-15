@@ -3472,6 +3472,8 @@ impl
             raw_connector_request: None,
             connector_response_headers: None,
             vault_headers: None,
+            minor_amount_capturable: None,
+            connector_response: None,
         })
     }
 }
