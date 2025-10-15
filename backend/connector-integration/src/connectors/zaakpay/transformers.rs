@@ -439,37 +439,35 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
     }
 }
 
-impl TryFrom<(ZaakPayPaymentsSyncResponse, &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>)>
-    for PaymentsResponseData
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
+// Helper function to convert ZaakPayPaymentsSyncResponse to PaymentsResponseData
+pub fn zaakpay_payments_sync_response_to_payments_response_data(
+    response: ZaakPayPaymentsSyncResponse,
+    _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+) -> Result<PaymentsResponseData, error_stack::Report<errors::ConnectorError>> {
+    // Get the first order from the response
+    let order = response.orders.first()
+        .ok_or(errors::ConnectorError::MissingRequiredField { field: "orders" })?;
 
-    fn try_from((response, _req): (ZaakPayPaymentsSyncResponse, &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>)) -> Result<Self, Self::Error> {
-        // Get the first order from the response
-        let order = response.orders.first()
-            .ok_or(errors::ConnectorError::MissingRequiredField { field: "orders" })?;
+    let status = match order.txnStatus.as_deref() {
+        Some("success") => AttemptStatus::Charged,
+        Some("pending") => AttemptStatus::Pending,
+        Some("failure") => AttemptStatus::Failure,
+        _ => AttemptStatus::Failure,
+    };
 
-        let status = match order.txnStatus.as_deref() {
-            Some("success") => AttemptStatus::Charged,
-            Some("pending") => AttemptStatus::Pending,
-            Some("failure") => AttemptStatus::Failure,
-            _ => AttemptStatus::Failure,
-        };
+    let amount_received = order.orderDetail.as_ref()
+        .and_then(|od| od.amount.as_ref())
+        .and_then(|amt| amt.parse::<f64>().ok())
+        .map(|amt| MinorUnit::from_major_unit_as_f64(amt));
 
-        let amount_received = order.orderDetail.as_ref()
-            .and_then(|od| od.amount.as_ref())
-            .and_then(|amt| amt.parse::<f64>().ok())
-            .map(|amt| MinorUnit::from_major_unit_as_f64(amt));
-
-        Ok(Self {
-            status,
-            amount_captured: amount_received,
-            connector_transaction_id: order.orderDetail.as_ref().map(|od| od.orderId.clone()),
-            error_message: Some(order.responseDescription.clone()),
-            // Add other required fields as needed
-            ..Default::default()
-        })
-    }
+    Ok(PaymentsResponseData {
+        status,
+        amount_captured: amount_received,
+        connector_transaction_id: order.orderDetail.as_ref().map(|od| od.orderId.clone()),
+        error_message: Some(order.responseDescription.clone()),
+        // Add other required fields as needed
+        ..Default::default()
+    })
 }
 
 impl TryFrom<&RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>>
