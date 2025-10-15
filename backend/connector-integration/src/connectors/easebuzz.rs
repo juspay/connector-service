@@ -375,6 +375,38 @@ macros::create_all_prerequisites!(
             request_body: EaseBuzzSubmitEvidenceRequest,
             response_body: EaseBuzzSubmitEvidenceResponse,
             router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        ),
+        // Authentication flows
+        (
+            flow: PreAuthenticate,
+            request_body: EaseBuzzPreAuthenticateRequest,
+            response_body: EaseBuzzPreAuthenticateResponse,
+            router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: Authenticate,
+            request_body: EaseBuzzAuthenticateRequest,
+            response_body: EaseBuzzAuthenticateResponse,
+            router_data: RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PostAuthenticate,
+            request_body: EaseBuzzPostAuthenticateRequest,
+            response_body: EaseBuzzPostAuthenticateResponse,
+            router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        // Token flows
+        (
+            flow: PaymentMethodToken,
+            request_body: EaseBuzzPaymentMethodTokenRequest,
+            response_body: EaseBuzzPaymentMethodTokenResponse,
+            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        ),
+        (
+            flow: CreateAccessToken,
+            request_body: EaseBuzzCreateAccessTokenRequest,
+            response_body: EaseBuzzCreateAccessTokenResponse,
+            router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         )
     ],
     amount_converters: [
