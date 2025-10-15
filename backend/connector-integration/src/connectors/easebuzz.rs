@@ -663,6 +663,33 @@ pub struct EaseBuzzSubmitEvidenceRequest;
 #[derive(Debug, Clone)]
 pub struct EaseBuzzSubmitEvidenceResponse;
 
+// Authentication flow stub types
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzPreAuthenticateRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzPreAuthenticateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzAuthenticateRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzAuthenticateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzPostAuthenticateRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzPostAuthenticateResponse;
+
+// Token flow stub types
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzPaymentMethodTokenRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzPaymentMethodTokenResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzCreateAccessTokenRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzCreateAccessTokenResponse;
+
 // Stub implementations for unsupported flows
 macro_rules! impl_not_implemented_flow {
     ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
