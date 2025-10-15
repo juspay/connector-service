@@ -398,7 +398,7 @@ impl TryFrom<(ZaakPayPaymentsResponse, &RouterDataV2<Authorize, PaymentFlowData,
     }
 }
 
-impl<T: PaymentMethodDataTypes> TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
     for ZaakPayPaymentsSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
