@@ -172,7 +172,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         // Generate hash - this would typically involve SHA512 hashing
         let hash_string = format!(
-            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
+            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
             auth.key.expose(),
             item.router_data.resource_common_data.connector_request_reference_id,
             amount.get_amount_as_string(),
