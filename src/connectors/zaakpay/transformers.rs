@@ -26,6 +26,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     services,
     utils::{self, ConnectorCommonData},
+    connectors::zaakpay::constants::*,
 };
 
 // Request types
