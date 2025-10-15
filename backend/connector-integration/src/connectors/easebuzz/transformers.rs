@@ -303,7 +303,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                             data.txnid.unwrap_or_else(|| router_data.resource_common_data.connector_request_reference_id.clone()),
                         ),
                         redirection_data,
-                        mandate_reference: data.mandate_reg_ref_id.map(|id| ResponseId::ConnectorMandateId(id)),
+                        mandate_reference: None, // TODO: Implement mandate reference mapping
                         connector_metadata: None,
                         network_txn_id: data.bank_txn_id,
                         connector_response_reference_id: data.easebuzz_id,
@@ -388,7 +388,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                                 data.txnid.unwrap_or_else(|| router_data.resource_common_data.connector_request_reference_id.clone()),
                             ),
                             redirection_data: None,
-                            mandate_reference: data.mandate_reg_ref_id.map(|id| ResponseId::ConnectorMandateId(id)),
+                            mandate_reference: None, // TODO: Implement mandate reference mapping
                             connector_metadata: None,
                             network_txn_id: data.bank_txn_id,
                             connector_response_reference_id: data.easebuzz_id,
