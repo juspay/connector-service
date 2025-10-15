@@ -346,7 +346,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 Err(ErrorResponse {
                     status_code: http_code,
                     code: response.status.to_string(),
-                    message: response.error_desc.unwrap_or_else(|| "Unknown error".to_string()),
+                    message: response.error_desc.clone().unwrap_or_else(|| "Unknown error".to_string()),
                     reason: response.error_desc,
                     attempt_status: None,
                     connector_transaction_id: None,
