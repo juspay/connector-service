@@ -441,12 +441,12 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
     }
 }
 
-impl<T: PaymentMethodDataTypes> TryFrom<(ZaakPayPaymentsSyncResponse, &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>)>
+impl TryFrom<(ZaakPayPaymentsSyncResponse, &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>)>
     for PaymentsResponseData
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from((response, req): (ZaakPayPaymentsSyncResponse, &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>)) -> Result<Self, Self::Error> {
+    fn try_from((response, _req): (ZaakPayPaymentsSyncResponse, &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>)) -> Result<Self, Self::Error> {
         // Get the first order from the response
         let order = response.orders.first()
             .ok_or(errors::ConnectorError::MissingRequiredField { field: "orders" })?;
