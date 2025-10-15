@@ -88,10 +88,7 @@ impl<
 > connector_types::PaymentSessionToken for EaseBuzz<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for EaseBuzz<T>
-{
-}
+
 
 impl<
     T: PaymentMethodDataTypes
