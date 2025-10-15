@@ -91,6 +91,22 @@ impl<
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAccessToken for EaseBuzz<T>
 {
+    type ConnectorErrorType = errors::ConnectorError;
+    
+    fn get_access_token(
+        &self,
+        _req: &domain_types::router_data_v2::RouterDataV2<
+            domain_types::connector_flow::CreateAccessToken,
+            PaymentFlowData,
+            domain_types::connector_types::AccessTokenRequestData,
+            domain_types::connector_types::AccessTokenResponseData,
+        >,
+    ) -> CustomResult<
+        domain_types::connector_types::AccessTokenResponseData,
+        errors::ConnectorError,
+    > {
+        Err(errors::ConnectorError::NotImplemented("Access token generation".to_string()).into())
+    }
 }
 
 impl<
