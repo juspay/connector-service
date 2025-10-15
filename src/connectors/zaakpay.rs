@@ -31,6 +31,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     services,
     utils::{self, ConnectorCommonData},
+    connectors::zaakpay::constants::ZAAKPAY_API_BASE_URL,
 };
 
 #[derive(Debug, Clone)]
