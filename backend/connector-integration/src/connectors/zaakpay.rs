@@ -216,34 +216,3 @@ impl_not_implemented_flow!(Accept, DisputeFlowData, AcceptDisputeData, DisputeRe
 impl_not_implemented_flow!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
 impl_not_implemented_flow!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
 
-// Implement source verification stubs for all flows
-macro_rules! impl_source_verification_stub {
-    ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
-        impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + std::default::Default>
-            SourceVerification<$flow, $common_data, $req, $resp> for crate::types::ConnectorData<T>
-        {
-            fn verify_source(
-                &self,
-                _request: &RouterDataV2<$flow, $common_data, $req, $resp>,
-                _business_profile: &domain_types::router_data::BusinessProfile,
-            ) -> CustomResult<bool, errors::ConnectorError> {
-                Ok(true)
-            }
-        }
-    };
-}
-
-// Apply source verification stubs to all flows
-impl_source_verification_stub!(Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData);
-impl_source_verification_stub!(PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData);
-impl_source_verification_stub!(RSync, RefundFlowData, RefundSyncData, RefundsResponseData);
-impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
-impl_source_verification_stub!(Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData);
-impl_source_verification_stub!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
-impl_source_verification_stub!(CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse);
-impl_source_verification_stub!(CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData);
-impl_source_verification_stub!(SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData);
-impl_source_verification_stub!(RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData);
-impl_source_verification_stub!(Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData);
-impl_source_verification_stub!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
-impl_source_verification_stub!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
