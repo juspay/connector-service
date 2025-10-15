@@ -477,7 +477,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let base64_signature = request
             .headers
             .get("x-cryptopay-signature")
-            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Missing incoming webhook signature for Cryptopay")?;
         hex::decode(base64_signature)
             .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
     }
@@ -488,7 +489,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secrets: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::ConnectorError>> {
         let message = std::str::from_utf8(&request.body)
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Webhook source verification message parsing failed for Cryptopay")?;
         Ok(message.to_string().into_bytes())
     }
 
@@ -514,6 +516,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         algorithm
             .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
             .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Webhook source verification failed for Cryptopay")
     }
 
     fn get_event_type(
