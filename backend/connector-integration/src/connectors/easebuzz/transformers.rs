@@ -254,7 +254,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             amount,
             email: None,
             phone: None,
-            key: auth.key.expose(),
+            key: auth_key.to_string(),
             hash,
         })
     }
