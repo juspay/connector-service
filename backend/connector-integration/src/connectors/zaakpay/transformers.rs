@@ -518,36 +518,34 @@ impl TryFrom<&RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsRespon
     }
 }
 
-impl TryFrom<(ZaakPayRefundSyncResponse, &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>)>
-    for RefundsResponseData
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
+// Helper function to convert ZaakPayRefundSyncResponse to RefundsResponseData
+pub fn zaakpay_refund_sync_response_to_refunds_response_data(
+    response: ZaakPayRefundSyncResponse,
+    _req: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>
+) -> Result<RefundsResponseData, error_stack::Report<errors::ConnectorError>> {
+    // Get the first order from the response
+    let order = response.orders.first()
+        .ok_or(errors::ConnectorError::MissingRequiredField { field: "orders" })?;
 
-    fn try_from((response, _req): (ZaakPayRefundSyncResponse, &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>)) -> Result<Self, Self::Error> {
-        // Get the first order from the response
-        let order = response.orders.first()
-            .ok_or(errors::ConnectorError::MissingRequiredField { field: "orders" })?;
+    let status = match order.txnStatus.as_deref() {
+        Some("success") => common_enums::RefundStatus::Success,
+        Some("pending") => common_enums::RefundStatus::Pending,
+        Some("failure") => common_enums::RefundStatus::Failure,
+        _ => common_enums::RefundStatus::Failure,
+    };
 
-        let status = match order.txnStatus.as_deref() {
-            Some("success") => common_enums::RefundStatus::Success,
-            Some("pending") => common_enums::RefundStatus::Pending,
-            Some("failure") => common_enums::RefundStatus::Failure,
-            _ => common_enums::RefundStatus::Failure,
-        };
+    let refund_amount = order.refundDetails.as_ref()
+        .and_then(|refunds| refunds.first())
+        .and_then(|refund| refund.amount.parse::<f64>().ok())
+        .map(|amt| MinorUnit::from_major_unit_as_f64(amt));
 
-        let refund_amount = order.refundDetails.as_ref()
+    Ok(RefundsResponseData {
+        refund_id: order.refundDetails.as_ref()
             .and_then(|refunds| refunds.first())
-            .and_then(|refund| refund.amount.parse::<f64>().ok())
-            .map(|amt| MinorUnit::from_major_unit_as_f64(amt));
-
-        Ok(Self {
-            refund_id: order.refundDetails.as_ref()
-                .and_then(|refunds| refunds.first())
-                .and_then(|refund| refund.merchantRefId.clone()),
-            status,
-            amount: refund_amount,
-            // Add other required fields as needed
-            ..Default::default()
-        })
-    }
+            .and_then(|refund| refund.merchantRefId.clone()),
+        status,
+        amount: refund_amount,
+        // Add other required fields as needed
+        ..Default::default()
+    })
 }
