@@ -213,27 +213,18 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Option<services::Request>, errors::ConnectorError> {
             let request = ZaakPayPaymentsSyncRequest::try_from(req)?;
-            let url = self.base_url(req) + "/status.do";
+            let url = self.base_url(&utils::ConnectorCommonData {
+                connector_name: self.connector_name,
+                resource_common_data: &req.router_data.resource_common_data,
+                connector_auth_type: &req.router_data.connector_auth_type,
+                test_mode: req.router_data.resource_common_data.test_mode,
+            }) + ZAAKPAY_STATUS_URL;
             Ok(Some(services::RequestBuilder::new()
                 .method(services::Method::Post)
                 .url(&url)
                 .attach_default_headers()
                 .set_body(RequestContent::Json(request))
                 .build()))
-        }
-
-        fn handle_response_v2(
-            &self,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            res: services::Response,
-        ) -> CustomResult<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, errors::ConnectorError> {
-            let response: ZaakPayPaymentsSyncResponse = res
-                .response
-                .parse_struct("ZaakPayPaymentsSyncResponse")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-            
-            let router_data = RouterDataV2::try_from((req, response))?;
-            Ok(router_data)
         }
     }
 );
