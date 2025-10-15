@@ -4,7 +4,6 @@ use common_enums::{AttemptStatus, PaymentMethodType};
 use common_utils::{
     types::{MinorUnit},
 };
-use common_enums::{AttemptStatus, PaymentMethodType};
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsResponseData},
