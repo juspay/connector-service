@@ -161,7 +161,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .connector
             .amount_converter
             .convert(
-                common_utils::MinorUnit(item.router_data.request.amount.into()),
+                common_utils::MinorUnit::new(item.router_data.request.amount),
                 item.router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
@@ -174,7 +174,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             amount.to_string(),
             "Product Info", // productinfo
             customer_id.get_string_repr(), // firstname
-            item.router_data.request.email.as_ref().map(|e| e.clone().expose()).unwrap_or_default().to_string(),
+            item.router_data.request.email.as_ref().map(|e| e.clone().expose().expose()).unwrap_or_default().to_string(),
             "", // phone
             return_url, // surl
             return_url, // furl
@@ -240,7 +240,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .connector
             .amount_converter
             .convert(
-                common_utils::MinorUnit(item.router_data.request.amount.into()),
+                common_utils::MinorUnit::new(item.router_data.request.amount),
                 item.router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
