@@ -54,6 +54,7 @@ enum PaymentStatus {
   VOID_INITIATED = 12;
   VOIDED = 11;
   VOID_FAILED = 15;
+  VOIDED_POST_CAPTURE = 57;
 
   // Other payment flows
   COD_INITIATED = 10; // Cash on Delivery initiated

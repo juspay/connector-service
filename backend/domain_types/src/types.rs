@@ -2367,7 +2367,7 @@ impl ForeignFrom<common_enums::AttemptStatus> for grpc_api_types::payments::Paym
             common_enums::AttemptStatus::VoidPostCaptureInitiated => Self::VoidInitiated,
             common_enums::AttemptStatus::VoidFailed => Self::VoidFailed,
             common_enums::AttemptStatus::Voided => Self::Voided,
-            common_enums::AttemptStatus::VoidedPostCapture => Self::Voided,
+            common_enums::AttemptStatus::VoidedPostCapture => Self::VoidedPostCapture,
             common_enums::AttemptStatus::Unresolved => Self::Unresolved,
             common_enums::AttemptStatus::PaymentMethodAwaited => Self::PaymentMethodAwaited,
             common_enums::AttemptStatus::ConfirmationAwaited => Self::ConfirmationAwaited,
@@ -2415,6 +2415,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentStatus> for common_enums::A
             grpc_api_types::payments::PaymentStatus::VoidInitiated => Ok(Self::VoidInitiated),
             grpc_api_types::payments::PaymentStatus::VoidFailed => Ok(Self::VoidFailed),
             grpc_api_types::payments::PaymentStatus::Voided => Ok(Self::Voided),
+            grpc_api_types::payments::PaymentStatus::VoidedPostCapture => Ok(Self::VoidedPostCapture),
             grpc_api_types::payments::PaymentStatus::Unresolved => Ok(Self::Unresolved),
             grpc_api_types::payments::PaymentStatus::PaymentMethodAwaited => {
                 Ok(Self::PaymentMethodAwaited)

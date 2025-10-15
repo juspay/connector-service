@@ -1,6 +1,6 @@
 use common_enums::{self, CountryAlpha2, Currency};
 use common_utils::{
-    types::MinorUnit,
+    types::MinorUnit, StringMajorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void, VoidPC},
@@ -171,7 +171,7 @@ impl<
         
         let (authorization, sale) = if item.router_data.request.is_auto_capture()? && amount != MinorUnit::zero() {
             let sale = Sale {
-                id: format!("sale_{}", merchant_txn_id),
+                id: format!("{}_{}", OperationId::Sale, merchant_txn_id),
                 report_group: report_group.clone(),
                 customer_id: item.router_data.resource_common_data.get_customer_id()
                     .ok()
@@ -189,7 +189,7 @@ impl<
             (None, Some(sale))
         } else {
             let authorization = Authorization {
-                id: format!("auth_{}", merchant_txn_id),
+                id: format!("{}_{}", OperationId::Auth, merchant_txn_id),
                 report_group: report_group.clone(),
                 customer_id: item.router_data.resource_common_data.get_customer_id()
                     .ok()
@@ -224,25 +224,6 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<WorldpayvantivRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
-    for VantivSyncRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-    
-    fn try_from(
-        _item: WorldpayvantivRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
-    ) -> Result<Self, Self::Error> {
-        // Empty sync request for WorldpayVantiv
-        Ok(Self {})
-    }
-}
 
 
 pub(super) mod worldpayvantiv_constants {
@@ -1041,14 +1022,12 @@ pub enum WorldpayvantivResponseCode {
 }
 
 // Sync structures
-#[derive(Debug, Serialize, Deserialize)]
-pub struct VantivSyncRequest {}
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VantivSyncResponse {
-    #[serde(rename = "paymentId")]
-    pub payment_id: u64,
+    #[serde(rename = "paymentId", skip_serializing_if = "Option::is_none")]
+    pub payment_id: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub request_uuid: Option<String>,
     pub payment_status: PaymentStatus,
@@ -1069,8 +1048,8 @@ pub enum PaymentStatus {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaymentDetail {
-    #[serde(rename = "paymentId")]
-    pub payment_id: u64,
+    #[serde(rename = "paymentId", skip_serializing_if = "Option::is_none")]
+    pub payment_id: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub batch_id: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1084,7 +1063,7 @@ pub struct PaymentDetail {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dupe_txn_id: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub amount: Option<String>,
+    pub amount: Option<StringMajorUnit>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub purchase_currency: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1281,28 +1260,17 @@ fn determine_attempt_status_for_psync(
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Copy)]
+#[derive(Debug, strum::Display, Serialize, Deserialize, PartialEq, Clone, Copy)]
+#[strum(serialize_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum OperationId {
     Sale,
     Auth,
     Capture,
     Void,
+    #[strum(serialize = "voidPC")]
     VoidPC,
     Refund,
-}
-
-impl std::fmt::Display for OperationId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Sale => write!(f, "sale"),
-            Self::Auth => write!(f, "auth"),
-            Self::Capture => write!(f, "capture"),
-            Self::Void => write!(f, "void"),
-            Self::VoidPC => write!(f, "voidPC"),
-            Self::Refund => write!(f, "refund"),
-        }
-    }
 }
 
 
@@ -1394,8 +1362,13 @@ impl<
                     let error_response = ErrorResponse {
                         code: auth_response.response.to_string(),
                         message: auth_response.message.clone(),
+                        reason: Some(auth_response.message.clone()),
+                        status_code: item.http_code,
+                        attempt_status: Some(status),
                         connector_transaction_id: Some(auth_response.cnp_txn_id.clone()),
-                        ..Default::default()
+                        network_decline_code: None,
+                        network_advice_code: None,
+                        network_error_message: None,
                     };
                     
                     Ok(Self {
@@ -1432,8 +1405,13 @@ impl<
                 let error_response = ErrorResponse {
                     code: item.response.response_code,
                     message: item.response.message.clone(),
+                    reason: Some(item.response.message.clone()),
+                    status_code: item.http_code,
+                    attempt_status: Some(common_enums::AttemptStatus::Failure),
                     connector_transaction_id: None,
-                    ..Default::default()
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
                 };
                 
                 Ok(Self {
@@ -1513,8 +1491,11 @@ where
                     match payment_method_token {
                         Some(PaymentMethodToken::ApplePayDecrypt(apple_pay_decrypted_data)) => {
                             let card_type = determine_apple_pay_card_type(&apple_pay_data.payment_method.network)?;
-                            // Apple Pay doesn't provide separate expiry fields, use placeholder
-                            let exp_date = "1299".to_string(); // December 2099 as placeholder
+                            // Extract expiry date from Apple Pay decrypted data
+                            let expiry_month: Secret<String> = apple_pay_decrypted_data.get_expiry_month()?;
+                            let expiry_year = apple_pay_decrypted_data.get_four_digit_expiry_year()?;
+                            let formatted_year = &expiry_year.expose()[2..]; // Convert to 2-digit year
+                            let exp_date = format!("{}{}", expiry_month.expose(), formatted_year);
                             
                             let card_number_string = apple_pay_decrypted_data.application_primary_account_number.expose();
                             let raw_card_number = create_raw_card_number_from_string::<T>(card_number_string)?;
@@ -1541,8 +1522,16 @@ where
                     match payment_method_token {
                         Some(PaymentMethodToken::GooglePayDecrypt(google_pay_decrypted_data)) => {
                             let card_type = determine_google_pay_card_type(&google_pay_data.info.card_network)?;
-                            // Google Pay doesn't provide separate expiry fields, use placeholder
-                            let exp_date = "1299".to_string(); // December 2099 as placeholder
+                            // Extract expiry date from Google Pay decrypted data  
+                            let expiry_month = google_pay_decrypted_data.payment_method_details.expiration_month.two_digits();
+                            // Since CardExpirationYear doesn't have a public accessor, we need to deserialize it
+                            // This follows the pattern where year is extracted from the validated data
+                            let expiry_year_bytes = serde_json::to_vec(&google_pay_decrypted_data.payment_method_details.expiration_year)
+                                .change_context(ConnectorError::RequestEncodingFailed)?;
+                            let expiry_year: u16 = serde_json::from_slice(&expiry_year_bytes)
+                                .change_context(ConnectorError::RequestEncodingFailed)?;
+                            let formatted_year = format!("{:02}", expiry_year % 100); // Convert to 2-digit year
+                            let exp_date = format!("{}{}", expiry_month, formatted_year);
 
                             let card_number_string = google_pay_decrypted_data.payment_method_details.pan.peek().to_string();
                             let raw_card_number = create_raw_card_number_from_string::<T>(card_number_string)?;
@@ -1676,7 +1665,11 @@ impl TryFrom<ResponseRouterData<VantivSyncResponse, RouterDataV2<PSync, PaymentF
         };
 
         let payments_response = PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(item.response.payment_id.to_string()),
+            resource_id: ResponseId::ConnectorTransactionId(
+                item.response.payment_id
+                    .map(|id| id.to_string())
+                    .unwrap_or_else(|| "unknown".to_string())
+            ),
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
@@ -1727,7 +1720,7 @@ impl<
         let merchant_txn_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
         
         let capture = CaptureRequest {
-            id: format!("capture_{}", merchant_txn_id),
+            id: format!("{}_{}", OperationId::Capture, merchant_txn_id),
             report_group: "Default".to_string(),
             cnp_txn_id,
             amount: MinorUnit::from(item.router_data.request.minor_amount_to_capture),
@@ -1833,7 +1826,7 @@ impl<
         let merchant_txn_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
         
         let credit = RefundRequest {
-            id: format!("refund_{}", merchant_txn_id),
+            id: format!("{}_{}", OperationId::Refund, merchant_txn_id),
             report_group: "Default".to_string(),
             cnp_txn_id,
             amount: MinorUnit::from(item.router_data.request.minor_refund_amount),
@@ -1857,25 +1850,6 @@ impl<
 }
 
 // TryFrom for RSync request
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<WorldpayvantivRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
-    for VantivSyncRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-    
-    fn try_from(
-        _item: WorldpayvantivRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
-    ) -> Result<Self, Self::Error> {
-        // Empty sync request for WorldpayVantiv refund sync
-        Ok(Self {})
-    }
-}
 
 // TryFrom for VoidPC (VoidPostCapture) request
 impl<
@@ -2028,8 +2002,13 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, RouterDataV2<Refund, RefundFl
             let error_response = ErrorResponse {
                 code: item.response.response_code,
                 message: item.response.message.clone(),
+                reason: Some(item.response.message.clone()),
+                status_code: item.http_code,
+                attempt_status: Some(common_enums::AttemptStatus::Failure),
                 connector_transaction_id: None,
-                ..Default::default()
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             };
             
             Ok(Self {
@@ -2059,7 +2038,9 @@ impl TryFrom<ResponseRouterData<VantivSyncResponse, RouterDataV2<RSync, RefundFl
         };
 
         let refunds_response = RefundsResponseData {
-            connector_refund_id: item.response.payment_id.to_string(),
+            connector_refund_id: item.response.payment_id
+                .map(|id| id.to_string())
+                .unwrap_or_else(|| "unknown".to_string()),
             refund_status: status,
             status_code: item.http_code,
         };
@@ -2110,7 +2091,7 @@ impl<
         let merchant_txn_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
         
         let capture = CaptureRequest {
-            id: format!("capture_{}", merchant_txn_id),
+            id: format!("{}_{}", OperationId::Capture, merchant_txn_id),
             report_group: "Default".to_string(),
             cnp_txn_id,
             amount: MinorUnit::from(item.router_data.request.minor_amount_to_capture),
@@ -2146,8 +2127,13 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, RouterDataV2<Capture, Payment
                 let error_response = ErrorResponse {
                     code: capture_response.response.to_string(),
                     message: capture_response.message.clone(),
+                    reason: Some(capture_response.message.clone()),
+                    status_code: item.http_code,
+                    attempt_status: Some(status),
                     connector_transaction_id: Some(capture_response.cnp_txn_id.clone()),
-                    ..Default::default()
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
                 };
                 
                 Ok(Self {
@@ -2183,8 +2169,13 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, RouterDataV2<Capture, Payment
             let error_response = ErrorResponse {
                 code: item.response.response_code,
                 message: item.response.message.clone(),
+                reason: Some(item.response.message.clone()),
+                status_code: item.http_code,
+                attempt_status: Some(common_enums::AttemptStatus::CaptureFailed),
                 connector_transaction_id: None,
-                ..Default::default()
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             };
             
             Ok(Self {
@@ -2233,7 +2224,7 @@ impl<
         let merchant_txn_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
         
         let void = VoidRequest {
-            id: format!("void_{}", merchant_txn_id),
+            id: format!("{}_{}", OperationId::Void, merchant_txn_id),
             report_group: "Default".to_string(),
             cnp_txn_id,
         };
@@ -2266,8 +2257,13 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, RouterDataV2<Void, PaymentFlo
                 let error_response = ErrorResponse {
                     code: auth_reversal_response.response.to_string(),
                     message: auth_reversal_response.message.clone(),
+                    reason: Some(auth_reversal_response.message.clone()),
+                    status_code: item.http_code,
+                    attempt_status: Some(status),
                     connector_transaction_id: Some(auth_reversal_response.cnp_txn_id.clone()),
-                    ..Default::default()
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
                 };
                 
                 Ok(Self {
@@ -2307,8 +2303,13 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, RouterDataV2<Void, PaymentFlo
                 let error_response = ErrorResponse {
                     code: void_response.response.to_string(),
                     message: void_response.message.clone(),
+                    reason: Some(void_response.message.clone()),
+                    status_code: item.http_code,
+                    attempt_status: Some(status),
                     connector_transaction_id: Some(void_response.cnp_txn_id.clone()),
-                    ..Default::default()
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
                 };
                 
                 Ok(Self {
@@ -2344,8 +2345,13 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, RouterDataV2<Void, PaymentFlo
             let error_response = ErrorResponse {
                 code: item.response.response_code,
                 message: item.response.message.clone(),
+                reason: Some(item.response.message.clone()),
+                status_code: item.http_code,
+                attempt_status: Some(common_enums::AttemptStatus::VoidFailed),
                 connector_transaction_id: None,
-                ..Default::default()
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             };
             
             Ok(Self {
@@ -2373,8 +2379,13 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, RouterDataV2<VoidPC, PaymentF
                 let error_response = ErrorResponse {
                     code: void_response.response.to_string(),
                     message: void_response.message.clone(),
+                    reason: Some(void_response.message.clone()),
+                    status_code: item.http_code,
+                    attempt_status: Some(status),
                     connector_transaction_id: Some(void_response.cnp_txn_id.clone()),
-                    ..Default::default()
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
                 };
                 
                 Ok(Self {
@@ -2410,8 +2421,13 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, RouterDataV2<VoidPC, PaymentF
             let error_response = ErrorResponse {
                 code: item.response.response_code,
                 message: item.response.message.clone(),
+                reason: Some(item.response.message.clone()),
+                status_code: item.http_code,
+                attempt_status: Some(common_enums::AttemptStatus::VoidFailed),
                 connector_transaction_id: None,
-                ..Default::default()
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             };
             
             Ok(Self {
@@ -2509,8 +2525,13 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<CnpOnlineResponse, Ro
                 let error_response = ErrorResponse {
                     code: auth_response.response.to_string(),
                     message: auth_response.message.clone(),
+                    reason: Some(auth_response.message.clone()),
+                    status_code: item.http_code,
+                    attempt_status: Some(status),
                     connector_transaction_id: Some(auth_response.cnp_txn_id.clone()),
-                    ..Default::default()
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
                 };
                 
                 Ok(Self {
@@ -2553,8 +2574,13 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<CnpOnlineResponse, Ro
             let error_response = ErrorResponse {
                 code: item.response.response_code,
                 message: item.response.message.clone(),
+                reason: Some(item.response.message.clone()),
+                status_code: item.http_code,
+                attempt_status: Some(common_enums::AttemptStatus::AuthorizationFailed),
                 connector_transaction_id: None,
-                ..Default::default()
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             };
             
             Ok(Self {
@@ -2582,8 +2608,113 @@ fn get_attempt_status(flow: WorldpayvantivPaymentFlow, response: WorldpayvantivR
             WorldpayvantivPaymentFlow::Void => Ok(common_enums::AttemptStatus::VoidInitiated),
             WorldpayvantivPaymentFlow::VoidPC => Ok(common_enums::AttemptStatus::VoidPostCaptureInitiated),
         },
-        // Decline codes
-        _ => match flow {
+        // Decline codes - all other response codes not listed above
+        WorldpayvantivResponseCode::InsufficientFunds
+        | WorldpayvantivResponseCode::CallIssuer
+        | WorldpayvantivResponseCode::ExceedsApprovalAmountLimit
+        | WorldpayvantivResponseCode::ExceedsActivityAmountLimit
+        | WorldpayvantivResponseCode::InvalidEffectiveDate
+        | WorldpayvantivResponseCode::InvalidAccountNumber
+        | WorldpayvantivResponseCode::AccountNumberDoesNotMatchPaymentType
+        | WorldpayvantivResponseCode::InvalidExpirationDate
+        | WorldpayvantivResponseCode::InvalidCVV
+        | WorldpayvantivResponseCode::InvalidCardValidationNum
+        | WorldpayvantivResponseCode::ExpiredCard
+        | WorldpayvantivResponseCode::InvalidPin
+        | WorldpayvantivResponseCode::InvalidTransactionType
+        | WorldpayvantivResponseCode::AccountNumberNotOnFile
+        | WorldpayvantivResponseCode::AccountNumberLocked
+        | WorldpayvantivResponseCode::InvalidLocation
+        | WorldpayvantivResponseCode::InvalidMerchantId
+        | WorldpayvantivResponseCode::InvalidLocation2
+        | WorldpayvantivResponseCode::InvalidMerchantClassCode
+        | WorldpayvantivResponseCode::InvalidExpirationDate2
+        | WorldpayvantivResponseCode::InvalidData
+        | WorldpayvantivResponseCode::InvalidPin2
+        | WorldpayvantivResponseCode::ExceedsNumberofPINEntryTries
+        | WorldpayvantivResponseCode::InvalidCryptoBox
+        | WorldpayvantivResponseCode::InvalidRequestFormat
+        | WorldpayvantivResponseCode::InvalidApplicationData
+        | WorldpayvantivResponseCode::InvalidMerchantCategoryCode
+        | WorldpayvantivResponseCode::TransactionCannotBeCompleted
+        | WorldpayvantivResponseCode::TransactionTypeNotSupportedForCard
+        | WorldpayvantivResponseCode::TransactionTypeNotAllowedAtTerminal
+        | WorldpayvantivResponseCode::GenericDecline
+        | WorldpayvantivResponseCode::DeclineByCard
+        | WorldpayvantivResponseCode::DoNotHonor
+        | WorldpayvantivResponseCode::InvalidMerchant
+        | WorldpayvantivResponseCode::PickUpCard
+        | WorldpayvantivResponseCode::CardOk
+        | WorldpayvantivResponseCode::CallVoiceOperator
+        | WorldpayvantivResponseCode::StopRecurring
+        | WorldpayvantivResponseCode::NoChecking
+        | WorldpayvantivResponseCode::NoCreditAccount
+        | WorldpayvantivResponseCode::NoCreditAccountType
+        | WorldpayvantivResponseCode::InvalidCreditPlan
+        | WorldpayvantivResponseCode::InvalidTransactionCode
+        | WorldpayvantivResponseCode::TransactionNotPermittedToCardholderAccount
+        | WorldpayvantivResponseCode::TransactionNotPermittedToMerchant
+        | WorldpayvantivResponseCode::PINTryExceeded
+        | WorldpayvantivResponseCode::SecurityViolation
+        | WorldpayvantivResponseCode::HardCapturePickUpCard
+        | WorldpayvantivResponseCode::ResponseReceivedTooLate
+        | WorldpayvantivResponseCode::SoftDecline
+        | WorldpayvantivResponseCode::ContactCardIssuer
+        | WorldpayvantivResponseCode::CallVoiceCenter
+        | WorldpayvantivResponseCode::InvalidMerchantTerminal
+        | WorldpayvantivResponseCode::InvalidAmount
+        | WorldpayvantivResponseCode::ResubmitTransaction
+        | WorldpayvantivResponseCode::InvalidTransaction
+        | WorldpayvantivResponseCode::MerchantNotFound
+        | WorldpayvantivResponseCode::PickUpCard2
+        | WorldpayvantivResponseCode::ExpiredCard2
+        | WorldpayvantivResponseCode::SuspectedFraud
+        | WorldpayvantivResponseCode::ContactCardIssuer2
+        | WorldpayvantivResponseCode::DoNotHonor2
+        | WorldpayvantivResponseCode::InvalidMerchant2
+        | WorldpayvantivResponseCode::InsufficientFunds2
+        | WorldpayvantivResponseCode::AccountNumberNotOnFile2
+        | WorldpayvantivResponseCode::InvalidAmount2
+        | WorldpayvantivResponseCode::InvalidCardNumber
+        | WorldpayvantivResponseCode::InvalidExpirationDate3
+        | WorldpayvantivResponseCode::InvalidCVV2
+        | WorldpayvantivResponseCode::InvalidCardValidationNum2
+        | WorldpayvantivResponseCode::InvalidPin3
+        | WorldpayvantivResponseCode::CardRestricted
+        | WorldpayvantivResponseCode::OverCreditLimit
+        | WorldpayvantivResponseCode::AccountClosed
+        | WorldpayvantivResponseCode::AccountFrozen
+        | WorldpayvantivResponseCode::InvalidTransactionType2
+        | WorldpayvantivResponseCode::InvalidMerchantId2
+        | WorldpayvantivResponseCode::ProcessorNotAvailable
+        | WorldpayvantivResponseCode::NetworkTimeOut
+        | WorldpayvantivResponseCode::SystemError
+        | WorldpayvantivResponseCode::DuplicateTransaction
+        | WorldpayvantivResponseCode::VoiceAuthRequired
+        | WorldpayvantivResponseCode::AuthenticationRequired
+        | WorldpayvantivResponseCode::SecurityCodeRequired
+        | WorldpayvantivResponseCode::SecurityCodeNotMatch
+        | WorldpayvantivResponseCode::ZipCodeNotMatch
+        | WorldpayvantivResponseCode::AddressNotMatch
+        | WorldpayvantivResponseCode::AVSFailure
+        | WorldpayvantivResponseCode::CVVFailure
+        | WorldpayvantivResponseCode::ServiceNotAllowed
+        | WorldpayvantivResponseCode::CreditNotSupported
+        | WorldpayvantivResponseCode::InvalidCreditAmount
+        | WorldpayvantivResponseCode::CreditAmountExceedsDebitAmount
+        | WorldpayvantivResponseCode::RefundNotSupported
+        | WorldpayvantivResponseCode::InvalidRefundAmount
+        | WorldpayvantivResponseCode::RefundAmountExceedsOriginalAmount
+        | WorldpayvantivResponseCode::VoidNotSupported
+        | WorldpayvantivResponseCode::VoidNotAllowed
+        | WorldpayvantivResponseCode::CaptureNotSupported
+        | WorldpayvantivResponseCode::CaptureNotAllowed
+        | WorldpayvantivResponseCode::InvalidCaptureAmount
+        | WorldpayvantivResponseCode::CaptureAmountExceedsAuthAmount
+        | WorldpayvantivResponseCode::TransactionAlreadySettled
+        | WorldpayvantivResponseCode::TransactionAlreadyVoided
+        | WorldpayvantivResponseCode::TransactionAlreadyCaptured
+        | WorldpayvantivResponseCode::TransactionNotFound => match flow {
             WorldpayvantivPaymentFlow::Sale => Ok(common_enums::AttemptStatus::Failure),
             WorldpayvantivPaymentFlow::Auth => Ok(common_enums::AttemptStatus::AuthorizationFailed),
             WorldpayvantivPaymentFlow::Capture => Ok(common_enums::AttemptStatus::CaptureFailed),
