@@ -39,50 +39,22 @@ impl<T> interfaces::api::ConnectorCommon for ZaakPay<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
 {
-    fn get_id(&self) -> &'static str {
+    fn id(&self) -> &'static str {
         self.connector_name
     }
 
-    fn get_name(&self) -> String {
-        "ZaakPay".to_string()
+    fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
+        common_enums::CurrencyUnit::Minor
     }
 
-    fn get_connector_type(&self) -> interfaces::connector_types::ConnectorType {
-        interfaces::connector_types::ConnectorType::PaymentProcessor
+    fn get_auth_header(
+        &self,
+        _auth_type: &domain_types::router_data::ConnectorAuthType,
+    ) -> CustomResult<Vec<(String, String)>, errors::ConnectorError> {
+        Ok(vec![])
     }
 
-    fn get_connector_version(&self) -> String {
-        "1.0.0".to_string()
-    }
-
-    fn get_supported_payment_methods(&self) -> Vec<PaymentMethodType> {
-        vec![PaymentMethodType::Upi]
-    }
-
-    fn get_connector_specifications(&self) -> interfaces::connector_types::ConnectorSpecifications {
-        interfaces::connector_types::ConnectorSpecifications {
-            connector_name: self.get_name(),
-            connector_type: self.get_connector_type(),
-            supported_payment_methods: self.get_supported_payment_methods(),
-            supported_flows: vec![
-                interfaces::connector_types::ConnectorFlow::Authorize,
-                interfaces::connector_types::ConnectorFlow::PaymentSync,
-                interfaces::connector_types::ConnectorFlow::RefundSync,
-            ],
-            supported_currencies: vec!["INR".to_string()],
-            supported_countries: vec!["IN".to_string()],
-        }
-    }
-
-    fn get_webhook_secret(&self) -> Option<&'static str> {
-        None
-    }
-
-    fn get_webhook_details(&self) -> Option<ConnectorWebhookSecrets> {
-        None
-    }
-
-    fn base_url<'a>(&self, _req: &'a utils::ConnectorCommonData) -> &'a str {
+    fn base_url<'a>(&self, _req: &'a domain_types::router_data::ConnectorCommonData) -> &'a str {
         "https://api.zaakpay.com"
     }
 }
