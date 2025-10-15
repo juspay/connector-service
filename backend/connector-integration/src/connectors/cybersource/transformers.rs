@@ -44,25 +44,6 @@ use serde::{Deserialize, Serialize};
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 pub const REFUND_VOIDED: &str = "Refund request has been voided.";
 
-fn get_card_number_string<T: PaymentMethodDataTypes + 'static>(
-    card_number: &RawCardNumber<T>,
-) -> String {
-    use std::any::{Any, TypeId};
-
-    let any_ref: &dyn Any = card_number;
-
-    match TypeId::of::<T>() {
-        id if id == TypeId::of::<payment_method_data::DefaultPCIHolder>() => any_ref
-            .downcast_ref::<RawCardNumber<payment_method_data::DefaultPCIHolder>>()
-            .map(|c| c.peek().to_string())
-            .unwrap_or_default(),
-        _ => any_ref
-            .downcast_ref::<RawCardNumber<payment_method_data::VaultTokenHolder>>()
-            .map(|c| c.peek().to_string())
-            .unwrap_or_default(),
-    }
-}
-
 fn card_issuer_to_string(card_issuer: CardIssuer) -> String {
     let card_type = match card_issuer {
         CardIssuer::AmericanExpress => "003",
@@ -210,9 +191,9 @@ impl<
                     .and_then(get_cybersource_card_type)
                 {
                     Some(card_network) => Some(card_network.to_string()),
-                    None => domain_types::utils::get_card_issuer(&get_card_number_string(
-                        &ccard.card_number,
-                    ))
+                    None => domain_types::utils::get_card_issuer(
+                        &(format!("{:?}", ccard.card_number.0)),
+                    )
                     .ok()
                     .map(card_issuer_to_string),
                 };
@@ -1247,11 +1228,9 @@ impl<
 
         let card_type = match raw_card_type.clone().and_then(get_cybersource_card_type) {
             Some(card_network) => Some(card_network.to_string()),
-            None => {
-                domain_types::utils::get_card_issuer(&get_card_number_string(&ccard.card_number))
-                    .ok()
-                    .map(card_issuer_to_string)
-            }
+            None => domain_types::utils::get_card_issuer(&(format!("{:?}", ccard.card_number.0)))
+                .ok()
+                .map(card_issuer_to_string),
         };
 
         let payment_information = PaymentInformation::Cards(Box::new(CardPaymentInformation {
@@ -2411,9 +2390,9 @@ impl<
                     .and_then(get_cybersource_card_type)
                 {
                     Some(card_network) => Some(card_network.to_string()),
-                    None => domain_types::utils::get_card_issuer(&get_card_number_string(
-                        &ccard.card_number,
-                    ))
+                    None => domain_types::utils::get_card_issuer(
+                        &(format!("{:?}", ccard.card_number.0)),
+                    )
                     .ok()
                     .map(card_issuer_to_string),
                 };
@@ -3171,9 +3150,9 @@ impl<
                     .and_then(get_cybersource_card_type)
                 {
                     Some(card_network) => Some(card_network.to_string()),
-                    None => domain_types::utils::get_card_issuer(&get_card_number_string(
-                        &ccard.card_number,
-                    ))
+                    None => domain_types::utils::get_card_issuer(
+                        &(format!("{:?}", ccard.card_number.0)),
+                    )
                     .ok()
                     .map(card_issuer_to_string),
                 };
@@ -3453,9 +3432,9 @@ impl<
                     .and_then(get_cybersource_card_type)
                 {
                     Some(card_network) => Some(card_network.to_string()),
-                    None => domain_types::utils::get_card_issuer(&get_card_number_string(
-                        &ccard.card_number,
-                    ))
+                    None => domain_types::utils::get_card_issuer(
+                        &(format!("{:?}", ccard.card_number.0)),
+                    )
                     .ok()
                     .map(card_issuer_to_string),
                 };
