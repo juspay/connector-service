@@ -157,9 +157,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 // Implement source verification stubs for all flows
-macros::impl_source_verification_stub!(Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData);
-macros::impl_source_verification_stub!(PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData);
-macros::impl_source_verification_stub!(RSync, PaymentFlowData, RefundSyncData, RefundsResponseData);
+// Implement source verification for all flows
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData> for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    SourceVerification<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData> for ZaakPay<T> {}
 
 // Stub types for unimplemented flows
 #[derive(Debug, Clone, Serialize)]
