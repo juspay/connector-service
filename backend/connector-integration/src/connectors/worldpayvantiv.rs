@@ -48,7 +48,7 @@ use interfaces::{
 use serde::Serialize;
 
 use self::transformers::{
-    CnpOnlineResponse, VantivSyncRequest, VantivSyncResponse,
+    CnpOnlineResponse, VantivSyncResponse,
     WorldpayvantivAuthType, WorldpayvantivPaymentsRequest, BASE64_ENGINE,
 };
 
@@ -477,7 +477,6 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PSync,
-            request_body: VantivSyncRequest,
             response_body: VantivSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         )
@@ -586,14 +585,12 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpayvantiv,
-    curl_request: Json(VantivSyncRequest),
     curl_response: VantivSyncResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
     flow_response: PaymentsResponseData,
     http_method: Get,
-    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
@@ -926,14 +923,14 @@ impl<
         &self,
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> CustomResult<String, ConnectorError> {
-        let txn_id = req.request.connector_refund_id.clone();
+        let refund_id = req.request.connector_refund_id.clone();
         let secondary_base_url = req.resource_common_data.connectors.worldpayvantiv.secondary_base_url
             .as_ref()
             .unwrap_or(&req.resource_common_data.connectors.worldpayvantiv.base_url);
         Ok(format!(
             "{}/reports/dtrPaymentStatus/{}",
             secondary_base_url,
-            txn_id
+            refund_id
         ))
     }
 
@@ -941,8 +938,8 @@ impl<
         &self,
         _req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> CustomResult<Option<RequestContent>, ConnectorError> {
-        let request = VantivSyncRequest {};
-        Ok(Some(RequestContent::Json(Box::new(request))))
+        // GET request doesn't need a body
+        Ok(None)
     }
 
     fn handle_response_v2(
@@ -1014,20 +1011,11 @@ impl<
 
     fn handle_response_v2(
         &self,
-        data: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
+        _data: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: Response,
     ) -> CustomResult<RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>, ConnectorError> {
-        let response_str = std::str::from_utf8(&res.response)
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
-        let response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
-        event_builder.map(|i| i.set_response_body(&response));
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
+        Err(ConnectorError::NotImplemented("SetupMandate not implemented for WorldpayVantiv".into()).into())
     }
 
     fn get_error_response_v2(
