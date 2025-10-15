@@ -2,23 +2,18 @@ use std::collections::HashMap;
 
 use common_enums::{AttemptStatus, PaymentMethodType};
 use common_utils::{
-    errors::CustomResult,
-    ext_traits::ValueExt,
-    types::{StringMinorUnit, MinorUnit},
+    types::{MinorUnit},
 };
+use common_enums::{AttemptStatus, PaymentMethodType};
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsResponseData},
     errors,
-    payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType},
     router_data_v2::RouterDataV2,
 };
-use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
-
-use crate::types;
 
 // Request/Response types based on Haskell implementation
 
