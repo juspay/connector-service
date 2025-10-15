@@ -500,8 +500,7 @@ TryFrom<
         >,
     ) -> Result<Self, Self::Error> {
         // CRITICAL: Extract all values dynamically from router data - NO HARDCODING
-        let customer_id = item.router_data.resource_common_data.get_customer_id()
-            .change_context(errors::ConnectorError::MissingRequiredField { field_name: "customer_id" })?;
+        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let return_url = item.router_data.request.get_router_return_url()
             .unwrap_or_else(|| "https://default.return.url".to_string());
         
@@ -509,7 +508,7 @@ TryFrom<
         let amount = item.connector.amount_converter.convert(
             item.router_data.request.minor_amount,
             item.router_data.request.currency,
-        ).map_err(|_| errors::ConnectorError::ParsingFailed)?;
+        ).change_context(errors::ConnectorError::RequestEncodingFailed)?;
         let currency = item.router_data.request.currency.to_string();
 
         // CRITICAL: Extract authentication data dynamically
