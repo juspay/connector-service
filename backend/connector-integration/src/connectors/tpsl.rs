@@ -152,7 +152,11 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            req.resource_common_data.connectors.tpsl.base_url.as_ref()
+            if req.resource_common_data.test_mode.unwrap_or(false) {
+                &req.resource_common_data.connectors.tpsl.test_base_url
+            } else {
+                &req.resource_common_data.connectors.tpsl.base_url
+            }
         }
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
