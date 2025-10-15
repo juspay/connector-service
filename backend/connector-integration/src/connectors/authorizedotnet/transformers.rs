@@ -1974,7 +1974,7 @@ fn create_error_response(
     error_message: String,
     status: AttemptStatus,
     connector_transaction_id: Option<String>,
-    _raw_connector_response: Option<String>,
+    _raw_connector_response: Option<Secret<String>>,
 ) -> ErrorResponse {
     ErrorResponse {
         status_code: http_status_code,
@@ -2121,7 +2121,7 @@ pub fn convert_to_payments_response_data_or_error(
     http_status_code: u16,
     operation: Operation,
     capture_method: Option<enums::CaptureMethod>,
-    raw_connector_response: Option<String>,
+    raw_connector_response: Option<Secret<String>>,
 ) -> Result<(AttemptStatus, Result<PaymentsResponseData, ErrorResponse>), HsInterfacesConnectorError>
 {
     let status = get_hs_status(response, http_status_code, operation, capture_method);
