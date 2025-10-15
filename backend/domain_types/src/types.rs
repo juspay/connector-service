@@ -14,8 +14,9 @@ use grpc_api_types::payments::{
     AcceptDisputeResponse, ConnectorState, DisputeDefendRequest, DisputeDefendResponse,
     DisputeResponse, DisputeServiceSubmitEvidenceResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureResponse, PaymentServiceGetResponse,
-    PaymentServiceRegisterRequest, PaymentServiceRegisterResponse, PaymentServiceVoidRequest,
-    PaymentServiceVoidResponse, PaymentServiceVoidPostCaptureResponse, RefundResponse,
+    PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
+    PaymentServiceVoidPostCaptureResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
+    RefundResponse,
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::Serialize;
@@ -56,7 +57,8 @@ fn extract_headers_from_metadata(
 use crate::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync,
-        PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
+        PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, ConnectorMandateReferenceId,
@@ -2377,7 +2379,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentStatus> for common_enums::A
             grpc_api_types::payments::PaymentStatus::VoidInitiated => Ok(Self::VoidInitiated),
             grpc_api_types::payments::PaymentStatus::VoidFailed => Ok(Self::VoidFailed),
             grpc_api_types::payments::PaymentStatus::Voided => Ok(Self::Voided),
-            grpc_api_types::payments::PaymentStatus::VoidedPostCapture => Ok(Self::VoidedPostCapture),
+            grpc_api_types::payments::PaymentStatus::VoidedPostCapture => {
+                Ok(Self::VoidedPostCapture)
+            }
             grpc_api_types::payments::PaymentStatus::Unresolved => Ok(Self::Unresolved),
             grpc_api_types::payments::PaymentStatus::PaymentMethodAwaited => {
                 Ok(Self::PaymentMethodAwaited)
@@ -2512,9 +2516,13 @@ pub fn generate_payment_void_response(
     }
 }
 
-
 pub fn generate_payment_void_post_capture_response(
-    router_data_v2: RouterDataV2<VoidPC, PaymentFlowData, crate::connector_types::PaymentsCancelPostCaptureData, PaymentsResponseData>,
+    router_data_v2: RouterDataV2<
+        VoidPC,
+        PaymentFlowData,
+        crate::connector_types::PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    >,
 ) -> Result<PaymentServiceVoidPostCaptureResponse, error_stack::Report<ApplicationErrorResponse>> {
     let transaction_response = router_data_v2.response;
 
@@ -3377,7 +3385,9 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceVoidPostCaptureRequest> for crate::connector_types::PaymentsCancelPostCaptureData {
+impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceVoidPostCaptureRequest>
+    for crate::connector_types::PaymentsCancelPostCaptureData
+{
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(

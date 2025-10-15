@@ -9,12 +9,13 @@ use domain_types::{
         ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, DisputeWebhookDetailsResponse, EventType, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsCancelPostCaptureData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
-        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
+        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
@@ -56,7 +57,12 @@ pub trait PaymentVoidV2:
 }
 
 pub trait PaymentVoidPostCaptureV2:
-    ConnectorIntegrationV2<connector_flow::VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    ConnectorIntegrationV2<
+    connector_flow::VoidPC,
+    PaymentFlowData,
+    PaymentsCancelPostCaptureData,
+    PaymentsResponseData,
+>
 {
 }
 

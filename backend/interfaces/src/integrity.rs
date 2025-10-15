@@ -7,10 +7,11 @@ use common_utils::errors::IntegrityCheckError;
 // Domain type imports
 use domain_types::connector_types::{
     AcceptDisputeData, AccessTokenRequestData, DisputeDefendData, PaymentCreateOrderData,
-    PaymentMethodTokenizationData, PaymentVoidData, PaymentsCancelPostCaptureData, PaymentsAuthenticateData,
-    PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
-    PaymentsPreAuthenticateData, PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData,
-    SessionTokenRequestData, SetupMandateRequestData, SubmitEvidenceData,
+    PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+    PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+    PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsSyncData, RefundSyncData,
+    RefundsData, RepeatPaymentData, SessionTokenRequestData, SetupMandateRequestData,
+    SubmitEvidenceData,
 };
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
@@ -18,10 +19,10 @@ use domain_types::{
         AcceptDisputeIntegrityObject, AccessTokenIntegrityObject, AuthenticateIntegrityObject,
         AuthoriseIntegrityObject, CaptureIntegrityObject, CreateOrderIntegrityObject,
         DefendDisputeIntegrityObject, PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject,
-        PaymentVoidIntegrityObject, PaymentVoidPostCaptureIntegrityObject, PostAuthenticateIntegrityObject,
-        PreAuthenticateIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
-        RepeatPaymentIntegrityObject, SessionTokenIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject,
+        PaymentVoidIntegrityObject, PaymentVoidPostCaptureIntegrityObject,
+        PostAuthenticateIntegrityObject, PreAuthenticateIntegrityObject, RefundIntegrityObject,
+        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SessionTokenIntegrityObject,
+        SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
     },
 };
 

@@ -200,8 +200,13 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
-    for Cryptopay<T>
+    >
+    ConnectorIntegrationV2<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Cryptopay<T>
 {
 }
 
@@ -212,7 +217,8 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > SourceVerification<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    >
+    SourceVerification<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
     for Cryptopay<T>
 {
 }

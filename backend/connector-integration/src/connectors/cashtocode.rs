@@ -15,12 +15,12 @@ use domain_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
         ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData, PaymentsCancelPostCaptureData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, RequestDetails, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -353,8 +353,12 @@ impl<
             + 'static
             + Serialize,
     >
-    ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
-    for Cashtocode<T>
+    ConnectorIntegrationV2<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Cashtocode<T>
 {
 }
 
@@ -877,7 +881,12 @@ impl_source_verification_stub!(
     PaymentsPostAuthenticateData<T>,
     PaymentsResponseData
 );
-impl_source_verification_stub!(VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData);
+impl_source_verification_stub!(
+    VoidPC,
+    PaymentFlowData,
+    PaymentsCancelPostCaptureData,
+    PaymentsResponseData
+);
 
 impl<
         T: PaymentMethodDataTypes
