@@ -254,7 +254,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             txnid: item.router_data.request.connector_transaction_id.get_connector_transaction_id()
                 .map_err(|_| errors::ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             amount,
-            email: item.router_data.request.email.clone(),
+            email: None,
             phone: None,
             key: auth.key.expose(),
             hash,
