@@ -1925,14 +1925,16 @@ impl PaymentService for Payments {
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
-                    let response = external_services::service::execute_connector_processing_step(
-                        &self.config.proxy,
-                        connector_integration,
-                        router_data,
-                        None,
-                        event_params,
-                        None, // token_data - None for non-proxy payments
-                        common_enums::CallConnectorAction::Trigger,
+                    let response = Box::pin(
+                        external_services::service::execute_connector_processing_step(
+                            &self.config.proxy,
+                            connector_integration,
+                            router_data,
+                            None,
+                            event_params,
+                            None, // token_data - None for non-proxy payments
+                            common_enums::CallConnectorAction::Trigger,
+                        ),
                     )
                     .await
                     .switch()
