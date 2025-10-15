@@ -384,10 +384,7 @@ where
                 .router_data
                 .request
                 .connector_transaction_id
-                .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_transaction_id",
-                })?,
+                .get_string_repr(),
             amount,
             currency,
             product_description: item
