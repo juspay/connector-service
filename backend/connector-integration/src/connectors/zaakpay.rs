@@ -162,7 +162,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    SourceVerification<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData> for ZaakPay<T> {}
+    SourceVerification<RSync, domain_types::connector_types::RefundFlowData, RefundSyncData, RefundsResponseData> for ZaakPay<T> {}
 
 // SourceVerification implementations for unimplemented flows
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
