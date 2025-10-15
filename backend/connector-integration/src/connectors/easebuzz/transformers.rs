@@ -193,7 +193,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             txnid: item.router_data.resource_common_data.connector_request_reference_id.clone(),
             amount,
             productinfo: "Product Info".to_string(),
-            firstname: Some(customer_id.get_string_repr()),
+            firstname: Some(customer_id.get_string_repr().to_string()),
             email: item.router_data.request.email.clone(),
             phone: None,
             surl: return_url.clone(),
