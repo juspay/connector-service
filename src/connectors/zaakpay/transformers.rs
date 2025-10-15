@@ -515,12 +515,12 @@ impl<T> TryFrom<ZaakPayPaymentsResponse> for PaymentsResponseData {
 
     fn try_from(response: ZaakPayPaymentsResponse) -> Result<Self, Self::Error> {
         let status = match response.response_code.as_str() {
-            "100" => AttemptStatus::AuthenticationFailed,
-            "101" => AttemptStatus::Failure,
-            "102" => AttemptStatus::Failure,
-            "103" => AttemptStatus::Failure,
-            "200" => AttemptStatus::Charged,
-            "201" => AttemptStatus::Pending,
+            ZAAKPAY_RESPONSE_CODE_AUTH_FAILED => AttemptStatus::AuthenticationFailed,
+            ZAAKPAY_RESPONSE_CODE_INVALID_REQUEST => AttemptStatus::Failure,
+            ZAAKPAY_RESPONSE_CODE_SYSTEM_ERROR => AttemptStatus::Failure,
+            ZAAKPAY_RESPONSE_CODE_INVALID_DATA => AttemptStatus::Failure,
+            ZAAKPAY_RESPONSE_CODE_SUCCESS => AttemptStatus::Charged,
+            ZAAKPAY_RESPONSE_CODE_PENDING => AttemptStatus::Pending,
             "202" => AttemptStatus::Pending,
             _ => AttemptStatus::Pending,
         };
