@@ -71,6 +71,7 @@ pub enum ConnectorEnum {
     Aci,
     Trustpay,
     Stripe,
+    ZaakPay,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
