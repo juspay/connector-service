@@ -2667,18 +2667,6 @@ where
                 item.response.id.clone(),
             )
         } else {
-            let _charges = item
-                .response
-                .latest_charge
-                .as_ref()
-                .map(|charge| match charge {
-                    StripeChargeEnum::ChargeId(charges) => charges.clone(),
-                    StripeChargeEnum::ChargeObject(charge) => charge.id.clone(),
-                })
-                .and_then(|charge_id| {
-                    construct_charge_response(charge_id, &item.router_data.request)
-                });
-
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
                 redirection_data: redirection_data.map(Box::new),
@@ -2690,7 +2678,6 @@ where
                     .router_data
                     .request
                     .get_request_incremental_authorization(),
-                //charges,
                 status_code: item.http_code,
             })
         };
@@ -2948,17 +2935,6 @@ impl<F> TryFrom<ResponseRouterData<PaymentIntentSyncResponse, Self>>
                     }),
                 _ => None,
             };
-            let _charges = item
-                .response
-                .latest_charge
-                .as_ref()
-                .map(|charge| match charge {
-                    StripeChargeEnum::ChargeId(charges) => charges.clone(),
-                    StripeChargeEnum::ChargeObject(charge) => charge.id.clone(),
-                })
-                .and_then(|charge_id| {
-                    construct_charge_response(charge_id, &item.router_data.request)
-                });
 
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
@@ -2968,7 +2944,6 @@ impl<F> TryFrom<ResponseRouterData<PaymentIntentSyncResponse, Self>>
                 network_txn_id: network_transaction_id,
                 connector_response_reference_id: Some(item.response.id.clone()),
                 incremental_authorization_allowed: None,
-                //charges,
                 status_code: item.http_code,
             })
         };
