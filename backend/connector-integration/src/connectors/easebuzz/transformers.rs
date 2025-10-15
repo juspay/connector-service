@@ -15,7 +15,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{connectors::easebuzz::EaseBuzzRouterData, types::ResponseRouterData};
 use crate::connectors::macros::GetFormData;
