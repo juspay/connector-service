@@ -161,7 +161,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.amount,
+                common_utils::MinorUnit(item.router_data.request.amount),
                 item.router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
@@ -413,7 +413,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzPaymentsSyncResponse, RouterDataV2<PSync
                     Err(ErrorResponse {
                         status_code: http_code,
                         code: "SYNC_ERROR".to_string(),
-                        message: error_msg,
+                        message: error_msg.clone(),
                         reason: Some(error_msg),
                         attempt_status: None,
                         connector_transaction_id: None,
