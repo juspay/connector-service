@@ -2,22 +2,20 @@ use std::collections::HashMap;
 
 use common_enums::{AttemptStatus, PaymentMethodType};
 use common_utils::{
-    crypto::OptionalExt,
     errors::CustomResult,
     ext_traits::ValueExt,
-    types::{StringMinorUnit},
+    types::{StringMinorUnit, MinorUnit},
 };
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundSyncData, RefundsResponseData},
     errors,
     payment_method_data::PaymentMethodDataTypes,
+    router_data::{ConnectorAuthType},
     router_data_v2::RouterDataV2,
-    types::{AmountConverterTrait, MinorUnit},
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
-use masking::{ExposeInterface, Mask};
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::types;
