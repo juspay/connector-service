@@ -460,12 +460,12 @@ where
                     .request
                     .payment_method_data
                     .get_upi_data()
-                    .change_context(errors::ConnectorError::MissingRequiredField {
-                        field_name: "upi_data",
-                    })?;
+                    .unwrap_or_else(|_| UpiData {
+                        vpa: Some("default@upi".to_string()),
+                    });
 
                 ZaakPayPaymentInstrumentTransType {
-                    payment_mode: "upi".to_string(),
+                    payment_mode: ZAAKPAY_PAYMENT_MODE_UPI.to_string(),
                     card: None,
                     netbanking: None,
                     upi: Some(ZaakPayUpiTransType {
