@@ -122,7 +122,7 @@ macros::macro_connector_implementation!(
     curl_request: Json(ZaakPayRefundSyncRequest),
     curl_response: ZaakPayRefundSyncResponse,
     flow_name: RSync,
-    resource_common_data: PaymentFlowData,
+    resource_common_data: domain_types::connector_types::RefundFlowData,
     flow_request: RefundSyncData,
     flow_response: RefundsResponseData,
     http_method: Post,
