@@ -15,10 +15,10 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::{connectors::easebuzz::EaseBuzzRouterData, types::ResponseRouterData};
+use crate::connectors::macros::GetFormData;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
