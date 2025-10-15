@@ -536,7 +536,7 @@ impl<
         constants::APPLICATION_X_WWW_FORM_URLENCODED
     }
 
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
+    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
         // This would need to be implemented in the Connectors struct
         // For now, return the production URL
         constants::EASEBUZZ_PRODUCTION_BASE_URL
