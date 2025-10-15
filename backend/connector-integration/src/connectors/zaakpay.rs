@@ -73,11 +73,9 @@ where
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> CustomResult<Option<services::Request>, errors::ConnectorError> {
         let request = transformers::ZaakPayPaymentsRequest::try_from(req)?;
-        let url = self.base_url(&domain_types::router_data::ConnectorCommonData {
-            connector_name: self.connector_name,
-            resource_common_data: &req.router_data.resource_common_data,
-            connector_auth_type: &req.router_data.connector_auth_type,
-            test_mode: req.router_data.resource_common_data.test_mode,
+        let url = self.base_url(&domain_types::router_data::ConnectorData {
+            connector: Box::new(()), // Placeholder
+            connector_name: domain_types::connector_types::ConnectorEnum::ZaakPay,
         }) + "/transaction/.do";
         Ok(Some(services::RequestBuilder::new()
             .method(services::Method::Post)
