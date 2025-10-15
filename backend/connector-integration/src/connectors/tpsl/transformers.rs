@@ -778,7 +778,7 @@ TryFrom<
         let amount = item.connector.amount_converter.convert(
             item.router_data.request.amount,
             item.router_data.request.currency,
-        ).map_err(|_| errors::ConnectorError::ParsingFailed)?;
+        ).change_context(errors::ConnectorError::RequestEncodingFailed)?;
         let currency = item.router_data.request.currency.to_string();
 
         let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
