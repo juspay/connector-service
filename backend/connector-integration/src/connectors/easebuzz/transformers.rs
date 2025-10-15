@@ -178,7 +178,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             amount.to_string(),
             "Product Info", // productinfo
             customer_id.get_string_repr(), // firstname
-            item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
+            item.router_data.request.email.as_ref().map(|e| e.expose().clone()).unwrap_or_default(),
             "", // phone
             return_url, // surl
             return_url, // furl
@@ -242,7 +242,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             item.router_data.request.connector_transaction_id.get_connector_transaction_id()
                 .map_err(|_| errors::ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             amount.to_string(),
-            item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
+            item.router_data.request.email.as_ref().map(|e| e.expose().clone()).unwrap_or_default(),
             "", // phone
             auth.salt.expose(),
             "ver1" // additional parameter
