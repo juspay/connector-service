@@ -163,11 +163,8 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
-                &req.resource_common_data.connectors.tpsl.test_base_url
-            } else {
-                &req.resource_common_data.connectors.tpsl.base_url
-            }
+            // RefundFlowData doesn't have test_mode, use base_url by default
+            &req.resource_common_data.connectors.tpsl.base_url
         }
     }
 );
