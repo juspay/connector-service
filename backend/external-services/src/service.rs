@@ -197,7 +197,9 @@ where
                 Some(request) => {
                     updated_router_data
                         .resource_common_data
-                        .set_raw_connector_request(Some(extract_raw_connector_request(request).into()));
+                        .set_raw_connector_request(Some(
+                            extract_raw_connector_request(request).into(),
+                        ));
                     updated_router_data
                 }
                 None => updated_router_data,
@@ -555,7 +557,9 @@ where
                                             strip_bom_and_convert_to_string(&body.response);
                                         updated_router_data
                                             .resource_common_data
-                                            .set_raw_connector_response(raw_response_string.map(Into::into));
+                                            .set_raw_connector_response(
+                                                raw_response_string.map(Into::into),
+                                            );
 
                                         // Set response headers if available
                                         updated_router_data
@@ -592,7 +596,9 @@ where
                                             strip_bom_and_convert_to_string(&body.response);
                                         updated_router_data
                                             .resource_common_data
-                                            .set_raw_connector_response(raw_response_string.map(Into::into));
+                                            .set_raw_connector_response(
+                                                raw_response_string.map(Into::into),
+                                            );
                                         updated_router_data
                                             .resource_common_data
                                             .set_connector_response_headers(body.headers.clone());
