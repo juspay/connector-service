@@ -65,7 +65,7 @@ pub struct EaseBuzzPaymentsResponse {
     pub data: Option<EaseBuzzResponseData>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EaseBuzzResponseData {
     pub easebuzz_id: Option<String>,
@@ -108,14 +108,14 @@ pub struct EaseBuzzPaymentsSyncResponse {
     pub msg: EaseBuzzTxnSyncMessageType,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum EaseBuzzTxnSyncMessageType {
     Success(EaseBuzzResponseData),
     Error(String),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EaseBuzzErrorResponse {
     pub status: i32,
@@ -123,7 +123,7 @@ pub struct EaseBuzzErrorResponse {
     pub data: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EaseBuzzAuth {
     pub key: Secret<String>,
