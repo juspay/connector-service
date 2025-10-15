@@ -187,6 +187,8 @@ fn create_payment_sync_request(
         // all_keys_required: None,
         capture_method: None,
         handle_response: None,
+        amount: TEST_AMOUNT,
+        currency: i32::from(Currency::Aed),
     }
 }
 

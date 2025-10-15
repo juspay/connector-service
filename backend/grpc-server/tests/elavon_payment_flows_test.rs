@@ -222,6 +222,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         capture_method: None,
         handle_response: None,
         access_token: None,
+        amount: TEST_AMOUNT,
+        currency: i32::from(Currency::Usd),
     }
 }
 
