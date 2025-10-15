@@ -240,12 +240,12 @@ pub struct ZaakPayErrorResponse {
 
 // Transformer implementations
 
-impl<T: PaymentMethodDataTypes> TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<()>, PaymentsResponseData>>
     for ZaakPayPaymentsRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>) -> Result<Self, Self::Error> {
+    fn try_from(item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<()>, PaymentsResponseData>) -> Result<Self, Self::Error> {
         // Extract merchant identifier from auth type
         let merchant_identifier = match &item.connector_auth_type {
             ConnectorAuthType::HeaderKey { api_key } => {
