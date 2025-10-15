@@ -24,11 +24,7 @@ use hyperswitch_masking::Secret;
 use masking::ExposeInterface;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    services,
-    utils::{self, ConnectorCommonData},
-    with_error_response_body,
-};
+use crate::{with_error_response_body};
 
 use super::macros;
 
