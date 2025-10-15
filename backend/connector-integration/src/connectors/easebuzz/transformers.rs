@@ -137,7 +137,7 @@ impl TryFrom<&ConnectorAuthType> for EaseBuzzAuth {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, key1, .. } => Ok(Self {
                 key: api_key.clone(),
-                salt: key1.clone().unwrap_or_else(|| Secret::new("".to_string())),
+                salt: key1.clone(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
