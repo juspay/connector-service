@@ -464,8 +464,7 @@ impl From<TpslPaymentStatus> for common_enums::AttemptStatus {
     }
 }
 
-// Type alias for router data to match macro expectations
-pub type TPSLRouterData<R, T> = crate::connectors::tpsl::TPSLRouterData<R, T>;
+
 
 impl<
     T: PaymentMethodDataTypes
