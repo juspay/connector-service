@@ -373,9 +373,9 @@ where
 
         // Determine mode (test/live)
         let mode = if item.router_data.resource_common_data.test_mode.unwrap_or(false) {
-            "0"
+            ZAAKPAY_MODE_TEST
         } else {
-            "1"
+            ZAAKPAY_MODE_LIVE
         };
 
         // Create order detail
@@ -581,9 +581,9 @@ where
 
         // Determine mode (test/live)
         let mode = if item.router_data.resource_common_data.test_mode.unwrap_or(false) {
-            "0"
+            ZAAKPAY_MODE_TEST
         } else {
-            "1"
+            ZAAKPAY_MODE_LIVE
         };
 
         // Create order detail
@@ -697,9 +697,9 @@ where
 
         // Determine mode (test/live)
         let mode = if item.router_data.resource_common_data.test_mode.unwrap_or(false) {
-            "0"
+            ZAAKPAY_MODE_TEST
         } else {
-            "1"
+            ZAAKPAY_MODE_LIVE
         };
 
         // Create order detail
