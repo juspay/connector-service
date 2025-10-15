@@ -370,32 +370,30 @@ impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<()>
     }
 }
 
-impl TryFrom<(ZaakPayPaymentsResponse, &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<()>, PaymentsResponseData>)>
-    for PaymentsResponseData
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
+// Helper function to convert ZaakPayPaymentsResponse to PaymentsResponseData
+pub fn zaakpay_payments_response_to_payments_response_data(
+    response: ZaakPayPaymentsResponse,
+    _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<()>, PaymentsResponseData>
+) -> Result<PaymentsResponseData, error_stack::Report<errors::ConnectorError>> {
+    let status = match response.responseCode.as_str() {
+        "100" => common_enums::AttemptStatus::Charged,
+        "101" => common_enums::AttemptStatus::Pending,
+        "102" => common_enums::AttemptStatus::Failure,
+        _ => common_enums::AttemptStatus::Failure,
+    };
 
-    fn try_from((response, _req): (ZaakPayPaymentsResponse, &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<()>, PaymentsResponseData>)) -> Result<Self, Self::Error> {
-        let status = match response.responseCode.as_str() {
-            "100" => common_enums::AttemptStatus::Charged,
-            "101" => common_enums::AttemptStatus::Pending,
-            "102" => common_enums::AttemptStatus::Failure,
-            _ => common_enums::AttemptStatus::Failure,
-        };
+    let amount_received = response.orderDetail.amount.parse::<f64>()
+        .ok()
+        .map(|amt| MinorUnit::from_major_unit_as_f64(amt));
 
-        let amount_received = response.orderDetail.amount.parse::<f64>()
-            .ok()
-            .map(|amt| MinorUnit::from_major_unit_as_f64(amt));
-
-        Ok(Self {
-            status,
-            amount_captured: amount_received,
-            connector_transaction_id: Some(response.orderDetail.orderId),
-            error_message: Some(response.responseDescription),
-            // Add other required fields as needed
-            ..Default::default()
-        })
-    }
+    Ok(PaymentsResponseData {
+        status,
+        amount_captured: amount_received,
+        connector_transaction_id: Some(response.orderDetail.orderId),
+        error_message: Some(response.responseDescription),
+        // Add other required fields as needed
+        ..Default::default()
+    })
 }
 
 impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
