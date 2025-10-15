@@ -62,7 +62,7 @@ macros::create_all_prerequisites!(
         amount_converter: StringMinorUnit
     ],
     member_functions: {
-        get_content_type: |&self| Some("application/json".to_string()),
+        get_content_type: |self| Some("application/json".to_string()),
         get_error_response_v2: |&self, response: &[u8]| {
             let error_response: Result<transformers::ZaakPayErrorResponse, _> = serde_json::from_slice(response);
             error_response.map_err(|_| errors::ConnectorError::ResponseDeserializationFailed).map(|err| ErrorResponse {
