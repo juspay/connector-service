@@ -59,24 +59,7 @@ where
     }
 }
 
-impl<T> interfaces::api::ConnectorCommonV2 for ZaakPay<T>
-where
-    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-{
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
-    }
 
-    fn get_error_response_v2(
-        &self,
-        response: &[u8],
-    ) -> CustomResult<errors::ConnectorError, errors::ConnectorError> {
-        let error_response: ZaakPayErrorResponse = response
-            .parse_struct("ZaakPayErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-        Ok(errors::ConnectorError::from(error_response))
-    }
-}
 
 
 
