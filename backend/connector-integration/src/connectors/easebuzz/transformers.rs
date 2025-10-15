@@ -211,6 +211,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
+impl GetFormData for EaseBuzzPaymentsRequest {
+    fn get_form_data(&self) -> reqwest::multipart::Form {
+        // For now, return an empty form - this would need proper implementation
+        reqwest::multipart::Form::new()
+    }
+}
+
+impl GetFormData for EaseBuzzPaymentsSyncRequest {
+    fn get_form_data(&self) -> reqwest::multipart::Form {
+        // For now, return an empty form - this would need proper implementation
+        reqwest::multipart::Form::new()
+    }
+}
+
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<EaseBuzzRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
     for EaseBuzzPaymentsSyncRequest
