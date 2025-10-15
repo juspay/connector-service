@@ -521,7 +521,7 @@ impl TryFrom<&RouterDataV2<RSync, domain_types::connector_types::RefundFlowData,
 // Helper function to convert ZaakPayRefundSyncResponse to RefundsResponseData
 pub fn zaakpay_refund_sync_response_to_refunds_response_data(
     response: ZaakPayRefundSyncResponse,
-    _req: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>
+    _req: &RouterDataV2<RSync, domain_types::connector_types::RefundFlowData, RefundSyncData, RefundsResponseData>
 ) -> Result<RefundsResponseData, error_stack::Report<errors::ConnectorError>> {
     // Get the first order from the response
     let order = response.orders.first()
