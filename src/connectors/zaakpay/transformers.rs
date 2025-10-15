@@ -427,14 +427,14 @@ where
                 .as_ref()
                 .and_then(|addr| addr.country.clone())
                 .map(|c| c.to_string())
-                .unwrap_or_else(|| "IN".to_string()),
+                .unwrap_or_else(|| ZAAKPAY_COUNTRY_IN.to_string()),
             pincode: Secret::new(
                 item.router_data
                     .request
                     .billing_address
                     .as_ref()
                     .and_then(|addr| addr.zip.clone())
-                    .unwrap_or_else(|| "110001".to_string()),
+                    .unwrap_or_else(|| ZAAKPAY_DEFAULT_PINCODE.to_string()),
             ),
         };
 
