@@ -72,7 +72,7 @@ macros::create_all_prerequisites!(
                 reason: None,
             })
         },
-        get_api_tag: |flow| {
+        get_api_tag: |&self, flow| {
             match flow {
                 domain_types::connector_flow::Flow::Authorize => "transact",
                 domain_types::connector_flow::Flow::PSync => "check",
