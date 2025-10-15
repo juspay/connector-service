@@ -345,11 +345,9 @@ where
         let customer_id = item
             .router_data
             .resource_common_data
-            .get_customer_id()
-            .change_context(errors::ConnectorError::MissingRequiredField {
-                field_name: "customer_id",
-            })?;
-        let customer_id_string = customer_id.get_string_repr();
+            .customer_id
+            .clone()
+            .unwrap_or_else(|| "default_customer".to_string());
 
         // Extract email and phone
         let email = item
