@@ -1,5 +1,6 @@
 use std::{collections::HashMap, str::FromStr};
 
+use common_enums;
 use common_utils::{
     errors::CustomResult, request::Method, types::StringMinorUnit,
     Email,
