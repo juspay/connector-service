@@ -3,7 +3,6 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_utils::{
-    errors::CustomResult,
     types::{StringMinorUnit},
 };
 use domain_types::{
@@ -17,10 +16,8 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
-    types::Connectors,
 };
-use error_stack::ResultExt;
-use hyperswitch_masking::{Maskable, Secret};
+use hyperswitch_masking::Maskable;
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
