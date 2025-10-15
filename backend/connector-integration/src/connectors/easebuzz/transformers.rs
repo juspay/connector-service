@@ -242,7 +242,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             item.router_data.request.connector_transaction_id.get_connector_transaction_id()
                 .map_err(|_| errors::ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             amount.to_string(),
-            item.router_data.request.email.as_ref().map(|e| e.expose().clone()).unwrap_or_default(),
+            "", // email - not available in sync data
             "", // phone
             auth.salt.expose(),
             "ver1" // additional parameter
