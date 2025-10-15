@@ -529,17 +529,17 @@ impl<T> TryFrom<ZaakPayPaymentsResponse> for PaymentsResponseData {
             .ok()
             .map(|amt| MinorUnit::from_major_unit_as_i64(amt));
 
-        Ok(PaymentsResponseData {
-            status,
-            response: Ok(services::Response {
-                status_code: 200,
-                response_body: serde_json::to_value(response)
-                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?,
-                headers: HashMap::new(),
-            }),
-            amount_captured: amount_received,
-            connector_transaction_id: Some(response.order_detail.order_id),
-            ..Default::default()
+        Ok(PaymentsResponseData::TransactionResponse {
+            resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
+                response.order_detail.order_id,
+            ),
+            redirection_data: None,
+            mandate_reference: None,
+            connector_metadata: None,
+            network_txn_id: None,
+            connector_response_reference_id: None,
+            incremental_authorization_allowed: None,
+            status_code: 200,
         })
     }
 }
