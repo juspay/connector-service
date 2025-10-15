@@ -502,7 +502,7 @@ TryFrom<
         // CRITICAL: Extract all values dynamically from router data - NO HARDCODING
         let customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let return_url = item.router_data.request.get_router_return_url()
-            .unwrap_or_else(|| "https://default.return.url".to_string());
+            .unwrap_or_else(|_| "https://default.return.url".to_string());
         
         // CRITICAL: Use proper amount converter - never hardcode amounts
         let amount = item.connector.amount_converter.convert(
