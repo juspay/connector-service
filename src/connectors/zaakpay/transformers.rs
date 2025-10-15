@@ -776,16 +776,9 @@ impl<T> TryFrom<ZaakPayRefundSyncResponse> for RefundsResponseData {
             .and_then(|detail| detail.arn.clone());
 
         Ok(RefundsResponseData {
+            connector_refund_id: connector_refund_id.unwrap_or_default(),
             refund_status,
-            response: Ok(services::Response {
-                status_code: 200,
-                response_body: serde_json::to_value(response)
-                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?,
-                headers: HashMap::new(),
-            }),
-            refund_amount,
-            connector_refund_id,
-            ..Default::default()
+            status_code: 200,
         })
     }
 }
