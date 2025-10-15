@@ -750,9 +750,9 @@ impl<T> TryFrom<ZaakPayRefundSyncResponse> for RefundsResponseData {
         let refund_status = if let Some(refund_details) = &order.refund_details {
             if !refund_details.is_empty() {
                 match order.txn_status.as_deref() {
-                    Some("success") => domain_types::RefundStatus::Success,
-                    Some("pending") => domain_types::RefundStatus::Pending,
-                    Some("failure") => domain_types::RefundStatus::Failure,
+                    Some(ZAAKPAY_TXN_STATUS_SUCCESS) => domain_types::RefundStatus::Success,
+                    Some(ZAAKPAY_TXN_STATUS_PENDING) => domain_types::RefundStatus::Pending,
+                    Some(ZAAKPAY_TXN_STATUS_FAILURE) => domain_types::RefundStatus::Failure,
                     _ => domain_types::RefundStatus::Pending,
                 }
             } else {
