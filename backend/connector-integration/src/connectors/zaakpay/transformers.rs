@@ -470,12 +470,12 @@ pub fn zaakpay_payments_sync_response_to_payments_response_data(
     })
 }
 
-impl TryFrom<&RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>>
+impl TryFrom<&RouterDataV2<RSync, domain_types::connector_types::RefundFlowData, RefundSyncData, RefundsResponseData>>
     for ZaakPayRefundSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>) -> Result<Self, Self::Error> {
+    fn try_from(item: &RouterDataV2<RSync, domain_types::connector_types::RefundFlowData, RefundSyncData, RefundsResponseData>) -> Result<Self, Self::Error> {
         // Extract merchant identifier from auth type
         let merchant_identifier = match &item.connector_auth_type {
             ConnectorAuthType::HeaderKey { api_key } => {
