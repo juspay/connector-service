@@ -248,7 +248,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<&RouterDataV2<Authorize, PaymentFlowData
     fn try_from(item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>) -> Result<Self, Self::Error> {
         // Extract merchant identifier from auth type
         let merchant_identifier = match &item.connector_auth_type {
-            domain_types::connector_types::ConnectorAuthType::HeaderKey { api_key } => {
+            ConnectorAuthType::HeaderKey { api_key } => {
                 api_key.expose().clone()
             }
             _ => return Err(errors::ConnectorError::AuthenticationFailed.into()),
@@ -406,7 +406,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<&RouterDataV2<PSync, PaymentFlowData, Pa
     fn try_from(item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>) -> Result<Self, Self::Error> {
         // Extract merchant identifier from auth type
         let merchant_identifier = match &item.connector_auth_type {
-            domain_types::connector_types::ConnectorAuthType::HeaderKey { api_key } => {
+            ConnectorAuthType::HeaderKey { api_key } => {
                 api_key.expose().clone()
             }
             _ => return Err(errors::ConnectorError::AuthenticationFailed.into()),
@@ -482,7 +482,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<&RouterDataV2<RSync, PaymentFlowData, Re
     fn try_from(item: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>) -> Result<Self, Self::Error> {
         // Extract merchant identifier from auth type
         let merchant_identifier = match &item.connector_auth_type {
-            domain_types::connector_types::ConnectorAuthType::HeaderKey { api_key } => {
+            ConnectorAuthType::HeaderKey { api_key } => {
                 api_key.expose().clone()
             }
             _ => return Err(errors::ConnectorError::AuthenticationFailed.into()),
