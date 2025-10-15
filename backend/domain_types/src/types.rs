@@ -2593,8 +2593,11 @@ pub fn generate_payment_sync_response(
                     amount: None,
                     minor_amount: None,
                     currency: None,
-                    captured_amount: None,
-                    minor_captured_amount: None,
+                    captured_amount: router_data_v2.resource_common_data.amount_captured,
+                    minor_captured_amount: router_data_v2
+                        .resource_common_data
+                        .minor_amount_captured
+                        .map(|amount_captured| amount_captured.get_amount_as_i64()),
                     payment_method_type: None,
                     capture_method: None,
                     auth_type: None,
@@ -3228,8 +3231,10 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             amount: None,
             minor_amount: None,
             currency: None,
-            captured_amount: None,
-            minor_captured_amount: None,
+            captured_amount: value.amount_captured,
+            minor_captured_amount: value
+                .minor_amount_captured
+                .map(|amount_captured| amount_captured.get_amount_as_i64()),
             payment_method_type: None,
             capture_method: None,
             auth_type: None,
