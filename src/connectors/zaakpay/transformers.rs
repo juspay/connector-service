@@ -642,7 +642,7 @@ impl<T> TryFrom<ZaakPayPaymentsSyncResponse> for PaymentsResponseData {
             .as_ref()
             .map(|od| od.order_id.clone());
 
-        Ok(Self {
+        Ok(PaymentsResponseData {
             status,
             response: Ok(services::Response {
                 status_code: 200,
