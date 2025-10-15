@@ -17,6 +17,7 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
+    types::Connectors,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{Maskable, Secret};
@@ -24,11 +25,14 @@ use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types,
+    events::connector_api_logs::ConnectorEvent,
+    verification::SourceVerification,
 };
 use serde::Serialize;
 use transformers::{ZaakPayPaymentsRequest, ZaakPayPaymentsResponse, ZaakPayPaymentsSyncRequest, ZaakPayPaymentsSyncResponse, ZaakPayRefundSyncRequest, ZaakPayRefundSyncResponse};
 
 use super::macros;
+use crate::types::ResponseRouterData;
 
 // Create all prerequisites using the mandatory macro framework
 macros::create_all_prerequisites!(
