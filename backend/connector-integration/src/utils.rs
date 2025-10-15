@@ -1,16 +1,24 @@
 pub mod xml_utils;
-use common_utils::CustomResult;
+use common_utils::{types::MinorUnit, CustomResult};
 use domain_types::{
-    connector_types::PaymentsAuthorizeData, errors, payment_method_data::PaymentMethodDataTypes,
-    router_data::ErrorResponse, router_response_types::Response,
+    connector_types::{
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsSyncData,
+        SetupMandateRequestData,
+    },
+    errors,
+    payment_method_data::PaymentMethodDataTypes,
+    router_data::ErrorResponse,
+    router_response_types::Response,
 };
 use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde_json::Value;
+use std::str::FromStr;
 pub use xml_utils::preprocess_xml_response_bytes;
 
 type Error = error_stack::Report<errors::ConnectorError>;
 use common_enums::enums;
+use serde::Deserialize;
 
 #[macro_export]
 macro_rules! with_error_response_body {
@@ -121,5 +129,74 @@ pub fn is_refund_failure(status: enums::RefundStatus) -> bool {
         common_enums::RefundStatus::ManualReview
         | common_enums::RefundStatus::Pending
         | common_enums::RefundStatus::Success => false,
+    }
+}
+
+pub fn deserialize_zero_minor_amount_as_none<'de, D>(
+    deserializer: D,
+) -> Result<Option<MinorUnit>, D::Error>
+where
+    D: serde::de::Deserializer<'de>,
+{
+    let amount = Option::<MinorUnit>::deserialize(deserializer)?;
+    match amount {
+        Some(value) if value.get_amount_as_i64() == 0 => Ok(None),
+        _ => Ok(amount),
+    }
+}
+
+pub fn convert_uppercase<'de, D, T>(v: D) -> Result<T, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: FromStr,
+    <T as FromStr>::Err: std::fmt::Debug + std::fmt::Display + std::error::Error,
+{
+    use serde::de::Error;
+    let output = <&str>::deserialize(v)?;
+    output.to_uppercase().parse::<T>().map_err(D::Error::custom)
+}
+
+pub trait SplitPaymentData {
+    fn get_split_payment_data(&self)
+        -> Option<domain_types::connector_types::SplitPaymentsRequest>;
+}
+
+impl SplitPaymentData for PaymentsCaptureData {
+    fn get_split_payment_data(
+        &self,
+    ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
+        None
+    }
+}
+
+impl<T: PaymentMethodDataTypes> SplitPaymentData for PaymentsAuthorizeData<T> {
+    fn get_split_payment_data(
+        &self,
+    ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
+        self.split_payments.clone()
+    }
+}
+
+impl SplitPaymentData for PaymentsSyncData {
+    fn get_split_payment_data(
+        &self,
+    ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
+        self.split_payments.clone()
+    }
+}
+
+impl SplitPaymentData for PaymentVoidData {
+    fn get_split_payment_data(
+        &self,
+    ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
+        None
+    }
+}
+
+impl<T: PaymentMethodDataTypes> SplitPaymentData for SetupMandateRequestData<T> {
+    fn get_split_payment_data(
+        &self,
+    ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
+        None
     }
 }

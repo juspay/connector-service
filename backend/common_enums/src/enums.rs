@@ -1731,3 +1731,64 @@ pub enum CallConnectorAction {
     Trigger,
     HandleResponse(Vec<u8>),
 }
+
+#[derive(
+    Clone,
+    Debug,
+    Eq,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    strum::Display,
+    strum::EnumString,
+    Hash,
+)]
+pub enum PaymentChargeType {
+    #[serde(untagged)]
+    Stripe(StripeChargeType),
+}
+
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    Hash,
+    Eq,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    strum::Display,
+    strum::EnumString,
+)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
+pub enum StripeChargeType {
+    #[default]
+    Direct,
+    Destination,
+}
+
+#[derive(
+    Default,
+    Clone,
+    Debug,
+    Eq,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    strum::Display,
+    strum::EnumString,
+    ToSchema,
+    Hash,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum AuthorizationStatus {
+    Success,
+    Failure,
+    // Processing state is before calling connector
+    #[default]
+    Processing,
+    // Requires merchant action
+    Unresolved,
+}

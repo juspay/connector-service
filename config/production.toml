@@ -51,6 +51,7 @@ rapyd.base_url = "https://api.rapyd.net"
 aci.base_url = "https://eu-prod.oppwa.com/"
 trustpay.base_url = "https://tpgw.trustpay.eu/"
 trustpay.base_url_bank_redirects = "https://aapi.trustpay.eu/"
+stripe.base_url = "https://api.stripe.com/"
 
 # Generic Events Configuration
 [events]
