@@ -624,9 +624,9 @@ impl<T> TryFrom<ZaakPayPaymentsSyncResponse> for PaymentsResponseData {
         })?;
 
         let status = match order.txn_status.as_deref() {
-            Some("success") => AttemptStatus::Charged,
-            Some("pending") => AttemptStatus::Pending,
-            Some("failure") => AttemptStatus::Failure,
+            Some(ZAAKPAY_TXN_STATUS_SUCCESS) => AttemptStatus::Charged,
+            Some(ZAAKPAY_TXN_STATUS_PENDING) => AttemptStatus::Pending,
+            Some(ZAAKPAY_TXN_STATUS_FAILURE) => AttemptStatus::Failure,
             _ => AttemptStatus::Pending,
         };
 
