@@ -54,7 +54,7 @@ where
         Ok(vec![])
     }
 
-    fn base_url<'a>(&self, _req: &'a domain_types::router_data::ConnectorCommonData) -> &'a str {
+    fn base_url<'a>(&self, _req: &'a domain_types::router_data::ConnectorData) -> &'a str {
         "https://api.zaakpay.com"
     }
 }
