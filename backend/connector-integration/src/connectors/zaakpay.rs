@@ -254,17 +254,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     connector_types::PaymentVoidV2 for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentCapture for ZaakPay<T> {}
-// Remove unsupported traits
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::RefundExecute for ZaakPay<T> {}
+// Remove unsupported traits - only implement traits that exist in connector_types
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::RefundSyncV2 for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::MandateSetup for ZaakPay<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentTokenV2<T> for ZaakPay<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::DisputeAccept for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::DisputeDefend for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
