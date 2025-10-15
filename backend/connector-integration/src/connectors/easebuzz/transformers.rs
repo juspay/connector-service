@@ -232,15 +232,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         // Generate hash for sync request
+        let auth_key = auth.key.expose();
+        let auth_salt = auth.salt.expose();
         let hash_string = format!(
             "{}|{}|{}|{}|{}|{}|{}",
-            auth.key.expose(),
+            auth_key,
             item.router_data.request.connector_transaction_id.get_connector_transaction_id()
                 .map_err(|_| errors::ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             amount.to_string(),
             "", // email - not available in sync data
             "", // phone
-            auth.salt.expose(),
+            auth_salt,
             "ver1" // additional parameter
         );
         
