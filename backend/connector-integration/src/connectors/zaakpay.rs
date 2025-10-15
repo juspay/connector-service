@@ -10,7 +10,6 @@ use common_utils::{
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
     connector_types::{
-        ConnectorCommon, ConnectorCommonV2, ConnectorIntegrationV2, ConnectorSpecifications,
         ConnectorWebhookSecrets, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsResponseData,
     },
@@ -35,12 +34,12 @@ use super::macros;
 
 #[derive(Debug, Clone)]
 pub struct ZaakPay<T> {
-    amount_converter: &'static (dyn types::AmountConverterTrait<Output = String> + Sync),
+    amount_converter: &'static (dyn types::AmountConvertor<Output = String> + Sync),
     connector_name: &'static str,
     payment_method_data: std::marker::PhantomData<T>,
 }
 
-impl<T> ConnectorCommon for ZaakPay<T>
+impl<T> interfaces::api::ConnectorCommon for ZaakPay<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
 {
@@ -52,8 +51,8 @@ where
         "ZaakPay".to_string()
     }
 
-    fn get_connector_type(&self) -> domain_types::ConnectorType {
-        domain_types::ConnectorType::PaymentProcessor
+    fn get_connector_type(&self) -> interfaces::connector_types::ConnectorType {
+        interfaces::connector_types::ConnectorType::PaymentProcessor
     }
 
     fn get_connector_version(&self) -> String {
@@ -64,15 +63,15 @@ where
         vec![PaymentMethodType::Upi]
     }
 
-    fn get_connector_specifications(&self) -> ConnectorSpecifications {
-        ConnectorSpecifications {
+    fn get_connector_specifications(&self) -> interfaces::connector_types::ConnectorSpecifications {
+        interfaces::connector_types::ConnectorSpecifications {
             connector_name: self.get_name(),
             connector_type: self.get_connector_type(),
             supported_payment_methods: self.get_supported_payment_methods(),
             supported_flows: vec![
-                domain_types::ConnectorFlow::Authorize,
-                domain_types::ConnectorFlow::PaymentSync,
-                domain_types::ConnectorFlow::RefundSync,
+                interfaces::connector_types::ConnectorFlow::Authorize,
+                interfaces::connector_types::ConnectorFlow::PaymentSync,
+                interfaces::connector_types::ConnectorFlow::RefundSync,
             ],
             supported_currencies: vec!["INR".to_string()],
             supported_countries: vec!["IN".to_string()],
@@ -92,7 +91,7 @@ where
     }
 }
 
-impl<T> ConnectorCommonV2 for ZaakPay<T>
+impl<T> interfaces::api::ConnectorCommonV2 for ZaakPay<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
 {
@@ -119,7 +118,7 @@ where
     fn get_source_verification_data(
         &self,
         _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    ) -> CustomResult<Option<domain_types::connector_types::SourceVerificationData>, errors::ConnectorError> {
+    ) -> CustomResult<Option<interfaces::connector_types::SourceVerificationData>, errors::ConnectorError> {
         Ok(None)
     }
 }
@@ -132,7 +131,7 @@ where
     fn get_source_verification_data(
         &self,
         _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<Option<domain_types::connector_types::SourceVerificationData>, errors::ConnectorError> {
+    ) -> CustomResult<Option<interfaces::connector_types::SourceVerificationData>, errors::ConnectorError> {
         Ok(None)
     }
 }
@@ -145,142 +144,142 @@ where
     fn get_source_verification_data(
         &self,
         _req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<Option<domain_types::connector_types::SourceVerificationData>, errors::ConnectorError> {
+    ) -> CustomResult<Option<interfaces::connector_types::SourceVerificationData>, errors::ConnectorError> {
         Ok(None)
     }
 }
 
-impl<T> interfaces::verification::SourceVerification<domain_types::connector_flow::Void, PaymentFlowData, domain_types::connector_types::PaymentVoidData, PaymentsResponseData>
+impl<T> interfaces::verification::SourceVerification<interfaces::connector_types::Void, PaymentFlowData, interfaces::connector_types::PaymentVoidData, PaymentsResponseData>
     for ZaakPay<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
 {
     fn get_source_verification_data(
         &self,
-        _req: &RouterDataV2<domain_types::connector_flow::Void, PaymentFlowData, domain_types::connector_types::PaymentVoidData, PaymentsResponseData>,
-    ) -> CustomResult<Option<domain_types::connector_types::SourceVerificationData>, errors::ConnectorError> {
+        _req: &RouterDataV2<interfaces::connector_types::Void, PaymentFlowData, interfaces::connector_types::PaymentVoidData, PaymentsResponseData>,
+    ) -> CustomResult<Option<interfaces::connector_types::SourceVerificationData>, errors::ConnectorError> {
         Ok(None)
     }
 }
 
-impl<T> interfaces::verification::SourceVerification<domain_types::connector_flow::Capture, PaymentFlowData, domain_types::connector_types::PaymentsCaptureData, PaymentsResponseData>
+impl<T> interfaces::verification::SourceVerification<interfaces::connector_types::Capture, PaymentFlowData, interfaces::connector_types::PaymentsCaptureData, PaymentsResponseData>
     for ZaakPay<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
 {
     fn get_source_verification_data(
         &self,
-        _req: &RouterDataV2<domain_types::connector_flow::Capture, PaymentFlowData, domain_types::connector_types::PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<Option<domain_types::connector_types::SourceVerificationData>, errors::ConnectorError> {
+        _req: &RouterDataV2<interfaces::connector_types::Capture, PaymentFlowData, interfaces::connector_types::PaymentsCaptureData, PaymentsResponseData>,
+    ) -> CustomResult<Option<interfaces::connector_types::SourceVerificationData>, errors::ConnectorError> {
         Ok(None)
     }
 }
 
-impl<T> interfaces::verification::SourceVerification<domain_types::connector_flow::Refund, RefundFlowData, domain_types::connector_types::RefundsData, RefundsResponseData>
+impl<T> interfaces::verification::SourceVerification<interfaces::connector_types::Refund, RefundFlowData, interfaces::connector_types::RefundsData, RefundsResponseData>
     for ZaakPay<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
 {
     fn get_source_verification_data(
         &self,
-        _req: &RouterDataV2<domain_types::connector_flow::Refund, RefundFlowData, domain_types::connector_types::RefundsData, RefundsResponseData>,
-    ) -> CustomResult<Option<domain_types::connector_types::SourceVerificationData>, errors::ConnectorError> {
+        _req: &RouterDataV2<interfaces::connector_types::Refund, RefundFlowData, interfaces::connector_types::RefundsData, RefundsResponseData>,
+    ) -> CustomResult<Option<interfaces::connector_types::SourceVerificationData>, errors::ConnectorError> {
         Ok(None)
     }
 }
 
-impl<T> interfaces::verification::SourceVerification<domain_types::connector_flow::CreateOrder, PaymentFlowData, domain_types::connector_types::PaymentCreateOrderData, domain_types::connector_types::PaymentCreateOrderResponse>
+impl<T> interfaces::verification::SourceVerification<interfaces::connector_types::CreateOrder, PaymentFlowData, interfaces::connector_types::PaymentCreateOrderData, interfaces::connector_types::PaymentCreateOrderResponse>
     for ZaakPay<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
 {
     fn get_source_verification_data(
         &self,
-        _req: &RouterDataV2<domain_types::connector_flow::CreateOrder, PaymentFlowData, domain_types::connector_types::PaymentCreateOrderData, domain_types::connector_types::PaymentCreateOrderResponse>,
-    ) -> CustomResult<Option<domain_types::connector_types::SourceVerificationData>, errors::ConnectorError> {
+        _req: &RouterDataV2<interfaces::connector_types::CreateOrder, PaymentFlowData, interfaces::connector_types::PaymentCreateOrderData, interfaces::connector_types::PaymentCreateOrderResponse>,
+    ) -> CustomResult<Option<interfaces::connector_types::SourceVerificationData>, errors::ConnectorError> {
         Ok(None)
     }
 }
 
-impl<T> interfaces::verification::SourceVerification<domain_types::connector_flow::CreateSessionToken, PaymentFlowData, domain_types::connector_types::SessionTokenRequestData, domain_types::connector_types::SessionTokenResponseData>
+impl<T> interfaces::verification::SourceVerification<interfaces::connector_types::CreateSessionToken, PaymentFlowData, interfaces::connector_types::SessionTokenRequestData, interfaces::connector_types::SessionTokenResponseData>
     for ZaakPay<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
 {
     fn get_source_verification_data(
         &self,
-        _req: &RouterDataV2<domain_types::connector_flow::CreateSessionToken, PaymentFlowData, domain_types::connector_types::SessionTokenRequestData, domain_types::connector_types::SessionTokenResponseData>,
-    ) -> CustomResult<Option<domain_types::connector_types::SourceVerificationData>, errors::ConnectorError> {
+        _req: &RouterDataV2<interfaces::connector_types::CreateSessionToken, PaymentFlowData, interfaces::connector_types::SessionTokenRequestData, interfaces::connector_types::SessionTokenResponseData>,
+    ) -> CustomResult<Option<interfaces::connector_types::SourceVerificationData>, errors::ConnectorError> {
         Ok(None)
     }
 }
 
-impl<T> interfaces::verification::SourceVerification<domain_types::connector_flow::SetupMandate, PaymentFlowData, domain_types::connector_types::SetupMandateRequestData, PaymentsResponseData>
+impl<T> interfaces::verification::SourceVerification<interfaces::connector_types::SetupMandate, PaymentFlowData, interfaces::connector_types::SetupMandateRequestData, PaymentsResponseData>
     for ZaakPay<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
 {
     fn get_source_verification_data(
         &self,
-        _req: &RouterDataV2<domain_types::connector_flow::SetupMandate, PaymentFlowData, domain_types::connector_types::SetupMandateRequestData, PaymentsResponseData>,
-    ) -> CustomResult<Option<domain_types::connector_types::SourceVerificationData>, errors::ConnectorError> {
+        _req: &RouterDataV2<interfaces::connector_types::SetupMandate, PaymentFlowData, interfaces::connector_types::SetupMandateRequestData, PaymentsResponseData>,
+    ) -> CustomResult<Option<interfaces::connector_types::SourceVerificationData>, errors::ConnectorError> {
         Ok(None)
     }
 }
 
-impl<T> interfaces::verification::SourceVerification<domain_types::connector_flow::RepeatPayment, PaymentFlowData, domain_types::connector_types::RepeatPaymentData, PaymentsResponseData>
+impl<T> interfaces::verification::SourceVerification<interfaces::connector_types::RepeatPayment, PaymentFlowData, interfaces::connector_types::RepeatPaymentData, PaymentsResponseData>
     for ZaakPay<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
 {
     fn get_source_verification_data(
         &self,
-        _req: &RouterDataV2<domain_types::connector_flow::RepeatPayment, PaymentFlowData, domain_types::connector_types::RepeatPaymentData, PaymentsResponseData>,
-    ) -> CustomResult<Option<domain_types::connector_types::SourceVerificationData>, errors::ConnectorError> {
+        _req: &RouterDataV2<interfaces::connector_types::RepeatPayment, PaymentFlowData, interfaces::connector_types::RepeatPaymentData, PaymentsResponseData>,
+    ) -> CustomResult<Option<interfaces::connector_types::SourceVerificationData>, errors::ConnectorError> {
         Ok(None)
     }
 }
 
-impl<T> interfaces::verification::SourceVerification<domain_types::connector_flow::Accept, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::AcceptDisputeData, domain_types::connector_types::DisputeResponseData>
+impl<T> interfaces::verification::SourceVerification<interfaces::connector_types::Accept, interfaces::connector_types::DisputeFlowData, interfaces::connector_types::AcceptDisputeData, interfaces::connector_types::DisputeResponseData>
     for ZaakPay<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
 {
     fn get_source_verification_data(
         &self,
-        _req: &RouterDataV2<domain_types::connector_flow::Accept, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::AcceptDisputeData, domain_types::connector_types::DisputeResponseData>,
-    ) -> CustomResult<Option<domain_types::connector_types::SourceVerificationData>, errors::ConnectorError> {
+        _req: &RouterDataV2<interfaces::connector_types::Accept, interfaces::connector_types::DisputeFlowData, interfaces::connector_types::AcceptDisputeData, interfaces::connector_types::DisputeResponseData>,
+    ) -> CustomResult<Option<interfaces::connector_types::SourceVerificationData>, errors::ConnectorError> {
         Ok(None)
     }
 }
 
-impl<T> interfaces::verification::SourceVerification<domain_types::connector_flow::DefendDispute, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::DisputeDefendData, domain_types::connector_types::DisputeResponseData>
+impl<T> interfaces::verification::SourceVerification<interfaces::connector_types::DefendDispute, interfaces::connector_types::DisputeFlowData, interfaces::connector_types::DisputeDefendData, interfaces::connector_types::DisputeResponseData>
     for ZaakPay<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
 {
     fn get_source_verification_data(
         &self,
-        _req: &RouterDataV2<domain_types::connector_flow::DefendDispute, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::DisputeDefendData, domain_types::connector_types::DisputeResponseData>,
-    ) -> CustomResult<Option<domain_types::connector_types::SourceVerificationData>, errors::ConnectorError> {
+        _req: &RouterDataV2<interfaces::connector_types::DefendDispute, interfaces::connector_types::DisputeFlowData, interfaces::connector_types::DisputeDefendData, interfaces::connector_types::DisputeResponseData>,
+    ) -> CustomResult<Option<interfaces::connector_types::SourceVerificationData>, errors::ConnectorError> {
         Ok(None)
     }
 }
 
-impl<T> interfaces::verification::SourceVerification<domain_types::connector_flow::SubmitEvidence, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::SubmitEvidenceData, domain_types::connector_types::DisputeResponseData>
+impl<T> interfaces::verification::SourceVerification<interfaces::connector_types::SubmitEvidence, interfaces::connector_types::DisputeFlowData, interfaces::connector_types::SubmitEvidenceData, interfaces::connector_types::DisputeResponseData>
     for ZaakPay<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
 {
     fn get_source_verification_data(
         &self,
-        _req: &RouterDataV2<domain_types::connector_flow::SubmitEvidence, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::SubmitEvidenceData, domain_types::connector_types::DisputeResponseData>,
-    ) -> CustomResult<Option<domain_types::connector_types::SourceVerificationData>, errors::ConnectorError> {
+        _req: &RouterDataV2<interfaces::connector_types::SubmitEvidence, interfaces::connector_types::DisputeFlowData, interfaces::connector_types::SubmitEvidenceData, interfaces::connector_types::DisputeResponseData>,
+    ) -> CustomResult<Option<interfaces::connector_types::SourceVerificationData>, errors::ConnectorError> {
         Ok(None)
     }
 }
 
-impl<T> ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T> interfaces::connector_integration_v2::ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
     for ZaakPay<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
@@ -315,7 +314,7 @@ where
             .parse_struct("ZaakPayPaymentsResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
         
-        let router_response = transformers::PaymentsResponseData::try_from(response)?;
+        let router_response = domain_types::connector_types::PaymentsResponseData::try_from(response)?;
         Ok(req.clone().with_response(router_response))
     }
 
@@ -328,7 +327,7 @@ where
     }
 }
 
-impl<T> ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl<T> interfaces::connector_integration_v2::ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
     for ZaakPay<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
@@ -363,7 +362,7 @@ where
             .parse_struct("ZaakPayPaymentsSyncResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
         
-        let router_response = transformers::PaymentsResponseData::try_from(response)?;
+        let router_response = domain_types::connector_types::PaymentsResponseData::try_from(response)?;
         Ok(req.clone().with_response(router_response))
     }
 
@@ -376,7 +375,7 @@ where
     }
 }
 
-impl<T> ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl<T> interfaces::connector_integration_v2::ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
     for ZaakPay<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
@@ -411,7 +410,7 @@ where
             .parse_struct("ZaakPayRefundSyncResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
         
-        let router_response = transformers::RefundsResponseData::try_from(response)?;
+        let router_response = RefundsResponseData::try_from(response)?;
         Ok(req.clone().with_response(router_response))
     }
 
@@ -428,7 +427,7 @@ where
 macro_rules! impl_not_implemented_flow {
     ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
         impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-            ConnectorIntegrationV2<$flow, $common_data, $req, $resp> for ZaakPay<T>
+            interfaces::connector_integration_v2::ConnectorIntegrationV2<$flow, $common_data, $req, $resp> for ZaakPay<T>
         {
             fn build_request_v2(
                 &self,
@@ -459,41 +458,41 @@ macro_rules! impl_not_implemented_flow {
     };
 }
 
-impl_not_implemented_flow!(domain_types::connector_flow::Void, PaymentFlowData, domain_types::connector_types::PaymentVoidData, PaymentsResponseData);
-impl_not_implemented_flow!(domain_types::connector_flow::Capture, PaymentFlowData, domain_types::connector_types::PaymentsCaptureData, PaymentsResponseData);
-impl_not_implemented_flow!(domain_types::connector_flow::Refund, RefundFlowData, domain_types::connector_types::RefundsData, RefundsResponseData);
-impl_not_implemented_flow!(domain_types::connector_flow::CreateOrder, PaymentFlowData, domain_types::connector_types::PaymentCreateOrderData, domain_types::connector_types::PaymentCreateOrderResponse);
-impl_not_implemented_flow!(domain_types::connector_flow::CreateSessionToken, PaymentFlowData, domain_types::connector_types::SessionTokenRequestData, domain_types::connector_types::SessionTokenResponseData);
-impl_not_implemented_flow!(domain_types::connector_flow::SetupMandate, PaymentFlowData, domain_types::connector_types::SetupMandateRequestData, PaymentsResponseData);
-impl_not_implemented_flow!(domain_types::connector_flow::RepeatPayment, PaymentFlowData, domain_types::connector_types::RepeatPaymentData, PaymentsResponseData);
-impl_not_implemented_flow!(domain_types::connector_flow::Accept, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::AcceptDisputeData, domain_types::connector_types::DisputeResponseData);
-impl_not_implemented_flow!(domain_types::connector_flow::DefendDispute, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::DisputeDefendData, domain_types::connector_types::DisputeResponseData);
-impl_not_implemented_flow!(domain_types::connector_flow::SubmitEvidence, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::SubmitEvidenceData, domain_types::connector_types::DisputeResponseData);
+impl_not_implemented_flow!(interfaces::connector_types::Void, PaymentFlowData, interfaces::connector_types::PaymentVoidData, PaymentsResponseData);
+impl_not_implemented_flow!(interfaces::connector_types::Capture, PaymentFlowData, interfaces::connector_types::PaymentsCaptureData, PaymentsResponseData);
+impl_not_implemented_flow!(interfaces::connector_types::Refund, RefundFlowData, interfaces::connector_types::RefundsData, RefundsResponseData);
+impl_not_implemented_flow!(interfaces::connector_types::CreateOrder, PaymentFlowData, interfaces::connector_types::PaymentCreateOrderData, interfaces::connector_types::PaymentCreateOrderResponse);
+impl_not_implemented_flow!(interfaces::connector_types::CreateSessionToken, PaymentFlowData, interfaces::connector_types::SessionTokenRequestData, interfaces::connector_types::SessionTokenResponseData);
+impl_not_implemented_flow!(interfaces::connector_types::SetupMandate, PaymentFlowData, interfaces::connector_types::SetupMandateRequestData, PaymentsResponseData);
+impl_not_implemented_flow!(interfaces::connector_types::RepeatPayment, PaymentFlowData, interfaces::connector_types::RepeatPaymentData, PaymentsResponseData);
+impl_not_implemented_flow!(interfaces::connector_types::Accept, interfaces::connector_types::DisputeFlowData, interfaces::connector_types::AcceptDisputeData, interfaces::connector_types::DisputeResponseData);
+impl_not_implemented_flow!(interfaces::connector_types::DefendDispute, interfaces::connector_types::DisputeFlowData, interfaces::connector_types::DisputeDefendData, interfaces::connector_types::DisputeResponseData);
+impl_not_implemented_flow!(interfaces::connector_types::SubmitEvidence, interfaces::connector_types::DisputeFlowData, interfaces::connector_types::SubmitEvidenceData, interfaces::connector_types::DisputeResponseData);
 
 // Implement all required connector type traits
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::PaymentVoidV2 for ZaakPay<T> {}
+    interfaces::connector_types::PaymentVoidV2 for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::PaymentCaptureV2 for ZaakPay<T> {}
+    interfaces::connector_types::PaymentCaptureV2 for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::PaymentRefundV2 for ZaakPay<T> {}
+    interfaces::connector_types::PaymentRefundV2 for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::PaymentOrderCreate for ZaakPay<T> {}
+    interfaces::connector_types::PaymentOrderCreate for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::PaymentSessionToken for ZaakPay<T> {}
+    interfaces::connector_types::PaymentSessionToken for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::PaymentSetupMandate for ZaakPay<T> {}
+    interfaces::connector_types::PaymentSetupMandate for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::PaymentRepeatPayment for ZaakPay<T> {}
+    interfaces::connector_types::PaymentRepeatPayment for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::DisputeAccept for ZaakPay<T> {}
+    interfaces::connector_types::DisputeAccept for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::DisputeDefend for ZaakPay<T> {}
+    interfaces::connector_types::DisputeDefend for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::DisputeSubmitEvidence for ZaakPay<T> {}
+    interfaces::connector_types::DisputeSubmitEvidence for ZaakPay<T> {}
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::ConnectorServiceTrait<T> for ZaakPay<T> {}
+    interfaces::connector_types::ConnectorServiceTrait<T> for ZaakPay<T> {}
 
 // Error response types
 #[derive(Debug, Deserialize)]
