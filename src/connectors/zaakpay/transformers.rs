@@ -775,7 +775,7 @@ impl<T> TryFrom<ZaakPayRefundSyncResponse> for RefundsResponseData {
             .and_then(|details| details.first())
             .and_then(|detail| detail.arn.clone());
 
-        Ok(Self {
+        Ok(RefundsResponseData {
             refund_status,
             response: Ok(services::Response {
                 status_code: 200,
