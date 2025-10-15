@@ -529,7 +529,7 @@ impl<T> TryFrom<ZaakPayPaymentsResponse> for PaymentsResponseData {
             .ok()
             .map(|amt| MinorUnit::from_major_unit_as_i64(amt));
 
-        Ok(Self {
+        Ok(PaymentsResponseData {
             status,
             response: Ok(services::Response {
                 status_code: 200,
