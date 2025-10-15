@@ -41,7 +41,6 @@ use domain_types::{
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 pub const REFUND_VOIDED: &str = "Refund request has been voided.";
 
@@ -2300,7 +2299,10 @@ impl<
                         Some(PaymentMethodToken::PazeDecrypt(paze_decrypted_data)) => {
                             Self::try_from((&item, paze_decrypted_data))
                         }
-                        _ => Err(errors::ConnectorError::NotImplemented(
+                        Some(PaymentMethodToken::Token(_))
+                        | Some(PaymentMethodToken::ApplePayDecrypt(_))
+                        | Some(PaymentMethodToken::GooglePayDecrypt(_))
+                        | None => Err(errors::ConnectorError::NotImplemented(
                             domain_types::utils::get_unimplemented_payment_method_error_message(
                                 "Cybersource",
                             ),
@@ -2401,141 +2403,126 @@ impl<
             &item.router_data.resource_common_data.connector_meta_data,
         )?;
 
-        let (payment_instrument, authorization_options, commerce_indicator) = match &item
-            .router_data
-            .request
-            .mandate_reference
-        {
-            MandateReferenceId::ConnectorMandateId(connector_mandate_data) => {
-                let connector_mandate_id = connector_mandate_data
-                    .get_connector_mandate_id()
-                    .ok_or(errors::ConnectorError::MissingRequiredField {
-                        field_name: "connector_mandate_id",
-                    })?;
+        let (payment_instrument, authorization_options, commerce_indicator) =
+            match &item.router_data.request.mandate_reference {
+                MandateReferenceId::ConnectorMandateId(connector_mandate_data) => {
+                    let connector_mandate_id = connector_mandate_data
+                        .get_connector_mandate_id()
+                        .ok_or(errors::ConnectorError::MissingRequiredField {
+                            field_name: "connector_mandate_id",
+                        })?;
 
-                let original_amount = item
-                    .router_data
-                    .request
-                    .metadata
-                    .as_ref()
-                    .and_then(|metadata| metadata.get("original_payment_authorized_amount"))
-                    .and_then(|val| val.parse::<i64>().ok());
+                    let original_amount = Some(item.router_data.request.amount);
+                    let original_currency = Some(item.router_data.request.currency);
+                    let original_authorized_amount = match original_amount.zip(original_currency) {
+                        Some((original_amount, original_currency)) => {
+                            Some(domain_types::utils::get_amount_as_string(
+                                &common_enums::CurrencyUnit::Base,
+                                original_amount,
+                                original_currency,
+                            )?)
+                        }
+                        None => None,
+                    };
 
-                let original_currency = item
-                    .router_data
-                    .request
-                    .metadata
-                    .as_ref()
-                    .and_then(|metadata| metadata.get("original_payment_authorized_currency"))
-                    .and_then(|currency_str| common_enums::Currency::from_str(currency_str).ok());
+                    let payment_instrument = CybersoucrePaymentInstrument {
+                        id: connector_mandate_id.into(),
+                    };
 
-                let original_authorized_amount = match original_amount.zip(original_currency) {
-                    Some((original_amount, original_currency)) => {
-                        Some(domain_types::utils::get_amount_as_string(
-                            &common_enums::CurrencyUnit::Base,
+                    let authorization_options = CybersourceAuthorizationOptions {
+                        initiator: None,
+                        merchant_initiated_transaction: Some(MerchantInitiatedTransaction {
+                            reason: None,
+                            original_authorized_amount,
+                            previous_transaction_id: None,
+                        }),
+                        ignore_avs_result: connector_merchant_config.disable_avs,
+                        ignore_cv_result: connector_merchant_config.disable_cvn,
+                    };
+
+                    (
+                        payment_instrument,
+                        Some(authorization_options),
+                        "recurring".to_string(),
+                    )
+                }
+                MandateReferenceId::NetworkMandateId(network_transaction_id) => {
+                    let original_amount = item.router_data.request.minor_amount.get_amount_as_i64();
+                    let original_currency = item.router_data.request.currency;
+                    let original_authorized_amount = Some(
+                        domain_types::utils::to_currency_base_unit_with_zero_decimal_check(
                             original_amount,
                             original_currency,
-                        )?)
-                    }
-                    None => None,
-                };
+                        )?,
+                    );
 
-                let payment_instrument = CybersoucrePaymentInstrument {
-                    id: connector_mandate_id.into(),
-                };
+                    // For NetworkMandateId, we don't use payment_instrument, instead we use the network transaction id
+                    let payment_instrument = CybersoucrePaymentInstrument {
+                        id: Secret::new("dummy".to_string()), // This won't be used for NetworkMandateId
+                    };
 
-                let authorization_options = CybersourceAuthorizationOptions {
-                    initiator: None,
-                    merchant_initiated_transaction: Some(MerchantInitiatedTransaction {
-                        reason: None,
-                        original_authorized_amount,
-                        previous_transaction_id: None,
-                    }),
-                    ignore_avs_result: connector_merchant_config.disable_avs,
-                    ignore_cv_result: connector_merchant_config.disable_cvn,
-                };
+                    let authorization_options = CybersourceAuthorizationOptions {
+                        initiator: Some(CybersourcePaymentInitiator {
+                            initiator_type: Some(CybersourcePaymentInitiatorTypes::Merchant),
+                            credential_stored_on_file: None,
+                            stored_credential_used: Some(true),
+                        }),
+                        merchant_initiated_transaction: Some(MerchantInitiatedTransaction {
+                            reason: Some("7".to_string()),
+                            original_authorized_amount,
+                            previous_transaction_id: Some(Secret::new(
+                                network_transaction_id.clone(),
+                            )),
+                        }),
+                        ignore_avs_result: connector_merchant_config.disable_avs,
+                        ignore_cv_result: connector_merchant_config.disable_cvn,
+                    };
 
-                (
-                    payment_instrument,
-                    Some(authorization_options),
-                    "recurring".to_string(),
-                )
-            }
-            MandateReferenceId::NetworkMandateId(network_transaction_id) => {
-                let original_amount = item.router_data.request.minor_amount.get_amount_as_i64();
-                let original_currency = item.router_data.request.currency;
-                let original_authorized_amount = Some(
-                    domain_types::utils::to_currency_base_unit_with_zero_decimal_check(
-                        original_amount,
-                        original_currency,
-                    )?,
-                );
+                    (
+                        payment_instrument,
+                        Some(authorization_options),
+                        "recurring".to_string(),
+                    )
+                }
+                MandateReferenceId::NetworkTokenWithNTI(mandate_data) => {
+                    let original_amount = item.router_data.request.minor_amount.get_amount_as_i64();
+                    let original_currency = item.router_data.request.currency;
+                    let original_authorized_amount = Some(
+                        domain_types::utils::to_currency_base_unit_with_zero_decimal_check(
+                            original_amount,
+                            original_currency,
+                        )?,
+                    );
 
-                // For NetworkMandateId, we don't use payment_instrument, instead we use the network transaction id
-                let payment_instrument = CybersoucrePaymentInstrument {
-                    id: Secret::new("dummy".to_string()), // This won't be used for NetworkMandateId
-                };
+                    // For NetworkTokenWithNTI, we don't use payment_instrument, instead we use the network transaction id
+                    let payment_instrument = CybersoucrePaymentInstrument {
+                        id: Secret::new("dummy".to_string()), // This won't be used for NetworkTokenWithNTI
+                    };
 
-                let authorization_options = CybersourceAuthorizationOptions {
-                    initiator: Some(CybersourcePaymentInitiator {
-                        initiator_type: Some(CybersourcePaymentInitiatorTypes::Merchant),
-                        credential_stored_on_file: None,
-                        stored_credential_used: Some(true),
-                    }),
-                    merchant_initiated_transaction: Some(MerchantInitiatedTransaction {
-                        reason: Some("7".to_string()),
-                        original_authorized_amount,
-                        previous_transaction_id: Some(Secret::new(network_transaction_id.clone())),
-                    }),
-                    ignore_avs_result: connector_merchant_config.disable_avs,
-                    ignore_cv_result: connector_merchant_config.disable_cvn,
-                };
+                    let authorization_options = CybersourceAuthorizationOptions {
+                        initiator: Some(CybersourcePaymentInitiator {
+                            initiator_type: Some(CybersourcePaymentInitiatorTypes::Merchant),
+                            credential_stored_on_file: None,
+                            stored_credential_used: Some(true),
+                        }),
+                        merchant_initiated_transaction: Some(MerchantInitiatedTransaction {
+                            reason: Some("7".to_string()), // 7 is for MIT using NTI
+                            original_authorized_amount,
+                            previous_transaction_id: Some(Secret::new(
+                                mandate_data.network_transaction_id.clone(),
+                            )),
+                        }),
+                        ignore_avs_result: connector_merchant_config.disable_avs,
+                        ignore_cv_result: connector_merchant_config.disable_cvn,
+                    };
 
-                (
-                    payment_instrument,
-                    Some(authorization_options),
-                    "recurring".to_string(),
-                )
-            }
-            MandateReferenceId::NetworkTokenWithNTI(mandate_data) => {
-                let original_amount = item.router_data.request.minor_amount.get_amount_as_i64();
-                let original_currency = item.router_data.request.currency;
-                let original_authorized_amount = Some(
-                    domain_types::utils::to_currency_base_unit_with_zero_decimal_check(
-                        original_amount,
-                        original_currency,
-                    )?,
-                );
-
-                // For NetworkTokenWithNTI, we don't use payment_instrument, instead we use the network transaction id
-                let payment_instrument = CybersoucrePaymentInstrument {
-                    id: Secret::new("dummy".to_string()), // This won't be used for NetworkTokenWithNTI
-                };
-
-                let authorization_options = CybersourceAuthorizationOptions {
-                    initiator: Some(CybersourcePaymentInitiator {
-                        initiator_type: Some(CybersourcePaymentInitiatorTypes::Merchant),
-                        credential_stored_on_file: None,
-                        stored_credential_used: Some(true),
-                    }),
-                    merchant_initiated_transaction: Some(MerchantInitiatedTransaction {
-                        reason: Some("7".to_string()), // 7 is for MIT using NTI
-                        original_authorized_amount,
-                        previous_transaction_id: Some(Secret::new(
-                            mandate_data.network_transaction_id.clone(),
-                        )),
-                    }),
-                    ignore_avs_result: connector_merchant_config.disable_avs,
-                    ignore_cv_result: connector_merchant_config.disable_cvn,
-                };
-
-                (
-                    payment_instrument,
-                    Some(authorization_options),
-                    "recurring".to_string(),
-                )
-            }
-        };
+                    (
+                        payment_instrument,
+                        Some(authorization_options),
+                        "recurring".to_string(),
+                    )
+                }
+            };
 
         // Create ProcessingInformation for repeat payments with proper merchant_initiated_transaction
         let processing_information = ProcessingInformation {
