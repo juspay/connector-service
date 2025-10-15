@@ -87,6 +87,10 @@ where
     fn get_webhook_details(&self) -> Option<ConnectorWebhookSecrets> {
         None
     }
+
+    fn base_url<'a>(&self, _req: &'a utils::ConnectorCommonData) -> &'a str {
+        ZAAKPAY_API_BASE_URL
+    }
 }
 
 impl<T> ConnectorCommonV2 for ZaakPay<T>
