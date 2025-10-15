@@ -697,8 +697,3 @@ impl_source_verification_stub!(SubmitEvidence, DisputeFlowData, SubmitEvidenceDa
 impl_source_verification_stub!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
 impl_source_verification_stub!(CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse);
 impl_source_verification_stub!(CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData);
-impl_source_verification_stub!(PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData);
-impl_source_verification_stub!(Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData);
-impl_source_verification_stub!(PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData);
-impl_source_verification_stub!(PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse);
-impl_source_verification_stub!(CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData);
