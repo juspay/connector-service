@@ -179,37 +179,18 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Option<services::Request>, errors::ConnectorError> {
             let request = ZaakPayPaymentsRequest::try_from(req)?;
-            let url = self.base_url(req) + "/transaction/.do";
+            let url = self.base_url(&utils::ConnectorCommonData {
+                connector_name: self.connector_name,
+                resource_common_data: &req.router_data.resource_common_data,
+                connector_auth_type: &req.router_data.connector_auth_type,
+                test_mode: req.router_data.resource_common_data.test_mode,
+            }) + ZAAKPAY_AUTHORIZE_URL;
             Ok(Some(services::RequestBuilder::new()
                 .method(services::Method::Post)
                 .url(&url)
                 .attach_default_headers()
                 .set_body(RequestContent::Json(request))
                 .build()))
-        }
-
-        fn handle_response_v2(
-            &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            res: services::Response,
-        ) -> CustomResult<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, errors::ConnectorError> {
-            let response: ZaakPayPaymentsResponse = res
-                .response
-                .parse_struct("ZaakPayPaymentsResponse")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-            
-            let router_data = RouterDataV2::try_from((req, response))?;
-            Ok(router_data)
-        }
-
-        fn get_error_response_v2(
-            &self,
-            res: &[u8],
-        ) -> CustomResult<errors::ConnectorError, errors::ConnectorError> {
-            let error_response: ZaakPayErrorResponse = res
-                .parse_struct("ZaakPayErrorResponse")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-            Ok(errors::ConnectorError::from(error_response))
         }
     }
 );
