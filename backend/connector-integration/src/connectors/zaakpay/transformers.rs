@@ -372,16 +372,17 @@ impl TryFrom<ZaakPayPaymentsResponse> for PaymentsResponseData {
             _ => AttemptStatus::Failure,
         };
 
-        Ok(PaymentsResponseData {
-            status,
-            amount: response.orderDetail.amount.parse().ok().map(|amt: i64| {
-                MinorUnit::new(amt)
-            }),
-            currency: Some(response.orderDetail.currency.parse().unwrap_or(common_enums::Currency::USD)),
-            connector_transaction_id: Some(response.orderDetail.orderId),
-            capture_method: Some(common_enums::CaptureMethod::Automatic),
-            error_message: Some(response.responseDescription),
-            ..Default::default()
+        Ok(domain_types::connector_types::PaymentsResponseData::TransactionResponse {
+            resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
+                response.orderDetail.orderId,
+            ),
+            redirection_data: None,
+            mandate_reference: None,
+            connector_metadata: None,
+            network_txn_id: None,
+            connector_response_reference_id: None,
+            incremental_authorization_allowed: None,
+            status_code: 200,
         })
     }
 }
