@@ -174,7 +174,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             amount.to_string(),
             "Product Info", // productinfo
             customer_id.get_string_repr(), // firstname
-            item.router_data.request.email.as_ref().map(|e| e.expose().clone()).unwrap_or_default().to_string(),
+            item.router_data.request.email.as_ref().map(|e| e.expose().clone()).unwrap_or_default().expose().to_string(),
             "", // phone
             return_url, // surl
             return_url, // furl
