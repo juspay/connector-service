@@ -355,13 +355,13 @@ where
             .request
             .email
             .clone()
-            .unwrap_or_else(|| format!("{}@example.com", customer_id_string));
+            .unwrap_or_else(|| format!("{}@example.com", customer_id));
         let phone = item
             .router_data
             .request
             .phone
             .clone()
-            .unwrap_or_else(|| "9999999999".to_string());
+            .unwrap_or_else(|| ZAAKPAY_DEFAULT_PHONE.to_string());
 
         // Extract return URL
         let return_url = item
