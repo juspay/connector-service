@@ -1084,7 +1084,7 @@ impl<
             + 'static
             + Serialize,
     >
-    From<(
+    TryFrom<(
         &CybersourceRouterData<
             RouterDataV2<
                 Authorize,
@@ -1097,7 +1097,9 @@ impl<
         Option<BillTo>,
     )> for OrderInformationWithBill
 {
-    fn from(
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
         (item, bill_to): (
             &CybersourceRouterData<
                 RouterDataV2<
@@ -1110,7 +1112,7 @@ impl<
             >,
             Option<BillTo>,
         ),
-    ) -> Self {
+    ) -> Result<Self, Self::Error> {
         let total_amount = item
             .connector
             .amount_converter
@@ -1118,15 +1120,14 @@ impl<
                 item.router_data.request.minor_amount.to_owned(),
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorError::RequestEncodingFailed)
-            .expect("Failed to convert amount");
-        Self {
+            .change_context(ConnectorError::AmountConversionFailed)?;
+        Ok(Self {
             amount_details: Amount {
                 total_amount,
                 currency: item.router_data.request.currency,
             },
             bill_to,
-        }
+        })
     }
 }
 
@@ -1240,7 +1241,7 @@ impl<
             item.router_data.resource_common_data.get_optional_billing(),
             email,
         )?;
-        let order_information = OrderInformationWithBill::from((item, Some(bill_to)));
+        let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
 
         let raw_card_type = ccard.card_network.clone();
 
@@ -1335,7 +1336,7 @@ impl<
             item.router_data.resource_common_data.get_optional_billing(),
             email,
         )?;
-        let order_information = OrderInformationWithBill::from((item, Some(bill_to)));
+        let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
 
         let card_issuer =
             domain_types::utils::get_card_issuer(token_data.get_network_token().peek());
@@ -1459,7 +1460,7 @@ impl<
             country: paze_data.billing_address.country_code,
             email,
         };
-        let order_information = OrderInformationWithBill::from((item, Some(bill_to)));
+        let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
 
         let payment_information =
             PaymentInformation::NetworkToken(Box::new(NetworkTokenPaymentInformation {
@@ -1546,7 +1547,7 @@ impl<
             item.router_data.resource_common_data.get_optional_billing(),
             email,
         )?;
-        let order_information = OrderInformationWithBill::from((item, Some(bill_to)));
+        let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
         let processing_information = ProcessingInformation::try_from((
             item,
             Some(PaymentSolution::ApplePay),
@@ -1673,7 +1674,7 @@ impl<
             item.router_data.resource_common_data.get_optional_billing(),
             email,
         )?;
-        let order_information = OrderInformationWithBill::from((item, Some(bill_to)));
+        let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
 
         let payment_information =
             PaymentInformation::GooglePayToken(Box::new(GooglePayTokenPaymentInformation {
@@ -1767,7 +1768,7 @@ impl<
             item.router_data.resource_common_data.get_optional_billing(),
             email,
         )?;
-        let order_information = OrderInformationWithBill::from((item, Some(bill_to)));
+        let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
 
         let payment_information =
             PaymentInformation::GooglePay(Box::new(GooglePayPaymentInformation {
@@ -1890,7 +1891,7 @@ impl<
             item.router_data.resource_common_data.get_optional_billing(),
             email,
         )?;
-        let order_information = OrderInformationWithBill::from((item, Some(bill_to)));
+        let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
 
         let payment_information =
             PaymentInformation::GooglePay(Box::new(GooglePayPaymentInformation {
@@ -2010,7 +2011,7 @@ impl<
             item.router_data.resource_common_data.get_optional_billing(),
             email,
         )?;
-        let order_information = OrderInformationWithBill::from((item, Some(bill_to)));
+        let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
 
         let payment_information = get_samsung_pay_payment_information(&samsung_pay_data)
             .attach_printable("Failed to get samsung pay payment information")?;
@@ -2167,7 +2168,7 @@ impl<
                                 email,
                             )?;
                             let order_information =
-                                OrderInformationWithBill::from((&item, Some(bill_to)));
+                                OrderInformationWithBill::try_from((&item, Some(bill_to)))?;
                             let processing_information = ProcessingInformation::try_from((
                                 &item,
                                 Some(PaymentSolution::ApplePay),
@@ -2519,7 +2520,7 @@ impl<
                 item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorError::AmountConversionFailed)?;
         Ok(Self {
             processing_information: ProcessingInformation {
                 capture_options: Some(CaptureOptions {
@@ -2606,7 +2607,7 @@ impl<
             .connector
             .amount_converter
             .convert(value.router_data.request.amount.unwrap(), currency)
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorError::AmountConversionFailed)?;
         Ok(Self {
             client_reference_information: ClientReferenceInformation {
                 code: Some(
@@ -3226,7 +3227,7 @@ impl<
                 item.router_data.request.amount,
                 item.router_data.request.currency.unwrap(),
             )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorError::AmountConversionFailed)?;
         let amount_details = Amount {
             total_amount,
             currency: item.router_data.request.currency.ok_or(
@@ -3508,7 +3509,7 @@ impl<
                 item.router_data.request.amount,
                 item.router_data.request.currency.unwrap(),
             )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorError::AmountConversionFailed)?;
         let amount_details = Amount {
             total_amount,
             currency: item.router_data.request.currency.ok_or(
@@ -4072,7 +4073,7 @@ impl<
                 item.router_data.request.minor_payment_amount.to_owned(),
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorError::AmountConversionFailed)?;
         Ok(Self {
             order_information: OrderInformation {
                 amount_details: Amount {
