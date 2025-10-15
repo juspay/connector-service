@@ -459,7 +459,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::validation::ValidationTrait for TPSL<T>
+    connector_types::ValidationTrait for TPSL<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
