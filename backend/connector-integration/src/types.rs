@@ -57,6 +57,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Aci => Box::new(Aci::new()),
             ConnectorEnum::Trustpay => Box::new(Trustpay::new()),
             ConnectorEnum::Stripe => Box::new(Stripe::new()),
+            ConnectorEnum::EaseBuzz => Box::new(EaseBuzz::new()),
         }
     }
 }
