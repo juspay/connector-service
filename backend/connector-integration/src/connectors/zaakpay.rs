@@ -21,7 +21,7 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
-use masking::ExposeInterface;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{with_error_response_body};
