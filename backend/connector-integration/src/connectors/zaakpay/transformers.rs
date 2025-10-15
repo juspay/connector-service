@@ -370,17 +370,17 @@ impl<T: PaymentMethodDataTypes> TryFrom<&RouterDataV2<Authorize, PaymentFlowData
     }
 }
 
-impl<T: PaymentMethodDataTypes> TryFrom<(ZaakPayPaymentsResponse, &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>)>
+impl TryFrom<(ZaakPayPaymentsResponse, &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<()>, PaymentsResponseData>)>
     for PaymentsResponseData
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from((response, req): (ZaakPayPaymentsResponse, &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>)) -> Result<Self, Self::Error> {
+    fn try_from((response, _req): (ZaakPayPaymentsResponse, &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<()>, PaymentsResponseData>)) -> Result<Self, Self::Error> {
         let status = match response.responseCode.as_str() {
-            "100" => AttemptStatus::Charged,
-            "101" => AttemptStatus::Pending,
-            "102" => AttemptStatus::Failure,
-            _ => AttemptStatus::Failure,
+            "100" => common_enums::AttemptStatus::Charged,
+            "101" => common_enums::AttemptStatus::Pending,
+            "102" => common_enums::AttemptStatus::Failure,
+            _ => common_enums::AttemptStatus::Failure,
         };
 
         let amount_received = response.orderDetail.amount.parse::<f64>()
