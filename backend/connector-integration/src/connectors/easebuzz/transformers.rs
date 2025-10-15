@@ -139,10 +139,6 @@ impl TryFrom<&ConnectorAuthType> for EaseBuzzAuth {
                 key: api_key.clone(),
                 salt: key1.clone().unwrap_or_else(|| Secret::new("".to_string())),
             }),
-            ConnectorAuthType::Key { api_key } => Ok(Self {
-                key: api_key.clone(),
-                salt: Secret::new("".to_string()), // Default salt if not provided
-            }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
     }
