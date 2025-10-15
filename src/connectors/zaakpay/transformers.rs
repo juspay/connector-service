@@ -319,13 +319,23 @@ where
         item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         // Extract merchant identifier from auth
-        let merchant_identifier = item
-            .router_data
-            .connector_auth_type
-            .get_merchant_id()
-            .change_context(errors::ConnectorError::MissingRequiredField {
-                field_name: "merchant_identifier",
-            })?;
+        let merchant_identifier = match &item.router_data.connector_auth_type {
+            domain_types::connector_types::ConnectorAuthType::SignatureKey(auth) => {
+                auth.api_key.clone()
+            }
+            domain_types::connector_types::ConnectorAuthType::HeaderKey(auth) => {
+                auth.api_key.clone()
+            }
+            domain_types::connector_types::ConnectorAuthType::BodyKey(auth) => {
+                auth.api_key.clone()
+            }
+            _ => {
+                return Err(errors::ConnectorError::MissingRequiredField {
+                    field_name: "merchant_identifier",
+                }
+                .into());
+            }
+        };
 
         // Extract amount using amount converter
         let amount = item.amount.get_amount_as_string();
@@ -551,13 +561,23 @@ where
         item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         // Extract merchant identifier from auth
-        let merchant_identifier = item
-            .router_data
-            .connector_auth_type
-            .get_merchant_id()
-            .change_context(errors::ConnectorError::MissingRequiredField {
-                field_name: "merchant_identifier",
-            })?;
+        let merchant_identifier = match &item.router_data.connector_auth_type {
+            domain_types::connector_types::ConnectorAuthType::SignatureKey(auth) => {
+                auth.api_key.clone()
+            }
+            domain_types::connector_types::ConnectorAuthType::HeaderKey(auth) => {
+                auth.api_key.clone()
+            }
+            domain_types::connector_types::ConnectorAuthType::BodyKey(auth) => {
+                auth.api_key.clone()
+            }
+            _ => {
+                return Err(errors::ConnectorError::MissingRequiredField {
+                    field_name: "merchant_identifier",
+                }
+                .into());
+            }
+        };
 
         // Extract amount using amount converter
         let amount = item.amount.get_amount_as_string();
@@ -657,13 +677,23 @@ where
         item: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
         // Extract merchant identifier from auth
-        let merchant_identifier = item
-            .router_data
-            .connector_auth_type
-            .get_merchant_id()
-            .change_context(errors::ConnectorError::MissingRequiredField {
-                field_name: "merchant_identifier",
-            })?;
+        let merchant_identifier = match &item.router_data.connector_auth_type {
+            domain_types::connector_types::ConnectorAuthType::SignatureKey(auth) => {
+                auth.api_key.clone()
+            }
+            domain_types::connector_types::ConnectorAuthType::HeaderKey(auth) => {
+                auth.api_key.clone()
+            }
+            domain_types::connector_types::ConnectorAuthType::BodyKey(auth) => {
+                auth.api_key.clone()
+            }
+            _ => {
+                return Err(errors::ConnectorError::MissingRequiredField {
+                    field_name: "merchant_identifier",
+                }
+                .into());
+            }
+        };
 
         // Extract amount using amount converter
         let amount = item.amount.get_amount_as_string();
