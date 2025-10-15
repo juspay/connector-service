@@ -82,3 +82,6 @@ pub use self::trustpay::Trustpay;
 
 pub mod stripe;
 pub use self::stripe::Stripe;
+
+pub mod zaakpay;
+pub use self::zaakpay::ZaakPay;
