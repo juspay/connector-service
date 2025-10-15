@@ -367,10 +367,9 @@ where
         let return_url = item
             .router_data
             .request
-            .get_router_return_url()
-            .change_context(errors::ConnectorError::MissingRequiredField {
-                field_name: "return_url",
-            })?;
+            .router_return_url
+            .clone()
+            .unwrap_or_else(|| "https://default.return.url".to_string());
 
         // Determine mode (test/live)
         let mode = if item.router_data.resource_common_data.test_mode.unwrap_or(false) {
