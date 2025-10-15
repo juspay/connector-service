@@ -4,6 +4,57 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.10.14.0
+
+### Features
+
+- **connector:** Added AccessToken flow for trustpay ([#219](https://github.com/juspay/connector-service/pull/219)) ([`d254128`](https://github.com/juspay/connector-service/commit/d254128376ca1dd3d1eab0d2a17fdd1c820b1d63))
+
+**Full Changelog:** [`2025.10.10.1...2025.10.14.0`](https://github.com/juspay/connector-service/compare/2025.10.10.1...2025.10.14.0)
+
+- - -
+
+## 2025.10.10.1
+
+### Refactors
+
+- **connector:** Update phonepe sandbox endpoint ([#218](https://github.com/juspay/connector-service/pull/218)) ([`343fd67`](https://github.com/juspay/connector-service/commit/343fd67743060d4daa5d2e08122113eaab48a24c))
+
+**Full Changelog:** [`2025.10.10.0...2025.10.10.1`](https://github.com/juspay/connector-service/compare/2025.10.10.0...2025.10.10.1)
+
+- - -
+
+## 2025.10.10.0
+
+### Features
+
+- **connector:** [TRUSTPAY] Connector Integration PSync flow ([#217](https://github.com/juspay/connector-service/pull/217)) ([`764aeba`](https://github.com/juspay/connector-service/commit/764aeba435816ce9dd2f21c972142ac4e036c0ef))
+
+**Full Changelog:** [`2025.10.09.0...2025.10.10.0`](https://github.com/juspay/connector-service/compare/2025.10.09.0...2025.10.10.0)
+
+- - -
+
+## 2025.10.09.0
+
+### Miscellaneous Tasks
+
+- Added webhooks support in Noon ([#156](https://github.com/juspay/connector-service/pull/156)) ([`6b24ce3`](https://github.com/juspay/connector-service/commit/6b24ce3550cf384258953143843fc9715978af94))
+
+**Full Changelog:** [`2025.10.08.0...2025.10.09.0`](https://github.com/juspay/connector-service/compare/2025.10.08.0...2025.10.09.0)
+
+- - -
+
+## 2025.10.08.0
+
+### Features
+
+- **connector:** [Aci] Connector Integration ([#212](https://github.com/juspay/connector-service/pull/212)) ([`ccd05e4`](https://github.com/juspay/connector-service/commit/ccd05e47115e33a14c9f4b804b3eafb7922ecc41))
+- **framework:** Run UCS in Shadow mode ([#213](https://github.com/juspay/connector-service/pull/213)) ([`96bce38`](https://github.com/juspay/connector-service/commit/96bce38ad52b0ffcb2b81603e0ac6a9d0a6e11ef))
+
+**Full Changelog:** [`2025.10.02.0...2025.10.08.0`](https://github.com/juspay/connector-service/compare/2025.10.02.0...2025.10.08.0)
+
+- - -
+
 ## 2025.10.02.0
 
 ### Features

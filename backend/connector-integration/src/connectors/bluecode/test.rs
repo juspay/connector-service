@@ -92,6 +92,8 @@ mod tests {
                     connector_response_headers: None,
                     raw_connector_response: None,
                     raw_connector_request: None,
+                    minor_amount_capturable: None,
+                    connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::HeaderKey {
                     api_key: Secret::new(api_key),
@@ -139,6 +141,11 @@ mod tests {
                     merchant_account_id: None,
                     merchant_config_currency: None,
                     all_keys_required: None,
+                    customer_acceptance: None,
+                    split_payments: None,
+                    request_extended_authorization: None,
+                    setup_mandate_details: None,
+                    enable_overcapture: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -228,6 +235,8 @@ mod tests {
                     connector_response_headers: None,
                     raw_connector_response: None,
                     raw_connector_request: None,
+                    minor_amount_capturable: None,
+                    connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::HeaderKey {
                     api_key: Secret::new(api_key),
@@ -267,6 +276,11 @@ mod tests {
                     merchant_account_id: None,
                     merchant_config_currency: None,
                     all_keys_required: None,
+                    customer_acceptance: None,
+                    split_payments: None,
+                    request_extended_authorization: None,
+                    setup_mandate_details: None,
+                    enable_overcapture: None,
                 },
                 response: Err(ErrorResponse::default()),
             };

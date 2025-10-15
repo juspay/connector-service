@@ -141,7 +141,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("mifinity_test_{}", get_timestamp()))),
         }),
-        connector_customer_id: Some("Test_customer".to_string()),
+        customer_id: Some("Test_customer".to_string()),
         enrolled_for_3ds: false,
         request_incremental_authorization: false,
         capture_method: Some(i32::from(capture_method)),
@@ -167,6 +167,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         access_token: None,
         capture_method: None,
         handle_response: None,
+        amount: TEST_AMOUNT,
+        currency: i32::from(Currency::Eur),
     }
 }
 
