@@ -428,7 +428,7 @@ macros::create_all_prerequisites!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: EaseBuzz,
-    curl_request: Form(EaseBuzzPaymentsRequest),
+    curl_request: FormData(EaseBuzzPaymentsRequest),
     curl_response: EaseBuzzPaymentsResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
