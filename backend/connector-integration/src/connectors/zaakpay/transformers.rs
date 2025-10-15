@@ -120,6 +120,146 @@ pub struct NetBankingRespType {
     pub bankName: Option<String>,
 }
 
+// Sync request types
+#[derive(Debug, Serialize)]
+pub struct ZaakPayPaymentsSyncRequest {
+    #[serde(rename = "_data")]
+    pub data: ZaakPayCheckDataRequest,
+    pub checksum: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ZaakPayCheckDataRequest {
+    #[serde(rename = "merchantIdentifier")]
+    pub merchant_identifier: String,
+    pub mode: String,
+    #[serde(rename = "orderDetail")]
+    pub order_detail: ZaakPayOrderDetailType,
+    #[serde(rename = "refundDetail")]
+    pub refund_detail: Option<ZaakPayRefundDetail>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ZaakPayRefundDetail {
+    #[serde(rename = "merchantRefId")]
+    pub merchant_ref_id: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ZaakPayOrderDetailType {
+    #[serde(rename = "orderId")]
+    pub order_id: String,
+    pub amount: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ZaakPayRefundSyncRequest {
+    #[serde(rename = "_data")]
+    pub data: ZaakPayCheckDataRequest,
+    pub checksum: String,
+}
+
+// Sync response types
+#[derive(Debug, Deserialize)]
+pub struct ZaakPayPaymentsSyncResponse {
+    #[serde(rename = "merchantIdentifier")]
+    pub merchant_identifier: String,
+    pub orders: Vec<ZaakPayOrderDetailsResponse>,
+    pub version: String,
+    pub success: Option<bool>,
+    pub checksum: Option<String>,
+    #[serde(rename = "partialRefundAmt")]
+    pub partial_refund_amt: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ZaakPayOrderDetailsResponse {
+    #[serde(rename = "orderDetail")]
+    pub order_detail: Option<ZaakPayOrderDetailResType>,
+    pub paymentinstrument: Option<ZaakPayPaymentinstrumentType>,
+    #[serde(rename = "responseCode")]
+    pub response_code: String,
+    #[serde(rename = "responseDescription")]
+    pub response_description: String,
+    #[serde(rename = "txnStatus")]
+    pub txn_status: Option<String>,
+    #[serde(rename = "txnDate")]
+    pub txn_date: Option<String>,
+    #[serde(rename = "userAccountDebited")]
+    pub user_account_debited: Option<bool>,
+    #[serde(rename = "partialRefundAmt")]
+    pub partial_refund_amt: Option<String>,
+    #[serde(rename = "refundDetails")]
+    pub refund_details: Option<Vec<ZaakPayRefundDetails>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ZaakPayRefundDetails {
+    pub amount: String,
+    pub arn: Option<String>,
+    #[serde(rename = "merchantRefId")]
+    pub merchant_ref_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ZaakPayOrderDetailResType {
+    #[serde(rename = "orderId")]
+    pub order_id: String,
+    #[serde(rename = "txnid")]
+    pub txn_id: Option<String>,
+    pub amount: Option<String>,
+    #[serde(rename = "productDescription")]
+    pub product_description: Option<String>,
+    #[serde(rename = "createDate")]
+    pub create_date: Option<String>,
+    #[serde(rename = "product1Description")]
+    pub product1_description: Option<String>,
+    #[serde(rename = "product2Description")]
+    pub product2_description: Option<String>,
+    #[serde(rename = "product3Description")]
+    pub product3_description: Option<String>,
+    #[serde(rename = "product4Description")]
+    pub product4_description: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ZaakPayPaymentinstrumentType {
+    #[serde(rename = "paymentMode")]
+    pub payment_mode: Option<String>,
+    pub card: Option<ZaakPayCardType>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ZaakPayCardType {
+    #[serde(rename = "cardToken")]
+    pub card_token: String,
+    #[serde(rename = "cardId")]
+    pub card_id: String,
+    #[serde(rename = "cardScheme")]
+    pub card_scheme: String,
+    pub bank: String,
+    #[serde(rename = "cardHashId")]
+    pub card_hash_id: String,
+    #[serde(rename = "paymentMethod")]
+    pub payment_method: String,
+    #[serde(rename = "first4")]
+    pub first4: String,
+    #[serde(rename = "last4")]
+    pub last4: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ZaakPayRefundSyncResponse {
+    #[serde(rename = "merchantIdentifier")]
+    pub merchant_identifier: String,
+    pub orders: Vec<ZaakPayOrderDetailsResponse>,
+    pub version: String,
+    pub success: Option<bool>,
+    pub checksum: Option<String>,
+    #[serde(rename = "partialRefundAmt")]
+    pub partial_refund_amt: Option<String>,
+}
+
 // Transformer implementations
 
 impl<T: PaymentMethodDataTypes + Debug> TryFrom<&RouterDataV2<domain_types::connector_flow::Authorize, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsAuthorizeData<T>, PaymentsResponseData>>
