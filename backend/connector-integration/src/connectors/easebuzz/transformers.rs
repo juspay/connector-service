@@ -231,7 +231,7 @@ impl<
         let hash = generate_easebuzz_hash(
             &item.router_data.connector_auth_type,
             &item.router_data.resource_common_data.connector_request_reference_id,
-            &amount,
+            &amount.get_amount_as_string(),
             &item.router_data.request.currency.to_string(),
         )?;
 
