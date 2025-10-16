@@ -229,8 +229,8 @@ pub struct AccessTokenIntegrityObject {
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct CreateConnectorCustomerIntegrityObject {
-    pub customer_id: Option<String>,
-    pub email: Option<String>,
+    pub customer_id: Option<Secret<String>>,
+    pub email: Option<Secret<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]

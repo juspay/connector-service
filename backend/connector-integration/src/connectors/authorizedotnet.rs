@@ -846,7 +846,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// SetupMandate is now unimplemented - customer creation moved to CreateConnectorCustomer flow
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -905,7 +904,7 @@ macros::macro_connector_implementation!(
     flow_request: ConnectorCustomerData,
     flow_response: ConnectorCustomerResponse,
     http_method: Post,
-    preprocess_response: true,
+    preprocess_response: true, // Keeping true for Authorize.net which needs BOM handling
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {

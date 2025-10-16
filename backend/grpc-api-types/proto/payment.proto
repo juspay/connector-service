@@ -1150,7 +1150,7 @@ message PaymentServiceAuthorizeRequest {
   // Customer Information
   optional SecretString email = 9; // Email address of the customer
   optional string customer_name = 10; // Name of the customer
-  optional string customer_id = 32; // Merchant's/Hyperswitch's customer ID
+  optional string customer_id = 32; // Merchant's customer ID
   optional string connector_customer_id = 11; // Customer ID as recognized by the connector
   
   // Address Information

@@ -2913,7 +2913,7 @@ impl<
                     payment_profiles: None,
                     ship_to_list,
                 },
-                validation_mode: None, // Don't send validationMode (Hyperswitch doesn't have this field)
+                validation_mode: None,
             },
         })
     }

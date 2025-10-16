@@ -4,7 +4,7 @@
 //! It ensures that request and response data remain consistent across connector interactions
 //! by comparing critical fields like amounts, currencies, and transaction identifiers.
 use common_utils::errors::IntegrityCheckError;
-use hyperswitch_masking::PeekInterface;
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 // Domain type imports
 use domain_types::connector_types::{
     AcceptDisputeData, AccessTokenRequestData, ConnectorCustomerData, DisputeDefendData,
@@ -431,8 +431,8 @@ impl GetIntegrityObject<CreateConnectorCustomerIntegrityObject> for ConnectorCus
 
     fn get_request_integrity_object(&self) -> CreateConnectorCustomerIntegrityObject {
         CreateConnectorCustomerIntegrityObject {
-            customer_id: self.customer_id.clone(),
-            email: self.email.as_ref().map(|e| e.peek().clone()),
+            customer_id: self.customer_id.clone().map(Secret::new),
+            email: self.email.as_ref().map(|e| Secret::new(e.peek().clone())),
         }
     }
 }
@@ -980,26 +980,36 @@ impl FlowIntegrity for CreateConnectorCustomerIntegrityObject {
 
         // Check customer_id
         if req_integrity_object.customer_id != res_integrity_object.customer_id {
+            let req_customer_id = req_integrity_object
+                .customer_id
+                .as_ref()
+                .map(|s| s.clone().expose())
+                .unwrap_or_else(|| "None".to_string());
+            let res_customer_id = res_integrity_object
+                .customer_id
+                .as_ref()
+                .map(|s| s.clone().expose())
+                .unwrap_or_else(|| "None".to_string());
             mismatched_fields.push(format_mismatch(
                 "customer_id",
-                req_integrity_object
-                    .customer_id
-                    .as_deref()
-                    .unwrap_or("None"),
-                res_integrity_object
-                    .customer_id
-                    .as_deref()
-                    .unwrap_or("None"),
+                &req_customer_id,
+                &res_customer_id,
             ));
         }
 
         // Check email
         if req_integrity_object.email != res_integrity_object.email {
-            mismatched_fields.push(format_mismatch(
-                "email",
-                req_integrity_object.email.as_deref().unwrap_or("None"),
-                res_integrity_object.email.as_deref().unwrap_or("None"),
-            ));
+            let req_email = req_integrity_object
+                .email
+                .as_ref()
+                .map(|s| s.clone().expose())
+                .unwrap_or_else(|| "None".to_string());
+            let res_email = res_integrity_object
+                .email
+                .as_ref()
+                .map(|s| s.clone().expose())
+                .unwrap_or_else(|| "None".to_string());
+            mismatched_fields.push(format_mismatch("email", &req_email, &res_email));
         }
 
         check_integrity_result(mismatched_fields, connector_transaction_id)
