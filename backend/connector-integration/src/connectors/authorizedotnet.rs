@@ -50,8 +50,8 @@ use serde::Serialize;
 
 use self::transformers::{
     get_trans_id, AuthorizedotnetAuthorizeResponse, AuthorizedotnetCaptureRequest,
-    AuthorizedotnetCaptureResponse, AuthorizedotnetCreateCustomerProfileRequest,
-    AuthorizedotnetCreateCustomerProfileResponse, AuthorizedotnetCreateSyncRequest,
+    AuthorizedotnetCaptureResponse, AuthorizedotnetCreateConnectorCustomerRequest,
+    AuthorizedotnetCreateConnectorCustomerResponse, AuthorizedotnetCreateSyncRequest,
     AuthorizedotnetPSyncResponse, AuthorizedotnetPaymentsRequest, AuthorizedotnetRSyncRequest,
     AuthorizedotnetRSyncResponse, AuthorizedotnetRefundRequest, AuthorizedotnetRefundResponse,
     AuthorizedotnetRepeatPaymentRequest, AuthorizedotnetRepeatPaymentResponse,
@@ -602,8 +602,8 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: CreateConnectorCustomer,
-            request_body: AuthorizedotnetCreateCustomerProfileRequest<T>,
-            response_body: AuthorizedotnetCreateCustomerProfileResponse,
+            request_body: AuthorizedotnetCreateConnectorCustomerRequest<T>,
+            response_body: AuthorizedotnetCreateConnectorCustomerResponse,
             router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
         )
     ],
@@ -897,8 +897,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Authorizedotnet,
-    curl_request: Json(AuthorizedotnetCreateCustomerProfileRequest),
-    curl_response: AuthorizedotnetCreateCustomerProfileResponse,
+    curl_request: Json(AuthorizedotnetCreateConnectorCustomerRequest),
+    curl_response: AuthorizedotnetCreateConnectorCustomerResponse,
     flow_name: CreateConnectorCustomer,
     resource_common_data: PaymentFlowData,
     flow_request: ConnectorCustomerData,
