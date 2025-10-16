@@ -216,7 +216,7 @@ impl<
         let payment_method_data = item.router_data.request.payment_method_data.clone();
         
         let (vpa, phone, email) = match payment_method_data {
-            Some(pm_data) => {
+            pm_data => {
                 match pm_data {
                     domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
                         (upi_data.vpa.clone(), None, item.router_data.request.email.clone())
@@ -224,7 +224,6 @@ impl<
                     _ => (None, None, item.router_data.request.email.clone()),
                 }
             }
-            None => (None, None, item.router_data.request.email.clone()),
         };
 
         // Generate hash - this would typically involve the merchant key and other parameters
