@@ -26,6 +26,7 @@ use std::str::FromStr;
 
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
@@ -47,6 +48,10 @@ fn create_raw_card_number_for_default_pci(
 
 fn create_raw_card_number_for_vault_token(card_string: String) -> RawCardNumber<VaultTokenHolder> {
     RawCardNumber(card_string)
+}
+
+fn get_random_string() -> String {
+    Alphanumeric.sample_string(&mut rand::thread_rng(), MAX_ID_LENGTH)
 }
 
 // // Helper traits for working with generic types
@@ -170,6 +175,32 @@ impl ForeignTryFrom<serde_json::Value> for Vec<UserField> {
     }
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AuthorizationType {
+    Final,
+    Pre,
+}
+
+impl TryFrom<enums::CaptureMethod> for AuthorizationType {
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
+
+    fn try_from(capture_method: enums::CaptureMethod) -> Result<Self, Self::Error> {
+        match capture_method {
+            enums::CaptureMethod::Manual => Ok(Self::Pre),
+            enums::CaptureMethod::SequentialAutomatic | enums::CaptureMethod::Automatic => {
+                Ok(Self::Final)
+            }
+            enums::CaptureMethod::ManualMultiple | enums::CaptureMethod::Scheduled => {
+                Err(error_stack::report!(ConnectorError::NotSupported {
+                    message: "Capture method not supported".to_string(),
+                    connector: "authorizedotnet",
+                }))?
+            }
+        }
+    }
+}
+
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -280,12 +311,10 @@ pub enum Reason {
     NoShow,
 }
 
-#[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub enum AuthorizationIndicator {
-    Final,
-    Pre,
+struct AuthorizationIndicator {
+    authorization_indicator: AuthorizationType,
 }
 
 #[derive(Debug, Serialize)]
@@ -299,6 +328,7 @@ pub enum ProfileDetails {
 #[serde(rename_all = "camelCase")]
 pub struct CreateProfileDetails {
     create_profile: bool,
+    customer_profile_id: Option<Secret<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -312,12 +342,6 @@ pub struct CustomerProfileDetails {
 #[serde(rename_all = "camelCase")]
 pub struct PaymentProfileDetails {
     payment_profile_id: Secret<String>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct AuthorizationIndicatorType {
-    authorization_indicator: AuthorizationIndicator,
 }
 
 #[skip_serializing_none]
@@ -336,7 +360,7 @@ pub struct AuthorizedotnetTransactionRequest<T: PaymentMethodDataTypes> {
     user_fields: Option<UserFields>,
     processing_options: Option<ProcessingOptions>,
     subsequent_auth_information: Option<SubsequentAuthInformation>,
-    authorization_indicator_type: Option<AuthorizationIndicatorType>,
+    authorization_indicator_type: Option<AuthorizationIndicator>,
     ref_trans_id: Option<String>,
 }
 
@@ -353,7 +377,6 @@ pub struct TransactionSetting {
     setting_value: String,
 }
 
-#[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateTransactionRequest<T: PaymentMethodDataTypes> {
@@ -413,16 +436,22 @@ impl<
         // Always create regular transaction request (mandate logic moved to RepeatPayment flow)
         let transaction_request = create_regular_transaction_request(&item, currency)?;
 
-        let ref_id = Some(
-            &item
-                .router_data
-                .resource_common_data
-                .connector_request_reference_id,
-        )
-        .filter(|id| !id.is_empty())
-        .cloned();
-
-        let ref_id = get_the_truncate_id(ref_id, MAX_ID_LENGTH);
+        let ref_id = if item
+            .router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .len()
+            <= MAX_ID_LENGTH
+        {
+            Some(
+                item.router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            )
+        } else {
+            None
+        };
         let create_transaction_request = CreateTransactionRequest {
             merchant_authentication,
             ref_id,
@@ -474,7 +503,11 @@ fn create_regular_transaction_request<
 
     let transaction_type = match item.router_data.request.capture_method {
         Some(enums::CaptureMethod::Manual) => TransactionType::AuthOnlyTransaction,
-        Some(enums::CaptureMethod::Automatic) | None => TransactionType::AuthCaptureTransaction,
+        Some(enums::CaptureMethod::Automatic)
+        | None
+        | Some(enums::CaptureMethod::SequentialAutomatic) => {
+            TransactionType::AuthCaptureTransaction
+        }
         Some(_) => {
             return Err(error_stack::report!(ConnectorError::NotSupported {
                 message: "Capture method not supported".to_string(),
@@ -486,32 +519,23 @@ fn create_regular_transaction_request<
     let order_description = item
         .router_data
         .resource_common_data
-        .description
-        .clone()
-        .unwrap_or_else(|| "Payment".to_string());
+        .connector_request_reference_id
+        .clone();
 
     // Truncate invoice number to 20 characters (Authorize.Net limit)
-    let invoice_number = Some(
-        &item
-            .router_data
-            .resource_common_data
-            .connector_request_reference_id,
-    )
-    .filter(|id| !id.is_empty())
-    .ok_or_else(|| {
-        error_stack::report!(ConnectorError::MissingRequiredField {
-            field_name: "connector_request_reference_id"
-        })
-    })?;
-
-    let truncated_invoice_number = if invoice_number.len() > 20 {
-        invoice_number[0..20].to_string()
-    } else {
-        invoice_number.to_string()
+    let invoice_number = match item.router_data.request.merchant_order_reference_id.clone() {
+        Some(invoice_num) => {
+            if invoice_num.len() > MAX_ID_LENGTH {
+                invoice_num[0..MAX_ID_LENGTH].to_string()
+            } else {
+                invoice_num
+            }
+        }
+        None => get_random_string(),
     };
 
     let order = Order {
-        invoice_number: truncated_invoice_number,
+        invoice_number: invoice_number,
         description: order_description,
     };
 
@@ -550,29 +574,40 @@ fn create_regular_transaction_request<
         }
     });
 
-    let customer_id_string = item
+    let customer_details = if !item
         .router_data
         .request
-        .customer_id
-        .as_ref()
-        .and_then(|cid| {
-            let id_str = cid.get_string_repr().to_owned();
-            if id_str.len() > MAX_ID_LENGTH {
-                None
-            } else {
-                Some(id_str)
-            }
-        });
-
-    let customer_details = customer_id_string.map(|cid| CustomerDetails {
-        id: cid,
-        email: item.router_data.request.email.clone(),
-    });
+        .is_customer_initiated_mandate_payment()
+    {
+        item.router_data
+            .request
+            .customer_id
+            .as_ref()
+            .and_then(|customer| {
+                let customer_id = customer.get_string_repr();
+                (customer_id.len() <= MAX_ID_LENGTH).then_some(CustomerDetails {
+                    id: customer_id.to_string(),
+                    email: item.router_data.request.get_optional_email(),
+                })
+            })
+    } else {
+        None
+    };
 
     // Check if we should create a profile for future mandate usage
-    let profile = if item.router_data.request.setup_future_usage.is_some() {
+    let profile = if item
+        .router_data
+        .request
+        .is_customer_initiated_mandate_payment()
+    {
         Some(ProfileDetails::CreateProfileDetails(CreateProfileDetails {
             create_profile: true,
+            customer_profile_id: item
+                .router_data
+                .resource_common_data
+                .connector_customer
+                .as_ref()
+                .map(|cid| Secret::new(cid.to_string())),
         }))
     } else {
         None
@@ -599,7 +634,12 @@ fn create_regular_transaction_request<
         user_fields,
         processing_options: None,
         subsequent_auth_information: None,
-        authorization_indicator_type: None,
+        authorization_indicator_type: match item.router_data.request.capture_method {
+            Some(capture_method) => Some(AuthorizationIndicator {
+                authorization_indicator: capture_method.try_into()?,
+            }),
+            None => None,
+        },
         ref_trans_id: None,
     })
 }
@@ -611,7 +651,6 @@ pub struct AuthorizedotnetRepeatPaymentRequest {
     create_transaction_request: CreateRepeatPaymentRequest,
 }
 
-#[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRepeatPaymentRequest {
@@ -627,10 +666,13 @@ pub struct AuthorizedotnetRepeatPaymentTransactionRequest {
     transaction_type: TransactionType,
     amount: FloatMajorUnit,
     currency_code: api_enums::Currency,
-    profile: ProfileDetails,
+    profile: Option<ProfileDetails>,
     order: Option<Order>,
     customer: Option<CustomerDetails>,
     user_fields: Option<UserFields>,
+    processing_options: Option<ProcessingOptions>,
+    subsequent_auth_information: Option<SubsequentAuthInformation>,
+    authorization_indicator_type: Option<AuthorizationIndicator>,
 }
 
 // Implementation for RepeatPayment request conversion
@@ -663,73 +705,88 @@ impl<
         let currency = api_enums::Currency::from_str(&currency_str)
             .map_err(|_| error_stack::report!(ConnectorError::RequestEncodingFailed))?;
 
-        // Extract mandate reference
-        let mandate_id = match &item.router_data.request.mandate_reference {
-            MandateReferenceId::ConnectorMandateId(connector_mandate_ref) => connector_mandate_ref
-                .get_connector_mandate_id()
-                .ok_or_else(|| {
-                    error_stack::report!(ConnectorError::MissingRequiredField {
-                        field_name: "connector_mandate_id"
-                    })
-                })?,
-            MandateReferenceId::NetworkMandateId(_) => {
-                return Err(error_stack::report!(ConnectorError::NotImplemented(
-                    "Network mandate ID not supported for repeat payments in authorizedotnet"
-                        .to_string(),
-                )))
-            }
-            MandateReferenceId::NetworkTokenWithNTI(_) => {
-                return Err(error_stack::report!(ConnectorError::NotImplemented(
-                    "Network token with NTI not supported for authorizedotnet".to_string(),
-                )))
-            }
-        };
+        // Handle different mandate reference types with appropriate MIT structures
+        let (profile, processing_options, subsequent_auth_information) =
+            match &item.router_data.request.mandate_reference {
+                // Case 1: Mandate-based MIT (using stored customer profile)
+                MandateReferenceId::ConnectorMandateId(connector_mandate_ref) => {
+                    let mandate_id = connector_mandate_ref
+                        .get_connector_mandate_id()
+                        .ok_or_else(|| {
+                            error_stack::report!(ConnectorError::MissingRequiredField {
+                                field_name: "connector_mandate_id"
+                            })
+                        })?;
 
-        // Parse the mandate_id to extract customer_profile_id and payment_profile_id
-        let profile = mandate_id
-            .split_once('-')
-            .map(|(customer_profile_id, payment_profile_id)| {
-                ProfileDetails::CustomerProfileDetails(CustomerProfileDetails {
-                    customer_profile_id: Secret::from(customer_profile_id.to_string()),
-                    payment_profile: PaymentProfileDetails {
-                        payment_profile_id: Secret::from(payment_profile_id.to_string()),
-                    },
-                })
-            })
-            .ok_or_else(|| {
-                error_stack::report!(ConnectorError::MissingRequiredField {
-                    field_name: "valid mandate_id format (should contain '-')"
-                })
-            })?;
+                    // Parse mandate_id to extract customer_profile_id and payment_profile_id
+                    let profile = mandate_id
+                        .split_once('-')
+                        .map(|(customer_profile_id, payment_profile_id)| {
+                            ProfileDetails::CustomerProfileDetails(CustomerProfileDetails {
+                                customer_profile_id: Secret::from(customer_profile_id.to_string()),
+                                payment_profile: PaymentProfileDetails {
+                                    payment_profile_id: Secret::from(
+                                        payment_profile_id.to_string(),
+                                    ),
+                                },
+                            })
+                        })
+                        .ok_or_else(|| {
+                            error_stack::report!(ConnectorError::MissingRequiredField {
+                                field_name: "valid mandate_id format (should contain '-')"
+                            })
+                        })?;
 
+                    (
+                        Some(profile),
+                        Some(ProcessingOptions {
+                            is_subsequent_auth: true,
+                        }),
+                        None, // No network transaction ID for mandate-based flow
+                    )
+                }
+
+                // Case 2: Network mandate ID flow (PG agnostic with network trans ID)
+                MandateReferenceId::NetworkMandateId(network_trans_id) => (
+                    None, // No customer profile for network transaction flow
+                    Some(ProcessingOptions {
+                        is_subsequent_auth: true,
+                    }),
+                    Some(SubsequentAuthInformation {
+                        original_network_trans_id: Secret::new(network_trans_id.clone()),
+                        reason: Reason::Resubmission,
+                    }),
+                ),
+
+                // Case 3: Network token with NTI - NOT SUPPORTED (same as Hyperswitch)
+                MandateReferenceId::NetworkTokenWithNTI(_) => {
+                    return Err(error_stack::report!(ConnectorError::NotImplemented(
+                        "Network token with NTI not supported for authorizedotnet".to_string(),
+                    )))
+                }
+            };
+
+        // Order description should be connector_request_reference_id (same as Hyperswitch)
         let order_description = item
             .router_data
             .resource_common_data
-            .description
-            .clone()
-            .unwrap_or_else(|| "Repeat Payment".to_string());
+            .connector_request_reference_id
+            .clone();
 
-        let invoice_number = Some(
-            &item
-                .router_data
-                .resource_common_data
-                .connector_request_reference_id,
-        )
-        .filter(|id| !id.is_empty())
-        .ok_or_else(|| {
-            error_stack::report!(ConnectorError::MissingRequiredField {
-                field_name: "connector_request_reference_id"
-            })
-        })?;
-
-        let truncated_invoice_number = if invoice_number.len() > 20 {
-            invoice_number[0..20].to_string()
-        } else {
-            invoice_number.to_string()
+        // Invoice number should be merchant_order_reference_id or random string (same as Hyperswitch)
+        let invoice_number = match item.router_data.request.merchant_order_reference_id.clone() {
+            Some(merchant_order_ref) => {
+                if merchant_order_ref.len() <= MAX_ID_LENGTH {
+                    merchant_order_ref
+                } else {
+                    get_random_string()
+                }
+            }
+            None => get_random_string(),
         };
 
         let order = Order {
-            invoice_number: truncated_invoice_number,
+            invoice_number,
             description: order_description,
         };
 
@@ -745,16 +802,23 @@ impl<
             None => None,
         };
 
-        let ref_id = Some(
-            &item
-                .router_data
-                .resource_common_data
-                .connector_request_reference_id,
-        )
-        .filter(|id| !id.is_empty())
-        .cloned();
-
-        let ref_id = get_the_truncate_id(ref_id, MAX_ID_LENGTH);
+        // ref_id should be connector_request_reference_id with MAX_ID_LENGTH check (same as Authorize flow)
+        let ref_id = if item
+            .router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .len()
+            <= MAX_ID_LENGTH
+        {
+            Some(
+                item.router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            )
+        } else {
+            None
+        };
 
         let customer_id_string = item
             .router_data
@@ -793,6 +857,14 @@ impl<
             order: Some(order),
             customer: customer_details,
             user_fields,
+            processing_options,
+            subsequent_auth_information,
+            authorization_indicator_type: match item.router_data.request.capture_method {
+                Some(capture_method) => Some(AuthorizationIndicator {
+                    authorization_indicator: capture_method.try_into()?,
+                }),
+                None => None,
+            },
         };
 
         Ok(Self {
@@ -1452,15 +1524,31 @@ pub enum TransactionResponse {
 // Base transaction response - used internally
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct TransactionProfileInfo {
+    customer_profile_id: String,
+    customer_payment_profile_id: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AuthorizedotnetTransactionResponse {
     response_code: AuthorizedotnetPaymentStatus,
     #[serde(rename = "transId")]
     transaction_id: String,
+    #[serde(default)]
     transaction_status: Option<String>,
+    #[serde(default)]
     network_trans_id: Option<Secret<String>>,
+    #[serde(default)]
     pub(super) account_number: Option<Secret<String>>,
+    #[serde(default)]
+    pub(super) account_type: Option<Secret<String>>,
+    #[serde(default)]
     pub(super) errors: Option<Vec<ErrorMessage>>,
+    #[serde(default)]
     secure_acceptance: Option<SecureAcceptance>,
+    #[serde(default)]
+    profile: Option<TransactionProfileInfo>,
 }
 
 // Create flow-specific response types
@@ -1766,19 +1854,81 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetRepeatPaymentResponse, Self>>
             http_code,
         } = value;
 
-        // Use our helper function to convert the response
-        // RepeatPayment is always captured immediately, so no capture_method needed
-        let (status, response_result) = convert_to_payments_response_data_or_error(
+        // Dedicated RepeatPayment response handling (matching Hyperswitch)
+        let status = get_hs_status(
             &response.0,
             http_code,
             Operation::Authorize,
             Some(enums::CaptureMethod::Automatic),
-            router_data
-                .resource_common_data
-                .raw_connector_response
-                .clone(),
-        )
-        .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
+        );
+
+        let response_result = match &response.0.transaction_response {
+            Some(TransactionResponse::AuthorizedotnetTransactionResponse(transaction_response)) => {
+                // Check for errors in the response
+                let error = transaction_response.errors.as_ref().and_then(|errors| {
+                    errors.first().map(|error| ErrorResponse {
+                        code: error.error_code.clone(),
+                        message: error.error_text.clone(),
+                        reason: Some(error.error_text.clone()),
+                        status_code: http_code,
+                        attempt_status: Some(status),
+                        connector_transaction_id: Some(transaction_response.transaction_id.clone()),
+                        network_advice_code: None,
+                        network_decline_code: None,
+                        network_error_message: None,
+                    })
+                });
+
+                // Build connector_metadata from account_number
+                let connector_metadata = build_connector_metadata(transaction_response);
+
+                // Extract mandate_reference from transaction_response.profile (RepeatPayment returns profile info)
+                let mandate_reference = transaction_response.profile.as_ref().map(|profile| {
+                    domain_types::connector_types::MandateReference {
+                        connector_mandate_id: Some(format!(
+                            "{}-{}",
+                            profile.customer_profile_id, profile.customer_payment_profile_id
+                        )),
+                        payment_method_id: None,
+                    }
+                });
+
+                match error {
+                    Some(err) => Err(err),
+                    None => Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(
+                            transaction_response.transaction_id.clone(),
+                        ),
+                        redirection_data: None,
+                        mandate_reference: mandate_reference.map(Box::new),
+                        connector_metadata,
+                        network_txn_id: transaction_response
+                            .network_trans_id
+                            .as_ref()
+                            .map(|s| s.peek().clone()),
+                        connector_response_reference_id: Some(
+                            transaction_response.transaction_id.clone(),
+                        ),
+                        incremental_authorization_allowed: None,
+                        status_code: http_code,
+                    }),
+                }
+            }
+            Some(TransactionResponse::AuthorizedotnetTransactionResponseError(_)) | None => {
+                let (error_code, error_message) = extract_error_details(&response.0, None);
+                Err(create_error_response(
+                    http_code,
+                    error_code,
+                    error_message,
+                    status,
+                    None,
+                    router_data
+                        .resource_common_data
+                        .raw_connector_response
+                        .clone(),
+                ))
+            }
+        };
 
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
@@ -2136,6 +2286,52 @@ fn get_hs_status(
     }
 }
 
+fn build_connector_metadata(
+    transaction_response: &AuthorizedotnetTransactionResponse,
+) -> Option<serde_json::Value> {
+    // Check if accountNumber is available
+    // Note: accountType contains card brand (e.g., "MasterCard"), not expiration date
+    // Authorize.net does not return the expiration date in authorization response
+
+    // Debug logging to understand what we're receiving
+    tracing::info!(
+        "build_connector_metadata: account_number={:?}, account_type={:?}",
+        transaction_response
+            .account_number
+            .as_ref()
+            .map(|n| n.peek()),
+        transaction_response.account_type.as_ref().map(|t| t.peek())
+    );
+
+    if let Some(card_number) = &transaction_response.account_number {
+        let card_number_value = card_number.peek();
+
+        // Create nested credit card structure
+        let credit_card_data = serde_json::json!({
+            "cardNumber": card_number_value,
+            "expirationDate": "XXXX"  // Hardcoded since Auth.net doesn't return it
+        });
+
+        // Serialize to JSON string for proto compatibility (proto expects map<string, string>)
+        let credit_card_json =
+            serde_json::to_string(&credit_card_data).unwrap_or_else(|_| "{}".to_string());
+
+        // Create flat metadata map with JSON string value
+        let metadata = serde_json::json!({
+            "creditCard": credit_card_json
+        });
+
+        tracing::info!(
+            "build_connector_metadata: Successfully built metadata: {:?}",
+            metadata
+        );
+        return Some(metadata);
+    }
+
+    tracing::warn!("build_connector_metadata: account_number is None, returning empty metadata");
+    None
+}
+
 pub fn convert_to_payments_response_data_or_error(
     response: &AuthorizedotnetPaymentsResponse,
     http_status_code: u16,
@@ -2159,16 +2355,37 @@ pub fn convert_to_payments_response_data_or_error(
         Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res))
             if is_successful_status =>
         {
+            let connector_metadata = build_connector_metadata(trans_res);
+
+            // Extract mandate_reference from profile_response if available
+            let mandate_reference = response.profile_response.as_ref().map(|profile_response| {
+                let payment_profile_id = profile_response
+                    .customer_payment_profile_id_list
+                    .as_ref()
+                    .and_then(|list| list.first().cloned());
+
+                domain_types::connector_types::MandateReference {
+                    connector_mandate_id: profile_response.customer_profile_id.as_ref().and_then(
+                        |customer_profile_id| {
+                            payment_profile_id.map(|payment_profile_id| {
+                                format!("{customer_profile_id}-{payment_profile_id}")
+                            })
+                        },
+                    ),
+                    payment_method_id: None,
+                }
+            });
+
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(trans_res.transaction_id.clone()),
                 redirection_data: None,
-                connector_metadata: None,
-                mandate_reference: None,
+                connector_metadata,
+                mandate_reference: mandate_reference.map(Box::new),
                 network_txn_id: trans_res
                     .network_trans_id
                     .as_ref()
                     .map(|s| s.peek().clone()),
-                connector_response_reference_id: None,
+                connector_response_reference_id: Some(trans_res.transaction_id.clone()),
                 incremental_authorization_allowed: None,
                 status_code: http_status_code,
             })
@@ -2460,15 +2677,14 @@ impl<
                 .email
                 .as_ref()
                 .map(|e| e.peek().clone()),
-            payment_profiles: vec![PaymentProfiles {
+            payment_profiles: Some(vec![PaymentProfiles {
                 customer_type: CustomerType::Individual,
                 payment: PaymentDetails::CreditCard(CreditCardDetails {
                     card_number: ccard.card_number.clone(),
                     expiration_date: Secret::new(expiration_date),
                     card_code: Some(ccard.card_cvc.clone()),
                 }),
-            }]
-            .into(),
+            }]),
             ship_to_list: None,
         };
         Ok(Self {

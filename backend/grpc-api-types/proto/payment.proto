@@ -1650,6 +1650,9 @@ message PaymentServiceRepeatEverythingResponse {
   uint32 status_code = 8; // HTTP status code from the connector
   map<string, string> response_headers = 9; // Optional HTTP response headers from the connector
 
+    // Metadata
+  map<string, string> connector_metadata = 13; // Connector-specific metadata for the transaction
+
   // Transaction Details
   optional string network_txn_id = 5; // Transaction ID from the payment network
   optional Identifier response_ref_id = 6; // Reference ID from the connector response
