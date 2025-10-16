@@ -1,12 +1,14 @@
 use common_enums::{self, enums, AttemptStatus, RefundStatus};
 use common_utils::{consts, ext_traits::OptionExt, pii::Email, types::FloatMajorUnit};
 use domain_types::{
-    connector_flow::{Authorize, PSync, RSync, Refund, RepeatPayment, SetupMandate},
+    connector_flow::{
+        Authorize, CreateConnectorCustomer, PSync, RSync, Refund, RepeatPayment, SetupMandate,
+    },
     connector_types::{
-        MandateReferenceId, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
-        SetupMandateRequestData,
+        ConnectorCustomerData, ConnectorCustomerResponse, MandateReferenceId, PaymentFlowData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::ConnectorError,
     payment_method_data::{
@@ -1517,9 +1519,26 @@ pub struct AuthorizedotnetZeroMandateRequest<
 > {
     merchant_authentication: AuthorizedotnetAuthType,
     profile: Profile<T>,
-    validation_mode: ValidationMode,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    validation_mode: Option<ValidationMode>,
 }
 
+// ShipToList for customer shipping address
+#[skip_serializing_none]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ShipToList {
+    first_name: Option<Secret<String>>,
+    last_name: Option<Secret<String>>,
+    address: Option<Secret<String>>,
+    city: Option<String>,
+    state: Option<Secret<String>>,
+    zip: Option<Secret<String>>,
+    country: Option<common_enums::CountryAlpha2>,
+    phone_number: Option<Secret<String>>,
+}
+
+#[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct Profile<
@@ -1531,9 +1550,10 @@ struct Profile<
         + Serialize,
 > {
     merchant_customer_id: Option<String>,
-    description: String,
+    description: Option<String>,
     email: Option<String>,
-    payment_profiles: Vec<PaymentProfiles<T>>,
+    payment_profiles: Option<Vec<PaymentProfiles<T>>>,
+    ship_to_list: Option<Vec<ShipToList>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -2428,11 +2448,12 @@ impl<
                 .customer_id
                 .as_ref()
                 .map(|id| id.get_string_repr().to_string()),
-            description: item
-                .router_data
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            description: Some(
+                item.router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
             email: item
                 .router_data
                 .request
@@ -2446,13 +2467,15 @@ impl<
                     expiration_date: Secret::new(expiration_date),
                     card_code: Some(ccard.card_cvc.clone()),
                 }),
-            }],
+            }]
+            .into(),
+            ship_to_list: None,
         };
         Ok(Self {
             create_customer_profile_request: AuthorizedotnetZeroMandateRequest {
                 merchant_authentication,
                 profile,
-                validation_mode,
+                validation_mode: Some(validation_mode),
             },
         })
     }
@@ -2776,5 +2799,202 @@ impl TryFrom<AuthorizedotnetWebhookObjectId> for AuthorizedotnetPSyncResponse {
                 }],
             },
         })
+    }
+}
+
+// Helper function to extract customer profile ID from error message
+// Message format: "A duplicate record with ID 933042598 already exists."
+fn extract_customer_id_from_error(error_text: &str) -> Option<String> {
+    // Look for pattern "ID <numbers>"
+    error_text
+        .split_whitespace()
+        .skip_while(|&word| word != "ID")
+        .nth(1) // Get the word after "ID"
+        .and_then(|id_str| {
+            // Remove any trailing punctuation and validate it's numeric
+            let cleaned = id_str.trim_end_matches(|c: char| !c.is_numeric());
+            if cleaned.chars().all(char::is_numeric) && !cleaned.is_empty() {
+                Some(cleaned.to_string())
+            } else {
+                None
+            }
+        })
+}
+
+// TryFrom implementations for CreateConnectorCustomer flow
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        AuthorizedotnetRouterData<
+            RouterDataV2<
+                CreateConnectorCustomer,
+                PaymentFlowData,
+                ConnectorCustomerData,
+                ConnectorCustomerResponse,
+            >,
+            T,
+        >,
+    > for CreateCustomerProfileRequest<T>
+{
+    type Error = Error;
+    fn try_from(
+        item: AuthorizedotnetRouterData<
+            RouterDataV2<
+                CreateConnectorCustomer,
+                PaymentFlowData,
+                ConnectorCustomerData,
+                ConnectorCustomerResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let merchant_authentication =
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+
+        // Build ship_to_list from shipping address if available
+        let ship_to_list = item
+            .router_data
+            .resource_common_data
+            .address
+            .get_shipping()
+            .and_then(|shipping| {
+                shipping.address.as_ref().map(|address| {
+                    vec![ShipToList {
+                        first_name: address.first_name.clone(),
+                        last_name: address.last_name.clone(),
+                        address: address.line1.clone(),
+                        city: address.city.clone(),
+                        state: address.state.clone(),
+                        zip: address.zip.clone(),
+                        country: address.country,
+                        phone_number: shipping
+                            .phone
+                            .as_ref()
+                            .and_then(|phone| phone.number.clone()),
+                    }]
+                })
+            });
+
+        // Create a customer profile without payment method (zero mandate)
+        Ok(Self {
+            create_customer_profile_request: AuthorizedotnetZeroMandateRequest {
+                merchant_authentication,
+                profile: Profile {
+                    merchant_customer_id: item.router_data.request.customer_id.clone(),
+                    description: None, // Match Hyperswitch: set to None
+                    email: item
+                        .router_data
+                        .request
+                        .email
+                        .as_ref()
+                        .map(|e| e.peek().clone()),
+                    payment_profiles: None, // Match Hyperswitch: set to None instead of empty vec
+                    ship_to_list,
+                },
+                validation_mode: Some(ValidationMode::LiveMode),
+            },
+        })
+    }
+}
+
+impl
+    TryFrom<
+        ResponseRouterData<
+            CreateCustomerProfileResponse,
+            RouterDataV2<
+                CreateConnectorCustomer,
+                PaymentFlowData,
+                ConnectorCustomerData,
+                ConnectorCustomerResponse,
+            >,
+        >,
+    >
+    for RouterDataV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    >
+{
+    type Error = Error;
+    fn try_from(
+        value: ResponseRouterData<
+            CreateCustomerProfileResponse,
+            RouterDataV2<
+                CreateConnectorCustomer,
+                PaymentFlowData,
+                ConnectorCustomerData,
+                ConnectorCustomerResponse,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+
+        let mut new_router_data = router_data;
+
+        if let Some(profile_id) = response.customer_profile_id {
+            // Success - return the connector customer ID
+            new_router_data.response = Ok(ConnectorCustomerResponse {
+                connector_customer_id: profile_id,
+            });
+        } else {
+            // Check if this is a "duplicate customer" error (E00039)
+            let first_error = response.messages.message.first();
+            let error_code = first_error.map(|m| m.code.as_str()).unwrap_or("");
+            let error_text = first_error.map(|m| m.text.as_str()).unwrap_or("");
+
+            if error_code == "E00039" {
+                // Extract customer profile ID from error message
+                // Message format: "A duplicate record with ID 933042598 already exists."
+                if let Some(existing_profile_id) = extract_customer_id_from_error(error_text) {
+                    tracing::info!(
+                        "Customer profile already exists with ID: {}, treating as success",
+                        existing_profile_id
+                    );
+                    new_router_data.response = Ok(ConnectorCustomerResponse {
+                        connector_customer_id: existing_profile_id,
+                    });
+                } else {
+                    // Couldn't extract ID, return error
+                    new_router_data.response = Err(ErrorResponse {
+                        status_code: http_code,
+                        code: error_code.to_string(),
+                        message: error_text.to_string(),
+                        reason: None,
+                        attempt_status: None,
+                        connector_transaction_id: None,
+                        network_decline_code: None,
+                        network_advice_code: None,
+                        network_error_message: None,
+                    });
+                }
+            } else {
+                // Other error - return error response
+                new_router_data.response = Err(ErrorResponse {
+                    status_code: http_code,
+                    code: error_code.to_string(),
+                    message: error_text.to_string(),
+                    reason: None,
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                });
+            }
+        }
+
+        Ok(new_router_data)
     }
 }

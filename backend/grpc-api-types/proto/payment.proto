@@ -1181,7 +1181,6 @@ message PaymentServiceAuthorizeResponse {
   optional RedirectForm redirection_data = 5; // Data for redirecting the customer's browser
   optional string network_txn_id = 6; // Transaction ID from the payment network
   optional Identifier response_ref_id = 7; // Renamed from connector_response_reference_id
-  optional MandateReference mandate_reference = 15; // Mandate reference, if applicable
 
   // Authorization Details
   optional bool incremental_authorization_allowed = 8; // Indicates if incremental authorization is allowed
@@ -1609,9 +1608,6 @@ message PaymentServiceRepeatEverythingResponse {
   optional string network_txn_id = 5; // Transaction ID from the payment network
   optional Identifier response_ref_id = 6; // Reference ID from the connector response
   optional MandateReference mandate_reference = 12; // Mandate reference from the response (profile info)
-
-  // Metadata
-  map<string, string> connector_metadata = 13; // Connector-specific metadata for the transaction
 
   // State Information
   optional ConnectorState state = 10; // State data for access token storage and other connector-specific state

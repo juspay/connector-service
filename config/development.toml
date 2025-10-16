@@ -24,9 +24,30 @@ host = "127.0.0.1"
 port = 8080
 
 [proxy]
-idle_pool_connection_timeout = 90
+http_url = "http://localhost:8081"
+https_url = "http://localhost:8081"
+mitm_proxy_enabled = true
 bypass_proxy_urls = []
-mitm_proxy_enabled = false
+mitm_ca_cert = """-----BEGIN CERTIFICATE-----
+MIIDNTCCAh2gAwIBAgIUIAPBHgj1NyLdFeZyuEsOSSiH1fcwDQYJKoZIhvcNAQEL
+BQAwKDESMBAGA1UEAwwJbWl0bXByb3h5MRIwEAYDVQQKDAltaXRtcHJveHkwHhcN
+MjUxMDA3MTIwNDU5WhcNMzUxMDA3MTIwNDU5WjAoMRIwEAYDVQQDDAltaXRtcHJv
+eHkxEjAQBgNVBAoMCW1pdG1wcm94eTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC
+AQoCggEBAKBX2YG3EPs+ENUD/ymXDzgalxd8jPeIvxRzEZe/CYoAIqy2feEiHRQd
+0spvDcfNiYxfs1VCwFxpaHz3AQOgr6YQE4/gTN75NWXgEYOThcTMjkHlFO4tFgMT
+gg0V4t8zG7ETrCBLuNqqwxwYAF3/D6NOPsMPwM5G5Bz2Z0SRQhP7FAsxC0Hi9v4O
+Nba28hysbo3uVzfysJXwL3WoqagkPpp7tjGhphmi9sh4udDj1qq8QCvLfp7Mm1P6
+W54Hj1xZb2lMTFugpZ7uYv9aNZRq3PCfdeDF2lZ51yEt3hIhUn7Wtkdm3qhvDl9l
+w1YZwrNOg0H+KEDIK8W0K1JG8heER/cCAwEAAaNXMFUwDwYDVR0TAQH/BAUwAwEB
+/zATBgNVHSUEDDAKBggrBgEFBQcDATAOBgNVHQ8BAf8EBAMCAQYwHQYDVR0OBBYE
+FA1s9cyjcbDsZRWQ8Dvne5tPxqYSMA0GCSqGSIb3DQEBCwUAA4IBAQAON9na8Zey
+nBzyD7bbJ6ivBRGqFJL9uWt8gU4JAlXNegfLlSN9cGY7oYO0RjuKZNES52zLNEKS
+knZ89Xl9K829GKaWUURylQ3O2m1KXz8NnyG+lGCGr+iUEXXCtBqkBR98prnTaapQ
+7366a1euJlLIAhCYSPkbZjpe6RDgplFwhqbp9J699mGmdJTR/HI5q26NezzgnF2K
+6KLjGYXRWGhBt/6Z0JxL1McCNT/Qkm9btddAobUik/qcNoN1j8Wd1PQvEngCKWw6
+V3GrY6JsURomepXwQJ3I8ImpABe/M3x1w5JAPl2B1BJUcQhy1jsniIit/fBaHH6T
+oWWKIP/bwOg1
+-----END CERTIFICATE-----"""
 
 [connectors]
 adyen.base_url = "https://checkout-test.adyen.com/"
