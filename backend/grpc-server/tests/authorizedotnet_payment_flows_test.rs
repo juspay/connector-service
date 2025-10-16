@@ -420,6 +420,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         metadata: HashMap::new(),
         browser_info: None,
         access_token: None,
+        capture_method: None,
     }
 }
 
@@ -440,6 +441,8 @@ fn create_void_request(transaction_id: &str) -> PaymentServiceVoidRequest {
         all_keys_required: None,
         browser_info: None,
         access_token: None,
+        amount: None,
+        currency: None,
     }
 }
 
