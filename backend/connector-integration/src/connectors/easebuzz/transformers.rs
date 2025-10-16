@@ -677,7 +677,6 @@ impl<
             + std::marker::Sync
             + std::marker::Send
             + 'static
-            + Serialize
             + Serialize,
     > TryFrom<ResponseRouterData<EaseBuzzRefundSyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
