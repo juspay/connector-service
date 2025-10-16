@@ -23,8 +23,6 @@ use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 // MD5 implementation for hash generation
-use std::fmt::Write;
-
 fn md5_compute(input: &str) -> md5::Digest {
     md5::compute(input)
 }
