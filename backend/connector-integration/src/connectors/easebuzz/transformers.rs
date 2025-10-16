@@ -219,7 +219,7 @@ impl<
             Some(pm_data) => {
                 match pm_data {
                     domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
-                        (upi_data.vpa.clone(), upi_data.phone_number.clone(), None)
+                        (upi_data.vpa.clone(), None, item.router_data.request.email.clone())
                     }
                     _ => (None, None, item.router_data.request.email.clone()),
                 }
