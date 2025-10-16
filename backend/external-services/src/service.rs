@@ -691,10 +691,21 @@ pub async fn call_connector_api(
                     Some(RequestContent::Json(payload)) => client.json(&payload),
                     Some(RequestContent::FormUrlEncoded(payload)) => client.form(&payload),
                     Some(RequestContent::Xml(payload)) => {
-                        // Use serde_json for XML conversion instead of quick_xml
+                        // For XML content, we need to extract the XML string properly
+                        // The payload implements a custom Serialize that generates XML content
                         let body = serde_json::to_string(&payload)
                             .change_context(ApiClientError::UrlEncodingFailed)?;
-                        client.body(body).header("Content-Type", "application/xml")
+
+                        // Properly deserialize the JSON string to extract clean XML
+                        let xml_body = if body.starts_with('"') && body.ends_with('"') {
+                            // This is a JSON-encoded string, deserialize it properly
+                            serde_json::from_str::<String>(&body)
+                                .change_context(ApiClientError::UrlEncodingFailed)?
+                        } else {
+                            // This is already the raw body content
+                            body
+                        };
+                        client.body(xml_body).header("Content-Type", "text/xml")
                     }
                     Some(RequestContent::FormData(form)) => client.multipart(form),
                     _ => client,
