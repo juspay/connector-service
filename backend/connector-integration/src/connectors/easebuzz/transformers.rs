@@ -9,20 +9,14 @@ use common_utils::{
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, ConnectorCustomerData, ConnectorCustomerResponse,
-        DisputeDefendData, DisputeFlowData, DisputeResponseData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData, ResponseId,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
