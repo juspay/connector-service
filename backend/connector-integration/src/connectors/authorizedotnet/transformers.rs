@@ -25,7 +25,7 @@ type HsInterfacesConnectorError = ConnectorError;
 use std::str::FromStr;
 
 use error_stack::ResultExt;
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
@@ -2890,8 +2890,8 @@ impl<
             .customer_id
             .as_ref()
             .and_then(|id| {
-                if id.len() <= MAX_ID_LENGTH {
-                    Some(id.to_string())
+                if id.peek().len() <= MAX_ID_LENGTH {
+                    Some(id.peek().clone())
                 } else {
                     None
                 }
@@ -2909,7 +2909,7 @@ impl<
                         .request
                         .email
                         .as_ref()
-                        .map(|e| e.peek().clone()),
+                        .map(|e| e.peek().clone().expose().expose()),
                     payment_profiles: None,
                     ship_to_list,
                 },

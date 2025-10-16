@@ -30,9 +30,7 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
-    api::ConnectorCommon,
-    connector_integration_v2::ConnectorIntegrationV2,
-    connector_types::{self, CreateConnectorCustomer as CreateConnectorCustomerTrait},
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
 
@@ -146,7 +144,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > CreateConnectorCustomerTrait for Aci<T>
+    > connector_types::CreateConnectorCustomer for Aci<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

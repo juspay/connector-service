@@ -48,7 +48,7 @@ use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{
-        self, is_mandate_supported, CreateConnectorCustomer as CreateConnectorCustomerTrait,
+        self, is_mandate_supported,
     },
     events::connector_api_logs::ConnectorEvent,
 };
@@ -135,7 +135,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > CreateConnectorCustomerTrait for Razorpay<T>
+    > connector_types::CreateConnectorCustomer for Razorpay<T>
 {
 }
 impl<

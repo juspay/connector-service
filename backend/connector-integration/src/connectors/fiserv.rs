@@ -36,9 +36,7 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
 use interfaces::{
-    api::ConnectorCommon,
-    connector_integration_v2::ConnectorIntegrationV2,
-    connector_types::{self, CreateConnectorCustomer as CreateConnectorCustomerTrait},
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
 use ring::hmac;
@@ -110,7 +108,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > CreateConnectorCustomerTrait for Fiserv<T>
+    > connector_types::CreateConnectorCustomer for Fiserv<T>
 {
 }
 

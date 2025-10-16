@@ -34,7 +34,7 @@ use hyperswitch_masking::{Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
-    connector_types::{self, CreateConnectorCustomer as CreateConnectorCustomerTrait},
+    connector_types,
     events::connector_api_logs::ConnectorEvent,
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
@@ -112,7 +112,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > CreateConnectorCustomerTrait for Phonepe<T>
+    > connector_types::CreateConnectorCustomer for Phonepe<T>
 {
 }
 impl<

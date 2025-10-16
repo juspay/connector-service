@@ -37,9 +37,7 @@ use domain_types::{
 };
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
-    api::ConnectorCommon,
-    connector_integration_v2::ConnectorIntegrationV2,
-    connector_types::{self, CreateConnectorCustomer as CreateConnectorCustomerTrait},
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
@@ -93,7 +91,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > CreateConnectorCustomerTrait for Xendit<T>
+    > connector_types::CreateConnectorCustomer for Xendit<T>
 {
 }
 

@@ -51,9 +51,7 @@ use domain_types::{
 use domain_types::errors;
 use domain_types::router_response_types::Response;
 use interfaces::{
-    api::ConnectorCommon,
-    connector_integration_v2::ConnectorIntegrationV2,
-    connector_types::{self, CreateConnectorCustomer as CreateConnectorCustomerTrait},
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
 
@@ -183,7 +181,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > CreateConnectorCustomerTrait for Cryptopay<T>
+    > connector_types::CreateConnectorCustomer for Cryptopay<T>
 {
 }
 impl<

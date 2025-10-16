@@ -38,8 +38,8 @@ use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{
-        AcceptDispute, ConnectorServiceTrait,
-        CreateConnectorCustomer as CreateConnectorCustomerTrait, DisputeDefend, IncomingWebhook,
+        self, AcceptDispute, ConnectorServiceTrait,
+        DisputeDefend, IncomingWebhook,
         PaymentAccessToken, PaymentAuthorizeV2, PaymentCapture, PaymentOrderCreate,
         PaymentSessionToken, PaymentSyncV2, PaymentTokenV2, PaymentVoidV2, RefundSyncV2, RefundV2,
         RepeatPaymentV2, SetupMandateV2, SubmitEvidenceV2, ValidationTrait,
@@ -116,7 +116,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > CreateConnectorCustomerTrait for Authorizedotnet<T>
+    > connector_types::CreateConnectorCustomer for Authorizedotnet<T>
 {
 }
 

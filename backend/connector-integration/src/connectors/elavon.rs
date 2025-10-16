@@ -33,7 +33,7 @@ use hyperswitch_masking::Maskable;
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::{self, ConnectorIntegrationV2},
-    connector_types::{self, CreateConnectorCustomer as CreateConnectorCustomerTrait},
+    connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
@@ -84,7 +84,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > CreateConnectorCustomerTrait for Elavon<T>
+    > connector_types::CreateConnectorCustomer for Elavon<T>
 {
 }
 

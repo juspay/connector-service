@@ -49,9 +49,7 @@ use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
-    connector_types::{
-        self, ConnectorValidation, CreateConnectorCustomer as CreateConnectorCustomerTrait,
-    },
+    connector_types::{self, ConnectorValidation},
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
@@ -541,7 +539,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    CreateConnectorCustomerTrait for Bluecode<T>
+    connector_types::CreateConnectorCustomer for Bluecode<T>
 {
 }
 

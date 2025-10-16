@@ -31,11 +31,8 @@ use domain_types::{
 };
 use hyperswitch_masking::{Maskable, PeekInterface};
 use interfaces::{
-    api::ConnectorCommon,
-    connector_integration_v2::ConnectorIntegrationV2,
-    connector_types::{self, CreateConnectorCustomer as CreateConnectorCustomerTrait},
-    events::connector_api_logs::ConnectorEvent,
-    verification,
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
+    events::connector_api_logs::ConnectorEvent, verification,
 };
 use paytm::constants;
 use serde::Serialize;
@@ -223,7 +220,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    CreateConnectorCustomerTrait for Paytm<T>
+    connector_types::CreateConnectorCustomer for Paytm<T>
 {
 }
 

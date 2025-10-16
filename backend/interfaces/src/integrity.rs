@@ -431,8 +431,11 @@ impl GetIntegrityObject<CreateConnectorCustomerIntegrityObject> for ConnectorCus
 
     fn get_request_integrity_object(&self) -> CreateConnectorCustomerIntegrityObject {
         CreateConnectorCustomerIntegrityObject {
-            customer_id: self.customer_id.clone().map(Secret::new),
-            email: self.email.as_ref().map(|e| Secret::new(e.peek().clone())),
+            customer_id: self.customer_id.clone(),
+            email: self.email.as_ref().map(|e| {
+                let email_inner = e.peek().clone().expose();
+                Secret::new(email_inner.expose())
+            }),
         }
     }
 }

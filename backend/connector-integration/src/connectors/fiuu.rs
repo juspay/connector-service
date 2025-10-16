@@ -42,7 +42,7 @@ use hyperswitch_masking::{ExposeInterface, Maskable, PeekInterface, Secret};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
-    connector_types::{self, CreateConnectorCustomer as CreateConnectorCustomerTrait},
+    connector_types::{self},
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::{Deserialize, Serialize};
@@ -103,7 +103,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > CreateConnectorCustomerTrait for Fiuu<T>
+    > connector_types::CreateConnectorCustomer for Fiuu<T>
 {
 }
 

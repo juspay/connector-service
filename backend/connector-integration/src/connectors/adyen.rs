@@ -50,7 +50,6 @@ use interfaces::{
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{
         self, is_mandate_supported, ConnectorValidation,
-        CreateConnectorCustomer as CreateConnectorCustomerTrait,
     },
     events::connector_api_logs::ConnectorEvent,
 };
@@ -91,7 +90,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    CreateConnectorCustomerTrait for Adyen<T>
+    connector_types::CreateConnectorCustomer for Adyen<T>
 {
 }
 

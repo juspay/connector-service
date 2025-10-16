@@ -35,7 +35,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::Maskable;
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2,
-    connector_types::CreateConnectorCustomer as CreateConnectorCustomerTrait,
+    connector_types::{self},
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
@@ -695,7 +695,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > CreateConnectorCustomerTrait for RazorpayV2<T>
+    > connector_types::CreateConnectorCustomer for RazorpayV2<T>
 {
 }
 

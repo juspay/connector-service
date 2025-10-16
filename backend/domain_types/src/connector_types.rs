@@ -1273,9 +1273,9 @@ pub struct AccessTokenResponseData {
 
 #[derive(Debug, Clone)]
 pub struct ConnectorCustomerData {
-    pub customer_id: Option<String>,
-    pub email: Option<Email>,
-    pub name: Option<String>,
+    pub customer_id: Option<Secret<String>>,
+    pub email: Option<Secret<Email>>,
+    pub name: Option<Secret<String>>,
     pub description: Option<String>,
 }
 
