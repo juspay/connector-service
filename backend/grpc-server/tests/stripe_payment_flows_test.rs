@@ -141,7 +141,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         enrolled_for_3ds: false,
         request_incremental_authorization: false,
         capture_method: Some(i32::from(capture_method)),
-        connector_customer: Some("cus_TE8065JzRWlLQf".to_string()),
+        connector_customer_id: Some("cus_TE8065JzRWlLQf".to_string()),
         // payment_method_type: Some(i32::from(PaymentMethodType::Credit)),
         ..Default::default()
     }

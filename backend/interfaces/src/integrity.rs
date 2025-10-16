@@ -4,24 +4,26 @@
 //! It ensures that request and response data remain consistent across connector interactions
 //! by comparing critical fields like amounts, currencies, and transaction identifiers.
 use common_utils::errors::IntegrityCheckError;
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 // Domain type imports
 use domain_types::connector_types::{
-    AcceptDisputeData, AccessTokenRequestData, DisputeDefendData, PaymentCreateOrderData,
-    PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
-    PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
-    PaymentsPreAuthenticateData, PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData,
-    SessionTokenRequestData, SetupMandateRequestData, SubmitEvidenceData,
+    AcceptDisputeData, AccessTokenRequestData, ConnectorCustomerData, DisputeDefendData,
+    PaymentCreateOrderData, PaymentMethodTokenizationData, PaymentVoidData,
+    PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+    PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsSyncData, RefundSyncData,
+    RefundsData, RepeatPaymentData, SessionTokenRequestData, SetupMandateRequestData,
+    SubmitEvidenceData,
 };
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_request_types::{
         AcceptDisputeIntegrityObject, AccessTokenIntegrityObject, AuthenticateIntegrityObject,
-        AuthoriseIntegrityObject, CaptureIntegrityObject, CreateOrderIntegrityObject,
-        DefendDisputeIntegrityObject, PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject,
-        PaymentVoidIntegrityObject, PostAuthenticateIntegrityObject,
-        PreAuthenticateIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
-        RepeatPaymentIntegrityObject, SessionTokenIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject,
+        AuthoriseIntegrityObject, CaptureIntegrityObject, CreateConnectorCustomerIntegrityObject,
+        CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
+        PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
+        PostAuthenticateIntegrityObject, PreAuthenticateIntegrityObject, RefundIntegrityObject,
+        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SessionTokenIntegrityObject,
+        SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
     },
 };
 
@@ -160,6 +162,7 @@ impl_check_integrity!(RepeatPaymentData);
 impl_check_integrity!(PaymentsAuthenticateData<S>);
 impl_check_integrity!(PaymentsPostAuthenticateData<S>);
 impl_check_integrity!(PaymentsPreAuthenticateData<S>);
+impl_check_integrity!(ConnectorCustomerData);
 
 // ========================================================================
 // GET INTEGRITY OBJECT IMPLEMENTATIONS
@@ -417,6 +420,22 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<PostAuthenticateIntegrityObje
         PostAuthenticateIntegrityObject {
             amount: self.amount,
             currency: self.currency.unwrap_or_default(),
+        }
+    }
+}
+
+impl GetIntegrityObject<CreateConnectorCustomerIntegrityObject> for ConnectorCustomerData {
+    fn get_response_integrity_object(&self) -> Option<CreateConnectorCustomerIntegrityObject> {
+        None // Customer creation responses don't have integrity objects
+    }
+
+    fn get_request_integrity_object(&self) -> CreateConnectorCustomerIntegrityObject {
+        CreateConnectorCustomerIntegrityObject {
+            customer_id: self.customer_id.clone(),
+            email: self.email.as_ref().map(|e| {
+                let email_inner = e.peek().clone().expose();
+                Secret::new(email_inner.expose())
+            }),
         }
     }
 }
@@ -946,6 +965,54 @@ impl FlowIntegrity for PostAuthenticateIntegrityObject {
                 &req_integrity_object.currency.to_string(),
                 &res_integrity_object.currency.to_string(),
             ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for CreateConnectorCustomerIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        // Check customer_id
+        if req_integrity_object.customer_id != res_integrity_object.customer_id {
+            let req_customer_id = req_integrity_object
+                .customer_id
+                .as_ref()
+                .map(|s| s.clone().expose())
+                .unwrap_or_else(|| "None".to_string());
+            let res_customer_id = res_integrity_object
+                .customer_id
+                .as_ref()
+                .map(|s| s.clone().expose())
+                .unwrap_or_else(|| "None".to_string());
+            mismatched_fields.push(format_mismatch(
+                "customer_id",
+                &req_customer_id,
+                &res_customer_id,
+            ));
+        }
+
+        // Check email
+        if req_integrity_object.email != res_integrity_object.email {
+            let req_email = req_integrity_object
+                .email
+                .as_ref()
+                .map(|s| s.clone().expose())
+                .unwrap_or_else(|| "None".to_string());
+            let res_email = res_integrity_object
+                .email
+                .as_ref()
+                .map(|s| s.clone().expose())
+                .unwrap_or_else(|| "None".to_string());
+            mismatched_fields.push(format_mismatch("email", &req_email, &res_email));
         }
 
         check_integrity_result(mismatched_fields, connector_transaction_id)
