@@ -749,7 +749,7 @@ fn generate_easebuzz_hash(
     
     // Simplified hash generation - actual implementation would follow EaseBuzz's hash algorithm
     let hash_string = format!("{}|{}|{}|{}", key, txnid, amount, currency);
-    let hash = format!("{:x}", md5::compute(hash_string));
+    let hash = format!("{:x}", md5_compute(&hash_string));
     
     Ok(Secret::new(hash))
 }
