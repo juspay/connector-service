@@ -28,31 +28,9 @@ use domain_types::{
     router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
     router_response_types::Response,
-    types::Connectors,
+    types::{Connectors, HasConnectors},
 };
 
-// Trait to provide access to connectors field
-pub trait HasConnectors {
-    fn connectors(&self) -> &Connectors;
-}
-
-impl HasConnectors for PaymentFlowData {
-    fn connectors(&self) -> &Connectors {
-        &self.connectors
-    }
-}
-
-impl HasConnectors for RefundFlowData {
-    fn connectors(&self) -> &Connectors {
-        &self.connectors
-    }
-}
-
-impl HasConnectors for DisputeFlowData {
-    fn connectors(&self) -> &Connectors {
-        &self.connectors
-    }
-}
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,

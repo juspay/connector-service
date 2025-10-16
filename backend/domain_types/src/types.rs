@@ -140,6 +140,29 @@ pub struct ConnectorParamsWithMoreUrls {
     pub base_url_bank_redirects: String,
 }
 
+// Trait to provide access to connectors field
+pub trait HasConnectors {
+    fn connectors(&self) -> &Connectors;
+}
+
+impl HasConnectors for PaymentFlowData {
+    fn connectors(&self) -> &Connectors {
+        &self.connectors
+    }
+}
+
+impl HasConnectors for RefundFlowData {
+    fn connectors(&self) -> &Connectors {
+        &self.connectors
+    }
+}
+
+impl HasConnectors for DisputeFlowData {
+    fn connectors(&self) -> &Connectors {
+        &self.connectors
+    }
+}
+
 #[derive(Debug, serde::Deserialize, Clone)]
 pub struct Proxy {
     pub http_url: Option<String>,
