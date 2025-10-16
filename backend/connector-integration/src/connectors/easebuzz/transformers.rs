@@ -231,7 +231,7 @@ impl<
         let hash = generate_easebuzz_hash(
             &item.router_data.connector_auth_type,
             &item.router_data.resource_common_data.connector_request_reference_id,
-            &amount.get_amount_as_string(),
+            amount.as_str(),
             &item.router_data.request.currency.to_string(),
         )?;
 
@@ -296,7 +296,7 @@ impl<
             &item.router_data.connector_auth_type,
             &item.router_data.request.connector_transaction_id.get_connector_transaction_id()
                 .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?,
-            &amount.get_amount_as_string(),
+            amount.as_str(),
             &item.router_data.request.currency.to_string(),
         )?;
 
@@ -349,7 +349,7 @@ impl<
             &item.router_data.connector_auth_type,
             &item.router_data.request.connector_transaction_id.get_connector_transaction_id()
                 .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?,
-            &amount.get_amount_as_string(),
+            amount.as_str(),
             &item.router_data.request.currency.to_string(),
         )?;
 
