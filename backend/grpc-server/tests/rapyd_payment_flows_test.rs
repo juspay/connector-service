@@ -239,6 +239,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         request_ref_id: None,
         browser_info: None,
         access_token: None,
+        capture_method: None,
     }
 }
 
@@ -277,6 +278,8 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         all_keys_required: None,
         browser_info: None,
         access_token: None,
+        amount: None,
+        currency: None,
     }
 }
 

@@ -1792,3 +1792,11 @@ pub enum AuthorizationStatus {
     // Requires merchant action
     Unresolved,
 }
+
+#[derive(Debug, Default, Eq, PartialEq, serde::Deserialize, serde::Serialize, Clone, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum DecoupledAuthenticationType {
+    #[default]
+    Challenge,
+    Frictionless,
+}

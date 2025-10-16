@@ -71,6 +71,7 @@ pub enum ConnectorEnum {
     Aci,
     Trustpay,
     Stripe,
+    Cybersource,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -108,6 +109,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Aci => Ok(Self::Aci),
             grpc_api_types::payments::Connector::Trustpay => Ok(Self::Trustpay),
             grpc_api_types::payments::Connector::Stripe => Ok(Self::Stripe),
+            grpc_api_types::payments::Connector::Cybersource => Ok(Self::Cybersource),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -802,6 +804,8 @@ pub struct PaymentVoidData {
     pub integrity_object: Option<PaymentVoidIntegrityObject>,
     pub raw_connector_response: Option<String>,
     pub browser_info: Option<BrowserInformation>,
+    pub amount: Option<MinorUnit>,
+    pub currency: Option<Currency>,
 }
 
 impl PaymentVoidData {
@@ -1855,6 +1859,7 @@ pub struct PaymentsCaptureData {
     pub connector_metadata: Option<serde_json::Value>,
     pub integrity_object: Option<CaptureIntegrityObject>,
     pub browser_info: Option<BrowserInformation>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
 }
 
 impl PaymentsCaptureData {

@@ -21,6 +21,7 @@ Jod = "Jod"  # Jordanian Dinar (capitalized)
 BA = "BA"  # Bosnia and Herzegovina
 FO = "FO"  # Faroe Islands  
 PN = "PN"  # Pitcairn Islands
+ND = "ND"  # North Dakota
 
 # Financial transaction status codes
 FPR = "FPR"  # Financial processing response code

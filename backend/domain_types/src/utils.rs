@@ -388,3 +388,76 @@ pub fn extract_merchant_id_from_metadata(
             })
         })?)
 }
+
+/// Convert US state names to their 2-letter abbreviations
+pub fn convert_us_state_to_code(state: &str) -> String {
+    // If already 2 characters, assume it's already an abbreviation
+    if state.len() == 2 {
+        return state.to_uppercase();
+    }
+
+    // Convert full state names to abbreviations (case-insensitive)
+    match state.to_lowercase().trim() {
+        "alabama" => "AL".to_string(),
+        "alaska" => "AK".to_string(),
+        "american samoa" => "AS".to_string(),
+        "arizona" => "AZ".to_string(),
+        "arkansas" => "AR".to_string(),
+        "california" => "CA".to_string(),
+        "colorado" => "CO".to_string(),
+        "connecticut" => "CT".to_string(),
+        "delaware" => "DE".to_string(),
+        "district of columbia" | "columbia" => "DC".to_string(),
+        "federated states of micronesia" | "micronesia" => "FM".to_string(),
+        "florida" => "FL".to_string(),
+        "georgia" => "GA".to_string(),
+        "guam" => "GU".to_string(),
+        "hawaii" => "HI".to_string(),
+        "idaho" => "ID".to_string(),
+        "illinois" => "IL".to_string(),
+        "indiana" => "IN".to_string(),
+        "iowa" => "IA".to_string(),
+        "kansas" => "KS".to_string(),
+        "kentucky" => "KY".to_string(),
+        "louisiana" => "LA".to_string(),
+        "maine" => "ME".to_string(),
+        "marshall islands" => "MH".to_string(),
+        "maryland" => "MD".to_string(),
+        "massachusetts" => "MA".to_string(),
+        "michigan" => "MI".to_string(),
+        "minnesota" => "MN".to_string(),
+        "mississippi" => "MS".to_string(),
+        "missouri" => "MO".to_string(),
+        "montana" => "MT".to_string(),
+        "nebraska" => "NE".to_string(),
+        "nevada" => "NV".to_string(),
+        "new hampshire" => "NH".to_string(),
+        "new jersey" => "NJ".to_string(),
+        "new mexico" => "NM".to_string(),
+        "new york" => "NY".to_string(),
+        "north carolina" => "NC".to_string(),
+        "north dakota" => "ND".to_string(),
+        "northern mariana islands" => "MP".to_string(),
+        "ohio" => "OH".to_string(),
+        "oklahoma" => "OK".to_string(),
+        "oregon" => "OR".to_string(),
+        "palau" => "PW".to_string(),
+        "pennsylvania" => "PA".to_string(),
+        "puerto rico" => "PR".to_string(),
+        "rhode island" => "RI".to_string(),
+        "south carolina" => "SC".to_string(),
+        "south dakota" => "SD".to_string(),
+        "tennessee" => "TN".to_string(),
+        "texas" => "TX".to_string(),
+        "utah" => "UT".to_string(),
+        "vermont" => "VT".to_string(),
+        "virgin islands" => "VI".to_string(),
+        "virginia" => "VA".to_string(),
+        "washington" => "WA".to_string(),
+        "west virginia" => "WV".to_string(),
+        "wisconsin" => "WI".to_string(),
+        "wyoming" => "WY".to_string(),
+        // If no match found, return original (might be international or invalid)
+        _ => state.to_string(),
+    }
+}
