@@ -10,7 +10,7 @@ use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData,
+        RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData, ResponseId,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
