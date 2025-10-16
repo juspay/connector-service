@@ -339,25 +339,37 @@ What cargo fmt does:
 <a name="supported-payment-processors-and-methods"></a>
 ## Supported payment processors and methods
 
-| Connector       | Authorize | Capture | Sale | Refunds | Disputes | Status | Webhooks |
-|-----------------|-----------|---------|------|---------|----------|--------|----------|
-| Stripe          |           |         |      |         |          |        |          |
-| Adyen           | ✔️         | ✔️       | ✔️    | ✔️       | ✔️        | ✔️      | ✔️        |
-| Paypal          |           |         |      |         |          |        |          |
-| Braintree       |           |         |      |         |          |        |          |
-| Authorize.net   |           |         |      |         |          |        |          |
-| Checkout.com    |           |         |      |         |          |        |          |
-| JP Morgan       |           |         |      |         |          |        |          |
-| Bank of America |           |         |      |         |          |        |          |
-| Fiserv          |           |         |      |         |          |        |          |
-| Wells Fargo     |           |         |      |         |          |        |          |
-| Global Payments |           |         |      |         |          |        |          |
-| Elavon          |           |         |      |         |          |        |          |
-| Paytm           |           |         |      |         |          |        |          |
-| Razorpay        | ✔️         | ✔️       | ✔️    | ✔️       |          | ✔️      | ✔️        |
-| Phonepe         |           |         |      |         |          |        |          |
-| PayU            |           |         |      |         |          |        |          |
-| Billdesk        |           |         |      |         |          |        |          |
+| Connector | Authorize | Capture | Sale | Refunds | Disputes | Status | Webhooks |
+|-----------|-----------|---------|------|---------|----------|--------|----------|
+| ACI | ✔️ | ✔️ | | ✔️ | | ✔️ | |
+| Adyen | ✔️ | ✔️ | | ✔️ | ✔️ | ✔️ | |
+| Authorize.net | ✔️ | ✔️ | | ✔️ | | ✔️ | ✔️ |
+| Bluecode | ✔️ | | | | | ✔️ | |
+| Braintree | ✔️ | ✔️ | | ✔️ | | ✔️ | |
+| Cashfree | ✔️ | | | | | | |
+| Cashtocode | ✔️ | | | | | | |
+| Checkout.com | ✔️ | ✔️ | | ✔️ | | ✔️ | |
+| Cryptopay | ✔️ | | | | | ✔️ | ✔️ |
+| dLocal | ✔️ | ✔️ | | ✔️ | | ✔️ | |
+| Elavon | ✔️ | ✔️ | | ✔️ | | ✔️ | |
+| Fiserv | ✔️ | ✔️ | | ✔️ | | ✔️ | |
+| Fiuu | ✔️ | ✔️ | | ✔️ | | ✔️ | ✔️ |
+| Helcim | ✔️ | ✔️ | | ✔️ | | ✔️ | |
+| Mifinity | ✔️ | | | | | ✔️ | |
+| Nexinets | ✔️ | ✔️ | | ✔️ | | ✔️ | |
+| Noon | ✔️ | ✔️ | | ✔️ | | ✔️ | ✔️ |
+| Novalnet | ✔️ | ✔️ | | ✔️ | | ✔️ | ✔️ |
+| Paytm | ✔️ | | | | | ✔️ | |
+| PayU | ✔️ | | | | | ✔️ | |
+| Phonepe | ✔️ | | | | | ✔️ | |
+| Placetopay | ✔️ | ✔️ | | ✔️ | | ✔️ | |
+| Rapyd | ✔️ | ✔️ | | ✔️ | | ✔️ | |
+| Razorpay | ✔️ | ✔️ | | ✔️ | | ✔️ | |
+| Razorpay V2 | ✔️ | ✔️ | | ✔️ | | ✔️ | |
+| Stripe | ✔️ | ✔️ | | ✔️ | | ✔️ | |
+| Trustpay | | | | | | ✔️ | |
+| Volt | ✔️ | | | | | ✔️ | ✔️ |
+| Xendit | ✔️ | ✔️ | | ✔️ | | ✔️ | |
 
 
 ---
