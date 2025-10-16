@@ -993,23 +993,17 @@ impl Payments {
             ConnectorCustomerResponse,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let email = match payload.email.clone() {
-            Some(email_str) => match common_utils::Email::try_from(email_str.expose()) {
-                Ok(email) => Some(email),
-                Err(_) => {
-                    tracing::warn!("Invalid email format provided for customer creation");
-                    None
-                }
-            },
-            None => None,
-        };
-        // Create connector customer request data
-        let connector_customer_request_data = ConnectorCustomerData {
-            customer_id: payload.customer_id.clone(),
-            email,
-            name: payload.customer_name.clone(),
-            description: None,
-        };
+        // Create connector customer request data using ForeignTryFrom
+        let connector_customer_request_data =
+            ConnectorCustomerData::foreign_try_from(payload.clone()).map_err(|err| {
+                tracing::error!("Failed to process connector customer data: {:?}", err);
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some("Failed to process connector customer data".to_string()),
+                    Some("CONNECTOR_CUSTOMER_DATA_ERROR".to_string()),
+                    None,
+                )
+            })?;
 
         // Create router data for connector customer flow
         let connector_customer_router_data = RouterDataV2::<

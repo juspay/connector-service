@@ -2882,23 +2882,38 @@ impl<
                 })
             });
 
+        // Conditionally send merchant_customer_id (matching Hyperswitch parity)
+        // Only send if customer_id exists and length <= MAX_ID_LENGTH (20 chars)
+        let merchant_customer_id = item
+            .router_data
+            .request
+            .customer_id
+            .as_ref()
+            .and_then(|id| {
+                if id.len() <= MAX_ID_LENGTH {
+                    Some(id.to_string())
+                } else {
+                    None
+                }
+            });
+
         // Create a customer profile without payment method (zero mandate)
         Ok(Self {
             create_customer_profile_request: AuthorizedotnetZeroMandateRequest {
                 merchant_authentication,
                 profile: Profile {
-                    merchant_customer_id: item.router_data.request.customer_id.clone(),
-                    description: None, // Match Hyperswitch: set to None
+                    merchant_customer_id,
+                    description: None,
                     email: item
                         .router_data
                         .request
                         .email
                         .as_ref()
                         .map(|e| e.peek().clone()),
-                    payment_profiles: None, // Match Hyperswitch: set to None instead of empty vec
+                    payment_profiles: None,
                     ship_to_list,
                 },
-                validation_mode: Some(ValidationMode::LiveMode),
+                validation_mode: None, // Don't send validationMode (Hyperswitch doesn't have this field)
             },
         })
     }
