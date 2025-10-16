@@ -38,8 +38,7 @@ use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{
-        self, AcceptDispute, ConnectorServiceTrait,
-        DisputeDefend, IncomingWebhook,
+        self, AcceptDispute, ConnectorServiceTrait, DisputeDefend, IncomingWebhook,
         PaymentAccessToken, PaymentAuthorizeV2, PaymentCapture, PaymentOrderCreate,
         PaymentSessionToken, PaymentSyncV2, PaymentTokenV2, PaymentVoidV2, RefundSyncV2, RefundV2,
         RepeatPaymentV2, SetupMandateV2, SubmitEvidenceV2, ValidationTrait,
@@ -51,12 +50,13 @@ use serde::Serialize;
 
 use self::transformers::{
     get_trans_id, AuthorizedotnetAuthorizeResponse, AuthorizedotnetCaptureRequest,
-    AuthorizedotnetCaptureResponse, AuthorizedotnetCreateSyncRequest, AuthorizedotnetPSyncResponse,
-    AuthorizedotnetPaymentsRequest, AuthorizedotnetRSyncRequest, AuthorizedotnetRSyncResponse,
-    AuthorizedotnetRefundRequest, AuthorizedotnetRefundResponse,
+    AuthorizedotnetCaptureResponse, AuthorizedotnetCreateCustomerProfileRequest,
+    AuthorizedotnetCreateCustomerProfileResponse, AuthorizedotnetCreateSyncRequest,
+    AuthorizedotnetPSyncResponse, AuthorizedotnetPaymentsRequest, AuthorizedotnetRSyncRequest,
+    AuthorizedotnetRSyncResponse, AuthorizedotnetRefundRequest, AuthorizedotnetRefundResponse,
     AuthorizedotnetRepeatPaymentRequest, AuthorizedotnetRepeatPaymentResponse,
     AuthorizedotnetVoidRequest, AuthorizedotnetVoidResponse, AuthorizedotnetWebhookEventType,
-    AuthorizedotnetWebhookObjectId, CreateCustomerProfileRequest, CreateCustomerProfileResponse,
+    AuthorizedotnetWebhookObjectId,
 };
 use super::macros;
 use crate::{types::ResponseRouterData, with_response_body};
@@ -602,8 +602,8 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: CreateConnectorCustomer,
-            request_body: CreateCustomerProfileRequest<T>,
-            response_body: CreateCustomerProfileResponse,
+            request_body: AuthorizedotnetCreateCustomerProfileRequest<T>,
+            response_body: AuthorizedotnetCreateCustomerProfileResponse,
             router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
         )
     ],
@@ -897,8 +897,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Authorizedotnet,
-    curl_request: Json(CreateCustomerProfileRequest),
-    curl_response: CreateCustomerProfileResponse,
+    curl_request: Json(AuthorizedotnetCreateCustomerProfileRequest),
+    curl_response: AuthorizedotnetCreateCustomerProfileResponse,
     flow_name: CreateConnectorCustomer,
     resource_common_data: PaymentFlowData,
     flow_request: ConnectorCustomerData,

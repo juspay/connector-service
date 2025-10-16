@@ -48,9 +48,7 @@ use hyperswitch_masking::{Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
-    connector_types::{
-        self, is_mandate_supported, ConnectorValidation,
-    },
+    connector_types::{self, is_mandate_supported, ConnectorValidation},
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
