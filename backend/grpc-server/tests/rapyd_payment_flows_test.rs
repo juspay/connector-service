@@ -142,7 +142,7 @@ fn create_payment_authorize_request(
     });
 
     // Set connector customer ID
-    request.connector_customer_id = Some("TEST_CONNECTOR".to_string());
+    request.customer_id = Some("TEST_CONNECTOR".to_string());
 
     // Set the customer information with static email (can be made dynamic)
     request.email = Some(TEST_EMAIL.to_string().into());
@@ -221,6 +221,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         access_token: None,
         capture_method: None,
         handle_response: None,
+        amount: TEST_AMOUNT,
+        currency: i32::from(Currency::Usd),
     }
 }
 
@@ -237,6 +239,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         request_ref_id: None,
         browser_info: None,
         access_token: None,
+        capture_method: None,
     }
 }
 
@@ -275,6 +278,8 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         all_keys_required: None,
         browser_info: None,
         access_token: None,
+        amount: None,
+        currency: None,
     }
 }
 

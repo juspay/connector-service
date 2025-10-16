@@ -1143,3 +1143,45 @@ pub enum CardType {
     Credit,
     Debit,
 }
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct BankTransferNextStepsData {
+    /// The instructions for performing a bank transfer
+    #[serde(flatten)]
+    pub bank_transfer_instructions: BankTransferInstructions,
+    /// The details received by the receiver
+    pub receiver: Option<ReceiverDetails>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BankTransferInstructions {
+    /// The credit transfer for ACH transactions
+    AchCreditTransfer(Box<AchTransfer>),
+    /// The instructions for Multibanco bank transactions
+    Multibanco(Box<MultibancoTransferInstructions>),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct AchTransfer {
+    pub account_number: Secret<String>,
+    pub bank_name: String,
+    pub routing_number: Secret<String>,
+    pub swift_code: Secret<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct MultibancoTransferInstructions {
+    pub reference: Secret<String>,
+    pub entity: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct ReceiverDetails {
+    /// The amount received by receiver
+    amount_received: i64,
+    /// The amount charged by ACH
+    amount_charged: Option<i64>,
+    /// The amount remaining to be sent via ACH
+    amount_remaining: Option<i64>,
+}

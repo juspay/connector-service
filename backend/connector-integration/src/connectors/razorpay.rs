@@ -923,6 +923,9 @@ impl<
             status_code: 200,
             response_headers: None,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
+            minor_amount_captured: None,
+            amount_captured: None,
+            error_reason: None,
         })
     }
 

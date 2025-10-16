@@ -182,6 +182,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
 
     let mandate_reference = MandateReference {
         mandate_id: Some(mandate_id.to_string()),
+        payment_method_id: None,
     };
 
     // Create metadata matching your JSON format
@@ -307,7 +308,7 @@ fn create_payment_authorize_request(
         })),
     });
 
-    request.connector_customer_id = Some("TEST_CONNECTOR".to_string());
+    request.customer_id = Some("TEST_CONNECTOR".to_string());
     // Set the customer information with unique email
     request.email = Some(generate_unique_email().into());
 
@@ -395,6 +396,8 @@ fn create_payment_get_request(transaction_id: &str) -> PaymentServiceGetRequest 
         access_token: None,
         capture_method: None,
         handle_response: None,
+        amount: TEST_AMOUNT,
+        currency: 146, // Currency value from working grpcurl
     }
 }
 
@@ -417,6 +420,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         metadata: HashMap::new(),
         browser_info: None,
         access_token: None,
+        capture_method: None,
     }
 }
 
@@ -437,6 +441,8 @@ fn create_void_request(transaction_id: &str) -> PaymentServiceVoidRequest {
         all_keys_required: None,
         browser_info: None,
         access_token: None,
+        amount: None,
+        currency: None,
     }
 }
 
