@@ -30,7 +30,10 @@ use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::easebuzz::EaseBuzzRouterData, types::ResponseRouterData};
+use crate::{types::ResponseRouterData};
+
+// Type alias for router data with EaseBuzz connector
+pub type EaseBuzzRouterData<T, U> = crate::connectors::ConnectorRouterData<T, U>;
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
