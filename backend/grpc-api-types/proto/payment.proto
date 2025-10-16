@@ -952,6 +952,7 @@ message Identifier {
 message MandateReference {
   // Connector's unique identifier for the mandate.
   optional string mandate_id = 1;
+  optional string payment_method_id = 2;
 }
 
 // Container for various address types related to a payment.
@@ -1096,6 +1097,31 @@ message EvidenceDocument {
   optional string text_content = 5;
 }
 
+// Extended authorization response data
+message ExtendedAuthorizationResponseData {
+  optional bool extended_authentication_applied = 1; // Whether extended authentication was applied
+  optional int64 capture_before = 2; // Unix timestamp before which capture must occur
+}
+
+// Additional payment method data for card payments
+message CardConnectorResponse {
+  optional bytes authentication_data = 1; // Authentication details as JSON bytes
+  optional bytes payment_checks = 2; // Payment checks as JSON bytes
+  optional string card_network = 3; // Card network returned by the processor
+  optional string domestic_network = 4; // Domestic (co-branded) card network
+}
+
+// Additional payment method connector response
+message AdditionalPaymentMethodConnectorResponse {
+  CardConnectorResponse card = 1; // Card-specific response data
+}
+
+// Connector response data containing various information from the connector
+message ConnectorResponseData {
+  optional AdditionalPaymentMethodConnectorResponse additional_payment_method_data = 1; // Additional payment method specific data
+  optional ExtendedAuthorizationResponseData extended_authorization_response_data = 2; // Extended authorization data
+  optional bool is_overcapture_enabled = 3; // Whether overcapture is enabled
+}
 
 // ============================================================================
 // SERVICE-SPECIFIC MESSAGES
@@ -1192,10 +1218,18 @@ message PaymentServiceAuthorizeResponse {
   optional ConnectorState state = 13; // State data for access token storage and other connector-specific state
 
   // Raw Response
-  optional string raw_connector_response = 9; // Raw response from the connector for debugging
+  optional SecretString raw_connector_response = 9; // Raw response from the connector for debugging
 
   // Raw Request
-  optional string raw_connector_request = 14; // Raw request from the connector for debugging
+  optional SecretString raw_connector_request = 14; // Raw request from the connector for debugging
+
+  // Payment Details
+  optional int64 captured_amount = 15; // Amount that has been captured
+  optional int64 minor_captured_amount = 16; // Captured amount in minor currency units
+  optional int64 minor_amount_capturable = 17; // Capturable amount in minor currency units
+
+  optional MandateReference mandate_reference = 18; // Mandate reference, if applicable
+  optional ConnectorResponseData connector_response = 19; // Various data regarding the response from connector
 }
 
 // Request message for synchronizing payment status.
@@ -1214,6 +1248,10 @@ message PaymentServiceGetRequest {
 
   // Body of the response.
   optional bytes handle_response = 4;
+
+  // Amount Information
+  int64 amount = 5; // The amount for the payment in minor currency units
+  Currency currency = 6; // The currency for the payment, in ISO 4217 three-letter code
 }
 
 // Response message for a payment status synchronization.
@@ -1255,15 +1293,16 @@ message PaymentServiceGetResponse {
   optional string connector_customer_id = 22; // Customer ID as recognized by the connector
   optional string merchant_order_reference_id = 23; // Merchant's internal reference ID
   map<string, string> metadata = 24; // Additional metadata from the connector
+  optional ConnectorResponseData connector_response = 30; // Various data regarding the response from connector
   
   // State Information
   optional ConnectorState state = 28; // State data for access token storage and other connector-specific state
 
   // Raw Response
-  optional string raw_connector_response = 25; // Raw response from the connector for debugging
+  optional SecretString raw_connector_response = 25; // Raw response from the connector for debugging
 
   // Raw Request
-  optional string raw_connector_request = 29; // Raw request to the connector for debugging
+  optional SecretString raw_connector_request = 29; // Raw request to the connector for debugging
 }
 
 // Request message for voiding a payment.
@@ -1302,7 +1341,7 @@ message PaymentServiceVoidResponse {
   optional ConnectorState state = 8; // State data for access token storage and other connector-specific state
 
   // Raw Request
-  optional string raw_connector_request = 9; // Raw request to the connector for debugging
+  optional SecretString raw_connector_request = 9; // Raw request to the connector for debugging
 }
 
 // Request message for capturing a payment.
@@ -1347,7 +1386,7 @@ message PaymentServiceCaptureResponse {
   optional ConnectorState state = 8; // State data for access token storage and other connector-specific state
 
   // Raw Request
-  optional string raw_connector_request = 9; // Raw request to the connector for debugging
+  optional SecretString raw_connector_request = 9; // Raw request to the connector for debugging
 }
 
 // Request message for processing a refund.
@@ -1421,10 +1460,10 @@ message RefundResponse {
   optional ConnectorState state = 24; // State data for access token storage and other connector-specific state
 
   // Raw Response
-  optional string raw_connector_response = 21; // Raw response from the connector for debugging
+  optional SecretString raw_connector_response = 21; // Raw response from the connector for debugging
 
   // Raw Request
-  optional string raw_connector_request = 25; // Raw request to the connector for debugging
+  optional SecretString raw_connector_request = 25; // Raw request to the connector for debugging
 }
 
 // Request message for creating a dispute.
@@ -1472,7 +1511,7 @@ message DisputeResponse {
   optional Identifier response_ref_id = 17; // Response reference ID for tracking
 
   // Raw Request
-  optional string raw_connector_request = 20; // Raw request to the connector for debugging
+  optional SecretString raw_connector_request = 20; // Raw request to the connector for debugging
 }
 
 // Request message for setting up a mandate.
@@ -1555,7 +1594,7 @@ message PaymentServiceRegisterResponse {
   optional ConnectorState state = 12; // State data for access token storage and other connector-specific state
 
   // Raw Request
-  optional string raw_connector_request = 13; // Raw request to the connector for debugging
+  optional SecretString raw_connector_request = 13; // Raw request to the connector for debugging
 }
 
 // Request message for repeat payment (MIT - Merchant Initiated Transaction).
@@ -1613,10 +1652,10 @@ message PaymentServiceRepeatEverythingResponse {
   optional ConnectorState state = 10; // State data for access token storage and other connector-specific state
 
   // Raw Response
-  optional string raw_connector_response = 7; // Raw response from the connector for debugging
+  optional SecretString raw_connector_response = 7; // Raw response from the connector for debugging
 
   // Raw Request
-  optional string raw_connector_request = 11; // Raw request to the connector for debugging
+  optional SecretString raw_connector_request = 11; // Raw request to the connector for debugging
 }
 
 // -------------------------
@@ -1684,7 +1723,7 @@ message PaymentServicePreAuthenticateResponse {
   optional ConnectorState state = 13; // State data for access token storage and other connector-specific state
   
   // Raw Response
-  optional string raw_connector_response = 9; // Raw response from the connector for debugging
+  optional SecretString raw_connector_response = 9; // Raw response from the connector for debugging
 }
 
 // Request message for authentication step
@@ -1751,7 +1790,7 @@ message PaymentServiceAuthenticateResponse {
   optional ConnectorState state = 13; // State data for access token storage and other connector-specific state
   
   // Raw Response
-  optional string raw_connector_response = 9; // Raw response from the connector for debugging
+  optional SecretString raw_connector_response = 9; // Raw response from the connector for debugging
 }
 
 // Request message for post-authentication step
@@ -1821,7 +1860,7 @@ message PaymentServicePostAuthenticateResponse {
   optional ConnectorState state = 13; // State data for access token storage and other connector-specific state
   
   // Raw Response
-  optional string raw_connector_response = 14; // Raw response from the connector for debugging
+  optional SecretString raw_connector_response = 14; // Raw response from the connector for debugging
 }
 
 // Request message for PaymentService.Transform RPC
@@ -2025,7 +2064,7 @@ message DisputeServiceSubmitEvidenceResponse {
   optional Identifier response_ref_id = 7; // Response reference ID for tracking
 
   // Raw Request
-  optional string raw_connector_request = 10; // Raw request to the connector for debugging
+  optional SecretString raw_connector_request = 10; // Raw request to the connector for debugging
 }
 
 // Request message for retrieving dispute information.
@@ -2159,7 +2198,7 @@ message DisputeDefendResponse {
   optional Identifier response_ref_id = 6; // Response reference ID for tracking
 
   // Raw Request
-  optional string raw_connector_request = 9; // Raw request to the connector for debugging
+  optional SecretString raw_connector_request = 9; // Raw request to the connector for debugging
 }
 
 // Request message for accepting a dispute.
@@ -2187,7 +2226,7 @@ message AcceptDisputeResponse {
   optional Identifier response_ref_id = 6; // Response reference ID for tracking
 
   // Raw Request
-  optional string raw_connector_request = 9; // Raw request to the connector for debugging
+  optional SecretString raw_connector_request = 9; // Raw request to the connector for debugging
 }
 
 // ============================================================================

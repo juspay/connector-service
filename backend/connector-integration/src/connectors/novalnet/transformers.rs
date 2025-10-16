@@ -2302,6 +2302,9 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                             error_message: None,
                             raw_connector_response: None,
                             response_headers: None,
+                            minor_amount_captured: None,
+                            amount_captured: None,
+                            error_reason: None,
                             transformation_status:
                                 common_enums::WebhookTransformationStatus::Complete,
                         })
@@ -2316,6 +2319,9 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                         error_message: Some(notif.result.status_text),
                         raw_connector_response: None,
                         response_headers: None,
+                        minor_amount_captured: None,
+                        amount_captured: None,
+                        error_reason: None,
                         transformation_status: common_enums::WebhookTransformationStatus::Complete,
                     }),
                 }
