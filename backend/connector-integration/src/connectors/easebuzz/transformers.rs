@@ -499,7 +499,7 @@ for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
                 Err(ErrorResponse {
                     code: "SYNC_ERROR".to_string(),
                     status_code: item.http_code,
-                    message: Some(error_message.clone()),
+                    message: error_message.clone(),
                     reason: Some(error_message),
                     attempt_status: None,
                     connector_transaction_id: None,
