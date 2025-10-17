@@ -280,7 +280,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                             response_data
                                 .merchant_tran_id
                                 .clone()
-                                .unwrap_or_else(|| router_data.request.connector_transaction_id
+                                .unwrap_or_else(|| router_data.router_data.request.connector_transaction_id
                                     .get_connector_transaction_id()
                                     .unwrap_or_default()),
                         ),
@@ -313,10 +313,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
-                ..router_data.resource_common_data
+                ..router_data.router_data.resource_common_data
             },
             response,
-            ..router_data
+            ..router_data.router_data
         })
     }
 }
