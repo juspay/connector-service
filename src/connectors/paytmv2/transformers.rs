@@ -19,6 +19,7 @@ use hyperswitch_domain_models::{
 };
 use masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
+use sha2::Digest;
 
 // Request/Response types based on the Haskell implementation
 
