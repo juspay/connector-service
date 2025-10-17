@@ -2,7 +2,7 @@ use common_enums::{AttemptStatus, PaymentMethodType};
 use common_utils::{
     crypto,
     errors::CustomResult,
-    types::{MinorUnit, StringMinorUnit},
+    types::MinorUnit,
 };
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
@@ -16,8 +16,6 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
-
-use domain_types::errors::ConnectorError;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzPaymentsRequest {
@@ -43,252 +41,6 @@ pub struct EaseBuzzPaymentsRequest {
     pub udf8: Option<String>,
     pub udf9: Option<String>,
     pub udf10: Option<String>,
-    pub address1: Option<String>,
-    pub address2: Option<String>,
-    pub city: Option<String>,
-    pub state: Option<String>,
-    pub country: Option<String>,
-    pub zipcode: Option<String>,
-    pub pg: Option<String>,
-    pub customer_unique_id: Option<String>,
-    pub split_payments: Option<String>,
-    pub sub_merchant_id: Option<String>,
-    pub sub_merchant_name: Option<String>,
-    pub sub_merchant_email: Option<String>,
-    pub sub_merchant_mobile: Option<String>,
-    pub sub_merchant_address: Option<String>,
-    pub sub_merchant_city: Option<String>,
-    pub sub_merchant_state: Option<String>,
-    pub sub_merchant_country: Option<String>,
-    pub sub_merchant_zipcode: Option<String>,
-    pub sub_merchant_tin: Option<String>,
-    pub sub_merchant_pan: Option<String>,
-    pub sub_merchant_gst: Option<String>,
-    pub sub_merchant_sac: Option<String>,
-    pub sub_merchant_service_tax: Option<String>,
-    pub sub_merchant_cess: Option<String>,
-    pub sub_merchant_discount: Option<String>,
-    pub sub_merchant_other_charges: Option<String>,
-    pub sub_merchant_shipping_charges: Option<String>,
-    pub sub_merchant_total_amount: Option<String>,
-    pub sub_merchant_additional_info: Option<String>,
-    pub sub_merchant_custom_fields: Option<String>,
-    pub sub_merchant_merchant_order_id: Option<String>,
-    pub sub_merchant_merchant_transaction_id: Option<String>,
-    pub sub_merchant_merchant_reference_id: Option<String>,
-    pub sub_merchant_merchant_description: Option<String>,
-    pub sub_merchant_merchant_notes: Option<String>,
-    pub sub_merchant_merchant_metadata: Option<String>,
-    pub sub_merchant_merchant_tags: Option<String>,
-    pub sub_merchant_merchant_attributes: Option<String>,
-    pub sub_merchant_merchant_properties: Option<String>,
-    pub sub_merchant_merchant_features: Option<String>,
-    pub sub_merchant_merchant_capabilities: Option<String>,
-    pub sub_merchant_merchant_restrictions: Option<String>,
-    pub sub_merchant_merchant_limits: Option<String>,
-    pub sub_merchant_merchant_fees: Option<String>,
-    pub sub_merchant_merchant_commission: Option<String>,
-    pub sub_merchant_merchant_settlement: Option<String>,
-    pub sub_merchant_merchant_payout: Option<String>,
-    pub sub_merchant_merchant_refund: Option<String>,
-    pub sub_merchant_merchant_chargeback: Option<String>,
-    pub sub_merchant_merchant_dispute: Option<String>,
-    pub sub_merchant_merchant_fraud: Option<String>,
-    pub sub_merchant_merchant_risk: Option<String>,
-    pub sub_merchant_merchant_compliance: Option<String>,
-    pub sub_merchant_merchant_audit: Option<String>,
-    pub sub_merchant_merchant_reporting: Option<String>,
-    pub sub_merchant_merchant_analytics: Option<String>,
-    pub sub_merchant_merchant_insights: Option<String>,
-    pub sub_merchant_merchant_recommendations: Option<String>,
-    pub sub_merchant_merchant_suggestions: Option<String>,
-    pub sub_merchant_merchant_alerts: Option<String>,
-    pub sub_merchant_merchant_notifications: Option<String>,
-    pub sub_merchant_merchant_webhooks: Option<String>,
-    pub sub_merchant_merchant_callbacks: Option<String>,
-    pub sub_merchant_merchant_redirects: Option<String>,
-    pub sub_merchant_merchant_postbacks: Option<String>,
-    pub sub_merchant_merchant_responses: Option<String>,
-    pub sub_merchant_merchant_requests: Option<String>,
-    pub sub_merchant_merchant_logs: Option<String>,
-    pub sub_merchant_merchant_events: Option<String>,
-    pub sub_merchant_merchant_triggers: Option<String>,
-    pub sub_merchant_merchant_actions: Option<String>,
-    pub sub_merchant_merchant_workflows: Option<String>,
-    pub sub_merchant_merchant_processes: Option<String>,
-    pub sub_merchant_merchant_pipelines: Option<String>,
-    pub sub_merchant_merchant_stages: Option<String>,
-    pub sub_merchant_merchant_steps: Option<String>,
-    pub sub_merchant_merchant_tasks: Option<String>,
-    pub sub_merchant_merchant_jobs: Option<String>,
-    pub sub_merchant_merchant_schedules: Option<String>,
-    pub sub_merchant_merchant_crons: Option<String>,
-    pub sub_merchant_merchant_timers: Option<String>,
-    pub sub_merchant_merchant_delays: Option<String>,
-    pub sub_merchant_merchant_retries: Option<String>,
-    pub sub_merchant_merchant_backoffs: Option<String>,
-    pub sub_merchant_merchant_circuit_breakers: Option<String>,
-    pub sub_merchant_merchant_rate_limits: Option<String>,
-    pub sub_merchant_merchant_throttling: Option<String>,
-    pub sub_merchant_merchant_queuing: Option<String>,
-    pub sub_merchant_merchant_batching: Option<String>,
-    pub sub_merchant_merchant_streaming: Option<String>,
-    pub sub_merchant_merchant_real_time: Option<String>,
-    pub sub_merchant_merchant_async: Option<String>,
-    pub sub_merchant_merchant_sync: Option<String>,
-    pub sub_merchant_merchant_blocking: Option<String>,
-    pub sub_merchant_merchant_non_blocking: Option<String>,
-    pub sub_merchant_merchant_concurrent: Option<String>,
-    pub sub_merchant_merchant_parallel: Option<String>,
-    pub sub_merchant_merchant_distributed: Option<String>,
-    pub sub_merchant_merchant_clustered: Option<String>,
-    pub sub_merchant_merchant_scaled: Option<String>,
-    pub sub_merchant_merchant_load_balanced: Option<String>,
-    pub sub_merchant_merchant_high_availability: Option<String>,
-    pub sub_merchant_merchant_fault_tolerant: Option<String>,
-    pub sub_merchant_merchant_disaster_recovery: Option<String>,
-    pub sub_merchant_merchant_backup: Option<String>,
-    pub sub_merchant_merchant_replication: Option<String>,
-    pub sub_merchant_merchant_sharding: Option<String>,
-    pub sub_merchant_merchant_partitioning: Option<String>,
-    pub sub_merchant_merchant_indexing: Option<String>,
-    pub sub_merchant_merchant_caching: Option<String>,
-    pub sub_merchant_merchant_optimization: Option<String>,
-    pub sub_merchant_merchant_performance: Option<String>,
-    pub sub_merchant_merchant_monitoring: Option<String>,
-    pub sub_merchant_merchant_logging: Option<String>,
-    pub sub_merchant_merchant_tracing: Option<String>,
-    pub sub_merchant_merchant_profiling: Option<String>,
-    pub sub_merchant_merchant_debugging: Option<String>,
-    pub sub_merchant_merchant_testing: Option<String>,
-    pub sub_merchant_merchant_validation: Option<String>,
-    pub sub_merchant_merchant_verification: Option<String>,
-    pub sub_merchant_merchant_authentication: Option<String>,
-    pub sub_merchant_merchant_authorization: Option<String>,
-    pub sub_merchant_merchant_encryption: Option<String>,
-    pub sub_merchant_merchant_decryption: Option<String>,
-    pub sub_merchant_merchant_hashing: Option<String>,
-    pub sub_merchant_merchant_signing: Option<String>,
-    pub sub_merchant_merchant_audit_trail: Option<String>,
-    pub sub_merchant_master_merchant_id: Option<String>,
-    pub sub_merchant_master_merchant_name: Option<String>,
-    pub sub_merchant_master_merchant_email: Option<String>,
-    pub sub_merchant_master_merchant_mobile: Option<String>,
-    pub sub_merchant_master_merchant_address: Option<String>,
-    pub sub_merchant_master_merchant_city: Option<String>,
-    pub sub_merchant_master_merchant_state: Option<String>,
-    pub sub_merchant_master_merchant_country: Option<String>,
-    pub sub_merchant_master_merchant_zipcode: Option<String>,
-    pub sub_merchant_master_merchant_tin: Option<String>,
-    pub sub_merchant_master_merchant_pan: Option<String>,
-    pub sub_merchant_master_merchant_gst: Option<String>,
-    pub sub_merchant_master_merchant_sac: Option<String>,
-    pub sub_merchant_master_merchant_service_tax: Option<String>,
-    pub sub_merchant_master_merchant_cess: Option<String>,
-    pub sub_merchant_master_merchant_discount: Option<String>,
-    pub sub_merchant_master_merchant_other_charges: Option<String>,
-    pub sub_merchant_master_merchant_shipping_charges: Option<String>,
-    pub sub_merchant_master_merchant_total_amount: Option<String>,
-    pub sub_merchant_master_merchant_additional_info: Option<String>,
-    pub sub_merchant_master_merchant_custom_fields: Option<String>,
-    pub sub_merchant_master_merchant_order_id: Option<String>,
-    pub sub_merchant_master_merchant_transaction_id: Option<String>,
-    pub sub_merchant_master_merchant_reference_id: Option<String>,
-    pub sub_merchant_master_merchant_description: Option<String>,
-    pub sub_merchant_master_merchant_notes: Option<String>,
-    pub sub_merchant_master_merchant_metadata: Option<String>,
-    pub sub_merchant_master_merchant_tags: Option<String>,
-    pub sub_merchant_master_merchant_attributes: Option<String>,
-    pub sub_merchant_master_merchant_properties: Option<String>,
-    pub sub_merchant_master_merchant_features: Option<String>,
-    pub sub_merchant_master_merchant_capabilities: Option<String>,
-    pub sub_merchant_master_merchant_restrictions: Option<String>,
-    pub sub_merchant_master_merchant_limits: Option<String>,
-    pub sub_merchant_master_merchant_fees: Option<String>,
-    pub sub_merchant_master_merchant_commission: Option<String>,
-    pub sub_merchant_master_merchant_settlement: Option<String>,
-    pub sub_merchant_master_merchant_payout: Option<String>,
-    pub sub_merchant_master_merchant_refund: Option<String>,
-    pub sub_merchant_master_merchant_chargeback: Option<String>,
-    pub sub_merchant_master_merchant_dispute: Option<String>,
-    pub sub_merchant_master_merchant_fraud: Option<String>,
-    pub sub_merchant_master_merchant_risk: Option<String>,
-    pub sub_merchant_master_merchant_compliance: Option<String>,
-    pub sub_merchant_master_merchant_audit: Option<String>,
-    pub sub_merchant_master_merchant_reporting: Option<String>,
-    pub sub_merchant_master_merchant_analytics: Option<String>,
-    pub sub_merchant_master_merchant_insights: Option<String>,
-    pub sub_merchant_master_merchant_recommendations: Option<String>,
-    pub sub_merchant_master_merchant_suggestions: Option<String>,
-    pub sub_merchant_master_merchant_alerts: Option<String>,
-    pub sub_merchant_master_merchant_notifications: Option<String>,
-    pub sub_merchant_master_merchant_webhooks: Option<String>,
-    pub sub_merchant_master_merchant_callbacks: Option<String>,
-    pub sub_merchant_master_merchant_redirects: Option<String>,
-    pub sub_merchant_master_merchant_postbacks: Option<String>,
-    pub sub_merchant_master_merchant_responses: Option<String>,
-    pub sub_merchant_master_merchant_requests: Option<String>,
-    pub sub_merchant_master_merchant_logs: Option<String>,
-    pub sub_merchant_master_merchant_events: Option<String>,
-    pub sub_merchant_master_merchant_triggers: Option<String>,
-    pub sub_merchant_master_merchant_actions: Option<String>,
-    pub sub_merchant_master_merchant_workflows: Option<String>,
-    pub sub_merchant_master_merchant_processes: Option<String>,
-    pub sub_merchant_master_merchant_pipelines: Option<String>,
-    pub sub_merchant_master_merchant_stages: Option<String>,
-    pub sub_merchant_master_merchant_steps: Option<String>,
-    pub sub_merchant_master_merchant_tasks: Option<String>,
-    pub sub_merchant_master_merchant_jobs: Option<String>,
-    pub sub_merchant_master_merchant_schedules: Option<String>,
-    pub sub_merchant_master_merchant_crons: Option<String>,
-    pub sub_merchant_master_merchant_timers: Option<String>,
-    pub sub_merchant_master_merchant_delays: Option<String>,
-    pub sub_merchant_master_merchant_retries: Option<String>,
-    pub sub_merchant_master_merchant_backoffs: Option<String>,
-    pub sub_merchant_master_merchant_circuit_breakers: Option<String>,
-    pub sub_merchant_master_merchant_rate_limits: Option<String>,
-    pub sub_merchant_master_merchant_throttling: Option<String>,
-    pub sub_merchant_master_merchant_queuing: Option<String>,
-    pub sub_merchant_master_merchant_batching: Option<String>,
-    pub sub_merchant_master_merchant_streaming: Option<String>,
-    pub sub_merchant_master_merchant_real_time: Option<String>,
-    pub sub_merchant_master_merchant_async: Option<String>,
-    pub sub_merchant_master_merchant_sync: Option<String>,
-    pub sub_merchant_master_merchant_blocking: Option<String>,
-    pub sub_merchant_master_merchant_non_blocking: Option<String>,
-    pub sub_merchant_master_merchant_concurrent: Option<String>,
-    pub sub_merchant_master_merchant_parallel: Option<String>,
-    pub sub_merchant_master_merchant_distributed: Option<String>,
-    pub sub_merchant_master_merchant_clustered: Option<String>,
-    pub sub_merchant_master_merchant_scaled: Option<String>,
-    pub sub_merchant_master_merchant_load_balanced: Option<String>,
-    pub sub_merchant_master_merchant_high_availability: Option<String>,
-    pub sub_merchant_master_merchant_fault_tolerant: Option<String>,
-    pub sub_merchant_master_merchant_disaster_recovery: Option<String>,
-    pub sub_merchant_master_merchant_backup: Option<String>,
-    pub sub_merchant_master_merchant_replication: Option<String>,
-    pub sub_merchant_master_merchant_sharding: Option<String>,
-    pub sub_merchant_master_merchant_partitioning: Option<String>,
-    pub sub_merchant_master_merchant_indexing: Option<String>,
-    pub sub_merchant_master_merchant_caching: Option<String>,
-    pub sub_merchant_master_merchant_optimization: Option<String>,
-    pub sub_merchant_master_merchant_performance: Option<String>,
-    pub sub_merchant_master_merchant_monitoring: Option<String>,
-    pub sub_merchant_master_merchant_logging: Option<String>,
-    pub sub_merchant_master_merchant_tracing: Option<String>,
-    pub sub_merchant_master_merchant_profiling: Option<String>,
-    pub sub_merchant_master_merchant_debugging: Option<String>,
-    pub sub_merchant_master_merchant_testing: Option<String>,
-    pub sub_merchant_master_merchant_validation: Option<String>,
-    pub sub_merchant_master_merchant_verification: Option<String>,
-    pub sub_merchant_master_merchant_authentication: Option<String>,
-    pub sub_merchant_master_merchant_authorization: Option<String>,
-    pub sub_merchant_master_merchant_encryption: Option<String>,
-    pub sub_merchant_master_merchant_decryption: Option<String>,
-    pub sub_merchant_master_merchant_hashing: Option<String>,
-    pub sub_merchant_master_merchant_signing: Option<String>,
-    pub sub_merchant_master_merchant_audit_trail: Option<String>,
-    pub sub_merchant_master_merchant_legal: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -376,7 +128,6 @@ pub struct EaseBuzzPaymentData {
     pub order_dispute: String,
     pub order_fraud: String,
     pub order_risk: String,
-    pub order_compliance: String,
     pub order_audit: String,
     pub order_reporting: String,
     pub order_analytics: String,
@@ -530,7 +281,7 @@ pub fn get_auth_header(auth_type: &ConnectorAuthType) -> CustomResult<Secret<Str
         ConnectorAuthType::SignatureKey { api_key, .. } => Ok(Secret::new(api_key.clone())),
         ConnectorAuthType::BodyKey { api_key, .. } => Ok(Secret::new(api_key.clone())),
         ConnectorAuthType::HeaderKey { api_key, .. } => Ok(Secret::new(api_key.clone())),
-        _ => Err(errors::ConnectorError::AuthenticationFailed.into()),
+        _ => Err(ConnectorError::AuthenticationFailed.into()),
     }
 }
 
@@ -539,7 +290,7 @@ pub fn get_secret_key(auth_type: &ConnectorAuthType) -> CustomResult<Secret<Stri
         ConnectorAuthType::SignatureKey { api_secret, .. } => Ok(Secret::new(api_secret.clone())),
         ConnectorAuthType::BodyKey { api_secret, .. } => Ok(Secret::new(api_secret.clone())),
         ConnectorAuthType::HeaderKey { api_secret, .. } => Ok(Secret::new(api_secret.clone())),
-        _ => Err(errors::ConnectorError::AuthenticationFailed.into()),
+        _ => Err(ConnectorError::AuthenticationFailed.into()),
     }
 }
 
@@ -567,10 +318,12 @@ pub fn generate_hash(
     hash_string.push('|');
     hash_string.push_str(salt);
 
-    crypto::Sha512::digest(hash_string.as_bytes())
-        .iter()
-        .map(|byte| format!("{:02x}", byte))
-        .collect()
+    use sha2::{Digest, Sha512};
+    let mut hasher = Sha512::new();
+    hasher.update(hash_string.as_bytes());
+    let result = hasher.finalize();
+    
+    format!("{:x}", result)
 }
 
 // TryFrom implementations for request types
@@ -579,7 +332,7 @@ impl<T> TryFrom<&RouterDataV2<domain_types::connector_flow::Authorize, PaymentFl
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: &RouterDataV2<domain_types::connector_flow::Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
@@ -645,253 +398,6 @@ where
             udf8: udf_fields[7].clone(),
             udf9: udf_fields[8].clone(),
             udf10: udf_fields[9].clone(),
-            address1: None,
-            address2: None,
-            city: None,
-            state: None,
-            country: None,
-            zipcode: None,
-            pg: None,
-            customer_unique_id: None,
-            split_payments: None,
-            sub_merchant_id: None,
-            sub_merchant_name: None,
-            sub_merchant_email: None,
-            sub_merchant_mobile: None,
-            sub_merchant_address: None,
-            sub_merchant_city: None,
-            sub_merchant_state: None,
-            sub_merchant_country: None,
-            sub_merchant_zipcode: None,
-            sub_merchant_tin: None,
-            sub_merchant_pan: None,
-            sub_merchant_gst: None,
-            sub_merchant_sac: None,
-            sub_merchant_service_tax: None,
-            sub_merchant_cess: None,
-            sub_merchant_discount: None,
-            sub_merchant_other_charges: None,
-            sub_merchant_shipping_charges: None,
-            sub_merchant_total_amount: None,
-            sub_merchant_additional_info: None,
-            sub_merchant_custom_fields: None,
-            sub_merchant_merchant_order_id: None,
-            sub_merchant_merchant_transaction_id: None,
-            sub_merchant_merchant_reference_id: None,
-            sub_merchant_merchant_description: None,
-            sub_merchant_merchant_notes: None,
-            sub_merchant_merchant_metadata: None,
-            sub_merchant_merchant_tags: None,
-            sub_merchant_merchant_attributes: None,
-            sub_merchant_merchant_properties: None,
-            sub_merchant_merchant_features: None,
-            sub_merchant_merchant_capabilities: None,
-            sub_merchant_merchant_restrictions: None,
-            sub_merchant_merchant_limits: None,
-            sub_merchant_merchant_fees: None,
-            sub_merchant_merchant_commission: None,
-            sub_merchant_merchant_settlement: None,
-            sub_merchant_merchant_payout: None,
-            sub_merchant_merchant_refund: None,
-            sub_merchant_merchant_chargeback: None,
-            sub_merchant_merchant_dispute: None,
-            sub_merchant_merchant_fraud: None,
-            sub_merchant_merchant_risk: None,
-            sub_merchant_merchant_compliance: None,
-            sub_merchant_merchant_audit: None,
-            sub_merchant_merchant_reporting: None,
-            sub_merchant_merchant_analytics: None,
-            sub_merchant_merchant_insights: None,
-            sub_merchant_merchant_recommendations: None,
-            sub_merchant_merchant_suggestions: None,
-            sub_merchant_merchant_alerts: None,
-            sub_merchant_merchant_notifications: None,
-            sub_merchant_merchant_webhooks: None,
-            sub_merchant_merchant_callbacks: None,
-            sub_merchant_merchant_redirects: None,
-            sub_merchant_merchant_postbacks: None,
-            sub_merchant_merchant_responses: None,
-            sub_merchant_merchant_requests: None,
-            sub_merchant_merchant_logs: None,
-            sub_merchant_merchant_events: None,
-            sub_merchant_merchant_triggers: None,
-            sub_merchant_merchant_actions: None,
-            sub_merchant_merchant_workflows: None,
-            sub_merchant_merchant_processes: None,
-            sub_merchant_merchant_pipelines: None,
-            sub_merchant_merchant_stages: None,
-            sub_merchant_merchant_steps: None,
-            sub_merchant_merchant_tasks: None,
-            sub_merchant_merchant_jobs: None,
-            sub_merchant_merchant_schedules: None,
-            sub_merchant_merchant_crons: None,
-            sub_merchant_merchant_timers: None,
-            sub_merchant_merchant_delays: None,
-            sub_merchant_merchant_retries: None,
-            sub_merchant_merchant_backoffs: None,
-            sub_merchant_merchant_circuit_breakers: None,
-            sub_merchant_merchant_rate_limits: None,
-            sub_merchant_merchant_throttling: None,
-            sub_merchant_merchant_queuing: None,
-            sub_merchant_merchant_batching: None,
-            sub_merchant_merchant_streaming: None,
-            sub_merchant_merchant_real_time: None,
-            sub_merchant_merchant_async: None,
-            sub_merchant_merchant_sync: None,
-            sub_merchant_merchant_blocking: None,
-            sub_merchant_merchant_non_blocking: None,
-            sub_merchant_merchant_concurrent: None,
-            sub_merchant_merchant_parallel: None,
-            sub_merchant_merchant_distributed: None,
-            sub_merchant_merchant_clustered: None,
-            sub_merchant_merchant_scaled: None,
-            sub_merchant_merchant_load_balanced: None,
-            sub_merchant_merchant_high_availability: None,
-            sub_merchant_merchant_fault_tolerant: None,
-            sub_merchant_merchant_disaster_recovery: None,
-            sub_merchant_merchant_backup: None,
-            sub_merchant_merchant_replication: None,
-            sub_merchant_merchant_sharding: None,
-            sub_merchant_merchant_partitioning: None,
-            sub_merchant_merchant_indexing: None,
-            sub_merchant_merchant_caching: None,
-            sub_merchant_merchant_optimization: None,
-            sub_merchant_merchant_performance: None,
-            sub_merchant_merchant_monitoring: None,
-            sub_merchant_merchant_logging: None,
-            sub_merchant_merchant_tracing: None,
-            sub_merchant_merchant_profiling: None,
-            sub_merchant_merchant_debugging: None,
-            sub_merchant_merchant_testing: None,
-            sub_merchant_merchant_validation: None,
-            sub_merchant_merchant_verification: None,
-            sub_merchant_merchant_authentication: None,
-            sub_merchant_merchant_authorization: None,
-            sub_merchant_merchant_encryption: None,
-            sub_merchant_merchant_decryption: None,
-            sub_merchant_merchant_hashing: None,
-            sub_merchant_merchant_signing: None,
-            sub_merchant_merchant_audit_trail: None,
-            sub_merchant_merchant_compliance: None,
-            sub_merchant_master_merchant_id: None,
-            sub_merchant_master_merchant_name: None,
-            sub_merchant_master_merchant_email: None,
-            sub_merchant_master_merchant_mobile: None,
-            sub_merchant_master_merchant_address: None,
-            sub_merchant_master_merchant_city: None,
-            sub_merchant_master_merchant_state: None,
-            sub_merchant_master_merchant_country: None,
-            sub_merchant_master_merchant_zipcode: None,
-            sub_merchant_master_merchant_tin: None,
-            sub_merchant_master_merchant_pan: None,
-            sub_merchant_master_merchant_gst: None,
-            sub_merchant_master_merchant_sac: None,
-            sub_merchant_master_merchant_service_tax: None,
-            sub_merchant_master_merchant_cess: None,
-            sub_merchant_master_merchant_discount: None,
-            sub_merchant_master_merchant_other_charges: None,
-            sub_merchant_master_merchant_shipping_charges: None,
-            sub_merchant_master_merchant_total_amount: None,
-            sub_merchant_master_merchant_additional_info: None,
-            sub_merchant_master_merchant_custom_fields: None,
-            sub_merchant_master_merchant_order_id: None,
-            sub_merchant_master_merchant_transaction_id: None,
-            sub_merchant_master_merchant_reference_id: None,
-            sub_merchant_master_merchant_description: None,
-            sub_merchant_master_merchant_notes: None,
-            sub_merchant_master_merchant_metadata: None,
-            sub_merchant_master_merchant_tags: None,
-            sub_merchant_master_merchant_attributes: None,
-            sub_merchant_master_merchant_properties: None,
-            sub_merchant_master_merchant_features: None,
-            sub_merchant_master_merchant_capabilities: None,
-            sub_merchant_master_merchant_restrictions: None,
-            sub_merchant_master_merchant_limits: None,
-            sub_merchant_master_merchant_fees: None,
-            sub_merchant_master_merchant_commission: None,
-            sub_merchant_master_merchant_settlement: None,
-            sub_merchant_master_merchant_payout: None,
-            sub_merchant_master_merchant_refund: None,
-            sub_merchant_master_merchant_chargeback: None,
-            sub_merchant_master_merchant_dispute: None,
-            sub_merchant_master_merchant_fraud: None,
-            sub_merchant_master_merchant_risk: None,
-            sub_merchant_master_merchant_compliance: None,
-            sub_merchant_master_merchant_audit: None,
-            sub_merchant_master_merchant_reporting: None,
-            sub_merchant_master_merchant_analytics: None,
-            sub_merchant_master_merchant_insights: None,
-            sub_merchant_master_merchant_recommendations: None,
-            sub_merchant_master_merchant_suggestions: None,
-            sub_merchant_master_merchant_alerts: None,
-            sub_merchant_master_merchant_notifications: None,
-            sub_merchant_master_merchant_webhooks: None,
-            sub_merchant_master_merchant_callbacks: None,
-            sub_merchant_master_merchant_redirects: None,
-            sub_merchant_master_merchant_postbacks: None,
-            sub_merchant_master_merchant_responses: None,
-            sub_merchant_master_merchant_requests: None,
-            sub_merchant_master_merchant_logs: None,
-            sub_merchant_master_merchant_events: None,
-            sub_merchant_master_merchant_triggers: None,
-            sub_merchant_master_merchant_actions: None,
-            sub_merchant_master_merchant_workflows: None,
-            sub_merchant_master_merchant_processes: None,
-            sub_merchant_master_merchant_pipelines: None,
-            sub_merchant_master_merchant_stages: None,
-            sub_merchant_master_merchant_steps: None,
-            sub_merchant_master_merchant_tasks: None,
-            sub_merchant_master_merchant_jobs: None,
-            sub_merchant_master_merchant_schedules: None,
-            sub_merchant_master_merchant_crons: None,
-            sub_merchant_master_merchant_timers: None,
-            sub_merchant_master_merchant_delays: None,
-            sub_merchant_master_merchant_retries: None,
-            sub_merchant_master_merchant_backoffs: None,
-            sub_merchant_master_merchant_circuit_breakers: None,
-            sub_merchant_master_merchant_rate_limits: None,
-            sub_merchant_master_merchant_throttling: None,
-            sub_merchant_master_merchant_queuing: None,
-            sub_merchant_master_merchant_batching: None,
-            sub_merchant_master_merchant_streaming: None,
-            sub_merchant_master_merchant_real_time: None,
-            sub_merchant_master_merchant_async: None,
-            sub_merchant_master_merchant_sync: None,
-            sub_merchant_master_merchant_blocking: None,
-            sub_merchant_master_merchant_non_blocking: None,
-            sub_merchant_master_merchant_concurrent: None,
-            sub_merchant_master_merchant_parallel: None,
-            sub_merchant_master_merchant_distributed: None,
-            sub_merchant_master_merchant_clustered: None,
-            sub_merchant_master_merchant_scaled: None,
-            sub_merchant_master_merchant_load_balanced: None,
-            sub_merchant_master_merchant_high_availability: None,
-            sub_merchant_master_merchant_fault_tolerant: None,
-            sub_merchant_master_merchant_disaster_recovery: None,
-            sub_merchant_master_merchant_backup: None,
-            sub_merchant_master_merchant_replication: None,
-            sub_merchant_master_merchant_sharding: None,
-            sub_merchant_master_merchant_partitioning: None,
-            sub_merchant_master_merchant_indexing: None,
-            sub_merchant_master_merchant_caching: None,
-            sub_merchant_master_merchant_optimization: None,
-            sub_merchant_master_merchant_performance: None,
-            sub_merchant_master_merchant_monitoring: None,
-            sub_merchant_master_merchant_logging: None,
-            sub_merchant_master_merchant_tracing: None,
-            sub_merchant_master_merchant_profiling: None,
-            sub_merchant_master_merchant_debugging: None,
-            sub_merchant_master_merchant_testing: None,
-            sub_merchant_master_merchant_validation: None,
-            sub_merchant_master_merchant_verification: None,
-            sub_merchant_master_merchant_authentication: None,
-            sub_merchant_master_merchant_authorization: None,
-            sub_merchant_master_merchant_encryption: None,
-            sub_merchant_master_merchant_decryption: None,
-            sub_merchant_master_merchant_hashing: None,
-            sub_merchant_master_merchant_signing: None,
-            sub_merchant_master_merchant_audit_trail: None,
-            sub_merchant_master_merchant_legal: None,
         })
     }
 }
@@ -899,7 +405,7 @@ where
 impl TryFrom<&RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
     for EaseBuzzPaymentsSyncRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: &RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -917,10 +423,7 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData,
         
         // Generate hash for sync
         let hash_string = format!("{}|{}|{}|{}|{}|{}", key, txnid, amount, email, phone, salt);
-        let hash = crypto::Sha512::digest(hash_string.as_bytes())
-        .iter()
-        .map(|byte| format!("{:02x}", byte))
-        .collect();
+        let hash = generate_hash("", "", "", "", "", "", &hash_string);
         
         Ok(Self {
             key: Secret::new(key),
@@ -936,7 +439,7 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData,
 impl TryFrom<&RouterDataV2<domain_types::connector_flow::RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>>
     for EaseBuzzRefundSyncRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: &RouterDataV2<domain_types::connector_flow::RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
@@ -947,15 +450,12 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::RSync, PaymentFlowData,
         let key = auth_key.expose().clone();
         let salt = auth_secret.expose().clone();
         
-        let easebuzz_id = item.router_data.request.connector_transaction_id.get_connector_transaction_id().map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?.to_string();
+        let easebuzz_id = item.router_data.request.connector_transaction_id.get_connector_transaction_id().map_err(|_e| ConnectorError::RequestEncodingFailed)?.to_string();
         let merchant_refund_id = item.router_data.request.refund_id.clone();
         
         // Generate hash for refund sync
         let hash_string = format!("{}|{}|{}|{}", key, easebuzz_id, merchant_refund_id, salt);
-        let hash = crypto::Sha512::digest(hash_string.as_bytes())
-        .iter()
-        .map(|byte| format!("{:02x}", byte))
-        .collect();
+        let hash = generate_hash("", "", "", "", "", &hash_string);
         
         Ok(Self {
             key: Secret::new(key),
@@ -968,7 +468,7 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::RSync, PaymentFlowData,
 
 // TryFrom implementations for response types
 impl TryFrom<EaseBuzzPaymentsResponse> for PaymentsResponseData {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: EaseBuzzPaymentsResponse) -> Result<Self, Self::Error> {
         let status = if response.status {
@@ -986,7 +486,7 @@ impl TryFrom<EaseBuzzPaymentsResponse> for PaymentsResponseData {
         Ok(Self {
             status,
             amount_received: response.data.as_ref().and_then(|d| {
-                d.amount.parse::<f64>().ok().map(MinorUnit::from_major_unit_as_i64)
+                d.amount.parse::<f64>().ok().map(|amt| MinorUnit::new((amt * 100.0) as i64))
             }),
             connector_transaction_id: response.data.as_ref().map(|d| d.easebuzz_id.clone()),
             error_message: response.error_desc,
@@ -996,7 +496,7 @@ impl TryFrom<EaseBuzzPaymentsResponse> for PaymentsResponseData {
 }
 
 impl TryFrom<EaseBuzzPaymentsSyncResponse> for PaymentsResponseData {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: EaseBuzzPaymentsSyncResponse) -> Result<Self, Self::Error> {
         let (status, payment_data) = match response.msg {
@@ -1016,7 +516,7 @@ impl TryFrom<EaseBuzzPaymentsSyncResponse> for PaymentsResponseData {
         Ok(Self {
             status,
             amount_received: payment_data.as_ref().and_then(|d| {
-                d.amount.parse::<f64>().ok().map(MinorUnit::from_major_unit_as_i64)
+                d.amount.parse::<f64>().ok().map(|amt| MinorUnit::new((amt * 100.0) as i64))
             }),
             connector_transaction_id: payment_data.as_ref().map(|d| d.easebuzz_id.clone()),
             ..Default::default()
@@ -1025,7 +525,7 @@ impl TryFrom<EaseBuzzPaymentsSyncResponse> for PaymentsResponseData {
 }
 
 impl TryFrom<EaseBuzzRefundSyncResponse> for RefundsResponseData {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: EaseBuzzRefundSyncResponse) -> Result<Self, Self::Error> {
         let refund_data = match response.response {
@@ -1034,18 +534,8 @@ impl TryFrom<EaseBuzzRefundSyncResponse> for RefundsResponseData {
         };
 
         Ok(Self {
-            refund_id: refund_data.as_ref().and_then(|d| d.refunds.as_ref()).and_then(|refunds| refunds.first()).map(|r| r.refund_id.clone()),
-            refund_status: refund_data.as_ref().and_then(|d| d.refunds.as_ref()).and_then(|refunds| refunds.first()).map(|r| {
-                match r.refund_status.as_str() {
-                    "success" => common_enums::RefundStatus::Success,
-                    "pending" => common_enums::RefundStatus::Pending,
-                    "failure" => common_enums::RefundStatus::Failure,
-                    _ => common_enums::RefundStatus::Pending,
-                }
-            }),
-            refund_amount_received: refund_data.as_ref().and_then(|d| d.refunds.as_ref()).and_then(|refunds| refunds.first()).and_then(|r| {
-                r.refund_amount.parse::<f64>().ok().map(MinorUnit::from_major_unit_as_i64)
-            }),
+            connector_refund_id: refund_data.as_ref().and_then(|d| d.refunds.as_ref()).and_then(|refunds| refunds.first()).map(|r| r.refund_id.clone()),
+            status_code: Some(response.status as u16),
             ..Default::default()
         })
     }
