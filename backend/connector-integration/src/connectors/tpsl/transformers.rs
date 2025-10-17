@@ -77,7 +77,7 @@ pub struct TpslMethodPayload {
     pub code: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslInstrumentPayload {
     pub expiry: Option<TpslExpiryPayload>,
