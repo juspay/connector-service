@@ -539,7 +539,7 @@ impl<
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            amount: Some(amount),
+            amount: Some(amount.to_string()),
         };
 
         let data = ZaakPayCheckDataRequest {
