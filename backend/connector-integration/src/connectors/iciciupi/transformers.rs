@@ -108,7 +108,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             collect_by_date: None, // Can be configured based on requirements
             merchant_id: auth.merchant_id.expose().clone(),
             merchant_name: None, // Can be extracted from router data if available
-            sub_merchant_id: auth.sub_merchant_id.as_ref().map(|s| s.expose().clone()),
+            sub_merchant_id: auth.sub_merchant_id.as_ref().map(|s| s.clone().expose().clone()),
             sub_merchant_name: None,
             terminal_id: auth.terminal_id.expose().clone(),
             merchant_tran_id: item.router_data.resource_common_data.connector_request_reference_id.clone(),
