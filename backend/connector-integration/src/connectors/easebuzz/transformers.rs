@@ -342,7 +342,7 @@ where
         let amount = item.request.amount.to_string();
         let productinfo = "Payment".to_string();
         let firstname = item.request.customer_name.clone().unwrap_or_else(|| "Customer".to_string());
-        let email_string = item.request.email.as_ref().map(|e| e.expose().clone()).unwrap_or_else(|| "customer@example.com".to_string());
+        let email_string = item.request.email.as_ref().map(|e| e.expose().expose().clone()).unwrap_or_else(|| "customer@example.com".to_string());
 let email_for_hash = email_string.clone();
         let phone = "9999999999".to_string(); // Phone field not available in PaymentsAuthorizeData
         
