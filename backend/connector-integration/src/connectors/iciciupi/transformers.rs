@@ -140,7 +140,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         Ok(Self {
             merchant_id: auth.merchant_id.expose().clone(),
-            sub_merchant_id: auth.sub_merchant_id.as_ref().map(|s| s.expose().clone()),
+            sub_merchant_id: auth.sub_merchant_id.as_ref().map(|s| s.clone().expose().clone()),
             terminal_id: auth.terminal_id.expose().clone(),
             transaction_type: Some(crate::connectors::iciciupi::constants::COLLECT_PAY_TRANSACTION.to_string()),
             merchant_tran_id: item.router_data.request.connector_transaction_id
