@@ -5,6 +5,7 @@ use std::fmt;
 use common_enums::Currency;
 use common_utils::errors::CustomResult;
 use common_utils::types::MinorUnit;
+use domain_types::errors;
 use masking::Secret;
 use serde::{Deserialize, Serialize};
 
