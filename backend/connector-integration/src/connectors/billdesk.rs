@@ -10,7 +10,7 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
-    connector_types::{ConnectorWebhookSecrets, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RequestDetails, ResponseId},
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData},
     errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -25,15 +25,12 @@ use interfaces::{
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types,
     events::connector_api_logs::ConnectorEvent,
-    verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
 use transformers::{self as billdesk, BilldeskPaymentsRequest, BilldeskPaymentsResponse, BilldeskPaymentsSyncRequest, BilldeskPaymentsSyncResponse};
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-
-
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -48,19 +45,10 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> connector_types::ConnectorServiceTrait<T> for Billdesk<T>
-{
-}
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
 > connector_types::PaymentAuthorizeV2<T> for Billdesk<T>
 {
 }
+
 impl<
     T: PaymentMethodDataTypes
         + std::fmt::Debug
@@ -69,94 +57,6 @@ impl<
         + 'static
         + Serialize,
 > connector_types::PaymentSyncV2 for Billdesk<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::IncomingWebhook for Billdesk<T>
-{
-    fn verify_webhook_source(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secrets: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
-        // TODO: Implement webhook verification based on Billdesk's signature validation
-        Ok(true)
-    }
-
-    fn get_event_type(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<
-        domain_types::connector_types::EventType,
-        error_stack::Report<domain_types::errors::ConnectorError>,
-    > {
-        Ok(domain_types::connector_types::EventType::PaymentIntentSuccess)
-    }
-
-    fn process_payment_webhook(
-        &self,
-        request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<
-        domain_types::connector_types::WebhookDetailsResponse,
-        error_stack::Report<domain_types::errors::ConnectorError>,
-    > {
-        let webhook: transformers::BilldeskPaymentsSyncResponse = request
-            .body
-            .parse_struct("BilldeskPaymentsSyncResponse")
-            .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)?;
-
-        Ok(domain_types::connector_types::WebhookDetailsResponse {
-            resource_id: Some(
-                domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                    webhook._TxnReferenceNo.clone(),
-                ),
-            ),
-            status: common_enums::AttemptStatus::Charged,
-            status_code: 200,
-            mandate_reference: None,
-            connector_response_reference_id: None,
-            error_code: None,
-            error_message: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
-            response_headers: None,
-            minor_amount_captured: None,
-            amount_captured: None,
-            error_reason: None,
-            transformation_status: common_enums::WebhookTransformationStatus::Complete,
-        })
-    }
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentOrderCreate for Billdesk<T>
-{
-}
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::ValidationTrait for Billdesk<T>
 {
 }
 
@@ -200,8 +100,6 @@ macros::create_all_prerequisites!(
         ) -> &'a str {
             &req.resource_common_data.connectors.billdesk.base_url
         }
-
-        
     }
 );
 
@@ -352,13 +250,11 @@ impl<
     }
 }
 
-
-
 fn get_billdesk_auth_header(
     auth_type: &transformers::BilldeskAuth,
 ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
     Ok(vec![(
         headers::AUTHORIZATION.to_string(),
-        format!("Bearer {}", auth_type.api_key.peek()).into_masked(),
+        format!("Bearer {}", auth_type.api_key.expose()).into_masked(),
     )])
 }
