@@ -248,7 +248,7 @@ impl<
         let key_exposed = auth.key.clone().expose();
         let salt_exposed = auth.salt.clone().expose();
         let hash_string = format!(
-            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
+            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
             key_exposed,
             item.router_data.resource_common_data.connector_request_reference_id,
             amount.to_string(),
