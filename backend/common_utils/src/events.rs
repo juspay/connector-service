@@ -267,6 +267,7 @@ pub enum FlowName {
     PreAuthenticate,
     Authenticate,
     PostAuthenticate,
+    MandateRevoke,
     Unknown,
 }
 
@@ -294,6 +295,7 @@ impl FlowName {
             Self::PreAuthenticate => "PreAuthenticate",
             Self::Authenticate => "Authenticate",
             Self::PostAuthenticate => "PostAuthenticate",
+            Self::MandateRevoke => "MandateRevoke",
             Self::Unknown => "Unknown",
         }
     }
