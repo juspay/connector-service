@@ -273,16 +273,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentTokenV2<T> for IciciUpi<T>
-{
-}
+
 
 
 
