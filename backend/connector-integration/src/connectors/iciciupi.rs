@@ -327,7 +327,7 @@ macros::create_all_prerequisites!(
         (
             flow: Authorize,
             request_body: IciciUpiPaymentsRequest,
-            response_body: iciciupi::IciciUpiResponseEnum,
+            response_body: IciciUpiResponseEnum,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
