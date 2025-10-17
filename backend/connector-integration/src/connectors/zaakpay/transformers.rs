@@ -420,7 +420,7 @@ impl<
             product_description: item
                 .router_data
                 .request
-                .description
+                .statement_descriptor
                 .clone()
                 .unwrap_or_else(|| "Payment".to_string()),
             email: item
