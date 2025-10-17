@@ -340,7 +340,7 @@ where
         let salt = auth_secret.expose().clone();
         
         let txnid = item.resource_common_data.connector_request_reference_id.clone();
-        let amount = item.request.amount.get_amount_as_string();
+        let amount = item.request.amount.to_string();
         let productinfo = "Payment".to_string();
         let firstname = item.request.customer_name.clone().unwrap_or_else(|| "Customer".to_string());
         let email = item.request.email.as_ref().map(|e| e.expose().clone()).unwrap_or_else(|| "customer@example.com".to_string());
@@ -414,7 +414,7 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData,
         let salt = auth_secret.expose().clone();
         
         let txnid = item.resource_common_data.connector_request_reference_id.clone();
-        let amount = item.request.amount.get_amount_as_string();
+        let amount = item.request.amount.to_string();
         let email = "customer@example.com".to_string();
         let phone = "9999999999".to_string();
         
