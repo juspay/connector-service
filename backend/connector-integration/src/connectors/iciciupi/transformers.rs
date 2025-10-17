@@ -96,9 +96,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         Ok(Self {
-            payer_va: upi_data.vpa.clone(),
+            payer_va: upi_data.vpa_id.clone().unwrap_or_default(),
             amount,
-            note: item.router_data.request.get_optional_description().cloned(),
+            note: None, // Description not available in PaymentsAuthorizeData
             collect_by_date: None, // Can be configured based on requirements
             merchant_id: auth.merchant_id.expose().clone(),
             merchant_name: None, // Can be extracted from router data if available
