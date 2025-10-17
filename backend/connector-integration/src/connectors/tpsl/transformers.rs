@@ -137,7 +137,7 @@ pub struct TpslAuthenticationPayload {
     pub sub_type: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslInstructionPayload {
     pub occurrence: String,
