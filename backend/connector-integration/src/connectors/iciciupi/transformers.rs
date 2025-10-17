@@ -18,7 +18,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::iciciupi::IciciUpiRouterData, types::ResponseRouterData};
+use crate::types::ResponseRouterData;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
