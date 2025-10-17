@@ -624,7 +624,7 @@ impl TryFrom<MobikwikPaymentsSyncResponse> for PaymentsResponseData
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
-            network_txn_id: response.refid,
+            network_txn_id: response.refid.clone(),
             connector_response_reference_id: response.refid,
             incremental_authorization_allowed: None,
             status_code: 200,
