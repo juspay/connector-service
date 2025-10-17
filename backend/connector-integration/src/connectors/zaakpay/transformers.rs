@@ -428,7 +428,7 @@ impl<
                 .request
                 .email
                 .clone()
-                .map(|e| e.to_string())
+                .map(|e| e.peek().to_string())
                 .unwrap_or_else(|| format!("{}@example.com", customer_id)),
             phone: "0000000000".to_string(),
         };
