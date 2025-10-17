@@ -454,7 +454,7 @@ impl<
                     }),
                 }
             }
-            Some(common_enums::PaymentMethodType::Netbanking) => {
+            Some(common_enums::PaymentMethodType::OnlineBankingFpx) => {
                 ZaakPayPaymentInstrumentTransType {
                     payment_mode: "netbanking".to_string(),
                     card: None,
