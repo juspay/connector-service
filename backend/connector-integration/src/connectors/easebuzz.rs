@@ -309,14 +309,14 @@ macros::create_all_prerequisites!(
             flow: Authorize,
             request_body: EaseBuzzPaymentsRequest,
             response_body: EaseBuzzPaymentsResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
         ),
         (
             flow: PSync,
             request_body: EaseBuzzTxnSyncRequest,
             response_body: EaseBuzzTxnSyncResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ),
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+        )
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
