@@ -543,9 +543,32 @@ impl TryFrom<EaseBuzzRefundSyncResponse> for RefundsResponseData {
             _ => None,
         };
 
+        let (connector_refund_id, refund_status) = if let Some(data) = refund_data {
+            if let Some(refunds) = &data.refunds {
+                if let Some(refund) = refunds.first() {
+                    (
+                        refund.refund_id.clone(),
+                        match refund.refund_status.as_str() {
+                            "success" => common_enums::RefundStatus::Success,
+                            "pending" => common_enums::RefundStatus::Pending,
+                            "failure" => common_enums::RefundStatus::Failure,
+                            _ => common_enums::RefundStatus::Pending,
+                        },
+                    )
+                } else {
+                    ("".to_string(), common_enums::RefundStatus::Pending)
+                }
+            } else {
+                ("".to_string(), common_enums::RefundStatus::Pending)
+            }
+        } else {
+            ("".to_string(), common_enums::RefundStatus::Failure)
+        };
+
         Ok(RefundsResponseData {
-            connector_refund_id: refund_data.as_ref().and_then(|d| d.refunds.as_ref()).and_then(|refunds| refunds.first()).map(|r| r.refund_id.clone()).unwrap_or_else(|| "".to_string()),
-            refund_status: refund_data.as_ref().and_then(|d| d.refunds.as_ref()).and_then(|refunds| refunds.first()).map(|r| r.refund_status.clone()),
+            connector_refund_id,
+            refund_status,
+            status_code: 200u16,
         })
     }
 }
