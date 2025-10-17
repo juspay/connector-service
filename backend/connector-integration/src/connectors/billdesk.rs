@@ -502,9 +502,6 @@ impl_not_implemented_flow!(RepeatPayment, PaymentFlowData, RepeatPaymentData, Pa
 impl_not_implemented_flow!(Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData);
 impl_not_implemented_flow!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
 impl_not_implemented_flow!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
-impl_not_implemented_flow!(PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData);
-impl_not_implemented_flow!(Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData);
-impl_not_implemented_flow!(PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData);
 impl_not_implemented_flow!(CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData);
 impl_not_implemented_flow!(CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse);
 impl_not_implemented_flow!(PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse);
