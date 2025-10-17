@@ -449,12 +449,14 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::RSync, PaymentFlowData,
         let key = auth_key.expose().clone();
         let salt = auth_secret.expose().clone();
         
-        let easebuzz_id = item.request.connector_transaction_id.get_connector_transaction_id().map_err(|_e| domain_types::errors::ConnectorError::RequestEncodingFailed)?.to_string();
-        let merchant_refund_id = item.request.refund_id.clone();
+        let easebuzz_id = item.request.connector_transaction_id.clone();
+        let merchant_refund_id = item.request.refund_id.clone().unwrap_or_else(|| "".to_string());
         
         // Generate hash for refund sync
         let hash_string = format!("{}|{}|{}|{}", key, easebuzz_id, merchant_refund_id, salt);
-        let hash = generate_hash("", "", "", "", "", &hash_string);
+        let hash = generate_hash(
+            "", "", "", "", "", "", &[], &hash_string
+        );
         
         Ok(Self {
             key: Secret::new(key),
