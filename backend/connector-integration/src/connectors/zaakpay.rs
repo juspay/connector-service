@@ -283,14 +283,14 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PSync,
-            request_body: zaakpay::ZaakPayPaymentsSyncRequest,
-            response_body: zaakpay::ZaakPayPaymentsSyncResponse,
+            request_body: ZaakPayPaymentsSyncRequest,
+            response_body: ZaakPayPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
             flow: RSync,
-            request_body: zaakpay::ZaakPayRefundSyncRequest,
-            response_body: zaakpay::ZaakPayRefundSyncResponse,
+            request_body: ZaakPayRefundSyncRequest,
+            response_body: ZaakPayRefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
