@@ -245,10 +245,10 @@ impl<
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         // Generate hash - this would typically involve SHA512 of specific fields
-        let key_exposed = auth.key.expose();
-        let salt_exposed = auth.salt.expose();
+        let key_exposed = auth.key.clone().expose();
+        let salt_exposed = auth.salt.clone().expose();
         let hash_string = format!(
-            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
+            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
             key_exposed,
             item.router_data.resource_common_data.connector_request_reference_id,
             amount.to_string(),
@@ -269,7 +269,6 @@ impl<
             "", // udf9
             "", // udf10
             "", // additional charges
-            "", // customer authentication
             salt_exposed
         );
 
