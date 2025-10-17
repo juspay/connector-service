@@ -708,9 +708,8 @@ impl<
             + std::marker::Sync
             + std::marker::Send
             + 'static
-            + Serialize
             + Serialize,
-    > TryFrom<ResponseRouterData<ZaakPayPaymentsSyncResponse, Self>>
+    > TryFrom<ResponseRouterData<ZaakPayPaymentsSyncResponse, RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
