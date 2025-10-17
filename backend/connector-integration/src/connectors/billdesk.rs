@@ -50,7 +50,7 @@ use domain_types::router_request_types::{
     SessionTokenRequestData,
 };
 use domain_types::connector_types::{
-    AccessTokenResponseData, ConnectorCustomerResponse, PaymentMethodTokenResponse, SessionTokenResponseData,
+    AccessTokenResponseData, ConnectorCustomerResponse, PaymentMethodTokenResponse,
 };
 
 pub(crate) mod headers {
