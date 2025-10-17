@@ -607,14 +607,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<MobikwikPaymentsSyncResponse> for PaymentsResponseData
+impl TryFrom<MobikwikPaymentsSyncResponse> for PaymentsResponseData
 {
     type Error = error_stack::Report<ConnectorError>;
 
