@@ -320,7 +320,7 @@ fn get_redirect_form_data(
             })
         } else {
             Err(errors::ConnectorError::MissingRequiredField {
-                field: "url",
+                field_name: "url".to_string(),
             }
             .into())
         }
