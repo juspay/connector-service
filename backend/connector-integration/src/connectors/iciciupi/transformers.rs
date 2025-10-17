@@ -191,13 +191,13 @@ impl From<IciciUpiPaymentsResponse> for common_enums::AttemptStatus {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    TryFrom<ResponseRouterData<IciciUpiResponseEnum, T>>
+    TryFrom<ResponseRouterData<IciciUpiResponseEnum, IciciUpiRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<IciciUpiResponseEnum, T>,
+        item: ResponseRouterData<IciciUpiResponseEnum, IciciUpiRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
