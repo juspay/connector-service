@@ -221,7 +221,7 @@ impl<
 
         // Build the message for UPI payment
         let mut message_data = HashMap::new();
-        message_data.insert("merchantid".to_string(), auth_type.merchant_id.peek().to_string());
+        message_data.insert("merchantid".to_string(), auth_type.merchant_id.expose().to_string());
         message_data.insert("customerid".to_string(), customer_id.get_string_repr());
         message_data.insert("txnamount".to_string(), amount);
         message_data.insert("currency".to_string(), item.router_data.request.currency.to_string());
@@ -293,7 +293,7 @@ impl<
 
         // Build the message for status check
         let mut message_data = HashMap::new();
-        message_data.insert("merchantid".to_string(), auth_type.merchant_id.peek().to_string());
+        message_data.insert("merchantid".to_string(), auth_type.merchant_id.expose().to_string());
         message_data.insert("customerid".to_string(), customer_id.get_string_repr());
         message_data.insert("txnreferenceNo".to_string(), transaction_id);
         message_data.insert("requesttype".to_string(), "STATUS".to_string());
