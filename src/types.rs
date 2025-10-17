@@ -1,7 +1,6 @@
 // Domain types and enums
 use std::fmt;
 
-use common_enums::{Currency, PaymentMethodType};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,9 +31,9 @@ pub enum ConnectorFlow {
 pub struct ConnectorSpecifications {
     pub connector_name: String,
     pub connector_type: ConnectorType,
-    pub supported_payment_methods: Vec<PaymentMethodType>,
+    pub supported_payment_methods: Vec<String>,
     pub supported_flows: Vec<ConnectorFlow>,
-    pub supported_currencies: Vec<Currency>,
+    pub supported_currencies: Vec<String>,
     pub supported_countries: Vec<CountryAlpha2>,
     pub connector_metadata: Option<serde_json::Value>,
 }
@@ -54,15 +53,15 @@ pub enum CountryAlpha2 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ConnectorAuthType {
     SignatureKey {
-        api_key: hyperswitch_masking::Secret<String>,
-        key1: Option<hyperswitch_masking::Secret<String>>,
-        key2: Option<hyperswitch_masking::Secret<String>>,
+        api_key: String,
+        key1: Option<String>,
+        key2: Option<String>,
     },
     BodyKey {
-        api_key: hyperswitch_masking::Secret<String>,
+        api_key: String,
     },
     HeaderKey {
-        api_key: hyperswitch_masking::Secret<String>,
+        api_key: String,
     },
 }
 
@@ -76,7 +75,7 @@ pub enum WebhookSourceVerificationAlgorithm {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConnectorWebhookSecrets {
-    pub secret: hyperswitch_masking::Secret<String>,
+    pub secret: String,
     pub webhook_url: String,
 }
 
