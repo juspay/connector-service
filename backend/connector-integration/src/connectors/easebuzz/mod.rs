@@ -7,7 +7,7 @@ use common_utils::{
     errors::CustomResult,
     ext_traits::ByteSliceExt,
     request::{Method, RequestBuilder},
-    types::StringMinorUnit,
+    types::{StringMinorUnit, StringMinorUnitForConnector},
 };
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
@@ -83,7 +83,7 @@ impl<
 
 #[derive(Clone)]
 pub struct EaseBuzz<T> {
-    pub amount_converter: &'static (dyn common_utils::types::AmountConvertor<Output = String> + Sync),
+    pub amount_converter: &'static (dyn common_utils::types::AmountConvertor<Output = common_utils::types::StringMinorUnit> + Sync),
     pub connector_name: &'static str,
     pub payment_method_data: std::marker::PhantomData<T>,
 }
@@ -91,7 +91,7 @@ pub struct EaseBuzz<T> {
 impl<T> EaseBuzz<T> {
     pub fn new() -> Self {
         Self {
-            amount_converter: &StringMinorUnit,
+            amount_converter: &StringMinorUnitForConnector,
             connector_name: "EaseBuzz",
             payment_method_data: std::marker::PhantomData,
         }
