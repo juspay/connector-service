@@ -1,7 +1,6 @@
 use common_enums::PaymentMethodType;
 use common_utils::{
     errors::CustomResult,
-    pii::Email,
 };
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
