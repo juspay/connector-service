@@ -317,7 +317,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
         
         let payments_response = PaymentsResponseData::try_from(response)?;
-        Ok(req.clone().add_response(payments_response))
+        let mut updated_req = req.clone();
+        updated_req.response = Ok(payments_response);
+        Ok(updated_req)
     }
 
     fn get_error_response_v2(
@@ -380,7 +382,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
         
         let payments_response = PaymentsResponseData::try_from(response)?;
-        Ok(req.clone().add_response(payments_response))
+        let mut updated_req = req.clone();
+        updated_req.response = Ok(payments_response);
+        Ok(updated_req)
     }
 
     fn get_error_response_v2(
@@ -443,7 +447,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
         
         let refunds_response = RefundsResponseData::try_from(response)?;
-        Ok(req.clone().add_response(refunds_response))
+        let mut updated_req = req.clone();
+        updated_req.response = Ok(refunds_response);
+        Ok(updated_req)
     }
 
     fn get_error_response_v2(
