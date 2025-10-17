@@ -377,7 +377,7 @@ where
             amount,
             productinfo,
             firstname,
-            email: email_secret.expose().to_string(),
+            // email: email_secret.expose().to_string(),
             phone,
             surl,
             furl,
