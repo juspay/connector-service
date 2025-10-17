@@ -4,6 +4,35 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## [2025-01-XX] - Mobikwik Connector Addition
+
+### Added
+- New Mobikwik connector implementation
+- Payment methods supported: UPI, Wallet
+- Transaction flows: Authorize, PSync
+- Full UCS v2 macro framework compliance
+- Comprehensive error handling and status mapping
+- Checksum-based authentication for Mobikwik API
+
+### Files Created/Modified
+- `src/connectors/mobikwik.rs` - Main connector implementation
+- `src/connectors/mobikwik/transformers.rs` - Request/response transformers
+- `src/connectors/mobikwik/constants.rs` - API constants and endpoints
+- `src/connectors.rs` - Added connector registration
+- `src/types.rs` - Added connector to ConnectorEnum and convert_connector function
+- `backend/domain_types/src/connector_types.rs` - Added Mobikwik to ConnectorEnum
+- `backend/domain_types/src/types.rs` - Added mobikwik connector params
+
+### Technical Details
+- Migrated from Hyperswitch/Euler Haskell implementation
+- Uses UCS v2 macro framework for trait implementations
+- Implements proper error handling and status mapping
+- Full type safety with guard rails
+- Supports test and production environments
+- Dynamic request body extraction from router data (no hardcoded values)
+
+- - -
+
 ## 2025.10.17.0
 
 ### Features
