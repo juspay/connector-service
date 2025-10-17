@@ -40,7 +40,7 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use transformers::{self as mobikwik, MobikwikPaymentsRequest, MobikwikPaymentsResponse};
+use transformers::{self as mobikwik, MobikwikPaymentsRequest, MobikwikPaymentsResponse, MobikwikPaymentsSyncRequest, MobikwikPaymentsSyncResponse};
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
