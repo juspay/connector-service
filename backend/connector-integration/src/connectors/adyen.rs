@@ -14,17 +14,17 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, MandateRevoke, PSync, PaymentMethodToken,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        CreateOrder, CreateSessionToken, DefendDispute, MandateRevoke, PSync, PaymentMethodToken,
         PostAuthenticate, PreAuthenticate, RSync, Refund, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
-        ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, MandateRevokeRequestData, MandateRevokeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,
+        DisputeDefendData, DisputeFlowData, DisputeResponseData, MandateRevokeRequestData,
+        MandateRevokeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
         RefundsData, RefundsResponseData, RequestDetails, ResponseId, SessionTokenRequestData,
@@ -86,6 +86,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAccessToken for Adyen<T>
 {
 }
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::CreateConnectorCustomer for Adyen<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Adyen<T>
 {
@@ -499,6 +505,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Adyen<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PreAuthenticate,
@@ -666,6 +689,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         AccessTokenRequestData,
         AccessTokenResponseData,
+    > for Adyen<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
     > for Adyen<T>
 {
 }

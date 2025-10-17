@@ -5,21 +5,22 @@ use std::fmt::Debug;
 use common_utils::{consts, errors::CustomResult, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, MandateRevoke, PSync, PaymentMethodToken,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        CreateOrder, CreateSessionToken, DefendDispute, MandateRevoke, PSync, PaymentMethodToken,
         PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
         SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, MandateRevokeRequestData, MandateRevokeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
@@ -83,6 +84,16 @@ impl<
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAccessToken for Checkout<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::CreateConnectorCustomer for Checkout<T>
 {
 }
 impl<
@@ -663,6 +674,23 @@ impl<
             + 'static
             + Serialize,
     >
+    ConnectorIntegrationV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Checkout<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         CreateSessionToken,
         PaymentFlowData,
@@ -685,6 +713,23 @@ impl<
         PaymentFlowData,
         AccessTokenRequestData,
         AccessTokenResponseData,
+    > for Checkout<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
     > for Checkout<T>
 {
 }

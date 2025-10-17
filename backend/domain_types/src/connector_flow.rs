@@ -41,6 +41,9 @@ pub struct CreateSessionToken;
 pub struct CreateAccessToken;
 
 #[derive(Debug, Clone)]
+pub struct CreateConnectorCustomer;
+
+#[derive(Debug, Clone)]
 pub struct PaymentMethodToken;
 
 #[derive(Debug, Clone)]
@@ -74,6 +77,7 @@ pub enum FlowName {
     Dsync,
     CreateSessionToken,
     CreateAccessToken,
+    CreateConnectorCustomer,
     PaymentMethodToken,
     PreAuthenticate,
     Authenticate,

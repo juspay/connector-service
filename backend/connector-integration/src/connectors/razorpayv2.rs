@@ -9,21 +9,22 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, MandateRevoke, PSync, PaymentMethodToken,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        CreateOrder, CreateSessionToken, DefendDispute, MandateRevoke, PSync, PaymentMethodToken,
         PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
         SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, MandateRevokeRequestData, MandateRevokeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors,
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
@@ -34,7 +35,9 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::Maskable;
 use interfaces::{
-    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2,
+    api::ConnectorCommon,
+    connector_integration_v2::ConnectorIntegrationV2,
+    connector_types::{self},
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
@@ -638,6 +641,23 @@ impl<
     > for RazorpayV2<T>
 {
 }
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for RazorpayV2<T>
+{
+}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -668,6 +688,16 @@ impl<
             + 'static
             + Serialize,
     > interfaces::connector_types::PaymentAccessToken for RazorpayV2<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::CreateConnectorCustomer for RazorpayV2<T>
 {
 }
 
@@ -1217,6 +1247,23 @@ impl<
         PaymentFlowData,
         AccessTokenRequestData,
         AccessTokenResponseData,
+    > for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
     > for RazorpayV2<T>
 {
 }

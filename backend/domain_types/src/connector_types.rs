@@ -747,6 +747,12 @@ impl PaymentFlowData {
         }
         self
     }
+    pub fn set_connector_customer_id(mut self, connector_customer_id: Option<String>) -> Self {
+        if connector_customer_id.is_some() && self.connector_customer.is_none() {
+            self.connector_customer = connector_customer_id;
+        }
+        self
+    }
 
     pub fn set_access_token_id(mut self, access_token_id: Option<String>) -> Self {
         if let (Some(token_id), None) = (access_token_id, &self.access_token) {
@@ -1049,7 +1055,7 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     // }
 
     pub fn is_customer_initiated_mandate_payment(&self) -> bool {
-        (self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
+        self.customer_acceptance.is_some()
             && self.setup_future_usage == Some(common_enums::FutureUsage::OffSession)
     }
 
@@ -1267,6 +1273,19 @@ pub struct AccessTokenResponseData {
     pub access_token: String,
     pub token_type: Option<String>,
     pub expires_in: Option<i64>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConnectorCustomerData {
+    pub customer_id: Option<Secret<String>>,
+    pub email: Option<Secret<Email>>,
+    pub name: Option<Secret<String>>,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConnectorCustomerResponse {
+    pub connector_customer_id: String,
 }
 
 #[derive(Debug, Clone)]

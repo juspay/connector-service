@@ -872,6 +872,9 @@ message AccessToken {
 message ConnectorState {
   // Access token obtained from connector
   optional AccessToken access_token = 1;
+
+  // Connector's customer ID (e.g., Authorize.net customer profile ID)
+  optional string connector_customer_id = 2;
 }
 
 // Additional authentication data, typically from 3DS.
@@ -1156,8 +1159,8 @@ message PaymentServiceAuthorizeRequest {
   // Customer Information
   optional SecretString email = 9; // Email address of the customer
   optional string customer_name = 10; // Name of the customer
-  optional string customer_id = 11; // Customer ID
-  optional string connector_customer = 32; // Customer ID as recognized by the connector
+  optional string customer_id = 32; // Merchant's customer ID
+  optional string connector_customer_id = 11; // Customer ID as recognized by the connector
   
   // Address Information
   PaymentAddress address = 12; // Billing and shipping address details
@@ -1201,28 +1204,28 @@ message PaymentServiceAuthorizeRequest {
 message PaymentServiceAuthorizeResponse {
   // Identification
   Identifier transaction_id = 1; // Identifier for the resource created
-  
+
   // Status Information
   PaymentStatus status = 2; // Status of the payment attempt
   optional string error_code = 3; // Error code if the authorization failed
   optional string error_message = 4; // Error message if the authorization failed
   uint32 status_code = 10; // HTTP status code from the connector
   map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
-  
+
   // Redirection and Transaction Details
   optional RedirectForm redirection_data = 5; // Data for redirecting the customer's browser
   optional string network_txn_id = 6; // Transaction ID from the payment network
   optional Identifier response_ref_id = 7; // Renamed from connector_response_reference_id
-  
+
   // Authorization Details
   optional bool incremental_authorization_allowed = 8; // Indicates if incremental authorization is allowed
-  
+
   // Metadata
   map<string, string> connector_metadata = 12; // Connector-specific metadata for the transaction
-  
+
   // State Information
   optional ConnectorState state = 13; // State data for access token storage and other connector-specific state
-  
+
   // Raw Response
   optional SecretString raw_connector_response = 9; // Raw response from the connector for debugging
 
@@ -1648,21 +1651,22 @@ message PaymentServiceRepeatEverythingRequest {
 message PaymentServiceRepeatEverythingResponse {
   // Identification
   Identifier transaction_id = 1; // Identifier for the resource created
-  
+
   // Status Information
   PaymentStatus status = 2; // Status of the payment attempt
   optional string error_code = 3; // Error code if the payment failed
   optional string error_message = 4; // Error message if the payment failed
   uint32 status_code = 8; // HTTP status code from the connector
   map<string, string> response_headers = 9; // Optional HTTP response headers from the connector
-  
+
   // Transaction Details
   optional string network_txn_id = 5; // Transaction ID from the payment network
   optional Identifier response_ref_id = 6; // Reference ID from the connector response
-  
+  optional MandateReference mandate_reference = 12; // Mandate reference from the response (profile info)
+
   // State Information
   optional ConnectorState state = 10; // State data for access token storage and other connector-specific state
-  
+
   // Raw Response
   optional SecretString raw_connector_response = 7; // Raw response from the connector for debugging
 

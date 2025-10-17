@@ -59,18 +59,18 @@ use crate::{
         PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, ConnectorMandateReferenceId,
-        ConnectorResponseHeaders, ContinueRedirectionResponse, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, DisputeWebhookDetailsResponse, MandateReferenceId,
-        MandateRevokeRequestData, MultipleCaptureRequestData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
-        RawConnectorRequestResponse, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
-        RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse,
+        AcceptDisputeData, AccessTokenRequestData, ConnectorCustomerData,
+        ConnectorMandateReferenceId, ConnectorResponseHeaders, ContinueRedirectionResponse,
+        DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
+        MandateReferenceId, MandateRevokeRequestData, MultipleCaptureRequestData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData, RefundSyncData,
+        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     mandates::{self, MandateData},
@@ -1611,7 +1611,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
                     error_message: "Failed to parse Customer Id".to_owned(),
                     error_object: None,
                 }))?,
-            connector_customer: value.connector_customer,
+            connector_customer: value.connector_customer_id,
             description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
             connector_meta_data: {
@@ -2006,18 +2006,31 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
         .resource_common_data
         .get_raw_connector_request();
 
-    // Create state with access token if available in payment flow data
-    let state = router_data_v2
-        .resource_common_data
-        .access_token
-        .as_ref()
-        .map(|token_data| ConnectorState {
-            access_token: Some(grpc_api_types::payments::AccessToken {
-                token: token_data.access_token.clone(),
-                expires_in_seconds: token_data.expires_in,
-                token_type: token_data.token_type.clone(),
-            }),
-        });
+    // Create state if either access token or connector customer is available
+    let state = if router_data_v2.resource_common_data.access_token.is_some()
+        || router_data_v2
+            .resource_common_data
+            .connector_customer
+            .is_some()
+    {
+        Some(ConnectorState {
+            access_token: router_data_v2
+                .resource_common_data
+                .access_token
+                .as_ref()
+                .map(|token_data| grpc_api_types::payments::AccessToken {
+                    token: token_data.access_token.clone(),
+                    expires_in_seconds: token_data.expires_in,
+                    token_type: token_data.token_type.clone(),
+                }),
+            connector_customer_id: router_data_v2
+                .resource_common_data
+                .connector_customer
+                .clone(),
+        })
+    } else {
+        None
+    };
 
     let connector_response = router_data_v2
         .resource_common_data
@@ -2440,18 +2453,31 @@ pub fn generate_payment_void_response(
 ) -> Result<PaymentServiceVoidResponse, error_stack::Report<ApplicationErrorResponse>> {
     let transaction_response = router_data_v2.response;
 
-    // If there's an access token in PaymentFlowData, it must be newly generated (needs caching)
-    let state = router_data_v2
-        .resource_common_data
-        .access_token
-        .as_ref()
-        .map(|token_data| ConnectorState {
-            access_token: Some(grpc_api_types::payments::AccessToken {
-                token: token_data.access_token.clone(),
-                expires_in_seconds: token_data.expires_in,
-                token_type: token_data.token_type.clone(),
-            }),
-        });
+    // Create state if either access token or connector customer is available
+    let state = if router_data_v2.resource_common_data.access_token.is_some()
+        || router_data_v2
+            .resource_common_data
+            .connector_customer
+            .is_some()
+    {
+        Some(ConnectorState {
+            access_token: router_data_v2
+                .resource_common_data
+                .access_token
+                .as_ref()
+                .map(|token_data| grpc_api_types::payments::AccessToken {
+                    token: token_data.access_token.clone(),
+                    expires_in_seconds: token_data.expires_in,
+                    token_type: token_data.token_type.clone(),
+                }),
+            connector_customer_id: router_data_v2
+                .resource_common_data
+                .connector_customer
+                .clone(),
+        })
+    } else {
+        None
+    };
 
     let raw_connector_request = router_data_v2
         .resource_common_data
@@ -2550,18 +2576,31 @@ pub fn generate_payment_sync_response(
         .resource_common_data
         .get_raw_connector_response();
 
-    // Extract access token from PaymentFlowData (following session token pattern)
-    let state = router_data_v2
-        .resource_common_data
-        .access_token
-        .as_ref()
-        .map(|token_data| ConnectorState {
-            access_token: Some(grpc_api_types::payments::AccessToken {
-                token: token_data.access_token.clone(),
-                expires_in_seconds: token_data.expires_in,
-                token_type: token_data.token_type.clone(),
-            }),
-        });
+    // Create state if either access token or connector customer is available
+    let state = if router_data_v2.resource_common_data.access_token.is_some()
+        || router_data_v2
+            .resource_common_data
+            .connector_customer
+            .is_some()
+    {
+        Some(ConnectorState {
+            access_token: router_data_v2
+                .resource_common_data
+                .access_token
+                .as_ref()
+                .map(|token_data| grpc_api_types::payments::AccessToken {
+                    token: token_data.access_token.clone(),
+                    expires_in_seconds: token_data.expires_in,
+                    token_type: token_data.token_type.clone(),
+                }),
+            connector_customer_id: router_data_v2
+                .resource_common_data
+                .connector_customer
+                .clone(),
+        })
+    } else {
+        None
+    };
 
     let raw_connector_request = router_data_v2
         .resource_common_data
@@ -3906,18 +3945,31 @@ pub fn generate_payment_capture_response(
 ) -> Result<PaymentServiceCaptureResponse, error_stack::Report<ApplicationErrorResponse>> {
     let transaction_response = router_data_v2.response;
 
-    // If there's an access token in PaymentFlowData, it must be newly generated (needs caching)
-    let state = router_data_v2
-        .resource_common_data
-        .access_token
-        .as_ref()
-        .map(|token_data| ConnectorState {
-            access_token: Some(grpc_api_types::payments::AccessToken {
-                token: token_data.access_token.clone(),
-                expires_in_seconds: token_data.expires_in,
-                token_type: token_data.token_type.clone(),
-            }),
-        });
+    // Create state if either access token or connector customer is available
+    let state = if router_data_v2.resource_common_data.access_token.is_some()
+        || router_data_v2
+            .resource_common_data
+            .connector_customer
+            .is_some()
+    {
+        Some(ConnectorState {
+            access_token: router_data_v2
+                .resource_common_data
+                .access_token
+                .as_ref()
+                .map(|token_data| grpc_api_types::payments::AccessToken {
+                    token: token_data.access_token.clone(),
+                    expires_in_seconds: token_data.expires_in,
+                    token_type: token_data.token_type.clone(),
+                }),
+            connector_customer_id: router_data_v2
+                .resource_common_data
+                .connector_customer
+                .clone(),
+        })
+    } else {
+        None
+    };
 
     let raw_connector_request = router_data_v2
         .resource_common_data
@@ -4242,18 +4294,31 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
     let status = router_data_v2.resource_common_data.status;
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
 
-    // Create state with access token if available in payment flow data
-    let state = router_data_v2
-        .resource_common_data
-        .access_token
-        .as_ref()
-        .map(|token_data| ConnectorState {
-            access_token: Some(grpc_api_types::payments::AccessToken {
-                token: token_data.access_token.clone(),
-                expires_in_seconds: token_data.expires_in,
-                token_type: token_data.token_type.clone(),
-            }),
-        });
+    // Create state if either access token or connector customer is available
+    let state = if router_data_v2.resource_common_data.access_token.is_some()
+        || router_data_v2
+            .resource_common_data
+            .connector_customer
+            .is_some()
+    {
+        Some(ConnectorState {
+            access_token: router_data_v2
+                .resource_common_data
+                .access_token
+                .as_ref()
+                .map(|token_data| grpc_api_types::payments::AccessToken {
+                    token: token_data.access_token.clone(),
+                    expires_in_seconds: token_data.expires_in,
+                    token_type: token_data.token_type.clone(),
+                }),
+            connector_customer_id: router_data_v2
+                .resource_common_data
+                .connector_customer
+                .clone(),
+        })
+    } else {
+        None
+    };
 
     let raw_connector_request = router_data_v2
         .resource_common_data
@@ -4808,6 +4873,27 @@ impl ForeignTryFrom<&ConnectorAuthType> for AccessTokenRequestData {
     }
 }
 
+impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
+    for ConnectorCustomerData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::PaymentServiceAuthorizeRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let email = value
+            .email
+            .and_then(|email_str| Email::try_from(email_str.expose()).ok());
+
+        Ok(Self {
+            customer_id: value.customer_id.map(Secret::new),
+            email: email.map(Secret::new),
+            name: value.customer_name.map(Secret::new),
+            description: None,
+        })
+    }
+}
+
 impl<
         T: PaymentMethodDataTypes
             + Default
@@ -5016,18 +5102,31 @@ pub fn generate_repeat_payment_response(
     let status = router_data_v2.resource_common_data.status;
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
 
-    // Create state with access token if available in payment flow data
-    let state = router_data_v2
-        .resource_common_data
-        .access_token
-        .as_ref()
-        .map(|token_data| ConnectorState {
-            access_token: Some(grpc_api_types::payments::AccessToken {
-                token: token_data.access_token.clone(),
-                expires_in_seconds: token_data.expires_in,
-                token_type: token_data.token_type.clone(),
-            }),
-        });
+    // Create state if either access token or connector customer is available
+    let state = if router_data_v2.resource_common_data.access_token.is_some()
+        || router_data_v2
+            .resource_common_data
+            .connector_customer
+            .is_some()
+    {
+        Some(ConnectorState {
+            access_token: router_data_v2
+                .resource_common_data
+                .access_token
+                .as_ref()
+                .map(|token_data| grpc_api_types::payments::AccessToken {
+                    token: token_data.access_token.clone(),
+                    expires_in_seconds: token_data.expires_in,
+                    token_type: token_data.token_type.clone(),
+                }),
+            connector_customer_id: router_data_v2
+                .resource_common_data
+                .connector_customer
+                .clone(),
+        })
+    } else {
+        None
+    };
     let raw_connector_response = router_data_v2
         .resource_common_data
         .get_raw_connector_response();
@@ -5064,6 +5163,7 @@ pub fn generate_repeat_payment_response(
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
                     state,
+                    mandate_reference: None,
                     raw_connector_request,
                 },
             ),
@@ -5101,6 +5201,7 @@ pub fn generate_repeat_payment_response(
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
                     state,
+                    mandate_reference: None,
                     raw_connector_request,
                 },
             )
