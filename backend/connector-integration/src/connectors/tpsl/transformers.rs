@@ -538,7 +538,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 request_type: "STATUS".to_string(),
             },
             consumer: TpslConsumerDataType {
-                identifier: item.router_data.resource_common_data.get_customer_id()?.to_string(),
+                identifier: item.router_data.resource_common_data.get_customer_id()?.get_string_repr().to_string(),
             },
         })
     }
