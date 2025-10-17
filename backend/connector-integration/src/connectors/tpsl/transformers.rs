@@ -363,15 +363,23 @@ impl TryFrom<&ConnectorAuthType> for TpslAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key1 } => {
+            ConnectorAuthType::SignatureKey { api_key, .. } => {
                 let auth_data: TpslAuthType = api_key
-                    .to_owned()
-                    .parse_value("TpslAuthType")
+                    .peek()
+                    .parse_str::<TpslAuthType>()
                     .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
                 Ok(auth_data)
             }
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
+    }
+}
+
+impl std::str::FromStr for TpslAuthType {
+    type Err = serde_json::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        serde_json::from_str(s)
     }
 }
 
