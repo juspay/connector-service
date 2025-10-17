@@ -371,8 +371,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn handle_response_v2(
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        response: &Response,
-        _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
+        event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
+        response: domain_types::router_response_types::Response,
     ) -> CustomResult<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, errors::ConnectorError> {
         let response: easebuzz::EaseBuzzPaymentsSyncResponse = response
             .response
@@ -385,7 +385,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     fn get_error_response_v2(
         &self,
-        response: &Response,
+        response: domain_types::router_response_types::Response,
         _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
             let error_response: easebuzz::EaseBuzzErrorResponse = response
@@ -434,8 +434,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn handle_response_v2(
         &self,
         req: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
-        response: &Response,
-        _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
+        event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
+        response: domain_types::router_response_types::Response,
     ) -> CustomResult<RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>, errors::ConnectorError> {
         let response: easebuzz::EaseBuzzRefundSyncResponse = response
             .response
@@ -448,7 +448,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     fn get_error_response_v2(
         &self,
-        response: &Response,
+        response: domain_types::router_response_types::Response,
         _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
             let error_response: easebuzz::EaseBuzzErrorResponse = response
