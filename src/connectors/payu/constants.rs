@@ -1,8 +1,3 @@
-use std::collections::HashMap;
-
-use common_enums::PaymentMethodType;
-use domain_types::types;
-
 pub const PAYU_BASE_URL: &str = "https://info.payu.in";
 pub const PAYU_TEST_BASE_URL: &str = "https://test.payu.in";
 
@@ -38,29 +33,29 @@ pub fn get_payu_endpoint(command: &str, is_test_mode: bool) -> String {
     format!("{}{}", base_url, PAYU_AUTHORIZE_ENDPOINT)
 }
 
-pub fn get_payment_method_code(payment_method_type: PaymentMethodType) -> &'static str {
+pub fn get_payment_method_code(payment_method_type: &str) -> &'static str {
     match payment_method_type {
-        PaymentMethodType::UpiCollect => PAYU_MODE_UPI_COLLECT,
-        PaymentMethodType::UpiIntent => PAYU_MODE_UPI_INTENT,
+        "upi_collect" => PAYU_MODE_UPI_COLLECT,
+        "upi_intent" => PAYU_MODE_UPI_INTENT,
         _ => PAYU_MODE_NET_BANKING,
     }
 }
 
-pub fn map_payu_status_to_attempt_status(status: &str) -> common_enums::AttemptStatus {
+pub fn map_payu_status_to_attempt_status(status: &str) -> &'static str {
     match status {
-        PAYU_STATUS_SUCCESS => common_enums::AttemptStatus::Charged,
-        PAYU_STATUS_FAILURE => common_enums::AttemptStatus::Failure,
-        PAYU_STATUS_PENDING => common_enums::AttemptStatus::Pending,
-        _ => common_enums::AttemptStatus::AuthenticationPending,
+        PAYU_STATUS_SUCCESS => "charged",
+        PAYU_STATUS_FAILURE => "failure",
+        PAYU_STATUS_PENDING => "pending",
+        _ => "authentication_pending",
     }
 }
 
-pub fn map_payu_status_to_refund_status(status: &str) -> common_enums::RefundStatus {
+pub fn map_payu_status_to_refund_status(status: &str) -> &'static str {
     match status {
-        PAYU_STATUS_SUCCESS => common_enums::RefundStatus::Success,
-        PAYU_STATUS_FAILURE => common_enums::RefundStatus::Failure,
-        PAYU_STATUS_PENDING => common_enums::RefundStatus::Pending,
-        _ => common_enums::RefundStatus::Pending,
+        PAYU_STATUS_SUCCESS => "success",
+        PAYU_STATUS_FAILURE => "failure",
+        PAYU_STATUS_PENDING => "pending",
+        _ => "pending",
     }
 }
 
