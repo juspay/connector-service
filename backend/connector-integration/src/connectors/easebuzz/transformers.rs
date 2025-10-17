@@ -337,14 +337,13 @@ impl<
         ).change_context(ConnectorError::RequestEncodingFailed)?;
 
         // Generate hash for sync request
-        let key_exposed = auth.key.expose();
-        let salt_exposed = auth.salt.expose();
+        let key_exposed = auth.key.clone().expose();
+        let salt_exposed = auth.salt.clone().expose();
         let hash_string = format!(
-            "{}|{}|{}|{}|{}",
+            "{}|{}|{}|{}",
             key_exposed,
             item.router_data.request.connector_transaction_id.get_connector_transaction_id().map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             amount.to_string(),
-            "", // email - not available in sync request
             salt_exposed
         );
 
