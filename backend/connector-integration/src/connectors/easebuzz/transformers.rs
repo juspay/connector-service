@@ -333,7 +333,7 @@ impl<
         // For sync, we need to get the amount from the connector response or use a default
         // This is a simplified approach - in practice you'd store this somewhere
         let amount = item.connector.amount_converter.convert(
-            common_utils::types::MinorUnit(1000), // Default amount - should be retrieved from storage
+            common_utils::types::MinorUnit::new(1000), // Default amount - should be retrieved from storage
             common_enums::Currency::INR, // Default currency
         ).change_context(ConnectorError::RequestEncodingFailed)?;
 
