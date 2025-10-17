@@ -300,7 +300,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .url(&url)
             .attach_default_headers()
             .headers(self.get_auth_header(&req.connector_auth_type)?)
-            .set_body(common_utils::request::RequestContent::FormUrlEncoded(request));
+            .set_body(common_utils::request::RequestContent::FormUrlEncoded(Box::new(request)));
         
         Ok(Some(request_builder.build()))
     }
@@ -317,7 +317,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
         
         let payments_response = PaymentsResponseData::try_from(response)?;
-        Ok(req.clone().with_response(payments_response))
+        Ok(req.clone().add_response(payments_response))
     }
 
     fn get_error_response_v2(
@@ -363,7 +363,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .url(&url)
             .attach_default_headers()
             .headers(self.get_auth_header(&req.connector_auth_type)?)
-            .set_body(common_utils::request::RequestContent::FormUrlEncoded(request));
+            .set_body(common_utils::request::RequestContent::FormUrlEncoded(Box::new(request)));
         
         Ok(Some(request_builder.build()))
     }
@@ -380,7 +380,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
         
         let payments_response = PaymentsResponseData::try_from(response)?;
-        Ok(req.clone().with_response(payments_response))
+        Ok(req.clone().add_response(payments_response))
     }
 
     fn get_error_response_v2(
@@ -426,7 +426,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .url(&url)
             .attach_default_headers()
             .headers(self.get_auth_header(&req.connector_auth_type)?)
-            .set_body(common_utils::request::RequestContent::FormUrlEncoded(request));
+            .set_body(common_utils::request::RequestContent::FormUrlEncoded(Box::new(request)));
         
         Ok(Some(request_builder.build()))
     }
@@ -443,7 +443,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
         
         let refunds_response = RefundsResponseData::try_from(response)?;
-        Ok(req.clone().with_response(refunds_response))
+        Ok(req.clone().add_response(refunds_response))
     }
 
     fn get_error_response_v2(
