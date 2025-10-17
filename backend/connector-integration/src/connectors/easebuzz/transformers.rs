@@ -598,8 +598,11 @@ fn generate_easebuzz_hash(
         key, txnid, amount, "Payment", "", "", "", "", "", "", currency, salt
     );
     
-    let digest = crypto::Sha512::digest(hash_string.as_bytes());
-    Ok(hex::encode(digest))
+    use sha2::Digest;
+    let mut hasher = sha2::Sha512::new();
+    hasher.update(hash_string.as_bytes());
+    let result = hasher.finalize();
+    Ok(hex::encode(result))
 }
 
 fn generate_sync_hash(
@@ -616,8 +619,11 @@ fn generate_sync_hash(
         key, txnid, amount, "", "", "", "", "", "", "", currency, salt
     );
     
-    let digest = crypto::Sha512::digest(hash_string.as_bytes());
-    Ok(hex::encode(digest))
+    use sha2::Digest;
+    let mut hasher = sha2::Sha512::new();
+    hasher.update(hash_string.as_bytes());
+    let result = hasher.finalize();
+    Ok(hex::encode(result))
 }
 
 fn get_payment_source(
