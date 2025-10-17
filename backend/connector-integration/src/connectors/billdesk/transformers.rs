@@ -23,19 +23,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
 
-// Additional imports for missing types
-use common_enums;
-use domain_types::router_request_types::{
-    AccessTokenRequestData, ConnectorCustomerData, PaymentCreateOrderData, PaymentMethodTokenizationData,
-    PaymentsAuthenticateData, PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-    RepeatPaymentData, SessionTokenRequestData, SetupMandateRequestData, SubmitEvidenceData,
-};
-use domain_types::connector_types::{
-    AcceptDisputeData, ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-    PaymentCreateOrderResponse, PaymentMethodTokenResponse, SessionTokenResponseData,
-};
-use domain_types::router_request_types::{PaymentVoidData, RefundsData, RefundSyncData};
-
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BilldeskPaymentsRequest {
