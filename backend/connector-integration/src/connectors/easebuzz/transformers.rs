@@ -451,7 +451,7 @@ impl<
                 Err(ErrorResponse {
                     code: "SYNC_ERROR".to_string(),
                     status_code: http_code,
-                    message: Some(error_msg.clone()),
+                    message: error_msg,
                     reason: Some(error_msg),
                     attempt_status: None,
                     connector_transaction_id: None,
