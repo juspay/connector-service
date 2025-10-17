@@ -58,7 +58,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Trustpay => Box::new(Trustpay::new()),
             ConnectorEnum::Stripe => Box::new(Stripe::new()),
             ConnectorEnum::Cybersource => Box::new(Cybersource::new()),
-            ConnectorEnum::EaseBuzz => Box::new(&EaseBuzz::new()) as BoxedConnector<T>,
+            ConnectorEnum::EaseBuzz => Box::new(EaseBuzz::new()) as Box<dyn connector_types::ConnectorServiceTrait<T> + Sync>,
         }
     }
 }
