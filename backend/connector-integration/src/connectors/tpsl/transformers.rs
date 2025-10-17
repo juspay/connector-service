@@ -494,9 +494,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 tenure_id: "".to_string(),
             },
             consumer: TpslConsumerPayload {
-                mobile_number: item.router_data.request.get_phone_number_as_optional().unwrap_or_else(|| "9999999999".to_string()),
-                email_i_d: item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_else(|| "test@example.com".to_string()),
-                identifier: customer_id.to_string(),
+                mobile_number: "9999999999".to_string(),
+                email_i_d: item.router_data.request.email.as_ref().map(|_| "test@example.com".to_string()).unwrap_or_else(|| "test@example.com".to_string()),
+                identifier: customer_id.get_string_repr().to_string(),
                 account_no: "".to_string(),
                 account_type: "".to_string(),
                 account_holder_name: "".to_string(),
