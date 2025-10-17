@@ -532,10 +532,9 @@ impl TryFrom<EaseBuzzRefundSyncResponse> for RefundsResponseData {
             _ => None,
         };
 
-        Ok(Self {
+        Ok(RefundsResponseData {
             connector_refund_id: refund_data.as_ref().and_then(|d| d.refunds.as_ref()).and_then(|refunds| refunds.first()).map(|r| r.refund_id.clone()).unwrap_or_else(|| "".to_string()),
-            status_code: response.status as u16,
-            ..Default::default()
+            refund_status: refund_data.as_ref().and_then(|d| d.refunds.as_ref()).and_then(|refunds| refunds.first()).map(|r| r.refund_status.clone()),
         })
     }
 }
