@@ -15,17 +15,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
 
-#[derive(Debug, Clone)]
-pub struct IciciUpiRouterData<R, T> {
-    pub router_data: R,
-    pub connector: IciciUpiConnectorData<T>,
-}
-
-#[derive(Debug, Clone)]
-pub struct IciciUpiConnectorData<T> {
-    pub amount_converter: T,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IciciUpiAuth {
