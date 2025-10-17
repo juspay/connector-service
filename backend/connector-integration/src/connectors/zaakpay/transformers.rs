@@ -429,7 +429,7 @@ impl<
                 .email
                 .clone()
                 .map(|e| e.peek().to_string())
-                .unwrap_or_else(|| format!("{}@example.com", customer_id)),
+                .unwrap_or_else(|| format!("{}@example.com", customer_id.get_string_repr())),
             phone: "0000000000".to_string(),
         };
 
