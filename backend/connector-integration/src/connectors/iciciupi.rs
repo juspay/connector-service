@@ -414,39 +414,39 @@ macros::create_all_prerequisites!(
         // Authentication flows
         (
             flow: PreAuthenticate,
-            request_body: IciciUpiVoidRequest,
-            response_body: IciciUpiVoidResponse,
+            request_body: IciciUpiPreAuthenticateRequest,
+            response_body: IciciUpiPreAuthenticateResponse,
             router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
         ),
         (
             flow: Authenticate,
-            request_body: IciciUpiVoidRequest,
-            response_body: IciciUpiVoidResponse,
+            request_body: IciciUpiAuthenticateRequest,
+            response_body: IciciUpiAuthenticateResponse,
             router_data: RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
         ),
         (
             flow: PostAuthenticate,
-            request_body: IciciUpiVoidRequest,
-            response_body: IciciUpiVoidResponse,
+            request_body: IciciUpiPostAuthenticateRequest,
+            response_body: IciciUpiPostAuthenticateResponse,
             router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
         ),
         // Additional flows
         (
             flow: PaymentMethodToken,
-            request_body: IciciUpiVoidRequest,
-            response_body: IciciUpiVoidResponse,
+            request_body: IciciUpiPaymentMethodTokenRequest,
+            response_body: IciciUpiPaymentMethodTokenResponse,
             router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         ),
         (
             flow: CreateAccessToken,
-            request_body: IciciUpiVoidRequest,
-            response_body: IciciUpiVoidResponse,
+            request_body: IciciUpiCreateAccessTokenRequest,
+            response_body: IciciUpiCreateAccessTokenResponse,
             router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         ),
         (
             flow: CreateConnectorCustomer,
-            request_body: IciciUpiVoidRequest,
-            response_body: IciciUpiVoidResponse,
+            request_body: IciciUpiCreateConnectorCustomerRequest,
+            response_body: IciciUpiCreateConnectorCustomerResponse,
             router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
         )
     ],
