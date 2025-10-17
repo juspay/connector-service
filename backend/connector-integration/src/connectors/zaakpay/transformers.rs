@@ -337,7 +337,7 @@ impl From<ZaakPayTransactionStatus> for common_enums::AttemptStatus {
                 Self::AuthenticationPending
             }
             ZaakPayTransactionStatus::Refunded => Self::AutoRefunded,
-            ZaakPayTransactionStatus::PartialRefunded => Self::PartialAutoRefunded,
+            ZaakPayTransactionStatus::PartialRefunded => Self::PartialCharged,
         }
     }
 }
