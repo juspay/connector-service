@@ -1615,9 +1615,16 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                value.metadata.get("connector_meta_data").map(|json_string| {
-                    Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
-                }).transpose()? // Converts Option<Result<T, E>> to Result<Option<T>, E> and propagates E if it's an Err
+                if !value.account_metadata.is_empty() {
+                    Some(Secret::new(serde_json::Value::Object(
+                        value.account_metadata
+                            .into_iter()
+                            .map(|(k, v)| (k, serde_json::Value::String(v)))
+                            .collect()
+                    )))
+                } else {
+                    None
+                }
             },
             amount_captured: None,
             minor_amount_captured: None,
@@ -1682,7 +1689,18 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            connector_meta_data: {
+                if !value.account_metadata.is_empty() {
+                    Some(Secret::new(serde_json::Value::Object(
+                        value.account_metadata
+                            .into_iter()
+                            .map(|(k, v)| (k, serde_json::Value::String(v)))
+                            .collect()
+                    )))
+                } else {
+                    None
+                }
+            },
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -4101,7 +4119,18 @@ impl
             connector_customer: None,
             description: value.metadata.get("description").cloned(),
             return_url: None,
-            connector_meta_data: None,
+            connector_meta_data: {
+                if !value.account_metadata.is_empty() {
+                    Some(Secret::new(serde_json::Value::Object(
+                        value.account_metadata
+                            .into_iter()
+                            .map(|(k, v)| (k, serde_json::Value::String(v)))
+                            .collect()
+                    )))
+                } else {
+                    None
+                }
+            },
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
