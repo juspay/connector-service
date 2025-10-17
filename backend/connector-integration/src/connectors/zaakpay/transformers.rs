@@ -345,7 +345,7 @@ impl From<ZaakPayTransactionStatus> for common_enums::AttemptStatus {
 // Helper function to get authentication data
 fn get_zaakpay_auth(
     connector_auth_type: &ConnectorAuthType,
-) -> Result<ZaakPayAuth, errors::ConnectorError> {
+) -> CustomResult<ZaakPayAuth, errors::ConnectorError> {
     ZaakPayAuth::try_from(connector_auth_type)
         .change_context(errors::ConnectorError::FailedToObtainAuthType)
 }
