@@ -347,15 +347,19 @@ impl<
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         // Extract phone number from payment method data
-        let phone_number = item
-            .router_data
-            .request
-            .payment_method_data
-            .as_ref()
-            .and_then(|pm| pm.get_upi_intent_data())
-            .and_then(|upi| upi.vpa.as_ref())
-            .map(|vpa| vpa.clone()) // For UPI, use VPA as identifier
-            .unwrap_or_else(|| customer_id.get_string_repr().to_string()); // Fallback to customer ID
+        let phone_number = match &item.router_data.request.payment_method_data {
+            domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
+                match upi_data {
+                    domain_types::payment_method_data::UpiData::UpiCollect(collect_data) => {
+                        collect_data.vpa_id.as_ref()
+                            .map(|vpa| vpa.peek().clone())
+                            .unwrap_or_else(|| customer_id.get_string_repr().to_string())
+                    }
+                    _ => customer_id.get_string_repr().to_string(),
+                }
+            }
+            _ => customer_id.get_string_repr().to_string(),
+        };
 
         // Build parameters for checksum generation
         let mut params = HashMap::new();
