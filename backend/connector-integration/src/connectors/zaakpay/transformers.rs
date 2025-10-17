@@ -47,7 +47,7 @@ pub struct ZaakPayTransactDataRequest {
     pub payment_instrument: ZaakPayPaymentInstrumentTransType,
 }
 
-#[derive(Default, Debug, Serialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayOrderDetailTransType {
     pub order_id: String,
