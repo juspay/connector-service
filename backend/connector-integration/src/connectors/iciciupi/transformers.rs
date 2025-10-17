@@ -321,7 +321,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-// Stub types for unsupported flows
+// Stub types for unsupported flows - unique types for each flow
 #[derive(Debug, Clone, Serialize)]
 pub struct IciciUpiVoidRequest;
 
@@ -387,3 +387,40 @@ pub struct IciciUpiDefendDisputeRequest;
 
 #[derive(Debug, Clone)]
 pub struct IciciUpiDefendDisputeResponse;
+
+// Additional stub types for authentication and other flows
+#[derive(Debug, Clone, Serialize)]
+pub struct IciciUpiPreAuthenticateRequest;
+
+#[derive(Debug, Clone)]
+pub struct IciciUpiPreAuthenticateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct IciciUpiAuthenticateRequest;
+
+#[derive(Debug, Clone)]
+pub struct IciciUpiAuthenticateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct IciciUpiPostAuthenticateRequest;
+
+#[derive(Debug, Clone)]
+pub struct IciciUpiPostAuthenticateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct IciciUpiPaymentMethodTokenRequest;
+
+#[derive(Debug, Clone)]
+pub struct IciciUpiPaymentMethodTokenResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct IciciUpiCreateAccessTokenRequest;
+
+#[derive(Debug, Clone)]
+pub struct IciciUpiCreateAccessTokenResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct IciciUpiCreateConnectorCustomerRequest;
+
+#[derive(Debug, Clone)]
+pub struct IciciUpiCreateConnectorCustomerResponse;
