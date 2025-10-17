@@ -450,7 +450,7 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::RSync, PaymentFlowData,
         let salt = auth_secret.expose().clone();
         
         let easebuzz_id = item.request.connector_transaction_id.clone();
-        let merchant_refund_id = item.request.refund_id.clone().unwrap_or_else(|| "".to_string());
+        let merchant_refund_id = item.request.connector_refund_id.clone();
         
         // Generate hash for refund sync
         let hash_string = format!("{}|{}|{}|{}", key, easebuzz_id, merchant_refund_id, salt);
