@@ -368,7 +368,7 @@ let email_for_hash = email_string.clone();
             &amount,
             &productinfo,
             &firstname,
-            &email_secret_for_hash,
+            &email_for_hash,
             &udf_fields,
             &salt,
         );
