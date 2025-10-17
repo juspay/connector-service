@@ -23,7 +23,7 @@ pub const PAYU_ERROR_CODE_INVALID_TRANSACTION: &str = "E002";
 pub const PAYU_ERROR_CODE_INSUFFICIENT_FUNDS: &str = "E003";
 pub const PAYU_ERROR_CODE_INVALID_VPA: &str = "E004";
 
-pub fn get_payu_endpoint(command: &str, is_test_mode: bool) -> String {
+pub fn get_payu_endpoint(_command: &str, is_test_mode: bool) -> String {
     let base_url = if is_test_mode {
         PAYU_TEST_BASE_URL
     } else {
