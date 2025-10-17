@@ -611,7 +611,7 @@ impl<
         "application/json"
     }
 
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
+    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
         // This would need to be added to the Connectors struct
         // For now, return a default
         "https://pay.easebuzz.in"
