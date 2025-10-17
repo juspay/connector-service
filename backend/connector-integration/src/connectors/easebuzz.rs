@@ -72,50 +72,7 @@ impl<
 > connector_types::PaymentSyncV2 for EaseBuzz<T>
 {
 }
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::IncomingWebhook for EaseBuzz<T>
-{
-    fn verify_webhook_source(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secrets: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
-        // TODO: Implement webhook verification based on EaseBuzz webhook signature
-        Ok(true)
-    }
 
-    fn get_event_type(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<
-        domain_types::connector_types::EventType,
-        error_stack::Report<domain_types::errors::ConnectorError>,
-    > {
-        Ok(domain_types::connector_types::EventType::PaymentIntentSuccess)
-    }
-
-    fn process_payment_webhook(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<
-        domain_types::connector_types::WebhookDetailsResponse,
-        error_stack::Report<domain_types::errors::ConnectorError>,
-    > {
-        // TODO: Implement webhook processing
-        Err(errors::ConnectorError::NotImplemented("Webhook processing".to_string()).into())
-    }
-}
 
 impl<
     T: PaymentMethodDataTypes
