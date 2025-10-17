@@ -833,24 +833,13 @@ impl<
                 };
 
                 (
-                    status,
+                    common_enums::RefundStatus::RefundSuccess, // Convert to RefundStatus
                     Ok(RefundsResponseData {
-                        refund_id: router_data
+                        connector_refund_id: router_data
                             .resource_common_data
                             .connector_request_reference_id
                             .clone(),
-                        connector_transaction_id: response_data
-                            .orders
-                            .first()
-                            .and_then(|order| order.order_detail.as_ref())
-                            .and_then(|detail| detail.txnid.clone()),
-                        refund_status: status,
-                        connector_response_reference_id: None,
-                        amount_received: None,
-                        connector_metadata: None,
-                        refund_amount_received: None,
-                        error_code: None,
-                        error_message: None,
+                        refund_status: common_enums::RefundStatus::RefundSuccess,
                         status_code: http_code,
                     }),
                 )
