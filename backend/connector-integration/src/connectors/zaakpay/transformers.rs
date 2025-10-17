@@ -580,7 +580,7 @@ impl<
         item: ZaakPayRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = get_zaakpay_auth(&item.router_data.connector_auth_type)?;
-        
+
         // For RSync, we don't have amount in the request, use None
         let order_detail = ZaakPayOrderDetailType {
             order_id: item
@@ -659,7 +659,7 @@ impl<
                 (
                     common_enums::AttemptStatus::AuthenticationPending,
                     Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
+                        resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
                             router_data
                                 .resource_common_data
                                 .connector_request_reference_id
@@ -746,7 +746,7 @@ impl<
                 (
                     status,
                     Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
+                        resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
                             router_data
                                 .resource_common_data
                                 .connector_request_reference_id
@@ -828,24 +828,24 @@ impl<
                     .map(|_| "success");
 
                 let status = match refund_status {
-                    Some("success") => common_enums::AttemptStatus::Charged,
-                    _ => common_enums::AttemptStatus::Failure,
+                    Some("success") => common_enums::RefundStatus::RefundSuccess,
+                    _ => common_enums::RefundStatus::RefundFailure,
                 };
 
                 (
-                    common_enums::RefundStatus::RefundSuccess, // Convert to RefundStatus
+                    status,
                     Ok(RefundsResponseData {
                         connector_refund_id: router_data
                             .resource_common_data
                             .connector_request_reference_id
                             .clone(),
-                        refund_status: common_enums::RefundStatus::RefundSuccess,
+                        refund_status: status,
                         status_code: http_code,
                     }),
                 )
             }
             ZaakPayRefundSyncResponse::Error(error_data) => (
-                common_enums::AttemptStatus::Failure,
+                common_enums::RefundStatus::RefundFailure,
                 Err(ErrorResponse {
                     code: error_data.response_code.to_string(),
                     status_code: item.http_code,
@@ -870,54 +870,3 @@ impl<
         })
     }
 }
-
-// Stub types for unsupported flows
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayVoidRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayVoidResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayCaptureRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayCaptureResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayRefundRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayRefundResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayCreateOrderRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayCreateOrderResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPaySessionTokenRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPaySessionTokenResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPaySetupMandateRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPaySetupMandateResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayRepeatPaymentRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayRepeatPaymentResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayAcceptDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayAcceptDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayDefendDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayDefendDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPaySubmitEvidenceRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPaySubmitEvidenceResponse;
