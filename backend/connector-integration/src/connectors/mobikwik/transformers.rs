@@ -84,7 +84,7 @@ pub struct DebitResponseType {
     pub checksum: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AddMoneyDebitResponse {
     pub statuscode: String,
