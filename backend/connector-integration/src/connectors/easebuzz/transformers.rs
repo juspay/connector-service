@@ -624,13 +624,9 @@ fn get_payment_source(
     payment_method_type: Option<common_enums::PaymentMethodType>,
 ) -> CustomResult<String, ConnectorError> {
     match payment_method_type {
-        Some(common_enums::PaymentMethodType::Upi) => Ok("upi".to_string()),
         Some(common_enums::PaymentMethodType::UpiCollect) => Ok("upi".to_string()),
         Some(common_enums::PaymentMethodType::UpiIntent) => Ok("upi".to_string()),
-        Some(common_enums::PaymentMethodType::Card) => Ok("card".to_string()),
-        Some(common_enums::PaymentMethodType::NetBanking) => Ok("netbanking".to_string()),
-        Some(common_enums::PaymentMethodType::Wallet) => Ok("wallet".to_string()),
-        _ => Err(errors::ConnectorError::MissingPaymentMethodType.into()),
+        _ => Ok("upi".to_string()), // Default to UPI for EaseBuzz
     }
 }
 
