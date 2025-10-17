@@ -5,9 +5,7 @@ use std::fmt::Debug;
 
 use common_utils::{
     errors::CustomResult,
-    ext_traits::ByteSliceExt,
-    request::{Method, RequestBuilder},
-    types::{StringMinorUnit, StringMinorUnitForConnector},
+    types::{StringMinorUnitForConnector},
 };
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
@@ -19,7 +17,6 @@ use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
-    router_response_types::Response,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Maskable};
