@@ -365,9 +365,7 @@ impl TryFrom<&ConnectorAuthType> for TpslAuthType {
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, .. } => {
-                let auth_data: TpslAuthType = api_key
-                    .peek()
-                    .parse_str::<TpslAuthType>()
+                let auth_data: TpslAuthType = serde_json::from_str(api_key.peek())
                     .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
                 Ok(auth_data)
             }
