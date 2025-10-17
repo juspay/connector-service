@@ -17,10 +17,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    core::errors::{self, ConnectorError},
-    services::connector::ConnectorCommon,
-};
+use domain_types::errors::ConnectorError;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzPaymentsRequest {
