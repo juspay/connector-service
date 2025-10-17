@@ -256,13 +256,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    TryFrom<ResponseRouterData<IciciUpiPaymentsSyncResponse, T>>
+    TryFrom<ResponseRouterData<IciciUpiPaymentsSyncResponse, IciciUpiRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<IciciUpiPaymentsSyncResponse, T>,
+        item: ResponseRouterData<IciciUpiPaymentsSyncResponse, IciciUpiRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
