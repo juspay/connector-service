@@ -112,24 +112,9 @@ macros::create_all_prerequisites!(
 
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+            _req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
-                crate::connectors::easebuzz::constants::base_urls::TEST
-            } else {
-                crate::connectors::easebuzz::constants::base_urls::PRODUCTION
-            }
-        }
-
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
-            &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
-        ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
-                crate::connectors::easebuzz::constants::base_urls::TEST
-            } else {
-                crate::connectors::easebuzz::constants::base_urls::PRODUCTION
-            }
+            crate::connectors::easebuzz::constants::base_urls::TEST
         }
     }
 );
