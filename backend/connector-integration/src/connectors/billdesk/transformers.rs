@@ -182,7 +182,7 @@ impl<
             merchant_id.peek(),
             &customer_id.get_string_repr(),
             &txn_reference_no,
-            amount.as_str(),
+            &amount.to_string(),
             &item.router_data.request.currency.to_string(),
             &return_url,
         );
