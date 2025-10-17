@@ -1,4 +1,113 @@
-use common_utils::{
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<IciciUpiPaymentsResponse, IciciUpiRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<IciciUpiPaymentsResponse, IciciUpiRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        let attempt_status = common_enums::AttemptStatus::from(response.clone());
+        
+        let response_data = Ok(PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(
+                response
+                    .merchant_tran_id
+                    .clone()
+                    .unwrap_or_else(|| router_data.router_data.resource_common_data.connector_request_reference_id.clone()),
+            ),
+            redirection_data: None,
+            mandate_reference: None,
+            connector_metadata: None,
+            network_txn_id: response.bank_rrn,
+            connector_response_reference_id: None,
+            incremental_authorization_allowed: None,
+            status_code: http_code,
+        });
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: attempt_status,
+                ..router_data.router_data.resource_common_data
+            },
+            response: response_data,
+            ..router_data.router_data
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<IciciUpiPaymentsSyncResponse, IciciUpiRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<IciciUpiPaymentsSyncResponse, IciciUpiRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        let (status, response_data) = match response.response {
+            Some(response_data) => {
+                let attempt_status = common_enums::AttemptStatus::from(response_data.clone());
+                
+                (
+                    attempt_status,
+                    Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(
+                            response_data
+                                .merchant_tran_id
+                                .clone()
+                                .unwrap_or_else(|| router_data.router_data.request.connector_transaction_id
+                                    .get_connector_transaction_id()
+                                    .unwrap_or_default()),
+                        ),
+                        redirection_data: None,
+                        mandate_reference: None,
+                        connector_metadata: None,
+                        network_txn_id: response_data.bank_rrn,
+                        connector_response_reference_id: None,
+                        incremental_authorization_allowed: None,
+                        status_code: http_code,
+                    }),
+                )
+            }
+            None => (
+                common_enums::AttemptStatus::Failure,
+                Err(ErrorResponse {
+                    code: "NO_RESPONSE".to_string(),
+                    status_code: http_code,
+                    message: "No response received from ICICI UPI".to_string(),
+                    reason: Some("No response received from ICICI UPI".to_string()),
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    network_error_message: None,
+                }),
+            ),
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.router_data.resource_common_data
+            },
+            response: response_data,
+            ..router_data.router_data
+        })
+    }
+}use common_utils::{
     errors::CustomResult, types::StringMinorUnit,
 };
 use domain_types::{
