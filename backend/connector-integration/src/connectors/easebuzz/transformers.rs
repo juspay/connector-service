@@ -9,11 +9,10 @@ use domain_types::{
     router_data::ConnectorAuthType,
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, 
-        RefundSyncData, RefundsResponseData
+        RefundFlowData, RefundsResponseData
     },
 };
-use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{Secret, ExposeInterface};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha512};
 
