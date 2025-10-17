@@ -474,23 +474,28 @@ impl TryFrom<EaseBuzzPaymentsResponse> for PaymentsResponseData {
     fn try_from(response: EaseBuzzPaymentsResponse) -> Result<Self, Self::Error> {
         let status = if response.status {
             match response.data.as_ref().map(|d| d.status.as_str()) {
-                Some("success") => AttemptStatus::Charged,
-                Some("pending") => AttemptStatus::Pending,
-                Some("failure") => AttemptStatus::Failure,
-                Some("user_aborted") => AttemptStatus::AuthenticationFailed,
-                _ => AttemptStatus::Pending,
+                Some("success") => common_enums::AttemptStatus::Charged,
+                Some("pending") => common_enums::AttemptStatus::Pending,
+                Some("failure") => common_enums::AttemptStatus::Failure,
+                Some("user_aborted") => common_enums::AttemptStatus::AuthenticationFailed,
+                _ => common_enums::AttemptStatus::Pending,
             }
         } else {
-            AttemptStatus::Failure
+            common_enums::AttemptStatus::Failure
         };
 
-        Ok(PaymentsResponseData {
-            status,
-            amount_received: response.data.as_ref().and_then(|d| {
-                d.amount.parse::<f64>().ok().map(|amt| MinorUnit::new((amt * 100.0) as i64))
-            }),
-            connector_transaction_id: response.data.as_ref().map(|d| d.easebuzz_id.clone()),
-            error_message: response.error_desc,
+        let resource_id = response.data.as_ref()
+            .map(|d| domain_types::connector_types::ResponseId::ConnectorTransactionId(d.easebuzz_id.clone()));
+
+        Ok(PaymentsResponseData::TransactionResponse {
+            resource_id: resource_id.unwrap_or(domain_types::connector_types::ResponseId::NoResponseId),
+            redirection_data: None,
+            connector_metadata: None,
+            mandate_reference: None,
+            network_txn_id: response.data.as_ref().and_then(|d| d.bank_ref_num.clone()),
+            connector_response_reference_id: None,
+            incremental_authorization_allowed: None,
+            status_code: 200u16,
         })
     }
 }
