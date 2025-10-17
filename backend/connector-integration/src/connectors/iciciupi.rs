@@ -5,17 +5,17 @@ use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
 use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit,
+    ext_traits::ByteSliceExt, types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder, CreateSessionToken, DefendDispute, PaymentMethodToken, PostAuthenticate, PreAuthenticate, PSync, RSync,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
         Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData, ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        AcceptDisputeData, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
@@ -28,7 +28,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -38,13 +38,10 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as iciciupi, IciciUpiAcceptDisputeRequest, IciciUpiAcceptDisputeResponse, IciciUpiAuthenticateRequest,
-    IciciUpiAuthenticateResponse, IciciUpiCaptureRequest, IciciUpiCaptureResponse, IciciUpiCreateAccessTokenRequest,
-    IciciUpiCreateAccessTokenResponse, IciciUpiCreateConnectorCustomerRequest, IciciUpiCreateConnectorCustomerResponse,
+    self as iciciupi, IciciUpiAcceptDisputeRequest, IciciUpiAcceptDisputeResponse,
+    IciciUpiCaptureRequest, IciciUpiCaptureResponse,
     IciciUpiCreateOrderRequest, IciciUpiCreateOrderResponse, IciciUpiDefendDisputeRequest, IciciUpiDefendDisputeResponse,
     IciciUpiPaymentsRequest, IciciUpiPaymentsResponse, IciciUpiPaymentsSyncRequest, IciciUpiPaymentsSyncResponse,
-    IciciUpiPaymentMethodTokenRequest, IciciUpiPaymentMethodTokenResponse, IciciUpiPostAuthenticateRequest,
-    IciciUpiPostAuthenticateResponse, IciciUpiPreAuthenticateRequest, IciciUpiPreAuthenticateResponse,
     IciciUpiRefundRequest, IciciUpiRefundResponse, IciciUpiRepeatPaymentRequest, IciciUpiRepeatPaymentResponse,
     IciciUpiResponseEnum, IciciUpiRSyncRequest, IciciUpiRSyncResponse, IciciUpiSessionTokenRequest,
     IciciUpiSessionTokenResponse, IciciUpiSetupMandateRequest, IciciUpiSetupMandateResponse,
@@ -107,66 +104,7 @@ impl<
 
 
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for IciciUpi<T>
-{
-}
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::CreateConnectorCustomer for IciciUpi<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentTokenV2<T> for IciciUpi<T>
-{
-}
-
-// Authentication trait implementations (empty for UPI-only connector)
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentPreAuthenticateV2<T> for IciciUpi<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentAuthenticateV2<T> for IciciUpi<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentPostAuthenticateV2<T> for IciciUpi<T>
-{
-}
 
 
 
@@ -587,7 +525,7 @@ impl<
         constants::APPLICATION_JSON
     }
 
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
+    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
         // ICICI UPI doesn't use the standard connectors struct for base URL
         // It uses test_mode to determine sandbox vs production
         constants::PRODUCTION_BASE_URL
