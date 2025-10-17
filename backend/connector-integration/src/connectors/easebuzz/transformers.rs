@@ -414,13 +414,15 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData,
         let salt = auth_secret.expose().clone();
         
         let txnid = item.resource_common_data.connector_request_reference_id.clone();
-        let amount = item.amount.get_amount_as_string();
-        let email = item.request.email.as_ref().map(|e| e.to_string()).unwrap_or_else(|| "customer@example.com".to_string());
-        let phone = item.request.phone.as_ref().map(|p| p.to_string()).unwrap_or_else(|| "9999999999".to_string());
+        let amount = item.request.amount.get_amount_as_string();
+        let email = "customer@example.com".to_string();
+        let phone = "9999999999".to_string();
         
         // Generate hash for sync
         let hash_string = format!("{}|{}|{}|{}|{}|{}", key, txnid, amount, email, phone, salt);
-        let hash = generate_hash("", "", "", "", "", "", &hash_string);
+        let hash = generate_hash(
+            "", "", "", "", "", "", &[], &hash_string
+        );
         
         Ok(Self {
             key: Secret::new(key),
