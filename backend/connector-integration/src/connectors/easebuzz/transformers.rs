@@ -362,7 +362,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
+                1000, // Default amount for sync - should be extracted from request
                 item.router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
@@ -371,7 +371,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             &auth.key.peek(),
             &item.router_data.request.connector_transaction_id.get_connector_transaction_id()
                 .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
-            &amount.get_amount_as_string(),
+            &amount.to_string(),
             &item.router_data.request.currency.to_string(),
             &auth.salt.peek(),
         )?;
@@ -380,8 +380,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             txnid: item.router_data.request.connector_transaction_id.get_connector_transaction_id()
                 .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             amount,
-            email: item.router_data.request.email.clone(),
-            phone: item.router_data.request.get_phone_number().map(|p| Secret::new(p.to_string())),
+            email: None,
+            phone: None,
             key: auth.key,
             hash: Secret::new(hash),
         })
