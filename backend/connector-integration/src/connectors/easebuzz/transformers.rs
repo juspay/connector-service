@@ -378,7 +378,7 @@ let email_secret_for_hash = email_secret.expose().clone();
             amount,
             productinfo,
             firstname,
-            email: email_secret,
+            email: email_secret_for_hash.clone(),
             phone,
             surl,
             furl,
