@@ -101,6 +101,17 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
+    > connector_types::PaymentSessionToken for IciciUpi<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     > connector_types::PaymentAccessToken for IciciUpi<T>
 {
 }
