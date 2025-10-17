@@ -465,7 +465,7 @@ impl<
                 Err(ErrorResponse {
                     code: error_type.error_code,
                     status_code: http_code,
-                    message: Some(error_type.error_message.clone()),
+                    message: error_type.error_message,
                     reason: Some(error_type.error_message),
                     attempt_status: None,
                     connector_transaction_id: None,
