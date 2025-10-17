@@ -407,7 +407,6 @@ impl<
         + std::marker::Sync
         + std::marker::Send
         + 'static
-        + Serialize
         + Serialize,
 > TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
