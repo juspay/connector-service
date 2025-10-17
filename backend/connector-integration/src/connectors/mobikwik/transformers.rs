@@ -536,14 +536,40 @@ impl<
                     }),
                 )
             }
-            MobikwikPaymentsResponse::AddMoneyResponse(response_data)
-            | MobikwikPaymentsResponse::RedirectResponse(response_data) => {
+            MobikwikPaymentsResponse::AddMoneyResponse(response_data) => {
                 let payment_method_type = router_data
                     .request
                     .payment_method_type
                     .ok_or(errors::ConnectorError::MissingPaymentMethodType)?;
                 
-                let redirection_data = get_redirect_form_data(payment_method_type, &response)?;
+                let redirection_data = get_redirect_form_data(payment_method_type, &MobikwikPaymentsResponse::AddMoneyResponse(response_data.clone()))?;
+
+                (
+                    common_enums::AttemptStatus::AuthenticationPending,
+                    Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(
+                            router_data
+                                .resource_common_data
+                                .connector_request_reference_id
+                                .clone(),
+                        ),
+                        redirection_data: Some(Box::new(redirection_data)),
+                        mandate_reference: None,
+                        connector_metadata: None,
+                        network_txn_id: response_data.refid.clone(),
+                        connector_response_reference_id: response_data.refid,
+                        incremental_authorization_allowed: None,
+                        status_code: http_code,
+                    }),
+                )
+            }
+            MobikwikPaymentsResponse::RedirectResponse(response_data) => {
+                let payment_method_type = router_data
+                    .request
+                    .payment_method_type
+                    .ok_or(errors::ConnectorError::MissingPaymentMethodType)?;
+                
+                let redirection_data = get_redirect_form_data(payment_method_type, &MobikwikPaymentsResponse::RedirectResponse(response_data.clone()))?;
 
                 (
                     common_enums::AttemptStatus::AuthenticationPending,
