@@ -420,7 +420,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                     description: "Payment".to_string(),
                     provider_identifier: "UPI".to_string(),
                     surcharge_or_discount_amount: "0".to_string(),
-                    amount: amount.get_amount_as_string(),
+                    amount: amount.to_string(),
                     com_amt: "0".to_string(),
                     s_k_u: "PAYMENT".to_string(),
                     reference: item.router_data.resource_common_data.connector_request_reference_id.clone(),
@@ -459,7 +459,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 },
                 instruction: TpslInstructionPayload {
                     occurrence: "ONCE".to_string(),
-                    amount: amount.get_amount_as_string(),
+                    amount: amount.to_string(),
                     frequency: "ONCE".to_string(),
                     instruction_type: "PAYMENT".to_string(),
                     description: "Payment Instruction".to_string(),
@@ -477,7 +477,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             transaction: TpslTransactionPayload {
                 device_identifier: "WEB".to_string(),
                 sms_sending: "N".to_string(),
-                amount: amount.get_amount_as_string(),
+                amount: amount.to_string(),
                 forced3_d_s_call: "N".to_string(),
                 transaction_type: "SALE".to_string(),
                 description: "Payment Transaction".to_string(),
