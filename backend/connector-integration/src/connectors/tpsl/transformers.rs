@@ -68,7 +68,7 @@ pub struct TpslPaymentPayload {
     pub instruction: TpslInstructionPayload,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslMethodPayload {
     pub token: String,
