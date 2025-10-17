@@ -1534,6 +1534,7 @@ message PaymentServiceRegisterRequest {
   // Customer Information
   optional SecretString email = 5; // Email address of the customer
   optional string customer_name = 6; // Name of the customer
+  optional string customer_id = 29; // Merchant's customer ID
   optional string connector_customer_id = 7; // Customer ID as recognized by the connector
   
   // Address Information
@@ -1593,6 +1594,7 @@ message PaymentServiceRegisterResponse {
   optional RedirectForm redirection_data = 6; // Data for redirecting the customer's browser
   optional string network_txn_id = 7; // Renamed from network_transaction_id
   optional Identifier response_ref_id = 8; // Renamed from connector_response_reference_id
+  optional ConnectorResponseData connector_response = 14; // Various data regarding the response from connector
   
   // Authorization Details
   optional bool incremental_authorization_allowed = 9; // Indicates if incremental authorization is allowed

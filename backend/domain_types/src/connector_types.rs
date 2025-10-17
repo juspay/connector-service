@@ -1281,6 +1281,9 @@ pub struct ConnectorCustomerData {
     pub email: Option<Secret<Email>>,
     pub name: Option<Secret<String>>,
     pub description: Option<String>,
+    pub phone: Option<Secret<String>>,
+    pub preprocessing_id: Option<String>,
+    pub split_payments: Option<SplitPaymentsRequest>,
 }
 
 #[derive(Debug, Clone)]

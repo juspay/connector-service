@@ -4097,8 +4097,18 @@ impl
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
             ),
-            customer_id: None,
-            connector_customer: None,
+            customer_id: value
+                .customer_id
+                .clone()
+                .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
+                .transpose()
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_CUSTOMER_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Failed to parse Customer Id".to_owned(),
+                    error_object: None,
+                }))?,
+            connector_customer: value.connector_customer_id,
             description: value.metadata.get("description").cloned(),
             return_url: None,
             connector_meta_data: None,
@@ -4228,7 +4238,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             minor_amount: Some(common_utils::types::MinorUnit::new(0)),
             shipping_cost: None,
             customer_id: value
-                .connector_customer_id
+                .customer_id
                 .clone()
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
@@ -4324,6 +4334,17 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
         .resource_common_data
         .get_raw_connector_request();
 
+    let connector_response = router_data_v2
+        .resource_common_data
+        .connector_response
+        .as_ref()
+        .map(|connector_response_data| {
+            grpc_api_types::payments::ConnectorResponseData::foreign_try_from(
+                connector_response_data.clone(),
+            )
+        })
+        .transpose()?;
+
     let response = match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -4395,6 +4416,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                         .get_connector_response_headers_as_map(),
                     state,
                     raw_connector_request,
+                    connector_response,
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -4426,6 +4448,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 .get_connector_response_headers_as_map(),
             state,
             raw_connector_request,
+            connector_response: None,
         },
     };
     Ok(response)
@@ -4890,6 +4913,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
             email: email.map(Secret::new),
             name: value.customer_name.map(Secret::new),
             description: None,
+            split_payments: None,
+            phone: None,
+            preprocessing_id: None,
         })
     }
 }

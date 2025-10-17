@@ -43,9 +43,10 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as stripe, CancelRequest, CaptureRequest, PaymentIntentRequest, PaymentSyncResponse,
-    PaymentsAuthorizeResponse, PaymentsCaptureResponse, PaymentsVoidResponse, RefundResponse,
-    RefundResponse as RefundSyncResponse, StripeRefundRequest,
+    self as stripe, CancelRequest, CaptureRequest, CustomerRequest, PaymentIntentRequest,
+    PaymentSyncResponse, PaymentsAuthorizeResponse, PaymentsCaptureResponse, PaymentsVoidResponse,
+    RefundResponse, RefundResponse as RefundSyncResponse, SetupIntentRequest, SetupIntentResponse,
+    StripeCustomerResponse, StripeRefundRequest,
 };
 
 use super::macros;
@@ -152,6 +153,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Stripe<T>
 {
+    fn should_create_connector_customer(&self) -> bool {
+        true
+    }
 }
 
 macros::create_amount_converter_wrapper!(connector_name: Stripe, amount_type: MinorUnit);
@@ -192,6 +196,18 @@ macros::create_all_prerequisites!(
             flow: RSync,
             response_body: RefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: SetupIntentRequest<T>,
+            response_body: SetupIntentResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: CreateConnectorCustomer,
+            request_body: CustomerRequest,
+            response_body: StripeCustomerResponse,
+            router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
         )
     ],
     amount_converters: [],
@@ -370,6 +386,97 @@ macros::macro_connector_implementation!(
                 self.connector_base_url_payments(req),
                 "v1/payment_intents"
             ))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Stripe,
+    curl_request: FormUrlEncoded(SetupIntentRequest),
+    curl_response: SetupIntentResponse,
+    flow_name: SetupMandate,
+    resource_common_data: PaymentFlowData,
+    flow_request: SetupMandateRequestData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let mut header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )];
+            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            header.append(&mut api_key);
+            Ok(header)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+                "{}{}",
+                self.connector_base_url_payments(req),
+                "v1/setup_intents"
+            ))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Stripe,
+    curl_request: FormUrlEncoded(CustomerRequest),
+    curl_response: StripeCustomerResponse,
+    flow_name: CreateConnectorCustomer,
+    resource_common_data: PaymentFlowData,
+    flow_request: ConnectorCustomerData,
+    flow_response: ConnectorCustomerResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let mut header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type()
+                    .to_string()
+                    .into(),
+            )];
+            if let Some(domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(
+                stripe_split_payment,
+            )) = &req.request.split_payments
+            {
+                if stripe_split_payment.charge_type
+                    == common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct)
+                {
+                    let mut customer_account_header = vec![(
+                        headers::STRIPE_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
+                        stripe_split_payment
+                            .transfer_account_id
+                            .clone()
+                            .into_masked(),
+                    )];
+                    header.append(&mut customer_account_header);
+                }
+            }
+            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            header.append(&mut api_key);
+            Ok(header)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}{}", self.connector_base_url_payments(req), "v1/customers"))
         }
     }
 );
@@ -613,15 +720,6 @@ macros::macro_connector_implementation!(
 );
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Stripe<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
     for Stripe<T>
 {
@@ -701,16 +799,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
-    > for Stripe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateConnectorCustomer,
-        PaymentFlowData,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
     > for Stripe<T>
 {
 }
