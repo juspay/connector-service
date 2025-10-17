@@ -1,7 +1,6 @@
-use common_enums::{AttemptStatus, PaymentMethodType};
+use common_enums::PaymentMethodType;
 use common_utils::{
     errors::CustomResult,
-    types::MinorUnit,
 };
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
