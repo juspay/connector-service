@@ -32,7 +32,6 @@ use serde::Serialize;
 use transformers::{self as easebuzz, EaseBuzzPaymentsRequest, EaseBuzzPaymentsResponse};
 
 pub(crate) mod headers {
-    pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
