@@ -33,14 +33,9 @@ impl TryFrom<&ConnectorAuthType> for EaseBuzzAuth {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key1 } => Ok(Self {
+            ConnectorAuthType::SignatureKey { api_key, key1, .. } => Ok(Self {
                 key: api_key.clone(),
-                salt: key1.clone().ok_or(errors::ConnectorError::FailedToObtainAuthType)?,
-                merchant_id: None,
-            }),
-            ConnectorAuthType::MultiAccountKey { api_key, key1, .. } => Ok(Self {
-                key: api_key.clone(),
-                salt: key1.clone().ok_or(errors::ConnectorError::FailedToObtainAuthType)?,
+                salt: key1.clone(),
                 merchant_id: None,
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
