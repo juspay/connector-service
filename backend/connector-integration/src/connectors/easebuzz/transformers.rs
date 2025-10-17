@@ -513,13 +513,12 @@ impl TryFrom<EaseBuzzPaymentsSyncResponse> for PaymentsResponseData {
             EaseBuzzSyncMessage::Error(_) => (AttemptStatus::Failure, None),
         };
 
-        Ok(Self {
+        Ok(PaymentsResponseData {
             status,
             amount_received: payment_data.as_ref().and_then(|d| {
                 d.amount.parse::<f64>().ok().map(|amt| MinorUnit::new((amt * 100.0) as i64))
             }),
             connector_transaction_id: payment_data.as_ref().map(|d| d.easebuzz_id.clone()),
-            ..Default::default()
         })
     }
 }
