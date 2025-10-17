@@ -4,6 +4,50 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## [2025-01-XX] - EaseBuzz Connector Addition
+
+### Added
+- New EaseBuzz connector implementation
+- Payment methods supported: UPI, UPI Intent, UPI Collect, Card, NetBanking, Wallet
+- Transaction flows: Authorize, PSync (Payment Status Sync)
+- Full UCS v2 macro framework implementation
+- Comprehensive error handling and status mapping
+- Hash-based authentication with SHA512
+- Support for both test and production environments
+
+### Files Created/Modified
+- `src/connectors/easebuzz.rs` - Main connector implementation
+- `src/connectors/easebuzz/transformers.rs` - Request/response transformers
+- `src/connectors/easebuzz/constants.rs` - API constants and endpoints
+- `src/connectors.rs` - Added connector registration
+- `src/types.rs` - Added connector to ConnectorEnum and type mappings
+- `domain_types/src/connector_types.rs` - Added EaseBuzz to ConnectorEnum
+- `domain_types/src/types.rs` - Added easebuzz field to Connectors struct
+
+### Technical Details
+- Migrated from Hyperswitch/Euler Haskell implementation
+- Uses UCS v2 macro framework for trait implementations
+- Implements proper error handling and status mapping
+- Full type safety with guard rails (Secret<String>, MinorUnit, Email, etc.)
+- Dynamic value extraction from router data (no hardcoded values)
+- Amount framework using StringMinorUnit converter
+- SHA512 hash generation for request authentication
+- Support for webhook verification (stub implementation)
+
+### API Endpoints
+- `/payment/initiateLink` - Payment initiation
+- `/payment/seamless` - Seamless transaction processing
+- `/transaction/sync` - Transaction status synchronization
+- `/transaction/refund` - Refund processing
+- `/transaction/refundSync` - Refund status synchronization
+
+### Notes
+- TODO: Add EaseBuzz to grpc proto file for complete integration
+- TODO: Implement complete webhook verification logic
+- TODO: Add remaining flows (Refund, RSync) if needed
+
+- - -
+
 ## 2025.10.17.0
 
 ### Features
