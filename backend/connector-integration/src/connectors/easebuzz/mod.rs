@@ -131,19 +131,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
-    connector_types::ValidationTrait for EaseBuzz<T>
-{
-}
-
-// Implement all the missing payment traits
+// Implement the core payment traits
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSyncV2 for EaseBuzz<T>
 {
 }
 
