@@ -172,7 +172,7 @@ where
         };
 
         let hash_string = format!(
-            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
+            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
             key,
             transaction_id,
             amount,
@@ -184,8 +184,7 @@ where
             surl,
             furl,
             "UDF1",
-            "UDF2",
-            "UDF3"
+            "UDF2"
         );
 
         let hash = auth.generate_hash(&hash_string);
