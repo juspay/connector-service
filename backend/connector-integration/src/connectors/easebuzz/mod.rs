@@ -157,9 +157,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for EaseBuzz<T>
 {
 }
-        + 'static
-        + Serialize,
-> connector_types::PaymentSyncV2 for EaseBuzz<T>
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSyncV2 for EaseBuzz<T>
 {
 }
 
