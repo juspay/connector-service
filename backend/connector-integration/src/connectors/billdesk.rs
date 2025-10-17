@@ -43,6 +43,16 @@ use transformers::{self as billdesk, BilldeskPaymentsRequest, BilldeskPaymentsRe
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
+// Additional imports for missing types
+use domain_types::router_request_types::{
+    AccessTokenRequestData, ConnectorCustomerData, PaymentMethodTokenizationData,
+    PaymentsAuthenticateData, PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+    SessionTokenRequestData,
+};
+use domain_types::connector_types::{
+    AccessTokenResponseData, ConnectorCustomerResponse, PaymentMethodTokenResponse, SessionTokenResponseData,
+};
+
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
