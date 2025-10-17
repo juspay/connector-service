@@ -367,7 +367,7 @@ where
             &amount,
             &productinfo,
             &firstname,
-            email_secret.expose(),
+            &email_secret,
             &udf_fields,
             &salt,
         );
