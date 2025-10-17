@@ -435,13 +435,13 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData,
     }
 }
 
-impl TryFrom<&RouterDataV2<domain_types::connector_flow::RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>>
+impl TryFrom<&RouterDataV2<domain_types::connector_flow::RSync, PaymentFlowData, domain_types::connector_types::RefundSyncData, RefundsResponseData>>
     for EaseBuzzRefundSyncRequest
 {
     type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<domain_types::connector_flow::RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
+        item: &RouterDataV2<domain_types::connector_flow::RSync, PaymentFlowData, domain_types::connector_types::RefundSyncData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth_key = get_auth_header(&item.connector_auth_type)?;
         let auth_secret = get_secret_key(&item.connector_auth_type)?;
