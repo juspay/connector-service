@@ -267,12 +267,7 @@ macros::create_all_prerequisites!(
             &req.resource_common_data.connectors.billdesk.base_url
         }
 
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
-            &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.billdesk.base_url
-        }
+        
     }
 );
 
