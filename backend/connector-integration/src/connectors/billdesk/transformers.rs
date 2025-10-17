@@ -27,11 +27,6 @@ pub struct BilldeskPaymentsRequest {
     ipaddress: String,
 }
 
-#[derive(Default, Debug, Serialize)]
-pub struct BilldeskPaymentsSyncRequest {
-    msg: String,
-}
-
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum BilldeskPaymentsResponse {
@@ -77,62 +72,6 @@ pub struct BilldeskErrorResponse {
     pub error: String,
     pub error_description: String,
 }
-
-// Stub types for unsupported flows
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskVoidRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskVoidResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskCaptureRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskCaptureResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskRefundRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskRefundResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskRefundSyncRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskRefundSyncResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskCreateOrderRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskCreateOrderResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskSessionTokenRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskSessionTokenResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskSetupMandateRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskSetupMandateResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskRepeatPaymentRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskRepeatPaymentResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskAcceptDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskAcceptDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskDefendDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskDefendDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskSubmitEvidenceRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskSubmitEvidenceResponse;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -242,7 +181,7 @@ impl<
         let msg = build_billdesk_message(
             merchant_id.peek(),
             &customer_id.get_string_repr(),
-            txn_reference_no,
+            &txn_reference_no,
             amount.as_str(),
             &item.router_data.request.currency.to_string(),
             &return_url,
@@ -262,48 +201,6 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        BilldeskRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for BilldeskPaymentsSyncRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-    
-    fn try_from(
-        item: BilldeskRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let merchant_id = get_merchant_id(&item.router_data.connector_auth_type)?;
-        let txn_reference_no = item
-            .router_data
-            .request
-            .connector_transaction_id
-            .get_connector_transaction_id()
-            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
-
-        // Build status check message
-        let msg = format!(
-            "MerchantID={}&TxnReferenceNo={}",
-            merchant_id.peek(),
-            txn_reference_no
-        );
-
-        Ok(Self { msg })
-    }
-}
-
 fn get_redirect_form_data(
     response_data: BilldeskPaymentsResponseData,
 ) -> CustomResult<RedirectForm, errors::ConnectorError> {
@@ -320,13 +217,13 @@ fn get_redirect_form_data(
             })
         } else {
             Err(errors::ConnectorError::MissingRequiredField {
-                field_name: "url".to_string(),
+                field_name: "url",
             }
             .into())
         }
     } else {
         Err(errors::ConnectorError::MissingRequiredField {
-            field_name: "rdata".to_string(),
+            field_name: "rdata",
         }
         .into())
     }
