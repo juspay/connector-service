@@ -96,7 +96,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         Ok(Self {
-            payer_va: upi_data.vpa_id.as_ref().map(|vpa| vpa.peek().to_string()).unwrap_or_default(),
+            payer_va: upi_data.vpa_id.as_ref().map(|vpa| vpa.clone().expose()).unwrap_or_default(),
             amount,
             note: None, // Description not available in PaymentsAuthorizeData
             collect_by_date: None, // Can be configured based on requirements
