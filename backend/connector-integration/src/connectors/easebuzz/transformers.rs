@@ -1,6 +1,5 @@
 use common_enums::{AttemptStatus, PaymentMethodType};
 use common_utils::{
-    crypto,
     errors::CustomResult,
     types::MinorUnit,
 };
@@ -16,6 +15,7 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha512};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzPaymentsRequest {
@@ -276,21 +276,21 @@ pub struct EaseBuzzErrorResponse {
 }
 
 // Authentication helper functions
-pub fn get_auth_header(auth_type: &ConnectorAuthType) -> CustomResult<Secret<String>, ConnectorError> {
+pub fn get_auth_header(auth_type: &ConnectorAuthType) -> CustomResult<Secret<String>, domain_types::errors::ConnectorError> {
     match auth_type {
         ConnectorAuthType::SignatureKey { api_key, .. } => Ok(Secret::new(api_key.clone())),
         ConnectorAuthType::BodyKey { api_key, .. } => Ok(Secret::new(api_key.clone())),
         ConnectorAuthType::HeaderKey { api_key, .. } => Ok(Secret::new(api_key.clone())),
-        _ => Err(ConnectorError::AuthenticationFailed.into()),
+        _ => Err(domain_types::errors::ConnectorError::AuthenticationFailed.into()),
     }
 }
 
-pub fn get_secret_key(auth_type: &ConnectorAuthType) -> CustomResult<Secret<String>, ConnectorError> {
+pub fn get_secret_key(auth_type: &ConnectorAuthType) -> CustomResult<Secret<String>, domain_types::errors::ConnectorError> {
     match auth_type {
         ConnectorAuthType::SignatureKey { api_secret, .. } => Ok(Secret::new(api_secret.clone())),
         ConnectorAuthType::BodyKey { api_secret, .. } => Ok(Secret::new(api_secret.clone())),
         ConnectorAuthType::HeaderKey { api_secret, .. } => Ok(Secret::new(api_secret.clone())),
-        _ => Err(ConnectorError::AuthenticationFailed.into()),
+        _ => Err(domain_types::errors::ConnectorError::AuthenticationFailed.into()),
     }
 }
 
@@ -318,7 +318,6 @@ pub fn generate_hash(
     hash_string.push('|');
     hash_string.push_str(salt);
 
-    use sha2::{Digest, Sha512};
     let mut hasher = Sha512::new();
     hasher.update(hash_string.as_bytes());
     let result = hasher.finalize();
@@ -332,7 +331,7 @@ impl<T> TryFrom<&RouterDataV2<domain_types::connector_flow::Authorize, PaymentFl
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(
         item: &RouterDataV2<domain_types::connector_flow::Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
@@ -343,18 +342,18 @@ where
         let key = auth_key.expose().clone();
         let salt = auth_secret.expose().clone();
         
-        let txnid = item.router_data.resource_common_data.connector_request_reference_id.clone();
+        let txnid = item.resource_common_data.connector_request_reference_id.clone();
         let amount = item.amount.get_amount_as_string();
-        let productinfo = item.router_data.request.description.clone().unwrap_or_else(|| "Payment".to_string());
-        let firstname = item.router_data.request.get_customer_name().unwrap_or_else(|| "Customer".to_string());
-        let email = item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_else(|| "customer@example.com".to_string());
-        let phone = item.router_data.request.phone.as_ref().map(|p| p.to_string()).unwrap_or_else(|| "9999999999".to_string());
+        let productinfo = item.request.description.clone().unwrap_or_else(|| "Payment".to_string());
+        let firstname = item.request.get_customer_name().unwrap_or_else(|| "Customer".to_string());
+        let email = item.request.email.as_ref().map(|e| e.to_string()).unwrap_or_else(|| "customer@example.com".to_string());
+        let phone = item.request.phone.as_ref().map(|p| p.to_string()).unwrap_or_else(|| "9999999999".to_string());
         
-        let surl = item.router_data.request.get_router_return_url()?.unwrap_or_else(|| "https://example.com/success".to_string());
-        let furl = item.router_data.request.get_router_return_url()?.unwrap_or_else(|| "https://example.com/failure".to_string());
+        let surl = item.request.get_router_return_url()?.unwrap_or_else(|| "https://example.com/success".to_string());
+        let furl = item.request.get_router_return_url()?.unwrap_or_else(|| "https://example.com/failure".to_string());
         
         // Determine payment mode based on payment method type
-        let payment_modes = match item.router_data.request.payment_method_type {
+        let payment_modes = match item.request.payment_method_type {
             PaymentMethodType::Upi | PaymentMethodType::UpiIntent => "upi_intent".to_string(),
             PaymentMethodType::UpiCollect => "upi_collect".to_string(),
             _ => "upi".to_string(),
@@ -405,7 +404,7 @@ where
 impl TryFrom<&RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
     for EaseBuzzPaymentsSyncRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(
         item: &RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -416,10 +415,10 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData,
         let key = auth_key.expose().clone();
         let salt = auth_secret.expose().clone();
         
-        let txnid = item.router_data.resource_common_data.connector_request_reference_id.clone();
+        let txnid = item.resource_common_data.connector_request_reference_id.clone();
         let amount = item.amount.get_amount_as_string();
-        let email = item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_else(|| "customer@example.com".to_string());
-        let phone = item.router_data.request.phone.as_ref().map(|p| p.to_string()).unwrap_or_else(|| "9999999999".to_string());
+        let email = item.request.email.as_ref().map(|e| e.to_string()).unwrap_or_else(|| "customer@example.com".to_string());
+        let phone = item.request.phone.as_ref().map(|p| p.to_string()).unwrap_or_else(|| "9999999999".to_string());
         
         // Generate hash for sync
         let hash_string = format!("{}|{}|{}|{}|{}|{}", key, txnid, amount, email, phone, salt);
@@ -439,7 +438,7 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData,
 impl TryFrom<&RouterDataV2<domain_types::connector_flow::RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>>
     for EaseBuzzRefundSyncRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(
         item: &RouterDataV2<domain_types::connector_flow::RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
@@ -450,8 +449,8 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::RSync, PaymentFlowData,
         let key = auth_key.expose().clone();
         let salt = auth_secret.expose().clone();
         
-        let easebuzz_id = item.router_data.request.connector_transaction_id.get_connector_transaction_id().map_err(|_e| ConnectorError::RequestEncodingFailed)?.to_string();
-        let merchant_refund_id = item.router_data.request.refund_id.clone();
+        let easebuzz_id = item.request.connector_transaction_id.get_connector_transaction_id().map_err(|_e| domain_types::errors::ConnectorError::RequestEncodingFailed)?.to_string();
+        let merchant_refund_id = item.request.refund_id.clone();
         
         // Generate hash for refund sync
         let hash_string = format!("{}|{}|{}|{}", key, easebuzz_id, merchant_refund_id, salt);
@@ -468,7 +467,7 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::RSync, PaymentFlowData,
 
 // TryFrom implementations for response types
 impl TryFrom<EaseBuzzPaymentsResponse> for PaymentsResponseData {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(response: EaseBuzzPaymentsResponse) -> Result<Self, Self::Error> {
         let status = if response.status {
@@ -496,7 +495,7 @@ impl TryFrom<EaseBuzzPaymentsResponse> for PaymentsResponseData {
 }
 
 impl TryFrom<EaseBuzzPaymentsSyncResponse> for PaymentsResponseData {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(response: EaseBuzzPaymentsSyncResponse) -> Result<Self, Self::Error> {
         let (status, payment_data) = match response.msg {
@@ -525,7 +524,7 @@ impl TryFrom<EaseBuzzPaymentsSyncResponse> for PaymentsResponseData {
 }
 
 impl TryFrom<EaseBuzzRefundSyncResponse> for RefundsResponseData {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(response: EaseBuzzRefundSyncResponse) -> Result<Self, Self::Error> {
         let refund_data = match response.response {
@@ -534,8 +533,8 @@ impl TryFrom<EaseBuzzRefundSyncResponse> for RefundsResponseData {
         };
 
         Ok(Self {
-            connector_refund_id: refund_data.as_ref().and_then(|d| d.refunds.as_ref()).and_then(|refunds| refunds.first()).map(|r| r.refund_id.clone()),
-            status_code: Some(response.status as u16),
+            connector_refund_id: refund_data.as_ref().and_then(|d| d.refunds.as_ref()).and_then(|refunds| refunds.first()).map(|r| r.refund_id.clone()).unwrap_or_else(|| "".to_string()),
+            status_code: response.status as u16,
             ..Default::default()
         })
     }
