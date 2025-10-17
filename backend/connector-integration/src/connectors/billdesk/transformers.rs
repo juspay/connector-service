@@ -243,9 +243,9 @@ impl<
             merchant_id.peek(),
             &customer_id.get_string_repr(),
             txn_reference_no,
-            &amount,
+            amount.as_str(),
             &item.router_data.request.currency.to_string(),
-            return_url,
+            &return_url,
         );
 
         match item.router_data.resource_common_data.payment_method {
