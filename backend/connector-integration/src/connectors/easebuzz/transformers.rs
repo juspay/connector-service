@@ -249,9 +249,9 @@ impl<
             "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
             auth.key.expose(),
             item.router_data.resource_common_data.connector_request_reference_id,
-            amount.get_amount_as_string(),
-            item.router_data.request.product_name.as_deref().unwrap_or(""),
-            item.router_data.request.get_customer_name().unwrap_or(""),
+            amount.to_string(),
+            "", // product_name
+            "", // customer_name
             item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
             "", // phone
             return_url,
