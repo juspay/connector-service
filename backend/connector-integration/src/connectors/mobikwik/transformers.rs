@@ -355,7 +355,7 @@ impl<
             .and_then(|pm| pm.get_upi_intent_data())
             .and_then(|upi| upi.vpa.as_ref())
             .map(|vpa| vpa.clone()) // For UPI, use VPA as identifier
-            .unwrap_or_else(|| customer_id.get_string_repr()); // Fallback to customer ID
+            .unwrap_or_else(|| customer_id.get_string_repr().to_string()); // Fallback to customer ID
 
         // Build parameters for checksum generation
         let mut params = HashMap::new();
