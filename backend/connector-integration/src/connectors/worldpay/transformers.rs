@@ -88,12 +88,14 @@ fn fetch_payment_instrument<T: PaymentMethodDataTypes + std::fmt::Debug + std::m
             }
             let expiry_year: i32 = expiry_year.parse::<i32>()
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-                
+            let expiry_month_i8 = i8::try_from(expiry_month)
+                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
             Ok(PaymentInstrument::Card(CardPayment {
             raw_card_details: RawCardDetails {
                 payment_type: PaymentType::Plain,
                 expiry_date: ExpiryDate {
-                    month: Secret::new(expiry_month as i8),
+                    month: Secret::new(expiry_month_i8),
                     year: Secret::new(expiry_year),
                 },
                 card_number: card.card_number,
@@ -130,11 +132,13 @@ fn fetch_payment_instrument<T: PaymentMethodDataTypes + std::fmt::Debug + std::m
             }
             let expiry_year: i32 = expiry_year.parse::<i32>()
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            let expiry_month_i8 = i8::try_from(expiry_month)
+                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
             Ok(PaymentInstrument::RawCardForNTI(RawCardDetails {
                 payment_type: PaymentType::Plain,
                 expiry_date: ExpiryDate {
-                    month: Secret::new(expiry_month as i8),
+                    month: Secret::new(expiry_month_i8),
                     year: Secret::new(expiry_year),
                 },
                 card_number: RawCardNumber(raw_card_details.card_number),
