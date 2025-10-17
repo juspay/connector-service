@@ -410,13 +410,6 @@ macros::macro_connector_implementation!(
                         Ok(format!("{}/debitwallet", base_url))
                     }
                 }
-                Some(common_enums::PaymentMethodType::Wallet) => {
-                    if is_test {
-                        Ok(format!("{}/addmoney", base_url))
-                    } else {
-                        Ok(format!("{}/addmoney", base_url))
-                    }
-                }
                 _ => Err(errors::ConnectorError::MissingPaymentMethodType.into()),
             }
         }
