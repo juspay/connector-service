@@ -79,7 +79,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let auth = IciciUpiAuth::try_from(&item.router_data.connector_auth_type)?;
         
         // Extract UPI payment method data
-        let upi_data = item.router_data.request.payment_method_data
+        let upi_data = item.router_data.router_data.request.payment_method_data
             .as_ref()
             .and_then(|pm| pm.upi.as_ref())
             .ok_or(errors::ConnectorError::MissingRequiredField {
