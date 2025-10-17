@@ -252,7 +252,7 @@ impl<
             amount.to_string(),
             "", // product_name
             "", // customer_name
-            item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
+            item.router_data.request.email.as_ref().map(|e| e.peek().to_string()).unwrap_or_default(),
             "", // phone
             return_url,
             return_url, // furl same as surl
