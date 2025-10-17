@@ -59,7 +59,7 @@ pub struct TpslItemPayload {
     pub identifier: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslPaymentPayload {
     pub method: TpslMethodPayload,
