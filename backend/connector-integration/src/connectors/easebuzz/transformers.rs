@@ -277,19 +277,17 @@ pub struct EaseBuzzErrorResponse {
 // Authentication helper functions
 pub fn get_auth_header(auth_type: &ConnectorAuthType) -> CustomResult<Secret<String>, domain_types::errors::ConnectorError> {
     match auth_type {
-        ConnectorAuthType::SignatureKey { api_key, .. } => Ok(Secret::new(api_key.clone())),
-        ConnectorAuthType::BodyKey { api_key, .. } => Ok(Secret::new(api_key.clone())),
-        ConnectorAuthType::HeaderKey { api_key, .. } => Ok(Secret::new(api_key.clone())),
-        _ => Err(domain_types::errors::ConnectorError::AuthenticationFailed.into()),
+        ConnectorAuthType::SignatureKey { api_key, .. } => Ok(api_key.clone()),
+        ConnectorAuthType::BodyKey { api_key, .. } => Ok(api_key.clone()),
+        ConnectorAuthType::HeaderKey { api_key, .. } => Ok(api_key.clone()),
+        _ => Err(domain_types::errors::ConnectorError::RequestEncodingFailed.into()),
     }
 }
 
 pub fn get_secret_key(auth_type: &ConnectorAuthType) -> CustomResult<Secret<String>, domain_types::errors::ConnectorError> {
     match auth_type {
-        ConnectorAuthType::SignatureKey { api_secret, .. } => Ok(Secret::new(api_secret.clone())),
-        ConnectorAuthType::BodyKey { api_secret, .. } => Ok(Secret::new(api_secret.clone())),
-        ConnectorAuthType::HeaderKey { api_secret, .. } => Ok(Secret::new(api_secret.clone())),
-        _ => Err(domain_types::errors::ConnectorError::AuthenticationFailed.into()),
+        ConnectorAuthType::SignatureKey { api_secret, .. } => Ok(api_secret.clone()),
+        _ => Err(domain_types::errors::ConnectorError::RequestEncodingFailed.into()),
     }
 }
 
