@@ -182,8 +182,7 @@ where
             email,
             phone,
             surl,
-            furl,
-            "UDF1"
+            furl
         );
 
         let hash = auth.generate_hash(&hash_string);
