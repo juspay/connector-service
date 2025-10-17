@@ -50,6 +50,51 @@ impl<
 }
 
 // Implement ValidationTrait
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    SourceVerification<domain_types::connector_flow::Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    for EaseBuzz<T>
+{
+    fn get_source_verification_data(
+        &self,
+        _req: &RouterDataV2<domain_types::connector_flow::Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    ) -> CustomResult<
+        std::collections::HashMap<String, serde_json::Value>,
+        domain_types::errors::ConnectorError,
+    > {
+        Ok(std::collections::HashMap::new())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    SourceVerification<domain_types::connector_flow::PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for EaseBuzz<T>
+{
+    fn get_source_verification_data(
+        &self,
+        _req: &RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    ) -> CustomResult<
+        std::collections::HashMap<String, serde_json::Value>,
+        domain_types::errors::ConnectorError,
+    > {
+        Ok(std::collections::HashMap::new())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    SourceVerification<domain_types::connector_flow::RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for EaseBuzz<T>
+{
+    fn get_source_verification_data(
+        &self,
+        _req: &RouterDataV2<domain_types::connector_flow::RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+    ) -> CustomResult<
+        std::collections::HashMap<String, serde_json::Value>,
+        domain_types::errors::ConnectorError,
+    > {
+        Ok(std::collections::HashMap::new())
+    }
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
     connector_types::ValidationTrait for EaseBuzz<T>
 {
