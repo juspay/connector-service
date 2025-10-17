@@ -117,11 +117,6 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuthType {
                 merchant_id: key1.clone(),
                 checksum_key: Secret::new("".to_string()), // Will be populated from key1 if needed
             }),
-            ConnectorAuthType::Key { api_key, key1 } => Ok(Self {
-                api_key: api_key.clone(),
-                merchant_id: key1.clone(),
-                checksum_key: Secret::new("".to_string()),
-            }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
     }
@@ -137,11 +132,6 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuth {
                 key1,
                 ..
             } => Ok(Self {
-                api_key: api_key.clone(),
-                merchant_id: key1.clone(),
-                checksum_key: Secret::new("".to_string()),
-            }),
-            ConnectorAuthType::Key { api_key, key1 } => Ok(Self {
                 api_key: api_key.clone(),
                 merchant_id: key1.clone(),
                 checksum_key: Secret::new("".to_string()),
