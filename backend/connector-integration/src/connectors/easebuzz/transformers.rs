@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use common_utils::{
-    ext_traits::ValueExt, request::Method, types::{StringMinorUnit, MinorUnit},
+    ext_traits::ValueExt, request::Method, types::StringMinorUnit,
     Email,
 };
 use domain_types::{
