@@ -29,7 +29,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::{Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -293,7 +293,39 @@ impl<
 {
 }
 
-// Authentication trait implementations - not implemented for Billdesk
+// Authentication trait implementations
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentPreAuthenticateV2<T> for Billdesk<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentAuthenticateV2<T> for Billdesk<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentPostAuthenticateV2<T> for Billdesk<T>
+{
+}
 
 macros::create_all_prerequisites!(
     connector_name: Billdesk,
@@ -304,12 +336,6 @@ macros::create_all_prerequisites!(
             request_body: BilldeskPaymentsRequest,
             response_body: BilldeskPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: PSync,
-            request_body: BilldeskPaymentsSyncRequest,
-            response_body: BilldeskPaymentsSyncResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -446,70 +472,41 @@ impl<
     }
 }
 
-// Stub implementations for unsupported flows
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Billdesk<T>
-{
+// Stub implementations for all flows - these are required by the framework
+macro_rules! impl_not_implemented_flow {
+    ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
+        impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+            ConnectorIntegrationV2<$flow, $common_data, $req, $resp> for Billdesk<T>
+        {
+            fn build_request_v2(
+                &self,
+                _req: &RouterDataV2<$flow, $common_data, $req, $resp>,
+            ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+                let flow_name = stringify!($flow);
+                Err(errors::ConnectorError::NotImplemented(flow_name.to_string()).into())
+            }
+        }
+    };
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Billdesk<T>
-{
-}
+// Apply to all flows except Authorize (which is implemented above)
+impl_not_implemented_flow!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
+impl_not_implemented_flow!(PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData);
+impl_not_implemented_flow!(Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData);
+impl_not_implemented_flow!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
+impl_not_implemented_flow!(RSync, RefundFlowData, RefundSyncData, RefundsResponseData);
+impl_not_implemented_flow!(CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse);
+impl_not_implemented_flow!(CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData);
+impl_not_implemented_flow!(SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData);
+impl_not_implemented_flow!(RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData);
+impl_not_implemented_flow!(Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData);
+impl_not_implemented_flow!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
+impl_not_implemented_flow!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Billdesk<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    for Billdesk<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Billdesk<T>
-{
-}
-
-// Authentication flow implementations - not implemented for Billdesk
-
-// Additional flow implementations - not implemented for Billdesk
+// Authentication flow implementations
+impl_not_implemented_flow!(PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData);
+impl_not_implemented_flow!(Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData);
+impl_not_implemented_flow!(PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData);
 
 // SourceVerification implementations for all flows
 macro_rules! impl_source_verification_stub {
@@ -557,7 +554,7 @@ macro_rules! impl_source_verification_stub {
     };
 }
 
-// Apply to supported flows only
+// Apply to all flows
 impl_source_verification_stub!(
     Authorize,
     PaymentFlowData,
@@ -570,6 +567,137 @@ impl_source_verification_stub!(
     PaymentsSyncData,
     PaymentsResponseData
 );
+impl_source_verification_stub!(
+    Capture,
+    PaymentFlowData,
+    PaymentsCaptureData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
+impl_source_verification_stub!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
+impl_source_verification_stub!(RSync, RefundFlowData, RefundSyncData, RefundsResponseData);
+impl_source_verification_stub!(
+    SetupMandate,
+    PaymentFlowData,
+    SetupMandateRequestData<T>,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    RepeatPayment,
+    PaymentFlowData,
+    RepeatPaymentData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    Accept,
+    DisputeFlowData,
+    AcceptDisputeData,
+    DisputeResponseData
+);
+impl_source_verification_stub!(
+    SubmitEvidence,
+    DisputeFlowData,
+    SubmitEvidenceData,
+    DisputeResponseData
+);
+impl_source_verification_stub!(
+    DefendDispute,
+    DisputeFlowData,
+    DisputeDefendData,
+    DisputeResponseData
+);
+impl_source_verification_stub!(
+    CreateOrder,
+    PaymentFlowData,
+    PaymentCreateOrderData,
+    PaymentCreateOrderResponse
+);
+impl_source_verification_stub!(
+    PreAuthenticate,
+    PaymentFlowData,
+    PaymentsPreAuthenticateData<T>,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    Authenticate,
+    PaymentFlowData,
+    PaymentsAuthenticateData<T>,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    PostAuthenticate,
+    PaymentFlowData,
+    PaymentsPostAuthenticateData<T>,
+    PaymentsResponseData
+);
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Billdesk<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Billdesk<T>
+{
+}
 
 fn get_billdesk_auth_header(
     connector_auth_type: &ConnectorAuthType,
