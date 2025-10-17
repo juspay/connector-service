@@ -1,57 +1,43 @@
-[workspace]
-resolver = "2"
-members = [
-  "backend/grpc-api-types",
-  "backend/connector-integration",
-  "backend/external-services",
-  "backend/grpc-server", 
-  "sdk/rust-grpc-client",
-  "backend/common_enums",
-  "backend/common_utils",
-  "backend/interfaces",
-  "backend/domain_types",
-  "backend/tracing-kafka",
-  "backend/cards"
-]
-exclude = [
-  "examples/example-rs",
-  "examples/example-tui",
-  "examples/example-cli"
-]
+[package]
+name = "payu-connector"
+version = "0.1.0"
+edition = "2021"
 
+[dependencies]
+# Core dependencies
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.0", features = ["v4"] }
 
-[profile.release]
-strip = true
-lto = true
-codegen-units = 1
+# Common utilities
+common_utils = { path = "../common_utils" }
+common_enums = { path = "../common_enums" }
+domain_types = { path = "../domain_types" }
+error-stack = "0.4"
+hyperswitch-masking = "0.1"
+masking = "0.1"
 
+# Crypto utilities
+hex = "0.4"
+sha2 = "0.10"
 
-[workspace.lints.rust]
-unsafe_code = "forbid"
-rust_2018_idioms = { level = "warn", priority = -1 } # Remove priority once https://github.com/rust-lang/rust-clippy/pull/12827 is available in stable clippy
-unused_qualifications = "warn"
-# missing_debug_implementations = "warn"
-# missing_docs = "warn"
+# HTTP client
+reqwest = { version = "0.11", features = ["json", "multipart"] }
 
-[workspace.lints.clippy]
-as_conversions = "warn"
-expect_used = "warn"
-index_refutable_slice = "warn"
-indexing_slicing = "warn"
-large_futures = "warn"
-missing_panics_doc = "warn"
-out_of_bounds_indexing = "warn"
-panic = "warn"
-panic_in_result_fn = "warn"
-panicking_unwrap = "warn"
-print_stderr = "warn"
-print_stdout = "warn"
-todo = "warn"
-unimplemented = "warn"
-unreachable = "warn"
-unwrap_in_result = "warn"
-unwrap_used = "warn"
-use_self = "warn"
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
 
-# Lints to allow
-option_map_unit_fn = "allow"
+# Async utilities
+futures = "0.3"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Validation
+validator = "0.16"
+
+[dev-dependencies]
+mockito = "1.0"
+tokio-test = "0.4"
