@@ -415,7 +415,7 @@ impl<
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            amount: amount.clone(),
+            amount: amount.to_string(),
             currency: item.router_data.request.currency.to_string(),
             product_description: item
                 .router_data
