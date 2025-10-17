@@ -403,7 +403,7 @@ macros::macro_connector_implementation!(
             
             // Use different endpoints based on payment method and test mode
             match req.request.payment_method_type {
-                Some(common_enums::PaymentMethodType::Upi) => {
+                Some(common_enums::PaymentMethodType::UpiIntent) => {
                     if is_test {
                         Ok(format!("{}/debitwallet", base_url))
                     } else {
