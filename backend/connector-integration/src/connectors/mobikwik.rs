@@ -321,19 +321,7 @@ macros::create_all_prerequisites!(
             request_body: MobikwikPaymentsSyncRequest,
             response_body: MobikwikPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ),
-        // Stub types for unsupported flows
-        (flow: Void, request_body: MobikwikVoidRequest, response_body: MobikwikVoidResponse, router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>),
-        (flow: Capture, request_body: MobikwikCaptureRequest, response_body: MobikwikCaptureResponse, router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>),
-        (flow: Refund, request_body: MobikwikRefundRequest, response_body: MobikwikRefundResponse, router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>),
-        (flow: RSync, request_body: MobikwikRefundSyncRequest, response_body: MobikwikRefundSyncResponse, router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>),
-        (flow: CreateOrder, request_body: MobikwikCreateOrderRequest, response_body: MobikwikCreateOrderResponse, router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>),
-        (flow: CreateSessionToken, request_body: MobikwikSessionTokenRequest, response_body: MobikwikSessionTokenResponse, router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>),
-        (flow: SetupMandate, request_body: MobikwikSetupMandateRequest, response_body: MobikwikSetupMandateResponse, router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>),
-        (flow: RepeatPayment, request_body: MobikwikRepeatPaymentRequest, response_body: MobikwikRepeatPaymentResponse, router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>),
-        (flow: Accept, request_body: MobikwikAcceptDisputeRequest, response_body: MobikwikAcceptDisputeResponse, router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>),
-        (flow: DefendDispute, request_body: MobikwikDefendDisputeRequest, response_body: MobikwikDefendDisputeResponse, router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>),
-        (flow: SubmitEvidence, request_body: MobikwikSubmitEvidenceRequest, response_body: MobikwikSubmitEvidenceResponse, router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>),
+        )
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
