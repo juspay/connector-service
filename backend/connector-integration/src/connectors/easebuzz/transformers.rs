@@ -277,7 +277,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             phone: None,
             surl: return_url.clone(),
             furl: return_url,
-            udf1: Some(customer_id.to_string()),
+            udf1: Some(customer_id.get_string_repr().to_string()),
             hash: Secret::new(hash),
             payment_source: get_payment_source(item.router_data.request.payment_method_type)?,
             pg: None,
