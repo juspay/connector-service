@@ -352,8 +352,8 @@ where
         
         // Determine payment mode based on payment method type
         let payment_modes = match item.request.payment_method_type {
-            PaymentMethodType::Upi | PaymentMethodType::UpiIntent => "upi_intent".to_string(),
-            PaymentMethodType::UpiCollect => "upi_collect".to_string(),
+            Some(PaymentMethodType::Upi) => "upi_intent".to_string(),
+            Some(PaymentMethodType::UpiCollect) => "upi_collect".to_string(),
             _ => "upi".to_string(),
         };
         
