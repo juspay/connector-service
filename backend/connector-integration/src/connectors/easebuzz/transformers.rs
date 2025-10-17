@@ -268,7 +268,7 @@ impl<
             surl: return_url.clone(),
             furl: return_url,
             vpa,
-            customer_unique_id: Some(customer_id.get_string_repr()),
+            customer_unique_id: Some(customer_id.get_string_repr().to_string()),
             ..Default::default()
         })
     }
