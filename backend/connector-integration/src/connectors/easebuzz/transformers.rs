@@ -280,11 +280,11 @@ impl<
             currency: item.router_data.request.currency,
             email: item.router_data.request.email.clone(),
             phone: None, // Extract from router data if available
-            firstname: item.router_data.request.get_customer_name().ok(),
+            firstname: None, // Extract from router data if available
             lastname: None,
             surl: return_url.clone(),
             furl: return_url,
-            productinfo: item.router_data.request.product_name.as_deref().unwrap_or("Payment").to_string(),
+            productinfo: "Payment".to_string(),
             udf1: None,
             udf2: None,
             udf3: None,
