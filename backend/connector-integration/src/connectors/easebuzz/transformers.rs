@@ -362,7 +362,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .connector
             .amount_converter
             .convert(
-                1000, // Default amount for sync - should be extracted from request
+                common_utils::types::MinorUnit(1000), // Default amount for sync - should be extracted from request
                 item.router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
