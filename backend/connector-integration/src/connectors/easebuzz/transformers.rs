@@ -389,7 +389,7 @@ for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseD
                     .ok_or(errors::ConnectorError::MissingPaymentMethodType)?;
                 
                 // For UPI payments, we typically get a redirect response
-                let redirection_data = if payment_method_type == common_enums::PaymentMethodType::Upi {
+                let redirection_data = if payment_method_type == common_enums::PaymentMethodType::UpiCollect {
                     Some(Box::new(RedirectForm::Form {
                         endpoint: response_data.data.as_ref()
                             .and_then(|d| d.get("payment_url"))
