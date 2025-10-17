@@ -36,10 +36,15 @@ impl TryFrom<&ConnectorAuthType> for IciciUpiAuth {
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, .. } => {
-                let auth_data: IciciUpiAuth = api_key
-                    .parse_value("IciciUpiAuth")
-                    .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-                Ok(auth_data)
+                // For now, create a basic auth structure
+                // TODO: Implement proper auth parsing based on ICICI UPI requirements
+                Ok(Self {
+                    merchant_id: api_key.clone(), // Temporary - should be parsed properly
+                    sub_merchant_id: None,
+                    terminal_id: Secret::new("default".to_string()), // Temporary
+                    api_key: Some(api_key.clone()),
+                    encryption_key: None,
+                })
             }
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
