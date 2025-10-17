@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use domain_types::{connector_types::ConnectorEnum, payment_method_data::PaymentMethodDataTypes};
-use interfaces::connector_types::BoxedConnector;
+use interfaces::{connector_types::BoxedConnector, connector_types::ConnectorServiceTrait};
 
 use crate::connectors::{
     Aci, Adyen, Authorizedotnet, Bluecode, Braintree, Cashfree, Cashtocode, Checkout, Cryptopay,
