@@ -442,7 +442,7 @@ fn get_redirect_form_data(
     response_data: &MobikwikPaymentsResponse,
 ) -> CustomResult<RedirectForm, errors::ConnectorError> {
     match payment_method_type {
-        common_enums::PaymentMethodType::Upi => {
+        common_enums::PaymentMethodType::UpiIntent => {
             // For Mobikwik, typically redirect to their payment page
             let redirect_url = match response_data {
                 MobikwikPaymentsResponse::RedirectResponse(resp) => {
