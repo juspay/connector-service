@@ -340,14 +340,15 @@ where
         let salt = auth_secret.expose().clone();
         
         let txnid = item.resource_common_data.connector_request_reference_id.clone();
-        let amount = item.amount.get_amount_as_string();
-        let productinfo = item.request.description.clone().unwrap_or_else(|| "Payment".to_string());
-        let firstname = item.request.get_customer_name().unwrap_or_else(|| "Customer".to_string());
-        let email = item.request.email.as_ref().map(|e| e.to_string()).unwrap_or_else(|| "customer@example.com".to_string());
-        let phone = item.request.phone.as_ref().map(|p| p.to_string()).unwrap_or_else(|| "9999999999".to_string());
+        let amount = item.request.amount.get_amount_as_string();
+        let productinfo = "Payment".to_string();
+        let firstname = item.request.customer_name.clone().unwrap_or_else(|| "Customer".to_string());
+        let email = item.request.email.as_ref().map(|e| e.expose().clone()).unwrap_or_else(|| "customer@example.com".to_string());
+        let phone = item.request.phone.as_ref().map(|p| p.expose().clone()).unwrap_or_else(|| "9999999999".to_string());
         
-        let surl = item.request.get_router_return_url()?.unwrap_or_else(|| "https://example.com/success".to_string());
-        let furl = item.request.get_router_return_url()?.unwrap_or_else(|| "https://example.com/failure".to_string());
+        let return_url = item.request.get_router_return_url().unwrap_or_else(|| "https://example.com".to_string());
+        let surl = return_url.clone();
+        let furl = return_url;
         
         // Determine payment mode based on payment method type
         let payment_modes = match item.request.payment_method_type {
