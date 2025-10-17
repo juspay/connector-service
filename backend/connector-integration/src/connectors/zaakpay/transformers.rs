@@ -444,7 +444,7 @@ impl<
 
         // Build payment instrument based on payment method type
         let payment_instrument = match item.router_data.request.payment_method_type {
-            Some(common_enums::PaymentMethodType::Upi) => {
+            Some(common_enums::PaymentMethodType::UpiCollect) => {
                 ZaakPayPaymentInstrumentTransType {
                     payment_mode: "upi".to_string(),
                     card: None,
