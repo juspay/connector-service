@@ -504,26 +504,32 @@ impl TryFrom<EaseBuzzPaymentsSyncResponse> for PaymentsResponseData {
     type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(response: EaseBuzzPaymentsSyncResponse) -> Result<Self, Self::Error> {
-        let (status, payment_data) = match response.msg {
+        let (payment_data, status) = match response.msg {
             EaseBuzzSyncMessage::Success(data) => {
                 let status = match data.status.as_str() {
-                    "success" => AttemptStatus::Charged,
-                    "pending" => AttemptStatus::Pending,
-                    "failure" => AttemptStatus::Failure,
-                    "user_aborted" => AttemptStatus::AuthenticationFailed,
-                    _ => AttemptStatus::Pending,
+                    "success" => common_enums::AttemptStatus::Charged,
+                    "pending" => common_enums::AttemptStatus::Pending,
+                    "failure" => common_enums::AttemptStatus::Failure,
+                    "user_aborted" => common_enums::AttemptStatus::AuthenticationFailed,
+                    _ => common_enums::AttemptStatus::Pending,
                 };
-                (status, Some(data))
+                (Some(data), status)
             }
-            EaseBuzzSyncMessage::Error(_) => (AttemptStatus::Failure, None),
+            EaseBuzzSyncMessage::Error(_) => (None, common_enums::AttemptStatus::Failure),
         };
 
-        Ok(PaymentsResponseData {
-            status,
-            amount_received: payment_data.as_ref().and_then(|d| {
-                d.amount.parse::<f64>().ok().map(|amt| MinorUnit::new((amt * 100.0) as i64))
-            }),
-            connector_transaction_id: payment_data.as_ref().map(|d| d.easebuzz_id.clone()),
+        let resource_id = payment_data.as_ref()
+            .map(|d| domain_types::connector_types::ResponseId::ConnectorTransactionId(d.easebuzz_id.clone()));
+
+        Ok(PaymentsResponseData::TransactionResponse {
+            resource_id: resource_id.unwrap_or(domain_types::connector_types::ResponseId::NoResponseId),
+            redirection_data: None,
+            connector_metadata: None,
+            mandate_reference: None,
+            network_txn_id: payment_data.as_ref().and_then(|d| d.bank_ref_num.clone()),
+            connector_response_reference_id: None,
+            incremental_authorization_allowed: None,
+            status_code: 200u16,
         })
     }
 }
