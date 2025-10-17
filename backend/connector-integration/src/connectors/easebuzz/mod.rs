@@ -231,7 +231,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn handle_response_v2(
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
+        _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
         response: domain_types::router_response_types::Response,
     ) -> CustomResult<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, errors::ConnectorError> {
         let response: EaseBuzzPaymentsResponse = response
@@ -296,7 +296,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn handle_response_v2(
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
+        _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
         response: domain_types::router_response_types::Response,
     ) -> CustomResult<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, errors::ConnectorError> {
         let response: easebuzz::EaseBuzzPaymentsSyncResponse = response
@@ -361,7 +361,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn handle_response_v2(
         &self,
         req: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
-        event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
+        _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
         response: domain_types::router_response_types::Response,
     ) -> CustomResult<RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>, errors::ConnectorError> {
         let response: easebuzz::EaseBuzzRefundSyncResponse = response
