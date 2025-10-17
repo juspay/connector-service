@@ -98,7 +98,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         Ok(Self {
             payer_va: upi_data.vpa.clone(),
             amount,
-            note: item.router_data.request.description.clone(),
+            note: item.router_data.router_data.request.description.clone(),
             collect_by_date: None, // Can be configured based on requirements
             merchant_id: auth.merchant_id.expose().clone(),
             merchant_name: None, // Can be extracted from router data if available
