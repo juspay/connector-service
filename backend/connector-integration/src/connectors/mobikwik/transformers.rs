@@ -96,7 +96,7 @@ pub struct AddMoneyDebitResponse {
     pub refid: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RedirectDebitResponse {
     pub statuscode: String,
