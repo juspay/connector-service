@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::marker::PhantomData;
 
 use super::{PayuAuthType, PayuPaymentsRequest, PayuPaymentsResponse, PayuPaymentsSyncRequest, PayuPaymentsSyncResponse, PayuRefundSyncRequest, PayuRefundSyncResponse};
 
@@ -58,10 +59,11 @@ pub struct RefundsResponseData {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RouterDataV2<FCD, Req, Resp> {
+pub struct RouterDataV2<FCD, Req> {
     pub connector_auth_type: ConnectorAuthType,
     pub amount: AmountConverter,
     pub router_data: RouterData<FCD, Req>,
+    _phantom: PhantomData<()>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -98,7 +100,7 @@ impl PaymentMethodData {
     }
 }
 
-impl<T> TryFrom<&RouterDataV2<PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+impl<T> TryFrom<&RouterDataV2<PaymentFlowData, PaymentsAuthorizeData<T>>>
     for PayuPaymentsRequest
 where
     T: PaymentMethodDataTypes,
@@ -106,7 +108,7 @@ where
     type Error = String;
 
     fn try_from(
-        item: &RouterDataV2<PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        item: &RouterDataV2<PaymentFlowData, PaymentsAuthorizeData<T>>,
     ) -> Result<Self, Self::Error> {
         let auth = PayuAuthType::KeySecret {
             key: item.connector_auth_type.api_key.clone(),
@@ -214,13 +216,13 @@ where
     }
 }
 
-impl TryFrom<&RouterDataV2<PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+impl TryFrom<&RouterDataV2<PaymentFlowData, PaymentsSyncData>>
     for PayuPaymentsSyncRequest
 {
     type Error = String;
 
     fn try_from(
-        item: &RouterDataV2<PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: &RouterDataV2<PaymentFlowData, PaymentsSyncData>,
     ) -> Result<Self, Self::Error> {
         let auth = PayuAuthType::KeySecret {
             key: item.connector_auth_type.api_key.clone(),
@@ -242,13 +244,13 @@ impl TryFrom<&RouterDataV2<PaymentFlowData, PaymentsSyncData, PaymentsResponseDa
     }
 }
 
-impl TryFrom<&RouterDataV2<PaymentFlowData, RefundSyncData, RefundsResponseData>>
+impl TryFrom<&RouterDataV2<PaymentFlowData, RefundSyncData>>
     for PayuRefundSyncRequest
 {
     type Error = String;
 
     fn try_from(
-        item: &RouterDataV2<PaymentFlowData, RefundSyncData, RefundsResponseData>,
+        item: &RouterDataV2<PaymentFlowData, RefundSyncData>,
     ) -> Result<Self, Self::Error> {
         let auth = PayuAuthType::KeySecret {
             key: item.connector_auth_type.api_key.clone(),
@@ -291,15 +293,15 @@ impl TryFrom<PayuPaymentsResponse> for PaymentsResponseData {
             _ => "authentication_pending",
         };
 
-        let amount_received = response.amount.and_then(|amt| amt.parse::<f64>().ok()).map(|amt| (amt * 100.0) as i64);
+        let amount_received = response.amount.as_ref().and_then(|amt| amt.parse::<f64>().ok()).map(|amt| (amt * 100.0) as i64);
 
         Ok(Self {
             status: status.to_string(),
-            gateway_transaction_id: response.mihpayid,
-            connector_transaction_id: response.txnid,
+            gateway_transaction_id: response.mihpayid.clone(),
+            connector_transaction_id: response.txnid.clone(),
             amount_received,
-            error_message: response.error_message,
-            error_code: response.error_code,
+            error_message: response.error_message.clone(),
+            error_code: response.error_code.clone(),
             redirection_data: None,
             network_transaction_id: None,
             connector_response: Some(serde_json::json!({
@@ -326,18 +328,18 @@ impl TryFrom<PayuPaymentsSyncResponse> for PaymentsResponseData {
         };
 
         let (gateway_transaction_id, connector_transaction_id, amount_received, error_message, error_code, network_transaction_id) =
-            if let Some(txn_details) = response.txn_details {
+            if let Some(ref txn_details) = response.txn_details {
                 let amount_received = txn_details.amount.parse::<f64>().ok().map(|amt| (amt * 100.0) as i64);
                 (
-                    Some(txn_details.mihpayid),
-                    Some(txn_details.txnid),
+                    Some(txn_details.mihpayid.clone()),
+                    Some(txn_details.txnid.clone()),
                     amount_received,
-                    txn_details.error_message,
-                    txn_details.error_code,
-                    txn_details.bank_ref_num,
+                    txn_details.error_message.clone(),
+                    txn_details.error_code.clone(),
+                    txn_details.bank_ref_num.clone(),
                 )
             } else {
-                (None, None, None, response.msg, None, None)
+                (None, None, None, response.msg.clone(), None, None)
             };
 
         Ok(Self {
@@ -370,7 +372,7 @@ impl TryFrom<PayuRefundSyncResponse> for RefundsResponseData {
         };
 
         let (refund_id, connector_transaction_id, amount_received, error_message, error_code, network_transaction_id) =
-            if let Some(refund_details) = response.refund_details {
+            if let Some(ref refund_details) = response.refund_details {
                 if let Some(refund) = refund_details.first() {
                     let amount_received = refund.amount.parse::<f64>().ok().map(|amt| (amt * 100.0) as i64);
                     (
@@ -382,10 +384,10 @@ impl TryFrom<PayuRefundSyncResponse> for RefundsResponseData {
                         refund.bank_ref_num.clone(),
                     )
                 } else {
-                    (None, None, None, response.msg, None, None)
+                    (None, None, None, response.msg.clone(), None, None)
                 }
             } else {
-                (None, None, None, response.msg, None, None)
+                (None, None, None, response.msg.clone(), None, None)
             };
 
         Ok(Self {
