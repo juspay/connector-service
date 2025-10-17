@@ -37,7 +37,7 @@ pub struct TpslMerchantPayload {
     pub webhook_type: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslCartPayload {
     pub item: Vec<TpslItemPayload>,
