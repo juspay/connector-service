@@ -609,24 +609,7 @@ impl_source_verification_stub!(
     PaymentCreateOrderData,
     PaymentCreateOrderResponse
 );
-impl_source_verification_stub!(
-    PreAuthenticate,
-    PaymentFlowData,
-    PaymentsPreAuthenticateData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    Authenticate,
-    PaymentFlowData,
-    PaymentsAuthenticateData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    PostAuthenticate,
-    PaymentFlowData,
-    PaymentsPostAuthenticateData<T>,
-    PaymentsResponseData
-);
+// Authentication source verification - removed for simplicity
 
 impl<
         T: PaymentMethodDataTypes
