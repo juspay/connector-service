@@ -410,6 +410,44 @@ macros::create_all_prerequisites!(
             request_body: IciciUpiDefendDisputeRequest,
             response_body: IciciUpiDefendDisputeResponse,
             router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        ),
+        // Authentication flows
+        (
+            flow: PreAuthenticate,
+            request_body: IciciUpiVoidRequest,
+            response_body: IciciUpiVoidResponse,
+            router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: Authenticate,
+            request_body: IciciUpiVoidRequest,
+            response_body: IciciUpiVoidResponse,
+            router_data: RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PostAuthenticate,
+            request_body: IciciUpiVoidRequest,
+            response_body: IciciUpiVoidResponse,
+            router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        // Additional flows
+        (
+            flow: PaymentMethodToken,
+            request_body: IciciUpiVoidRequest,
+            response_body: IciciUpiVoidResponse,
+            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        ),
+        (
+            flow: CreateAccessToken,
+            request_body: IciciUpiVoidRequest,
+            response_body: IciciUpiVoidResponse,
+            router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        ),
+        (
+            flow: CreateConnectorCustomer,
+            request_body: IciciUpiVoidRequest,
+            response_body: IciciUpiVoidResponse,
+            router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
         )
     ],
     amount_converters: [
