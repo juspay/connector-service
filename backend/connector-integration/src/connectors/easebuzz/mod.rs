@@ -54,14 +54,29 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     SourceVerification<domain_types::connector_flow::Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
     for EaseBuzz<T>
 {
-    fn get_source_verification_data(
+    fn get_secrets(
         &self,
-        _req: &RouterDataV2<domain_types::connector_flow::Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    ) -> CustomResult<
-        std::collections::HashMap<String, serde_json::Value>,
-        domain_types::errors::ConnectorError,
-    > {
-        Ok(std::collections::HashMap::new())
+        _secrets: interfaces::verification::ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &RouterDataV2<domain_types::connector_flow::Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+
+    fn get_message(
+        &self,
+        payload: &[u8],
+        _router_data: &RouterDataV2<domain_types::connector_flow::Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
+        Ok(payload.to_vec())
     }
 }
 
@@ -69,29 +84,59 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     SourceVerification<domain_types::connector_flow::PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
     for EaseBuzz<T>
 {
-    fn get_source_verification_data(
+    fn get_secrets(
         &self,
-        _req: &RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<
-        std::collections::HashMap<String, serde_json::Value>,
-        domain_types::errors::ConnectorError,
-    > {
-        Ok(std::collections::HashMap::new())
+        _secrets: interfaces::verification::ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+
+    fn get_message(
+        &self,
+        payload: &[u8],
+        _router_data: &RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
+        Ok(payload.to_vec())
     }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<domain_types::connector_flow::RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    SourceVerification<domain_types::connector_flow::RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>
     for EaseBuzz<T>
 {
-    fn get_source_verification_data(
+    fn get_secrets(
         &self,
-        _req: &RouterDataV2<domain_types::connector_flow::RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<
-        std::collections::HashMap<String, serde_json::Value>,
-        domain_types::errors::ConnectorError,
-    > {
-        Ok(std::collections::HashMap::new())
+        _secrets: interfaces::verification::ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &RouterDataV2<domain_types::connector_flow::RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+
+    fn get_message(
+        &self,
+        payload: &[u8],
+        _router_data: &RouterDataV2<domain_types::connector_flow::RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
+        Ok(payload.to_vec())
     }
 }
 
