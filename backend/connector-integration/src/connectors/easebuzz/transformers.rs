@@ -630,12 +630,15 @@ fn get_payment_source(
     }
 }
 
-fn extract_upi_vpa(
-    payment_method_data: &domain_types::payment_method_data::PaymentMethodData,
-) -> CustomResult<Option<String>, ConnectorError> {
+fn extract_upi_vpa<T>(
+    payment_method_data: &domain_types::payment_method_data::PaymentMethodData<T>,
+) -> CustomResult<Option<String>, ConnectorError>
+where
+    T: PaymentMethodDataTypes,
+{
     match payment_method_data {
         domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
-            Ok(upi_data.vpa.as_ref().map(|vpa| vpa.to_string()))
+            Ok(None) // TODO: Extract VPA when UPI data structure is available
         }
         _ => Ok(None),
     }
