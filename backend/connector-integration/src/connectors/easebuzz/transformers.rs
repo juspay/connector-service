@@ -245,9 +245,11 @@ impl<
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         // Generate hash - this would typically involve SHA512 of specific fields
+        let key_exposed = auth.key.expose();
+        let salt_exposed = auth.salt.expose();
         let hash_string = format!(
-            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
-            auth.key.expose(),
+            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
+            key_exposed,
             item.router_data.resource_common_data.connector_request_reference_id,
             amount.to_string(),
             "", // product_name
@@ -268,7 +270,7 @@ impl<
             "", // udf10
             "", // additional charges
             "", // customer authentication
-            auth.salt.expose()
+            salt_exposed
         );
 
         // In a real implementation, you would hash this string
