@@ -484,7 +484,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<EaseBuzzTxnSyncResponse, Self>,
+        item: ResponseRouterData<EaseBuzzTxnSyncResponse, EaseBuzzRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
