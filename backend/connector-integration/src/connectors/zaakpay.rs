@@ -253,6 +253,26 @@ impl<
     > connector_types::PaymentTokenV2<T> for ZaakPay<T>
 {
 }
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentAccessToken for ZaakPay<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::CreateConnectorCustomer for ZaakPay<T>
+{
+}
 
 // Authentication trait implementations
 impl<
