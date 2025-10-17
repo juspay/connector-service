@@ -333,7 +333,7 @@ macros::create_all_prerequisites!(
         (flow: RepeatPayment, request_body: MobikwikRepeatPaymentRequest, response_body: MobikwikRepeatPaymentResponse, router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>),
         (flow: Accept, request_body: MobikwikAcceptDisputeRequest, response_body: MobikwikAcceptDisputeResponse, router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>),
         (flow: DefendDispute, request_body: MobikwikDefendDisputeRequest, response_body: MobikwikDefendDisputeResponse, router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>),
-        (flow: SubmitEvidence, request_body: MobikwikSubmitEvidenceRequest, response_body: MobikwikSubmitEvidenceResponse, router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>)
+        (flow: SubmitEvidence, request_body: MobikwikSubmitEvidenceRequest, response_body: MobikwikSubmitEvidenceResponse, router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>),
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
