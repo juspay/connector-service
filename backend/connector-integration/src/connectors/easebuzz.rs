@@ -681,6 +681,133 @@ impl_not_implemented_flow!(Accept, DisputeFlowData, AcceptDisputeData, DisputeRe
 impl_not_implemented_flow!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
 impl_not_implemented_flow!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
 
+// Authentication flow implementations
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::PreAuthenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<
+            domain_types::connector_flow::PreAuthenticate,
+            PaymentFlowData,
+            domain_types::connector_types::PaymentsPreAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("PreAuthenticate".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::Authenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<
+            domain_types::connector_flow::Authenticate,
+            PaymentFlowData,
+            domain_types::connector_types::PaymentsAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("Authenticate".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::PostAuthenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<
+            domain_types::connector_flow::PostAuthenticate,
+            PaymentFlowData,
+            domain_types::connector_types::PaymentsPostAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("PostAuthenticate".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::PaymentMethodToken,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentMethodTokenizationData<T>,
+        domain_types::connector_types::PaymentMethodTokenResponse,
+    > for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<
+            domain_types::connector_flow::PaymentMethodToken,
+            PaymentFlowData,
+            domain_types::connector_types::PaymentMethodTokenizationData<T>,
+            domain_types::connector_types::PaymentMethodTokenResponse,
+        >,
+    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("PaymentMethodToken".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::CreateAccessToken,
+        PaymentFlowData,
+        domain_types::connector_types::AccessTokenRequestData,
+        domain_types::connector_types::AccessTokenResponseData,
+    > for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<
+            domain_types::connector_flow::CreateAccessToken,
+            PaymentFlowData,
+            domain_types::connector_types::AccessTokenRequestData,
+            domain_types::connector_types::AccessTokenResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("CreateAccessToken".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::CreateConnectorCustomer,
+        PaymentFlowData,
+        domain_types::connector_types::ConnectorCustomerData,
+        domain_types::connector_types::ConnectorCustomerResponse,
+    > for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<
+            domain_types::connector_flow::CreateConnectorCustomer,
+            PaymentFlowData,
+            domain_types::connector_types::ConnectorCustomerData,
+            domain_types::connector_types::ConnectorCustomerResponse,
+        >,
+    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("CreateConnectorCustomer".to_string()).into())
+    }
+}
+
 // SourceVerification implementations for all flows
 macro_rules! impl_source_verification_stub {
     ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
