@@ -455,7 +455,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
                 Err(ErrorResponse {
                     code: "PAYMENT_FAILED".to_string(),
                     status_code: http_code,
-                    message: response.error_desc.unwrap_or_default(),
+                    message: response.error_desc.clone().unwrap_or_default(),
                     reason: response.error_desc,
                     attempt_status: None,
                     connector_transaction_id: None,
