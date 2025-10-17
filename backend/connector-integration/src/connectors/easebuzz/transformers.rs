@@ -379,7 +379,7 @@ let email_for_hash = email_string.clone();
             amount,
             productinfo,
             firstname,
-            email: email_secret_for_hash.clone(),
+            email: email_string,
             phone,
             surl,
             furl,
