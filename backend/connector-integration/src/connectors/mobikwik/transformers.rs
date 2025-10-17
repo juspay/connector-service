@@ -374,7 +374,7 @@ impl<
         let checksum = generate_checksum(&params, "salt_placeholder")?;
 
         match item.router_data.resource_common_data.payment_method {
-            common_enums::PaymentMethod::Upi(_) => Ok(Self {
+            common_enums::PaymentMethod::Upi => Ok(Self {
                 cell: phone_number,
                 amount,
                 orderid: item.router_data.resource_common_data.connector_request_reference_id,
