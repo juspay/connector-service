@@ -378,7 +378,7 @@ where
             amount,
             productinfo,
             firstname,
-            email: email_secret,
+            email: email_secret.clone(),
             phone,
             surl,
             furl,
