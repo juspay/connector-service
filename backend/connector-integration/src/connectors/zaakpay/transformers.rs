@@ -819,8 +819,8 @@ impl<
                     .map(|_| "success");
 
                 let status = match refund_status {
-                    Some("success") => common_enums::RefundStatus::RefundSuccess,
-                    _ => common_enums::RefundStatus::RefundFailure,
+                    Some("success") => common_enums::RefundStatus::Success,
+                    _ => common_enums::RefundStatus::Failure,
                 };
 
                 (
