@@ -9,7 +9,7 @@ use domain_types::{
     router_data::ConnectorAuthType,
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, 
-        RefundFlowData, RefundsResponseData
+        RefundsResponseData
     },
 };
 use hyperswitch_masking::{Secret, ExposeInterface};
