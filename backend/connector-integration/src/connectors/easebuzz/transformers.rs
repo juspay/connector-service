@@ -1,18 +1,18 @@
-use std::collections::HashMap;
-
-use common_enums::{AttemptStatus, Currency, PaymentMethodType};
+use common_enums::{AttemptStatus, PaymentMethodType};
 use common_utils::{
-    crypto::{self, Sha512Hasher},
+    crypto,
     errors::CustomResult,
-    ext_traits::BytesExt,
     pii::SecretSerdeValue,
-    request::RequestContent,
     types::{MinorUnit, StringMinorUnit},
 };
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
-    types::{AmountConverterTrait, ConnectorAuthType},
+    router_data::ConnectorAuthType,
+    connector_types::{
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, 
+        RefundSyncData, RefundsResponseData
+    },
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
@@ -21,7 +21,6 @@ use serde::{Deserialize, Serialize};
 use crate::{
     core::errors::{self, ConnectorError},
     services::connector::ConnectorCommon,
-    types::{PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundSyncData},
 };
 
 #[derive(Debug, Clone, Serialize)]
@@ -174,11 +173,7 @@ pub struct EaseBuzzPaymentsRequest {
     pub sub_merchant_merchant_decryption: Option<String>,
     pub sub_merchant_merchant_hashing: Option<String>,
     pub sub_merchant_merchant_signing: Option<String>,
-    pub sub_merchant_merchant_verification: Option<String>,
     pub sub_merchant_merchant_audit_trail: Option<String>,
-    pub sub_merchant_merchant_compliance: Option<String>,
-    pub sub_merchant_merchant_regulatory: Option<String>,
-    pub sub_merchant_merchant_legal: Option<String>,
     pub sub_merchant_master_merchant_id: Option<String>,
     pub sub_merchant_master_merchant_name: Option<String>,
     pub sub_merchant_master_merchant_email: Option<String>,
@@ -296,10 +291,7 @@ pub struct EaseBuzzPaymentsRequest {
     pub sub_merchant_master_merchant_decryption: Option<String>,
     pub sub_merchant_master_merchant_hashing: Option<String>,
     pub sub_merchant_master_merchant_signing: Option<String>,
-    pub sub_merchant_master_merchant_verification: Option<String>,
     pub sub_merchant_master_merchant_audit_trail: Option<String>,
-    pub sub_merchant_master_merchant_compliance: Option<String>,
-    pub sub_merchant_master_merchant_regulatory: Option<String>,
     pub sub_merchant_master_merchant_legal: Option<String>,
 }
 
@@ -462,7 +454,6 @@ pub struct EaseBuzzPaymentData {
     pub order_decryption: String,
     pub order_hashing: String,
     pub order_signing: String,
-    pub order_verification: String,
     pub order_audit_trail: String,
     pub order_compliance: String,
     pub order_regulatory: String,
@@ -585,7 +576,7 @@ pub fn generate_hash(
 }
 
 // TryFrom implementations for request types
-impl<T> TryFrom<&RouterDataV2<crate::core::connector_flows::Authorize, crate::types::PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+impl<T> TryFrom<&RouterDataV2<domain_types::connector_flow::Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
     for EaseBuzzPaymentsRequest
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
@@ -593,7 +584,7 @@ where
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<crate::core::connector_flows::Authorize, crate::types::PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        item: &RouterDataV2<domain_types::connector_flow::Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth_key = get_auth_header(&item.connector_auth_type)?;
         let auth_secret = get_secret_key(&item.connector_auth_type)?;
@@ -782,11 +773,8 @@ where
             sub_merchant_merchant_decryption: None,
             sub_merchant_merchant_hashing: None,
             sub_merchant_merchant_signing: None,
-            sub_merchant_merchant_verification: None,
             sub_merchant_merchant_audit_trail: None,
             sub_merchant_merchant_compliance: None,
-            sub_merchant_merchant_regulatory: None,
-            sub_merchant_merchant_legal: None,
             sub_merchant_master_merchant_id: None,
             sub_merchant_master_merchant_name: None,
             sub_merchant_master_merchant_email: None,
@@ -904,22 +892,19 @@ where
             sub_merchant_master_merchant_decryption: None,
             sub_merchant_master_merchant_hashing: None,
             sub_merchant_master_merchant_signing: None,
-            sub_merchant_master_merchant_verification: None,
             sub_merchant_master_merchant_audit_trail: None,
-            sub_merchant_master_merchant_compliance: None,
-            sub_merchant_master_merchant_regulatory: None,
             sub_merchant_master_merchant_legal: None,
         })
     }
 }
 
-impl TryFrom<&RouterDataV2<crate::core::connector_flows::PSync, crate::types::PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+impl TryFrom<&RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
     for EaseBuzzPaymentsSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<crate::core::connector_flows::PSync, crate::types::PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: &RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth_key = get_auth_header(&item.connector_auth_type)?;
         let auth_secret = get_secret_key(&item.connector_auth_type)?;
@@ -947,13 +932,13 @@ impl TryFrom<&RouterDataV2<crate::core::connector_flows::PSync, crate::types::Pa
     }
 }
 
-impl TryFrom<&RouterDataV2<crate::core::connector_flows::RSync, crate::types::PaymentFlowData, RefundSyncData, RefundsResponseData>>
+impl TryFrom<&RouterDataV2<domain_types::connector_flow::RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>>
     for EaseBuzzRefundSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<crate::core::connector_flows::RSync, crate::types::PaymentFlowData, RefundSyncData, RefundsResponseData>,
+        item: &RouterDataV2<domain_types::connector_flow::RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth_key = get_auth_header(&item.connector_auth_type)?;
         let auth_secret = get_secret_key(&item.connector_auth_type)?;
