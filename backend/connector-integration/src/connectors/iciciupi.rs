@@ -38,12 +38,16 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as iciciupi, IciciUpiAcceptDisputeRequest, IciciUpiAcceptDisputeResponse, IciciUpiCaptureRequest,
-    IciciUpiCaptureResponse, IciciUpiCreateOrderRequest, IciciUpiCreateOrderResponse, IciciUpiDefendDisputeRequest,
-    IciciUpiDefendDisputeResponse, IciciUpiPaymentsRequest, IciciUpiPaymentsResponse, IciciUpiPaymentsSyncRequest,
-    IciciUpiPaymentsSyncResponse, IciciUpiRefundRequest, IciciUpiRefundResponse, IciciUpiRepeatPaymentRequest,
-    IciciUpiRepeatPaymentResponse, IciciUpiResponseEnum, IciciUpiRSyncRequest, IciciUpiRSyncResponse,
-    IciciUpiSessionTokenRequest, IciciUpiSessionTokenResponse, IciciUpiSetupMandateRequest, IciciUpiSetupMandateResponse,
+    self as iciciupi, IciciUpiAcceptDisputeRequest, IciciUpiAcceptDisputeResponse, IciciUpiAuthenticateRequest,
+    IciciUpiAuthenticateResponse, IciciUpiCaptureRequest, IciciUpiCaptureResponse, IciciUpiCreateAccessTokenRequest,
+    IciciUpiCreateAccessTokenResponse, IciciUpiCreateConnectorCustomerRequest, IciciUpiCreateConnectorCustomerResponse,
+    IciciUpiCreateOrderRequest, IciciUpiCreateOrderResponse, IciciUpiDefendDisputeRequest, IciciUpiDefendDisputeResponse,
+    IciciUpiPaymentsRequest, IciciUpiPaymentsResponse, IciciUpiPaymentsSyncRequest, IciciUpiPaymentsSyncResponse,
+    IciciUpiPaymentMethodTokenRequest, IciciUpiPaymentMethodTokenResponse, IciciUpiPostAuthenticateRequest,
+    IciciUpiPostAuthenticateResponse, IciciUpiPreAuthenticateRequest, IciciUpiPreAuthenticateResponse,
+    IciciUpiRefundRequest, IciciUpiRefundResponse, IciciUpiRepeatPaymentRequest, IciciUpiRepeatPaymentResponse,
+    IciciUpiResponseEnum, IciciUpiRSyncRequest, IciciUpiRSyncResponse, IciciUpiSessionTokenRequest,
+    IciciUpiSessionTokenResponse, IciciUpiSetupMandateRequest, IciciUpiSetupMandateResponse,
     IciciUpiSubmitEvidenceRequest, IciciUpiSubmitEvidenceResponse, IciciUpiVoidRequest, IciciUpiVoidResponse,
 };
 
