@@ -442,13 +442,11 @@ macros::create_all_prerequisites!(
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+            _req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
-                constants::STAGING_BASE_URL
-            } else {
-                constants::PRODUCTION_BASE_URL
-            }
+            // For refunds, use production URL by default
+            // TODO: Add test_mode support to RefundFlowData if needed
+            constants::PRODUCTION_BASE_URL
         }
     }
 );
