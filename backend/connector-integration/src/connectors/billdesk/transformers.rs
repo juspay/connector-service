@@ -326,7 +326,7 @@ fn get_redirect_form_data(
         }
     } else {
         Err(errors::ConnectorError::MissingRequiredField {
-            field: "rdata",
+            field_name: "rdata".to_string(),
         }
         .into())
     }
