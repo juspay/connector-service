@@ -6,35 +6,33 @@ use std::fmt::Debug;
 use common_utils::{
     errors::CustomResult,
     ext_traits::ByteSliceExt,
+    request::{Method, RequestBuilder},
     types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
     connector_types::{
         ConnectorWebhookSecrets, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
-        PaymentsSyncData, RefundSyncData, RefundsResponseData,
+        PaymentsSyncData, RefundSyncData, RefundsResponseData, Connectors,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
-    types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::Maskable;
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types,
-    events::connector_api_logs::ConnectorEvent,
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
 use transformers::{self as easebuzz, EaseBuzzPaymentsRequest, EaseBuzzPaymentsResponse};
 
-use super::macros;
-use crate::{types::ResponseRouterData, with_error_response_body};
+use crate::types::ResponseRouterData;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -88,7 +86,7 @@ impl<
 
 #[derive(Debug, Clone)]
 pub struct EaseBuzz<T> {
-    pub amount_converter: &'static (dyn common_utils::types::AmountConverterTrait<Output = String> + Sync),
+    pub amount_converter: &'static (dyn common_utils::types::AmountConvertor<Output = String> + Sync),
     pub connector_name: &'static str,
     pub payment_method_data: std::marker::PhantomData<T>,
 }
@@ -126,26 +124,24 @@ impl<T> EaseBuzz<T> {
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorCommon for EaseBuzz<T>
 {
-    fn get_connector_name(&self) -> &'static str {
-        "EaseBuzz"
+    fn id(&self) -> &'static str {
+        "easebuzz"
     }
 
-    fn get_connector_version(&self) -> &'static str {
-        "1.0.0"
+    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
+        self.get_base_url(true)
     }
 
-    fn get_webhook_details(&self) -> ConnectorWebhookSecrets {
-        ConnectorWebhookSecrets {
-            primary_key: None,
-            secondary_key: None,
-            webhook_url: None,
-            webhook_username: None,
-            webhook_password: None,
-        }
+    fn get_auth_header(
+        &self,
+        auth_type: &ConnectorAuthType,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let auth = easebuzz::get_auth_header(auth_type)?;
+        Ok(vec![(headers::AUTHORIZATION.to_string(), auth.expose().into())])
     }
 
-    fn validate_connector(&self) -> CustomResult<(), errors::ConnectorError> {
-        Ok(())
+    fn common_get_content_type(&self) -> &'static str {
+        "application/x-www-form-urlencoded"
     }
 }
 
@@ -156,20 +152,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn build_request_v2(
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    ) -> CustomResult<Option<interfaces::services::Request>, errors::ConnectorError> {
-        let auth = easebuzz::get_auth_header(&req.connector_auth_type)?;
+    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
         let request = EaseBuzzPaymentsRequest::try_from(req)?;
-        let request_body = common_utils::request::RequestContent::Form(request);
-        let request = common_utils::request::build_request(
-            &self.get_base_url(req.resource_common_data.test_mode.unwrap_or(false)),
-            &self.get_authorize_endpoint(),
-            request_body,
-            Some(auth),
-            vec![],
-            None,
-            None,
-        )?;
-        Ok(Some(request))
+        let url = format!(
+            "{}{}",
+            self.get_base_url(req.resource_common_data.test_mode.unwrap_or(false)),
+            self.get_authorize_endpoint()
+        );
+        
+        let request_builder = RequestBuilder::new()
+            .method(Method::Post)
+            .url(&url)
+            .attach_default_headers()
+            .headers(self.get_auth_header(&req.connector_auth_type)?)
+            .set_body(common_utils::request::RequestContent::Form(request));
+        
+        Ok(Some(request_builder.build()))
     }
 
     fn handle_response_v2(
@@ -202,20 +200,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn build_request_v2(
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<Option<interfaces::services::Request>, errors::ConnectorError> {
-        let auth = easebuzz::get_auth_header(&req.connector_auth_type)?;
+    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
         let request = easebuzz::EaseBuzzPaymentsSyncRequest::try_from(req)?;
-        let request_body = common_utils::request::RequestContent::Form(request);
-        let request = common_utils::request::build_request(
-            &self.get_base_url(req.resource_common_data.test_mode.unwrap_or(false)),
-            &self.get_sync_endpoint(),
-            request_body,
-            Some(auth),
-            vec![],
-            None,
-            None,
-        )?;
-        Ok(Some(request))
+        let url = format!(
+            "{}{}",
+            self.get_base_url(req.resource_common_data.test_mode.unwrap_or(false)),
+            self.get_sync_endpoint()
+        );
+        
+        let request_builder = RequestBuilder::new()
+            .method(Method::Post)
+            .url(&url)
+            .attach_default_headers()
+            .headers(self.get_auth_header(&req.connector_auth_type)?)
+            .set_body(common_utils::request::RequestContent::Form(request));
+        
+        Ok(Some(request_builder.build()))
     }
 
     fn handle_response_v2(
@@ -248,20 +248,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn build_request_v2(
         &self,
         req: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<Option<interfaces::services::Request>, errors::ConnectorError> {
-        let auth = easebuzz::get_auth_header(&req.connector_auth_type)?;
+    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
         let request = easebuzz::EaseBuzzRefundSyncRequest::try_from(req)?;
-        let request_body = common_utils::request::RequestContent::Form(request);
-        let request = common_utils::request::build_request(
-            &self.get_base_url(req.resource_common_data.test_mode.unwrap_or(false)),
-            &self.get_refund_sync_endpoint(),
-            request_body,
-            Some(auth),
-            vec![],
-            None,
-            None,
-        )?;
-        Ok(Some(request))
+        let url = format!(
+            "{}{}",
+            self.get_base_url(req.resource_common_data.test_mode.unwrap_or(false)),
+            self.get_refund_sync_endpoint()
+        );
+        
+        let request_builder = RequestBuilder::new()
+            .method(Method::Post)
+            .url(&url)
+            .attach_default_headers()
+            .headers(self.get_auth_header(&req.connector_auth_type)?)
+            .set_body(common_utils::request::RequestContent::Form(request));
+        
+        Ok(Some(request_builder.build()))
     }
 
     fn handle_response_v2(
@@ -288,7 +290,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification for EaseBuzz<T>
+    SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    for EaseBuzz<T>
 {
     fn verify_source_verification_data(
         &self,
@@ -305,7 +308,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification for EaseBuzz<T>
+    SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for EaseBuzz<T>
 {
     fn verify_source_verification_data(
         &self,
@@ -317,7 +321,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification for EaseBuzz<T>
+    SourceVerification<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>
+    for EaseBuzz<T>
 {
     fn verify_source_verification_data(
         &self,
