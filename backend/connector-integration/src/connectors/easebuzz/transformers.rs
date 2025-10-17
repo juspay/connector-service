@@ -568,7 +568,10 @@ pub fn generate_hash(
     hash_string.push('|');
     hash_string.push_str(salt);
 
-    crypto::Sha512Hasher::hash_string(hash_string)
+    crypto::Sha512::digest(hash_string.as_bytes())
+        .iter()
+        .map(|byte| format!("{:02x}", byte))
+        .collect()
 }
 
 // TryFrom implementations for request types
@@ -915,7 +918,10 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData,
         
         // Generate hash for sync
         let hash_string = format!("{}|{}|{}|{}|{}|{}", key, txnid, amount, email, phone, salt);
-        let hash = crypto::Sha512Hasher::hash_string(hash_string);
+        let hash = crypto::Sha512::digest(hash_string.as_bytes())
+        .iter()
+        .map(|byte| format!("{:02x}", byte))
+        .collect();
         
         Ok(Self {
             key: Secret::new(key),
@@ -947,7 +953,10 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::RSync, PaymentFlowData,
         
         // Generate hash for refund sync
         let hash_string = format!("{}|{}|{}|{}", key, easebuzz_id, merchant_refund_id, salt);
-        let hash = crypto::Sha512Hasher::hash_string(hash_string);
+        let hash = crypto::Sha512::digest(hash_string.as_bytes())
+        .iter()
+        .map(|byte| format!("{:02x}", byte))
+        .collect();
         
         Ok(Self {
             key: Secret::new(key),
