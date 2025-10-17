@@ -1496,7 +1496,7 @@ pub struct AuthorizedotnetRefundResponse {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AuthorizedotnetCreateCustomerProfileRequest<
+pub struct AuthorizedotnetCreateConnectorCustomerRequest<
     T: PaymentMethodDataTypes
         + std::fmt::Debug
         + std::marker::Sync
@@ -2407,7 +2407,7 @@ impl<
             >,
             T,
         >,
-    > for AuthorizedotnetCreateCustomerProfileRequest<T>
+    > for AuthorizedotnetCreateConnectorCustomerRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -2483,7 +2483,7 @@ impl<
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AuthorizedotnetCreateCustomerProfileResponse {
+pub struct AuthorizedotnetCreateConnectorCustomerResponse {
     pub customer_profile_id: Option<String>,
     pub customer_payment_profile_id_list: Vec<String>,
     pub validation_direct_response_list: Option<Vec<Secret<String>>>,
@@ -2497,7 +2497,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > TryFrom<ResponseRouterData<AuthorizedotnetCreateCustomerProfileResponse, Self>>
+    > TryFrom<ResponseRouterData<AuthorizedotnetCreateConnectorCustomerResponse, Self>>
     for RouterDataV2<
         SetupMandate,
         PaymentFlowData,
@@ -2507,7 +2507,7 @@ impl<
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        value: ResponseRouterData<AuthorizedotnetCreateCustomerProfileResponse, Self>,
+        value: ResponseRouterData<AuthorizedotnetCreateConnectorCustomerResponse, Self>,
     ) -> Result<Self, error_stack::Report<ConnectorError>> {
         let ResponseRouterData {
             response,
@@ -2841,7 +2841,7 @@ impl<
             >,
             T,
         >,
-    > for AuthorizedotnetCreateCustomerProfileRequest<T>
+    > for AuthorizedotnetCreateConnectorCustomerRequest<T>
 {
     type Error = Error;
     fn try_from(
@@ -2922,7 +2922,7 @@ impl<
 impl
     TryFrom<
         ResponseRouterData<
-            AuthorizedotnetCreateCustomerProfileResponse,
+            AuthorizedotnetCreateConnectorCustomerResponse,
             RouterDataV2<
                 CreateConnectorCustomer,
                 PaymentFlowData,
@@ -2941,7 +2941,7 @@ impl
     type Error = Error;
     fn try_from(
         value: ResponseRouterData<
-            AuthorizedotnetCreateCustomerProfileResponse,
+            AuthorizedotnetCreateConnectorCustomerResponse,
             RouterDataV2<
                 CreateConnectorCustomer,
                 PaymentFlowData,
