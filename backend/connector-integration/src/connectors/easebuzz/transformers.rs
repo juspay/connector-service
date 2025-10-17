@@ -2,7 +2,6 @@ use common_enums::{AttemptStatus, PaymentMethodType};
 use common_utils::{
     crypto,
     errors::CustomResult,
-    pii::SecretSerdeValue,
     types::{MinorUnit, StringMinorUnit},
 };
 use domain_types::{
