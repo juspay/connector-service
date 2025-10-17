@@ -581,23 +581,14 @@ impl<
     ) -> Result<Self, Self::Error> {
         let auth = get_zaakpay_auth(&item.router_data.connector_auth_type)?;
         
-        // Extract amount using the amount converter
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
-
+        // For RSync, we don't have amount in the request, use None
         let order_detail = ZaakPayOrderDetailType {
             order_id: item
                 .router_data
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            amount: Some(amount),
+            amount: None,
         };
 
         let refund_detail = ZaakPayRefundDetail {
@@ -610,11 +601,7 @@ impl<
 
         let data = ZaakPayCheckDataRequest {
             merchant_identifier: auth.merchant_identifier,
-            mode: if item.router_data.resource_common_data.test_mode.unwrap_or(false) {
-                "0".to_string()
-            } else {
-                "1".to_string()
-            },
+            mode: "1".to_string(), // Default to live mode for sync
             order_detail,
             refund_detail: Some(refund_detail),
         };
