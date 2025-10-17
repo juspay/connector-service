@@ -318,7 +318,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let hash = generate_easebuzz_hash(
             &auth.key.peek(),
             &item.router_data.resource_common_data.connector_request_reference_id,
-            &amount.get_amount_as_string(),
+            &amount.to_string(),
             &item.router_data.request.currency.to_string(),
             &auth.salt.peek(),
         )?;
@@ -327,8 +327,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             txnid: item.router_data.resource_common_data.connector_request_reference_id.clone(),
             amount,
             email: item.router_data.request.email.clone(),
-            phone: item.router_data.request.get_phone_number().map(|p| Secret::new(p.to_string())),
-            firstname: item.router_data.request.get_customer_name().map(Secret::new),
+            phone: None,
+            firstname: None,
             surl: return_url.clone(),
             furl: return_url,
             hash: Secret::new(hash),
