@@ -430,13 +430,7 @@ impl<
                 .clone()
                 .map(|e| e.to_string())
                 .unwrap_or_else(|| format!("{}@example.com", customer_id)),
-            phone: item
-                .router_data
-                .request
-                .phone
-                .clone()
-                .map(|p| p.to_string())
-                .unwrap_or_else(|| "0000000000".to_string()),
+            phone: "0000000000".to_string(),
         };
 
         // Build billing address (using default values for now)
