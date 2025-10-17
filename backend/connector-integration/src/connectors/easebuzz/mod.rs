@@ -12,27 +12,24 @@ use common_utils::{
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
     connector_types::{
-        ConnectorWebhookSecrets, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
-        PaymentsSyncData, RefundSyncData, RefundsResponseData, Connectors,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+        PaymentsSyncData, RefundSyncData, RefundsResponseData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
     router_response_types::Response,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Maskable;
+use hyperswitch_masking::{ExposeInterface, Maskable};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types,
-    verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
 use transformers::{self as easebuzz, EaseBuzzPaymentsRequest, EaseBuzzPaymentsResponse};
-
-use crate::types::ResponseRouterData;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -84,7 +81,7 @@ impl<
 {
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct EaseBuzz<T> {
     pub amount_converter: &'static (dyn common_utils::types::AmountConvertor<Output = String> + Sync),
     pub connector_name: &'static str,
@@ -128,7 +125,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         "easebuzz"
     }
 
-    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
+    fn base_url<'a>(&self, _connectors: &'a domain_types::types::Connectors) -> &'a str {
         self.get_base_url(true)
     }
 
@@ -165,31 +162,46 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .url(&url)
             .attach_default_headers()
             .headers(self.get_auth_header(&req.connector_auth_type)?)
-            .set_body(common_utils::request::RequestContent::Form(request));
+            .set_body(common_utils::request::RequestContent::FormUrlEncoded(request));
         
         Ok(Some(request_builder.build()))
     }
 
     fn handle_response_v2(
         &self,
+        req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         response: &Response,
-        _router_data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    ) -> CustomResult<PaymentsResponseData, errors::ConnectorError> {
+        _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
+    ) -> CustomResult<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, errors::ConnectorError> {
         let response: EaseBuzzPaymentsResponse = response
             .response
             .parse_struct("EaseBuzzPaymentsResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-        PaymentsResponseData::try_from(response)
+        
+        let payments_response = PaymentsResponseData::try_from(response)?;
+        Ok(req.clone().with_response(payments_response))
     }
 
     fn get_error_response_v2(
         &self,
-        response: &[u8],
-    ) -> CustomResult<easebuzz::EaseBuzzErrorResponse, errors::ConnectorError> {
+        response: &Response,
+        _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
             let error_response: easebuzz::EaseBuzzErrorResponse = response
+                .response
                 .parse_struct("EaseBuzzErrorResponse")
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-            Ok(error_response)
+            Ok(domain_types::router_data::ErrorResponse {
+                status_code: response.status_code,
+                code: "EASEBUZZ_ERROR".to_string(),
+                message: error_response.error_desc.unwrap_or_else(|| "Unknown error".to_string()),
+                reason: None,
+                attempt_status: None,
+                connector_transaction_id: None,
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+            })
     }
 }
 
@@ -213,31 +225,46 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .url(&url)
             .attach_default_headers()
             .headers(self.get_auth_header(&req.connector_auth_type)?)
-            .set_body(common_utils::request::RequestContent::Form(request));
+            .set_body(common_utils::request::RequestContent::FormUrlEncoded(request));
         
         Ok(Some(request_builder.build()))
     }
 
     fn handle_response_v2(
         &self,
+        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         response: &Response,
-        _router_data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<PaymentsResponseData, errors::ConnectorError> {
+        _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
+    ) -> CustomResult<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, errors::ConnectorError> {
         let response: easebuzz::EaseBuzzPaymentsSyncResponse = response
             .response
             .parse_struct("EaseBuzzPaymentsSyncResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-        PaymentsResponseData::try_from(response)
+        
+        let payments_response = PaymentsResponseData::try_from(response)?;
+        Ok(req.clone().with_response(payments_response))
     }
 
     fn get_error_response_v2(
         &self,
-        response: &[u8],
-    ) -> CustomResult<easebuzz::EaseBuzzErrorResponse, errors::ConnectorError> {
+        response: &Response,
+        _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
             let error_response: easebuzz::EaseBuzzErrorResponse = response
+                .response
                 .parse_struct("EaseBuzzErrorResponse")
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-            Ok(error_response)
+            Ok(domain_types::router_data::ErrorResponse {
+                status_code: response.status_code,
+                code: "EASEBUZZ_ERROR".to_string(),
+                message: error_response.error_desc.unwrap_or_else(|| "Unknown error".to_string()),
+                reason: None,
+                attempt_status: None,
+                connector_transaction_id: None,
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+            })
     }
 }
 
@@ -261,74 +288,45 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .url(&url)
             .attach_default_headers()
             .headers(self.get_auth_header(&req.connector_auth_type)?)
-            .set_body(common_utils::request::RequestContent::Form(request));
+            .set_body(common_utils::request::RequestContent::FormUrlEncoded(request));
         
         Ok(Some(request_builder.build()))
     }
 
     fn handle_response_v2(
         &self,
+        req: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
         response: &Response,
-        _router_data: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<RefundsResponseData, errors::ConnectorError> {
+        _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
+    ) -> CustomResult<RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>, errors::ConnectorError> {
         let response: easebuzz::EaseBuzzRefundSyncResponse = response
             .response
             .parse_struct("EaseBuzzRefundSyncResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-        RefundsResponseData::try_from(response)
+        
+        let refunds_response = RefundsResponseData::try_from(response)?;
+        Ok(req.clone().with_response(refunds_response))
     }
 
     fn get_error_response_v2(
         &self,
-        response: &[u8],
-    ) -> CustomResult<easebuzz::EaseBuzzErrorResponse, errors::ConnectorError> {
+        response: &Response,
+        _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
             let error_response: easebuzz::EaseBuzzErrorResponse = response
+                .response
                 .parse_struct("EaseBuzzErrorResponse")
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-            Ok(error_response)
-    }
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-    for EaseBuzz<T>
-{
-    fn verify_source_verification_data(
-        &self,
-        _request: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-        _source_verification_secrets: &ConnectorSourceVerificationSecrets,
-    ) -> CustomResult<bool, errors::ConnectorError> {
-        Ok(true)
-    }
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for EaseBuzz<T>
-{
-    fn verify_source_verification_data(
-        &self,
-        _request: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        _source_verification_secrets: &ConnectorSourceVerificationSecrets,
-    ) -> CustomResult<bool, errors::ConnectorError> {
-        Ok(true)
-    }
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>
-    for EaseBuzz<T>
-{
-    fn verify_source_verification_data(
-        &self,
-        _request: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
-        _source_verification_secrets: &ConnectorSourceVerificationSecrets,
-    ) -> CustomResult<bool, errors::ConnectorError> {
-        Ok(true)
+            Ok(domain_types::router_data::ErrorResponse {
+                status_code: response.status_code,
+                code: "EASEBUZZ_ERROR".to_string(),
+                message: error_response.error_desc.unwrap_or_else(|| "Unknown error".to_string()),
+                reason: None,
+                attempt_status: None,
+                connector_transaction_id: None,
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+            })
     }
 }
