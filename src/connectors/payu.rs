@@ -76,7 +76,7 @@ pub struct PayuPaymentsRequest {
     pub var1: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PayuPaymentsResponse {
     pub status: String,
     pub mihpayid: Option<String>,
@@ -94,14 +94,14 @@ pub struct PayuPaymentsSyncRequest {
     pub var1: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PayuPaymentsSyncResponse {
     pub status: String,
     pub txn_details: Option<PayuTransactionDetails>,
     pub msg: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PayuTransactionDetails {
     pub mihpayid: String,
     pub txnid: String,
@@ -121,14 +121,14 @@ pub struct PayuRefundSyncRequest {
     pub var1: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PayuRefundSyncResponse {
     pub status: String,
     pub msg: Option<String>,
     pub refund_details: Option<Vec<PayuRefundDetail>>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PayuRefundDetail {
     pub refund_id: String,
     pub txnid: String,
@@ -196,7 +196,7 @@ impl PayuWebhookResponse {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PayuErrorResponse {
     pub error_code: String,
     pub error_message: String,
