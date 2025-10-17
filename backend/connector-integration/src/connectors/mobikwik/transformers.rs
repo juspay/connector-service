@@ -360,7 +360,7 @@ impl<
         // Build parameters for checksum generation
         let mut params = HashMap::new();
         params.insert("cell".to_string(), phone_number.clone());
-        params.insert("amount".to_string(), amount.get_amount_as_string());
+        params.insert("amount".to_string(), amount.to_string());
         params.insert("orderid".to_string(), item.router_data.resource_common_data.connector_request_reference_id.clone());
         params.insert("merchantname".to_string(), "Hyperswitch".to_string());
         params.insert("mid".to_string(), merchant_id.peek().clone());
