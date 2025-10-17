@@ -5,6 +5,8 @@ use std::fmt::Debug;
 
 use common_utils::{
     errors::CustomResult,
+    ext_traits::ByteSliceExt,
+    request::{Method, RequestBuilder},
     types::{StringMinorUnitForConnector},
 };
 use domain_types::{
