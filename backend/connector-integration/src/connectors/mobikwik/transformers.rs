@@ -612,7 +612,7 @@ impl TryFrom<MobikwikPaymentsSyncResponse> for PaymentsResponseData
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: MobikwikPaymentsSyncResponse) -> Result<Self, Self::Error> {
-        let attempt_status = match response.statuscode.as_str() {
+        let _attempt_status = match response.statuscode.as_str() {
             "0" | "200" => common_enums::AttemptStatus::Charged,
             "1" | "400" => common_enums::AttemptStatus::Failure,
             "2" | "300" => common_enums::AttemptStatus::Pending,
