@@ -229,14 +229,10 @@ impl<
         message_data.insert("itemcode".to_string(), "DIRECT".to_string());
         
         // Add UPI specific fields if available
-        if let Some(payment_method) = &item.router_data.resource_common_data.payment_method {
-            if let common_enums::PaymentMethod::Upi = payment_method {
-                if let Some(upi_data) = &item.router_data.request.payment_method_data {
-                    if let Some(upi) = upi_data.get_upi() {
-                        if let Some(vpa) = &upi.vpa {
-                            message_data.insert("vpa".to_string(), vpa.peek().to_string());
-                        }
-                    }
+        if let common_enums::PaymentMethod::Upi = item.router_data.resource_common_data.payment_method {
+            if let Some(upi) = item.router_data.request.payment_method_data.get_upi() {
+                if let Some(vpa) = &upi.vpa {
+                    message_data.insert("vpa".to_string(), vpa.expose().to_string());
                 }
             }
         }
