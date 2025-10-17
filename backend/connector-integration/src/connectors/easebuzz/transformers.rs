@@ -449,14 +449,7 @@ for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseD
     }
 }
 
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> TryFrom<ResponseRouterData<EaseBuzzPaymentsSyncResponse, Self>>
+impl TryFrom<ResponseRouterData<EaseBuzzPaymentsSyncResponse, Self>>
 for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
