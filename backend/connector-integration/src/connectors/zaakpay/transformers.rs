@@ -836,7 +836,7 @@ impl<
                 )
             }
             ZaakPayRefundSyncResponse::Error(error_data) => (
-                common_enums::RefundStatus::RefundFailure,
+                common_enums::RefundStatus::Failure,
                 Err(ErrorResponse {
                     code: error_data.response_code.to_string(),
                     status_code: item.http_code,
