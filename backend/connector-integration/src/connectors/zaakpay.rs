@@ -209,7 +209,7 @@ impl<
         error_stack::Report<domain_types::errors::ConnectorError>,
     > {
         // Webhook processing will be implemented based on ZaakPay's webhook format
-        Err(errors::ConnectorError::WebhookNotImplemented).into()
+        Err(errors::ConnectorError::WebhooksNotImplemented.into())
     }
 }
 
