@@ -343,7 +343,7 @@ where
         let amount = item.request.amount.to_string();
         let productinfo = "Payment".to_string();
         let firstname = item.request.customer_name.clone().unwrap_or_else(|| "Customer".to_string());
-        let email = item.request.email.as_ref().map(|e| e.expose().clone()).unwrap_or_else(|| "customer@example.com".to_string());
+        let email_str = item.request.email.as_ref().map(|e| e.expose().clone()).unwrap_or_else(|| "customer@example.com".to_string());
         let phone = "9999999999".to_string(); // Phone field not available in PaymentsAuthorizeData
         
         let return_url = item.request.router_return_url.clone().unwrap_or_else(|_| "https://example.com".to_string());
@@ -367,7 +367,7 @@ where
             &amount,
             &productinfo,
             &firstname,
-            &email,
+            &email_str,
             &udf_fields,
             &salt,
         );
@@ -378,7 +378,7 @@ where
             amount,
             productinfo,
             firstname,
-            email,
+            email: email_str,
             phone,
             surl,
             furl,
