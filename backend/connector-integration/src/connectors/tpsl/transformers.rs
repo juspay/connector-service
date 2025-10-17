@@ -462,7 +462,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                     instruction_type: "PAYMENT".to_string(),
                     description: "Payment Instruction".to_string(),
                     action: "PAY".to_string(),
-                    limit: amount.get_amount_as_string(),
+                    limit: amount.to_string(),
                     end_date_time: "".to_string(),
                     debit_day: "".to_string(),
                     debit_flag: "N".to_string(),
