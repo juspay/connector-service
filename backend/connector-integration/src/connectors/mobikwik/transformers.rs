@@ -261,7 +261,7 @@ impl From<MobikwikPaymentStatus> for common_enums::AttemptStatus {
 
 fn get_merchant_id(
     connector_auth_type: &ConnectorAuthType,
-    currency: common_enums::Currency,
+    _currency: common_enums::Currency,
 ) -> Result<Secret<String>, errors::ConnectorError> {
     match MobikwikAuth::try_from(connector_auth_type) {
         Ok(mobikwik_auth) => {
