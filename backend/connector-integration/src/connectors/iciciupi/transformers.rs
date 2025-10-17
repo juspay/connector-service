@@ -85,7 +85,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let auth = IciciUpiAuth::try_from(&item.router_data.connector_auth_type)?;
         
         // Extract UPI payment method data
-        let upi_data = item.router_data.router_data.request.payment_method_data
+        let upi_data = item.router_data.request.payment_method_data
             .as_ref()
             .and_then(|pm| pm.upi.as_ref())
             .ok_or(errors::ConnectorError::MissingRequiredField {
@@ -96,15 +96,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .connector
             .amount_converter
             .convert(
-                item.router_data.router_data.request.minor_amount,
-                item.router_data.router_data.request.currency,
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         Ok(Self {
             payer_va: upi_data.vpa.clone(),
             amount,
-            note: item.router_data.router_data.request.description.clone(),
+            note: item.router_data.request.description.clone(),
             collect_by_date: None, // Can be configured based on requirements
             merchant_id: auth.merchant_id.expose().clone(),
             merchant_name: None, // Can be extracted from router data if available
