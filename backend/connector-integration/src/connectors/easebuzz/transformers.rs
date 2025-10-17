@@ -246,7 +246,7 @@ impl<
 
         // Generate hash - this would typically involve SHA512 of specific fields
         let hash_string = format!(
-            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
+            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
             auth.key.expose(),
             item.router_data.resource_common_data.connector_request_reference_id,
             amount.to_string(),
