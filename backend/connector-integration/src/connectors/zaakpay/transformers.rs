@@ -298,9 +298,9 @@ impl TryFrom<&ConnectorAuthType> for ZaakPayAuth {
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, .. } => {
-                let auth = api_key
-                    .to_owned()
-                    .parse_value::<ZaakPayAuthType>("ZaakPayAuthType")
+                // Parse the API key as JSON to extract auth fields
+                let auth_str = api_key.peek();
+                let auth: ZaakPayAuthType = serde_json::from_str(auth_str)
                     .change_context(errors::ConnectorError::InvalidDataFormat {
                         field_name: "auth_key",
                     })?;
