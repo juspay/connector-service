@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 
 use super::{PayuAuthType, PayuPaymentsRequest, PayuPaymentsResponse, PayuPaymentsSyncRequest, PayuPaymentsSyncResponse, PayuRefundSyncRequest, PayuRefundSyncResponse};
@@ -60,14 +58,14 @@ pub struct RefundsResponseData {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RouterDataV2<F, FCD, Req, Resp> {
+pub struct RouterDataV2<FCD, Req, Resp> {
     pub connector_auth_type: ConnectorAuthType,
     pub amount: AmountConverter,
-    pub router_data: RouterData<FCD, Req, Resp>,
+    pub router_data: RouterData<FCD, Req>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RouterData<FCD, Req, Resp> {
+pub struct RouterData<FCD, Req> {
     pub request: Req,
     pub resource_common_data: FCD,
 }
@@ -100,7 +98,7 @@ impl PaymentMethodData {
     }
 }
 
-impl<T> TryFrom<&RouterDataV2<String, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+impl<T> TryFrom<&RouterDataV2<PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
     for PayuPaymentsRequest
 where
     T: PaymentMethodDataTypes,
@@ -108,7 +106,7 @@ where
     type Error = String;
 
     fn try_from(
-        item: &RouterDataV2<String, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        item: &RouterDataV2<PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = PayuAuthType::KeySecret {
             key: item.connector_auth_type.api_key.clone(),
@@ -172,7 +170,7 @@ where
         };
 
         let hash_string = format!(
-            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
+            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
             key,
             transaction_id,
             amount,
@@ -185,8 +183,7 @@ where
             furl,
             "UDF1",
             "UDF2",
-            "UDF3",
-            "UDF4"
+            "UDF3"
         );
 
         let hash = auth.generate_hash(&hash_string);
@@ -217,13 +214,13 @@ where
     }
 }
 
-impl TryFrom<&RouterDataV2<String, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+impl TryFrom<&RouterDataV2<PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
     for PayuPaymentsSyncRequest
 {
     type Error = String;
 
     fn try_from(
-        item: &RouterDataV2<String, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: &RouterDataV2<PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = PayuAuthType::KeySecret {
             key: item.connector_auth_type.api_key.clone(),
@@ -245,13 +242,13 @@ impl TryFrom<&RouterDataV2<String, PaymentFlowData, PaymentsSyncData, PaymentsRe
     }
 }
 
-impl TryFrom<&RouterDataV2<String, PaymentFlowData, RefundSyncData, RefundsResponseData>>
+impl TryFrom<&RouterDataV2<PaymentFlowData, RefundSyncData, RefundsResponseData>>
     for PayuRefundSyncRequest
 {
     type Error = String;
 
     fn try_from(
-        item: &RouterDataV2<String, PaymentFlowData, RefundSyncData, RefundsResponseData>,
+        item: &RouterDataV2<PaymentFlowData, RefundSyncData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = PayuAuthType::KeySecret {
             key: item.connector_auth_type.api_key.clone(),
@@ -297,7 +294,7 @@ impl TryFrom<PayuPaymentsResponse> for PaymentsResponseData {
         let amount_received = response.amount.and_then(|amt| amt.parse::<f64>().ok()).map(|amt| (amt * 100.0) as i64);
 
         Ok(Self {
-            status,
+            status: status.to_string(),
             gateway_transaction_id: response.mihpayid,
             connector_transaction_id: response.txnid,
             amount_received,
@@ -305,7 +302,14 @@ impl TryFrom<PayuPaymentsResponse> for PaymentsResponseData {
             error_code: response.error_code,
             redirection_data: None,
             network_transaction_id: None,
-            connector_response: Some(serde_json::to_value(response).map_err(|e| e.to_string())?),
+            connector_response: Some(serde_json::json!({
+                "status": response.status,
+                "mihpayid": response.mihpayid,
+                "txnid": response.txnid,
+                "amount": response.amount,
+                "error_message": response.error_message,
+                "error_code": response.error_code
+            })),
         })
     }
 }
@@ -337,7 +341,7 @@ impl TryFrom<PayuPaymentsSyncResponse> for PaymentsResponseData {
             };
 
         Ok(Self {
-            status,
+            status: status.to_string(),
             gateway_transaction_id,
             connector_transaction_id,
             amount_received,
@@ -345,7 +349,11 @@ impl TryFrom<PayuPaymentsSyncResponse> for PaymentsResponseData {
             error_code,
             redirection_data: None,
             network_transaction_id,
-            connector_response: Some(serde_json::to_value(response).map_err(|e| e.to_string())?),
+            connector_response: Some(serde_json::json!({
+                "status": response.status,
+                "txn_details": response.txn_details,
+                "msg": response.msg
+            })),
         })
     }
 }
@@ -381,14 +389,18 @@ impl TryFrom<PayuRefundSyncResponse> for RefundsResponseData {
             };
 
         Ok(Self {
-            status,
+            status: status.to_string(),
             refund_id,
             connector_transaction_id,
             amount_received,
             error_message,
             error_code,
             network_transaction_id,
-            connector_response: Some(serde_json::to_value(response).map_err(|e| e.to_string())?),
+            connector_response: Some(serde_json::json!({
+                "status": response.status,
+                "refund_details": response.refund_details,
+                "msg": response.msg
+            })),
         })
     }
 }
