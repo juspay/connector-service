@@ -471,7 +471,7 @@ impl TryFrom<EaseBuzzPaymentsResponse> for PaymentsResponseData {
     type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(response: EaseBuzzPaymentsResponse) -> Result<Self, Self::Error> {
-        let status = if response.status {
+        let _status = if response.status {
             match response.data.as_ref().map(|d| d.status.as_str()) {
                 Some("success") => common_enums::AttemptStatus::Charged,
                 Some("pending") => common_enums::AttemptStatus::Pending,
@@ -503,7 +503,7 @@ impl TryFrom<EaseBuzzPaymentsSyncResponse> for PaymentsResponseData {
     type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(response: EaseBuzzPaymentsSyncResponse) -> Result<Self, Self::Error> {
-        let (payment_data, status) = match response.msg {
+        let (payment_data, _status) = match response.msg {
             EaseBuzzSyncMessage::Success(data) => {
                 let status = match data.status.as_str() {
                     "success" => common_enums::AttemptStatus::Charged,
