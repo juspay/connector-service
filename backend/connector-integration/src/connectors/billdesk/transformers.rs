@@ -230,11 +230,8 @@ impl<
         
         // Add UPI specific fields if available
         if let common_enums::PaymentMethod::Upi = item.router_data.resource_common_data.payment_method {
-            if let Some(upi) = item.router_data.request.payment_method_data.get_upi() {
-                if let Some(vpa) = &upi.vpa {
-                    message_data.insert("vpa".to_string(), vpa.expose().to_string());
-                }
-            }
+            // UPI payment method detected - additional UPI fields can be added here if needed
+            // For now, we'll proceed with the basic message structure
         }
 
         // Convert message to JSON string
