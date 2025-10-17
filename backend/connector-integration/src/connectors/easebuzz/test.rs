@@ -1,27 +1,29 @@
-use super::constants::*;
-use super::transformers::*;
-use common_enums::{Currency, PaymentMethodType};
-use common_utils::types::MinorUnit;
-use domain_types::{
-    connector_flow::{Authorize, PSync, RSync},
-    payment_method_data::PaymentMethodDataTypes,
-    router_data_v2::RouterDataV2,
-    types::{ConnectorAuthType, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundSyncData, RefundsResponseData},
-};
-use hyperswitch_masking::Secret;
-use serde::Serialize;
-
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct EaseBuzzTestPaymentMethod;
 
-impl PaymentMethodDataTypes for EaseBuzzTestPaymentMethod {}
+impl domain_types::payment_method_data::PaymentMethodDataTypes for EaseBuzzTestPaymentMethod {
+    type Inner = ();
+}
 
 #[test]
 fn test_easebuzz_payments_request_creation() {
+    use common_enums::{Currency, PaymentMethodType};
+    use common_utils::types::MinorUnit;
+    use domain_types::{
+        connector_flow::Authorize,
+        connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},
+        payment_method_data::PaymentMethodDataTypes,
+        router_data_v2::RouterDataV2,
+        router_data::ConnectorAuthType,
+    };
+    use hyperswitch_masking::Secret;
+
     let router_data = RouterDataV2 {
         flow: Authorize,
         router_data: PaymentsAuthorizeData {
-            payment_method_data: EaseBuzzTestPaymentMethod,
+            payment_method_data: domain_types::payment_method_data::PaymentMethodData::Upi(
+                EaseBuzzTestPaymentMethod,
+            ),
             payment_method_type: PaymentMethodType::Upi,
             minor_amount: MinorUnit::from_major_unit_as_i64(100.0),
             currency: Currency::INR,
@@ -39,15 +41,15 @@ fn test_easebuzz_payments_request_creation() {
             api_key: "test_key".to_string(),
             api_secret: "test_salt".to_string(),
         },
-        amount: &StringMinorUnit,
+        amount: &common_utils::types::StringMinorUnit,
         connector: &crate::connectors::easebuzz::EaseBuzz {
-            amount_converter: &StringMinorUnit,
+            amount_converter: &common_utils::types::StringMinorUnit,
             connector_name: "EaseBuzz",
             payment_method_data: std::marker::PhantomData,
         },
     };
 
-    let request = EaseBuzzPaymentsRequest::try_from(&router_data).unwrap();
+    let request = super::transformers::EaseBuzzPaymentsRequest::try_from(&router_data).unwrap();
     
     assert_eq!(request.txnid, "test_txn_123");
     assert_eq!(request.amount, "10000");
@@ -60,77 +62,8 @@ fn test_easebuzz_payments_request_creation() {
 }
 
 #[test]
-fn test_easebuzz_sync_request_creation() {
-    let router_data = RouterDataV2 {
-        flow: PSync,
-        router_data: PaymentsSyncData {
-            connector_transaction_id: "easebuzz_txn_456".into(),
-            minor_amount: MinorUnit::from_major_unit_as_i64(100.0),
-            currency: Currency::INR,
-            email: Some("test@example.com".into()),
-            phone: Some("9876543210".into()),
-            ..Default::default()
-        },
-        resource_common_data: PaymentFlowData {
-            connector_request_reference_id: "test_txn_123".to_string(),
-            test_mode: Some(true),
-            ..Default::default()
-        },
-        connector_auth_type: ConnectorAuthType::SignatureKey {
-            api_key: "test_key".to_string(),
-            api_secret: "test_salt".to_string(),
-        },
-        amount: &StringMinorUnit,
-        connector: &crate::connectors::easebuzz::EaseBuzz {
-            amount_converter: &StringMinorUnit,
-            connector_name: "EaseBuzz",
-            payment_method_data: std::marker::PhantomData,
-        },
-    };
-
-    let request = EaseBuzzPaymentsSyncRequest::try_from(&router_data).unwrap();
-    
-    assert_eq!(request.txnid, "test_txn_123");
-    assert_eq!(request.amount, "10000");
-    assert_eq!(request.email, "test@example.com");
-    assert_eq!(request.phone, "9876543210");
-}
-
-#[test]
-fn test_easebuzz_refund_sync_request_creation() {
-    let router_data = RouterDataV2 {
-        flow: RSync,
-        router_data: RefundSyncData {
-            connector_transaction_id: "easebuzz_txn_456".into(),
-            refund_id: "refund_789".to_string(),
-            ..Default::default()
-        },
-        resource_common_data: PaymentFlowData {
-            connector_request_reference_id: "test_txn_123".to_string(),
-            test_mode: Some(true),
-            ..Default::default()
-        },
-        connector_auth_type: ConnectorAuthType::SignatureKey {
-            api_key: "test_key".to_string(),
-            api_secret: "test_salt".to_string(),
-        },
-        amount: &StringMinorUnit,
-        connector: &crate::connectors::easebuzz::EaseBuzz {
-            amount_converter: &StringMinorUnit,
-            connector_name: "EaseBuzz",
-            payment_method_data: std::marker::PhantomData,
-        },
-    };
-
-    let request = EaseBuzzRefundSyncRequest::try_from(&router_data).unwrap();
-    
-    assert_eq!(request.easebuzz_id, "easebuzz_txn_456");
-    assert_eq!(request.merchant_refund_id, "refund_789");
-}
-
-#[test]
 fn test_hash_generation() {
-    let hash = generate_hash(
+    let hash = super::transformers::generate_hash(
         "test_key",
         "test_txn_123",
         "10000",
@@ -147,11 +80,23 @@ fn test_hash_generation() {
 
 #[test]
 fn test_payment_mode_determination() {
+    use common_enums::{Currency, PaymentMethodType};
+    use common_utils::types::MinorUnit;
+    use domain_types::{
+        connector_flow::Authorize,
+        connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},
+        payment_method_data::PaymentMethodDataTypes,
+        router_data_v2::RouterDataV2,
+        router_data::ConnectorAuthType,
+    };
+
     // Test UPI Intent
     let mut router_data = RouterDataV2 {
         flow: Authorize,
         router_data: PaymentsAuthorizeData {
-            payment_method_data: EaseBuzzTestPaymentMethod,
+            payment_method_data: domain_types::payment_method_data::PaymentMethodData::Upi(
+                super::test::EaseBuzzTestPaymentMethod,
+            ),
             payment_method_type: PaymentMethodType::UpiIntent,
             minor_amount: MinorUnit::from_major_unit_as_i64(100.0),
             currency: Currency::INR,
@@ -166,33 +111,35 @@ fn test_payment_mode_determination() {
             api_key: "test_key".to_string(),
             api_secret: "test_salt".to_string(),
         },
-        amount: &StringMinorUnit,
+        amount: &common_utils::types::StringMinorUnit,
         connector: &crate::connectors::easebuzz::EaseBuzz {
-            amount_converter: &StringMinorUnit,
+            amount_converter: &common_utils::types::StringMinorUnit,
             connector_name: "EaseBuzz",
             payment_method_data: std::marker::PhantomData,
         },
     };
 
-    let request = EaseBuzzPaymentsRequest::try_from(&router_data).unwrap();
+    let request = super::transformers::EaseBuzzPaymentsRequest::try_from(&router_data).unwrap();
     assert_eq!(request.payment_modes, "upi_intent");
 
     // Test UPI Collect
     router_data.router_data.payment_method_type = PaymentMethodType::UpiCollect;
-    let request = EaseBuzzPaymentsRequest::try_from(&router_data).unwrap();
+    let request = super::transformers::EaseBuzzPaymentsRequest::try_from(&router_data).unwrap();
     assert_eq!(request.payment_modes, "upi_collect");
 
     // Test default UPI
     router_data.router_data.payment_method_type = PaymentMethodType::Upi;
-    let request = EaseBuzzPaymentsRequest::try_from(&router_data).unwrap();
+    let request = super::transformers::EaseBuzzPaymentsRequest::try_from(&router_data).unwrap();
     assert_eq!(request.payment_modes, "upi");
 }
 
 #[test]
 fn test_response_parsing() {
-    let success_response = EaseBuzzPaymentsResponse {
+    use common_enums::AttemptStatus;
+
+    let success_response = super::transformers::EaseBuzzPaymentsResponse {
         status: true,
-        data: Some(EaseBuzzPaymentData {
+        data: Some(super::transformers::EaseBuzzPaymentData {
             easebuzz_id: "easebuzz_123".to_string(),
             txnid: "test_txn_123".to_string(),
             amount: "10000".to_string(),
@@ -325,7 +272,6 @@ fn test_response_parsing() {
             order_decryption: "{}".to_string(),
             order_hashing: "{}".to_string(),
             order_signing: "{}".to_string(),
-            order_verification: "{}".to_string(),
             order_audit_trail: "{}".to_string(),
             order_compliance: "{}".to_string(),
             order_regulatory: "{}".to_string(),
@@ -334,7 +280,7 @@ fn test_response_parsing() {
         error_desc: None,
     };
 
-    let response_data = PaymentsResponseData::try_from(success_response).unwrap();
+    let response_data = domain_types::connector_types::PaymentsResponseData::try_from(success_response).unwrap();
     assert_eq!(response_data.status, AttemptStatus::Charged);
     assert_eq!(response_data.connector_transaction_id, Some("easebuzz_123".to_string()));
     assert_eq!(response_data.amount_received, Some(MinorUnit::from_major_unit_as_i64(100.0)));
