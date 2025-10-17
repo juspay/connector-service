@@ -459,7 +459,7 @@ fn get_auth_credentials(auth_type: &domain_types::types::ConnectorAuthType) -> C
 fn generate_signature(client_id: &str, merchant_id: &str) -> CustomResult<String, errors::ConnectorError> {
     // Generate signature using SHA256 hash
     let data = format!("{}|{}", client_id, merchant_id);
-    let hash = common_utils::crypto::generate_sha256_hash(data.as_bytes())
+    let hash = crypto::generate_sha256_hash(data.as_bytes())
         .change_context(errors::ConnectorError::RequestEncodingFailed)?;
     Ok(hex::encode(hash))
 }
