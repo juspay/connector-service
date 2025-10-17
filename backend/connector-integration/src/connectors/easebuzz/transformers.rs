@@ -598,8 +598,8 @@ fn generate_easebuzz_hash(
         key, txnid, amount, "Payment", "", "", "", "", "", "", currency, salt
     );
     
-    crypto::Sha512::hash_to_hex(hash_string.as_bytes())
-        .change_context(ConnectorError::RequestEncodingFailed)
+    let digest = crypto::Sha512::digest(hash_string.as_bytes());
+    Ok(hex::encode(digest))
 }
 
 fn generate_sync_hash(
@@ -616,8 +616,8 @@ fn generate_sync_hash(
         key, txnid, amount, "", "", "", "", "", "", "", currency, salt
     );
     
-    crypto::Sha512::hash_to_hex(hash_string.as_bytes())
-        .change_context(ConnectorError::RequestEncodingFailed)
+    let digest = crypto::Sha512::digest(hash_string.as_bytes());
+    Ok(hex::encode(digest))
 }
 
 fn get_payment_source(
