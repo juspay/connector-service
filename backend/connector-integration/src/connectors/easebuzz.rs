@@ -481,13 +481,9 @@ impl<
         "application/json"
     }
 
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        // Use test mode to determine base URL
-        if connectors.test_mode.unwrap_or(false) {
-            constants::EaseBuzzConstants::BASE_URL_TEST
-        } else {
-            constants::EaseBuzzConstants::BASE_URL_PROD
-        }
+    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
+        // Default to production base URL
+        constants::EaseBuzzConstants::BASE_URL_PROD
     }
 
     fn get_auth_header(
