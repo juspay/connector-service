@@ -451,7 +451,6 @@ pub struct EaseBuzzPaymentData {
     pub order_hashing: String,
     pub order_signing: String,
     pub order_audit_trail: String,
-    pub order_compliance: String,
     pub order_regulatory: String,
     pub order_legal: String,
 }
