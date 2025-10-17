@@ -478,7 +478,7 @@ macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: IciciUpi,
     curl_request: Json(IciciUpiPaymentsRequest),
-    curl_response: iciciupi::IciciUpiResponseEnum,
+    curl_response: IciciUpiPaymentsResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthorizeData<T>,
