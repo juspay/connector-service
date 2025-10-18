@@ -811,10 +811,7 @@ where
         .other_fields
         .as_ref()
         .and_then(|other_fields| match other_fields {
-            WorldpayPaymentResponseFields::AuthorizedResponse(res) => res
-                .links
-                .as_ref()
-                .and_then(|link| link.self_link.href.rsplit_once('/').map(|(_, h)| h)),
+            WorldpayPaymentResponseFields::AuthorizedResponse(_res) => None,
             WorldpayPaymentResponseFields::DDCResponse(res) => {
                 res.actions.supply_ddc_data.href.split('/').nth_back(1)
             }
