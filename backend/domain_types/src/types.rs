@@ -124,6 +124,7 @@ pub struct Connectors {
     pub trustpay: ConnectorParamsWithMoreUrls,
     pub stripe: ConnectorParams,
     pub cybersource: ConnectorParams,
+    pub worldpay: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -1156,7 +1157,7 @@ impl<
             statement_descriptor: None,
 
             router_return_url: value.return_url,
-            complete_authorize_url: None,
+            complete_authorize_url: value.complete_authorize_url,
             setup_future_usage: None,
             mandate_id: None,
             off_session: value.off_session,
@@ -2254,8 +2255,22 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
         let capture_method = Some(common_enums::CaptureMethod::foreign_try_from(
             value.capture_method(),
         )?);
-        let currency = common_enums::Currency::foreign_try_from(value.currency())?;
-        let amount = common_utils::types::MinorUnit::new(value.amount);
+        // Currency and amount are optional in proto, but required in PaymentsSyncData struct
+        // Default to USD and zero if not provided (these fields are not used by connectors like Worldpay for sync)
+        let currency = match value.currency {
+            Some(c) => {
+                let proto_currency = grpc_api_types::payments::Currency::try_from(c)
+                    .map_err(|_| ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_CURRENCY".to_string(),
+                        error_identifier: 400,
+                        error_message: "Invalid currency value".to_string(),
+                        error_object: None,
+                    }))?;
+                common_enums::Currency::foreign_try_from(proto_currency)?
+            },
+            None => common_enums::Currency::USD, // Default currency, not used by sync endpoints
+        };
+        let amount = common_utils::types::MinorUnit::new(value.amount.unwrap_or(0));
         // Create ResponseId from resource_id
         let connector_transaction_id = ResponseId::ConnectorTransactionId(
             value
@@ -3326,8 +3341,24 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
     fn foreign_try_from(
         value: PaymentServiceVoidRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let amount = Some(common_utils::types::MinorUnit::new(value.amount()));
-        let currency = Some(common_enums::Currency::foreign_try_from(value.currency())?);
+        // Handle optional amount and currency fields from proto
+        let amount = value.amount.map(common_utils::types::MinorUnit::new);
+        let currency = value
+            .currency
+            .map(|c| {
+                grpc_api_types::payments::Currency::try_from(c)
+                    .map_err(|_| ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_CURRENCY".to_string(),
+                        error_identifier: 400,
+                        error_message: "Invalid currency value".to_string(),
+                        error_object: None,
+                    }))
+                    .and_then(|proto_currency| {
+                        common_enums::Currency::foreign_try_from(proto_currency)
+                            .map_err(|e| e.current_context().clone())
+                    })
+            })
+            .transpose()?;
         Ok(Self {
             browser_info: value
                 .browser_info
@@ -5465,6 +5496,24 @@ impl<
         // Clone payment_method to avoid ownership issues
         let payment_method_clone = value.payment_method.clone();
 
+        // Create redirect response from metadata if present
+        // This is used to pass connector-specific data (e.g., collectionReference for Worldpay)
+        let redirect_response = if !value.metadata.is_empty() {
+            let params_string = serde_urlencoded::to_string(&value.metadata)
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_METADATA".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Failed to serialize metadata".to_owned(),
+                    error_object: None,
+                }))?;
+            Some(ContinueRedirectionResponse {
+                params: Some(Secret::new(params_string)),
+                payload: None,
+            })
+        } else {
+            None
+        };
+
         Ok(Self {
             payment_method_data: value
                 .payment_method
@@ -5512,7 +5561,7 @@ impl<
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             enrolled_for_3ds,
-            redirect_response: None,
+            redirect_response,
         })
     }
 }
@@ -5657,14 +5706,30 @@ impl<
         // Clone payment_method to avoid ownership issues
         let payment_method_clone = value.payment_method.clone();
 
-        // Create redirect response from authentication data if present
-        let redirect_response =
+        // Create redirect response from metadata or authentication data
+        // Priority: metadata first, then authentication_data for backward compatibility
+        let redirect_response = if !value.metadata.is_empty() {
+            // Use metadata for connector-specific data (e.g., collectionReference for Worldpay)
+            let params_string = serde_urlencoded::to_string(&value.metadata)
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_METADATA".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Failed to serialize metadata".to_owned(),
+                    error_object: None,
+                }))?;
+            Some(ContinueRedirectionResponse {
+                params: Some(Secret::new(params_string)),
+                payload: None,
+            })
+        } else {
+            // Fallback to authentication_data for backward compatibility
             value
                 .authentication_data
                 .map(|auth_data| ContinueRedirectionResponse {
                     params: auth_data.ds_transaction_id.clone().map(Secret::new),
                     payload: None,
-                });
+                })
+        };
         Ok(Self {
             payment_method_data: value
                 .payment_method
@@ -5769,7 +5834,16 @@ impl
             return_url: value.return_url.clone(),
             connector_meta_data: {
                 value.metadata.get("connector_meta_data").map(|json_string| {
-                    Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
+                    serde_json::from_str::<serde_json::Value>(json_string)
+                        .map(Secret::new)
+                        .map_err(|e| {
+                            error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
+                                error_identifier: 400,
+                                error_message: format!("Failed to parse connector_meta_data: {}", e),
+                                error_object: None,
+                            }))
+                        })
                 }).transpose()?
             },
             amount_captured: None,
@@ -5846,7 +5920,16 @@ impl
             return_url: value.return_url.clone(),
             connector_meta_data: {
                 value.metadata.get("connector_meta_data").map(|json_string| {
-                    Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
+                    serde_json::from_str::<serde_json::Value>(json_string)
+                        .map(Secret::new)
+                        .map_err(|e| {
+                            error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
+                                error_identifier: 400,
+                                error_message: format!("Failed to parse connector_meta_data: {}", e),
+                                error_object: None,
+                            }))
+                        })
                 }).transpose()?
             },
             amount_captured: None,
@@ -5923,7 +6006,16 @@ impl
             return_url: value.return_url.clone(),
             connector_meta_data: {
                 value.metadata.get("connector_meta_data").map(|json_string| {
-                    Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
+                    serde_json::from_str::<serde_json::Value>(json_string)
+                        .map(Secret::new)
+                        .map_err(|e| {
+                            error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
+                                error_identifier: 400,
+                                error_message: format!("Failed to parse connector_meta_data: {}", e),
+                                error_object: None,
+                            }))
+                        })
                 }).transpose()?
             },
             amount_captured: None,
