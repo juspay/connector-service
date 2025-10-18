@@ -4919,19 +4919,6 @@ impl<
             + PartialEq
             + serde::Serialize
             + serde::de::DeserializeOwned
-        })
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + Default
-            + Debug
-            + Send
-            + Eq
-            + PartialEq
-            + serde::Serialize
-            + serde::de::DeserializeOwned
             + Clone
             + CardConversionHelper<T>,
     > ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
@@ -4973,8 +4960,6 @@ impl<
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequest>
-    for RepeatPaymentData
 impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequest>
     for RepeatPaymentData
 {
