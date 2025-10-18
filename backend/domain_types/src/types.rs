@@ -2275,8 +2275,22 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
         let capture_method = Some(common_enums::CaptureMethod::foreign_try_from(
             value.capture_method(),
         )?);
-        let currency = common_enums::Currency::foreign_try_from(value.currency())?;
-        let amount = common_utils::types::MinorUnit::new(value.amount);
+        // Currency and amount are optional in proto, but required in PaymentsSyncData struct
+        // Default to USD and zero if not provided (these fields are not used by connectors like Worldpay for sync)
+        let currency = match value.currency {
+            Some(c) => {
+                let proto_currency = grpc_api_types::payments::Currency::try_from(c)
+                    .map_err(|_| ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_CURRENCY".to_string(),
+                        error_identifier: 400,
+                        error_message: "Invalid currency value".to_string(),
+                        error_object: None,
+                    }))?;
+                common_enums::Currency::foreign_try_from(proto_currency)?
+            },
+            None => common_enums::Currency::USD, // Default currency, not used by sync endpoints
+        };
+        let amount = common_utils::types::MinorUnit::new(value.amount.unwrap_or(0));
         // Create ResponseId from resource_id
         let connector_transaction_id = ResponseId::ConnectorTransactionId(
             value
@@ -3347,8 +3361,24 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
     fn foreign_try_from(
         value: PaymentServiceVoidRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let amount = Some(common_utils::types::MinorUnit::new(value.amount()));
-        let currency = Some(common_enums::Currency::foreign_try_from(value.currency())?);
+        // Handle optional amount and currency fields from proto
+        let amount = value.amount.map(common_utils::types::MinorUnit::new);
+        let currency = value
+            .currency
+            .map(|c| {
+                grpc_api_types::payments::Currency::try_from(c)
+                    .map_err(|_| ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_CURRENCY".to_string(),
+                        error_identifier: 400,
+                        error_message: "Invalid currency value".to_string(),
+                        error_object: None,
+                    }))
+                    .and_then(|proto_currency| {
+                        common_enums::Currency::foreign_try_from(proto_currency)
+                            .map_err(|e| e.current_context().clone())
+                    })
+            })
+            .transpose()?;
         Ok(Self {
             browser_info: value
                 .browser_info
