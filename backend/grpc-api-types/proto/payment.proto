@@ -1253,8 +1253,8 @@ message PaymentServiceGetRequest {
   optional bytes handle_response = 4;
 
   // Amount Information
-  optional int64 amount = 5; // The amount for the payment in minor currency units
-  optional Currency currency = 6; // The currency for the payment, in ISO 4217 three-letter code
+  int64 amount = 5; // The amount for the payment in minor currency units
+  Currency currency = 6; // The currency for the payment, in ISO 4217 three-letter code
 }
 
 // Response message for a payment status synchronization.
