@@ -5,10 +5,10 @@ use domain_types::{
         Authorize, CreateConnectorCustomer, PSync, RSync, Refund, RepeatPayment, SetupMandate,
     },
     connector_types::{
-        ConnectorCustomerData, ConnectorCustomerResponse, MandateReferenceId, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        ConnectorCustomerData, ConnectorCustomerResponse, MandateReference, MandateReferenceId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::ConnectorError,
     payment_method_data::{
@@ -1674,6 +1674,64 @@ pub enum ValidationMode {
     LiveMode,
 }
 
+// SetupMandate request structures - adds payment profile to existing customer
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizedotnetSetupMandateRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
+    create_customer_payment_profile_request: AuthorizedotnetPaymentProfileRequest<T>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizedotnetPaymentProfileRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
+    merchant_authentication: AuthorizedotnetAuthType,
+    customer_profile_id: Secret<String>,
+    payment_profile: PaymentProfile<T>,
+    validation_mode: ValidationMode,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentProfile<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    bill_to: Option<BillTo>,
+    payment: PaymentDetails<T>,
+}
+
+// SetupMandate response structure
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizedotnetSetupMandateResponse {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub customer_payment_profile_id_list: Vec<String>,
+    pub customer_profile_id: Option<String>,
+    #[serde(rename = "customerPaymentProfileId")]
+    pub customer_payment_profile_id: Option<String>,
+    pub validation_direct_response_list: Option<Vec<Secret<String>>>,
+    pub messages: ResponseMessages,
+}
+
 // PSync response wrapper - Using direct structure instead of wrapping AuthorizedotnetPaymentsResponse
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct AuthorizedotnetPSyncResponse {
@@ -2624,7 +2682,7 @@ impl<
             >,
             T,
         >,
-    > for AuthorizedotnetCreateConnectorCustomerRequest<T>
+    > for AuthorizedotnetSetupMandateRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -2642,12 +2700,40 @@ impl<
             PaymentMethodData::Card(card) => card,
             _ => return Err(error_stack::report!(ConnectorError::RequestEncodingFailed)),
         };
+
         let merchant_authentication =
             AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+
         let validation_mode = match item.router_data.resource_common_data.test_mode {
             Some(true) | None => ValidationMode::TestMode,
             Some(false) => ValidationMode::LiveMode,
         };
+        let customer_profile_id = item
+            .router_data
+            .resource_common_data
+            .connector_customer
+            .as_ref()
+            .ok_or(ConnectorError::MissingRequiredField {
+                field_name: "connector_customer_id is missing",
+            })?
+            .clone();
+
+        // Build billing address if present - use get_optional_billing() method
+        let bill_to = item
+            .router_data
+            .resource_common_data
+            .get_optional_billing()
+            .and_then(|billing| billing.address.as_ref())
+            .map(|address| BillTo {
+                first_name: address.first_name.clone(),
+                last_name: address.last_name.clone(),
+                address: address.line1.clone(),
+                city: address.city.clone(),
+                state: address.state.clone(),
+                zip: address.zip.clone(),
+                country: address.country,
+            });
+
         // Create expiry date manually since we can't use the trait method generically
         let expiry_month = ccard.card_exp_month.peek().clone();
         let year = ccard.card_exp_year.peek().clone();
@@ -2658,40 +2744,21 @@ impl<
         };
         let expiration_date = format!("{expiry_year}-{expiry_month}");
 
-        let profile = Profile {
-            merchant_customer_id: item
-                .router_data
-                .request
-                .customer_id
-                .as_ref()
-                .map(|id| id.get_string_repr().to_string()),
-            description: Some(
-                item.router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
-            ),
-            email: item
-                .router_data
-                .request
-                .email
-                .as_ref()
-                .map(|e| e.peek().clone()),
-            payment_profiles: Some(vec![PaymentProfiles {
-                customer_type: CustomerType::Individual,
-                payment: PaymentDetails::CreditCard(CreditCardDetails {
-                    card_number: ccard.card_number.clone(),
-                    expiration_date: Secret::new(expiration_date),
-                    card_code: Some(ccard.card_cvc.clone()),
-                }),
-            }]),
-            ship_to_list: None,
+        let payment_profile = PaymentProfile {
+            bill_to,
+            payment: PaymentDetails::CreditCard(CreditCardDetails {
+                card_number: ccard.card_number.clone(),
+                expiration_date: Secret::new(expiration_date),
+                card_code: Some(ccard.card_cvc.clone()),
+            }),
         };
+
         Ok(Self {
-            create_customer_profile_request: AuthorizedotnetZeroMandateRequest {
+            create_customer_payment_profile_request: AuthorizedotnetPaymentProfileRequest {
                 merchant_authentication,
-                profile,
-                validation_mode: Some(validation_mode),
+                customer_profile_id: Secret::new(customer_profile_id),
+                payment_profile,
+                validation_mode,
             },
         })
     }
@@ -2713,7 +2780,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > TryFrom<ResponseRouterData<AuthorizedotnetCreateConnectorCustomerResponse, Self>>
+    > TryFrom<ResponseRouterData<AuthorizedotnetSetupMandateResponse, Self>>
     for RouterDataV2<
         SetupMandate,
         PaymentFlowData,
@@ -2723,7 +2790,7 @@ impl<
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        value: ResponseRouterData<AuthorizedotnetCreateConnectorCustomerResponse, Self>,
+        value: ResponseRouterData<AuthorizedotnetSetupMandateResponse, Self>,
     ) -> Result<Self, error_stack::Report<ConnectorError>> {
         let ResponseRouterData {
             response,
@@ -2731,7 +2798,27 @@ impl<
             http_code,
         } = value;
 
-        let status = if response.messages.result_code == ResultCode::Ok {
+        // Get connector customer ID from resource_common_data - we need it to build mandate reference
+        let connector_customer_id = router_data
+            .resource_common_data
+            .connector_customer
+            .as_ref()
+            .ok_or(ConnectorError::MissingRequiredField {
+                field_name: "connector_customer_id",
+            })?
+            .clone();
+
+        // Check if we have a successful response:
+        // 1. resultCode == "Ok" (normal success)
+        // 2. OR we have customer profile ID AND payment profile ID (E00039 duplicate case)
+        //    E00039 = "A duplicate customer payment profile already exists"
+        //    This is acceptable for idempotent SetupMandate - profile is available for use
+        let is_success = response.messages.result_code == ResultCode::Ok
+            || (response.customer_profile_id.is_some()
+                && (response.customer_payment_profile_id.is_some()
+                    || !response.customer_payment_profile_id_list.is_empty()));
+
+        let status = if is_success {
             AttemptStatus::Charged
         } else {
             AttemptStatus::Failure
@@ -2742,24 +2829,25 @@ impl<
         resource_common_data.status = status;
         new_router_data.resource_common_data = resource_common_data;
 
-        if let Some(profile_id) = response.customer_profile_id.clone() {
-            // Create composite mandate ID using customer profile ID and first payment profile ID
-            let connector_mandate_id = response
+        if response.customer_profile_id.is_some() {
+            // Extract payment profile ID from response
+            let payment_profile_id = response
                 .customer_payment_profile_id_list
                 .first()
-                .map(|payment_profile_id| format!("{profile_id}-{payment_profile_id}"))
-                .or(Some(profile_id.clone()));
+                .or(response.customer_payment_profile_id.as_ref())
+                .ok_or(ConnectorError::ResponseDeserializationFailed)?;
+
+            // Create composite mandate ID: {customer_profile_id}-{payment_profile_id}
+            let connector_mandate_id = format!("{connector_customer_id}-{payment_profile_id}");
 
             new_router_data.response = Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(profile_id.clone()),
+                resource_id: ResponseId::NoResponseId,
                 redirection_data: None,
                 connector_metadata: None,
-                mandate_reference: Some(Box::new(
-                    domain_types::connector_types::MandateReference {
-                        connector_mandate_id,
-                        payment_method_id: None,
-                    },
-                )),
+                mandate_reference: Some(Box::new(MandateReference {
+                    connector_mandate_id: Some(connector_mandate_id),
+                    payment_method_id: None,
+                })),
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
@@ -2773,13 +2861,13 @@ impl<
                     .message
                     .first()
                     .map(|m| m.code.clone())
-                    .unwrap_or_default(),
+                    .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
                 message: response
                     .messages
                     .message
                     .first()
                     .map(|m| m.text.clone())
-                    .unwrap_or_default(),
+                    .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
                 reason: None,
                 attempt_status: Some(AttemptStatus::Failure),
                 connector_transaction_id: None,
