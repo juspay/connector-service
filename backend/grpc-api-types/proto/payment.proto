@@ -1535,6 +1535,7 @@ message PaymentServiceRegisterRequest {
   optional SecretString email = 5; // Email address of the customer
   optional string customer_name = 6; // Name of the customer
   optional string connector_customer_id = 7; // Customer ID as recognized by the connector
+  optional string customer_id = 29; // Merchant's customer ID
   
   // Address Information
   PaymentAddress address = 8; // Billing address details for the mandate
