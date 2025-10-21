@@ -1667,6 +1667,8 @@ message PaymentServiceRepeatEverythingResponse {
 
   // Raw Request
   optional SecretString raw_connector_request = 11; // Raw request to the connector for debugging
+
+  optional ConnectorResponseData connector_response = 14; // Various data regarding the response from connector
 }
 
 // -------------------------
