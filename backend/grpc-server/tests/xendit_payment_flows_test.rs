@@ -136,7 +136,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         }),
         enrolled_for_3ds: true,
         request_incremental_authorization: false,
-        connector_customer_id: Some(CONNECTOR_CUSTOMER_ID.to_string()),
+        customer_id: Some(CONNECTOR_CUSTOMER_ID.to_string()),
         // browser_info: TODO - BrowserInfo type not available in grpc_api_types
         capture_method: Some(i32::from(capture_method)),
         // payment_method_type: Some(i32::from(PaymentMethodType::Credit)),
@@ -156,6 +156,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         access_token: None,
         capture_method: None,
         handle_response: None,
+        amount: TEST_AMOUNT,
+        currency: i32::from(Currency::Idr),
     }
 }
 

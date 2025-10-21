@@ -43,6 +43,10 @@ impl MaskedSerdeValue {
             })
             .ok()
     }
+
+    pub fn inner(&self) -> &serde_json::Value {
+        &self.inner
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -238,6 +242,8 @@ impl Event {
     }
 }
 
+#[derive(strum::Display)]
+#[strum(serialize_all = "snake_case")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FlowName {
     Authorize,
@@ -256,6 +262,7 @@ pub enum FlowName {
     CreateOrder,
     CreateSessionToken,
     CreateAccessToken,
+    CreateConnectorCustomer,
     PaymentMethodToken,
     PreAuthenticate,
     Authenticate,
@@ -283,6 +290,7 @@ impl FlowName {
             Self::PaymentMethodToken => "PaymentMethodToken",
             Self::CreateSessionToken => "CreateSessionToken",
             Self::CreateAccessToken => "CreateAccessToken",
+            Self::CreateConnectorCustomer => "CreateConnectorCustomer",
             Self::PreAuthenticate => "PreAuthenticate",
             Self::Authenticate => "Authenticate",
             Self::PostAuthenticate => "PostAuthenticate",

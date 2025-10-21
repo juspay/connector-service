@@ -7,14 +7,15 @@ use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::FloatMajorUnit};
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
-        PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
+        SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
-        ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
@@ -93,6 +94,16 @@ impl<
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAccessToken for Cashtocode<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::CreateConnectorCustomer for Cashtocode<T>
 {
 }
 
@@ -252,6 +263,9 @@ impl<
             error_message: None,
             raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
             response_headers: None,
+            minor_amount_captured: None,
+            amount_captured: None,
+            error_reason: None,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
         })
     }
@@ -712,6 +726,23 @@ impl<
     > for Cashtocode<T>
 {
 }
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Cashtocode<T>
+{
+}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -899,6 +930,23 @@ impl<
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
         PaymentMethodTokenResponse,
+    > for Cashtocode<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
     > for Cashtocode<T>
 {
 }

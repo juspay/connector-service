@@ -6,15 +6,17 @@ use common_enums::AttemptStatus;
 use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
-        PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
+        SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
@@ -215,6 +217,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAccessToken for Paytm<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::CreateConnectorCustomer for Paytm<T>
 {
 }
 
@@ -513,6 +519,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+// CreateConnectorCustomer implementation
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Paytm<T>
+{
+}
+
 // Authorize flow implementation using macros
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -733,6 +750,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
+    > for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    verification::SourceVerification<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
     > for Paytm<T>
 {
 }

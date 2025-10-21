@@ -1181,7 +1181,7 @@ impl<
                         }
                     }
                     None => {
-                        // It is not expected to get empty response from the connnector, if we get we are not updating the payment response since we don't have any info in the authorize response.
+                        // It is not expected to get empty response from the connector, if we get we are not updating the payment response since we don't have any info in the authorize response.
                         let response = Ok(PaymentsResponseData::TransactionResponse {
                             resource_id: ResponseId::NoResponseId,
                             redirection_data: None,

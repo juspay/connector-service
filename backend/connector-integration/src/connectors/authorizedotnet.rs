@@ -7,21 +7,23 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
-        PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
+        SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
-        ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, EventType, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
-        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, WebhookDetailsResponse,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,
+        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, ResponseId, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        WebhookDetailsResponse,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
@@ -36,10 +38,10 @@ use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{
-        AcceptDispute, ConnectorServiceTrait, DisputeDefend, IncomingWebhook, PaymentAccessToken,
-        PaymentAuthorizeV2, PaymentCapture, PaymentOrderCreate, PaymentSessionToken, PaymentSyncV2,
-        PaymentTokenV2, PaymentVoidV2, RefundSyncV2, RefundV2, RepeatPaymentV2, SetupMandateV2,
-        SubmitEvidenceV2, ValidationTrait,
+        self, AcceptDispute, ConnectorServiceTrait, DisputeDefend, IncomingWebhook,
+        PaymentAccessToken, PaymentAuthorizeV2, PaymentCapture, PaymentOrderCreate,
+        PaymentSessionToken, PaymentSyncV2, PaymentTokenV2, PaymentVoidV2, RefundSyncV2, RefundV2,
+        RepeatPaymentV2, SetupMandateV2, SubmitEvidenceV2, ValidationTrait,
     },
     events::connector_api_logs::ConnectorEvent,
     verification::SourceVerification,
@@ -48,12 +50,13 @@ use serde::Serialize;
 
 use self::transformers::{
     get_trans_id, AuthorizedotnetAuthorizeResponse, AuthorizedotnetCaptureRequest,
-    AuthorizedotnetCaptureResponse, AuthorizedotnetCreateSyncRequest, AuthorizedotnetPSyncResponse,
-    AuthorizedotnetPaymentsRequest, AuthorizedotnetRSyncRequest, AuthorizedotnetRSyncResponse,
-    AuthorizedotnetRefundRequest, AuthorizedotnetRefundResponse,
+    AuthorizedotnetCaptureResponse, AuthorizedotnetCreateCustomerProfileRequest,
+    AuthorizedotnetCreateCustomerProfileResponse, AuthorizedotnetCreateSyncRequest,
+    AuthorizedotnetPSyncResponse, AuthorizedotnetPaymentsRequest, AuthorizedotnetRSyncRequest,
+    AuthorizedotnetRSyncResponse, AuthorizedotnetRefundRequest, AuthorizedotnetRefundResponse,
     AuthorizedotnetRepeatPaymentRequest, AuthorizedotnetRepeatPaymentResponse,
     AuthorizedotnetVoidRequest, AuthorizedotnetVoidResponse, AuthorizedotnetWebhookEventType,
-    AuthorizedotnetWebhookObjectId, CreateCustomerProfileRequest, CreateCustomerProfileResponse,
+    AuthorizedotnetWebhookObjectId,
 };
 use super::macros;
 use crate::{types::ResponseRouterData, with_response_body};
@@ -113,8 +116,22 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
+    > connector_types::CreateConnectorCustomer for Authorizedotnet<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     > ValidationTrait for Authorizedotnet<T>
 {
+    fn should_create_connector_customer(&self) -> bool {
+        true
+    }
 }
 impl<
         T: PaymentMethodDataTypes
@@ -281,6 +298,9 @@ impl<
             error_message: None,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             response_headers: None,
+            minor_amount_captured: None,
+            amount_captured: None,
+            error_reason: None,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
         })
     }
@@ -581,10 +601,10 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
         ),
         (
-            flow: SetupMandate,
-            request_body: CreateCustomerProfileRequest<T>,
-            response_body: CreateCustomerProfileResponse,
-            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+            flow: CreateConnectorCustomer,
+            request_body: AuthorizedotnetCreateCustomerProfileRequest<T>,
+            response_body: AuthorizedotnetCreateCustomerProfileResponse,
+            router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
         )
     ],
     amount_converters: [
@@ -826,36 +846,22 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Use macro implementation for SetupMandate
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Authorizedotnet,
-    curl_request: Json(CreateCustomerProfileRequest),
-    curl_response: CreateCustomerProfileResponse,
-    flow_name: SetupMandate,
-    resource_common_data: PaymentFlowData,
-    flow_request: SetupMandateRequestData<T>,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    preprocess_response: true,
-    generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-            self.build_headers(req)
-        }
-
-        fn get_url(
-            &self,
-            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorError> {
-            Ok(self.connector_base_url_payments(req).to_string())
-        }
-    }
-);
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    > for Authorizedotnet<T>
+{
+}
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -881,6 +887,37 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<String, ConnectorError> {
+            Ok(self.connector_base_url_payments(req).to_string())
+        }
+    }
+);
+
+// Implement CreateConnectorCustomer flow
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Authorizedotnet,
+    curl_request: Json(AuthorizedotnetCreateCustomerProfileRequest),
+    curl_response: AuthorizedotnetCreateCustomerProfileResponse,
+    flow_name: CreateConnectorCustomer,
+    resource_common_data: PaymentFlowData,
+    flow_request: ConnectorCustomerData,
+    flow_response: ConnectorCustomerResponse,
+    http_method: Post,
+    preprocess_response: true, // Keeping true for Authorize.net which needs BOM handling
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
         ) -> CustomResult<String, ConnectorError> {
             Ok(self.connector_base_url_payments(req).to_string())
         }
@@ -1189,6 +1226,23 @@ impl<
             + Serialize,
     > SourceVerification<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
     for Authorizedotnet<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    SourceVerification<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Authorizedotnet<T>
 {
 }
 

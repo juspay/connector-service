@@ -71,5 +71,20 @@ pub use self::helcim::Helcim;
 pub mod placetopay;
 pub use self::placetopay::Placetopay;
 
+pub mod rapyd;
+pub use self::rapyd::Rapyd;
+
+pub mod aci;
+pub use self::aci::Aci;
+
+pub mod trustpay;
+pub use self::trustpay::Trustpay;
+
+pub mod stripe;
+pub use self::stripe::Stripe;
+
+pub mod cybersource;
+pub use self::cybersource::Cybersource;
+
 pub mod peachpayments;
 pub use self::peachpayments::Peachpayments;

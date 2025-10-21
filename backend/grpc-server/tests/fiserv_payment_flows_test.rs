@@ -195,6 +195,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         // all_keys_required: None,
         capture_method: None,
         handle_response: None,
+        amount: TEST_AMOUNT,
+        currency: i32::from(Currency::Usd),
     }
 }
 
@@ -223,6 +225,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         request_ref_id: None, // all_keys_required: None,
         browser_info: None,
         access_token: None,
+        capture_method: None,
     }
 }
 

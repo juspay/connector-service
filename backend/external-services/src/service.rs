@@ -68,6 +68,7 @@ use common_utils::{
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ErasedMaskSerialize, ExposeInterface, Maskable};
 // TokenData is now imported from hyperswitch_injector
+use common_utils::consts;
 use injector::{injector_core, HttpMethod, TokenData};
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
@@ -106,6 +107,7 @@ pub struct EventProcessingParams<'a> {
     pub request_id: &'a str,
     pub lineage_ids: &'a lineage::LineageIds<'a>,
     pub reference_id: &'a Option<String>,
+    pub shadow_mode: bool,
 }
 
 #[tracing::instrument(
@@ -171,7 +173,7 @@ where
                 let raw_response_string = strip_bom_and_convert_to_string(&body.response);
                 updated_router_data
                     .resource_common_data
-                    .set_raw_connector_response(raw_response_string);
+                    .set_raw_connector_response(raw_response_string.map(Into::into));
             }
 
             let handle_response_result =
@@ -188,19 +190,42 @@ where
             Ok(response)
         }
         common_enums::CallConnectorAction::Trigger => {
-            let connector_request = connector.build_request_v2(&router_data)?;
+            let mut connector_request = connector.build_request_v2(&router_data.clone())?;
 
             let mut updated_router_data = router_data.clone();
             updated_router_data = match &connector_request {
                 Some(request) => {
                     updated_router_data
                         .resource_common_data
-                        .set_raw_connector_request(Some(extract_raw_connector_request(request)));
+                        .set_raw_connector_request(Some(
+                            extract_raw_connector_request(request).into(),
+                        ));
                     updated_router_data
                 }
                 None => updated_router_data,
             };
+            connector_request = connector_request.map(|mut req| {
+                if event_params.shadow_mode {
+                    req.add_header(
+                        consts::X_REQUEST_ID,
+                        Maskable::Masked(Secret::new(event_params.request_id.to_string())),
+                    );
+                    req.add_header(
+                        consts::X_SOURCE_NAME,
+                        Maskable::Masked(Secret::new(consts::X_CONNECTOR_SERVICE.to_string())),
+                    );
+                    req.add_header(
+                        consts::X_FLOW_NAME,
+                        Maskable::Masked(Secret::new(event_params.flow_name.to_string())),
+                    );
 
+                    req.add_header(
+                        consts::X_CONNECTOR_NAME,
+                        Maskable::Masked(Secret::new(event_params.connector_name.to_string())),
+                    );
+                }
+                req
+            });
             let headers = connector_request
                 .as_ref()
                 .map(|connector_request| connector_request.headers.clone())
@@ -532,7 +557,9 @@ where
                                             strip_bom_and_convert_to_string(&body.response);
                                         updated_router_data
                                             .resource_common_data
-                                            .set_raw_connector_response(raw_response_string);
+                                            .set_raw_connector_response(
+                                                raw_response_string.map(Into::into),
+                                            );
 
                                         // Set response headers if available
                                         updated_router_data
@@ -569,7 +596,9 @@ where
                                             strip_bom_and_convert_to_string(&body.response);
                                         updated_router_data
                                             .resource_common_data
-                                            .set_raw_connector_response(raw_response_string);
+                                            .set_raw_connector_response(
+                                                raw_response_string.map(Into::into),
+                                            );
                                         updated_router_data
                                             .resource_common_data
                                             .set_connector_response_headers(body.headers.clone());
@@ -762,6 +791,17 @@ fn get_base_client(
     .clone())
 }
 
+fn load_custom_ca_certificate_from_content(
+    mut client_builder: reqwest::ClientBuilder,
+    cert_content: &str,
+) -> CustomResult<reqwest::ClientBuilder, ApiClientError> {
+    let certificate = reqwest::Certificate::from_pem(cert_content.as_bytes())
+        .change_context(ApiClientError::InvalidProxyConfiguration)
+        .attach_printable("Failed to parse certificate PEM from provided content")?;
+    client_builder = client_builder.add_root_certificate(certificate);
+    Ok(client_builder)
+}
+
 fn get_client_builder(
     proxy_config: &Proxy,
     should_bypass_proxy: bool,
@@ -776,6 +816,16 @@ fn get_client_builder(
 
     if should_bypass_proxy {
         return Ok(client_builder);
+    }
+
+    // Attach MITM certificate if enabled
+    if proxy_config.mitm_proxy_enabled {
+        if let Some(cert_content) = &proxy_config.mitm_ca_cert {
+            if !cert_content.trim().is_empty() {
+                client_builder =
+                    load_custom_ca_certificate_from_content(client_builder, cert_content.trim())?;
+            }
+        }
     }
 
     // Proxy all HTTPS traffic through the configured HTTPS proxy

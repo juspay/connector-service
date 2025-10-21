@@ -7,18 +7,19 @@ use common_utils::{
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken,
-        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund, RepeatPayment,
-        SetupMandate, Void,
+        Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
+        CreateSessionToken, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund,
+        RepeatPayment, SetupMandate, Void,
     },
     connector_types::{
-        AccessTokenRequestData, AccessTokenResponseData, ConnectorResponseHeaders,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, ConnectorResponseHeaders, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
+        RawConnectorRequestResponse, RefundFlowData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData,
     },
     errors::{ApiError, ApplicationErrorResponse},
@@ -68,6 +69,7 @@ struct EventParams<'a> {
     request_id: &'a str,
     lineage_ids: &'a lineage::LineageIds<'a>,
     reference_id: &'a Option<String>,
+    shadow_mode: bool,
 }
 
 /// Helper function for converting CardDetails to TokenData with structured types
@@ -223,6 +225,7 @@ impl Payments {
                 request_id,
                 lineage_ids,
                 reference_id,
+                shadow_mode: metadata_payload.shadow_mode,
             };
 
             let order_id = self
@@ -252,6 +255,7 @@ impl Payments {
                 request_id,
                 lineage_ids,
                 reference_id,
+                shadow_mode: metadata_payload.shadow_mode,
             };
 
             let payment_session_data = self
@@ -301,6 +305,7 @@ impl Payments {
                         request_id,
                         lineage_ids,
                         reference_id,
+                        shadow_mode: metadata_payload.shadow_mode,
                     };
 
                     let access_token_data = self
@@ -330,6 +335,49 @@ impl Payments {
             payment_flow_data
         };
 
+        // Extract connector customer ID (if provided by Hyperswitch)
+        let cached_connector_customer_id = payload.connector_customer_id.clone();
+
+        // Check if connector supports customer creation
+        let should_create_connector_customer =
+            connector_data.connector.should_create_connector_customer();
+
+        // Conditional customer creation - ONLY if connector needs it AND no existing customer ID
+        let payment_flow_data = if should_create_connector_customer {
+            match cached_connector_customer_id {
+                Some(_customer_id) => payment_flow_data,
+                None => {
+                    let event_params = EventParams {
+                        _connector_name: &connector.to_string(),
+                        _service_name: service_name,
+                        request_id,
+                        lineage_ids,
+                        reference_id,
+                        shadow_mode: metadata_payload.shadow_mode,
+                    };
+
+                    let connector_customer_response = self
+                        .handle_connector_customer(
+                            connector_data.clone(),
+                            &payment_flow_data,
+                            connector_auth_details.clone(),
+                            &payload,
+                            &connector.to_string(),
+                            service_name,
+                            event_params,
+                        )
+                        .await?;
+
+                    payment_flow_data.set_connector_customer_id(Some(
+                        connector_customer_response.connector_customer_id,
+                    ))
+                }
+            }
+        } else {
+            // Connector doesn't support customer creation
+            payment_flow_data
+        };
+
         let should_do_payment_method_token =
             connector_data.connector.should_do_payment_method_token();
 
@@ -340,6 +388,7 @@ impl Payments {
                 request_id,
                 lineage_ids,
                 reference_id,
+                shadow_mode: metadata_payload.shadow_mode,
             };
             let payment_method_token_data = self
                 .handle_payment_session_token(
@@ -397,6 +446,7 @@ impl Payments {
             request_id,
             lineage_ids,
             reference_id,
+            shadow_mode: metadata_payload.shadow_mode,
         };
 
         // Execute connector processing
@@ -554,6 +604,7 @@ impl Payments {
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            shadow_mode: event_params.shadow_mode,
         };
 
         // Execute connector processing
@@ -656,6 +707,7 @@ impl Payments {
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            shadow_mode: event_params.shadow_mode,
         };
 
         // Execute connector processing
@@ -749,6 +801,7 @@ impl Payments {
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            shadow_mode: event_params.shadow_mode,
         };
 
         // Execute connector processing
@@ -864,6 +917,7 @@ impl Payments {
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            shadow_mode: event_params.shadow_mode,
         };
 
         let response = external_services::service::execute_connector_processing_step(
@@ -902,6 +956,111 @@ impl Payments {
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(format!("Access Token creation failed: {message}")),
                 Some("ACCESS_TOKEN_CREATION_ERROR".to_string()),
+                Some(status_code.into()),
+            )),
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn handle_connector_customer<
+        T: PaymentMethodDataTypes
+            + Default
+            + Eq
+            + Debug
+            + Send
+            + serde::Serialize
+            + serde::de::DeserializeOwned
+            + Clone
+            + Sync
+            + domain_types::types::CardConversionHelper<T>
+            + 'static,
+    >(
+        &self,
+        connector_data: ConnectorData<T>,
+        payment_flow_data: &PaymentFlowData,
+        connector_auth_details: ConnectorAuthType,
+        payload: &PaymentServiceAuthorizeRequest,
+        connector_name: &str,
+        service_name: &str,
+        event_params: EventParams<'_>,
+    ) -> Result<ConnectorCustomerResponse, PaymentAuthorizationError> {
+        // Get connector integration for CreateConnectorCustomer flow
+        let connector_integration: BoxedConnectorIntegrationV2<
+            '_,
+            CreateConnectorCustomer,
+            PaymentFlowData,
+            ConnectorCustomerData,
+            ConnectorCustomerResponse,
+        > = connector_data.connector.get_connector_integration_v2();
+
+        // Create connector customer request data using ForeignTryFrom
+        let connector_customer_request_data =
+            ConnectorCustomerData::foreign_try_from(payload.clone()).map_err(|err| {
+                tracing::error!("Failed to process connector customer data: {:?}", err);
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some("Failed to process connector customer data".to_string()),
+                    Some("CONNECTOR_CUSTOMER_DATA_ERROR".to_string()),
+                    None,
+                )
+            })?;
+
+        // Create router data for connector customer flow
+        let connector_customer_router_data = RouterDataV2::<
+            CreateConnectorCustomer,
+            PaymentFlowData,
+            ConnectorCustomerData,
+            ConnectorCustomerResponse,
+        > {
+            flow: std::marker::PhantomData,
+            resource_common_data: payment_flow_data.clone(),
+            connector_auth_type: connector_auth_details,
+            request: connector_customer_request_data,
+            response: Err(ErrorResponse::default()),
+        };
+
+        // Execute connector processing
+        let external_event_params = EventProcessingParams {
+            connector_name,
+            service_name,
+            flow_name: FlowName::CreateConnectorCustomer,
+            event_config: &self.config.events,
+            request_id: event_params.request_id,
+            lineage_ids: event_params.lineage_ids,
+            reference_id: event_params.reference_id,
+            shadow_mode: event_params.shadow_mode,
+        };
+
+        let response = external_services::service::execute_connector_processing_step(
+            &self.config.proxy,
+            connector_integration,
+            connector_customer_router_data,
+            None,
+            external_event_params,
+            None,
+            common_enums::CallConnectorAction::Trigger,
+        )
+        .await
+        .switch()
+        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
+            PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some(format!("Connector customer creation failed: {e}")),
+                Some("CONNECTOR_CUSTOMER_CREATION_ERROR".to_string()),
+                Some(500),
+            )
+        })?;
+
+        match response.response {
+            Ok(connector_customer_data) => Ok(connector_customer_data),
+            Err(ErrorResponse {
+                message,
+                status_code,
+                ..
+            }) => Err(PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some(format!("Connector customer creation failed: {message}")),
+                Some("CONNECTOR_CUSTOMER_CREATION_ERROR".to_string()),
                 Some(status_code.into()),
             )),
         }
@@ -999,6 +1158,7 @@ impl Payments {
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            shadow_mode: event_params.shadow_mode,
         };
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
@@ -1374,6 +1534,7 @@ impl PaymentService for Payments {
                                     request_id,
                                     lineage_ids,
                                     reference_id,
+                                    shadow_mode: metadata_payload.shadow_mode,
                                 };
 
                                 let access_token_data = self
@@ -1433,6 +1594,7 @@ impl PaymentService for Payments {
                         request_id: &metadata_payload.request_id,
                         lineage_ids: &metadata_payload.lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        shadow_mode: metadata_payload.shadow_mode,
                     };
 
                     let consume_or_trigger_flow = match payload.handle_response {
@@ -1863,6 +2025,7 @@ impl PaymentService for Payments {
                             request_id: &request_id,
                             lineage_ids: &lineage_ids,
                             reference_id: &metadata_payload.reference_id,
+                            shadow_mode: metadata_payload.shadow_mode,
                         };
 
                         Some(
@@ -1908,16 +2071,19 @@ impl PaymentService for Payments {
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        shadow_mode: metadata_payload.shadow_mode,
                     };
 
-                    let response = external_services::service::execute_connector_processing_step(
-                        &self.config.proxy,
-                        connector_integration,
-                        router_data,
-                        None,
-                        event_params,
-                        None, // token_data - None for non-proxy payments
-                        common_enums::CallConnectorAction::Trigger,
+                    let response = Box::pin(
+                        external_services::service::execute_connector_processing_step(
+                            &self.config.proxy,
+                            connector_integration,
+                            router_data,
+                            None,
+                            event_params,
+                            None, // token_data - None for non-proxy payments
+                            common_enums::CallConnectorAction::Trigger,
+                        ),
                     )
                     .await
                     .switch()
@@ -2026,6 +2192,7 @@ impl PaymentService for Payments {
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        shadow_mode: metadata_payload.shadow_mode,
                     };
 
                     let response = external_services::service::execute_connector_processing_step(
