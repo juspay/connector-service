@@ -3984,13 +3984,19 @@ pub fn generate_payment_capture_response(
                 network_txn_id: _,
                 connector_response_reference_id,
                 incremental_authorization_allowed: _,
-                mandate_reference: _,
+                mandate_reference,
                 status_code,
             } => {
                 let status = router_data_v2.resource_common_data.status;
                 let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
                 let grpc_resource_id =
                     grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?;
+
+                let mandate_reference_grpc =
+                    mandate_reference.map(|m| grpc_api_types::payments::MandateReference {
+                        mandate_id: m.connector_mandate_id,
+                        payment_method_id: m.payment_method_id,
+                    });
 
                 Ok(PaymentServiceCaptureResponse {
                     transaction_id: Some(grpc_resource_id),
@@ -4008,6 +4014,12 @@ pub fn generate_payment_capture_response(
                         .get_connector_response_headers_as_map(),
                     state,
                     raw_connector_request,
+                    mandate_reference: mandate_reference_grpc,
+                    captured_amount: router_data_v2.resource_common_data.amount_captured,
+                    minor_captured_amount: router_data_v2
+                        .resource_common_data
+                        .minor_amount_captured
+                        .map(|amount_captured| amount_captured.get_amount_as_i64()),
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -4044,6 +4056,9 @@ pub fn generate_payment_capture_response(
                     .get_connector_response_headers_as_map(),
                 state,
                 raw_connector_request,
+                mandate_reference: None,
+                captured_amount: None,
+                minor_captured_amount: None,
             })
         }
     }

@@ -1394,6 +1394,13 @@ message PaymentServiceCaptureResponse {
 
   // Raw Request
   optional SecretString raw_connector_request = 9; // Raw request to the connector for debugging
+
+  // Payment Details
+  optional int64 captured_amount = 10; // Amount that has been captured
+  optional int64 minor_captured_amount = 11; // Captured amount in minor currency units
+
+  // Mandate Details
+  MandateReference mandate_reference = 12; // Reference to the created mandate
 }
 
 // Request message for processing a refund.
