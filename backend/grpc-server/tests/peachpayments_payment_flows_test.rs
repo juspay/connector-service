@@ -174,6 +174,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         // all_keys_required: None,
         capture_method: None,
         handle_response: None,
+        amount: TEST_AMOUNT,
+        currency: i32::from(Currency::Eur),
     }
 }
 
@@ -204,6 +206,8 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         all_keys_required: None,
         browser_info: None,
         access_token: None,
+        amount: None,
+        currency: Some(i32::from(Currency::Zar)),
     }
 }
 
