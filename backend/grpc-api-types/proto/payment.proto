@@ -1401,6 +1401,9 @@ message PaymentServiceCaptureResponse {
 
   // Mandate Details
   MandateReference mandate_reference = 12; // Reference to the created mandate
+
+  // Authorization Details
+  optional bool incremental_authorization_allowed = 13; // Indicates if incremental authorization is allowed
 }
 
 // Request message for processing a refund.

@@ -1372,6 +1372,7 @@ pub struct WebhookDetailsResponse {
     pub amount_captured: Option<i64>,
     // minor amount for amount framework
     pub minor_amount_captured: Option<MinorUnit>,
+    pub network_txn_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]
