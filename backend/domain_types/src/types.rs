@@ -5205,9 +5205,13 @@ pub fn generate_repeat_payment_response(
                         .get_connector_response_headers_as_map(),
                     state,
                     raw_connector_request,
-                    connector_response: router_data_v2.resource_common_data.connector_response.and_then(|data| {
-                        grpc_api_types::payments::ConnectorResponseData::foreign_try_from(data).ok()
-                    }),
+                    connector_response: router_data_v2
+                        .resource_common_data
+                        .connector_response
+                        .and_then(|data| {
+                            grpc_api_types::payments::ConnectorResponseData::foreign_try_from(data)
+                                .ok()
+                        }),
                 },
             ),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {

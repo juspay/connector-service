@@ -1599,12 +1599,14 @@ fn convert_to_additional_payment_method_connector_response(
                 "description": description
             });
 
-            Some(domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Card {
-                authentication_data: None,
-                payment_checks: Some(payment_checks),
-                card_network: None,
-                domestic_network: None,
-            })
+            Some(
+                domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Card {
+                    authentication_data: None,
+                    payment_checks: Some(payment_checks),
+                    card_network: None,
+                    domestic_network: None,
+                },
+            )
         }
     }
 }
@@ -1836,17 +1838,18 @@ impl<
         } = value;
 
         // Use our helper function to convert the response
-        let (status, response_result, connector_response_data) = convert_to_payments_response_data_or_error(
-            &response.0,
-            http_code,
-            Operation::Authorize,
-            router_data.request.capture_method,
-            router_data
-                .resource_common_data
-                .raw_connector_response
-                .clone(),
-        )
-        .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
+        let (status, response_result, connector_response_data) =
+            convert_to_payments_response_data_or_error(
+                &response.0,
+                http_code,
+                Operation::Authorize,
+                router_data.request.capture_method,
+                router_data
+                    .resource_common_data
+                    .raw_connector_response
+                    .clone(),
+            )
+            .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
 
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
@@ -1878,17 +1881,18 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetCaptureResponse, Self>>
         } = value;
 
         // Use our helper function to convert the response
-        let (status, response_result, connector_response_data) = convert_to_payments_response_data_or_error(
-            &response.0,
-            http_code,
-            Operation::Capture,
-            None,
-            router_data
-                .resource_common_data
-                .raw_connector_response
-                .clone(),
-        )
-        .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
+        let (status, response_result, connector_response_data) =
+            convert_to_payments_response_data_or_error(
+                &response.0,
+                http_code,
+                Operation::Capture,
+                None,
+                router_data
+                    .resource_common_data
+                    .raw_connector_response
+                    .clone(),
+            )
+            .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
 
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
@@ -1919,17 +1923,18 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidResponse, Self>>
             http_code,
         } = value;
         // Use our helper function to convert the response
-        let (status, response_result, connector_response_data) = convert_to_payments_response_data_or_error(
-            &response.0,
-            http_code,
-            Operation::Void,
-            None,
-            router_data
-                .resource_common_data
-                .raw_connector_response
-                .clone(),
-        )
-        .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
+        let (status, response_result, connector_response_data) =
+            convert_to_payments_response_data_or_error(
+                &response.0,
+                http_code,
+                Operation::Void,
+                None,
+                router_data
+                    .resource_common_data
+                    .raw_connector_response
+                    .clone(),
+            )
+            .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
 
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
@@ -2463,8 +2468,7 @@ pub fn convert_to_payments_response_data_or_error(
     operation: Operation,
     capture_method: Option<enums::CaptureMethod>,
     raw_connector_response: Option<Secret<String>>,
-) -> PaymentConversionResult
-{
+) -> PaymentConversionResult {
     let status = get_hs_status(response, http_status_code, operation, capture_method);
 
     let is_successful_status = matches!(

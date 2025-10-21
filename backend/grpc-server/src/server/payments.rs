@@ -1102,9 +1102,7 @@ impl Payments {
         let connector_customer_request_data =
             ConnectorCustomerData::foreign_try_from(payload.clone()).map_err(|err| {
                 tracing::error!("Failed to process connector customer data: {:?}", err);
-                tonic::Status::internal(format!(
-                    "Failed to process connector customer data: {err}"
-                ))
+                tonic::Status::internal(format!("Failed to process connector customer data: {err}"))
             })?;
 
         // Create router data for connector customer flow
