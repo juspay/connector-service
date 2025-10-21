@@ -321,7 +321,8 @@ impl TryFrom<&Option<pii::SecretSerdeValue>> for FiservSessionObject {
             .and_then(|secret_value| match secret_value.peek() {
                 serde_json::Value::String(s) => Ok(s.clone()),
                 _ => Err(report!(ConnectorError::InvalidConnectorConfig {
-                    config: "FiservSessionObject in merchant_account_metadata was not a JSON string",
+                    config:
+                        "FiservSessionObject in merchant_account_metadata was not a JSON string",
                 })),
             })?;
 
@@ -440,7 +441,8 @@ impl<
             serde_json::Value::String(s) => s,
             _ => {
                 return Err(report!(ConnectorError::InvalidConnectorConfig {
-                    config: "merchant_account_metadata was not a JSON string for FiservSessionObject",
+                    config:
+                        "merchant_account_metadata was not a JSON string for FiservSessionObject",
                 }))
             }
         };

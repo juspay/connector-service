@@ -126,14 +126,16 @@ impl TryFrom<&pii::SecretSerdeValue> for BluecodeMetadataObject {
             serde_json::Value::String(s) => s.clone(),
             _ => {
                 return Err(report!(errors::ConnectorError::InvalidConnectorConfig {
-                    config: "BluecodeMetadataObject in merchant_account_metadata was not a JSON string",
+                    config:
+                        "BluecodeMetadataObject in merchant_account_metadata was not a JSON string",
                 }));
             }
         };
 
         serde_json::from_str(&secret_value_str).change_context(
             errors::ConnectorError::InvalidConnectorConfig {
-                config: "Deserializing BluecodeMetadataObject from merchant_account_metadata string",
+                config:
+                    "Deserializing BluecodeMetadataObject from merchant_account_metadata string",
             },
         )
     }

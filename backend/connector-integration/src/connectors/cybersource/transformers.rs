@@ -939,7 +939,10 @@ impl<
             .to_string();
 
         let connector_merchant_config = CybersourceConnectorMetadataObject::try_from(
-            &item.router_data.resource_common_data.merchant_account_metadata,
+            &item
+                .router_data
+                .resource_common_data
+                .merchant_account_metadata,
         )?;
 
         let (action_list, action_token_types, authorization_options) =

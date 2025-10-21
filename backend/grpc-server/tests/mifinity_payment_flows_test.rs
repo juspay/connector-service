@@ -147,7 +147,10 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         capture_method: Some(i32::from(capture_method)),
         metadata: {
             let mut metadata = std::collections::HashMap::new();
-            metadata.insert("merchant_account_metadata".to_string(), merchant_account_metadata);
+            metadata.insert(
+                "merchant_account_metadata".to_string(),
+                merchant_account_metadata,
+            );
             metadata
         },
         // payment_method_type: Some(i32::from(PaymentMethodType::Credit)),
