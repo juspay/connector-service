@@ -535,7 +535,7 @@ fn create_regular_transaction_request<
     };
 
     let order = Order {
-        invoice_number: invoice_number,
+        invoice_number,
         description: order_description,
     };
 
@@ -1549,6 +1549,8 @@ pub struct AuthorizedotnetTransactionResponse {
     secure_acceptance: Option<SecureAcceptance>,
     #[serde(default)]
     profile: Option<TransactionProfileInfo>,
+    #[serde(default, rename = "avsResultCode")]
+    avs_result_code: Option<String>,
 }
 
 // Create flow-specific response types
@@ -1563,6 +1565,49 @@ pub struct AuthorizedotnetVoidResponse(pub AuthorizedotnetPaymentsResponse);
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct AuthorizedotnetRepeatPaymentResponse(pub AuthorizedotnetPaymentsResponse);
+
+// Helper function to get AVS response description based on the code
+fn get_avs_response_description(code: &str) -> Option<&'static str> {
+    match code {
+        "A" => Some("The street address matched, but the postal code did not."),
+        "B" => Some("No address information was provided."),
+        "E" => Some("The AVS check returned an error."),
+        "G" => Some("The card was issued by a bank outside the U.S. and does not support AVS."),
+        "N" => Some("Neither the street address nor postal code matched."),
+        "P" => Some("AVS is not applicable for this transaction."),
+        "R" => Some("Retry — AVS was unavailable or timed out."),
+        "S" => Some("AVS is not supported by card issuer."),
+        "U" => Some("Address information is unavailable."),
+        "W" => Some("The US ZIP+4 code matches, but the street address does not."),
+        "X" => Some("Both the street address and the US ZIP+4 code matched."),
+        "Y" => Some("The street address and postal code matched."),
+        "Z" => Some("The postal code matched, but the street address did not."),
+        _ => None,
+    }
+}
+
+// Convert transaction response to additional payment method connector response
+fn convert_to_additional_payment_method_connector_response(
+    transaction_response: &AuthorizedotnetTransactionResponse,
+) -> Option<domain_types::router_data::AdditionalPaymentMethodConnectorResponse> {
+    match transaction_response.avs_result_code.as_deref() {
+        Some("P") | None => None,
+        Some(code) => {
+            let description = get_avs_response_description(code);
+            let payment_checks = serde_json::json!({
+                "avs_result_code": code,
+                "description": description
+            });
+
+            Some(domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Card {
+                authentication_data: None,
+                payment_checks: Some(payment_checks),
+                card_network: None,
+                domestic_network: None,
+            })
+        }
+    }
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -1791,7 +1836,7 @@ impl<
         } = value;
 
         // Use our helper function to convert the response
-        let (status, response_result) = convert_to_payments_response_data_or_error(
+        let (status, response_result, connector_response_data) = convert_to_payments_response_data_or_error(
             &response.0,
             http_code,
             Operation::Authorize,
@@ -1806,9 +1851,10 @@ impl<
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
 
-        // Update the status in resource_common_data
+        // Update the status and connector_response in resource_common_data
         let mut resource_common_data = new_router_data.resource_common_data.clone();
         resource_common_data.status = status;
+        resource_common_data.connector_response = connector_response_data;
         new_router_data.resource_common_data = resource_common_data;
 
         // Set the response
@@ -1832,7 +1878,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetCaptureResponse, Self>>
         } = value;
 
         // Use our helper function to convert the response
-        let (status, response_result) = convert_to_payments_response_data_or_error(
+        let (status, response_result, connector_response_data) = convert_to_payments_response_data_or_error(
             &response.0,
             http_code,
             Operation::Capture,
@@ -1847,9 +1893,10 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetCaptureResponse, Self>>
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
 
-        // Update the status in resource_common_data
+        // Update the status and connector_response in resource_common_data
         let mut resource_common_data = new_router_data.resource_common_data.clone();
         resource_common_data.status = status;
+        resource_common_data.connector_response = connector_response_data;
         new_router_data.resource_common_data = resource_common_data;
 
         // Set the response
@@ -1872,7 +1919,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidResponse, Self>>
             http_code,
         } = value;
         // Use our helper function to convert the response
-        let (status, response_result) = convert_to_payments_response_data_or_error(
+        let (status, response_result, connector_response_data) = convert_to_payments_response_data_or_error(
             &response.0,
             http_code,
             Operation::Void,
@@ -1887,9 +1934,10 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidResponse, Self>>
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
 
-        // Update the status in resource_common_data
+        // Update the status and connector_response in resource_common_data
         let mut resource_common_data = new_router_data.resource_common_data.clone();
         resource_common_data.status = status;
+        resource_common_data.connector_response = connector_response_data;
         new_router_data.resource_common_data = resource_common_data;
 
         // Set the response
@@ -1919,6 +1967,15 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetRepeatPaymentResponse, Self>>
             Operation::Authorize,
             Some(enums::CaptureMethod::Automatic),
         );
+
+        // Extract connector response data
+        let connector_response_data = match &response.0.transaction_response {
+            Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res)) => {
+                convert_to_additional_payment_method_connector_response(trans_res)
+                    .map(domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data)
+            }
+            _ => None,
+        };
 
         let response_result = match &response.0.transaction_response {
             Some(TransactionResponse::AuthorizedotnetTransactionResponse(transaction_response)) => {
@@ -1991,9 +2048,10 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetRepeatPaymentResponse, Self>>
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
 
-        // Update the status in resource_common_data
+        // Update the status and connector_response in resource_common_data
         let mut resource_common_data = new_router_data.resource_common_data.clone();
         resource_common_data.status = status;
+        resource_common_data.connector_response = connector_response_data;
         new_router_data.resource_common_data = resource_common_data;
 
         // Set the response
@@ -2390,13 +2448,22 @@ fn build_connector_metadata(
     None
 }
 
+type PaymentConversionResult = Result<
+    (
+        AttemptStatus,
+        Result<PaymentsResponseData, ErrorResponse>,
+        Option<domain_types::router_data::ConnectorResponseData>,
+    ),
+    HsInterfacesConnectorError,
+>;
+
 pub fn convert_to_payments_response_data_or_error(
     response: &AuthorizedotnetPaymentsResponse,
     http_status_code: u16,
     operation: Operation,
     capture_method: Option<enums::CaptureMethod>,
     raw_connector_response: Option<Secret<String>>,
-) -> Result<(AttemptStatus, Result<PaymentsResponseData, ErrorResponse>), HsInterfacesConnectorError>
+) -> PaymentConversionResult
 {
     let status = get_hs_status(response, http_status_code, operation, capture_method);
 
@@ -2408,6 +2475,15 @@ pub fn convert_to_payments_response_data_or_error(
             | AttemptStatus::Charged
             | AttemptStatus::Voided
     );
+
+    // Extract connector response data from transaction response if available
+    let connector_response_data = match &response.transaction_response {
+        Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res)) => {
+            convert_to_additional_payment_method_connector_response(trans_res)
+                .map(domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data)
+        }
+        _ => None,
+    };
 
     let response_payload_result = match &response.transaction_response {
         Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res))
@@ -2496,7 +2572,7 @@ pub fn convert_to_payments_response_data_or_error(
         }
     };
 
-    Ok((status, response_payload_result))
+    Ok((status, response_payload_result, connector_response_data))
 }
 
 // Transaction details for sync response used in PSync implementation
