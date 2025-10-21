@@ -2588,6 +2588,10 @@ pub fn generate_payment_void_post_capture_response(
                 expires_in_seconds: token_data.expires_in,
                 token_type: token_data.token_type.clone(),
             }),
+            connector_customer_id: router_data_v2
+                .resource_common_data
+                .connector_customer
+                .clone(),
         });
 
     match transaction_response {
