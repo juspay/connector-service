@@ -1615,10 +1615,10 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                if !value.account_metadata.is_empty() {
+                if !value.merchant_account_metadata.is_empty() {
                     Some(Secret::new(serde_json::Value::Object(
                         value
-                            .account_metadata
+                            .merchant_account_metadata
                             .into_iter()
                             .map(|(k, v)| (k, serde_json::Value::String(v)))
                             .collect(),
@@ -1691,10 +1691,10 @@ impl
             description: None,
             return_url: None,
             connector_meta_data: {
-                if !value.account_metadata.is_empty() {
+                if !value.merchant_account_metadata.is_empty() {
                     Some(Secret::new(serde_json::Value::Object(
                         value
-                            .account_metadata
+                            .merchant_account_metadata
                             .into_iter()
                             .map(|(k, v)| (k, serde_json::Value::String(v)))
                             .collect(),
@@ -4122,10 +4122,10 @@ impl
             description: value.metadata.get("description").cloned(),
             return_url: None,
             connector_meta_data: {
-                if !value.account_metadata.is_empty() {
+                if !value.merchant_account_metadata.is_empty() {
                     Some(Secret::new(serde_json::Value::Object(
                         value
-                            .account_metadata
+                            .merchant_account_metadata
                             .into_iter()
                             .map(|(k, v)| (k, serde_json::Value::String(v)))
                             .collect(),

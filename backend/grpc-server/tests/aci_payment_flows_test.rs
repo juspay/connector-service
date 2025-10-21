@@ -377,7 +377,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         browser_info: None,
         test_mode: None,
         payment_method_type: None,
-        account_metadata: HashMap::new(),
+        merchant_account_metadata: HashMap::new(),
     }
 }
 
