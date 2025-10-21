@@ -1617,10 +1617,11 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             connector_meta_data: {
                 if !value.account_metadata.is_empty() {
                     Some(Secret::new(serde_json::Value::Object(
-                        value.account_metadata
+                        value
+                            .account_metadata
                             .into_iter()
                             .map(|(k, v)| (k, serde_json::Value::String(v)))
-                            .collect()
+                            .collect(),
                     )))
                 } else {
                     None
@@ -1692,10 +1693,11 @@ impl
             connector_meta_data: {
                 if !value.account_metadata.is_empty() {
                     Some(Secret::new(serde_json::Value::Object(
-                        value.account_metadata
+                        value
+                            .account_metadata
                             .into_iter()
                             .map(|(k, v)| (k, serde_json::Value::String(v)))
-                            .collect()
+                            .collect(),
                     )))
                 } else {
                     None
@@ -4122,10 +4124,11 @@ impl
             connector_meta_data: {
                 if !value.account_metadata.is_empty() {
                     Some(Secret::new(serde_json::Value::Object(
-                        value.account_metadata
+                        value
+                            .account_metadata
                             .into_iter()
                             .map(|(k, v)| (k, serde_json::Value::String(v)))
-                            .collect()
+                            .collect(),
                     )))
                 } else {
                     None
