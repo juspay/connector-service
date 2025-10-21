@@ -2492,7 +2492,7 @@ pub fn generate_payment_void_response(
                 network_txn_id: _,
                 connector_response_reference_id,
                 incremental_authorization_allowed: _,
-                mandate_reference: _,
+                mandate_reference,
                 status_code,
             } => {
                 let status = router_data_v2.resource_common_data.status;
@@ -2500,6 +2500,12 @@ pub fn generate_payment_void_response(
 
                 let grpc_resource_id =
                     grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?;
+
+                let mandate_reference_grpc =
+                    mandate_reference.map(|m| grpc_api_types::payments::MandateReference {
+                        mandate_id: m.connector_mandate_id,
+                        payment_method_id: m.payment_method_id,
+                    });
 
                 Ok(PaymentServiceVoidResponse {
                     transaction_id: Some(grpc_resource_id),
@@ -2517,6 +2523,7 @@ pub fn generate_payment_void_response(
                         .get_connector_response_headers_as_map(),
                     raw_connector_request,
                     state,
+                    mandate_reference: mandate_reference_grpc,
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -2553,6 +2560,7 @@ pub fn generate_payment_void_response(
                     .get_connector_response_headers_as_map(),
                 state: None,
                 raw_connector_request,
+                mandate_reference: None,
             })
         }
     }

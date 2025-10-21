@@ -1346,6 +1346,9 @@ message PaymentServiceVoidResponse {
 
   // Raw Request
   optional SecretString raw_connector_request = 9; // Raw request to the connector for debugging
+
+  // Mandate Details
+  optional MandateReference mandate_reference = 10; // Reference to the mandate, if applicable
 }
 
 // Request message for capturing a payment.
