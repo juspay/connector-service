@@ -1604,7 +1604,7 @@ impl connector_types::ConnectorValidation for Razorpay<DefaultPCIHolder> {
         data: &PaymentsSyncData,
         _is_three_ds: bool,
         _status: AttemptStatus,
-        _connector_meta_data: Option<SecretSerdeValue>,
+        _merchant_account_metadata: Option<SecretSerdeValue>,
     ) -> CustomResult<(), errors::ConnectorError> {
         if data.encoded_data.is_some() {
             return Ok(());

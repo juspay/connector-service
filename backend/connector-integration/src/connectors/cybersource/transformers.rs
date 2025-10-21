@@ -939,7 +939,7 @@ impl<
             .to_string();
 
         let connector_merchant_config = CybersourceConnectorMetadataObject::try_from(
-            &item.router_data.resource_common_data.connector_meta_data,
+            &item.router_data.resource_common_data.merchant_account_metadata,
         )?;
 
         let (action_list, action_token_types, authorization_options) =
@@ -2576,7 +2576,7 @@ impl<
         let merchant_defined_information = value
             .router_data
             .resource_common_data
-            .connector_meta_data
+            .merchant_account_metadata
             .clone()
             .map(|secret_value: Secret<serde_json::Value>| {
                 convert_metadata_to_merchant_defined_info(secret_value.expose())

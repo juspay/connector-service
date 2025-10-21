@@ -75,7 +75,7 @@ where
     T: serde::de::DeserializeOwned,
 {
     let connector_meta_secret =
-        connector_meta.ok_or_else(missing_field_err("connector_meta_data"))?;
+        connector_meta.ok_or_else(missing_field_err("merchant_account_metadata"))?;
 
     let json_value = connector_meta_secret.expose();
 

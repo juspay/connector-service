@@ -306,7 +306,7 @@ pub struct FiservSessionObject {
 }
 
 // The TryFrom<&Option<pii::SecretSerdeValue>> for FiservSessionObject might not be needed
-// if FiservSessionObject is always parsed from the string within connector_meta_data directly
+// if FiservSessionObject is always parsed from the string within merchant_account_metadata directly
 // in the TryFrom implementations for FiservPaymentsRequest, FiservCaptureRequest, etc.
 impl TryFrom<&Option<pii::SecretSerdeValue>> for FiservSessionObject {
     type Error = error_stack::Report<ConnectorError>;
@@ -315,19 +315,19 @@ impl TryFrom<&Option<pii::SecretSerdeValue>> for FiservSessionObject {
             .as_ref()
             .ok_or_else(|| {
                 report!(ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data (FiservSessionObject)"
+                    field_name: "merchant_account_metadata (FiservSessionObject)"
                 })
             })
             .and_then(|secret_value| match secret_value.peek() {
                 serde_json::Value::String(s) => Ok(s.clone()),
                 _ => Err(report!(ConnectorError::InvalidConnectorConfig {
-                    config: "FiservSessionObject in connector_meta_data was not a JSON string",
+                    config: "FiservSessionObject in merchant_account_metadata was not a JSON string",
                 })),
             })?;
 
         serde_json::from_str(&secret_value_str).change_context(
             ConnectorError::InvalidConnectorConfig {
-                config: "Deserializing FiservSessionObject from connector_meta_data string",
+                config: "Deserializing FiservSessionObject from merchant_account_metadata string",
             },
         )
     }
@@ -427,11 +427,11 @@ impl<
 
         let session_meta_value = router_data
             .resource_common_data
-            .connector_meta_data
+            .merchant_account_metadata
             .as_ref()
             .ok_or_else(|| {
                 report!(ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data for FiservSessionObject"
+                    field_name: "merchant_account_metadata for FiservSessionObject"
                 })
             })?
             .peek();
@@ -440,14 +440,14 @@ impl<
             serde_json::Value::String(s) => s,
             _ => {
                 return Err(report!(ConnectorError::InvalidConnectorConfig {
-                    config: "connector_meta_data was not a JSON string for FiservSessionObject",
+                    config: "merchant_account_metadata was not a JSON string for FiservSessionObject",
                 }))
             }
         };
 
         let session: FiservSessionObject = serde_json::from_str(session_str).change_context(
             ConnectorError::InvalidConnectorConfig {
-                config: "Deserializing FiservSessionObject from connector_meta_data string",
+                config: "Deserializing FiservSessionObject from merchant_account_metadata string",
             },
         )?;
 
@@ -509,19 +509,19 @@ impl<
         let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_auth_type)?;
 
         // Prioritize connector_metadata from PaymentsCaptureData if available,
-        // otherwise fall back to resource_common_data.connector_meta_data.
+        // otherwise fall back to resource_common_data.merchant_account_metadata.
 
         // Try to get session string from different sources - converting both paths to String for type consistency
         let session_str = if let Some(meta) = router_data
             .resource_common_data
-            .connector_meta_data
+            .merchant_account_metadata
             .as_ref()
         {
-            // Use connector_meta_data from resource_common_data (which is Secret<Value>)
+            // Use merchant_account_metadata from resource_common_data (which is Secret<Value>)
             match meta.peek() {
                 serde_json::Value::String(s) => s.to_string(), // Convert &str to String
                 _ => return Err(report!(ConnectorError::InvalidConnectorConfig {
-                    config: "connector_meta_data was not a JSON string for FiservSessionObject in Capture",
+                    config: "merchant_account_metadata was not a JSON string for FiservSessionObject in Capture",
                 })),
             }
         } else if let Some(connector_meta) = router_data.request.connector_metadata.as_ref() {
@@ -536,7 +536,7 @@ impl<
             // No metadata available
             return Err(report!(ConnectorError::MissingRequiredField {
                 field_name:
-                    "connector_metadata or connector_meta_data for FiservSessionObject in Capture"
+                    "connector_metadata or merchant_account_metadata for FiservSessionObject in Capture"
             }));
         };
 
@@ -656,11 +656,11 @@ impl<
         // Get session information
         let session_meta_value = router_data
             .resource_common_data
-            .connector_meta_data
+            .merchant_account_metadata
             .as_ref()
             .ok_or_else(|| {
                 report!(ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data for FiservSessionObject in Void"
+                    field_name: "merchant_account_metadata for FiservSessionObject in Void"
                 })
             })?
             .peek();
@@ -670,14 +670,14 @@ impl<
             _ => {
                 return Err(report!(ConnectorError::InvalidConnectorConfig {
                     config:
-                        "connector_meta_data was not a JSON string for FiservSessionObject in Void",
+                        "merchant_account_metadata was not a JSON string for FiservSessionObject in Void",
                 }))
             }
         };
 
         let session: FiservSessionObject = serde_json::from_str(session_str).change_context(
             ConnectorError::InvalidConnectorConfig {
-                config: "Deserializing FiservSessionObject from connector_meta_data string in Void",
+                config: "Deserializing FiservSessionObject from merchant_account_metadata string in Void",
             },
         )?;
 
@@ -725,7 +725,7 @@ impl<
         let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_auth_type)?;
 
         // Try to get session information - use only connector_metadata from request since
-        // RefundFlowData doesn't have connector_meta_data field in resource_common_data
+        // RefundFlowData doesn't have merchant_account_metadata field in resource_common_data
         let session_str = if let Some(connector_meta) =
             router_data.request.connector_metadata.as_ref()
         {
@@ -741,7 +741,7 @@ impl<
             // No metadata available
             return Err(report!(ConnectorError::MissingRequiredField {
                 field_name:
-                    "connector_metadata or connector_meta_data for FiservSessionObject in Refund"
+                    "connector_metadata or merchant_account_metadata for FiservSessionObject in Refund"
             }));
         };
 

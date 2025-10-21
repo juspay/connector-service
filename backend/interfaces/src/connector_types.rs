@@ -416,7 +416,7 @@ pub trait ConnectorValidation: ConnectorCommon + ConnectorSpecifications {
         data: &PaymentsSyncData,
         _is_three_ds: bool,
         _status: AttemptStatus,
-        _connector_meta_data: Option<SecretSerdeValue>,
+        _merchant_account_metadata: Option<SecretSerdeValue>,
     ) -> CustomResult<(), domain_types::errors::ConnectorError> {
         data.connector_transaction_id
             .get_connector_transaction_id()

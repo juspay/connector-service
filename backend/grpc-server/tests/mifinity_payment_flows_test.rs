@@ -101,7 +101,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
     });
 
     // Create connector metadata JSON string
-    let connector_meta_data = format!(
+    let merchant_account_metadata = format!(
         "{{\"brand_id\":\"{TEST_BRAND_ID}\",\"destination_account_number\":\"{TEST_DESTINATION_ACCOUNT_NUMBER}\"}}"
     );
 
@@ -147,7 +147,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         capture_method: Some(i32::from(capture_method)),
         metadata: {
             let mut metadata = std::collections::HashMap::new();
-            metadata.insert("connector_meta_data".to_string(), connector_meta_data);
+            metadata.insert("merchant_account_metadata".to_string(), merchant_account_metadata);
             metadata
         },
         // payment_method_type: Some(i32::from(PaymentMethodType::Credit)),
