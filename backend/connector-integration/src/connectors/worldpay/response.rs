@@ -1,5 +1,5 @@
-use error_stack::ResultExt;
 use domain_types::errors;
+use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -282,18 +282,21 @@ where
         .and_then(|link| link.self_link.href.rsplit_once('/').map(|(_, h)| h))
         .or_else(|| {
             // Fallback to variant-specific logic for DDC and 3DS challenges
-            response.other_fields.as_ref().and_then(|other_fields| match other_fields {
-                WorldpayPaymentResponseFields::DDCResponse(res) => {
-                    res.actions.supply_ddc_data.href.split('/').nth_back(1)
-                }
-                WorldpayPaymentResponseFields::ThreeDsChallenged(res) => res
-                    .actions
-                    .complete_three_ds_challenge
-                    .href
-                    .split('/')
-                    .nth_back(1),
-                _ => None,
-            })
+            response
+                .other_fields
+                .as_ref()
+                .and_then(|other_fields| match other_fields {
+                    WorldpayPaymentResponseFields::DDCResponse(res) => {
+                        res.actions.supply_ddc_data.href.split('/').nth_back(1)
+                    }
+                    WorldpayPaymentResponseFields::ThreeDsChallenged(res) => res
+                        .actions
+                        .complete_three_ds_challenge
+                        .href
+                        .split('/')
+                        .nth_back(1),
+                    _ => None,
+                })
         })
         .map(|href| {
             urlencoding::decode(href)

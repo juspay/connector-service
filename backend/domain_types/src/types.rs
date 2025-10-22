@@ -5594,13 +5594,14 @@ impl<
         // Create redirect response from metadata if present
         // This is used to pass connector-specific data (e.g., collectionReference for Worldpay)
         let redirect_response = if !value.metadata.is_empty() {
-            let params_string = serde_urlencoded::to_string(&value.metadata)
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+            let params_string = serde_urlencoded::to_string(&value.metadata).change_context(
+                ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_METADATA".to_owned(),
                     error_identifier: 400,
                     error_message: "Failed to serialize metadata".to_owned(),
                     error_object: None,
-                }))?;
+                }),
+            )?;
             Some(ContinueRedirectionResponse {
                 params: Some(Secret::new(params_string)),
                 payload: None,
@@ -5805,13 +5806,14 @@ impl<
         // Priority: metadata first, then authentication_data for backward compatibility
         let redirect_response = if !value.metadata.is_empty() {
             // Use metadata for connector-specific data (e.g., collectionReference for Worldpay)
-            let params_string = serde_urlencoded::to_string(&value.metadata)
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+            let params_string = serde_urlencoded::to_string(&value.metadata).change_context(
+                ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_METADATA".to_owned(),
                     error_identifier: 400,
                     error_message: "Failed to serialize metadata".to_owned(),
                     error_object: None,
-                }))?;
+                }),
+            )?;
             Some(ContinueRedirectionResponse {
                 params: Some(Secret::new(params_string)),
                 payload: None,
@@ -5928,18 +5930,27 @@ impl
             description: None,
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                value.metadata.get("connector_meta_data").map(|json_string| {
-                    serde_json::from_str::<serde_json::Value>(json_string)
-                        .map(Secret::new)
-                        .map_err(|e| {
-                            error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
-                                error_identifier: 400,
-                                error_message: format!("Failed to parse connector_meta_data: {}", e),
-                                error_object: None,
-                            }))
-                        })
-                }).transpose()?
+                value
+                    .metadata
+                    .get("connector_meta_data")
+                    .map(|json_string| {
+                        serde_json::from_str::<serde_json::Value>(json_string)
+                            .map(Secret::new)
+                            .map_err(|e| {
+                                error_stack::Report::new(ApplicationErrorResponse::BadRequest(
+                                    ApiError {
+                                        sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
+                                        error_identifier: 400,
+                                        error_message: format!(
+                                            "Failed to parse connector_meta_data: {}",
+                                            e
+                                        ),
+                                        error_object: None,
+                                    },
+                                ))
+                            })
+                    })
+                    .transpose()?
             },
             amount_captured: None,
             minor_amount_captured: None,
@@ -6014,18 +6025,27 @@ impl
             description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                value.metadata.get("connector_meta_data").map(|json_string| {
-                    serde_json::from_str::<serde_json::Value>(json_string)
-                        .map(Secret::new)
-                        .map_err(|e| {
-                            error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
-                                error_identifier: 400,
-                                error_message: format!("Failed to parse connector_meta_data: {}", e),
-                                error_object: None,
-                            }))
-                        })
-                }).transpose()?
+                value
+                    .metadata
+                    .get("connector_meta_data")
+                    .map(|json_string| {
+                        serde_json::from_str::<serde_json::Value>(json_string)
+                            .map(Secret::new)
+                            .map_err(|e| {
+                                error_stack::Report::new(ApplicationErrorResponse::BadRequest(
+                                    ApiError {
+                                        sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
+                                        error_identifier: 400,
+                                        error_message: format!(
+                                            "Failed to parse connector_meta_data: {}",
+                                            e
+                                        ),
+                                        error_object: None,
+                                    },
+                                ))
+                            })
+                    })
+                    .transpose()?
             },
             amount_captured: None,
             minor_amount_captured: None,
@@ -6100,18 +6120,27 @@ impl
             description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                value.metadata.get("connector_meta_data").map(|json_string| {
-                    serde_json::from_str::<serde_json::Value>(json_string)
-                        .map(Secret::new)
-                        .map_err(|e| {
-                            error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
-                                error_identifier: 400,
-                                error_message: format!("Failed to parse connector_meta_data: {}", e),
-                                error_object: None,
-                            }))
-                        })
-                }).transpose()?
+                value
+                    .metadata
+                    .get("connector_meta_data")
+                    .map(|json_string| {
+                        serde_json::from_str::<serde_json::Value>(json_string)
+                            .map(Secret::new)
+                            .map_err(|e| {
+                                error_stack::Report::new(ApplicationErrorResponse::BadRequest(
+                                    ApiError {
+                                        sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
+                                        error_identifier: 400,
+                                        error_message: format!(
+                                            "Failed to parse connector_meta_data: {}",
+                                            e
+                                        ),
+                                        error_object: None,
+                                    },
+                                ))
+                            })
+                    })
+                    .transpose()?
             },
             amount_captured: None,
             minor_amount_captured: None,

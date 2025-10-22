@@ -382,7 +382,6 @@ pub(super) const THREE_DS_MODE: &str = "always";
 pub(super) const THREE_DS_TYPE: &str = "integrated";
 pub(super) const THREE_DS_CHALLENGE_PREFERENCE: &str = "challengeMandated";
 
-
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorldpayAuthenticateRequest {
@@ -396,4 +395,3 @@ pub type WorldpayPostAuthenticateRequest = WorldpayAuthenticateRequest;
 
 // RepeatPayment uses the same request structure as Authorize (MIT vs CIT)
 pub type WorldpayRepeatPaymentRequest<T> = WorldpayAuthorizeRequest<T>;
-

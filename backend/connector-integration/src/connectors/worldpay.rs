@@ -1,25 +1,32 @@
-pub mod transformers;
 pub mod requests;
 pub mod response;
+pub mod transformers;
 
-use common_utils::{
-    errors::CustomResult,
-    ext_traits::BytesExt,
-    };
+use self::requests::{
+    WorldpayAuthorizeRequest, WorldpayCaptureRequest, WorldpayPostAuthenticateRequest,
+    WorldpayPreAuthenticateRequest, WorldpayRefundRequest, WorldpayRepeatPaymentRequest,
+};
+use self::response::{
+    WorldpayAuthorizeResponse, WorldpayCaptureResponse, WorldpayErrorResponse,
+    WorldpayPostAuthenticateResponse, WorldpayPreAuthenticateResponse, WorldpayRefundResponse,
+    WorldpayRefundSyncResponse, WorldpayRepeatPaymentResponse, WorldpaySyncResponse,
+    WorldpayVoidResponse,
+};
+use common_utils::{errors::CustomResult, ext_traits::BytesExt};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute,
-        PSync, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, CreateSessionToken,
-        PreAuthenticate, PostAuthenticate,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
+        SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData,
-        PaymentsPreAuthenticateData, PaymentsPostAuthenticateData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SetupMandateRequestData, SubmitEvidenceData, SessionTokenRequestData, SessionTokenResponseData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -28,22 +35,14 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
-use serde::Serialize;
-use std::fmt::Debug;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
+use serde::Serialize;
+use std::fmt::Debug;
 use transformers::{self as worldpay};
-use self::requests::{WorldpayAuthorizeRequest, WorldpayCaptureRequest, WorldpayRefundRequest, WorldpayPreAuthenticateRequest, WorldpayPostAuthenticateRequest, WorldpayRepeatPaymentRequest};
-use self::response::{
-    WorldpayErrorResponse,
-    WorldpayAuthorizeResponse, WorldpaySyncResponse,
-    WorldpayCaptureResponse, WorldpayVoidResponse, WorldpayRefundResponse,
-    WorldpayRefundSyncResponse, WorldpayPreAuthenticateResponse, WorldpayPostAuthenticateResponse,
-    WorldpayRepeatPaymentResponse
-};
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
@@ -243,8 +242,6 @@ macros::create_all_prerequisites!(
     }
 );
 
-
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Worldpay<T>
 {
@@ -267,7 +264,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError>
+    {
         let auth = worldpay::WorldpayAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
         Ok(vec![(
