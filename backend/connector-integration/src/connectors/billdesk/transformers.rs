@@ -185,7 +185,7 @@ impl<
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         let ip_address = item.router_data.request.get_ip_address_as_optional()
-            .map(|ip| ip.expose())
+            .and_then(|ip| Some(ip.expose()))
             .unwrap_or_else(|| "127.0.0.1".to_string());
 
         let user_agent = item.router_data.request.browser_info
