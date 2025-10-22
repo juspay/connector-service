@@ -504,17 +504,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn try_from(
         item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
+        let auth = TpslAuth::try_from(&item.connector_auth_type)?;
         let merchant_code = auth.merchant_code
             .ok_or(errors::ConnectorError::FailedToObtainAuthType)?
             .expose();
 
-        let transaction_id = item.router_data.request.connector_transaction_id
+        let transaction_id = item.request.connector_transaction_id
             .get_connector_transaction_id()
             .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
 
-        let amount = item.amount.get_amount_as_string();
-        let currency = item.router_data.request.currency.to_string();
+        let amount = item.request.minor_amount.to_string();
+        let currency = item.request.currency.to_string();
         let date_time = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
         Ok(Self {
