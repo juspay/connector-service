@@ -4048,7 +4048,7 @@ impl<
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_payment_amount.to_owned(),
+                item.router_data.request.minor_refund_amount.to_owned(),
                 item.router_data.request.currency,
             )
             .change_context(ConnectorError::AmountConversionFailed)?;

@@ -146,6 +146,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
+                    merchant_account_metadata: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -281,6 +282,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
+                    merchant_account_metadata: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
