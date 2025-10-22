@@ -3347,24 +3347,8 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
     fn foreign_try_from(
         value: PaymentServiceVoidRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        // Handle optional amount and currency fields from proto
-        let amount = value.amount.map(common_utils::types::MinorUnit::new);
-        let currency = value
-            .currency
-            .map(|c| {
-                grpc_api_types::payments::Currency::try_from(c)
-                    .map_err(|_| ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_CURRENCY".to_string(),
-                        error_identifier: 400,
-                        error_message: "Invalid currency value".to_string(),
-                        error_object: None,
-                    }))
-                    .and_then(|proto_currency| {
-                        common_enums::Currency::foreign_try_from(proto_currency)
-                            .map_err(|e| e.current_context().clone())
-                    })
-            })
-            .transpose()?;
+        let amount = Some(common_utils::types::MinorUnit::new(value.amount()));
+        let currency = Some(common_enums::Currency::foreign_try_from(value.currency())?);
         Ok(Self {
             browser_info: value
                 .browser_info
