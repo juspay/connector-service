@@ -981,3 +981,6 @@ fn generate_checksum(auth_type: &transformers::BilldeskAuth) -> CustomResult<Str
     // This typically involves concatenating specific fields and hashing with the secret key
     Ok(format!("checksum_{}", auth_type.merchant_id.peek()))
 }
+
+#[cfg(test)]
+mod test;
