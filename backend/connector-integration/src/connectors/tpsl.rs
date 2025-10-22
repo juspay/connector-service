@@ -317,7 +317,7 @@ macros::create_all_prerequisites!(
             response_body: TpslPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
-        (flow: Void, request_body: TpslVoidRequest, response_body: TpslVoidResponse, router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>),
+        // (flow: Void, request_body: TpslVoidRequest, response_body: TpslVoidResponse, router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>),
         (flow: Capture, request_body: TpslCaptureRequest, response_body: TpslCaptureResponse, router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>),
         (flow: Refund, request_body: TpslRefundRequest, response_body: TpslRefundResponse, router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>),
         (flow: RSync, request_body: TpslRefundSyncRequest, response_body: TpslRefundSyncResponse, router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>),
