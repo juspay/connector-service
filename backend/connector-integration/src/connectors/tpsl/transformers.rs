@@ -471,7 +471,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 request_type: "SALE".to_string(),
                 token: None,
                 security_token: None,
-                device_identifier: item.router_data.request.get_ip_address_as_optional()
+                device_identifier: item.request.get_ip_address_as_optional()
                     .map(|ip| ip.expose())
                     .unwrap_or_else(|| "127.0.0.1".to_string()),
                 sms_sending: "Y".to_string(),
@@ -531,7 +531,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 date_time,
                 request_type: "VERIFY".to_string(),
                 token: "SYNC_TOKEN".to_string(),
-                device_identifier: item.router_data.request.get_ip_address_as_optional()
+                device_identifier: item.request.get_ip_address_as_optional()
                     .map(|ip| ip.expose())
                     .unwrap_or_else(|| "127.0.0.1".to_string()),
                 r#type: Some("VERIFY".to_string()),
