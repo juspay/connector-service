@@ -550,8 +550,8 @@ impl<
         "application/json"
     }
 
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.billdesk.base_url.as_ref()
+    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
+        "https://www.billdesk.com/pgidsk/PGIDirectRequest"
     }
 
     fn get_auth_header(
