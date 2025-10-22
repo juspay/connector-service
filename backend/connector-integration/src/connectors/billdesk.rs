@@ -427,9 +427,6 @@ macros::macro_connector_implementation!(
                 Some(common_enums::PaymentMethodType::UpiCollect) => {
                     Ok(format!("{}?reqid=BDRDF011", base_url))
                 }
-                Some(common_enums::PaymentMethodType::UpiCollect) => {
-                    Ok(format!("{}?reqid=BDRDF011", base_url))
-                }
                 _ => Ok(format!("{}?reqid=BDRDF002", base_url)),
             }
         }
