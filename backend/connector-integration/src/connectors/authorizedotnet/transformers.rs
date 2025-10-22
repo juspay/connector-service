@@ -471,22 +471,13 @@ impl<
         // Always create regular transaction request (mandate logic moved to RepeatPayment flow)
         let transaction_request = create_regular_transaction_request(&item, currency)?;
 
-        let ref_id = if item
-            .router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .len()
-            <= MAX_ID_LENGTH
-        {
-            Some(
-                item.router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
-            )
-        } else {
-            None
-        };
+        let ref_id = Some(
+            item.router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+        )
+        .filter(|id| id.len() <= MAX_ID_LENGTH);
         let create_transaction_request = CreateTransactionRequest {
             merchant_authentication,
             ref_id,
@@ -815,22 +806,13 @@ impl<
         )?;
 
         // ref_id should be connector_request_reference_id with MAX_ID_LENGTH check (same as Authorize flow)
-        let ref_id = if item
-            .router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .len()
-            <= MAX_ID_LENGTH
-        {
-            Some(
-                item.router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
-            )
-        } else {
-            None
-        };
+        let ref_id = Some(
+            item.router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+        )
+        .filter(|id| id.len() <= MAX_ID_LENGTH);
 
         let customer_id_string = validate_customer_id_length(
             item.router_data
