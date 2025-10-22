@@ -704,7 +704,7 @@ macro_rules! create_all_prerequisites {
                     flow: $flow_name: ident,
                     $(request_body: $flow_request: ident $(<$generic_param: ident>)?,)?
                     response_body: $flow_response: ident,
-                    router_data: $router_data_type: tt,
+                    router_data: $router_data_type: ty,
                 )
             ),*
         ],
@@ -780,7 +780,7 @@ macro_rules! create_all_prerequisites_impl_templating {
         connector: $connector: ident,
         request_body: $flow_request: ident $(<$generic_param: ident>)?,
         response_body: $flow_response: ident,
-        router_data: $router_data_type: tt,
+        router_data: $router_data_type: ty,
         generic_type: $generic_type: tt,
     ) => {
         crate::connectors::macros::impl_templating_mixed!(
@@ -796,7 +796,7 @@ macro_rules! create_all_prerequisites_impl_templating {
     (
         connector: $connector: ident,
         response_body: $flow_response: ident,
-        router_data: $router_data_type: tt,
+        router_data: $router_data_type: ty,
         generic_type: $generic_type: tt,
     ) => {
         crate::connectors::macros::impl_templating!(
