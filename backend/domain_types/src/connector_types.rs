@@ -812,6 +812,7 @@ pub struct PaymentVoidData {
     pub browser_info: Option<BrowserInformation>,
     pub amount: Option<MinorUnit>,
     pub currency: Option<Currency>,
+    pub metadata: Option<serde_json::Value>,
 }
 
 impl PaymentVoidData {
