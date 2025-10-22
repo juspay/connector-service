@@ -4,6 +4,31 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## [2025-01-XX] - Billdesk Connector Addition
+
+### Added
+- New Billdesk connector implementation
+- Payment methods supported: UPI (UPI Intent/Collect)
+- Transaction flows: Authorize, PSync
+- Full webhook support for payment status updates
+
+### Files Created/Modified
+- `src/connectors/billdesk.rs` - Main connector implementation
+- `src/connectors/billdesk/transformers.rs` - Request/response transformers
+- `src/connectors/billdesk/constants.rs` - API constants and endpoints
+- `src/connectors.rs` - Added connector registration
+- `src/types.rs` - Added connector to ConnectorEnum
+
+### Technical Details
+- Migrated from Hyperswitch/Euler Haskell implementation
+- Uses UCS v2 macro framework for trait implementations
+- Implements proper error handling and status mapping
+- Full type safety with guard rails
+- Supports both UAT and production environments
+- Dynamic request/response handling with proper amount conversion
+
+- - -
+
 ## 2025.10.17.0
 
 ### Features
