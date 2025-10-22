@@ -288,7 +288,7 @@ impl<
         );
 
         match item.router_data.request.payment_method_type {
-            Some(common_enums::PaymentMethodType::Upi) => Ok(Self {
+            Some(common_enums::PaymentMethodType::UpiCollect) => Ok(Self {
                 msg,
                 useragent: Some(user_agent),
                 ipaddress: Some(ip_address),
