@@ -198,8 +198,8 @@ impl<
                 // Create UPI payment message
                 let msg = create_upi_payment_message(
                     &item.router_data,
-                    &customer_id,
-                    &amount,
+                    &customer_id.get_string_repr(),
+                    &amount.get_amount_as_string(),
                     &item.router_data.connector_auth_type,
                 )?;
                 
