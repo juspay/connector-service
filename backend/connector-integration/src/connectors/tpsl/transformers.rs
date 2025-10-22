@@ -553,11 +553,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn try_from(
         item: (TpslPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, u16),
     ) -> Result<Self, Self::Error> {
-        let ResponseRouterData {
-            response,
-            router_data,
-            http_code,
-        } = item;
+        let (response, router_data, http_code) = item;
 
         let (status, response_data) = match response.response {
             TpslResponseData::AuthS2sResponse(auth_response) => {
