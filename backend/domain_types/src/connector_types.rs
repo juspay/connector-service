@@ -319,6 +319,7 @@ pub struct PaymentFlowData {
     pub vault_headers: Option<std::collections::HashMap<String, Secret<String>>>,
     /// This field is used to store various data regarding the response from connector
     pub connector_response: Option<ConnectorResponseData>,
+    pub recurring_mandate_payment_data: Option<RecurringMandatePaymentData>,
 }
 
 impl PaymentFlowData {
@@ -1996,13 +1997,15 @@ pub struct RepeatPaymentData {
     pub minor_amount: MinorUnit,
     pub currency: Currency,
     pub merchant_order_reference_id: Option<String>,
-    pub metadata: Option<HashMap<String, String>>,
+    pub metadata: Option<serde_json::Value>,
     pub webhook_url: Option<String>,
     pub integrity_object: Option<RepeatPaymentIntegrityObject>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub browser_info: Option<BrowserInformation>,
     pub email: Option<common_utils::pii::Email>,
     pub payment_method_type: Option<common_enums::PaymentMethodType>,
+    pub off_session: Option<bool>,
+    pub split_payments: Option<SplitPaymentsRequest>,
 }
 
 impl RepeatPaymentData {
@@ -2512,4 +2515,12 @@ pub struct DirectChargeRefund {
 pub struct DestinationChargeRefund {
     pub revert_platform_fee: bool,
     pub revert_transfer: bool,
+}
+
+#[derive(Debug, Default, Clone, Serialize)]
+pub struct RecurringMandatePaymentData {
+    pub payment_method_type: Option<common_enums::PaymentMethodType>, //required for making recurring payment using saved payment method through stripe
+    pub original_payment_authorized_amount: Option<i64>,
+    pub original_payment_authorized_currency: Option<common_enums::Currency>,
+    pub mandate_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }

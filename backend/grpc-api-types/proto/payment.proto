@@ -1636,8 +1636,10 @@ message PaymentServiceRepeatEverythingRequest {
   // Browser Information
   optional BrowserInformation browser_info = 13; // Browser information, if relevant
 
-  optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
-  optional PaymentMethodType payment_method_type = 32; // Indicates the sub type of payment method. Eg: 'google_pay' & 'apple_pay'
+  optional bool test_mode = 14; // A boolean value to indicate if the connector is in Test mode
+  optional PaymentMethodType payment_method_type = 15; // Indicates the sub type of payment method. Eg: 'google_pay' & 'apple_pay'
+
+  optional bool off_session = 16; // Indicates if off-session process
 }
 
 // Response message for repeat payment operation.

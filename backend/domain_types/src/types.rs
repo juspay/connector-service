@@ -1637,6 +1637,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             connector_response_headers: None,
             connector_response: None,
             vault_headers,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -1701,6 +1702,7 @@ impl
             connector_response_headers: None,
             connector_response: None,
             vault_headers: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -1771,6 +1773,7 @@ impl
             connector_response_headers: None,
             vault_headers: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -1826,6 +1829,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             connector_response_headers: None,
             vault_headers: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -2343,6 +2347,7 @@ impl
             connector_response_headers: None,
             vault_headers: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -3875,6 +3880,7 @@ impl
             connector_response_headers: None,
             vault_headers: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -3931,6 +3937,7 @@ impl
             connector_response_headers: None,
             vault_headers: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -4130,6 +4137,7 @@ impl
             connector_response_headers: None,
             vault_headers: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -4154,22 +4162,17 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             }
             None => None,
         };
-        let customer_acceptance = value.customer_acceptance.clone().ok_or_else(|| {
-            error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_CUSTOMER_ACCEPTANCE".to_owned(),
-                error_identifier: 400,
-                error_message: "Customer acceptance is missing".to_owned(),
-                error_object: None,
-            }))
-        })?;
+        let customer_acceptance = value.customer_acceptance.as_ref().map(|customer_acceptance| {
+            mandates::CustomerAcceptance::foreign_try_from(
+                customer_acceptance.clone(),
+            )
+        }).transpose()?;
 
         let setup_future_usage = value.setup_future_usage();
 
         let setup_mandate_details = MandateData {
             update_mandate_id: None,
-            customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
-                customer_acceptance.clone(),
-            )?),
+            customer_acceptance: customer_acceptance.clone(),
             mandate_type: None,
         };
 
@@ -4188,14 +4191,12 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             amount: Some(0),
             confirm: true,
             statement_descriptor_suffix: None,
-            customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
-                customer_acceptance.clone(),
-            )?),
+            customer_acceptance,
             mandate_id: None,
             setup_future_usage: Some(common_enums::FutureUsage::foreign_try_from(
                 setup_future_usage,
             )?),
-            off_session: Some(false),
+            off_session: None,
             setup_mandate_details: Some(setup_mandate_details),
             router_return_url: value.return_url.clone(),
             webhook_url: value.webhook_url,
@@ -4986,7 +4987,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
             <Option<PaymentMethodType>>::foreign_try_from(value.payment_method_type())?;
         let capture_method = value.capture_method();
         let merchant_order_reference_id = value.merchant_order_reference_id;
-        let metadata = value.metadata;
         let webhook_url = value.webhook_url;
 
         // Extract mandate reference
@@ -5039,10 +5039,16 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
             minor_amount: common_utils::types::MinorUnit::new(minor_amount),
             currency: common_enums::Currency::foreign_try_from(currency)?,
             merchant_order_reference_id,
-            metadata: if metadata.is_empty() {
+            metadata: if value.metadata.is_empty() {
                 None
             } else {
-                Some(metadata)
+                Some(serde_json::Value::Object(
+                    value
+                        .metadata
+                        .into_iter()
+                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .collect(),
+                ))
             },
             webhook_url,
             integrity_object: None,
@@ -5055,6 +5061,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             payment_method_type,
+            off_session: value.off_session,
+            split_payments: None,
         })
     }
 }
@@ -5109,6 +5117,7 @@ impl
             connector_response_headers: None,
             vault_headers: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -5816,6 +5825,7 @@ impl
             vault_headers,
             raw_connector_request: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -5893,6 +5903,7 @@ impl
             raw_connector_request: None,
             minor_amount_capturable: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -5970,6 +5981,7 @@ impl
             raw_connector_request: None,
             minor_amount_capturable: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }

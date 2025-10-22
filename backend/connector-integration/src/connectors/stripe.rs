@@ -44,9 +44,10 @@ use interfaces::{
 use serde::Serialize;
 use transformers::{
     self as stripe, CancelRequest, CaptureRequest, CustomerRequest, PaymentIntentRequest,
-    PaymentSyncResponse, PaymentsAuthorizeResponse, PaymentsCaptureResponse, PaymentsVoidResponse,
-    RefundResponse, RefundResponse as RefundSyncResponse, SetupIntentRequest, SetupIntentResponse,
-    StripeCustomerResponse, StripeRefundRequest,
+    PaymentIntentRequest as RepeatPaymentRequest, PaymentSyncResponse, PaymentsAuthorizeResponse,
+    PaymentsAuthorizeResponse as RepeatPaymentResponse, PaymentsCaptureResponse,
+    PaymentsVoidResponse, RefundResponse, RefundResponse as RefundSyncResponse, SetupIntentRequest,
+    SetupIntentResponse, StripeCustomerResponse, StripeRefundRequest,
 };
 
 use super::macros;
@@ -168,6 +169,12 @@ macros::create_all_prerequisites!(
             request_body: PaymentIntentRequest<T>,
             response_body: PaymentsAuthorizeResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: RepeatPaymentRequest<T>,
+            response_body: RepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
         ),
         (
             flow: PSync,
@@ -380,6 +387,79 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+                "{}{}",
+                self.connector_base_url_payments(req),
+                "v1/payment_intents"
+            ))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Stripe,
+    curl_request: FormUrlEncoded(PaymentIntentRequest),
+    curl_response: PaymentsAuthorizeResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let mut header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type()
+                    .to_string()
+                    .into(),
+            )];
+
+            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            header.append(&mut api_key);
+
+            let stripe_split_payment_metadata = stripe::StripeSplitPaymentRequest::try_from(req)?;
+
+            // if the request has split payment object, then append the transfer account id in headers in charge_type is Direct
+            if let Some(domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(
+                stripe_split_payment,
+            )) = &req.request.split_payments
+            {
+                if stripe_split_payment.charge_type
+                    ==common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct)
+                {
+                    let mut customer_account_header = vec![(
+                        headers::STRIPE_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
+                        stripe_split_payment
+                            .transfer_account_id
+                            .clone()
+                            .into_masked(),
+                    )];
+                    header.append(&mut customer_account_header);
+                }
+            }
+            // if request doesn't have transfer_account_id, but stripe_split_payment_metadata has it, append it
+            else if let Some(transfer_account_id) =
+                stripe_split_payment_metadata.transfer_account_id.clone()
+            {
+                let mut customer_account_header = vec![(
+                    headers::STRIPE_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
+                    transfer_account_id.into_masked(),
+                )];
+                header.append(&mut customer_account_header);
+            }
+            Ok(header)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}{}",
@@ -924,11 +1004,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Stripe<T>
-{
-}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         CreateSessionToken,
