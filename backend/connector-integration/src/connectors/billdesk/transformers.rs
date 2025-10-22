@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use common_utils::{
     errors::CustomResult,
     request::Method,
-    types::StringMinorUnit,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface};
 use domain_types::{
