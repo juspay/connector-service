@@ -1141,7 +1141,9 @@ impl<
                             error_object: None,
                         }))
                     })
-                    .and_then(|proto_usage| common_enums::FutureUsage::foreign_try_from(proto_usage))
+                    .and_then(|proto_usage| {
+                        common_enums::FutureUsage::foreign_try_from(proto_usage)
+                    })
             })
             .transpose()?;
 
