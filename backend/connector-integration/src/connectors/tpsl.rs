@@ -310,6 +310,12 @@ macros::create_all_prerequisites!(
             flow: PSync,
             response_body: TpslPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
+            flow: Void,
+            request_body: TpslVoidRequest,
+            response_body: TpslVoidResponse,
+            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         )
     ],
     amount_converters: [
