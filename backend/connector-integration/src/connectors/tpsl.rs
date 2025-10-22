@@ -318,7 +318,6 @@ macros::create_all_prerequisites!(
             response_body: TpslPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
-        // Stub types for unsupported flows
         (flow: Void, request_body: TpslVoidRequest, response_body: TpslVoidResponse, router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>),
         (flow: Capture, request_body: TpslCaptureRequest, response_body: TpslCaptureResponse, router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>),
         (flow: Refund, request_body: TpslRefundRequest, response_body: TpslRefundResponse, router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>),
