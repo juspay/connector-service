@@ -5195,7 +5195,7 @@ pub fn generate_repeat_payment_response(
                     mandate_reference: mandate_reference.map(|m| {
                         grpc_api_types::payments::MandateReference {
                             mandate_id: m.connector_mandate_id,
-                            payment_method_id: None,
+                            payment_method_id: m.payment_method_id,
                         }
                     }),
                     status_code: status_code as u32,
