@@ -967,7 +967,7 @@ impl<F, T>
                 .href
                 .split('/')
                 .nth_back(1)
-                .and_then(|link_data| {
+                .map(|link_data| {
                     let mut metadata = serde_json::Map::new();
                     metadata.insert(
                         METADATA_LINK_DATA.to_string(),
@@ -977,7 +977,7 @@ impl<F, T>
                         METADATA_3DS_STAGE.to_string(),
                         serde_json::Value::String(STAGE_DDC.to_string()),
                     );
-                    Some(serde_json::Value::Object(metadata))
+                    serde_json::Value::Object(metadata)
                 }),
             Some(WorldpayPaymentResponseFields::ThreeDsChallenged(res)) => res
                 .actions
@@ -985,7 +985,7 @@ impl<F, T>
                 .href
                 .split('/')
                 .nth_back(1)
-                .and_then(|link_data| {
+                .map(|link_data| {
                     let mut metadata = serde_json::Map::new();
                     metadata.insert(
                         METADATA_LINK_DATA.to_string(),
@@ -995,7 +995,7 @@ impl<F, T>
                         METADATA_3DS_STAGE.to_string(),
                         serde_json::Value::String(STAGE_CHALLENGE.to_string()),
                     );
-                    Some(serde_json::Value::Object(metadata))
+                    serde_json::Value::Object(metadata)
                 }),
             _ => None,
         };
