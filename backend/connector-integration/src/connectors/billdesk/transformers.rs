@@ -492,7 +492,7 @@ impl<
         };
 
         // Extract amount if available
-        let amount_received = response.txn_amount.as_ref().and_then(|amt_str| {
+        let _amount_received = response.txn_amount.as_ref().and_then(|amt_str| {
             amt_str.parse::<f64>().ok().map(|amt| {
                 common_utils::types::MinorUnit::new((amt * 100.0) as i64)
             })
