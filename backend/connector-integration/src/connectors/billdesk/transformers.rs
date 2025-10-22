@@ -103,15 +103,11 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuth {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key1, .. } => {
-                if let (Some(merchant_id), Some(checksum_key)) = (api_key, key1) {
-                    Ok(Self {
-                        merchant_id,
-                        checksum_key,
-                    })
-                } else {
-                    Err(errors::ConnectorError::FailedToObtainAuthType.into())
-                }
+            ConnectorAuthType::SignatureKey { api_key: Some(merchant_id), key1: Some(checksum_key), .. } => {
+                Ok(Self {
+                    merchant_id,
+                    checksum_key,
+                })
             }
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
