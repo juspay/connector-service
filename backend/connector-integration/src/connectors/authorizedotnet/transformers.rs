@@ -57,9 +57,8 @@ fn get_random_string() -> String {
 /// Returns invoice number if length <= MAX_ID_LENGTH, otherwise random string
 fn get_invoice_number_or_random(merchant_order_reference_id: Option<String>) -> String {
     match merchant_order_reference_id {
-        None => get_random_string(),
         Some(num) if num.len() <= MAX_ID_LENGTH => num,
-        Some(_) => get_random_string(),
+        None | Some(_) => get_random_string(),
     }
 }
 
