@@ -282,6 +282,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         access_token: None,
         amount: None,
         currency: None,
+        ..Default::default()
     }
 }
 

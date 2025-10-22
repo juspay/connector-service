@@ -444,6 +444,7 @@ fn create_void_request(transaction_id: &str) -> PaymentServiceVoidRequest {
         access_token: None,
         amount: None,
         currency: None,
+        ..Default::default()
     }
 }
 
