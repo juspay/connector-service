@@ -1129,6 +1129,22 @@ impl<
             })
             .transpose()?;
 
+        let setup_future_usage = value
+            .setup_future_usage
+            .map(|usage| {
+                grpc_api_types::payments::FutureUsage::try_from(usage)
+                    .map_err(|_| {
+                        error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_SETUP_FUTURE_USAGE".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid setup future usage value".to_owned(),
+                            error_object: None,
+                        }))
+                    })
+                    .and_then(|proto_usage| common_enums::FutureUsage::foreign_try_from(proto_usage))
+            })
+            .transpose()?;
+
         let customer_acceptance = value.customer_acceptance.clone();
         Ok(Self {
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
@@ -1178,9 +1194,7 @@ impl<
 
             router_return_url: value.return_url.clone(),
             complete_authorize_url: None,
-            setup_future_usage: Some(common_enums::FutureUsage::foreign_try_from(
-                value.setup_future_usage(),
-            )?),
+            setup_future_usage,
             mandate_id: None,
             off_session: value.off_session,
             order_category: value.order_category,
