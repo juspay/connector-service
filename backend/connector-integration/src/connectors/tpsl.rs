@@ -320,7 +320,7 @@ macros::create_all_prerequisites!(
         (flow: Void, request_body: TpslVoidRequest, response_body: TpslVoidResponse, router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>),
         (flow: Capture, request_body: TpslCaptureRequest, response_body: TpslCaptureResponse, router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>),
         (flow: Refund, request_body: TpslRefundRequest, response_body: TpslRefundResponse, router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>),
-        (flow: RSync, request_body: TpslRefundSyncRequest, response_body: TpslRefundSyncResponse, router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>),
+        (flow: RSync, response_body: TpslRefundSyncResponse, router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>),
         (flow: CreateOrder, request_body: TpslCreateOrderRequest, response_body: TpslCreateOrderResponse, router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>),
         (flow: CreateSessionToken, request_body: TpslSessionTokenRequest, response_body: TpslSessionTokenResponse, router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>),
         (flow: SetupMandate, request_body: TpslSetupMandateRequest, response_body: TpslSetupMandateResponse, router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>),
