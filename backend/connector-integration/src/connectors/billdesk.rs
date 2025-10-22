@@ -482,7 +482,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             // For UPI payments, use the initiate endpoint
             match req.request.payment_method_type {
-                Some(common_enums::PaymentMethodType::Upi) => {
+                Some(common_enums::PaymentMethodType::UpiCollect) => {
                     Ok(format!("{}?reqid=BDRDF011", self.connector_base_url_payments(req)))
                 }
                 _ => Err(errors::ConnectorError::MissingPaymentMethodType.into()),
