@@ -1578,7 +1578,7 @@ message PaymentServiceRegisterRequest {
   optional PaymentExperience payment_experience = 28; // Preferred payment experience
 
   // Account-Specific Configuration
-  map<string, string> merchant_account_metadata = 29; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  map<string, string> merchant_account_metadata = 30; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for a mandate setup operation.
