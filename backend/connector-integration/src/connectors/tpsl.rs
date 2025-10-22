@@ -312,6 +312,11 @@ macros::create_all_prerequisites!(
             response_body: TpslPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
+        (
+            flow: PSync,
+            response_body: TpslPaymentsSyncResponse,
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
