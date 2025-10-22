@@ -394,3 +394,6 @@ pub struct WorldpayAuthenticateRequest {
 pub type WorldpayPreAuthenticateRequest = WorldpayAuthenticateRequest;
 pub type WorldpayPostAuthenticateRequest = WorldpayAuthenticateRequest;
 
+// RepeatPayment uses the same request structure as Authorize (MIT vs CIT)
+pub type WorldpayRepeatPaymentRequest<T> = WorldpayAuthorizeRequest<T>;
+

@@ -12,7 +12,7 @@ use domain_types::{
     connector_types::{
         MandateIds, MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         ResponseId,
     },
     errors::{self, ConnectorError},
@@ -486,6 +486,119 @@ impl<
     }
 }
 
+// RepeatPayment request transformer - for MIT (Merchant Initiated Transactions)
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        WorldpayRouterData<
+            RouterDataV2<
+                domain_types::connector_flow::RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for WorldpayRepeatPaymentRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: WorldpayRouterData<
+            RouterDataV2<
+                domain_types::connector_flow::RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Extract merchant name from metadata
+        let worldpay_connector_metadata_object: WorldpayConnectorMetadataObject =
+            WorldpayConnectorMetadataObject::try_from(item.router_data.request.merchant_account_metadata.as_ref())?;
+
+        let merchant_name = worldpay_connector_metadata_object.merchant_name.ok_or(
+            errors::ConnectorError::InvalidConnectorConfig {
+                config: "merchant_account_metadata.merchant_name",
+            },
+        )?;
+
+        // Extract payment instrument from mandate_reference
+        let payment_instrument = match &item.router_data.request.mandate_reference {
+            MandateReferenceId::ConnectorMandateId(connector_mandate_ref) => {
+                let href = connector_mandate_ref
+                    .get_connector_mandate_id()
+                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                        field_name: "connector_mandate_id",
+                    })?;
+
+                PaymentInstrument::CardToken(CardToken {
+                    payment_type: PaymentType::Token,
+                    href,
+                    cvc: None,
+                })
+            }
+            MandateReferenceId::NetworkMandateId(_network_txn_id) => {
+                // NTI flow would need raw card details, which RepeatPayment doesn't have
+                return Err(errors::ConnectorError::NotImplemented(
+                    "NetworkMandateId not supported in RepeatPayment - use CardDetailsForNetworkTransactionId in Authorize flow instead".to_string()
+                ).into());
+            }
+            MandateReferenceId::NetworkTokenWithNTI(_) => {
+                return Err(errors::ConnectorError::NotImplemented(
+                    "NetworkTokenWithNTI not supported in RepeatPayment yet".to_string()
+                ).into());
+            }
+        };
+
+        // Determine settlement from capture_method
+        let settlement = match item.router_data.request.capture_method {
+            Some(enums::CaptureMethod::Automatic) | Some(enums::CaptureMethod::SequentialAutomatic) | None => {
+                Some(AutoSettlement { auto: true })
+            }
+            Some(enums::CaptureMethod::Manual) | Some(enums::CaptureMethod::ManualMultiple) => {
+                Some(AutoSettlement { auto: false })
+            }
+            _ => None,
+        };
+
+        Ok(Self {
+            instruction: Instruction {
+                settlement,
+                method: PaymentMethod::Card, // RepeatPayment is always card-based
+                payment_instrument,
+                narrative: InstructionNarrative {
+                    line1: merchant_name.expose(),
+                },
+                value: PaymentValue {
+                    amount: item.router_data.request.minor_amount,
+                    currency: item.router_data.request.currency,
+                },
+                debt_repayment: None,
+                three_ds: None, // MIT transactions don't require 3DS
+                token_creation: None, // No new token creation for repeat payments
+                customer_agreement: Some(CustomerAgreement {
+                    agreement_type: CustomerAgreementType::Subscription,
+                    stored_card_usage: Some(StoredCardUsageType::Subsequent), // CRITICAL: MIT indicator
+                    scheme_reference: None,
+                }),
+            },
+            merchant: Merchant {
+                entity: WorldpayAuthType::try_from(&item.router_data.connector_auth_type)?.entity_id,
+                ..Default::default()
+            },
+            transaction_reference: item.router_data.resource_common_data.connector_request_reference_id.clone(),
+            customer: None,
+        })
+    }
+}
+
 pub struct WorldpayAuthType {
     pub(super) api_key: Secret<String>,
     pub(super) entity_id: Secret<String>,
@@ -621,6 +734,44 @@ impl<
     ) -> Result<Self, Self::Error> {
         // Use the existing ForeignTryFrom implementation
         Self::foreign_try_from((item, None, 0))
+    }
+}
+
+// RepeatPayment response transformer
+impl TryFrom<
+        ResponseRouterData<
+            WorldpayPaymentsResponse,
+            RouterDataV2<
+                domain_types::connector_flow::RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData,
+                PaymentsResponseData,
+            >,
+        >,
+    >
+    for RouterDataV2<
+        domain_types::connector_flow::RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<
+            WorldpayPaymentsResponse,
+            RouterDataV2<
+                domain_types::connector_flow::RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData,
+                PaymentsResponseData,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Extract amount before moving item
+        let amount = item.router_data.request.minor_amount.get_amount_as_i64();
+        // Use the existing ForeignTryFrom implementation, passing the amount for correct status determination
+        Self::foreign_try_from((item, None, amount))
     }
 }
 

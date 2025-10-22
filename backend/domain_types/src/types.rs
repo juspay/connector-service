@@ -1177,7 +1177,14 @@ impl<
 
             router_return_url: value.return_url,
             complete_authorize_url: value.complete_authorize_url,
-            setup_future_usage: None,
+            setup_future_usage: value
+                .setup_future_usage
+                .map(|fu| {
+                    common_enums::FutureUsage::foreign_try_from(
+                        grpc_api_types::payments::FutureUsage::try_from(fu).unwrap_or_default(),
+                    )
+                })
+                .transpose()?,
             mandate_id: None,
             off_session: value.off_session,
             order_category: value.order_category,
@@ -4974,7 +4981,14 @@ impl<
             customer_acceptance: customer_acceptance
                 .map(mandates::CustomerAcceptance::foreign_try_from)
                 .transpose()?,
-            setup_future_usage: None,
+            setup_future_usage: value
+                .setup_future_usage
+                .map(|fu| {
+                    common_enums::FutureUsage::foreign_try_from(
+                        grpc_api_types::payments::FutureUsage::try_from(fu).unwrap_or_default(),
+                    )
+                })
+                .transpose()?,
             mandate_id: None,
             setup_mandate_details: None,
             integrity_object: None,
