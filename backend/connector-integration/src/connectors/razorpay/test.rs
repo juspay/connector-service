@@ -183,6 +183,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
+                    merchant_account_metadata: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -336,6 +337,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
+                    merchant_account_metadata: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_01".to_string(),
@@ -463,6 +465,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
+                    merchant_account_metadata: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_02".to_string(),
@@ -635,6 +638,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
+                    merchant_account_metadata: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -948,6 +952,7 @@ mod tests {
                 request_extended_authorization: None,
                 setup_mandate_details: None,
                 enable_overcapture: None,
+                merchant_account_metadata: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1131,6 +1136,7 @@ mod tests {
                 request_extended_authorization: None,
                 setup_mandate_details: None,
                 enable_overcapture: None,
+                merchant_account_metadata: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1502,6 +1508,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
+                    merchant_account_metadata: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_INVALID".to_string(),
