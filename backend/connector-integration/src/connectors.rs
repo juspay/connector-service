@@ -85,3 +85,6 @@ pub use self::stripe::Stripe;
 
 pub mod cybersource;
 pub use self::cybersource::Cybersource;
+
+pub mod tpsl;
+pub use self::tpsl::TPSL;
