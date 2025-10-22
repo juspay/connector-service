@@ -52,7 +52,7 @@ fn extract_headers_from_metadata(
     }
 }
 
-// For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
+// For decoding merchant_account_metadata and Engine trait - base64 crate no longer needed here
 use crate::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync,
@@ -1634,10 +1634,18 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             connector_customer: value.connector_customer_id,
             description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
-            connector_meta_data: {
-                value.metadata.get("connector_meta_data").map(|json_string| {
-                    Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
-                }).transpose()? // Converts Option<Result<T, E>> to Result<Option<T>, E> and propagates E if it's an Err
+            merchant_account_metadata: {
+                if !value.merchant_account_metadata.is_empty() {
+                    Some(Secret::new(serde_json::Value::Object(
+                        value
+                            .merchant_account_metadata
+                            .into_iter()
+                            .map(|(k, v)| (k, serde_json::Value::String(v)))
+                            .collect(),
+                    )))
+                } else {
+                    None
+                }
             },
             amount_captured: None,
             minor_amount_captured: None,
@@ -1702,7 +1710,19 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            merchant_account_metadata: {
+                if !value.merchant_account_metadata.is_empty() {
+                    Some(Secret::new(serde_json::Value::Object(
+                        value
+                            .merchant_account_metadata
+                            .into_iter()
+                            .map(|(k, v)| (k, serde_json::Value::String(v)))
+                            .collect(),
+                    )))
+                } else {
+                    None
+                }
+            },
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -1766,7 +1786,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            merchant_account_metadata: None,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -1827,7 +1847,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            merchant_account_metadata: None,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -2344,7 +2364,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            merchant_account_metadata: None,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -3877,7 +3897,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            merchant_account_metadata: None,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -3932,7 +3952,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            merchant_account_metadata: None,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -4121,7 +4141,19 @@ impl
             connector_customer: None,
             description: value.metadata.get("description").cloned(),
             return_url: None,
-            connector_meta_data: None,
+            merchant_account_metadata: {
+                if !value.merchant_account_metadata.is_empty() {
+                    Some(Secret::new(serde_json::Value::Object(
+                        value
+                            .merchant_account_metadata
+                            .into_iter()
+                            .map(|(k, v)| (k, serde_json::Value::String(v)))
+                            .collect(),
+                    )))
+                } else {
+                    None
+                }
+            },
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -5118,7 +5150,7 @@ impl
             connector_customer: None,
             description: Some("Repeat payment transaction".to_string()),
             return_url: None,
-            connector_meta_data: None,
+            merchant_account_metadata: None,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -5821,8 +5853,8 @@ impl
             connector_customer: None,
             description: None,
             return_url: value.return_url.clone(),
-            connector_meta_data: {
-                value.metadata.get("connector_meta_data").map(|json_string| {
+            merchant_account_metadata: {
+                value.metadata.get("merchant_account_metadata").map(|json_string| {
                     Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
                 }).transpose()?
             },
@@ -5898,8 +5930,8 @@ impl
             connector_customer: None,
             description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
-            connector_meta_data: {
-                value.metadata.get("connector_meta_data").map(|json_string| {
+            merchant_account_metadata: {
+                value.metadata.get("merchant_account_metadata").map(|json_string| {
                     Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
                 }).transpose()?
             },
@@ -5975,8 +6007,8 @@ impl
             connector_customer: None,
             description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
-            connector_meta_data: {
-                value.metadata.get("connector_meta_data").map(|json_string| {
+            merchant_account_metadata: {
+                value.metadata.get("merchant_account_metadata").map(|json_string| {
                     Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
                 }).transpose()?
             },

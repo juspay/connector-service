@@ -726,7 +726,7 @@ impl ConnectorValidation for Bluecode<DefaultPCIHolder> {
         _data: &PaymentsSyncData,
         _is_three_ds: bool,
         _status: enums::AttemptStatus,
-        _connector_meta_data: Option<common_utils::pii::SecretSerdeValue>,
+        _merchant_account_metadata: Option<common_utils::pii::SecretSerdeValue>,
     ) -> CustomResult<(), errors::ConnectorError> {
         Ok(())
     }
