@@ -374,18 +374,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn try_from(
         item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
+        let auth = TpslAuth::try_from(&item.connector_auth_type)?;
         let merchant_code = auth.merchant_code
             .ok_or(errors::ConnectorError::FailedToObtainAuthType)?
             .expose();
 
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
-        let return_url = item.router_data.request.get_router_return_url()?;
-        let amount = item.amount.get_amount_as_string();
-        let currency = item.router_data.request.currency.to_string();
-        let transaction_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
-        let email = item.router_data.request.email.clone().map(|e| e.to_string()).unwrap_or_default();
-        let phone = item.router_data.request.phone.clone().map(|p| p.to_string()).unwrap_or_default();
+        let customer_id = item.resource_common_data.get_customer_id()?;
+        let return_url = item.request.get_router_return_url()?;
+        let amount = item.request.minor_amount.to_string();
+        let currency = item.request.currency.to_string();
+        let transaction_id = item.resource_common_data.connector_request_reference_id.clone();
+        let email = item.request.email.clone().map(|e| e.to_string()).unwrap_or_default();
+        let phone = item.request.phone.clone().map(|p| p.to_string()).unwrap_or_default();
 
         let date_time = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
