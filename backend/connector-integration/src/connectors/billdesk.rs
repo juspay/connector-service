@@ -440,13 +440,9 @@ macros::create_all_prerequisites!(
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+            _req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
-                "https://uat.billdesk.com/pgidsk/PGIDirectRequest"
-            } else {
-                "https://www.billdesk.com/pgidsk/PGIDirectRequest"
-            }
+            "https://www.billdesk.com/pgidsk/PGIDirectRequest"
         }
     }
 );
