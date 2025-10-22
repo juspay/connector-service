@@ -1189,6 +1189,9 @@ message PaymentServiceAuthorizeRequest {
   optional PaymentExperience payment_experience = 30; // Preferred payment experience
 
   optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
+
+  // Account-Specific Configuration
+  map<string, string> merchant_account_metadata = 33; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for a payment authorization.
@@ -1573,6 +1576,9 @@ message PaymentServiceRegisterRequest {
   optional CustomerAcceptance customer_acceptance = 26; // Details of customer acceptance
   optional BrowserInformation browser_info = 27; // Information about the customer's browser
   optional PaymentExperience payment_experience = 28; // Preferred payment experience
+
+  // Account-Specific Configuration
+  map<string, string> merchant_account_metadata = 29; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for a mandate setup operation.
@@ -1637,6 +1643,9 @@ message PaymentServiceRepeatEverythingRequest {
 
   optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
   optional PaymentMethodType payment_method_type = 32; // Indicates the sub type of payment method. Eg: 'google_pay' & 'apple_pay'
+
+  // Account-Specific Configuration
+  map<string, string> merchant_account_metadata = 33; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for repeat payment operation.
