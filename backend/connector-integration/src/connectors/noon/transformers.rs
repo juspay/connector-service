@@ -795,7 +795,7 @@ impl<
         Ok(Self {
             api_operation: NoonApiOperations::CancelSubscription,
             subscription: NoonSubscriptionObject {
-                identifier: Secret::new(item.router_data.request.mandate_id),
+                identifier: item.router_data.request.mandate_id,
             },
         })
     }

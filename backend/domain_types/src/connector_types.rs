@@ -1291,8 +1291,8 @@ pub struct ConnectorCustomerResponse {
 
 #[derive(Debug, Clone)]
 pub struct MandateRevokeRequestData {
-    pub mandate_id: String,
-    pub connector_mandate_id: Option<String>,
+    pub mandate_id: Secret<String>,
+    pub connector_mandate_id: Option<Secret<String>>,
 }
 
 #[derive(Debug, Clone)]

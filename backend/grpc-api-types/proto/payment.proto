@@ -1684,7 +1684,7 @@ message PaymentServiceRepeatEverythingResponse {
 }
 
 // Request message for a mandate revoke operation.
-message PaymentServiceRevokeRequest {
+message PaymentServiceRevokeMandateRequest {
   // Identification
   Identifier request_ref_id = 1; // Reference ID for tracking
   
@@ -1694,7 +1694,7 @@ message PaymentServiceRevokeRequest {
 }
 
 // Response message for a mandate revoke operation.
-message PaymentServiceRevokeResponse {
+message PaymentServiceRevokeMandateResponse {
   // Identification
   Identifier request_ref_id = 1; // Reference ID for tracking
   

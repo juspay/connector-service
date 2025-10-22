@@ -825,8 +825,8 @@ impl FlowIntegrity for MandateRevokeIntegrityObject {
         if req_integrity_object.mandate_id != res_integrity_object.mandate_id {
             mismatched_fields.push(format_mismatch(
                 "mandate_id",
-                &req_integrity_object.mandate_id,
-                &res_integrity_object.mandate_id,
+                &req_integrity_object.mandate_id.expose(),
+                &res_integrity_object.mandate_id.expose(),
             ));
         }
 

@@ -14,8 +14,9 @@ use grpc_api_types::payments::{
     AcceptDisputeResponse, ConnectorState, DisputeDefendRequest, DisputeDefendResponse,
     DisputeResponse, DisputeServiceSubmitEvidenceResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureResponse, PaymentServiceGetResponse,
-    PaymentServiceRegisterRequest, PaymentServiceRegisterResponse, PaymentServiceRevokeRequest,
-    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse,
+    PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
+    PaymentServiceRevokeMandateRequest, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
+    RefundResponse,
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::Serialize;
@@ -6003,26 +6004,34 @@ impl
 }
 
 // Conversion implementations for MandateRevoke flow
-impl ForeignTryFrom<PaymentServiceRevokeRequest> for MandateRevokeRequestData {
+impl ForeignTryFrom<PaymentServiceRevokeMandateRequest> for MandateRevokeRequestData {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        value: PaymentServiceRevokeRequest,
+        value: PaymentServiceRevokeMandateRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
-            mandate_id: value.mandate_id,
-            connector_mandate_id: value.connector_mandate_id,
+            mandate_id: Secret::new(value.mandate_id),
+            connector_mandate_id: value.connector_mandate_id.map(Secret::new),
         })
     }
 }
 
-impl ForeignTryFrom<(PaymentServiceRevokeRequest, Connectors, &MaskedMetadata)>
-    for PaymentFlowData
+impl
+    ForeignTryFrom<(
+        PaymentServiceRevokeMandateRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for PaymentFlowData
 {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (value, connectors, metadata): (PaymentServiceRevokeRequest, Connectors, &MaskedMetadata),
+        (value, connectors, metadata): (
+            PaymentServiceRevokeMandateRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 

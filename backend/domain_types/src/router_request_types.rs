@@ -259,5 +259,5 @@ pub struct PostAuthenticateIntegrityObject {
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct MandateRevokeIntegrityObject {
-    pub mandate_id: String,
+    pub mandate_id: Secret<String>,
 }

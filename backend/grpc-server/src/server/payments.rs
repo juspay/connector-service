@@ -46,9 +46,9 @@ use grpc_api_types::payments::{
     PaymentServicePreAuthenticateResponse, PaymentServiceRefundRequest,
     PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
     PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
-    PaymentServiceRevokeRequest, PaymentServiceRevokeResponse, PaymentServiceTransformRequest,
-    PaymentServiceTransformResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    RefundResponse, WebhookTransformationStatus,
+    PaymentServiceRevokeMandateRequest, PaymentServiceRevokeMandateResponse,
+    PaymentServiceTransformRequest, PaymentServiceTransformResponse, PaymentServiceVoidRequest,
+    PaymentServiceVoidResponse, RefundResponse, WebhookTransformationStatus,
 };
 use hyperswitch_masking::ExposeInterface;
 use injector::{TokenData, VaultConnectors};
@@ -2243,8 +2243,8 @@ impl PaymentService for Payments {
     )]
     async fn revoke(
         &self,
-        request: tonic::Request<PaymentServiceRevokeRequest>,
-    ) -> Result<tonic::Response<PaymentServiceRevokeResponse>, tonic::Status> {
+        request: tonic::Request<PaymentServiceRevokeMandateRequest>,
+    ) -> Result<tonic::Response<PaymentServiceRevokeMandateResponse>, tonic::Status> {
         info!("MANDATE_REVOKE_FLOW: initiated");
         let service_name = request
             .extensions()
@@ -3195,7 +3195,7 @@ pub fn generate_mandate_revoke_response(
         MandateRevokeRequestData,
         MandateRevokeResponseData,
     >,
-) -> Result<PaymentServiceRevokeResponse, error_stack::Report<ApplicationErrorResponse>> {
+) -> Result<PaymentServiceRevokeMandateResponse, error_stack::Report<ApplicationErrorResponse>> {
     let mandate_revoke_response = router_data_v2.response;
     let raw_connector_response = router_data_v2
         .resource_common_data
@@ -3208,7 +3208,7 @@ pub fn generate_mandate_revoke_response(
         .get_connector_response_headers_as_map();
 
     match mandate_revoke_response {
-        Ok(response) => Ok(PaymentServiceRevokeResponse {
+        Ok(response) => Ok(PaymentServiceRevokeMandateResponse {
             request_ref_id: Some(grpc_api_types::payments::Identifier {
                 id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
                     router_data_v2
@@ -3242,7 +3242,7 @@ pub fn generate_mandate_revoke_response(
             raw_connector_response,
             raw_connector_request,
         }),
-        Err(e) => Ok(PaymentServiceRevokeResponse {
+        Err(e) => Ok(PaymentServiceRevokeMandateResponse {
             request_ref_id: Some(grpc_api_types::payments::Identifier {
                 id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
                     router_data_v2
