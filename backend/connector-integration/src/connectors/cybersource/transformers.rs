@@ -1238,7 +1238,7 @@ impl<
                 number: ccard.card_number,
                 expiration_month: ccard.card_exp_month,
                 expiration_year: ccard.card_exp_year,
-                security_code: None,
+                security_code: Some(ccard.card_cvc),
                 card_type: card_type.clone(),
                 type_selection_indicator: Some("1".to_owned()),
             },
