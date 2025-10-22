@@ -629,11 +629,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn try_from(
         item: (TpslPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, u16),
     ) -> Result<Self, Self::Error> {
-        let ResponseRouterData {
-            response,
-            router_data,
-            http_code,
-        } = item;
+        let (response, router_data, http_code) = item;
 
         let attempt_status = match response.transaction_state.as_str() {
             "SUCCESS" => common_enums::AttemptStatus::Charged,
