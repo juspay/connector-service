@@ -266,9 +266,7 @@ impl<
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
 
         // Get transaction reference ID
-        let txn_reference_no = item.router_data.request.connector_transaction_id
-            .get_connector_transaction_id()
-            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
+        let txn_reference_no = item.router_data.resource_common_data.connector_request_reference_id.clone();
 
         // Create additional info map
         let mut additional_info = HashMap::new();
