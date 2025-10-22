@@ -54,6 +54,41 @@ fn get_random_string() -> String {
     Alphanumeric.sample_string(&mut rand::thread_rng(), MAX_ID_LENGTH)
 }
 
+/// Returns invoice number if length <= MAX_ID_LENGTH, otherwise random string
+fn get_invoice_number_or_random(merchant_order_reference_id: Option<String>) -> String {
+    match merchant_order_reference_id {
+        None => get_random_string(),
+        Some(num) if num.len() <= MAX_ID_LENGTH => num,
+        Some(_) => get_random_string(),
+    }
+}
+
+/// Returns customer ID only if length <= MAX_ID_LENGTH
+fn validate_customer_id_length(customer_id: Option<String>) -> Option<String> {
+    customer_id.filter(|id| id.len() <= MAX_ID_LENGTH)
+}
+
+/// Convert metadata to UserFields with optional serialization
+fn metadata_to_user_fields(
+    metadata: Option<serde_json::Value>,
+    needs_serialization: bool,
+) -> Result<Option<UserFields>, Error> {
+    let meta = match metadata {
+        Some(m) => m,
+        None => return Ok(None),
+    };
+
+    let value = if needs_serialization {
+        serde_json::to_value(meta).change_context(ConnectorError::RequestEncodingFailed)?
+    } else {
+        meta
+    };
+
+    Ok(Some(UserFields {
+        user_field: Vec::<UserField>::foreign_try_from(value)?,
+    }))
+}
+
 // // Helper traits for working with generic types
 // trait RawCardNumberExt<T: PaymentMethodDataTypes> {
 //     fn peek(&self) -> &str;
@@ -522,17 +557,9 @@ fn create_regular_transaction_request<
         .connector_request_reference_id
         .clone();
 
-    // Truncate invoice number to 20 characters (Authorize.Net limit)
-    let invoice_number = match item.router_data.request.merchant_order_reference_id.clone() {
-        Some(invoice_num) => {
-            if invoice_num.len() > MAX_ID_LENGTH {
-                invoice_num[0..MAX_ID_LENGTH].to_string()
-            } else {
-                invoice_num
-            }
-        }
-        None => get_random_string(),
-    };
+    // Get invoice number (random string if > MAX_ID_LENGTH or None)
+    let invoice_number =
+        get_invoice_number_or_random(item.router_data.request.merchant_order_reference_id.clone());
 
     let order = Order {
         invoice_number,
@@ -540,12 +567,7 @@ fn create_regular_transaction_request<
     };
 
     // Extract user fields from metadata
-    let user_fields: Option<UserFields> = match item.router_data.request.metadata.clone() {
-        Some(metadata) => Some(UserFields {
-            user_field: Vec::<UserField>::foreign_try_from(metadata)?,
-        }),
-        None => None,
-    };
+    let user_fields = metadata_to_user_fields(item.router_data.request.metadata.clone(), false)?;
 
     // Process billing address
     let billing_address = item
@@ -574,44 +596,41 @@ fn create_regular_transaction_request<
         }
     });
 
-    let customer_details = if !item
+    let customer_details = item
         .router_data
         .request
-        .is_customer_initiated_mandate_payment()
-    {
-        item.router_data
-            .request
-            .customer_id
-            .as_ref()
-            .and_then(|customer| {
-                let customer_id = customer.get_string_repr();
-                (customer_id.len() <= MAX_ID_LENGTH).then_some(CustomerDetails {
-                    id: customer_id.to_string(),
-                    email: item.router_data.request.get_optional_email(),
-                })
+        .customer_id
+        .as_ref()
+        .filter(|_| {
+            !item
+                .router_data
+                .request
+                .is_customer_initiated_mandate_payment()
+        })
+        .and_then(|customer| {
+            let customer_id = customer.get_string_repr();
+            (customer_id.len() <= MAX_ID_LENGTH).then_some(CustomerDetails {
+                id: customer_id.to_string(),
+                email: item.router_data.request.get_optional_email(),
             })
-    } else {
-        None
-    };
+        });
 
     // Check if we should create a profile for future mandate usage
-    let profile = if item
+    let profile = item
         .router_data
         .request
         .is_customer_initiated_mandate_payment()
-    {
-        Some(ProfileDetails::CreateProfileDetails(CreateProfileDetails {
-            create_profile: true,
-            customer_profile_id: item
-                .router_data
-                .resource_common_data
-                .connector_customer
-                .as_ref()
-                .map(|cid| Secret::new(cid.to_string())),
-        }))
-    } else {
-        None
-    };
+        .then(|| {
+            ProfileDetails::CreateProfileDetails(CreateProfileDetails {
+                create_profile: true,
+                customer_profile_id: item
+                    .router_data
+                    .resource_common_data
+                    .connector_customer
+                    .as_ref()
+                    .map(|cid| Secret::new(cid.to_string())),
+            })
+        });
 
     Ok(AuthorizedotnetTransactionRequest {
         transaction_type,
@@ -773,34 +792,27 @@ impl<
             .connector_request_reference_id
             .clone();
 
-        // Invoice number should be merchant_order_reference_id or random string (same as Hyperswitch)
-        let invoice_number = match item.router_data.request.merchant_order_reference_id.clone() {
-            Some(merchant_order_ref) => {
-                if merchant_order_ref.len() <= MAX_ID_LENGTH {
-                    merchant_order_ref
-                } else {
-                    get_random_string()
-                }
-            }
-            None => get_random_string(),
-        };
+        // Get invoice number (random string if > MAX_ID_LENGTH or None)
+        let invoice_number = get_invoice_number_or_random(
+            item.router_data.request.merchant_order_reference_id.clone(),
+        );
 
         let order = Order {
             invoice_number,
             description: order_description,
         };
 
-        // Extract user fields from metadata
-        let user_fields: Option<UserFields> = match item.router_data.request.metadata.clone() {
-            Some(metadata) => {
-                let metadata_value = serde_json::to_value(metadata)
-                    .change_context(ConnectorError::RequestEncodingFailed)?;
-                Some(UserFields {
-                    user_field: Vec::<UserField>::foreign_try_from(metadata_value)?,
-                })
-            }
-            None => None,
-        };
+        // Extract user fields from metadata (RepeatPayment metadata is HashMap, needs conversion to Value)
+        let user_fields = metadata_to_user_fields(
+            item.router_data
+                .request
+                .metadata
+                .clone()
+                .map(serde_json::to_value)
+                .transpose()
+                .change_context(ConnectorError::RequestEncodingFailed)?,
+            false, // Already serialized above
+        )?;
 
         // ref_id should be connector_request_reference_id with MAX_ID_LENGTH check (same as Authorize flow)
         let ref_id = if item
@@ -820,19 +832,13 @@ impl<
             None
         };
 
-        let customer_id_string = item
-            .router_data
-            .resource_common_data
-            .customer_id
-            .as_ref()
-            .and_then(|cid| {
-                let id_str = cid.get_string_repr().to_owned();
-                if id_str.len() > MAX_ID_LENGTH {
-                    None
-                } else {
-                    Some(id_str)
-                }
-            });
+        let customer_id_string = validate_customer_id_length(
+            item.router_data
+                .resource_common_data
+                .customer_id
+                .as_ref()
+                .map(|cid| cid.get_string_repr().to_owned()),
+        );
 
         let customer_details = customer_id_string.map(|cid| CustomerDetails {
             id: cid,
@@ -3268,18 +3274,13 @@ impl<
 
         // Conditionally send merchant_customer_id (matching Hyperswitch parity)
         // Only send if customer_id exists and length <= MAX_ID_LENGTH (20 chars)
-        let merchant_customer_id = item
-            .router_data
-            .request
-            .customer_id
-            .as_ref()
-            .and_then(|id| {
-                if id.peek().len() <= MAX_ID_LENGTH {
-                    Some(id.peek().clone())
-                } else {
-                    None
-                }
-            });
+        let merchant_customer_id = validate_customer_id_length(
+            item.router_data
+                .request
+                .customer_id
+                .as_ref()
+                .map(|id| id.peek().clone()),
+        );
 
         // Create a customer profile without payment method (zero mandate)
         Ok(Self {
