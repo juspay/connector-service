@@ -519,7 +519,7 @@ impl<
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(
-                    response.txn_reference_no.unwrap_or_default(),
+                    response.merchant_id.unwrap_or_default(),
                 ),
                 redirection_data: None,
                 mandate_reference: None,
