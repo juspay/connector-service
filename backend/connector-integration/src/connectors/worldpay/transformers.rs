@@ -56,6 +56,8 @@ const METADATA_DDC_REFERENCE: &str = "device_data_collection";
 const STAGE_DDC: &str = "ddc";
 const STAGE_CHALLENGE: &str = "challenge";
 
+/// Metadata object extracted from merchant_account_metadata
+/// Contains Worldpay-specific merchant configuration
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct WorldpayConnectorMetadataObject {
     pub merchant_name: Option<Secret<String>>,
@@ -66,7 +68,7 @@ impl TryFrom<Option<&pii::SecretSerdeValue>> for WorldpayConnectorMetadataObject
     fn try_from(meta_data: Option<&pii::SecretSerdeValue>) -> Result<Self, Self::Error> {
         let metadata: Self = crate::utils::to_connector_meta_from_secret::<Self>(meta_data.cloned())
             .change_context(errors::ConnectorError::InvalidConnectorConfig {
-                config: "metadata",
+                config: "merchant_account_metadata",
             })?;
         Ok(metadata)
     }
@@ -432,11 +434,11 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let worldpay_connector_metadata_object: WorldpayConnectorMetadataObject =
-            WorldpayConnectorMetadataObject::try_from(item.router_data.resource_common_data.connector_meta_data.as_ref())?;
+            WorldpayConnectorMetadataObject::try_from(item.router_data.request.merchant_account_metadata.as_ref())?;
 
         let merchant_name = worldpay_connector_metadata_object.merchant_name.ok_or(
             errors::ConnectorError::InvalidConnectorConfig {
-                config: "metadata.merchant_name",
+                config: "merchant_account_metadata.merchant_name",
             },
         )?;
 
