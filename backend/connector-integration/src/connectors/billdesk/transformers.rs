@@ -2,12 +2,10 @@ use std::collections::HashMap;
 
 use common_utils::{
     errors::CustomResult,
-    ext_traits::ValueExt,
     request::Method,
     types::StringMinorUnit,
-    Email,
 };
-use hyperswitch_masking::PeekInterface;
+use hyperswitch_masking::{ExposeInterface, PeekInterface};
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
