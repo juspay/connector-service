@@ -124,7 +124,7 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuth {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum BilldeskPaymentStatus {
     Success,
