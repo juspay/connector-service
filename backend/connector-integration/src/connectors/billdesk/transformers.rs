@@ -320,9 +320,7 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let merchant_id = get_merchant_id(&item.router_data.connector_auth_type)?;
-        let txn_reference_no = item.router_data.request.connector_transaction_id
-            .get_connector_transaction_id()
-            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
+        let txn_reference_no = item.router_data.resource_common_data.connector_request_reference_id.clone();
 
         // Create message for status check
         let additional_info = HashMap::new();
