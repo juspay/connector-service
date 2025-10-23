@@ -280,7 +280,7 @@ impl<
                 // Create the message for UPI transaction
                 let msg = create_upi_message(
                     &transaction_id,
-                    amount.as_str(),
+                    &amount.to_string(),
                     &item.router_data.request.currency.to_string(),
                     &customer_id.get_string_repr(),
                 )?;
