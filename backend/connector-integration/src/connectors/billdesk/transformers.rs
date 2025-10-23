@@ -251,7 +251,14 @@ impl<
         let merchant_id = get_merchant_id(&item.router_data.connector_auth_type)?;
         
         // CRITICAL: Use proper amount conversion
-        let amount = item.amount.get_amount_as_string();
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
+            .change_context(ConnectorError::RequestEncodingFailed)?;
         let currency = item.router_data.request.currency.to_string();
 
         // CRITICAL: Extract IP address dynamically
