@@ -465,19 +465,21 @@ impl TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: BilldeskPaymentsSyncResponse) -> Result<Self, Self::Error> {
-        let status = match response.auth_status.as_str() {
+        let _status = match response.auth_status.as_str() {
             "0300" | "0399" => common_enums::AttemptStatus::Charged,
             "0396" => common_enums::AttemptStatus::AuthenticationPending,
             "0397" => common_enums::AttemptStatus::Failure,
             _ => common_enums::AttemptStatus::Pending,
         };
 
+        let txn_reference_no = response.txn_reference_no.clone();
+
         Ok(Self::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(response.txn_reference_no),
+            resource_id: ResponseId::ConnectorTransactionId(txn_reference_no.clone()),
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
-            network_txn_id: Some(response.txn_reference_no),
+            network_txn_id: Some(txn_reference_no),
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
             status_code: 200,
