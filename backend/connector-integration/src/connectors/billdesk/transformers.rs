@@ -109,16 +109,7 @@ pub struct BilldeskRdata {
     pub url: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BilldeskPaymentsSyncResponse {
-    pub txn_reference_no: String,
-    pub auth_status: String,
-    pub txn_amount: String,
-    pub currency: String,
-    pub error_status: Option<String>,
-    pub error_description: Option<String>,
-}
+
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BilldeskErrorResponse {
