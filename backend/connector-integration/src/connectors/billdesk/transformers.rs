@@ -188,6 +188,16 @@ pub struct BilldeskPaymentsSyncRequest {
     pub msg: String,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct BilldeskPaymentsSyncResponse {
+    pub txn_reference_no: String,
+    pub auth_status: String,
+    pub txn_amount: String,
+    pub currency: String,
+    pub error_status: Option<String>,
+    pub error_description: Option<String>,
+}
+
 fn get_redirect_form_data(
     payment_method_type: common_enums::PaymentMethodType,
     response_data: BilldeskRdata,
