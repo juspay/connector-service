@@ -573,8 +573,9 @@ impl<
             MandateReferenceId::NetworkMandateId(_network_txn_id) => {
                 // NTI flow would need raw card details, which RepeatPayment doesn't have
                 return Err(errors::ConnectorError::NotImplemented(
-                    "NetworkMandateId not supported in RepeatPayment".to_string()
-                ).into());
+                    "NetworkMandateId not supported in RepeatPayment".to_string(),
+                )
+                .into());
             }
             MandateReferenceId::NetworkTokenWithNTI(_) => {
                 return Err(errors::ConnectorError::NotImplemented(
