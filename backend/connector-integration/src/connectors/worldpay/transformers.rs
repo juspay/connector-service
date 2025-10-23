@@ -80,7 +80,7 @@ fn fetch_payment_instrument<
 >(
     payment_method: PaymentMethodData<T>,
     billing_address: Option<&domain_types::payment_address::Address>,
-    mandate_ids: Option<MandateIds>,
+    _mandate_ids: Option<MandateIds>,
 ) -> CustomResult<PaymentInstrument<T>, errors::ConnectorError> {
     match payment_method {
         PaymentMethodData::Card(card) => {
@@ -133,54 +133,28 @@ fn fetch_payment_instrument<
             }))
         }
         PaymentMethodData::CardDetailsForNetworkTransactionId(raw_card_details) => {
-            // Extract expiry month and year directly from the card fields
-            let expiry_month: i32 = raw_card_details
-                .card_exp_month
+            // Extract expiry month and year using helper functions
+            let expiry_month_i8 = raw_card_details.get_expiry_month_as_i8()?;
+            let expiry_year_4_digit = raw_card_details.get_expiry_year_4_digit();
+            let expiry_year: i32 = expiry_year_4_digit
                 .peek()
                 .parse::<i32>()
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-            let mut expiry_year: String = raw_card_details.card_exp_year.peek().clone();
-            if expiry_year.len() == 2 {
-                expiry_year = format!("20{expiry_year}");
-            }
-            let expiry_year: i32 = expiry_year
-                .parse::<i32>()
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-            let expiry_month_i8 = i8::try_from(expiry_month)
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
             Ok(PaymentInstrument::RawCardForNTI(RawCardDetails {
                 payment_type: PaymentType::Plain,
                 expiry_date: ExpiryDate {
-                    month: Secret::new(expiry_month_i8),
+                    month: expiry_month_i8,
                     year: Secret::new(expiry_year),
                 },
                 card_number: RawCardNumber(raw_card_details.card_number),
             }))
         }
-        PaymentMethodData::MandatePayment => mandate_ids
-            .and_then(|mandate_ids| {
-                mandate_ids
-                    .mandate_reference_id
-                    .and_then(|mandate_id| match mandate_id {
-                        MandateReferenceId::ConnectorMandateId(connector_mandate_id) => {
-                            connector_mandate_id.get_connector_mandate_id().map(|href| {
-                                PaymentInstrument::CardToken(CardToken {
-                                    payment_type: PaymentType::Token,
-                                    href,
-                                    cvc: None,
-                                })
-                            })
-                        }
-                        _ => None,
-                    })
-            })
-            .ok_or(
-                errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_mandate_id",
-                }
-                .into(),
-            ),
+        PaymentMethodData::MandatePayment => {
+            Err(errors::ConnectorError::NotImplemented(
+                "MandatePayment should not be used in Authorize flow - use RepeatPayment flow for MIT transactions".to_string()
+            ).into())
+        }
         PaymentMethodData::Wallet(wallet) => match wallet {
             WalletDataPaymentMethod::GooglePay(data) => {
                 Ok(PaymentInstrument::Googlepay(WalletPayment {
@@ -407,7 +381,7 @@ fn get_token_and_agreement<
     mandate_ids: Option<MandateIds>,
 ) -> (Option<TokenCreation>, Option<CustomerAgreement>) {
     match (payment_method_data, setup_future_usage, off_session) {
-        // CIT
+        // CIT - Setup for future usage (creates token for future MIT via RepeatPayment)
         (PaymentMethodData::Card(_), Some(enums::FutureUsage::OffSession), _) => (
             Some(TokenCreation {
                 token_type: TokenCreationType::Worldpay,
@@ -415,15 +389,6 @@ fn get_token_and_agreement<
             Some(CustomerAgreement {
                 agreement_type: CustomerAgreementType::Subscription,
                 stored_card_usage: Some(StoredCardUsageType::First),
-                scheme_reference: None,
-            }),
-        ),
-        // MIT
-        (PaymentMethodData::Card(_), _, Some(true)) => (
-            None,
-            Some(CustomerAgreement {
-                agreement_type: CustomerAgreementType::Subscription,
-                stored_card_usage: Some(StoredCardUsageType::Subsequent),
                 scheme_reference: None,
             }),
         ),
@@ -608,7 +573,7 @@ impl<
             MandateReferenceId::NetworkMandateId(_network_txn_id) => {
                 // NTI flow would need raw card details, which RepeatPayment doesn't have
                 return Err(errors::ConnectorError::NotImplemented(
-                    "NetworkMandateId not supported in RepeatPayment - use CardDetailsForNetworkTransactionId in Authorize flow instead".to_string()
+                    "NetworkMandateId not supported in RepeatPayment".to_string()
                 ).into());
             }
             MandateReferenceId::NetworkTokenWithNTI(_) => {
@@ -1049,60 +1014,6 @@ impl<F, T>
             ..router_data.router_data
         })
     }
-}
-
-// Helper function to get resource ID from payment response
-pub fn get_resource_id<T, F>(
-    response: WorldpayPaymentsResponse,
-    connector_transaction_id: Option<String>,
-    transform_fn: F,
-) -> Result<T, error_stack::Report<errors::ConnectorError>>
-where
-    F: Fn(String) -> T,
-{
-    let optional_reference_id = response
-        .links
-        .as_ref()
-        .and_then(|link| link.self_link.href.rsplit_once('/').map(|(_, h)| h))
-        .or_else(|| {
-            // Fallback to variant-specific logic for DDC and 3DS challenges
-            response
-                .other_fields
-                .as_ref()
-                .and_then(|other_fields| match other_fields {
-                    WorldpayPaymentResponseFields::DDCResponse(res) => {
-                        res.actions.supply_ddc_data.href.split('/').nth_back(1)
-                    }
-                    WorldpayPaymentResponseFields::ThreeDsChallenged(res) => res
-                        .actions
-                        .complete_three_ds_challenge
-                        .href
-                        .split('/')
-                        .nth_back(1),
-                    _ => None,
-                })
-        })
-        .map(|href| {
-            urlencoding::decode(href)
-                .map(|s| transform_fn(s.into_owned()))
-                .change_context(errors::ConnectorError::ResponseHandlingFailed)
-        })
-        .transpose()?;
-    optional_reference_id
-        .or_else(|| response.transaction_reference.map(&transform_fn))
-        .or_else(|| connector_transaction_id.map(&transform_fn))
-        .ok_or_else(|| {
-            errors::ConnectorError::MissingRequiredField {
-                field_name: "_links.self.href or transactionReference",
-            }
-            .into()
-        })
-}
-
-// Response ID string wrapper
-#[derive(Debug, Clone)]
-pub struct ResponseIdStr {
-    pub id: String,
 }
 
 // Note: Old RouterData TryFrom implementations removed as we're using RouterDataV2
