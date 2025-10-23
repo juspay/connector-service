@@ -47,7 +47,7 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuth {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, .. } => {
+            ConnectorAuthType::SignatureKey { .. } => {
                 // For now, create a simple auth structure from the api_key
                 // In a real implementation, this would parse the actual auth data
                 Ok(Self {
