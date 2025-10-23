@@ -321,7 +321,7 @@ fn create_upi_paydata<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static 
     // Extract UPI specific data from payment method
     if let Some(payment_method_data) = &request_data.payment_method_data {
         match payment_method_data {
-            domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
+            PaymentMethodData::Upi(upi_data) => {
                 if let Some(vpa) = &upi_data.vpa {
                     Ok(format!("VPA={}", vpa))
                 } else {
