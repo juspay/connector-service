@@ -244,7 +244,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         amount_to_capture: TEST_AMOUNT,
         currency: i32::from(Currency::Myr),
         multiple_capture_data: None,
-        metadata: HashMap::new(),
+        connector_metadata: HashMap::new(),
         request_ref_id: None,
         browser_info: None,
         access_token: None,
