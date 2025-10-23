@@ -2576,9 +2576,11 @@ impl<
         let merchant_defined_information = value
             .router_data
             .request
-            .metadata
+            .connector_metadata
             .clone()
-            .map(convert_metadata_to_merchant_defined_info);
+            .map(|connector_metadata| {
+                convert_metadata_to_merchant_defined_info(connector_metadata.expose())
+            });
 
         let currency = value.router_data.request.currency.unwrap();
         let total_amount = value

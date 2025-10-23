@@ -1329,7 +1329,7 @@ message PaymentServiceVoidRequest {
   optional Currency currency = 8; // Currency of the void amount
 
   // Metadata
-  map<string, string> metadata = 9; // Additional metadata for the connector
+  map<string, string> connector_metadata = 9; // Additional metadata for the connector
 }
 
 // Response message for a payment void operation.
@@ -1371,7 +1371,7 @@ message PaymentServiceCaptureRequest {
   Currency currency = 4; // Currency of the amount to capture
   
   // Metadata
-  map<string, string> metadata = 5; // Additional metadata for the connector
+  map<string, string> connector_metadata = 5; // Additional metadata for the connector
   
   // Multiple Capture Information
   optional MultipleCaptureRequestData multiple_capture_data = 6; // Data for multiple capture scenarios
