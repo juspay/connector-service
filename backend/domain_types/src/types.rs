@@ -2531,7 +2531,7 @@ pub fn generate_payment_void_response(
                 connector_metadata: _,
                 network_txn_id: _,
                 connector_response_reference_id,
-                incremental_authorization_allowed: _,
+                incremental_authorization_allowed,
                 mandate_reference,
                 status_code,
             } => {
@@ -2564,6 +2564,7 @@ pub fn generate_payment_void_response(
                     raw_connector_request,
                     state,
                     mandate_reference: mandate_reference_grpc,
+                    incremental_authorization_allowed,
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -2601,6 +2602,7 @@ pub fn generate_payment_void_response(
                 state: None,
                 raw_connector_request,
                 mandate_reference: None,
+                incremental_authorization_allowed: None,
             })
         }
     }

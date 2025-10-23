@@ -1355,6 +1355,9 @@ message PaymentServiceVoidResponse {
 
   // Mandate Details
   optional MandateReference mandate_reference = 10; // Reference to the mandate, if applicable
+
+  // Authorization Details
+  optional bool incremental_authorization_allowed = 11; // Indicates if incremental authorization is allowed
 }
 
 // Request message for capturing a payment.
