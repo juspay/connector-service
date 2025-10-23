@@ -217,7 +217,7 @@ impl<
         + std::marker::Sync
         + std::marker::Send
         + 'static
-        + Serialize,
+        + Serialize
 >
     TryFrom<
         BilldeskRouterData<
@@ -243,28 +243,29 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        // CRITICAL: Extract customer ID dynamically from router data
         let customer_id = item.router_data.resource_common_data.get_customer_id()?;
-        let merchant_id = get_merchant_id(&item.router_data.connector_auth_type)?;
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+        let customer_id_string = customer_id.get_string_repr();
 
-        // Extract IP address and user agent
+        // CRITICAL: Extract merchant ID from auth type
+        let merchant_id = get_merchant_id(&item.router_data.connector_auth_type)?;
+        
+        // CRITICAL: Use proper amount conversion
+        let amount = item.amount.get_amount_as_string();
+        let currency = item.router_data.request.currency.to_string();
+
+        // CRITICAL: Extract IP address dynamically
         let ip_address = item.router_data.request.get_ip_address_as_optional()
             .map(|ip| ip.expose())
             .unwrap_or_else(|| "127.0.0.1".to_string());
 
+        // CRITICAL: Extract user agent dynamically
         let user_agent = item.router_data.request.browser_info
             .as_ref()
             .and_then(|info| info.user_agent.clone())
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
 
-        // Get transaction reference ID
+        // CRITICAL: Extract transaction reference ID dynamically
         let txn_reference_no = item.router_data.resource_common_data.connector_request_reference_id.clone();
 
         // Create additional info map
@@ -275,10 +276,10 @@ impl<
         // Create the message
         let msg = create_billdesk_message(
             &merchant_id.peek(),
-            &customer_id.get_string_repr(),
+            &customer_id_string,
             &txn_reference_no,
-            &amount.to_string(),
-            &item.router_data.request.currency.to_string(),
+            &amount,
+            &currency,
             &additional_info,
         );
 
@@ -302,23 +303,20 @@ impl<
         + std::marker::Sync
         + std::marker::Send
         + 'static
-        + Serialize,
+        + Serialize
 >
     TryFrom<
-        BilldeskRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     > for BilldeskPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: BilldeskRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        item: BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
+        // CRITICAL: Extract merchant ID from auth type
         let merchant_id = get_merchant_id(&item.router_data.connector_auth_type)?;
+        
+        // CRITICAL: Extract transaction reference ID dynamically
         let txn_reference_no = item.router_data.resource_common_data.connector_request_reference_id.clone();
 
         // Create message for status check
@@ -383,7 +381,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize
-        + Serialize,
+        + Serialize
 > TryFrom<ResponseRouterData<BilldeskPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
