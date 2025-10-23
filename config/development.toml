@@ -35,7 +35,7 @@ mock_server_url = "http://localhost:3000"
 
 [api_tags.tags]
 # Payment Flow API Tags
-Authorize = "GW_INIT_INTENT"
+Authorize = "GW_INIT_COLLECT"
 CreateOrder = "GW_CREATE_ORDER"
 SetupMandate = "GW_SETUP_MANDATE"
 RepeatPayment = "GW_REPEAT_PAYMENT"
