@@ -313,7 +313,7 @@ fn create_upi_message(
     Ok(message)
 }
 
-fn create_upi_paydata<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>(
+fn create_upi_paydata<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
     request_data: &PaymentsAuthorizeData<T>,
 ) -> CustomResult<String, errors::ConnectorError> {
     // Extract UPI specific data from payment method
