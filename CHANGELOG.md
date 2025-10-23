@@ -4,20 +4,39 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
-## [2025-01-XX] - Billdesk Connector Addition
+## [2025-01-07] - Billdesk Connector Migration to UCS v2 Macro Framework
 
 ### Added
-- New Billdesk connector implementation
-- Payment methods supported: UPI (UPI Intent/Collect)
+- Complete migration of Billdesk connector to UCS v2 macro framework
+- Payment methods supported: UPI (UPI Intent/Collect) 
 - Transaction flows: Authorize, PSync
 - Full webhook support for payment status updates
+- Proper error handling and status mapping
+- Complete type safety with guard rails
+
+### Changed
+- **BREAKING**: Migrated from manual trait implementations to mandatory UCS v2 macro framework
+- Replaced all manual `ConnectorServiceTrait`, `PaymentAuthorizeV2`, etc. implementations with `create_all_prerequisites!` and `macro_connector_implementation!` macros
+- Updated request/response transformers to use dynamic data extraction from router data
+- Implemented proper amount framework using `StringMinorUnit` converter
+- Added comprehensive stub implementations for all unsupported flows
+- Enhanced authentication handling for Billdesk's merchant ID and checksum key pattern
 
 ### Files Created/Modified
-- `src/connectors/billdesk.rs` - Main connector implementation
-- `src/connectors/billdesk/transformers.rs` - Request/response transformers
-- `src/connectors/billdesk/constants.rs` - API constants and endpoints
-- `src/connectors.rs` - Added connector registration
-- `src/types.rs` - Added connector to ConnectorEnum
+- `backend/connector-integration/src/connectors/billdesk.rs` - Complete rewrite using UCS v2 macro framework
+- `backend/connector-integration/src/connectors/billdesk/transformers.rs` - Updated with dynamic data extraction
+- `backend/connector-integration/src/connectors/billdesk/constants.rs` - API constants and endpoints
+- `backend/connector-integration/src/connectors.rs` - Connector registration (already present)
+- `backend/domain_types/src/types.rs` - ConnectorEnum registration (already present)
+
+### Technical Details
+- Migrated from Hyperswitch/Euler Haskell implementation patterns
+- Uses mandatory UCS v2 macro framework for all trait implementations
+- Implements proper error handling and status mapping from Haskell implementation
+- Full type safety with guard rails (Secret<String> for sensitive data, MinorUnit for amounts)
+- Dynamic extraction of all request values from router data (no hardcoded values)
+- Support for test/production environment switching
+- Comprehensive webhook verification and processing
 
 ### Technical Details
 - Migrated from Hyperswitch/Euler Haskell implementation
