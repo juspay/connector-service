@@ -946,10 +946,7 @@ fn generate_billdesk_checksum<T: PaymentMethodDataTypes + Debug + Sync + Send + 
     let request_data = format!(
         "{}{}{}{}",
         req.resource_common_data.connector_request_reference_id,
-        req.connector.amount_converter.convert(
-            req.request.minor_amount,
-            req.request.currency,
-        ).change_context(errors::ConnectorError::RequestEncodingFailed)?,
+        req.request.minor_amount.to_string(),
         req.request.currency.to_string(),
         checksum_key
     );
