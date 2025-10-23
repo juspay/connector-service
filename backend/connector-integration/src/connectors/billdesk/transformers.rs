@@ -286,7 +286,7 @@ impl<
             &merchant_id.peek(),
             &customer_id_string,
             &txn_reference_no,
-            &amount,
+            &amount.to_string(),
             &currency,
             &additional_info,
         );
