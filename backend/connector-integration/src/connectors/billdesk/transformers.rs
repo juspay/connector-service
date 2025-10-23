@@ -319,7 +319,7 @@ fn create_upi_paydata<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send 
 ) -> CustomResult<String, errors::ConnectorError> {
     // Extract UPI specific data from payment method
     match &request_data.payment_method_data {
-        PaymentMethodData::Upi(upi_data) => {
+        PaymentMethodData::Upi(_upi_data) => {
             // For now, return a default UPI paydata
             // In a real implementation, this would extract the actual VPA
             Ok("UPI=DEFAULT".to_string())
