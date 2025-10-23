@@ -281,14 +281,14 @@ impl<
                 // Create the message for UPI transaction
                 let msg = create_upi_message(
                     &transaction_id,
-                    &amount,
+                    amount.as_str(),
                     &item.router_data.request.currency.to_string(),
                     &customer_id.get_string_repr(),
                 )?;
 
                 Ok(Self {
                     msg,
-                    paydata: Some(create_upi_paydata(&item.router_data)?),
+                    paydata: Some(create_upi_paydata(&item.router_data.request)?),
                     ipaddress: Some(ip_address),
                     useragent: Some(user_agent),
                 })
