@@ -332,8 +332,8 @@ fn get_redirect_form_data(
     }
 }
 
-impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<domain_types::payment_method_data::DefaultPCIHolder>, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<BilldeskPaymentsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<domain_types::payment_method_data::DefaultPCIHolder>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     
