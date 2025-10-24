@@ -85,6 +85,19 @@ pub mod connector_types {
         pub status: crate::stubs::AttemptStatus,
         pub amount: u64,
         pub currency: crate::stubs::Currency,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pub error: Option<String>,
+    }
+
+    impl Default for PaymentsResponseData {
+        fn default() -> Self {
+            Self {
+                status: crate::stubs::AttemptStatus::Pending,
+                amount: 0,
+                currency: crate::stubs::Currency::Inr,
+                error: None,
+            }
+        }
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
