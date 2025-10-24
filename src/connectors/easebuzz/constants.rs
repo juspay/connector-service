@@ -1,13 +1,6 @@
 use std::collections::HashMap;
 
-// Placeholder types for compilation
-pub enum Currency {
-    INR,
-}
-
-pub enum PaymentMethodType {
-    Upi,
-}
+use common_enums::{Currency, PaymentMethodType};
 
 // API Endpoints for EaseBuzz
 pub const EASEBUZZ_BASE_URL: &str = "https://pay.easebuzz.in";
