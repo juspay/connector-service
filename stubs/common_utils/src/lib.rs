@@ -1,9 +1,8 @@
 // Stub implementations for common_utils
 
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, Secret};
+use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
-use std::fmt;
 
 pub mod errors {
     use error_stack::Context;
@@ -22,8 +21,6 @@ pub mod errors {
         #[error("Invalid request")]
         InvalidRequest,
     }
-
-    impl Context for ConnectorError {}
 }
 
 pub mod ext_traits {
