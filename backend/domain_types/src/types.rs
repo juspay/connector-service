@@ -4200,23 +4200,10 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             setup_mandate_details: Some(setup_mandate_details),
             router_return_url: value.return_url.clone(),
             webhook_url: value.webhook_url,
-            browser_info: value.browser_info.map(|info| BrowserInformation {
-                color_depth: None,
-                java_enabled: info.java_enabled,
-                java_script_enabled: info.java_script_enabled,
-                language: info.language,
-                screen_height: info.screen_height,
-                screen_width: info.screen_width,
-                time_zone: None,
-                ip_address: None,
-                accept_header: info.accept_header,
-                user_agent: info.user_agent,
-                os_type: info.os_type,
-                os_version: info.os_version,
-                device_model: info.device_model,
-                accept_language: info.accept_language,
-                referer: info.referer,
-            }),
+            browser_info: value
+                .browser_info
+                .map(BrowserInformation::foreign_try_from)
+                .transpose()?,
             email,
             customer_name: None,
             return_url: value.return_url.clone(),
