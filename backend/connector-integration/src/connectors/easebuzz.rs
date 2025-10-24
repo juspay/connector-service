@@ -39,7 +39,7 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use transformers::{
+use {
     self as easebuzz, 
     EasebuzzPaymentsRequest, 
     EasebuzzPaymentsResponse,
@@ -360,111 +360,111 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PSync,
-            request_body: transformers::EasebuzzPaymentsSyncRequest,
+            request_body: EasebuzzPaymentsSyncRequest,
             response_body: EasebuzzPaymentsResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         // Stub flows for compilation
         (
             flow: Void,
-            request_body: transformers::EasebuzzVoidRequest,
-            response_body: transformers::EasebuzzVoidResponse,
+            request_body: EasebuzzVoidRequest,
+            response_body: EasebuzzVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
         (
             flow: Capture,
-            request_body: transformers::EasebuzzCaptureRequest,
-            response_body: transformers::EasebuzzCaptureResponse,
+            request_body: EasebuzzCaptureRequest,
+            response_body: EasebuzzCaptureResponse,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ),
         (
             flow: Refund,
-            request_body: transformers::EasebuzzRefundRequest,
-            response_body: transformers::EasebuzzRefundRequestResponse,
+            request_body: EasebuzzRefundRequest,
+            response_body: EasebuzzRefundRequestResponse,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
         (
             flow: RSync,
-            request_body: transformers::EasebuzzRefundSyncRequest,
-            response_body: transformers::EasebuzzRefundSyncResponseWrapper,
+            request_body: EasebuzzRefundSyncRequest,
+            response_body: EasebuzzRefundSyncResponseWrapper,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ),
         (
             flow: CreateOrder,
-            request_body: transformers::EasebuzzCreateOrderRequest,
-            response_body: transformers::EasebuzzCreateOrderResponse,
+            request_body: EasebuzzCreateOrderRequest,
+            response_body: EasebuzzCreateOrderResponse,
             router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
         ),
         (
             flow: CreateSessionToken,
-            request_body: transformers::EasebuzzSessionTokenRequest,
-            response_body: transformers::EasebuzzSessionTokenResponse,
+            request_body: EasebuzzSessionTokenRequest,
+            response_body: EasebuzzSessionTokenResponse,
             router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
         ),
         (
             flow: SetupMandate,
-            request_body: transformers::EasebuzzSetupMandateRequest,
-            response_body: transformers::EasebuzzSetupMandateResponse,
+            request_body: EasebuzzSetupMandateRequest,
+            response_body: EasebuzzSetupMandateResponse,
             router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         ),
         (
             flow: RepeatPayment,
-            request_body: transformers::EasebuzzRepeatPaymentRequest,
-            response_body: transformers::EasebuzzRepeatPaymentResponse,
+            request_body: EasebuzzRepeatPaymentRequest,
+            response_body: EasebuzzRepeatPaymentResponse,
             router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
         ),
         (
             flow: Accept,
-            request_body: transformers::EasebuzzAcceptDisputeRequest,
-            response_body: transformers::EasebuzzAcceptDisputeResponse,
+            request_body: EasebuzzAcceptDisputeRequest,
+            response_body: EasebuzzAcceptDisputeResponse,
             router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
         ),
         (
             flow: SubmitEvidence,
-            request_body: transformers::EasebuzzSubmitEvidenceRequest,
-            response_body: transformers::EasebuzzSubmitEvidenceResponse,
+            request_body: EasebuzzSubmitEvidenceRequest,
+            response_body: EasebuzzSubmitEvidenceResponse,
             router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
         ),
         (
             flow: DefendDispute,
-            request_body: transformers::EasebuzzDefendDisputeRequest,
-            response_body: transformers::EasebuzzDefendDisputeResponse,
+            request_body: EasebuzzDefendDisputeRequest,
+            response_body: EasebuzzDefendDisputeResponse,
             router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
         ),
         (
             flow: PreAuthenticate,
-            request_body: transformers::EasebuzzPreAuthenticateRequest,
-            response_body: transformers::EasebuzzPreAuthenticateResponse,
+            request_body: EasebuzzPreAuthenticateRequest,
+            response_body: EasebuzzPreAuthenticateResponse,
             router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
         ),
         (
             flow: Authenticate,
-            request_body: transformers::EasebuzzAuthenticateRequest,
-            response_body: transformers::EasebuzzAuthenticateResponse,
+            request_body: EasebuzzAuthenticateRequest,
+            response_body: EasebuzzAuthenticateResponse,
             router_data: RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
         ),
         (
             flow: PostAuthenticate,
-            request_body: transformers::EasebuzzPostAuthenticateRequest,
-            response_body: transformers::EasebuzzPostAuthenticateResponse,
+            request_body: EasebuzzPostAuthenticateRequest,
+            response_body: EasebuzzPostAuthenticateResponse,
             router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
         ),
         (
             flow: CreateAccessToken,
-            request_body: transformers::EasebuzzCreateAccessTokenRequest,
-            response_body: transformers::EasebuzzCreateAccessTokenResponse,
+            request_body: EasebuzzCreateAccessTokenRequest,
+            response_body: EasebuzzCreateAccessTokenResponse,
             router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         ),
         (
             flow: CreateConnectorCustomer,
-            request_body: transformers::EasebuzzCreateConnectorCustomerRequest,
-            response_body: transformers::EasebuzzCreateConnectorCustomerResponse,
+            request_body: EasebuzzCreateConnectorCustomerRequest,
+            response_body: EasebuzzCreateConnectorCustomerResponse,
             router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
         ),
         (
             flow: PaymentMethodToken,
-            request_body: transformers::EasebuzzPaymentMethodTokenRequest,
-            response_body: transformers::EasebuzzPaymentMethodTokenResponse,
+            request_body: EasebuzzPaymentMethodTokenRequest,
+            response_body: EasebuzzPaymentMethodTokenResponse,
             router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         )
     ],
@@ -539,7 +539,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}{}", base_url, transformers::EasebuzzApi::INITIATE_PAYMENT))
+            Ok(format!("{}{}", base_url, EasebuzzApi::INITIATE_PAYMENT))
         }
     }
 );
@@ -547,7 +547,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Easebuzz,
-    curl_request: Json(transformers::EasebuzzPaymentsSyncRequest),
+    curl_request: Json(EasebuzzPaymentsSyncRequest),
     curl_response: EasebuzzPaymentsResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
@@ -574,7 +574,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}{}", base_url, transformers::EasebuzzApi::TRANSACTION_SYNC))
+            Ok(format!("{}{}", base_url, EasebuzzApi::TRANSACTION_SYNC))
         }
     }
 );
@@ -617,7 +617,7 @@ impl<
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: transformers::EasebuzzPaymentsResponse = res
+        let response: EasebuzzPaymentsResponse = res
             .response
             .parse_struct("EasebuzzPaymentsResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
