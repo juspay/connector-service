@@ -274,7 +274,7 @@ impl<
 
         Ok(Self {
             msg,
-            useragent,
+            useragent: user_agent,
             ipaddress: ip_address,
         })
     }
