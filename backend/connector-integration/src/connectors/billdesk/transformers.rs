@@ -302,7 +302,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let msg = build_billdesk_message(&item, true)?;
+        let msg = build_billdesk_message_sync(&item)?;
 
         Ok(Self { msg })
     }
