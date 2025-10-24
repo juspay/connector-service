@@ -30,7 +30,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::{Maskable, Secret};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -39,56 +39,15 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use {
-    self as easebuzz, 
-    EasebuzzPaymentsRequest, 
-    EasebuzzPaymentsResponse,
-    EasebuzzPaymentsSyncRequest,
-    EasebuzzVoidRequest,
-    EasebuzzVoidResponse,
-    EasebuzzCaptureRequest,
-    EasebuzzCaptureResponse,
-    EasebuzzRefundRequest,
-    EasebuzzRefundRequestResponse,
-    EasebuzzRefundSyncRequest,
-    EasebuzzRefundSyncResponseWrapper,
-    EasebuzzCreateOrderRequest,
-    EasebuzzCreateOrderResponse,
-    EasebuzzSessionTokenRequest,
-    EasebuzzSessionTokenResponse,
-    EasebuzzSetupMandateRequest,
-    EasebuzzSetupMandateResponse,
-    EasebuzzRepeatPaymentRequest,
-    EasebuzzRepeatPaymentResponse,
-    EasebuzzAcceptDisputeRequest,
-    EasebuzzAcceptDisputeResponse,
-    EasebuzzSubmitEvidenceRequest,
-    EasebuzzSubmitEvidenceResponse,
-    EasebuzzDefendDisputeRequest,
-    EasebuzzDefendDisputeResponse,
-    EasebuzzPreAuthenticateRequest,
-    EasebuzzPreAuthenticateResponse,
-    EasebuzzAuthenticateRequest,
-    EasebuzzAuthenticateResponse,
-    EasebuzzPostAuthenticateRequest,
-    EasebuzzPostAuthenticateResponse,
-    EasebuzzCreateAccessTokenRequest,
-    EasebuzzCreateAccessTokenResponse,
-    EasebuzzCreateConnectorCustomerRequest,
-    EasebuzzCreateConnectorCustomerResponse,
-    EasebuzzPaymentMethodTokenRequest,
-    EasebuzzPaymentMethodTokenResponse,
-};
-
-// Type alias for router data
-pub type EasebuzzRouterData<R, T> = ConnectorRouterData<R, T>;
+use transformers::{EasebuzzPaymentsRequest, EasebuzzPaymentsResponse, EasebuzzApi};
 
 use super::macros;
-use crate::{connectors::ConnectorRouterData, types::ResponseRouterData, with_error_response_body};
+use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
+    pub(crate) const ACCEPT: &str = "Accept";
 }
 
 // Trait implementations with generic type parameters
@@ -269,7 +228,7 @@ impl<
         error_stack::Report<domain_types::errors::ConnectorError>,
     > {
         // TODO: Implement webhook processing
-        Err(errors::ConnectorError::WebhookNotImplemented.into())
+        Err(errors::ConnectorError::WebhooksNotImplemented.into())
     }
 }
 
@@ -360,112 +319,9 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PSync,
-            request_body: EasebuzzPaymentsSyncRequest,
+            request_body: transformers::EasebuzzPaymentsSyncRequest,
             response_body: EasebuzzPaymentsResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ),
-        // Stub flows for compilation
-        (
-            flow: Void,
-            request_body: EasebuzzVoidRequest,
-            response_body: EasebuzzVoidResponse,
-            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ),
-        (
-            flow: Capture,
-            request_body: EasebuzzCaptureRequest,
-            response_body: EasebuzzCaptureResponse,
-            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ),
-        (
-            flow: Refund,
-            request_body: EasebuzzRefundRequest,
-            response_body: EasebuzzRefundRequestResponse,
-            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ),
-        (
-            flow: RSync,
-            request_body: EasebuzzRefundSyncRequest,
-            response_body: EasebuzzRefundSyncResponseWrapper,
-            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ),
-        (
-            flow: CreateOrder,
-            request_body: EasebuzzCreateOrderRequest,
-            response_body: EasebuzzCreateOrderResponse,
-            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
-        ),
-        (
-            flow: CreateSessionToken,
-            request_body: EasebuzzSessionTokenRequest,
-            response_body: EasebuzzSessionTokenResponse,
-            router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
-        ),
-        (
-            flow: SetupMandate,
-            request_body: EasebuzzSetupMandateRequest,
-            response_body: EasebuzzSetupMandateResponse,
-            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: RepeatPayment,
-            request_body: EasebuzzRepeatPaymentRequest,
-            response_body: EasebuzzRepeatPaymentResponse,
-            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-        ),
-        (
-            flow: Accept,
-            request_body: EasebuzzAcceptDisputeRequest,
-            response_body: EasebuzzAcceptDisputeResponse,
-            router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
-        ),
-        (
-            flow: SubmitEvidence,
-            request_body: EasebuzzSubmitEvidenceRequest,
-            response_body: EasebuzzSubmitEvidenceResponse,
-            router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
-        ),
-        (
-            flow: DefendDispute,
-            request_body: EasebuzzDefendDisputeRequest,
-            response_body: EasebuzzDefendDisputeResponse,
-            router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
-        ),
-        (
-            flow: PreAuthenticate,
-            request_body: EasebuzzPreAuthenticateRequest,
-            response_body: EasebuzzPreAuthenticateResponse,
-            router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: Authenticate,
-            request_body: EasebuzzAuthenticateRequest,
-            response_body: EasebuzzAuthenticateResponse,
-            router_data: RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: PostAuthenticate,
-            request_body: EasebuzzPostAuthenticateRequest,
-            response_body: EasebuzzPostAuthenticateResponse,
-            router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: CreateAccessToken,
-            request_body: EasebuzzCreateAccessTokenRequest,
-            response_body: EasebuzzCreateAccessTokenResponse,
-            router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
-        ),
-        (
-            flow: CreateConnectorCustomer,
-            request_body: EasebuzzCreateConnectorCustomerRequest,
-            response_body: EasebuzzCreateConnectorCustomerResponse,
-            router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
-        ),
-        (
-            flow: PaymentMethodToken,
-            request_body: EasebuzzPaymentMethodTokenRequest,
-            response_body: EasebuzzPaymentMethodTokenResponse,
-            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         )
     ],
     amount_converters: [
@@ -495,17 +351,6 @@ macros::create_all_prerequisites!(
                 req.resource_common_data.connectors.easebuzz.base_url.as_ref()
             }
         }
-
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
-            &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
-        ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
-                req.resource_common_data.connectors.easebuzz.test_base_url.as_ref()
-            } else {
-                req.resource_common_data.connectors.easebuzz.base_url.as_ref()
-            }
-        }
     }
 );
 
@@ -524,9 +369,9 @@ macros::macro_connector_implementation!(
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut header = vec![(
+            let header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
             )];
@@ -547,7 +392,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Easebuzz,
-    curl_request: Json(EasebuzzPaymentsSyncRequest),
+    curl_request: Json(transformers::EasebuzzPaymentsSyncRequest),
     curl_response: EasebuzzPaymentsResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
@@ -559,9 +404,9 @@ macros::macro_connector_implementation!(
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut header = vec![(
+            let header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
             )];
@@ -617,7 +462,7 @@ impl<
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: EasebuzzPaymentsResponse = res
+        let response: transformers::EasebuzzPaymentsResponse = res
             .response
             .parse_struct("EasebuzzPaymentsResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
