@@ -607,17 +607,7 @@ impl<
 {
 }
 
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Billdesk<T>
-{
-}
+
 
 impl<
     T: PaymentMethodDataTypes
