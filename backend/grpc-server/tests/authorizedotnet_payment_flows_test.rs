@@ -418,7 +418,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         amount_to_capture: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
-        metadata: HashMap::new(),
+        connector_metadata: HashMap::new(),
         browser_info: None,
         access_token: None,
         capture_method: None,
@@ -444,6 +444,7 @@ fn create_void_request(transaction_id: &str) -> PaymentServiceVoidRequest {
         access_token: None,
         amount: None,
         currency: None,
+        ..Default::default()
     }
 }
 

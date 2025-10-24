@@ -1327,6 +1327,9 @@ message PaymentServiceVoidRequest {
   // Amount Information
   optional int64 amount = 7; // Amount to void
   optional Currency currency = 8; // Currency of the void amount
+
+  // Metadata
+  map<string, string> connector_metadata = 9; // Additional metadata for the connector
 }
 
 // Response message for a payment void operation.
@@ -1349,6 +1352,12 @@ message PaymentServiceVoidResponse {
 
   // Raw Request
   optional SecretString raw_connector_request = 9; // Raw request to the connector for debugging
+
+  // Mandate Details
+  optional MandateReference mandate_reference = 10; // Reference to the mandate, if applicable
+
+  // Authorization Details
+  optional bool incremental_authorization_allowed = 11; // Indicates if incremental authorization is allowed
 }
 
 // Request message for capturing a payment.
@@ -1362,7 +1371,7 @@ message PaymentServiceCaptureRequest {
   Currency currency = 4; // Currency of the amount to capture
   
   // Metadata
-  map<string, string> metadata = 5; // Additional metadata for the connector
+  map<string, string> connector_metadata = 5; // Additional metadata for the connector
   
   // Multiple Capture Information
   optional MultipleCaptureRequestData multiple_capture_data = 6; // Data for multiple capture scenarios
@@ -1397,6 +1406,16 @@ message PaymentServiceCaptureResponse {
 
   // Raw Request
   optional SecretString raw_connector_request = 9; // Raw request to the connector for debugging
+
+  // Payment Details
+  optional int64 captured_amount = 10; // Amount that has been captured
+  optional int64 minor_captured_amount = 11; // Captured amount in minor currency units
+
+  // Mandate Details
+  MandateReference mandate_reference = 12; // Reference to the created mandate
+
+  // Authorization Details
+  optional bool incremental_authorization_allowed = 13; // Indicates if incremental authorization is allowed
 }
 
 // Request message for processing a refund.
