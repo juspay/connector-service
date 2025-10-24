@@ -390,13 +390,13 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
 }
 
 impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    TryFrom<ResponseRouterData<EasebuzzPaymentsResponse, EasebuzzRouterData<RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>>
+    TryFrom<ResponseRouterData<EasebuzzPaymentsResponse, &RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<EasebuzzPaymentsResponse, EasebuzzRouterData<RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>,
+        item: ResponseRouterData<EasebuzzPaymentsResponse, &RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
