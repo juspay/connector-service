@@ -172,7 +172,7 @@ macros::create_all_prerequisites!(
 );
 
 // Implement connector common traits
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     ConnectorCommon for EaseBuzz<T>
 {
     fn get_id(&self) -> &'static str {
@@ -218,20 +218,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             supported_currencies: vec!["INR".parse().unwrap()],
             supported_countries: vec!["IN".parse().unwrap()],
             ..Default::default()
-        }
-    }
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorCommonV2 for EaseBuzz<T>
-{
-    fn get_api_tag(&self, flow: &str) -> &'static str {
-        match flow {
-            "Authorize" => "payment",
-            "PSync" => "sync",
-            "RSync" => "refund_sync",
-            "Refund" => "refund",
-            _ => "default",
         }
     }
 }
