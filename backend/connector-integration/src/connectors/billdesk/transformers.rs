@@ -310,14 +310,7 @@ fn get_redirect_form_data(
             Ok(RedirectForm::Form {
                 endpoint: url,
                 method: Method::Post,
-                form_fields: rdata
-                    .parameters
-                    .into_iter()
-                    .map(|(k, v)| (k, v.into_masked()))
-                    .collect::<HashMap<String, Maskable<String>>>()
-                    .into_iter()
-                    .map(|(k, v)| (k, v))
-                    .collect(),
+                form_fields: rdata.parameters,
             })
         } else {
             Err(errors::ConnectorError::MissingRequiredField {
