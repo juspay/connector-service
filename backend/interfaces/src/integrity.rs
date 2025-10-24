@@ -8,11 +8,11 @@ use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 // Domain type imports
 use domain_types::connector_types::{
     AcceptDisputeData, AccessTokenRequestData, ConnectorCustomerData, DisputeDefendData,
-    PaymentCreateOrderData, PaymentMethodTokenizationData, PaymentVoidData, PaymentsCancelPostCaptureData,
-    PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
-    PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsSyncData, RefundSyncData,
-    RefundsData, RepeatPaymentData, SessionTokenRequestData, SetupMandateRequestData,
-    SubmitEvidenceData,
+    PaymentCreateOrderData, PaymentMethodTokenizationData, PaymentVoidData,
+    PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+    PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+    PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData, SessionTokenRequestData,
+    SetupMandateRequestData, SubmitEvidenceData,
 };
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
@@ -20,10 +20,11 @@ use domain_types::{
         AcceptDisputeIntegrityObject, AccessTokenIntegrityObject, AuthenticateIntegrityObject,
         AuthoriseIntegrityObject, CaptureIntegrityObject, CreateConnectorCustomerIntegrityObject,
         CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
-        PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject, PaymentVoidPostCaptureIntegrityObject,
-        PostAuthenticateIntegrityObject, PreAuthenticateIntegrityObject, RefundIntegrityObject,
-        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SessionTokenIntegrityObject,
-        SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
+        PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
+        PaymentVoidPostCaptureIntegrityObject, PostAuthenticateIntegrityObject,
+        PreAuthenticateIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
+        RepeatPaymentIntegrityObject, SessionTokenIntegrityObject, SetupMandateIntegrityObject,
+        SubmitEvidenceIntegrityObject,
     },
 };
 

@@ -10,20 +10,20 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateConnectorCustomer, CreateOrder, CreateSessionToken, DefendDispute,
-        PSync, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void, VoidPC,
+        Accept, Authenticate, Authorize, Capture, CreateConnectorCustomer, CreateOrder,
+        CreateSessionToken, DefendDispute, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
-        AcceptDisputeData, ConnectorCustomerData, ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
-        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, WebhookDetailsResponse,
+        AcceptDisputeData, ConnectorCustomerData, ConnectorCustomerResponse,
+        ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, EventType, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
@@ -38,7 +38,8 @@ use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{
-        AcceptDispute, ConnectorServiceTrait, CreateConnectorCustomer as CreateConnectorCustomerTrait, DisputeDefend, IncomingWebhook,
+        AcceptDispute, ConnectorServiceTrait,
+        CreateConnectorCustomer as CreateConnectorCustomerTrait, DisputeDefend, IncomingWebhook,
         PaymentAuthenticateV2, PaymentAuthorizeV2, PaymentCapture, PaymentOrderCreate,
         PaymentPostAuthenticateV2, PaymentPreAuthenticateV2, PaymentSessionToken, PaymentSyncV2,
         PaymentVoidPostCaptureV2, PaymentVoidV2, RefundSyncV2, RefundV2, RepeatPaymentV2,
@@ -1080,89 +1081,8 @@ impl<
         PaymentsResponseData,
     > for Worldpayvantiv<T>
 {
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-        self.build_headers(req)
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        self.common_get_content_type()
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<String, ConnectorError> {
-        Ok(self.connector_base_url_payments(req).to_string())
-    }
-
-    fn get_request_body(
-        &self,
-        _req: &RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<RequestContent>, ConnectorError> {
-        // WorldpayVantiv setup mandate not implemented yet - return placeholder error
-        Err(ConnectorError::NotImplemented(
-            "SetupMandate not implemented for WorldpayVantiv".into(),
-        )
-        .into())
-    }
-
-    fn handle_response_v2(
-        &self,
-        _data: &RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData<T>,
-            PaymentsResponseData,
-        >,
-        _event_builder: Option<&mut ConnectorEvent>,
-        _res: Response,
-    ) -> CustomResult<
-        RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData<T>,
-            PaymentsResponseData,
-        >,
-        ConnectorError,
-    > {
-        Err(ConnectorError::NotImplemented(
-            "SetupMandate not implemented for WorldpayVantiv".into(),
-        )
-        .into())
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-
-    fn get_http_method(&self) -> common_utils::request::Method {
-        common_utils::request::Method::Post
-    }
 }
 
-// Empty implementation for RepeatPayment flow
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -1174,35 +1094,6 @@ impl<
     ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
     for Worldpayvantiv<T>
 {
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-        self.build_headers(req)
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        self.common_get_content_type()
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-    ) -> CustomResult<String, ConnectorError> {
-        Ok(self.connector_base_url_payments(req).to_string())
-    }
-
-    fn get_request_body(
-        &self,
-        _req: &RouterDataV2<
-            RepeatPayment,
-            PaymentFlowData,
-            RepeatPaymentData,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<RequestContent>, ConnectorError> {
-        Err(ConnectorError::NotImplemented("Repeat payment not implemented yet".into()).into())
-    }
 }
 
 // Empty implementations for dispute flows
@@ -1510,7 +1401,8 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > ConnectorIntegrationV2<
+    >
+    ConnectorIntegrationV2<
         CreateConnectorCustomer,
         PaymentFlowData,
         ConnectorCustomerData,
@@ -1526,7 +1418,8 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > interfaces::verification::SourceVerification<
+    >
+    interfaces::verification::SourceVerification<
         CreateConnectorCustomer,
         PaymentFlowData,
         ConnectorCustomerData,

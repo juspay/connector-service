@@ -1,12 +1,11 @@
 use common_enums::{self, CountryAlpha2, Currency};
 use common_utils::{types::MinorUnit, StringMajorUnit};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void, VoidPC},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, VoidPC},
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
-        SetupMandateRequestData,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
@@ -1490,6 +1489,7 @@ impl<
 }
 
 // Helper functions for creating RawCardNumber from different sources
+#[allow(dead_code)]
 fn create_raw_card_number_from_string<T: PaymentMethodDataTypes>(
     card_string: String,
 ) -> Result<RawCardNumber<T>, error_stack::Report<ConnectorError>>
@@ -1499,6 +1499,7 @@ where
     Ok(RawCardNumber(T::Inner::from(card_string)))
 }
 
+#[allow(dead_code)]
 fn get_payment_info<T: PaymentMethodDataTypes>(
     payment_method_data: &PaymentMethodData<T>,
     payment_method_token: Option<PaymentMethodToken>,
@@ -1646,6 +1647,7 @@ where
     }
 }
 
+#[allow(dead_code)]
 fn determine_apple_pay_card_type(
     network: &str,
 ) -> Result<WorldpayvativCardType, error_stack::Report<ConnectorError>> {
@@ -1662,6 +1664,7 @@ fn determine_apple_pay_card_type(
     }
 }
 
+#[allow(dead_code)]
 fn determine_google_pay_card_type(
     network: &str,
 ) -> Result<WorldpayvativCardType, error_stack::Report<ConnectorError>> {
@@ -1941,7 +1944,7 @@ impl<
 
         // For pre-capture void, use AuthReversal
         let auth_reversal = AuthReversal {
-            id: format!("Void_{}", merchant_txn_id),
+            id: format!("{}_{}", OperationId::Void, merchant_txn_id),
             report_group,
             cnp_txn_id,
             amount: None, // Amount is optional for AuthReversal
@@ -2082,7 +2085,7 @@ impl<
                 .unwrap_or_else(|| "rtpGrp".to_string());
 
         let void = VoidRequest {
-            id: format!("VoidPC_{}", merchant_txn_id),
+            id: format!("{}_{}", OperationId::VoidPC, merchant_txn_id),
             report_group,
             cnp_txn_id,
         };
@@ -2097,112 +2100,6 @@ impl<
             capture: None,
             auth_reversal: None,
             void: Some(void),
-            credit: None,
-        };
-
-        Ok(WorldpayvantivPaymentsRequest { cnp_request })
-    }
-}
-
-// TryFrom for SetupMandate request
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        WorldpayvantivRouterData<
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for WorldpayvantivPaymentsRequest<T>
-where
-    T::Inner: From<String> + Clone,
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        item: WorldpayvantivRouterData<
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let auth = WorldpayvantivAuthType::try_from(&item.router_data.connector_auth_type)?;
-
-        let authentication = Authentication {
-            user: auth.user,
-            password: auth.password,
-        };
-
-        let payment_method_data = &item.router_data.request.payment_method_data;
-        let order_source = OrderSource::from(payment_method_data.clone());
-        let payment_info = get_payment_info::<T>(payment_method_data, None)?;
-
-        let merchant_txn_id = item
-            .router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
-
-        let bill_to_address = get_billing_address(
-            &item
-                .router_data
-                .resource_common_data
-                .address
-                .get_payment_method_billing()
-                .cloned(),
-        );
-        let ship_to_address = get_shipping_address(
-            &item
-                .router_data
-                .resource_common_data
-                .address
-                .get_shipping()
-                .cloned(),
-        );
-
-        let authorization = Authorization {
-            id: format!("setupmandate_{}", merchant_txn_id),
-            report_group: "Default".to_string(),
-            customer_id: None,
-            order_id: merchant_txn_id.clone(),
-            amount: item
-                .router_data
-                .request
-                .minor_amount
-                .unwrap_or(MinorUnit::zero()),
-            order_source,
-            bill_to_address,
-            ship_to_address,
-            payment_info,
-            enhanced_data: None,
-            processing_instructions: None,
-            cardholder_authentication: None,
-        };
-
-        let cnp_request = CnpOnlineRequest {
-            version: worldpayvantiv_constants::WORLDPAYVANTIV_VERSION.to_string(),
-            xmlns: worldpayvantiv_constants::XMLNS.to_string(),
-            merchant_id: auth.merchant_id,
-            authentication,
-            authorization: Some(authorization),
-            sale: None,
-            capture: None,
-            auth_reversal: None,
-            void: None,
             credit: None,
         };
 
@@ -2759,223 +2656,6 @@ impl
             Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status: common_enums::AttemptStatus::VoidFailed,
-                    ..item.router_data.resource_common_data
-                },
-                response: Err(error_response),
-                ..item.router_data
-            })
-        }
-    }
-}
-
-// Step 134-143: TryFrom for SetupMandate request and response
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        WorldpayvantivRouterData<
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for CnpOnlineRequest<T>
-where
-    T::Inner: From<String> + Clone,
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: WorldpayvantivRouterData<
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let auth = WorldpayvantivAuthType::try_from(&item.router_data.connector_auth_type)?;
-
-        let authentication = Authentication {
-            user: auth.user,
-            password: auth.password,
-        };
-
-        let payment_method_data = &item.router_data.request.payment_method_data;
-        let order_source = OrderSource::from(payment_method_data.clone());
-        let payment_info = get_payment_info::<T>(payment_method_data, None)?;
-
-        let merchant_txn_id = item
-            .router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
-
-        let bill_to_address = get_billing_address(
-            &item
-                .router_data
-                .resource_common_data
-                .address
-                .get_payment_method_billing()
-                .cloned(),
-        );
-        let ship_to_address = get_shipping_address(
-            &item
-                .router_data
-                .resource_common_data
-                .address
-                .get_shipping()
-                .cloned(),
-        );
-
-        let authorization = Authorization {
-            id: format!("setupmandate_{}", merchant_txn_id),
-            report_group: "Default".to_string(),
-            customer_id: None,
-            order_id: merchant_txn_id.clone(),
-            amount: item
-                .router_data
-                .request
-                .minor_amount
-                .unwrap_or(MinorUnit::zero()),
-            order_source,
-            bill_to_address,
-            ship_to_address,
-            payment_info,
-            enhanced_data: None,
-            processing_instructions: None,
-            cardholder_authentication: None,
-        };
-
-        Ok(Self {
-            version: worldpayvantiv_constants::WORLDPAYVANTIV_VERSION.to_string(),
-            xmlns: worldpayvantiv_constants::XMLNS.to_string(),
-            merchant_id: auth.merchant_id,
-            authentication,
-            authorization: Some(authorization),
-            sale: None,
-            capture: None,
-            auth_reversal: None,
-            void: None,
-            credit: None,
-        })
-    }
-}
-
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            CnpOnlineResponse,
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    >
-    for RouterDataV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    >
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<
-            CnpOnlineResponse,
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    ) -> Result<Self, Self::Error> {
-        if let Some(auth_response) = item.response.authorization_response {
-            let status =
-                get_attempt_status(WorldpayvantivPaymentFlow::Auth, auth_response.response)?;
-
-            if is_payment_failure(status) {
-                let error_response = ErrorResponse {
-                    code: auth_response.response.to_string(),
-                    message: auth_response.message.clone(),
-                    reason: Some(auth_response.message.clone()),
-                    status_code: item.http_code,
-                    attempt_status: Some(status),
-                    connector_transaction_id: Some(auth_response.cnp_txn_id.clone()),
-                    network_decline_code: None,
-                    network_advice_code: None,
-                    network_error_message: None,
-                };
-
-                Ok(Self {
-                    resource_common_data: PaymentFlowData {
-                        status,
-                        ..item.router_data.resource_common_data
-                    },
-                    response: Err(error_response),
-                    ..item.router_data
-                })
-            } else {
-                let mandate_reference = auth_response.token_response.as_ref().map(|token| {
-                    Box::new(MandateReference {
-                        connector_mandate_id: Some(token.cnp_token.clone().expose()),
-                        payment_method_id: None,
-                    })
-                });
-
-                let payments_response = PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(
-                        auth_response.cnp_txn_id.clone(),
-                    ),
-                    redirection_data: None,
-                    mandate_reference,
-                    connector_metadata: None,
-                    network_txn_id: auth_response
-                        .network_transaction_id
-                        .clone()
-                        .map(|id| id.expose()),
-                    connector_response_reference_id: Some(auth_response.order_id.clone()),
-                    incremental_authorization_allowed: None,
-                    status_code: item.http_code,
-                };
-
-                Ok(Self {
-                    resource_common_data: PaymentFlowData {
-                        status,
-                        ..item.router_data.resource_common_data
-                    },
-                    response: Ok(payments_response),
-                    ..item.router_data
-                })
-            }
-        } else {
-            let error_response = ErrorResponse {
-                code: item.response.response_code,
-                message: item.response.message.clone(),
-                reason: Some(item.response.message.clone()),
-                status_code: item.http_code,
-                attempt_status: Some(common_enums::AttemptStatus::AuthorizationFailed),
-                connector_transaction_id: None,
-                network_decline_code: None,
-                network_advice_code: None,
-                network_error_message: None,
-            };
-
-            Ok(Self {
-                resource_common_data: PaymentFlowData {
-                    status: common_enums::AttemptStatus::AuthorizationFailed,
                     ..item.router_data.resource_common_data
                 },
                 response: Err(error_response),

@@ -132,9 +132,22 @@ pub struct Connectors {
 #[derive(Clone, serde::Deserialize, Debug, Default)]
 pub struct ConnectorParams {
     /// base url
+    #[serde(default)]
     pub base_url: String,
+    #[serde(default)]
     pub dispute_base_url: Option<String>,
+    #[serde(default)]
     pub secondary_base_url: Option<String>,
+}
+
+impl ConnectorParams {
+    pub fn new(base_url: String, dispute_base_url: Option<String>) -> Self {
+        Self {
+            base_url,
+            dispute_base_url,
+            secondary_base_url: None,
+        }
+    }
 }
 
 #[derive(Debug, serde::Deserialize, Clone, Default)]
@@ -2520,7 +2533,7 @@ pub fn generate_payment_void_response(
                     }),
                     error_code: None,
                     error_message: None,
-                    status_code: status_code as u32,
+                    status_code: u32::from(status_code),
                     response_headers: router_data_v2
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
@@ -2622,7 +2635,7 @@ pub fn generate_payment_void_post_capture_response(
                     }),
                     error_code: None,
                     error_message: None,
-                    status_code: status_code as u32,
+                    status_code: u32::from(status_code),
                     response_headers: router_data_v2
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
@@ -2648,7 +2661,7 @@ pub fn generate_payment_void_post_capture_response(
                         grpc_api_types::payments::identifier::IdType::NoResponseIdMarker(()),
                     ),
                 }),
-                status: status as i32,
+                status: status.into(),
                 response_ref_id: e.connector_transaction_id.map(|id| {
                     grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
@@ -2656,7 +2669,7 @@ pub fn generate_payment_void_post_capture_response(
                 }),
                 error_code: Some(e.code),
                 error_message: Some(e.message),
-                status_code: e.status_code as u32,
+                status_code: u32::from(e.status_code),
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
