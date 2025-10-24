@@ -328,7 +328,7 @@ macros::create_all_prerequisites!(
         // Stub flows for compilation
         (
             flow: Void,
-            request_body: easebuzz::EasebuzzVoidRequest,
+            request_body: transformers::EasebuzzVoidRequest,
             response_body: easebuzz::EasebuzzVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
