@@ -39,7 +39,46 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use transformers::{self as easebuzz, EasebuzzPaymentsRequest, EasebuzzPaymentsResponse};
+use transformers::{
+    self as easebuzz, 
+    EasebuzzPaymentsRequest, 
+    EasebuzzPaymentsResponse,
+    EasebuzzPaymentsSyncRequest,
+    EasebuzzVoidRequest,
+    EasebuzzVoidResponse,
+    EasebuzzCaptureRequest,
+    EasebuzzCaptureResponse,
+    EasebuzzRefundRequest,
+    EasebuzzRefundRequestResponse,
+    EasebuzzRefundSyncRequest,
+    EasebuzzRefundSyncResponseWrapper,
+    EasebuzzCreateOrderRequest,
+    EasebuzzCreateOrderResponse,
+    EasebuzzSessionTokenRequest,
+    EasebuzzSessionTokenResponse,
+    EasebuzzSetupMandateRequest,
+    EasebuzzSetupMandateResponse,
+    EasebuzzRepeatPaymentRequest,
+    EasebuzzRepeatPaymentResponse,
+    EasebuzzAcceptDisputeRequest,
+    EasebuzzAcceptDisputeResponse,
+    EasebuzzSubmitEvidenceRequest,
+    EasebuzzSubmitEvidenceResponse,
+    EasebuzzDefendDisputeRequest,
+    EasebuzzDefendDisputeResponse,
+    EasebuzzPreAuthenticateRequest,
+    EasebuzzPreAuthenticateResponse,
+    EasebuzzAuthenticateRequest,
+    EasebuzzAuthenticateResponse,
+    EasebuzzPostAuthenticateRequest,
+    EasebuzzPostAuthenticateResponse,
+    EasebuzzCreateAccessTokenRequest,
+    EasebuzzCreateAccessTokenResponse,
+    EasebuzzCreateConnectorCustomerRequest,
+    EasebuzzCreateConnectorCustomerResponse,
+    EasebuzzPaymentMethodTokenRequest,
+    EasebuzzPaymentMethodTokenResponse,
+};
 
 // Type alias for router data
 pub type EasebuzzRouterData<R, T> = ConnectorRouterData<R, T>;
