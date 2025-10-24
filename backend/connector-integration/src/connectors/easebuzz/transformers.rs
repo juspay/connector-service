@@ -20,6 +20,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{connectors::easebuzz::EasebuzzRouterData, types::ResponseRouterData};
 
+// Type alias for router data
+pub type EasebuzzRouterData<R, T> = crate::connectors::ConnectorRouterData<R, T>;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EasebuzzAuth {
     pub key: Secret<String>,
