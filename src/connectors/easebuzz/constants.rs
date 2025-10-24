@@ -144,15 +144,11 @@ pub fn validate_vpa(vpa: &str) -> Result<(), ConnectorError> {
 
 pub fn validate_amount(amount: i64) -> Result<(), ConnectorError> {
     if amount < MIN_TRANSACTION_AMOUNT {
-        return Err(ConnectorError::InvalidRequestData {
-            message: format!("Amount must be at least ₹{}", MIN_TRANSACTION_AMOUNT / 100),
-        });
+        return Err(ConnectorError::InvalidRequest);
     }
     
     if amount > MAX_TRANSACTION_AMOUNT {
-        return Err(ConnectorError::InvalidRequestData {
-            message: format!("Amount cannot exceed ₹{}", MAX_TRANSACTION_AMOUNT / 100),
-        });
+        return Err(ConnectorError::InvalidRequest);
     }
     
     Ok(())
