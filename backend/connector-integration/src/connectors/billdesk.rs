@@ -42,7 +42,7 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use transformers::{self as billdesk, BilldeskPaymentsRequest, BilldeskPaymentsResponse};
+use transformers::{self as billdesk, BilldeskPaymentsRequest, BilldeskPaymentsResponse, BilldeskPaymentsSyncRequest, BilldeskVoidRequest, BilldeskVoidResponse, BilldeskCaptureRequest, BilldeskCaptureResponse, BilldeskRefundRequest, BilldeskRefundResponse, BilldeskRefundSyncRequest, BilldeskRefundSyncResponse, BilldeskMandateRequest, BilldeskMandateResponse, BilldeskRepeatPaymentRequest, BilldeskRepeatPaymentResponse, BilldeskCreateOrderRequest, BilldeskCreateOrderResponse, BilldeskSessionTokenRequest, BilldeskSessionTokenResponse, BilldeskAcceptDisputeRequest, BilldeskAcceptDisputeResponse, BilldeskSubmitEvidenceRequest, BilldeskSubmitEvidenceResponse, BilldeskDefendDisputeRequest, BilldeskDefendDisputeResponse};
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
