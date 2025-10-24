@@ -127,22 +127,16 @@ pub fn validate_transaction_id(txn_id: &str) -> Result<(), ConnectorError> {
 
 pub fn validate_vpa(vpa: &str) -> Result<(), ConnectorError> {
     if vpa.is_empty() {
-        return Err(ConnectorError::MissingRequiredField {
-            field_name: "vpa".to_string(),
-        });
+        return Err(ConnectorError::InvalidRequest);
     }
     
     if vpa.len() > MAX_VPA_LENGTH {
-        return Err(ConnectorError::InvalidRequestData {
-            message: format!("VPA exceeds maximum length of {}", MAX_VPA_LENGTH),
-        });
+        return Err(ConnectorError::InvalidRequest);
     }
     
     // Basic VPA format validation (should contain @)
     if !vpa.contains('@') {
-        return Err(ConnectorError::InvalidRequestData {
-            message: "Invalid VPA format".to_string(),
-        });
+        return Err(ConnectorError::InvalidRequest);
     }
     
     Ok(())
