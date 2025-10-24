@@ -359,49 +359,73 @@ macros::create_all_prerequisites!(
     }
 );
 
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Billdesk,
-    curl_request: Json(BilldeskPaymentsRequest),
-    curl_response: BilldeskPaymentsResponse,
-    flow_name: Authorize,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsAuthorizeData<T>,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut header = vec![(
-                headers::CONTENT_TYPE.to_string(),
-                self.common_get_content_type().to_string().into(),
-            )];
-
-            let auth_type = transformers::BilldeskAuth::try_from(&req.connector_auth_type)?;
-
-            let mut auth_header = get_billdesk_auth_header(&auth_type)?;
-
-            header.append(&mut auth_header);
-            Ok(header)
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            let is_test = req.resource_common_data.test_mode.unwrap_or(false);
-            let base_url = if is_test {
-                "https://uat.billdesk.com/pgidsk/PGIDirectRequest?reqid=BDRDF011"
-            } else {
-                "https://www.billdesk.com/pgidsk/PGIDirectRequest?reqid=BDRDF011"
-            };
-            Ok(base_url.to_string())
-        }
+// Manual implementation for Authorize flow to avoid macro conflicts
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    for Billdesk<T>
+{
+    fn build_request_v2(
+        &self,
+        req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+        let request = transformers::BilldeskPaymentsRequest::try_from((req.clone(), self.clone()))?;
+        let url = self.get_url(req)?;
+        let headers = self.get_headers(req)?;
+        
+        Ok(Some(common_utils::request::Request {
+            url,
+            method: common_utils::request::Method::Post,
+            headers,
+            body: common_utils::request::RequestContent::Json(request),
+            encoding: None,
+        }))
     }
-);
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > Billdesk<T> {
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let mut header = vec![(
+            headers::CONTENT_TYPE.to_string(),
+            self.common_get_content_type().to_string().into(),
+        )];
+
+        let auth_type = transformers::BilldeskAuth::try_from(&req.connector_auth_type)?;
+
+        let mut auth_header = get_billdesk_auth_header(&auth_type)?;
+
+        header.append(&mut auth_header);
+        Ok(header)
+    }
+    
+    fn get_url(
+        &self,
+        req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let is_test = req.resource_common_data.test_mode.unwrap_or(false);
+        let base_url = if is_test {
+            "https://uat.billdesk.com/pgidsk/PGIDirectRequest?reqid=BDRDF011"
+        } else {
+            "https://www.billdesk.com/pgidsk/PGIDirectRequest?reqid=BDRDF011"
+        };
+        Ok(base_url.to_string())
+    }
+}
 
 impl<
         T: PaymentMethodDataTypes
