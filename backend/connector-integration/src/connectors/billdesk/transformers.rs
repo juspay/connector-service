@@ -161,7 +161,7 @@ pub struct BilldeskDefendDisputeRequest;
 #[derive(Debug, Clone)]
 pub struct BilldeskDefendDisputeResponse;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum BilldeskPaymentStatus {
     Success,
