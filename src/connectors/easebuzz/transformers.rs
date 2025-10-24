@@ -389,7 +389,7 @@ pub struct EaseBuzzAuth {
     pub salt: Secret<String>,
 }
 
-fn get_auth_credentials(auth_type: &domain_types::ConnectorAuthType) -> CustomResult<EaseBuzzAuth, errors::ConnectorError> {
+fn get_auth_credentials(auth_type: &domain_types::ConnectorAuthType) -> CustomResult<EaseBuzzAuth, domain_types::errors::ConnectorError> {
     match auth_type {
         domain_types::ConnectorAuthType::SignatureKey {
             api_key,
@@ -398,13 +398,13 @@ fn get_auth_credentials(auth_type: &domain_types::ConnectorAuthType) -> CustomRe
         } => {
             let key = key
                 .clone()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
+                .ok_or(domain_types::errors::ConnectorError::MissingRequiredField {
                     field_name: "key",
                 })?;
             
             let salt = api_key
                 .clone()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
+                .ok_or(domain_types::errors::ConnectorError::MissingRequiredField {
                     field_name: "salt",
                 })?;
 
@@ -413,7 +413,7 @@ fn get_auth_credentials(auth_type: &domain_types::ConnectorAuthType) -> CustomRe
                 salt: Secret::new(salt),
             })
         }
-        _ => Err(errors::ConnectorError::AuthenticationFailed.into()),
+        _ => Err(domain_types::errors::ConnectorError::AuthenticationFailed.into()),
     }
 }
 
