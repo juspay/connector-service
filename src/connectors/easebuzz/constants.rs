@@ -78,12 +78,7 @@ pub const MIN_REFUND_AMOUNT: i64 = 100; // ₹1.00
 pub const MAX_REFUND_AMOUNT: i64 = 10000000; // ₹100,000.00
 
 // Status mappings
-// Placeholder status enum
-pub enum AttemptStatus {
-    Charged,
-    Failure,
-    Pending,
-}
+use common_enums::AttemptStatus;
 
 pub fn map_easebuzz_status_to_attempt_status(status: i32) -> AttemptStatus {
     match status {
