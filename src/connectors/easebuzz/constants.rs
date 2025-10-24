@@ -109,15 +109,27 @@ pub fn map_easebuzz_refund_status_to_attempt_status(status: &str) -> AttemptStat
     }
 }
 
+// Placeholder error types
+#[derive(Debug)]
+pub enum ConnectorError {
+    AuthenticationFailed,
+    TransactionNotFound,
+    InsufficientBalance,
+    PaymentDeclined,
+    MissingRequiredField { field_name: String },
+    InvalidRequestData { message: String },
+    UnknownErrorResponse { code: String, message: String, status_code: Option<u16>, reason: Option<String> },
+}
+
 // Error mapping
-pub fn map_easebuzz_error_to_connector_error(error_code: &str, error_message: &str) -> domain_types::errors::ConnectorError {
+pub fn map_easebuzz_error_to_connector_error(error_code: &str, error_message: &str) -> ConnectorError {
     match error_code {
-        ERROR_CODE_INVALID_HASH => domain_types::errors::ConnectorError::AuthenticationFailed,
-        ERROR_CODE_INVALID_TRANSACTION => domain_types::errors::ConnectorError::TransactionNotFound,
-        ERROR_CODE_INSUFFICIENT_FUNDS => domain_types::errors::ConnectorError::InsufficientBalance,
-        ERROR_CODE_TRANSACTION_DECLINED => domain_types::errors::ConnectorError::PaymentDeclined,
-        ERROR_CODE_INVALID_MERCHANT => domain_types::errors::ConnectorError::AuthenticationFailed,
-        _ => domain_types::errors::ConnectorError::UnknownErrorResponse {
+        ERROR_CODE_INVALID_HASH => ConnectorError::AuthenticationFailed,
+        ERROR_CODE_INVALID_TRANSACTION => ConnectorError::TransactionNotFound,
+        ERROR_CODE_INSUFFICIENT_FUNDS => ConnectorError::InsufficientBalance,
+        ERROR_CODE_TRANSACTION_DECLINED => ConnectorError::PaymentDeclined,
+        ERROR_CODE_INVALID_MERCHANT => ConnectorError::AuthenticationFailed,
+        _ => ConnectorError::UnknownErrorResponse {
             code: error_code.to_string(),
             message: error_message.to_string(),
             status_code: None,
