@@ -1195,7 +1195,7 @@ impl<
             statement_descriptor_suffix: None,
             statement_descriptor: None,
             router_return_url: value.return_url.clone(),
-            complete_authorize_url: None,
+            complete_authorize_url: value.complete_authorize_url,
             setup_future_usage,
             mandate_id: None,
             off_session: value.off_session,

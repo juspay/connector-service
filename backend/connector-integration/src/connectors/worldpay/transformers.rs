@@ -298,6 +298,8 @@ fn create_three_ds_request<
                     field_name: "user_agent",
                 })?;
 
+            let channel = Some(ThreeDSRequestChannel::Browser);
+
             Ok(Some(ThreeDSRequest {
                 three_ds_type: super::requests::THREE_DS_TYPE.to_string(),
                 mode: super::requests::THREE_DS_MODE.to_string(),
@@ -311,7 +313,7 @@ fn create_three_ds_request<
                     time_zone: browser_info.time_zone.map(|tz| tz.to_string()),
                     browser_java_enabled: browser_info.java_enabled,
                     browser_javascript_enabled: browser_info.java_script_enabled,
-                    channel: Some(ThreeDSRequestChannel::Browser),
+                    channel,
                 },
                 challenge: ThreeDSRequestChallenge {
                     return_url: router_data.request.get_complete_authorize_url()?,
@@ -758,7 +760,7 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         // Use the existing ForeignTryFrom implementation
-        Self::foreign_try_from((item, None, 0))
+        Self::foreign_try_from((item, None, MinorUnit::zero()))
     }
 }
 
@@ -794,9 +796,9 @@ impl
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        // Extract amount before moving item
-        let amount = item.router_data.request.minor_amount.get_amount_as_i64();
-        // Use the existing ForeignTryFrom implementation, passing the amount for correct status determination
+        // Extract amount before moving item to pass for correct status determination
+        let amount = item.router_data.request.minor_amount;
+        // Use the existing ForeignTryFrom implementation
         Self::foreign_try_from((item, None, amount))
     }
 }
@@ -808,7 +810,7 @@ impl<F, T>
             RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>,
         >,
         Option<String>,
-        i64,
+        MinorUnit,
     )> for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -819,7 +821,7 @@ impl<F, T>
                 RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>,
             >,
             Option<String>,
-            i64,
+            MinorUnit,
         ),
     ) -> Result<Self, Self::Error> {
         let (router_data, optional_correlation_id, amount) = item;
@@ -909,7 +911,7 @@ impl<F, T>
             PaymentOutcome::FraudHighRisk => Some("Transaction marked as high risk".to_string()),
             _ => None,
         };
-        let status = if amount == 0 && worldpay_status == PaymentOutcome::Authorized {
+        let status = if amount == MinorUnit::zero() && worldpay_status == PaymentOutcome::Authorized {
             enums::AttemptStatus::Charged
         } else {
             enums::AttemptStatus::from(worldpay_status.clone())

@@ -239,6 +239,29 @@ macros::create_all_prerequisites!(
         ) -> &'a str {
             &req.resource_common_data.connectors.worldpay.base_url
         }
+
+        /// Helper function to extract link_data from connector_meta_data
+        /// Used by PreAuthenticate and PostAuthenticate flows to avoid code duplication
+        pub fn extract_link_data_from_metadata<F, Req, Res>(
+            req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> Result<String, error_stack::Report<errors::ConnectorError>> {
+            let metadata_obj = req
+                .resource_common_data
+                .connector_meta_data
+                .as_ref()
+                .and_then(|metadata| metadata.peek().as_object())
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_meta_data",
+                })?;
+
+            metadata_obj
+                .get("link_data")
+                .and_then(|value| value.as_str())
+                .map(|s| s.to_string())
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_meta_data.link_data",
+                }.into())
+        }
     }
 );
 
@@ -528,28 +551,12 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            // Extract metadata object from connector_meta_data
-            let metadata_obj = req
-                .resource_common_data
-                .connector_meta_data
-                .as_ref()
-                .and_then(|metadata| metadata.peek().as_object())
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data",
-                })?;
-
-            // Extract linkData
-            let link_data = metadata_obj
-                .get("link_data")
-                .and_then(|value| value.as_str())
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data.link_data",
-                })?;
+            let link_data = Self::extract_link_data_from_metadata(req)?;
 
             Ok(format!(
                 "{}api/payments/{}/3dsDeviceData",
                 self.connector_base_url_payments(req),
-                urlencoding::encode(link_data),
+                urlencoding::encode(&link_data),
             ))
         }
     }
@@ -578,28 +585,12 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            // Extract metadata object from connector_meta_data
-            let metadata_obj = req
-                .resource_common_data
-                .connector_meta_data
-                .as_ref()
-                .and_then(|metadata| metadata.peek().as_object())
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data",
-                })?;
-
-            // Extract linkData
-            let link_data = metadata_obj
-                .get("link_data")
-                .and_then(|value| value.as_str())
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data.link_data",
-                })?;
+            let link_data = Self::extract_link_data_from_metadata(req)?;
 
             Ok(format!(
                 "{}api/payments/{}/3dsChallenges",
                 self.connector_base_url_payments(req),
-                urlencoding::encode(link_data),
+                urlencoding::encode(&link_data),
             ))
         }
     }
