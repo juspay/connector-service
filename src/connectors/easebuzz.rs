@@ -139,8 +139,8 @@ impl<T: PaymentMethodDataTypes + Debug + Send + Sync + 'static> interfaces::api:
 
     fn get_connector_specifications(&self) -> domain_types::connector_types::ConnectorSpecifications {
         domain_types::connector_types::ConnectorSpecifications {
-            connector_name: "easebuzz".to_string(),
-            connector_type: domain_types::types::ConnectorType::PaymentGateway,
+            connector_name: Some("easebuzz".to_string()),
+            connector_type: Some(domain_types::types::ConnectorType::PaymentGateway),
             supported_payment_methods: vec![domain_types::common_enums::PaymentMethodType::Upi],
             supported_currencies: vec!["INR".parse().unwrap()],
             supported_countries: vec!["IN".parse().unwrap()],
