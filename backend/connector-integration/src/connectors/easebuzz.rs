@@ -655,12 +655,8 @@ impl<
         "application/json"
     }
 
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        if connectors.test_mode.unwrap_or(false) {
-            constants::EASEBUZZ_TEST_BASE_URL
-        } else {
-            constants::EASEBUZZ_PROD_BASE_URL
-        }
+    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
+        constants::EASEBUZZ_TEST_BASE_URL // Default to test for now
     }
 
     fn get_auth_header(
