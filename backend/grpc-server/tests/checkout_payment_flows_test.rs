@@ -169,7 +169,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         amount_to_capture: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
-        metadata: std::collections::HashMap::new(),
+        connector_metadata: std::collections::HashMap::new(),
         request_ref_id: None,
         browser_info: None,
         access_token: None,
@@ -236,6 +236,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         access_token: None,
         amount: None,
         currency: None,
+        ..Default::default()
     }
 }
 
