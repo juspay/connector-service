@@ -42,20 +42,21 @@ pub trait GetUrl {
         connector: &crate::connectors::easebuzz::EaseBuzz<T>,
         req: &RouterDataV2<Self, domain_types::connector_types::PaymentFlowData, Self::Request, Self::Response>,
         base_url: &str,
-    ) -> CustomResult<String, errors::ConnectorError>
+    ) -> CustomResult<String, domain_types::errors::ConnectorError>
     where
         Self: Sized;
 }
 
+// Associated type definitions for URL traits
 impl GetUrl for domain_types::connector_types::PaymentsAuthorizeType {
-    type Request = domain_types::connector_types::PaymentsAuthorizeData<T>;
+    type Request = domain_types::connector_types::PaymentsAuthorizeData<PhantomData<String>>;
     type Response = domain_types::connector_types::PaymentsResponseData;
 
     fn get_url<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
         _connector: &crate::connectors::easebuzz::EaseBuzz<T>,
         req: &RouterDataV2<Self, domain_types::connector_types::PaymentFlowData, Self::Request, Self::Response>,
-        base_url: &str,
-    ) -> CustomResult<String, errors::ConnectorError> {
+        _base_url: &str,
+    ) -> CustomResult<String, domain_types::errors::ConnectorError> {
         let test_mode = req.resource_common_data.test_mode.unwrap_or(false);
         Ok(crate::connectors::easebuzz::constants::get_initiate_payment_url(test_mode))
     }
@@ -68,8 +69,8 @@ impl GetUrl for domain_types::connector_types::PaymentsSyncType {
     fn get_url<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
         _connector: &crate::connectors::easebuzz::EaseBuzz<T>,
         req: &RouterDataV2<Self, domain_types::connector_types::PaymentFlowData, Self::Request, Self::Response>,
-        base_url: &str,
-    ) -> CustomResult<String, errors::ConnectorError> {
+        _base_url: &str,
+    ) -> CustomResult<String, domain_types::errors::ConnectorError> {
         let test_mode = req.resource_common_data.test_mode.unwrap_or(false);
         Ok(crate::connectors::easebuzz::constants::get_txn_sync_url(test_mode))
     }
@@ -82,8 +83,8 @@ impl GetUrl for domain_types::connector_types::RefundType {
     fn get_url<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
         _connector: &crate::connectors::easebuzz::EaseBuzz<T>,
         req: &RouterDataV2<Self, domain_types::connector_types::PaymentFlowData, Self::Request, Self::Response>,
-        base_url: &str,
-    ) -> CustomResult<String, errors::ConnectorError> {
+        _base_url: &str,
+    ) -> CustomResult<String, domain_types::errors::ConnectorError> {
         let test_mode = req.resource_common_data.test_mode.unwrap_or(false);
         Ok(crate::connectors::easebuzz::constants::get_refund_url(test_mode))
     }
@@ -96,11 +97,27 @@ impl GetUrl for domain_types::connector_types::RefundSyncType {
     fn get_url<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
         _connector: &crate::connectors::easebuzz::EaseBuzz<T>,
         req: &RouterDataV2<Self, domain_types::connector_types::PaymentFlowData, Self::Request, Self::Response>,
-        base_url: &str,
-    ) -> CustomResult<String, errors::ConnectorError> {
+        _base_url: &str,
+    ) -> CustomResult<String, domain_types::errors::ConnectorError> {
         let test_mode = req.resource_common_data.test_mode.unwrap_or(false);
         Ok(crate::connectors::easebuzz::constants::get_refund_sync_url(test_mode))
     }
+}
+
+// Response router data type
+#[derive(Debug)]
+pub struct ResponseRouterData<F, T, R> {
+    pub flow: PhantomData<F>,
+    pub data: PhantomData<T>,
+    pub response: PhantomData<R>,
+}
+
+// Helper macro for error responses
+#[macro_export]
+macro_rules! with_error_response_body {
+    () => {
+        // Stub implementation
+    };
 }
 
 // Re-export domain types for convenience
