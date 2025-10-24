@@ -236,7 +236,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     TryFrom<&RouterDataV2<domain_types::connector_flow::Refund, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::RefundFlowData, domain_types::connector_types::RefundsResponseData>>
     for EaseBuzzRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(
         item: &RouterDataV2<
@@ -249,7 +249,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let auth = get_auth_credentials(&item.connector_auth_type)?;
         let transaction_id = item.request.connector_transaction_id
             .get_connector_transaction_id()
-            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
+            .map_err(|_e| domain_types::errors::ConnectorError::RequestEncodingFailed)?;
         let refund_amount = item.amount.get_amount_as_string();
         
         let hash = generate_refund_hash(
