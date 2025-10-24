@@ -23,6 +23,9 @@ use crate::types::ResponseRouterData;
 // Type alias for router data with Billdesk connector
 pub type BilldeskRouterData<R, T> = (R, T);
 
+// Forward declaration
+use super::Billdesk;
+
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BilldeskPaymentsRequest {
