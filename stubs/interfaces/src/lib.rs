@@ -18,7 +18,7 @@ pub mod connector_integration_v2 {
 
 pub mod connector_types {
     // Re-export from domain_types
-    pub use crate::stubs::domain_types::connector_types::*;
+    pub use domain_types::connector_types::*;
 }
 
 pub mod events {
