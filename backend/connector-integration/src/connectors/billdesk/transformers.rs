@@ -238,7 +238,7 @@ impl<
                     &transaction_id,
                     &amount,
                     &router_data.request.currency.to_string(),
-                    &customer_id.to_string(),
+                    &customer_id.get_string_repr(),
                     &router_data.connector_auth_type,
                 )?;
                 
