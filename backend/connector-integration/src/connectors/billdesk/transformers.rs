@@ -236,14 +236,14 @@ impl<
         let amount = router_data.request.minor_amount.to_string();
 
         // Build the message based on payment method type
-        match item.resource_common_data.payment_method {
+        match router_data.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => {
                 let msg = build_upi_message(
                     &transaction_id,
                     &amount,
-                    &item.request.currency.to_string(),
+                    &router_data.request.currency.to_string(),
                     &customer_id,
-                    &item.connector_auth_type,
+                    &router_data.connector_auth_type,
                 )?;
                 
                 Ok(Self {
