@@ -329,8 +329,8 @@ impl<T: std::fmt::Debug> std::fmt::Debug for Billdesk<T> {
 }
 
 impl<T> Billdesk<T> {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> &'static Self {
+        &Self {
             amount_converter: &common_utils::types::StringMinorUnitForConnector,
             connector_name: "billdesk",
             payment_method_data: PhantomData,
