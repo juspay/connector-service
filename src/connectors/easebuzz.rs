@@ -234,44 +234,13 @@ macros::macro_connector_implementation!(
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
-        fn build_request_v2(
+        fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Option<services::Request>, errors::ConnectorError> {
-            let connector_request = transformers::EaseBuzzPaymentsRequest::try_from(req)?;
-            let request = services::RequestBuilder::new()
-                .method(services::Method::Post)
-                .url(&types::PaymentsAuthorizeType::get_url(
-                    self,
-                    req,
-                    &self.base_url,
-                )?)
-                .attach_default_headers()
-                .set_body(types::RequestBody::Form(connector_request))
-                .build();
-
-            Ok(Some(request))
-        }
-
-        fn handle_response_v2(
-            &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            res: services::Response,
-        ) -> CustomResult<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, errors::ConnectorError> {
-            let response: transformers::EaseBuzzPaymentsResponse = res
-                .response
-                .parse_struct("EaseBuzzPaymentsResponse")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-            let router_response = transformers::EaseBuzzPaymentsResponse::try_from(response)?;
-
-            Ok(req.get_response(
-                router_response.status,
-                router_response.error_desc,
-                router_response,
-            ))
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
         }
     }
 );
@@ -288,44 +257,13 @@ macros::macro_connector_implementation!(
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
-        fn build_request_v2(
+        fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Option<services::Request>, errors::ConnectorError> {
-            let connector_request = transformers::EaseBuzzPaymentsSyncRequest::try_from(req)?;
-            let request = services::RequestBuilder::new()
-                .method(services::Method::Post)
-                .url(&types::PaymentsSyncType::get_url(
-                    self,
-                    req,
-                    &self.base_url,
-                )?)
-                .attach_default_headers()
-                .set_body(types::RequestBody::Form(connector_request))
-                .build();
-
-            Ok(Some(request))
-        }
-
-        fn handle_response_v2(
-            &self,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            res: services::Response,
-        ) -> CustomResult<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, errors::ConnectorError> {
-            let response: transformers::EaseBuzzPaymentsSyncResponse = res
-                .response
-                .parse_struct("EaseBuzzPaymentsSyncResponse")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-            let router_response = transformers::EaseBuzzPaymentsSyncResponse::try_from(response)?;
-
-            Ok(req.get_response(
-                router_response.status,
-                Some(router_response.msg),
-                router_response,
-            ))
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
         }
     }
 );
@@ -342,44 +280,13 @@ macros::macro_connector_implementation!(
     flow_response: RefundsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
-        fn build_request_v2(
+        fn get_headers(
             &self,
             req: &RouterDataV2<Refund, PaymentFlowData, RefundFlowData, RefundsResponseData>,
-        ) -> CustomResult<Option<services::Request>, errors::ConnectorError> {
-            let connector_request = transformers::EaseBuzzRefundRequest::try_from(req)?;
-            let request = services::RequestBuilder::new()
-                .method(services::Method::Post)
-                .url(&types::RefundType::get_url(
-                    self,
-                    req,
-                    &self.base_url,
-                )?)
-                .attach_default_headers()
-                .set_body(types::RequestBody::Form(connector_request))
-                .build();
-
-            Ok(Some(request))
-        }
-
-        fn handle_response_v2(
-            &self,
-            req: &RouterDataV2<Refund, PaymentFlowData, RefundFlowData, RefundsResponseData>,
-            res: services::Response,
-        ) -> CustomResult<RouterDataV2<Refund, PaymentFlowData, RefundFlowData, RefundsResponseData>, errors::ConnectorError> {
-            let response: transformers::EaseBuzzRefundResponse = res
-                .response
-                .parse_struct("EaseBuzzRefundResponse")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-            let router_response = transformers::EaseBuzzRefundResponse::try_from(response)?;
-
-            Ok(req.get_response(
-                router_response.status,
-                router_response.reason,
-                router_response,
-            ))
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
         }
     }
 );
@@ -396,44 +303,13 @@ macros::macro_connector_implementation!(
     flow_response: RefundsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
-        fn build_request_v2(
+        fn get_headers(
             &self,
             req: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Option<services::Request>, errors::ConnectorError> {
-            let connector_request = transformers::EaseBuzzRefundSyncRequest::try_from(req)?;
-            let request = services::RequestBuilder::new()
-                .method(services::Method::Post)
-                .url(&types::RefundSyncType::get_url(
-                    self,
-                    req,
-                    &self.base_url,
-                )?)
-                .attach_default_headers()
-                .set_body(types::RequestBody::Form(connector_request))
-                .build();
-
-            Ok(Some(request))
-        }
-
-        fn handle_response_v2(
-            &self,
-            req: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
-            res: services::Response,
-        ) -> CustomResult<RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>, errors::ConnectorError> {
-            let response: transformers::EaseBuzzRefundSyncResponse = res
-                .response
-                .parse_struct("EaseBuzzRefundSyncResponse")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-            let router_response = transformers::EaseBuzzRefundSyncResponse::try_from(response)?;
-
-            Ok(req.get_response(
-                router_response.status,
-                Some(router_response.message),
-                router_response,
-            ))
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
         }
     }
 );
@@ -443,24 +319,3 @@ impl_source_verification_stub!(Authorize, PaymentFlowData, PaymentsAuthorizeData
 impl_source_verification_stub!(PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData);
 impl_source_verification_stub!(Refund, PaymentFlowData, RefundFlowData, RefundsResponseData);
 impl_source_verification_stub!(RSync, PaymentFlowData, RefundSyncData, RefundsResponseData);
-
-// Implement connector types traits
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::PaymentAuthorizeV2 for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::PaymentSyncV2 for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::RefundV2 for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    domain_types::connector_types::RefundSyncV2 for EaseBuzz<T>
-{
-}
