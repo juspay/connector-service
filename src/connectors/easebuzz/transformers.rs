@@ -309,7 +309,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 // Response transformers
 
 impl TryFrom<EaseBuzzPaymentsResponse> for domain_types::connector_types::PaymentsResponseData {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(response: EaseBuzzPaymentsResponse) -> Result<Self, Self::Error> {
         let status = match response.status {
@@ -327,7 +327,7 @@ impl TryFrom<EaseBuzzPaymentsResponse> for domain_types::connector_types::Paymen
 }
 
 impl TryFrom<EaseBuzzPaymentsSyncResponse> for domain_types::connector_types::PaymentsResponseData {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(response: EaseBuzzPaymentsSyncResponse) -> Result<Self, Self::Error> {
         let status = if response.status {
@@ -345,7 +345,7 @@ impl TryFrom<EaseBuzzPaymentsSyncResponse> for domain_types::connector_types::Pa
 }
 
 impl TryFrom<EaseBuzzRefundResponse> for domain_types::connector_types::RefundsResponseData {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(response: EaseBuzzRefundResponse) -> Result<Self, Self::Error> {
         let status = if response.status {
@@ -364,7 +364,7 @@ impl TryFrom<EaseBuzzRefundResponse> for domain_types::connector_types::RefundsR
 }
 
 impl TryFrom<EaseBuzzRefundSyncResponse> for domain_types::connector_types::RefundsResponseData {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(response: EaseBuzzRefundSyncResponse) -> Result<Self, Self::Error> {
         let status = match response.status.as_str() {
