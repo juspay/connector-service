@@ -309,55 +309,25 @@ impl<
 {
 }
 
-macros::create_all_prerequisites!(
-    connector_name: Billdesk,
-    generic_type: T,
-    api: [
-        (
-            flow: Authorize,
-            request_body: BilldeskPaymentsRequest,
-            response_body: BilldeskPaymentsResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: PSync,
-            request_body: BilldeskPaymentsSyncRequest,
-            response_body: BilldeskPaymentsResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        )
-    ],
-    amount_converters: [
-        amount_converter: StringMinorUnit
-    ],
-    member_functions: {
-        pub fn build_headers<F, FCD, Req, Res>(
-            &self,
-            _req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
-        where
-            Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
-        {
-            Ok(vec![(
-                headers::CONTENT_TYPE.to_string(),
-                self.common_get_content_type().to_string().into(),
-            )])
-        }
+// Manual connector structure to avoid macro conflicts
+use std::marker::PhantomData;
 
-        pub fn connector_base_url_payments<'a, F, Req, Res>(
-            &self,
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.billdesk.base_url
-        }
+#[derive(Debug, Clone)]
+pub struct Billdesk<T> {
+    amount_converter: &'static (dyn common_utils::AmountConvertorTrait<Output = String> + Sync),
+    connector_name: &'static str,
+    payment_method_data: PhantomData<T>,
+}
 
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
-            &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.billdesk.base_url
+impl<T> Billdesk<T> {
+    pub fn new() -> Self {
+        Self {
+            amount_converter: &common_utils::types::StringMinorUnit,
+            connector_name: "billdesk",
+            payment_method_data: PhantomData,
         }
     }
-);
+}
 
 // Manual implementation for Authorize flow to avoid macro conflicts
 impl<
