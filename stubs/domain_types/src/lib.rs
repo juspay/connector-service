@@ -1,8 +1,7 @@
 // Stub implementations for domain_types
 
-use hyperswitch_masking::{Mask, Maskable, Secret};
+use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 pub mod connector_flow {
     use serde::{Deserialize, Serialize};
@@ -36,22 +35,22 @@ pub mod connector_types {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct ConnectorSpecifications {
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        pub connector_name: String,
+        pub connector_name: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        pub connector_type: ConnectorType,
+        pub connector_type: Option<super::types::ConnectorType>,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        pub supported_payment_methods: Vec<crate::stubs::PaymentMethodType>,
+        pub supported_payment_methods: Vec<common_enums::PaymentMethodType>,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        pub supported_currencies: Vec<crate::stubs::Currency>,
+        pub supported_currencies: Vec<common_enums::Currency>,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        pub supported_countries: Vec<Country>,
+        pub supported_countries: Vec<super::Country>,
     }
 
     impl Default for ConnectorSpecifications {
         fn default() -> Self {
             Self {
-                connector_name: String::new(),
-                connector_type: ConnectorType::PaymentGateway,
+                connector_name: None,
+                connector_type: None,
                 supported_payment_methods: Vec::new(),
                 supported_currencies: Vec::new(),
                 supported_countries: Vec::new(),
@@ -77,14 +76,14 @@ pub mod connector_types {
     pub struct PaymentsAuthorizeData<T> {
         pub payment_method_data: T,
         pub amount: u64,
-        pub currency: crate::stubs::Currency,
+        pub currency: common_enums::Currency,
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct PaymentsResponseData {
-        pub status: crate::stubs::AttemptStatus,
+        pub status: common_enums::AttemptStatus,
         pub amount: u64,
-        pub currency: crate::stubs::Currency,
+        pub currency: common_enums::Currency,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub error: Option<String>,
     }
@@ -92,9 +91,9 @@ pub mod connector_types {
     impl Default for PaymentsResponseData {
         fn default() -> Self {
             Self {
-                status: crate::stubs::AttemptStatus::Pending,
+                status: common_enums::AttemptStatus::Pending,
                 amount: 0,
-                currency: crate::stubs::Currency::Inr,
+                currency: common_enums::Currency::Inr,
                 error: None,
             }
         }
@@ -109,22 +108,22 @@ pub mod connector_types {
     pub struct RefundFlowData {
         pub payment_id: String,
         pub refund_amount: u64,
-        pub currency: crate::stubs::Currency,
+        pub currency: common_enums::Currency,
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct RefundsData {
         pub refund_id: String,
         pub amount: u64,
-        pub currency: crate::stubs::Currency,
+        pub currency: common_enums::Currency,
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct RefundsResponseData {
-        pub status: crate::stubs::AttemptStatus,
+        pub status: common_enums::AttemptStatus,
         pub refund_id: String,
         pub amount: u64,
-        pub currency: crate::stubs::Currency,
+        pub currency: common_enums::Currency,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub error: Option<String>,
     }
@@ -132,10 +131,10 @@ pub mod connector_types {
     impl Default for RefundsResponseData {
         fn default() -> Self {
             Self {
-                status: crate::stubs::AttemptStatus::Pending,
+                status: common_enums::AttemptStatus::Pending,
                 refund_id: String::new(),
                 amount: 0,
-                currency: crate::stubs::Currency::Inr,
+                currency: common_enums::Currency::Inr,
                 error: None,
             }
         }
@@ -234,6 +233,12 @@ pub mod types {
         Wallet,
     }
 
+    impl Default for ConnectorType {
+        fn default() -> Self {
+            ConnectorType::PaymentGateway
+        }
+    }
+
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct ConnectorMetadata {
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -241,11 +246,11 @@ pub mod types {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub website: Option<String>,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        pub supported_payment_methods: Vec<super::PaymentMethodType>,
+        pub supported_payment_methods: Vec<common_enums::PaymentMethodType>,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        pub supported_currencies: Vec<super::Currency>,
+        pub supported_currencies: Vec<common_enums::Currency>,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        pub supported_countries: Vec<Country>,
+        pub supported_countries: Vec<super::Country>,
     }
 
     impl Default for ConnectorMetadata {
@@ -272,15 +277,37 @@ pub enum Country {
 }
 
 impl std::str::FromStr for Country {
-    type Err = thiserror::Error;
+    type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_uppercase().as_str() {
             "US" => Ok(Country::Us),
             "IN" => Ok(Country::In),
             "GB" => Ok(Country::Gb),
-            _ => Err(thiserror::Error::msg(format!("Invalid country: {}", s))),
+            _ => Err(format!("Invalid country: {}", s)),
         }
+    }
+}
+
+pub mod errors {
+    use thiserror::Error;
+
+    #[derive(Debug, Error)]
+    pub enum ConnectorError {
+        #[error("Request construction failed")]
+        RequestConstructionFailed,
+        #[error("Response deserialization failed")]
+        ResponseDeserializationFailed,
+        #[error("Network error")]
+        NetworkError,
+        #[error("Authentication failed")]
+        AuthenticationFailed,
+        #[error("Invalid request")]
+        InvalidRequest,
+        #[error("Missing required field: {field_name}")]
+        MissingRequiredField { field_name: String },
+        #[error("Request encoding failed")]
+        RequestEncodingFailed,
     }
 }
 
@@ -291,3 +318,83 @@ pub use router_data_v2::*;
 pub use router_data::*;
 pub use router_response_types::*;
 pub use types::*;
+
+// Import common_enums for use in this module
+pub mod common_enums {
+    use serde::{Deserialize, Serialize};
+    use std::fmt;
+
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+    pub enum AttemptStatus {
+        #[serde(rename = "started")]
+        Started,
+        #[serde(rename = "authentication_initiated")]
+        AuthenticationInitiated,
+        #[serde(rename = "authentication_successful")]
+        AuthenticationSuccessful,
+        #[serde(rename = "authentication_failed")]
+        AuthenticationFailed,
+        #[serde(rename = "authorization_initiated")]
+        AuthorizationInitiated,
+        #[serde(rename = "authorization_successful")]
+        AuthorizationSuccessful,
+        #[serde(rename = "authorization_failed")]
+        AuthorizationFailed,
+        #[serde(rename = "capture_initiated")]
+        CaptureInitiated,
+        #[serde(rename = "capture_successful")]
+        CaptureSuccessful,
+        #[serde(rename = "capture_failed")]
+        CaptureFailed,
+        #[serde(rename = "pending")]
+        Pending,
+        #[serde(rename = "charged_back")]
+        ChargedBack,
+        #[serde(rename = "void_initiated")]
+        VoidInitiated,
+        #[serde(rename = "void_successful")]
+        VoidSuccessful,
+        #[serde(rename = "void_failed")]
+        VoidFailed,
+        #[serde(rename = "failure")]
+        Failure,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+    pub enum Currency {
+        #[serde(rename = "USD")]
+        Usd,
+        #[serde(rename = "EUR")]
+        Eur,
+        #[serde(rename = "GBP")]
+        Gbp,
+        #[serde(rename = "INR")]
+        Inr,
+    }
+
+    impl std::str::FromStr for Currency {
+        type Err = String;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s.to_uppercase().as_str() {
+                "USD" => Ok(Currency::Usd),
+                "EUR" => Ok(Currency::Eur),
+                "GBP" => Ok(Currency::Gbp),
+                "INR" => Ok(Currency::Inr),
+                _ => Err(format!("Invalid currency: {}", s)),
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+    pub enum PaymentMethodType {
+        #[serde(rename = "card")]
+        Card,
+        #[serde(rename = "upi")]
+        Upi,
+        #[serde(rename = "netbanking")]
+        Netbanking,
+        #[serde(rename = "wallet")]
+        Wallet,
+    }
+}
