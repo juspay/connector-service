@@ -6,7 +6,7 @@ use common_enums::CurrencyUnit;
 use common_utils::{
     errors::CustomResult,
     ext_traits::ByteSliceExt,
-    types::StringMinorUnit,
+    types::{AmountConvertor, StringMinorUnit},
 };
 use domain_types::{
     connector_flow::{
@@ -33,7 +33,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface, Secret};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -44,8 +44,8 @@ use interfaces::{
 use serde::Serialize;
 use transformers::{self as billdesk, BilldeskPaymentsRequest, BilldeskPaymentsResponse, BilldeskPaymentsSyncRequest, BilldeskVoidRequest, BilldeskVoidResponse, BilldeskCaptureRequest, BilldeskCaptureResponse, BilldeskRefundRequest, BilldeskRefundResponse, BilldeskRefundSyncRequest, BilldeskRefundSyncResponse, BilldeskMandateRequest, BilldeskMandateResponse, BilldeskRepeatPaymentRequest, BilldeskRepeatPaymentResponse, BilldeskCreateOrderRequest, BilldeskCreateOrderResponse, BilldeskSessionTokenRequest, BilldeskSessionTokenResponse, BilldeskAcceptDisputeRequest, BilldeskAcceptDisputeResponse, BilldeskSubmitEvidenceRequest, BilldeskSubmitEvidenceResponse, BilldeskDefendDisputeRequest, BilldeskDefendDisputeResponse};
 
-use super::macros;
-use crate::{types::ResponseRouterData, with_error_response_body};
+
+
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -312,17 +312,26 @@ impl<
 // Manual connector structure to avoid macro conflicts
 use std::marker::PhantomData;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Billdesk<T> {
-    amount_converter: &'static dyn common_utils::AmountConvertor<Output = String>,
+    amount_converter: &'static dyn AmountConvertor<Output = String>,
     connector_name: &'static str,
     payment_method_data: PhantomData<T>,
+}
+
+impl<T: std::fmt::Debug> std::fmt::Debug for Billdesk<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Billdesk")
+            .field("connector_name", &self.connector_name)
+            .field("payment_method_data", &self.payment_method_data)
+            .finish()
+    }
 }
 
 impl<T> Billdesk<T> {
     pub fn new() -> Self {
         Self {
-            amount_converter: &common_utils::types::string_minor_unit::StringMinorUnit,
+            amount_converter: &common_utils::types::StringMinorUnitForConnector,
             connector_name: "billdesk",
             payment_method_data: PhantomData,
         }
@@ -351,9 +360,11 @@ impl<
         Ok(Some(common_utils::request::Request {
             url,
             method: common_utils::request::Method::Post,
-            headers,
-            body: common_utils::request::RequestContent::Json(request),
-            encoding: None,
+            headers: headers.into_iter().collect(),
+            body: Some(common_utils::request::RequestContent::Json(Box::new(request))),
+            certificate: None,
+            certificate_key: None,
+            ca_certificate: None,
         }))
     }
 }
