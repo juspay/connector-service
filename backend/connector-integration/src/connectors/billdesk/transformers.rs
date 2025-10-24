@@ -86,9 +86,8 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuth {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key } => {
+            ConnectorAuthType::SignatureKey { api_key, key1, api_secret } => {
                 let auth_data: BilldeskAuth = api_key
-                    .to_owned()
                     .parse_value("BilldeskAuth")
                     .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
                 Ok(auth_data)
