@@ -2,42 +2,42 @@
 pub mod constants;
 pub mod transformers;
 
-use std::marker::PhantomData;
+use std::fmt::Debug;
 
 use common_enums::{AttemptStatus, PaymentMethodType};
 use common_utils::{
-    crypto,
     errors::CustomResult,
-    ext_traits::BytesExt,
-    request::RequestContent,
-    types::{self, StringMinorUnit},
+    ext_traits::ByteSliceExt,
+    types::StringMinorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, PSync, RSync},
+    connector_flow::{Authorize, PSync, RSync, Refund},
     connector_types::{
-        ConnectorCommon, ConnectorCommonV2, ConnectorIntegrationV2, ConnectorSpecifications,
-        ConnectorWebhookSecrets, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData,
+        ConnectorCommon, ConnectorWebhookSecrets, PaymentFlowData, PaymentsAuthorizeData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
+        RefundSyncData,
     },
+    errors,
     payment_method_data::PaymentMethodDataTypes,
+    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
-    types as domain_types,
+    router_response_types::Response,
+    types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
-use masking::SecretTrait;
-use serde::{Deserialize, Serialize};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use interfaces::{
+    api::ConnectorCommon,
+    connector_integration_v2::ConnectorIntegrationV2,
+    connector_types,
+    events::connector_api_logs::ConnectorEvent,
+    verification::{ConnectorSourceVerificationSecrets, SourceVerification},
+};
+use serde::Serialize;
+use transformers::{self as easebuzz, EaseBuzzPaymentsRequest, EaseBuzzPaymentsResponse};
 
-use self::transformers::{
-    EaseBuzzPaymentsRequest, EaseBuzzPaymentsResponse, EaseBuzzPaymentsSyncRequest,
-    EaseBuzzPaymentsSyncResponse, EaseBuzzRefundRequest, EaseBuzzRefundResponse,
-    EaseBuzzRefundSyncRequest, EaseBuzzRefundSyncResponse,
-};
-use crate::{
-    impl_source_verification_stub,
-    services::{self, api, ConnectorCommon as ConnectorCommonTrait},
-    utils,
-};
+use super::macros;
+use crate::{types::ResponseRouterData, with_error_response_body};
 
 // Create all prerequisites using the mandatory macro framework
 macros::create_all_prerequisites!(
