@@ -8,7 +8,7 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData},
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
