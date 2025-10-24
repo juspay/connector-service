@@ -813,6 +813,7 @@ pub struct PaymentVoidData {
     pub browser_info: Option<BrowserInformation>,
     pub amount: Option<MinorUnit>,
     pub currency: Option<Currency>,
+    pub connector_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
 
 impl PaymentVoidData {
@@ -1374,6 +1375,7 @@ pub struct WebhookDetailsResponse {
     pub amount_captured: Option<i64>,
     // minor amount for amount framework
     pub minor_amount_captured: Option<MinorUnit>,
+    pub network_txn_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]

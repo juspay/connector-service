@@ -306,6 +306,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         browser_info: Some(create_test_browser_info()),
         amount: None,
         currency: None,
+        ..Default::default()
     }
 }
 
