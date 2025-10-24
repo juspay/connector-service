@@ -1,6 +1,6 @@
 // Stub implementations for interfaces
 
-use hyperswitch_masking::{Mask, Maskable, Secret};
+use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 pub mod api {
