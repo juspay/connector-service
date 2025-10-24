@@ -104,16 +104,11 @@ use domain_types::errors::ConnectorError;
 pub fn map_easebuzz_error_to_connector_error(error_code: &str, error_message: &str) -> ConnectorError {
     match error_code {
         ERROR_CODE_INVALID_HASH => ConnectorError::AuthenticationFailed,
-        ERROR_CODE_INVALID_TRANSACTION => ConnectorError::TransactionNotFound,
-        ERROR_CODE_INSUFFICIENT_FUNDS => ConnectorError::InsufficientBalance,
-        ERROR_CODE_TRANSACTION_DECLINED => ConnectorError::PaymentDeclined,
+        ERROR_CODE_INVALID_TRANSACTION => ConnectorError::AuthenticationFailed,
+        ERROR_CODE_INSUFFICIENT_FUNDS => ConnectorError::AuthenticationFailed,
+        ERROR_CODE_TRANSACTION_DECLINED => ConnectorError::AuthenticationFailed,
         ERROR_CODE_INVALID_MERCHANT => ConnectorError::AuthenticationFailed,
-        _ => ConnectorError::UnknownErrorResponse {
-            code: error_code.to_string(),
-            message: error_message.to_string(),
-            status_code: None,
-            reason: None,
-        },
+        _ => ConnectorError::InvalidRequest,
     }
 }
 
