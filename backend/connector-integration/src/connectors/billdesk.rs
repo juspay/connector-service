@@ -563,9 +563,7 @@ impl<
             ConnectorAuthType::SignatureKey { api_key, .. } => {
                 Ok(vec![(headers::AUTHORIZATION.to_string(), api_key.peek().to_owned().into_masked())])
             }
-            ConnectorAuthType::Key { api_key, .. } => {
-                Ok(vec![(headers::AUTHORIZATION.to_string(), api_key.peek().to_owned().into_masked())])
-            }
+            
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
     }
