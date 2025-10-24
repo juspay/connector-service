@@ -196,66 +196,50 @@ impl<
             + 'static
             + Serialize,
     >
-    TryFrom<
-        BilldeskRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for BilldeskPaymentsRequest
+    TryFrom<&RouterDataV2<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    >> for BilldeskPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: BilldeskRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
+        item: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let customer_id = item.resource_common_data.get_customer_id()?;
         let transaction_id = item
-            .router_data
             .resource_common_data
             .connector_request_reference_id;
         
         // Extract IP address
-        let ip_address = item.router_data.request.get_ip_address_as_optional()
+        let ip_address = item.request.get_ip_address_as_optional()
             .map(|ip| ip.expose())
             .unwrap_or_else(|| "127.0.0.1".to_string());
 
         // Extract user agent
-        let user_agent = item.router_data.request.browser_info
+        let user_agent = item.request.browser_info
             .as_ref()
             .and_then(|info| info.user_agent.clone())
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
 
         // Extract amount and currency
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+        let amount = item.request.minor_amount.get_amount_as_string();
 
         // Build the message based on payment method type
-        match item.router_data.resource_common_data.payment_method {
+        match item.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => {
                 let msg = build_upi_message(
                     &transaction_id,
                     &amount,
-                    &item.router_data.request.currency.to_string(),
+                    &item.request.currency.to_string(),
                     &customer_id,
-                    &item.router_data.connector_auth_type,
+                    &item.connector_auth_type,
                 )?;
                 
                 Ok(Self {
