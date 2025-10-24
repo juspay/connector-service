@@ -156,15 +156,11 @@ pub fn validate_amount(amount: i64) -> Result<(), ConnectorError> {
 
 pub fn validate_refund_amount(amount: i64) -> Result<(), ConnectorError> {
     if amount < MIN_REFUND_AMOUNT {
-        return Err(ConnectorError::InvalidRequestData {
-            message: format!("Refund amount must be at least ₹{}", MIN_REFUND_AMOUNT / 100),
-        });
+        return Err(ConnectorError::InvalidRequest);
     }
     
     if amount > MAX_REFUND_AMOUNT {
-        return Err(ConnectorError::InvalidRequestData {
-            message: format!("Refund amount cannot exceed ₹{}", MAX_REFUND_AMOUNT / 100),
-        });
+        return Err(ConnectorError::InvalidRequest);
     }
     
     Ok(())
