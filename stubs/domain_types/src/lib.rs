@@ -125,6 +125,20 @@ pub mod connector_types {
         pub refund_id: String,
         pub amount: u64,
         pub currency: crate::stubs::Currency,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pub error: Option<String>,
+    }
+
+    impl Default for RefundsResponseData {
+        fn default() -> Self {
+            Self {
+                status: crate::stubs::AttemptStatus::Pending,
+                refund_id: String::new(),
+                amount: 0,
+                currency: crate::stubs::Currency::Inr,
+                error: None,
+            }
+        }
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
