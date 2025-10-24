@@ -99,7 +99,7 @@ pub struct EaseBuzzErrorResponse {
 }
 
 // Implement connector common traits
-impl<T: PaymentMethodDataTypes + Debug + Send + Sync + 'static> ConnectorCommon for EaseBuzz<T> {
+impl<T: PaymentMethodDataTypes + Debug + Send + Sync + 'static> interfaces::api::ConnectorCommon for EaseBuzz<T> {
     fn get_id(&self) -> &'static str {
         "easebuzz"
     }
