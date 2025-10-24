@@ -108,22 +108,22 @@ pub mod connector_types {
     pub struct RefundFlowData {
         pub payment_id: String,
         pub refund_amount: u64,
-        pub currency: common_enums::Currency,
+        pub currency: super::common_enums::Currency,
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct RefundsData {
         pub refund_id: String,
         pub amount: u64,
-        pub currency: common_enums::Currency,
+        pub currency: super::common_enums::Currency,
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct RefundsResponseData {
-        pub status: common_enums::AttemptStatus,
+        pub status: super::common_enums::AttemptStatus,
         pub refund_id: String,
         pub amount: u64,
-        pub currency: common_enums::Currency,
+        pub currency: super::common_enums::Currency,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub error: Option<String>,
     }
@@ -131,10 +131,10 @@ pub mod connector_types {
     impl Default for RefundsResponseData {
         fn default() -> Self {
             Self {
-                status: common_enums::AttemptStatus::Pending,
+                status: super::common_enums::AttemptStatus::Pending,
                 refund_id: String::new(),
                 amount: 0,
-                currency: common_enums::Currency::Inr,
+                currency: super::common_enums::Currency::Inr,
                 error: None,
             }
         }
