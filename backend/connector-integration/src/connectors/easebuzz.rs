@@ -392,7 +392,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Easebuzz,
-    curl_request: Json(transformers::EasebuzzPaymentsSyncRequest),
+    curl_request: Json(EasebuzzPaymentsSyncRequest),
     curl_response: EasebuzzPaymentsResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
