@@ -192,27 +192,21 @@ impl<
             + 'static
             + Serialize,
     >
-    TryFrom<BilldeskRouterData<
-        RouterDataV2<
+    TryFrom<(RouterDataV2<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    >, Billdesk<T>)> for BilldeskPaymentsRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: (RouterDataV2<
             Authorize,
             PaymentFlowData,
             PaymentsAuthorizeData<T>,
             PaymentsResponseData,
-        >,
-        T,
-    >> for BilldeskPaymentsRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: BilldeskRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
+        >, Billdesk<T>),
     ) -> Result<Self, Self::Error> {
         let (router_data, _connector) = item;
         let customer_id = router_data.resource_common_data.get_customer_id()?;
