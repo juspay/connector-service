@@ -15,7 +15,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
@@ -88,9 +88,9 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuth {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key1, api_secret } => {
+            ConnectorAuthType::SignatureKey { api_key, .. } => {
                 let auth_data: BilldeskAuth = api_key
-                    .parse_value("BilldeskAuth")
+                    .parse_json("BilldeskAuth")
                     .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
                 Ok(auth_data)
             }
@@ -238,7 +238,7 @@ impl<
                     &transaction_id,
                     &amount,
                     &router_data.request.currency.to_string(),
-                    &customer_id,
+                    &customer_id.to_string(),
                     &router_data.connector_auth_type,
                 )?;
                 
@@ -335,7 +335,7 @@ fn get_redirect_form_data(
                 form_fields: rdata
                     .parameters
                     .into_iter()
-                    .map(|(k, v)| (k, hyperswitch_masking::Secret::new(v)))
+                    .map(|(k, v)| (k, hyperswitch_masking::Secret::new(v).expose()))
                     .collect(),
             })
         } else {
