@@ -1720,7 +1720,7 @@ impl PaymentService for Payments {
                     };
 
                     let response_result =
-                        external_services::service::execute_connector_processing_step(
+                        Box::pin(external_services::service::execute_connector_processing_step(
                             &self.config.proxy,
                             connector_integration,
                             router_data,
@@ -1728,7 +1728,7 @@ impl PaymentService for Payments {
                             event_params,
                             None,
                             consume_or_trigger_flow,
-                        )
+                        ))
                         .await
                         .switch()
                         .into_grpc_status()?;
@@ -2393,7 +2393,7 @@ impl PaymentService for Payments {
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
-                    let response = external_services::service::execute_connector_processing_step(
+                    let response = Box::pin(external_services::service::execute_connector_processing_step(
                         &self.config.proxy,
                         connector_integration,
                         router_data,
@@ -2401,7 +2401,7 @@ impl PaymentService for Payments {
                         event_params,
                         None, // token_data - None for non-proxy payments
                         common_enums::CallConnectorAction::Trigger,
-                    )
+                    ))
                     .await
                     .switch()
                     .map_err(|e| e.into_grpc_status())?;
