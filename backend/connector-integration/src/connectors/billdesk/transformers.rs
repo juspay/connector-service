@@ -268,20 +268,21 @@ impl<
             + 'static
             + Serialize,
     >
-    TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+    TryFrom<BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
     for BilldeskPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
-        let transaction_id = item
+        let (router_data, _connector) = item;
+        let transaction_id = router_data
             .resource_common_data
             .connector_request_reference_id;
         
         let msg = build_status_sync_message(
             &transaction_id,
-            &item.connector_auth_type,
+            &router_data.connector_auth_type,
         )?;
 
         Ok(Self { msg })
