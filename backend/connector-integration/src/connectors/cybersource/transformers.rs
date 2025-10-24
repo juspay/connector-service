@@ -2575,12 +2575,13 @@ impl<
     ) -> Result<Self, Self::Error> {
         let merchant_defined_information = value
             .router_data
-            .resource_common_data
-            .connector_meta_data
+            .request
+            .connector_metadata
             .clone()
-            .map(|secret_value: Secret<serde_json::Value>| {
-                convert_metadata_to_merchant_defined_info(secret_value.expose())
+            .map(|connector_metadata| {
+                convert_metadata_to_merchant_defined_info(connector_metadata.expose())
             });
+
         let currency = value.router_data.request.currency.unwrap();
         let total_amount = value
             .connector
@@ -4049,7 +4050,7 @@ impl<
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_payment_amount.to_owned(),
+                item.router_data.request.minor_refund_amount.to_owned(),
                 item.router_data.request.currency,
             )
             .change_context(ConnectorError::AmountConversionFailed)?;

@@ -211,8 +211,8 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
     let connector_metadata_json =
         serde_json::to_string(&connector_metadata).expect("Failed to serialize connector metadata");
 
-    let mut metadata = HashMap::new();
-    metadata.insert("connector_metadata".to_string(), connector_metadata_json);
+    let mut connector_metadata = HashMap::new();
+    connector_metadata.insert("connector_metadata".to_string(), connector_metadata_json);
 
     PaymentServiceCaptureRequest {
         transaction_id: Some(Identifier {
@@ -221,7 +221,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         amount_to_capture: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
-        metadata,
+        connector_metadata,
         request_ref_id: None, // all_keys_required: None,
         browser_info: None,
         access_token: None,

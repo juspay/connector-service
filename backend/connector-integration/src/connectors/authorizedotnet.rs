@@ -50,11 +50,12 @@ use serde::Serialize;
 
 use self::transformers::{
     get_trans_id, AuthorizedotnetAuthorizeResponse, AuthorizedotnetCaptureRequest,
-    AuthorizedotnetCaptureResponse, AuthorizedotnetCreateCustomerProfileRequest,
-    AuthorizedotnetCreateCustomerProfileResponse, AuthorizedotnetCreateSyncRequest,
+    AuthorizedotnetCaptureResponse, AuthorizedotnetCreateConnectorCustomerRequest,
+    AuthorizedotnetCreateConnectorCustomerResponse, AuthorizedotnetCreateSyncRequest,
     AuthorizedotnetPSyncResponse, AuthorizedotnetPaymentsRequest, AuthorizedotnetRSyncRequest,
     AuthorizedotnetRSyncResponse, AuthorizedotnetRefundRequest, AuthorizedotnetRefundResponse,
     AuthorizedotnetRepeatPaymentRequest, AuthorizedotnetRepeatPaymentResponse,
+    AuthorizedotnetSetupMandateRequest, AuthorizedotnetSetupMandateResponse,
     AuthorizedotnetVoidRequest, AuthorizedotnetVoidResponse, AuthorizedotnetWebhookEventType,
     AuthorizedotnetWebhookObjectId,
 };
@@ -301,6 +302,7 @@ impl<
             minor_amount_captured: None,
             amount_captured: None,
             error_reason: None,
+            network_txn_id: None,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
         })
     }
@@ -602,9 +604,15 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: CreateConnectorCustomer,
-            request_body: AuthorizedotnetCreateCustomerProfileRequest<T>,
-            response_body: AuthorizedotnetCreateCustomerProfileResponse,
+            request_body: AuthorizedotnetCreateConnectorCustomerRequest<T>,
+            response_body: AuthorizedotnetCreateConnectorCustomerResponse,
             router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: AuthorizedotnetSetupMandateRequest<T>,
+            response_body: AuthorizedotnetSetupMandateResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -846,22 +854,36 @@ macros::macro_connector_implementation!(
     }
 );
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Authorizedotnet<T>
-{
-}
+// Implement SetupMandate flow
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Authorizedotnet,
+    curl_request: Json(AuthorizedotnetSetupMandateRequest),
+    curl_response: AuthorizedotnetSetupMandateResponse,
+    flow_name: SetupMandate,
+    resource_common_data: PaymentFlowData,
+    flow_request: SetupMandateRequestData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    preprocess_response: true,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, ConnectorError> {
+            Ok(self.connector_base_url_payments(req).to_string())
+        }
+    }
+);
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -897,14 +919,14 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Authorizedotnet,
-    curl_request: Json(AuthorizedotnetCreateCustomerProfileRequest),
-    curl_response: AuthorizedotnetCreateCustomerProfileResponse,
+    curl_request: Json(AuthorizedotnetCreateConnectorCustomerRequest),
+    curl_response: AuthorizedotnetCreateConnectorCustomerResponse,
     flow_name: CreateConnectorCustomer,
     resource_common_data: PaymentFlowData,
     flow_request: ConnectorCustomerData,
     flow_response: ConnectorCustomerResponse,
     http_method: Post,
-    preprocess_response: true, // Keeping true for Authorize.net which needs BOM handling
+    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
