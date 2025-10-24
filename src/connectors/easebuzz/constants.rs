@@ -18,7 +18,7 @@ pub const DEFAULT_PRODUCT_INFO: &str = "Payment";
 pub const DEFAULT_FIRST_NAME: &str = "Customer";
 
 // Supported currencies
-pub const SUPPORTED_CURRENCIES: &[Currency] = &[Currency::INR];
+pub const SUPPORTED_CURRENCIES: &[Currency] = &[Currency::Inr];
 
 // Supported payment methods
 pub const SUPPORTED_PAYMENT_METHODS: &[PaymentMethodType] = &[PaymentMethodType::Upi];
