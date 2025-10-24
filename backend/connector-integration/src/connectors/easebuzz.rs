@@ -319,7 +319,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PSync,
-            request_body: transformers::EasebuzzPaymentsSyncRequest,
+            request_body: EasebuzzPaymentsSyncRequest,
             response_body: EasebuzzPaymentsResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         )
