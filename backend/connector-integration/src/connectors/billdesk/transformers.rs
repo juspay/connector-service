@@ -190,6 +190,7 @@ fn build_billdesk_message<T: PaymentMethodDataTypes>(
     is_sync: bool,
 ) -> CustomResult<String, errors::ConnectorError> {
     let customer_id = router_data.router_data.resource_common_data.get_customer_id()?;
+    let customer_id_string = customer_id.get_string_repr();
     let amount = router_data
         .connector
         .amount_converter
@@ -211,28 +212,27 @@ fn build_billdesk_message<T: PaymentMethodDataTypes>(
     
     if is_sync {
         // For sync requests, we typically need the transaction reference
-        message_parts.push(format!("{}_{}", transaction_id, customer_id));
+        message_parts.push(format!("{}_{}", transaction_id, customer_id_string));
     } else {
         // For payment initiation, build the complete message
-        message_parts.push(format!("{}_{}_{}_{}", transaction_id, customer_id, amount, currency));
+        message_parts.push(format!("{}_{}_{}_{}", transaction_id, customer_id_string, amount, currency));
         
         // Add additional fields based on payment method
-        if let Some(payment_method) = router_data.router_data.resource_common_data.payment_method {
-            match payment_method {
-                common_enums::PaymentMethod::Upi => {
-                    // Add UPI specific fields
-                    if let Some(upi_data) = &router_data.router_data.request.payment_method_data {
-                        if let Some(upi_details) = upi_data.get_upi() {
-                            message_parts.push(upi_details.vpa.clone());
-                        }
+        let payment_method = router_data.router_data.resource_common_data.payment_method;
+        match payment_method {
+            common_enums::PaymentMethod::Upi => {
+                // Add UPI specific fields
+                if let Some(upi_data) = &router_data.router_data.request.payment_method_data {
+                    if let Some(upi_details) = upi_data.get_upi() {
+                        message_parts.push(upi_details.vpa.clone());
                     }
                 }
-                _ => {
-                    return Err(errors::ConnectorError::NotImplemented(
-                        "Payment method not supported".to_string(),
-                    )
-                    .into());
-                }
+            }
+            _ => {
+                return Err(errors::ConnectorError::NotImplemented(
+                    "Payment method not supported".to_string(),
+                )
+                .into());
             }
         }
     }
