@@ -335,7 +335,7 @@ fn get_redirect_form_data(
                 form_fields: rdata
                     .parameters
                     .into_iter()
-                    .map(|(k, v)| (k, hyperswitch_masking::Secret::new(v).expose()))
+                    .map(|(k, v)| (k, hyperswitch_masking::Secret::<String, hyperswitch_masking::WithType>::new(v).expose()))
                     .collect(),
             })
         } else {
