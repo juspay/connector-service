@@ -434,14 +434,14 @@ fn generate_payment_hash(
     surl: &str,
     furl: &str,
     salt: &str,
-) -> CustomResult<String, errors::ConnectorError> {
+) -> CustomResult<String, domain_types::errors::ConnectorError> {
     let hash_string = format!(
         "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
         key, txnid, amount, productinfo, firstname, email, phone, surl, furl, salt
     );
     
     crypto::compute_sha512_hash(&hash_string)
-        .change_context(errors::ConnectorError::RequestEncodingFailed)
+        .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)
 }
 
 fn generate_sync_hash(
@@ -451,14 +451,14 @@ fn generate_sync_hash(
     email: &str,
     phone: &str,
     salt: &str,
-) -> CustomResult<String, errors::ConnectorError> {
+) -> CustomResult<String, domain_types::errors::ConnectorError> {
     let hash_string = format!(
         "{}|{}|{}|{}|{}|{}",
         key, txnid, amount, email, phone, salt
     );
     
     crypto::compute_sha512_hash(&hash_string)
-        .change_context(errors::ConnectorError::RequestEncodingFailed)
+        .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)
 }
 
 fn generate_refund_hash(
@@ -467,14 +467,14 @@ fn generate_refund_hash(
     refund_amount: &str,
     refund_reason: &str,
     salt: &str,
-) -> CustomResult<String, errors::ConnectorError> {
+) -> CustomResult<String, domain_types::errors::ConnectorError> {
     let hash_string = format!(
         "{}|{}|{}|{}|{}",
         key, txnid, refund_amount, refund_reason, salt
     );
     
     crypto::compute_sha512_hash(&hash_string)
-        .change_context(errors::ConnectorError::RequestEncodingFailed)
+        .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)
 }
 
 fn generate_refund_sync_hash(
@@ -482,12 +482,12 @@ fn generate_refund_sync_hash(
     easebuzz_id: &str,
     merchant_refund_id: &str,
     salt: &str,
-) -> CustomResult<String, errors::ConnectorError> {
+) -> CustomResult<String, domain_types::errors::ConnectorError> {
     let hash_string = format!(
         "{}|{}|{}|{}",
         key, easebuzz_id, merchant_refund_id, salt
     );
     
     crypto::compute_sha512_hash(&hash_string)
-        .change_context(errors::ConnectorError::RequestEncodingFailed)
+        .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)
 }
