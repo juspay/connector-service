@@ -20,5 +20,11 @@ hex = "0.4"
 # External dependencies that don't require workspace
 hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.09.24.0", package = "masking" }
 
+# Local stub dependencies
+common_enums = { path = "stubs" }
+common_utils = { path = "stubs/common_utils" }
+domain_types = { path = "stubs/domain_types" }
+interfaces = { path = "stubs/interfaces" }
+
 [dev-dependencies]
 tokio-test = "0.4"
