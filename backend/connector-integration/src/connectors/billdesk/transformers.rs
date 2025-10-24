@@ -219,10 +219,9 @@ fn build_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std::mar
         match payment_method {
             common_enums::PaymentMethod::Upi => {
                 // Add UPI specific fields
-                if let Some(upi_data) = &router_data.router_data.request.payment_method_data {
-                    if let Some(upi_details) = upi_data.get_upi() {
-                        message_parts.push(upi_details.vpa.clone());
-                    }
+                let upi_data = &router_data.router_data.request.payment_method_data;
+                if let Some(upi_details) = upi_data.get_upi() {
+                    message_parts.push(upi_details.vpa.clone());
                 }
             }
             _ => {
