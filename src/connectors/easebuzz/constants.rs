@@ -97,17 +97,8 @@ pub fn map_easebuzz_refund_status_to_attempt_status(status: &str) -> AttemptStat
     }
 }
 
-// Placeholder error types
-#[derive(Debug)]
-pub enum ConnectorError {
-    AuthenticationFailed,
-    TransactionNotFound,
-    InsufficientBalance,
-    PaymentDeclined,
-    MissingRequiredField { field_name: String },
-    InvalidRequestData { message: String },
-    UnknownErrorResponse { code: String, message: String, status_code: Option<u16>, reason: Option<String> },
-}
+// Error types
+use domain_types::errors::ConnectorError;
 
 // Error mapping
 pub fn map_easebuzz_error_to_connector_error(error_code: &str, error_message: &str) -> ConnectorError {
