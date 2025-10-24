@@ -266,7 +266,7 @@ impl<
             response_headers: None,
             minor_amount_captured: None,
             amount_captured: None,
-            error_reason: webhook.error_desc,
+            error_reason: webhook.error_desc.clone(),
             network_txn_id: webhook.easebuzz_id,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
         })
