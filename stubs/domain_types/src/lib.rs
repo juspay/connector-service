@@ -39,9 +39,9 @@ pub mod connector_types {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub connector_type: Option<super::types::ConnectorType>,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        pub supported_payment_methods: Vec<common_enums::PaymentMethodType>,
+        pub supported_payment_methods: Vec<super::common_enums::PaymentMethodType>,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        pub supported_currencies: Vec<common_enums::Currency>,
+        pub supported_currencies: Vec<super::common_enums::Currency>,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         pub supported_countries: Vec<super::Country>,
     }
