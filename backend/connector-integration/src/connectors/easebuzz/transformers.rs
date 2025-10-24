@@ -220,13 +220,13 @@ pub struct EasebuzzRefundSyncType {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    TryFrom<EasebuzzRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
+    TryFrom<&EasebuzzRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
     for EasebuzzPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: EasebuzzRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        item: &EasebuzzRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = EasebuzzAuth::try_from(&item.router_data.connector_auth_type)?;
         let customer_id = item.router_data.resource_common_data.get_customer_id()?;
