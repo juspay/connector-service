@@ -6,7 +6,7 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData},
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -113,7 +113,7 @@ pub struct EasebuzzPaymentsSyncRequest {
     pub hash: Secret<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EasebuzzPaymentsResponse {
     pub status: bool,
@@ -303,7 +303,7 @@ pub struct EasebuzzPaymentsResponse {
     pub card_fingerprint_browser_webdriver_script_notice_timestamp_fingerprint: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EasebuzzResponseData {
     pub payment_url: Option<String>,
@@ -482,7 +482,7 @@ pub struct EasebuzzResponseData {
     pub card_fingerprint_browser_webdriver_script_notice_timestamp_fingerprint: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EasebuzzPaymentsSyncResponse {
     pub status: bool,
@@ -672,7 +672,7 @@ pub struct EasebuzzPaymentsSyncResponse {
     pub card_fingerprint_browser_webdriver_script_notice_timestamp_fingerprint: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EasebuzzErrorResponse {
     pub status: bool,
@@ -778,7 +778,7 @@ fn get_auth_credentials(
     currency: common_enums::Currency,
 ) -> Result<EasebuzzAuth, errors::ConnectorError> {
     EasebuzzAuth::try_from((connector_auth_type, &currency))
-        .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?
+        .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)
 }
 
 fn get_redirect_form_data(
@@ -786,7 +786,7 @@ fn get_redirect_form_data(
     response_data: EasebuzzResponseData,
 ) -> CustomResult<RedirectForm, errors::ConnectorError> {
     match payment_method_type {
-        common_enums::PaymentMethodType::Upi => {
+        common_enums::PaymentMethodType::UpiCollect => {
             if let Some(payment_url) = response_data.payment_url {
                 Ok(RedirectForm::Form {
                     endpoint: payment_url,
@@ -851,7 +851,7 @@ impl<
 
         // Extract browser info for device info
         let ip_address = item.router_data.request.get_ip_address_as_optional()
-            .map(|ip| ip.expose())
+            .map(|ip| ip.peek().to_string())
             .unwrap_or_else(|| "127.0.0.1".to_string());
 
         let user_agent = item.router_data.request.browser_info
@@ -873,7 +873,7 @@ impl<
 
         // Handle UPI payment method
         let upi_details = match item.router_data.request.payment_method_type {
-            Some(common_enums::PaymentMethodType::Upi) => {
+            Some(common_enums::PaymentMethodType::UpiCollect) => {
                 Some(EasebuzzUpiDetails {
                     vpa: None, // Will be extracted from payment_method_data if available
                     upi_intent: Some(true),
@@ -911,8 +911,8 @@ impl<
             hash: auth.salt, // In real implementation, this would be a proper hash
             key: auth.key,
             payment_source: Some("upi".to_string()),
-            sub_merchant_id: auth.sub_merchant_id.map(|s| s.expose()),
-            customer_unique_id: Some(customer_id.to_string()),
+            sub_merchant_id: auth.sub_merchant_id.map(|s| s.peek().to_string()),
+            customer_unique_id: Some(customer_id.get_string_repr().to_string()),
             split_info: None,
             custom_notes: None,
             device_info,
@@ -1012,7 +1012,7 @@ impl<
                 (
                     common_enums::AttemptStatus::AuthenticationPending,
                     Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
+                        resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
                             router_data
                                 .resource_common_data
                                 .connector_request_reference_id
@@ -1031,7 +1031,7 @@ impl<
                 (
                     common_enums::AttemptStatus::Charged,
                     Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
+                        resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
                             router_data
                                 .resource_common_data
                                 .connector_request_reference_id
@@ -1102,7 +1102,7 @@ impl<
         };
 
         let response_data = PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(
+            resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
                 response.txnid.unwrap_or_else(|| "unknown".to_string()),
             ),
             redirection_data: None,
