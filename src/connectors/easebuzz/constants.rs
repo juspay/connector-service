@@ -90,9 +90,9 @@ pub fn map_easebuzz_status_to_attempt_status(status: i32) -> AttemptStatus {
 
 pub fn map_easebuzz_refund_status_to_attempt_status(status: &str) -> AttemptStatus {
     match status.to_lowercase().as_str() {
-        "success" => AttemptStatus::Charged,
+        "success" => AttemptStatus::AuthorizationSuccessful,
         "pending" => AttemptStatus::Pending,
-        "failure" | "failed" => AttemptStatus::Failure,
+        "failure" | "failed" => AttemptStatus::AuthorizationFailed,
         _ => AttemptStatus::Pending,
     }
 }
