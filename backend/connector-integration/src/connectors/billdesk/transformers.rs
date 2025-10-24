@@ -4,7 +4,6 @@ use common_utils::{
     errors::CustomResult,
     ext_traits::ValueExt,
     request::Method,
-    pii::ExposeInterface,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
