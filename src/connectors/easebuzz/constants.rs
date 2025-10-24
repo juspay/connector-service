@@ -114,16 +114,16 @@ pub fn map_easebuzz_error_to_connector_error(error_code: &str, error_message: &s
 }
 
 // Validation functions
-pub fn validate_transaction_id(txn_id: &str) -> Result<(), errors::ConnectorError> {
+pub fn validate_transaction_id(txn_id: &str) -> Result<(), domain_types::errors::ConnectorError> {
     if txn_id.is_empty() {
-        return Err(errors::ConnectorError::MissingRequiredField {
+        return Err(domain_types::errors::ConnectorError::MissingRequiredField {
             field_name: "transaction_id",
         }
         .into());
     }
     
     if txn_id.len() > MAX_TRANSACTION_ID_LENGTH {
-        return Err(errors::ConnectorError::InvalidRequestData {
+        return Err(domain_types::errors::ConnectorError::InvalidRequestData {
             message: format!("Transaction ID exceeds maximum length of {}", MAX_TRANSACTION_ID_LENGTH),
         }
         .into());
@@ -132,16 +132,16 @@ pub fn validate_transaction_id(txn_id: &str) -> Result<(), errors::ConnectorErro
     Ok(())
 }
 
-pub fn validate_vpa(vpa: &str) -> Result<(), errors::ConnectorError> {
+pub fn validate_vpa(vpa: &str) -> Result<(), domain_types::errors::ConnectorError> {
     if vpa.is_empty() {
-        return Err(errors::ConnectorError::MissingRequiredField {
+        return Err(domain_types::errors::ConnectorError::MissingRequiredField {
             field_name: "vpa",
         }
         .into());
     }
     
     if vpa.len() > MAX_VPA_LENGTH {
-        return Err(errors::ConnectorError::InvalidRequestData {
+        return Err(domain_types::errors::ConnectorError::InvalidRequestData {
             message: format!("VPA exceeds maximum length of {}", MAX_VPA_LENGTH),
         }
         .into());
@@ -149,7 +149,7 @@ pub fn validate_vpa(vpa: &str) -> Result<(), errors::ConnectorError> {
     
     // Basic VPA format validation (should contain @)
     if !vpa.contains('@') {
-        return Err(errors::ConnectorError::InvalidRequestData {
+        return Err(domain_types::errors::ConnectorError::InvalidRequestData {
             message: "Invalid VPA format".to_string(),
         }
         .into());
@@ -158,16 +158,16 @@ pub fn validate_vpa(vpa: &str) -> Result<(), errors::ConnectorError> {
     Ok(())
 }
 
-pub fn validate_amount(amount: i64) -> Result<(), errors::ConnectorError> {
+pub fn validate_amount(amount: i64) -> Result<(), domain_types::errors::ConnectorError> {
     if amount < MIN_TRANSACTION_AMOUNT {
-        return Err(errors::ConnectorError::InvalidRequestData {
+        return Err(domain_types::errors::ConnectorError::InvalidRequestData {
             message: format!("Amount must be at least ₹{}", MIN_TRANSACTION_AMOUNT / 100),
         }
         .into());
     }
     
     if amount > MAX_TRANSACTION_AMOUNT {
-        return Err(errors::ConnectorError::InvalidRequestData {
+        return Err(domain_types::errors::ConnectorError::InvalidRequestData {
             message: format!("Amount cannot exceed ₹{}", MAX_TRANSACTION_AMOUNT / 100),
         }
         .into());
@@ -176,16 +176,16 @@ pub fn validate_amount(amount: i64) -> Result<(), errors::ConnectorError> {
     Ok(())
 }
 
-pub fn validate_refund_amount(amount: i64) -> Result<(), errors::ConnectorError> {
+pub fn validate_refund_amount(amount: i64) -> Result<(), domain_types::errors::ConnectorError> {
     if amount < MIN_REFUND_AMOUNT {
-        return Err(errors::ConnectorError::InvalidRequestData {
+        return Err(domain_types::errors::ConnectorError::InvalidRequestData {
             message: format!("Refund amount must be at least ₹{}", MIN_REFUND_AMOUNT / 100),
         }
         .into());
     }
     
     if amount > MAX_REFUND_AMOUNT {
-        return Err(errors::ConnectorError::InvalidRequestData {
+        return Err(domain_types::errors::ConnectorError::InvalidRequestData {
             message: format!("Refund amount cannot exceed ₹{}", MAX_REFUND_AMOUNT / 100),
         }
         .into());
