@@ -97,14 +97,14 @@ pub fn map_easebuzz_refund_status_to_attempt_status(status: &str) -> common_enum
 }
 
 // Error mapping
-pub fn map_easebuzz_error_to_connector_error(error_code: &str, error_message: &str) -> errors::ConnectorError {
+pub fn map_easebuzz_error_to_connector_error(error_code: &str, error_message: &str) -> domain_types::errors::ConnectorError {
     match error_code {
-        ERROR_CODE_INVALID_HASH => errors::ConnectorError::AuthenticationFailed,
-        ERROR_CODE_INVALID_TRANSACTION => errors::ConnectorError::TransactionNotFound,
-        ERROR_CODE_INSUFFICIENT_FUNDS => errors::ConnectorError::InsufficientBalance,
-        ERROR_CODE_TRANSACTION_DECLINED => errors::ConnectorError::PaymentDeclined,
-        ERROR_CODE_INVALID_MERCHANT => errors::ConnectorError::AuthenticationFailed,
-        _ => errors::ConnectorError::UnknownErrorResponse {
+        ERROR_CODE_INVALID_HASH => domain_types::errors::ConnectorError::AuthenticationFailed,
+        ERROR_CODE_INVALID_TRANSACTION => domain_types::errors::ConnectorError::TransactionNotFound,
+        ERROR_CODE_INSUFFICIENT_FUNDS => domain_types::errors::ConnectorError::InsufficientBalance,
+        ERROR_CODE_TRANSACTION_DECLINED => domain_types::errors::ConnectorError::PaymentDeclined,
+        ERROR_CODE_INVALID_MERCHANT => domain_types::errors::ConnectorError::AuthenticationFailed,
+        _ => domain_types::errors::ConnectorError::UnknownErrorResponse {
             code: error_code.to_string(),
             message: error_message.to_string(),
             status_code: None,
