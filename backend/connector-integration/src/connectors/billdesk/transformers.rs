@@ -262,7 +262,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let msg = build_billdesk_message(&item, false)?;
+        let msg = build_billdesk_message_authorize(&item)?;
         
         let user_agent = item.router_data.request.browser_info
             .as_ref()
