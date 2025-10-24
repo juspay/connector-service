@@ -2,23 +2,11 @@
 
 use std::marker::PhantomData;
 
-use common_enums::{AttemptStatus, Currency, PaymentMethodType};
-use common_utils::{
-    errors::CustomResult,
-    types::{self, StringMinorUnit},
-};
+use common_utils::CustomResult;
 use domain_types::{
-    connector_flow::{Authorize, PSync, RSync, Refund},
-    connector_types::{
-        ConnectorCommon, ConnectorCommonV2, ConnectorIntegrationV2, ConnectorSpecifications,
-        ConnectorWebhookSecrets, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData,
-    },
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
-    types as domain_types,
 };
-use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 // Connector enum for type system integration
@@ -38,6 +26,9 @@ impl ConnectorEnum {
 
 // URL trait implementations for different flow types
 pub trait GetUrl {
+    type Request;
+    type Response;
+    
     fn get_url<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
         connector: &crate::connectors::easebuzz::EaseBuzz<T>,
         req: &RouterDataV2<Self, domain_types::connector_types::PaymentFlowData, Self::Request, Self::Response>,
