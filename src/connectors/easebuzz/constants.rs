@@ -115,15 +115,11 @@ pub fn map_easebuzz_error_to_connector_error(error_code: &str, error_message: &s
 // Validation functions
 pub fn validate_transaction_id(txn_id: &str) -> Result<(), ConnectorError> {
     if txn_id.is_empty() {
-        return Err(ConnectorError::MissingRequiredField {
-            field_name: "transaction_id".to_string(),
-        });
+        return Err(ConnectorError::InvalidRequest);
     }
     
     if txn_id.len() > MAX_TRANSACTION_ID_LENGTH {
-        return Err(ConnectorError::InvalidRequestData {
-            message: format!("Transaction ID exceeds maximum length of {}", MAX_TRANSACTION_ID_LENGTH),
-        });
+        return Err(ConnectorError::InvalidRequest);
     }
     
     Ok(())
