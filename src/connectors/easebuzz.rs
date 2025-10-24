@@ -118,7 +118,7 @@ impl<T: PaymentMethodDataTypes + Debug + Send + Sync + 'static> interfaces::api:
         Some(domain_types::types::ConnectorMetadata {
             description: Some("EaseBuzz payment gateway supporting UPI transactions".to_string()),
             website: Some("https://easebuzz.in".to_string()),
-            supported_payment_methods: vec![PaymentMethodType::Upi],
+            supported_payment_methods: vec![domain_types::common_enums::PaymentMethodType::Upi],
             supported_currencies: vec!["INR".parse().unwrap()],
             supported_countries: vec!["IN".parse().unwrap()],
             ..Default::default()
@@ -141,7 +141,7 @@ impl<T: PaymentMethodDataTypes + Debug + Send + Sync + 'static> interfaces::api:
         domain_types::connector_types::ConnectorSpecifications {
             connector_name: "easebuzz".to_string(),
             connector_type: domain_types::types::ConnectorType::PaymentGateway,
-            supported_payment_methods: vec![PaymentMethodType::Upi],
+            supported_payment_methods: vec![domain_types::common_enums::PaymentMethodType::Upi],
             supported_currencies: vec!["INR".parse().unwrap()],
             supported_countries: vec!["IN".parse().unwrap()],
             ..Default::default()
