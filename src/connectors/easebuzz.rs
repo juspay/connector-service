@@ -2,15 +2,11 @@
 
 use std::fmt::Debug;
 
-use common_enums::{AttemptStatus, PaymentMethodType};
-use common_utils::{
-    errors::CustomResult,
-    types::StringMinorUnit,
-};
+use common_enums::PaymentMethodType;
+use common_utils::CustomResult;
 use domain_types::{
-    connector_flow::{Authorize, PSync, RSync, Refund},
     connector_types::{
-        ConnectorCommon, ConnectorWebhookSecrets, PaymentFlowData, PaymentsAuthorizeData,
+        ConnectorWebhookSecrets, PaymentFlowData, PaymentsAuthorizeData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
         RefundSyncData,
     },
@@ -19,8 +15,10 @@ use domain_types::{
     router_response_types::Response,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, Secret};
+use hyperswitch_masking::{Maskable, Secret};
 use serde::{Deserialize, Serialize};
+use interfaces::api::ConnectorCommon;
+use interfaces::connector_integration_v2::ConnectorIntegrationV2;
 
 // Main connector struct
 #[derive(Debug, Clone)]
