@@ -335,7 +335,7 @@ macros::create_all_prerequisites!(
         (
             flow: Capture,
             request_body: transformers::EasebuzzCaptureRequest,
-            response_body: easebuzz::EasebuzzCaptureResponse,
+            response_body: transformers::EasebuzzCaptureResponse,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ),
         (
