@@ -226,7 +226,7 @@ impl<
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
 
         // Extract amount and currency
-        let amount = item.request.minor_amount.get_amount_as_string();
+        let amount = item.request.minor_amount.to_string();
 
         // Build the message based on payment method type
         match item.resource_common_data.payment_method {
