@@ -85,20 +85,27 @@ pub const MIN_REFUND_AMOUNT: i64 = 100; // ₹1.00
 pub const MAX_REFUND_AMOUNT: i64 = 10000000; // ₹100,000.00
 
 // Status mappings
-pub fn map_easebuzz_status_to_attempt_status(status: i32) -> common_enums::AttemptStatus {
+// Placeholder status enum
+pub enum AttemptStatus {
+    Charged,
+    Failure,
+    Pending,
+}
+
+pub fn map_easebuzz_status_to_attempt_status(status: i32) -> AttemptStatus {
     match status {
-        RESPONSE_STATUS_SUCCESS => common_enums::AttemptStatus::Charged,
-        RESPONSE_STATUS_FAILURE => common_enums::AttemptStatus::Failure,
-        _ => common_enums::AttemptStatus::Pending,
+        RESPONSE_STATUS_SUCCESS => AttemptStatus::Charged,
+        RESPONSE_STATUS_FAILURE => AttemptStatus::Failure,
+        _ => AttemptStatus::Pending,
     }
 }
 
-pub fn map_easebuzz_refund_status_to_attempt_status(status: &str) -> common_enums::AttemptStatus {
+pub fn map_easebuzz_refund_status_to_attempt_status(status: &str) -> AttemptStatus {
     match status.to_lowercase().as_str() {
-        "success" => common_enums::AttemptStatus::Charged,
-        "pending" => common_enums::AttemptStatus::Pending,
-        "failure" | "failed" => common_enums::AttemptStatus::Failure,
-        _ => common_enums::AttemptStatus::Pending,
+        "success" => AttemptStatus::Charged,
+        "pending" => AttemptStatus::Pending,
+        "failure" | "failed" => AttemptStatus::Failure,
+        _ => AttemptStatus::Pending,
     }
 }
 
