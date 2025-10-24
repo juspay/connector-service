@@ -329,7 +329,7 @@ macros::create_all_prerequisites!(
         (
             flow: Void,
             request_body: transformers::EasebuzzVoidRequest,
-            response_body: easebuzz::EasebuzzVoidResponse,
+            response_body: transformers::EasebuzzVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
         (
