@@ -395,8 +395,8 @@ impl TryFrom<ResponseRouterData<BilldeskPaymentsResponse, Self>>
     }
 }
 
-impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     
