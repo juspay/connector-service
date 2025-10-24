@@ -42,7 +42,7 @@ use serde::Serialize;
 use transformers::{self as easebuzz, EasebuzzPaymentsRequest, EasebuzzPaymentsResponse, EasebuzzRouterData};
 
 use super::macros;
-use crate::{types::ResponseRouterData, with_error_response_body};
+use crate::{connectors::ConnectorRouterData, types::ResponseRouterData, with_error_response_body};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
