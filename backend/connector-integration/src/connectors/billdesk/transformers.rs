@@ -216,8 +216,8 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let (router_data, _connector) = item;
-        let customer_id = item.resource_common_data.get_customer_id()?;
-        let transaction_id = item
+        let customer_id = router_data.resource_common_data.get_customer_id()?;
+        let transaction_id = router_data
             .resource_common_data
             .connector_request_reference_id;
         
