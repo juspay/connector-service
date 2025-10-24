@@ -20,6 +20,8 @@ use serde::{Deserialize, Serialize};
 use interfaces::api::ConnectorCommon;
 use interfaces::connector_integration_v2::ConnectorIntegrationV2;
 
+pub mod constants;
+
 // Main connector struct
 #[derive(Debug, Clone)]
 pub struct EaseBuzz<T> {
