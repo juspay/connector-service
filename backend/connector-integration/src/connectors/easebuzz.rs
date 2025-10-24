@@ -39,7 +39,10 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use transformers::{self as easebuzz, EasebuzzPaymentsRequest, EasebuzzPaymentsResponse, EasebuzzRouterData};
+use transformers::{self as easebuzz, EasebuzzPaymentsRequest, EasebuzzPaymentsResponse};
+
+// Type alias for router data
+pub type EasebuzzRouterData<R, T> = ConnectorRouterData<R, T>;
 
 use super::macros;
 use crate::{connectors::ConnectorRouterData, types::ResponseRouterData, with_error_response_body};
