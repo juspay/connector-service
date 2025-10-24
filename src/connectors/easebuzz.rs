@@ -170,7 +170,7 @@ impl<T: PaymentMethodDataTypes + Debug + Send + Sync + 'static> EaseBuzz<T> {
         _req: &RouterDataV2<F, FCD, Req, Res>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, domain_types::errors::ConnectorError>
     where
-        Self: domain_types::connector_types::ConnectorIntegrationV2,
+        Self: ConnectorIntegrationV2,
     {
         let header = vec![(
             "Content-Type".to_string(),
