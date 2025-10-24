@@ -179,9 +179,8 @@ impl From<BilldeskPaymentStatus> for common_enums::AttemptStatus {
     }
 }
 
-fn build_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize, F>(
-    router_data: &BilldeskRouterData<RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
-    is_sync: bool,
+fn build_billdesk_message_authorize<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>(
+    router_data: &BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
 ) -> CustomResult<String, errors::ConnectorError> {
     let customer_id = router_data.router_data.resource_common_data.get_customer_id()?;
     let customer_id_string = customer_id.get_string_repr();
@@ -204,30 +203,40 @@ fn build_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std::mar
     // Build the message based on Billdesk's expected format
     let mut message_parts = Vec::new();
     
-    if is_sync {
-        // For sync requests, we typically need the transaction reference
-        message_parts.push(format!("{}_{}", transaction_id, customer_id_string));
-    } else {
-        // For payment initiation, build the complete message
-        message_parts.push(format!("{}_{}_{}_{}", transaction_id, customer_id_string, amount, currency));
-        
-        // Add additional fields based on payment method
-        let payment_method = router_data.router_data.resource_common_data.payment_method;
-        match payment_method {
-            common_enums::PaymentMethod::Upi => {
-                // Add UPI specific fields - simplified for now
-                message_parts.push("UPI".to_string());
-            }
-            _ => {
-                return Err(errors::ConnectorError::NotImplemented(
-                    "Payment method not supported".to_string(),
-                )
-                .into());
-            }
+    // For payment initiation, build the complete message
+    message_parts.push(format!("{}_{}_{}_{}", transaction_id, customer_id_string, amount, currency));
+    
+    // Add additional fields based on payment method
+    let payment_method = router_data.router_data.resource_common_data.payment_method;
+    match payment_method {
+        common_enums::PaymentMethod::Upi => {
+            // Add UPI specific fields - simplified for now
+            message_parts.push("UPI".to_string());
+        }
+        _ => {
+            return Err(errors::ConnectorError::NotImplemented(
+                "Payment method not supported".to_string(),
+            )
+            .into());
         }
     }
 
     Ok(message_parts.join("|"))
+}
+
+fn build_billdesk_message_sync<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>(
+    router_data: &BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
+) -> CustomResult<String, errors::ConnectorError> {
+    let customer_id = router_data.router_data.resource_common_data.get_customer_id()?;
+    let customer_id_string = customer_id.get_string_repr();
+    let transaction_id = router_data
+        .router_data
+        .resource_common_data
+        .connector_request_reference_id
+        .clone();
+
+    // For sync requests, we typically need the transaction reference
+    Ok(format!("{}_{}", transaction_id, customer_id_string))
 }
 
 impl<
