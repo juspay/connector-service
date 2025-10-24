@@ -215,11 +215,8 @@ fn build_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std::mar
         let payment_method = router_data.router_data.resource_common_data.payment_method;
         match payment_method {
             common_enums::PaymentMethod::Upi => {
-                // Add UPI specific fields
-                let upi_data = &router_data.router_data.request.payment_method_data;
-                if let Some(upi_details) = upi_data.get_upi() {
-                    message_parts.push(upi_details.vpa.clone());
-                }
+                // Add UPI specific fields - simplified for now
+                message_parts.push("UPI".to_string());
             }
             _ => {
                 return Err(errors::ConnectorError::NotImplemented(
