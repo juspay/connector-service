@@ -261,7 +261,7 @@ impl<
             mandate_reference: None,
             connector_response_reference_id: None,
             error_code: webhook.error_code,
-            error_message: webhook.error_desc,
+            error_message: webhook.error_desc.clone(),
             raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
             response_headers: None,
             minor_amount_captured: None,
