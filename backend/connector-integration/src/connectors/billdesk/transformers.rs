@@ -291,7 +291,7 @@ fn build_upi_message(
     let auth = BilldeskAuth::try_from(auth_type)?;
     let merchant_id = auth.merchant_id
         .ok_or(errors::ConnectorError::FailedToObtainAuthType)?
-        .peek();
+        .expose();
 
     // Build UPI message according to Billdesk format
     let message = format!(
@@ -309,7 +309,7 @@ fn build_status_sync_message(
     let auth = BilldeskAuth::try_from(auth_type)?;
     let merchant_id = auth.merchant_id
         .ok_or(errors::ConnectorError::FailedToObtainAuthType)?
-        .peek();
+        .expose();
 
     // Build status sync message according to Billdesk format
     let message = format!(
