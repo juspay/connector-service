@@ -179,11 +179,8 @@ impl From<BilldeskPaymentStatus> for common_enums::AttemptStatus {
     }
 }
 
-fn build_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>(
-    router_data: &BilldeskRouterData<
-        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        T,
-    >,
+fn build_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize, F>(
+    router_data: &BilldeskRouterData<RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     is_sync: bool,
 ) -> CustomResult<String, errors::ConnectorError> {
     let customer_id = router_data.router_data.resource_common_data.get_customer_id()?;
