@@ -15,7 +15,7 @@ use domain_types::{
     
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, ExposeInterface};
+use hyperswitch_masking::ExposeInterface;
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
