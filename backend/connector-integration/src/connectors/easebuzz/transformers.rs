@@ -1,7 +1,5 @@
-use std::collections::HashMap;
-
 use common_utils::{
-    errors::CustomResult, ext_traits::ValueExt, request::Method, types::StringMinorUnit,
+    types::StringMinorUnit,
     Email,
 };
 use domain_types::{
@@ -11,8 +9,6 @@ use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
-    router_response_types::RedirectForm,
-    utils,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
@@ -31,10 +27,10 @@ impl TryFrom<&ConnectorAuthType> for EasebuzzAuth {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key } => {
+            ConnectorAuthType::SignatureKey { api_key, key1, .. } => {
                 let auth = EasebuzzAuth {
                     key: api_key.clone(),
-                    salt: key.clone(),
+                    salt: key1.clone(),
                 };
                 Ok(auth)
             }
@@ -365,7 +361,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
             Err(ErrorResponse {
                 status_code: http_code,
                 code: response.error.as_ref().and_then(|e| e.code.clone()).unwrap_or_default(),
-                message: response.error.as_ref().and_then(|e| e.message.clone()),
+                message: response.error.as_ref().and_then(|e| e.message.clone()).unwrap_or_default(),
                 reason: response.error.as_ref().and_then(|e| e.reason.clone()),
                 attempt_status: None,
                 connector_transaction_id: response.txnid,
@@ -378,10 +374,10 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
-                ..router_data.resource_common_data
+                ..router_data.resource_common_data.clone()
             },
             response: response_data,
-            ..router_data
+            ..router_data.clone()
         })
     }
 }
@@ -424,7 +420,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
             Err(ErrorResponse {
                 status_code: http_code,
                 code: response.error.as_ref().and_then(|e| e.code.clone()).unwrap_or_default(),
-                message: response.error.as_ref().and_then(|e| e.message.clone()),
+                message: response.error.as_ref().and_then(|e| e.message.clone()).unwrap_or_default(),
                 reason: response.error.as_ref().and_then(|e| e.reason.clone()),
                 attempt_status: None,
                 connector_transaction_id: response.txnid,
@@ -437,10 +433,10 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
-                ..router_data.resource_common_data
+                ..router_data.resource_common_data.clone()
             },
             response: response_data,
-            ..router_data
+            ..router_data.clone()
         })
     }
 }
