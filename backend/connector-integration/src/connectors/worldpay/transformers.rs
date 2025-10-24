@@ -80,31 +80,22 @@ fn fetch_payment_instrument<
 >(
     payment_method: PaymentMethodData<T>,
     billing_address: Option<&domain_types::payment_address::Address>,
-    _mandate_ids: Option<MandateIds>,
 ) -> CustomResult<PaymentInstrument<T>, errors::ConnectorError> {
     match payment_method {
         PaymentMethodData::Card(card) => {
-            // Extract expiry month and year directly from the card fields
-            let expiry_month: i32 = card
-                .card_exp_month
+            // Extract expiry month and year using helper functions
+            let expiry_month_i8 = card.get_expiry_month_as_i8()?;
+            let expiry_year_4_digit = card.get_expiry_year_4_digit();
+            let expiry_year: i32 = expiry_year_4_digit
                 .peek()
                 .parse::<i32>()
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-            let mut expiry_year: String = card.card_exp_year.peek().clone();
-            if expiry_year.len() == 2 {
-                expiry_year = format!("20{expiry_year}");
-            }
-            let expiry_year: i32 = expiry_year
-                .parse::<i32>()
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-            let expiry_month_i8 = i8::try_from(expiry_month)
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
             Ok(PaymentInstrument::Card(CardPayment {
                 raw_card_details: RawCardDetails {
                     payment_type: PaymentType::Plain,
                     expiry_date: ExpiryDate {
-                        month: Secret::new(expiry_month_i8),
+                        month: expiry_month_i8,
                         year: Secret::new(expiry_year),
                     },
                     card_number: card.card_number,
@@ -481,7 +472,6 @@ impl<
                 payment_instrument: fetch_payment_instrument(
                     item.router_data.request.payment_method_data.clone(),
                     item.router_data.resource_common_data.get_optional_billing(),
-                    item.router_data.request.mandate_id.clone(),
                 )?,
                 narrative: InstructionNarrative {
                     line1: merchant_name.expose(),
