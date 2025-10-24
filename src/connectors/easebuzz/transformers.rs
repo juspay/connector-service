@@ -4,8 +4,7 @@ use common_enums::{AttemptStatus, Currency, PaymentMethodType};
 use common_utils::{
     crypto,
     errors::CustomResult,
-    ext_traits::BytesExt,
-    request::RequestContent,
+    ext_traits::ByteSliceExt,
     types::{self, StringMinorUnit},
 };
 use domain_types::{
@@ -17,11 +16,6 @@ use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use masking::{ExposeInterface, Mask, SecretTrait};
 use serde::{Deserialize, Serialize};
-
-use crate::{
-    services,
-    utils::{self, Convert},
-};
 
 // Request/Response types for EaseBuzz API
 
