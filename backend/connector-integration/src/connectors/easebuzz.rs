@@ -39,7 +39,7 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use transformers::{self as easebuzz, EasebuzzPaymentsRequest, EasebuzzPaymentsResponse};
+use transformers::{self as easebuzz, EasebuzzPaymentsRequest, EasebuzzPaymentsResponse, EasebuzzRouterData};
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
