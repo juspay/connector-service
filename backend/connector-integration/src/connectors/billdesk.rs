@@ -314,7 +314,7 @@ use std::marker::PhantomData;
 
 #[derive(Clone)]
 pub struct Billdesk<T> {
-    amount_converter: &'static dyn AmountConvertor<Output = StringMinorUnit> + Sync,
+    amount_converter: &'static (dyn AmountConvertor<Output = StringMinorUnit> + Sync),
     connector_name: &'static str,
     payment_method_data: PhantomData<T>,
 }
