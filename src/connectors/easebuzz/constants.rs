@@ -82,8 +82,8 @@ use common_enums::AttemptStatus;
 
 pub fn map_easebuzz_status_to_attempt_status(status: i32) -> AttemptStatus {
     match status {
-        RESPONSE_STATUS_SUCCESS => AttemptStatus::Charged,
-        RESPONSE_STATUS_FAILURE => AttemptStatus::Failure,
+        RESPONSE_STATUS_SUCCESS => AttemptStatus::AuthorizationSuccessful,
+        RESPONSE_STATUS_FAILURE => AttemptStatus::AuthorizationFailed,
         _ => AttemptStatus::Pending,
     }
 }
