@@ -9,6 +9,12 @@ pub mod api {
     pub trait ConnectorCommon {
         fn get_id(&self) -> &'static str;
         fn get_name(&self) -> &'static str;
+        fn get_connector_type(&self) -> domain_types::types::ConnectorType;
+        fn get_connector_metadata(&self) -> Option<domain_types::types::ConnectorMetadata>;
+        fn get_webhook_secret(&self) -> Option<&hyperswitch_masking::Secret<String>>;
+        fn get_webhook_url(&self) -> Option<&str>;
+        fn get_webhook_details(&self) -> Option<domain_types::connector_types::ConnectorWebhookSecrets>;
+        fn get_connector_specifications(&self) -> domain_types::connector_types::ConnectorSpecifications;
     }
 }
 
