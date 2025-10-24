@@ -39,6 +39,58 @@ use transformers::{self as easebuzz, EaseBuzzPaymentsRequest, EaseBuzzPaymentsRe
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
+// Trait implementations with generic type parameters
+impl<
+        T: PaymentMethodDataTypes
+            + Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::ConnectorServiceTrait<T> for EaseBuzz<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentAuthorizeV2<T> for EaseBuzz<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentSyncV2 for EaseBuzz<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RefundV2 for EaseBuzz<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RefundSyncV2 for EaseBuzz<T>
+{
+}
+
 // Create all prerequisites using the mandatory macro framework
 macros::create_all_prerequisites!(
     connector_name: EaseBuzz,
@@ -57,43 +109,60 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
-            flow: RSync,
-            request_body: EaseBuzzRefundSyncRequest,
-            response_body: EaseBuzzRefundSyncResponse,
-            router_data: RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
-        ),
-        (
             flow: Refund,
             request_body: EaseBuzzRefundRequest,
             response_body: EaseBuzzRefundResponse,
             router_data: RouterDataV2<Refund, PaymentFlowData, RefundFlowData, RefundsResponseData>,
+        ),
+        (
+            flow: RSync,
+            request_body: EaseBuzzRefundSyncRequest,
+            response_body: EaseBuzzRefundSyncResponse,
+            router_data: RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
     ],
     member_functions: {
+        fn build_headers<F, FCD, Req, Res>(
+            &self,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+        where
+            Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
+        {
+            let mut header = vec![(
+                "Content-Type".to_string(),
+                self.common_get_content_type().to_string().into(),
+            )];
+            Ok(header)
+        }
+
         fn get_content_type(&self) -> &'static str {
             "application/x-www-form-urlencoded"
         }
 
         fn get_error_response_v2(
             &self,
-            response: &[u8],
-        ) -> CustomResult<services::ErrorResponse, errors::ConnectorError> {
-            self.handle_error_response(response)
+            res: Response,
+            event_builder: Option<&mut ConnectorEvent>,
+        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+            self.build_error_response(res, event_builder)
         }
 
-        fn handle_error_response(
+        fn build_error_response(
             &self,
-            response: &[u8],
-        ) -> CustomResult<services::ErrorResponse, errors::ConnectorError> {
-            let error_response: transformers::EaseBuzzErrorResponse = response
+            res: Response,
+            _event_builder: Option<&mut ConnectorEvent>,
+        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+            let error_response: transformers::EaseBuzzErrorResponse = res
+                .response
                 .parse_struct("EaseBuzzErrorResponse")
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-            Ok(services::ErrorResponse {
-                status_code: error_response.status,
+            Ok(ErrorResponse {
+                status_code: res.status_code,
                 code: error_response.error_code,
                 message: error_response.error_desc,
                 reason: None,
