@@ -393,8 +393,6 @@ where
 
 impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-where
-    F: domain_types::connector_flow::ConnectorFlow,
 {
     type Error = error_stack::Report<ConnectorError>;
     
