@@ -20,9 +20,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::{connectors::easebuzz::EasebuzzRouterData, types::ResponseRouterData};
 
-// Re-export for use in main module
-pub use crate::connectors::easebuzz::EasebuzzRouterData;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EasebuzzAuth {
     pub key: Secret<String>,
