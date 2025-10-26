@@ -325,9 +325,6 @@ impl<
             .connector_request_reference_id
             .clone();
 
-        let email = item.router_data.request.email.clone();
-        let phone = item.router_data.request.phone_number.as_ref().map(|p| p.to_string());
-
         let hash = generate_hash(
             auth.key.peek(),
             auth.salt.peek(),
