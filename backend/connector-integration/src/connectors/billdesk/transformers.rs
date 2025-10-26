@@ -218,19 +218,19 @@ where
     if is_sync {
         // For sync requests, we need the transaction reference
         message_data.insert("MerchantID".to_string(), get_merchant_id(&router_data.router_data.connector_auth_type)?);
-        message_data.insert("CustomerID".to_string(), customer_id.get_string_repr());
+        message_data.insert("CustomerID".to_string(), customer_id.get_string_repr().to_string());
         message_data.insert("TxnReferenceNo".to_string(), router_data.router_data.resource_common_data.connector_request_reference_id.clone());
     } else {
         // For payment initiation
         message_data.insert("MerchantID".to_string(), get_merchant_id(&router_data.router_data.connector_auth_type)?);
-        message_data.insert("CustomerID".to_string(), customer_id.get_string_repr());
-        message_data.insert("TxnAmount".to_string(), amount);
+        message_data.insert("CustomerID".to_string(), customer_id.get_string_repr().to_string());
+        message_data.insert("TxnAmount".to_string(), amount.to_string());
         message_data.insert("Currency".to_string(), router_data.router_data.request.currency.to_string());
         message_data.insert("TxnType".to_string(), "UPI".to_string());
         message_data.insert("ItemCode".to_string(), "DIRECT".to_string());
         
         // Add UPI specific data if available
-        if let Some(payment_method) = &router_data.router_data.resource_common_data.payment_method {
+        if let Some(payment_method) = router_data.router_data.resource_common_data.payment_method {
             if matches!(payment_method, common_enums::PaymentMethod::Upi) {
                 if let Some(upi_data) = &router_data.router_data.request.payment_method_data {
                     if let Some(upi) = upi_data.get_upi() {
