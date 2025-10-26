@@ -330,36 +330,19 @@ impl<
     }
 }
 
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
->
-    TryFrom<
-        BilldeskRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    > for BilldeskRefundSyncRequest
+impl TryFrom<BilldeskRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
+    for BilldeskRefundSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: BilldeskRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
+        item: BilldeskRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let merchant_id = get_merchant_id(&item.router_data.connector_auth_type)?;
 
         let mut message_data = HashMap::new();
         message_data.insert("MerchantID".to_string(), merchant_id);
-        message_data.insert("CustomerID".to_string(), customer_id.get_string_repr());
-        message_data.insert("RefundId".to_string(), item.router_data.request.connector_transaction_id.get_connector_transaction_id().map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?);
+        message_data.insert("RefundId".to_string(), item.router_data.resource_common_data.connector_request_reference_id.clone());
         message_data.insert("RequestType".to_string(), "REFUND_STATUS".to_string());
 
         let msg = serde_json::to_string(&message_data)
