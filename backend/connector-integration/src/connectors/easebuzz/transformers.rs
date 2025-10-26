@@ -131,7 +131,7 @@ impl TryFrom<&ConnectorAuthType> for EaseBuzzAuth {
 fn get_auth_credentials(
     connector_auth_type: &ConnectorAuthType,
 ) -> Result<EaseBuzzAuth, errors::ConnectorError> {
-    EaseBuzzAuth::try_from(connector_auth_type)
+    EaseBuzzAuth::try_from(connector_auth_type).map_err(|e| e.change_context(errors::ConnectorError::FailedToObtainAuthType))
 }
 
 fn generate_hash(
