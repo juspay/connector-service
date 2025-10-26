@@ -56,8 +56,6 @@ pub struct EaseBuzzPaymentsRequest {
 pub struct EaseBuzzPaymentsSyncRequest {
     pub txnid: String,
     pub amount: StringMinorUnit,
-    pub email: Option<Email>,
-    pub phone: Option<String>,
     pub key: Secret<String>,
     pub hash: Secret<String>,
 }
