@@ -14,7 +14,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Secret, PeekInterface};
+use hyperswitch_masking::PeekInterface;
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
