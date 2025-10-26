@@ -447,10 +447,10 @@ impl TryFrom<BilldeskRefundSyncResponse> for RefundsResponseData {
 
     fn try_from(response: BilldeskRefundSyncResponse) -> Result<Self, Self::Error> {
         let refund_status = match response._RefStatus.as_str() {
-            "SUCCESS" => common_enums::RefundStatus::RefundSuccess,
-            "PENDING" => common_enums::RefundStatus::RefundPending,
-            "FAILURE" => common_enums::RefundStatus::RefundFailure,
-            _ => common_enums::RefundStatus::RefundPending,
+            "SUCCESS" => common_enums::RefundStatus::Success,
+            "PENDING" => common_enums::RefundStatus::Pending,
+            "FAILURE" => common_enums::RefundStatus::Failure,
+            _ => common_enums::RefundStatus::Pending,
         };
 
         Ok(Self {
