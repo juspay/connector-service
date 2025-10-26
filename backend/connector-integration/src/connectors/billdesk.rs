@@ -832,6 +832,30 @@ impl_source_verification_stub!(
     domain_types::connector_types::PaymentMethodTokenizationData<T>,
     domain_types::connector_types::PaymentMethodTokenResponse
 );
+impl_source_verification_stub!(
+    CreateSessionToken,
+    PaymentFlowData,
+    domain_types::connector_types::SessionTokenRequestData,
+    domain_types::connector_types::SessionTokenResponseData
+);
+impl_source_verification_stub!(
+    CreateAccessToken,
+    PaymentFlowData,
+    domain_types::connector_types::AccessTokenRequestData,
+    domain_types::connector_types::AccessTokenResponseData
+);
+impl_source_verification_stub!(
+    CreateConnectorCustomer,
+    PaymentFlowData,
+    domain_types::connector_types::ConnectorCustomerData,
+    domain_types::connector_types::ConnectorCustomerResponse
+);
+impl_source_verification_stub!(
+    CreateOrder,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentCreateOrderData,
+    domain_types::connector_types::PaymentCreateOrderResponse
+);
 
 fn get_billdesk_auth_header(
     auth_type: &ConnectorAuthType,
