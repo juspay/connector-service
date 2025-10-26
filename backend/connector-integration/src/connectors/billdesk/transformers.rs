@@ -195,8 +195,17 @@ where
     fn try_from(
         item: BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
-        let msg = build_billdesk_message(&item, true)?;
-        
+        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let merchant_id = get_merchant_id(&item.router_data.connector_auth_type)?;
+
+        let mut message_data = HashMap::new();
+        message_data.insert("MerchantID".to_string(), merchant_id);
+        message_data.insert("CustomerID".to_string(), customer_id.get_string_repr().to_string());
+        message_data.insert("TxnReferenceNo".to_string(), item.router_data.resource_common_data.connector_request_reference_id.clone());
+
+        let msg = serde_json::to_string(&message_data)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
         Ok(Self { msg })
     }
 }
