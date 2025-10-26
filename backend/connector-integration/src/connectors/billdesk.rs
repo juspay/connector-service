@@ -9,7 +9,10 @@ use common_utils::{
     types::StringMinorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, PSync, Void, Capture, Refund},
+    connector_flow::{
+        Authorize, PSync, Void, Capture, Refund, RSync, Accept, RepeatPayment, SetupMandate,
+        SubmitEvidence, DefendDispute, PreAuthenticate, Authenticate, PostAuthenticate,
+    },
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
         PaymentVoidData, PaymentsCaptureData, RefundFlowData, RefundsData, RefundsResponseData,
