@@ -121,13 +121,10 @@ impl TryFrom<&ConnectorAuthType> for EaseBuzzAuth {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, api_secret } => Ok(Self {
+            ConnectorAuthType::SignatureKey { api_key, api_secret, .. } => Ok(Self {
                 key: api_key.clone(),
                 salt: api_secret.clone(),
             }),
-            ConnectorAuthType::Key { api_key } => Err(errors::ConnectorError::FailedToObtainAuthType
-                .attach_printable("EaseBuzz requires both key and salt for authentication")
-                .into()),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
     }
