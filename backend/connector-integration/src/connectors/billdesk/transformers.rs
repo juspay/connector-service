@@ -290,7 +290,7 @@ impl<
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
 
         // For UPI payments, we might need additional payment data
-        let paydata = if matches!(item.router_data.resource_common_data.payment_method, Some(common_enums::PaymentMethod::Upi)) {
+        let paydata = if matches!(item.router_data.resource_common_data.payment_method, common_enums::PaymentMethod::Upi) {
             Some("UPI".to_string())
         } else {
             None
