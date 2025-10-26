@@ -332,7 +332,7 @@ impl<
             &amount.to_string(),
             "Payment", // productinfo
             None, // firstname
-            email.as_ref().map(|e| e.peek().to_string()),
+            None, // email
             None, // udf1
             None, // udf2
             None, // udf3
