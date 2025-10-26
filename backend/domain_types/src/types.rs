@@ -121,6 +121,7 @@ pub struct Connectors {
     pub placetopay: ConnectorParams,
     pub rapyd: ConnectorParams,
     pub aci: ConnectorParams,
+    pub easebuzz: ConnectorParams,
     pub trustpay: ConnectorParamsWithMoreUrls,
     pub stripe: ConnectorParams,
     pub cybersource: ConnectorParams,
