@@ -514,7 +514,7 @@ impl<
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: "EASEBUZZ_ERROR".to_string(),
-            message: response.error_desc.clone(),
+            message: response.error_desc.clone().unwrap_or_default(),
             reason: response.error_desc,
             attempt_status: None,
             connector_transaction_id: None,
