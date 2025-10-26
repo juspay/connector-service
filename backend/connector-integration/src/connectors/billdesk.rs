@@ -826,6 +826,12 @@ impl_source_verification_stub!(
     domain_types::connector_types::PaymentsPostAuthenticateData<T>,
     PaymentsResponseData
 );
+impl_source_verification_stub!(
+    PaymentMethodToken,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentMethodTokenizationData<T>,
+    domain_types::connector_types::PaymentMethodTokenResponse
+);
 
 fn get_billdesk_auth_header(
     auth_type: &ConnectorAuthType,
