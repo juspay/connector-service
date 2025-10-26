@@ -135,6 +135,18 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
+> ConnectorIntegrationV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
+    for EaseBuzz<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
 > connector_types::PaymentAuthenticateV2<T> for EaseBuzz<T>
 {
 }
