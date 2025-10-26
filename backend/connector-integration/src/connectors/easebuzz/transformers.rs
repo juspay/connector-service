@@ -422,9 +422,10 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
-impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<ResponseRouterData<EaseBuzzPaymentsSyncResponse, Self>>
+impl<F, T> TryFrom<ResponseRouterData<EaseBuzzPaymentsSyncResponse, RouterDataV2<F, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>>>
     for RouterDataV2<F, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>
+where
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
 {
     type Error = error_stack::Report<ConnectorError>;
 
