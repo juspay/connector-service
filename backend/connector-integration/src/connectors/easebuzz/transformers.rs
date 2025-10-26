@@ -200,7 +200,7 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let auth = get_auth_credentials(&item.router_data.connector_auth_type)?;
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let _customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let return_url = item.router_data.request.get_router_return_url()?;
         
         let amount = item
