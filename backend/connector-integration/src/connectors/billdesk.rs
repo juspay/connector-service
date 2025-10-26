@@ -963,10 +963,7 @@ fn get_billdesk_auth_header(
             let auth = format!("Bearer {}", api_key.peek());
             Ok(auth.into_masked())
         }
-        ConnectorAuthType::Key { api_key, .. } => {
-            let auth = format!("Bearer {}", api_key.peek());
-            Ok(auth.into_masked())
-        }
+        
         _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
     }
 }
