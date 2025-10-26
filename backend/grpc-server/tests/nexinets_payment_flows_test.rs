@@ -176,6 +176,7 @@ fn create_payment_sync_request(
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Eur),
         handle_response: None,
+        state: None,
     }
 }
 
@@ -250,6 +251,7 @@ fn create_refund_sync_request(
         browser_info: None,
         refund_metadata: HashMap::new(),
         access_token: None,
+        state: None,
     }
 }
 

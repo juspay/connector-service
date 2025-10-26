@@ -232,6 +232,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         handle_response: None,
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Myr),
+        state: None,
     }
 }
 
@@ -249,6 +250,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         browser_info: None,
         access_token: None,
         capture_method: None,
+        state: None,
     }
 }
 
@@ -273,6 +275,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         capture_method: None,
         request_ref_id: None,
         access_token: None,
+        state: None,
     }
 }
 
@@ -288,6 +291,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         request_ref_id: None,
         refund_metadata: HashMap::new(),
         access_token: None,
+        state: None,
     }
 }
 

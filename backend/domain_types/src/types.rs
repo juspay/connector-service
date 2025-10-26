@@ -1771,6 +1771,16 @@ impl
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(|token| crate::connector_types::AccessTokenResponseData {
+                access_token: token.token.clone(),
+                token_type: None,
+                expires_in: token.expires_in_seconds,
+            });
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -1790,13 +1800,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
-            access_token: value.access_token.map(|token| {
-                crate::connector_types::AccessTokenResponseData {
-                    access_token: token,
-                    token_type: None,
-                    expires_in: None,
-                }
-            }),
+            access_token,
             session_token: None,
             reference_id: None,
             payment_method_token: None,

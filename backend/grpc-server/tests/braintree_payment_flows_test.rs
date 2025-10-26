@@ -169,6 +169,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         handle_response: None,
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
+        state: None,
     }
 }
 
@@ -246,6 +247,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         browser_info: None,
         refund_metadata,
         access_token: None,
+        state: None,
     }
 }
 

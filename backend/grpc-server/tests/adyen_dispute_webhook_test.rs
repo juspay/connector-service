@@ -79,6 +79,7 @@ async fn process_webhook_and_get_response(
         }),
         webhook_secrets: None,
         access_token: None,
+        state: None,
     });
 
     let api_key = std::env::var("API_KEY").unwrap_or_else(|_| "test_adyen_api_key".to_string());
