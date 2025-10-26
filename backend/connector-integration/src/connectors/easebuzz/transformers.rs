@@ -95,7 +95,7 @@ pub struct EaseBuzzPaymentsSyncResponse {
     pub msg: EaseBuzzSyncMessage,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum EaseBuzzSyncMessage {
     Success(EaseBuzzSuccessData),
