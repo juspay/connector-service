@@ -523,8 +523,8 @@ impl<
             connector_transaction_id: Some(response._TxnReferenceNo),
             status,
             amount_captured: Some(
-                common_utils::types::MinorUnit::from_major_unit_as_i64(
-                    response._RefAmount.parse::<f64>().unwrap_or(0.0),
+                common_utils::types::MinorUnit::new(
+                    (response._RefAmount.parse::<f64>().unwrap_or(0.0) * 100.0) as i64,
                 ),
             ),
             currency: Some(response._TxnCurrency.parse().unwrap_or(common_enums::Currency::INR)),
