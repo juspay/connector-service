@@ -290,9 +290,7 @@ where
     }
 }
 
-impl<T> TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData
-where
-    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+impl TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData
 {
     type Error = error_stack::Report<ConnectorError>;
 
