@@ -12,6 +12,7 @@ use domain_types::{
     connector_flow::{Authorize, PSync, Void, Capture, Refund},
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
+        PaymentVoidData, PaymentsCaptureData, RefundFlowData, RefundsData, RefundsResponseData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
