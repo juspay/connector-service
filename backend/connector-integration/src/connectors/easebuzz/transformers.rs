@@ -244,7 +244,7 @@ impl<
             auth.key.peek(),
             auth.salt.peek(),
             &txnid,
-            &amount.get_amount_as_string(),
+            &amount.to_string(),
             "Payment", // productinfo
             None, // firstname
             email.as_ref().map(|e| e.to_string().as_str()),
@@ -331,7 +331,7 @@ impl<
             auth.key.peek(),
             auth.salt.peek(),
             &txnid,
-            &amount.get_amount_as_string(),
+            &amount.to_string(),
             "Payment", // productinfo
             None, // firstname
             email.as_ref().map(|e| e.to_string().as_str()),
