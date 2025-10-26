@@ -318,3 +318,43 @@ impl TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData
         })
     }
 }
+
+impl TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<BilldeskPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+        let mut router_data = item.router_data;
+
+        let status = match response._AuthStatus.as_str() {
+            "0300" | "0399" => common_enums::AttemptStatus::Charged,
+            "0396" => common_enums::AttemptStatus::AuthenticationPending,
+            "0398" => common_enums::AttemptStatus::Failure,
+            _ => common_enums::AttemptStatus::Pending,
+        };
+
+        let response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(response._TxnReferenceNo.clone()),
+            redirection_data: None,
+            mandate_reference: None,
+            connector_metadata: None,
+            network_txn_id: Some(response._BankReferenceNo.clone()),
+            connector_response_reference_id: None,
+            incremental_authorization_allowed: None,
+            status_code: item.http_code,
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
+            response: Ok(response_data),
+            ..router_data
+        })
+    }
+}
