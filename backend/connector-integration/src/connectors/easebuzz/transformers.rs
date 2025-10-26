@@ -226,15 +226,16 @@ impl<
         // Extract payment method specific data
         let (payment_source, vpa) = match item.router_data.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => {
-                if let Some(payment_method_data) = &item.router_data.request.payment_method_data {
-                    match payment_method_data {
-                        domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
-                            (Some("upi".to_string()), upi_data.vpa.clone())
+                match &item.router_data.request.payment_method_data {
+                    domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
+                        match upi_data {
+                            domain_types::payment_method_data::UpiData::UpiCollect(upi_collect_data) => {
+                                (Some("upi".to_string()), upi_collect_data.vpa_id.as_ref().map(|v| v.peek().to_string()))
+                            }
+                            _ => (Some("upi".to_string()), None),
                         }
-                        _ => (None, None),
                     }
-                } else {
-                    (Some("upi".to_string()), None)
+                    _ => (Some("upi".to_string()), None),
                 }
             }
             _ => (None, None),
