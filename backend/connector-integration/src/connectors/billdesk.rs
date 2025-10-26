@@ -13,6 +13,7 @@ use domain_types::{
         Authorize, PSync, Void, Capture, Refund, RSync, Accept, RepeatPayment, SetupMandate,
         SubmitEvidence, DefendDispute, PreAuthenticate, Authenticate, PostAuthenticate,
         CreateSessionToken, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
+        PaymentMethodToken,
     },
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
