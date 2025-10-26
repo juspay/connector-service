@@ -251,7 +251,6 @@ where
 fn get_merchant_id(auth_type: &ConnectorAuthType) -> CustomResult<String, errors::ConnectorError> {
     match auth_type {
         ConnectorAuthType::SignatureKey { api_key, .. } => Ok(api_key.peek().clone()),
-        ConnectorAuthType::Key { api_key, .. } => Ok(api_key.peek().clone()),
         _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
     }
 }
