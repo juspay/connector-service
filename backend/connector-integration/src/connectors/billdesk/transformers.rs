@@ -229,7 +229,7 @@ where
         
         // Add UPI specific data if available
         if matches!(router_data.router_data.resource_common_data.payment_method, common_enums::PaymentMethod::Upi) {
-            if let Some(upi_data) = &router_data.router_data.request.payment_method_data {
+            if let Some(upi_data) = router_data.router_data.request.payment_method_data.as_ref() {
                 if let Some(upi) = upi_data.get_upi() {
                     if let Some(vpa) = &upi.vpa {
                         message_data.insert("VPA".to_string(), vpa.clone());
