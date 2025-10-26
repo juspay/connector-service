@@ -707,6 +707,63 @@ impl_source_verification_stub!(
     PaymentsSyncData,
     PaymentsResponseData
 );
+impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
+impl_source_verification_stub!(Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData);
+impl_source_verification_stub!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
+impl_source_verification_stub!(
+    RSync,
+    RefundFlowData,
+    domain_types::connector_types::RefundSyncData,
+    RefundsResponseData
+);
+impl_source_verification_stub!(
+    SetupMandate,
+    PaymentFlowData,
+    domain_types::connector_types::SetupMandateRequestData<T>,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    RepeatPayment,
+    PaymentFlowData,
+    domain_types::connector_types::RepeatPaymentData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    Accept,
+    domain_types::connector_types::DisputeFlowData,
+    domain_types::connector_types::AcceptDisputeData,
+    domain_types::connector_types::DisputeResponseData
+);
+impl_source_verification_stub!(
+    SubmitEvidence,
+    domain_types::connector_types::DisputeFlowData,
+    domain_types::connector_types::SubmitEvidenceData,
+    domain_types::connector_types::DisputeResponseData
+);
+impl_source_verification_stub!(
+    DefendDispute,
+    domain_types::connector_types::DisputeFlowData,
+    domain_types::connector_types::DisputeDefendData,
+    domain_types::connector_types::DisputeResponseData
+);
+impl_source_verification_stub!(
+    PreAuthenticate,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentsPreAuthenticateData<T>,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    Authenticate,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentsAuthenticateData<T>,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    PostAuthenticate,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentsPostAuthenticateData<T>,
+    PaymentsResponseData
+);
 
 fn get_billdesk_auth_header(
     auth_type: &ConnectorAuthType,
