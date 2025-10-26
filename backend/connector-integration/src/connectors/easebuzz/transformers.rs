@@ -102,7 +102,7 @@ pub enum EaseBuzzSyncMessage {
     Error(String),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EaseBuzzErrorResponse {
     pub status: bool,
