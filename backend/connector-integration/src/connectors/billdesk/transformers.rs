@@ -328,7 +328,7 @@ impl TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, RouterDataV2<PSync
         item: ResponseRouterData<BilldeskPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
-        let mut router_data = item.router_data;
+        let router_data = item.router_data;
 
         let status = match response._AuthStatus.as_str() {
             "0300" | "0399" => common_enums::AttemptStatus::Charged,
