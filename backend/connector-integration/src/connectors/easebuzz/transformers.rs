@@ -219,7 +219,7 @@ impl<
             .clone();
 
         let email = item.router_data.request.email.clone();
-        let phone = item.router_data.request.payment_method_data.get_optional_shipping_phone_number();
+        let phone = None; // Phone number extraction not implemented
 
         // Extract payment method specific data
         let (payment_source, vpa) = match item.router_data.resource_common_data.payment_method {
