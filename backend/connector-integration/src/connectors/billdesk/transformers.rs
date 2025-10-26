@@ -4,8 +4,6 @@ use common_utils::{
     errors::CustomResult,
     request::Method,
     types::StringMinorUnit,
-    pii::ExposeInterface,
-    pii::PeekInterface,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
