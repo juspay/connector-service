@@ -346,8 +346,6 @@ impl<
         Ok(Self {
             txnid,
             amount,
-            email,
-            phone,
             key: auth.key,
             hash: Secret::new(hash),
         })
