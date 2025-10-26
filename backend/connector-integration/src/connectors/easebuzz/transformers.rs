@@ -75,7 +75,7 @@ pub enum EaseBuzzResponseData {
     Error(String),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EaseBuzzSuccessData {
     pub easebuzz_id: String,
