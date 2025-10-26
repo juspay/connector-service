@@ -3,14 +3,10 @@ use std::collections::HashMap;
 use common_utils::{
     errors::CustomResult,
     request::Method,
-    types::StringMinorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, PSync, RSync},
-    connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsResponseData,
-    },
+    connector_flow::{Authorize, PSync},
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId, PaymentsSyncData},
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -18,7 +14,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Secret, PeekInterface, ExposeInterface};
+use hyperswitch_masking::{Secret, PeekInterface};
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
@@ -35,12 +31,6 @@ pub struct BilldeskPaymentsRequest {
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BilldeskPaymentsSyncRequest {
-    msg: String,
-}
-
-#[derive(Default, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BilldeskRefundSyncRequest {
     msg: String,
 }
 
@@ -93,102 +83,9 @@ pub struct BilldeskPaymentsSyncResponse {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BilldeskRefundSyncResponse {
-    pub _RequestType: String,
-    pub _MerchantID: String,
-    pub _RefundId: String,
-    pub _TxnReferenceNo: String,
-    pub _TxnDate: String,
-    pub _CustomerID: String,
-    pub _TxnCurrency: String,
-    pub _TxnAmount: String,
-    pub _RefAmount: String,
-    pub _RefDateTime: String,
-    pub _RefStatus: String,
-    pub _MerchantRefNo: String,
-    pub _RefARN: String,
-    pub _RefARNTimeStamp: String,
-    pub _ErrorCode: String,
-    pub _ErrorReason: String,
-    pub _ProcessStatus: String,
-    pub _Checksum: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
 pub struct BilldeskErrorResponse {
     pub error: serde_json::Value,
     pub error_description: String,
-}
-
-// Stub types for unsupported flows
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskVoidRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskVoidResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskCaptureRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskCaptureResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskRefundRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskRefundResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskCreateOrderRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskCreateOrderResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskSessionTokenRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskSessionTokenResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskSetupMandateRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskSetupMandateResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskRepeatPaymentRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskRepeatPaymentResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskAcceptDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskAcceptDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskSubmitEvidenceRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskSubmitEvidenceResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskDefendDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskDefendDisputeResponse;
-
-#[derive(Debug, Default, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum BilldeskPaymentStatus {
-    #[default]
-    Pending,
-    Success,
-    Failure,
-}
-
-impl From<BilldeskPaymentStatus> for common_enums::AttemptStatus {
-    fn from(item: BilldeskPaymentStatus) -> Self {
-        match item {
-            BilldeskPaymentStatus::Success => Self::Charged,
-            BilldeskPaymentStatus::Pending => Self::AuthenticationPending,
-            BilldeskPaymentStatus::Failure => Self::Failure,
-        }
-    }
 }
 
 fn build_billdesk_message<T>(
@@ -251,8 +148,10 @@ fn get_merchant_id(auth_type: &ConnectorAuthType) -> CustomResult<String, errors
     }
 }
 
-impl TryFrom<BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
+impl<T> TryFrom<BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
     for BilldeskPaymentsRequest
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
 {
     type Error = error_stack::Report<ConnectorError>;
     
@@ -286,8 +185,10 @@ impl TryFrom<BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, Payment
     }
 }
 
-impl TryFrom<BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+impl<T> TryFrom<BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
     for BilldeskPaymentsSyncRequest
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
 {
     type Error = error_stack::Report<ConnectorError>;
     
@@ -296,28 +197,6 @@ impl TryFrom<BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyn
     ) -> Result<Self, Self::Error> {
         let msg = build_billdesk_message(&item, true)?;
         
-        Ok(Self { msg })
-    }
-}
-
-impl TryFrom<BilldeskRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
-    for BilldeskRefundSyncRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-    
-    fn try_from(
-        item: BilldeskRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
-    ) -> Result<Self, Self::Error> {
-        let merchant_id = get_merchant_id(&item.router_data.connector_auth_type)?;
-
-        let mut message_data = HashMap::new();
-        message_data.insert("MerchantID".to_string(), merchant_id);
-        message_data.insert("RefundId".to_string(), item.router_data.resource_common_data.connector_request_reference_id.clone());
-        message_data.insert("RequestType".to_string(), "REFUND_STATUS".to_string());
-
-        let msg = serde_json::to_string(&message_data)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-
         Ok(Self { msg })
     }
 }
@@ -411,14 +290,10 @@ where
     }
 }
 
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData {
+impl<T> TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: BilldeskPaymentsSyncResponse) -> Result<Self, Self::Error> {
@@ -437,25 +312,6 @@ impl<
             network_txn_id: Some(response._BankReferenceNo),
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
-            status_code: 200,
-        })
-    }
-}
-
-impl TryFrom<BilldeskRefundSyncResponse> for RefundsResponseData {
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(response: BilldeskRefundSyncResponse) -> Result<Self, Self::Error> {
-        let refund_status = match response._RefStatus.as_str() {
-            "SUCCESS" => common_enums::RefundStatus::Success,
-            "PENDING" => common_enums::RefundStatus::Pending,
-            "FAILURE" => common_enums::RefundStatus::Failure,
-            _ => common_enums::RefundStatus::Pending,
-        };
-
-        Ok(Self {
-            connector_refund_id: response._RefundId,
-            refund_status,
             status_code: 200,
         })
     }
