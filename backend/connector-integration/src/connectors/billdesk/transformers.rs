@@ -496,39 +496,21 @@ impl<
     }
 }
 
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> TryFrom<BilldeskRefundSyncResponse> for RefundsResponseData {
+impl TryFrom<BilldeskRefundSyncResponse> for RefundsResponseData {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: BilldeskRefundSyncResponse) -> Result<Self, Self::Error> {
-        let status = match response._RefStatus.as_str() {
-            "SUCCESS" => common_enums::AttemptStatus::Charged,
-            "PENDING" => common_enums::AttemptStatus::Pending,
-            "FAILURE" => common_enums::AttemptStatus::Failure,
-            _ => common_enums::AttemptStatus::Pending,
+        let refund_status = match response._RefStatus.as_str() {
+            "SUCCESS" => common_enums::RefundStatus::RefundSuccess,
+            "PENDING" => common_enums::RefundStatus::RefundPending,
+            "FAILURE" => common_enums::RefundStatus::RefundFailure,
+            _ => common_enums::RefundStatus::RefundPending,
         };
 
         Ok(Self {
-            refund_id: Some(response._RefundId),
-            connector_transaction_id: Some(response._TxnReferenceNo),
-            status,
-            amount_captured: Some(
-                common_utils::types::MinorUnit::new(
-                    (response._RefAmount.parse::<f64>().unwrap_or(0.0) * 100.0) as i64,
-                ),
-            ),
-            currency: Some(response._TxnCurrency.parse().unwrap_or(common_enums::Currency::INR)),
-            error_code: Some(response._ErrorCode),
-            error_message: Some(response._ErrorReason),
-            connector_response_reference_id: Some(response._RefARN),
-            refund_arn: Some(response._RefARN),
-            connector_metadata: None,
+            connector_refund_id: response._RefundId,
+            refund_status,
+            status_code: 200,
         })
     }
 }
