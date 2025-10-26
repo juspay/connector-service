@@ -66,6 +66,18 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
+> ConnectorIntegrationV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>
+    for EaseBuzz<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
 > connector_types::CreateConnectorCustomer for EaseBuzz<T>
 {
 }
