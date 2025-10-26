@@ -2,20 +2,22 @@ use std::collections::HashMap;
 
 use common_utils::{
     errors::CustomResult,
-    ext_traits::ValueExt,
     request::Method,
     types::StringMinorUnit,
-    Email,
+    pii::ExposeInterface,
+    pii::PeekInterface,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
+    connector_types::{
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsResponseData,
+    },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
