@@ -820,7 +820,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
                     "SUCCESS" => common_enums::AttemptStatus::Charged,
                     "PENDING" => common_enums::AttemptStatus::Pending,
                     "FAILURE" => common_enums::AttemptStatus::Failure,
-                    "PROCESSING" => common_enums::AttemptStatus::Processing,
+                    "PROCESSING" => common_enums::AttemptStatus::Authorizing,
                     _ => common_enums::AttemptStatus::Pending,
                 };
 
