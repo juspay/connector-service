@@ -287,7 +287,7 @@ impl<
         };
 
         Ok(Self {
-            txnid: transaction_id,
+            txnid: transaction_id.to_string(),
             amount,
             productinfo: "Payment".to_string(),
             firstname: Some(customer_id.get_string_repr().to_string()),
@@ -391,7 +391,7 @@ impl<
         let (key, hash) = get_easebuzz_auth_credentials(&item.router_data.connector_auth_type)?;
 
         Ok(Self {
-            txnid: transaction_id,
+            txnid: transaction_id.to_string(),
             amount,
             email,
             phone,
