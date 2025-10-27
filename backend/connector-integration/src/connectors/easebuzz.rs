@@ -382,7 +382,7 @@ macros::create_all_prerequisites!(
             flow: Accept,
             request_body: EaseBuzzAcceptDisputeRequest,
             response_body: EaseBuzzAcceptDisputeResponse,
-            router_data: RouterDataV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+            router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
         ),
         (
             flow: DefendDispute,
