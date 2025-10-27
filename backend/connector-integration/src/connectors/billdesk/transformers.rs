@@ -168,7 +168,7 @@ fn get_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std::marke
     
     // Create Billdesk message format based on payment method
     match item.router_data.request.payment_method_type {
-        Some(common_enums::PaymentMethodType::Upi) | Some(common_enums::PaymentMethodType::UpiCollect) => {
+        Some(common_enums::PaymentMethodType::UpiIntent) | Some(common_enums::PaymentMethodType::UpiCollect) => {
             // UPI message format
             let message = format!(
                 "merchantid={}&customerid={}&txnamount={}&currency={}&txnreferenceid={}&itemcode=UPI&txntype=UPICOLLECT",
