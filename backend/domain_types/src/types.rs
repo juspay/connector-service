@@ -143,6 +143,16 @@ pub struct ConnectorParamsWithMoreUrls {
     pub base_url_bank_redirects: String,
 }
 
+#[derive(Clone, serde::Deserialize, Debug, Default)]
+pub struct EaseBuzzConnectorParams {
+    /// base url
+    pub base_url: String,
+    /// test base url
+    pub base_url_test: String,
+    /// test mode flag
+    pub test_mode: Option<bool>,
+}
+
 // Trait to provide access to connectors field
 pub trait HasConnectors {
     fn connectors(&self) -> &Connectors;
