@@ -574,7 +574,7 @@ impl<
                     attempt_status,
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::ConnectorTransactionId(
-                            payment_data.txnid.unwrap_or_default(),
+                            payment_data.txnid.clone().unwrap_or_default(),
                         ),
                         redirection_data: None,
                         mandate_reference: None,
