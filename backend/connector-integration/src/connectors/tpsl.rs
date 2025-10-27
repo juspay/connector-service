@@ -22,6 +22,7 @@ use domain_types::{
         RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData, AccessTokenRequestData, AccessTokenResponseData,
         ConnectorCustomerData, ConnectorCustomerResponse, PaymentMethodTokenizationData, PaymentMethodTokenResponse,
+        PaymentsPreAuthenticateData, PaymentsAuthenticateData, PaymentsPostAuthenticateData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
