@@ -541,13 +541,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 .clone()
                 .map(|e| e.expose().expose().to_string())
                 .unwrap_or_else(|| format!("{}@example.com", customer_id.get_string_repr())),
-            mobile_number: item.router_data.request.phone
+            mobile_number: item.router_data.request.payment_method_data.phone
                 .clone()
                 .map(|p| p.to_string())
                 .unwrap_or_else(|| "9999999999".to_string()),
             account_no: customer_id.get_string_repr().to_string(),
             account_type: "SAVINGS".to_string(),
-            account_holder_name: item.router_data.request.name
+            account_holder_name: item.router_data.request.customer_name
                 .clone()
                 .unwrap_or_else(|| "Customer".to_string()),
             aadhar_no: None,
@@ -555,7 +555,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         let transaction = TpslTxnPayload {
             identifier: item.router_data.resource_common_data.connector_request_reference_id.clone(),
-            amount: amount.get_amount_as_string(),
+            amount: amount.to_string(),
             currency: item.router_data.request.currency.to_string(),
             request_type: "SALE".to_string(),
             transaction_type: "SALE".to_string(),
