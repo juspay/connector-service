@@ -305,7 +305,7 @@ impl<
     ) -> Result<Self, Self::Error> {
         let message_data = HashMap::from([
             ("merchantid".to_string(), "MERCHANT_ID".to_string()), // Will be replaced with actual merchant ID
-            ("customerid".to_string(), item.router_data.resource_common_data.get_customer_id()?.to_string()),
+            ("customerid".to_string(), item.router_data.resource_common_data.get_customer_id()?.get_string_repr().to_string()),
             ("txnreferenceNo".to_string(), item.router_data.resource_common_data.connector_request_reference_id.clone()),
             ("requesttype".to_string(), "STATUSQUERY".to_string()),
         ]);
