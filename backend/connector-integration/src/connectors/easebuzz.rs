@@ -325,13 +325,13 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
-            flow: PSync,
+            flow: Psync,
             request_body: EaseBuzzPaymentsSyncRequest,
             response_body: EaseBuzzPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
-            flow: RSync,
+            flow: Rsync,
             request_body: EaseBuzzRefundSyncRequest,
             response_body: EaseBuzzRefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
@@ -382,7 +382,7 @@ macros::create_all_prerequisites!(
             flow: Accept,
             request_body: EaseBuzzAcceptDisputeRequest,
             response_body: EaseBuzzAcceptDisputeResponse,
-            router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+            router_data: RouterDataV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
         ),
         (
             flow: DefendDispute,
