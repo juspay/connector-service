@@ -6,7 +6,8 @@ use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken,
+        DefendDispute, PaymentMethodToken, PostAuthenticate, PreAuthenticate, PSync, RSync,
         Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
