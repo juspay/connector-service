@@ -32,6 +32,7 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 use masking::ExposeInterface;
+use hyperswitch_masking::{Mask, Maskable, Secret};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
