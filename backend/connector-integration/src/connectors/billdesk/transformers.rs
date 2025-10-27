@@ -15,7 +15,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Secret, PeekInterface, Maskable, ExposeInterface};
+use hyperswitch_masking::{Secret, PeekInterface, ExposeInterface};
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
@@ -406,7 +406,7 @@ impl<
         };
         
         // Parse amount
-        let amount_received = response.txn_amount.parse::<i64>()
+        let _amount_received = response.txn_amount.parse::<i64>()
             .ok()
             .map(|amt| common_utils::types::MinorUnit::new(amt));
         
