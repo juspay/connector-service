@@ -58,6 +58,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Trustpay => Box::new(Trustpay::new()),
             ConnectorEnum::Stripe => Box::new(Stripe::new()),
             ConnectorEnum::Cybersource => Box::new(Cybersource::new()),
+            ConnectorEnum::Billdesk => Box::new(Billdesk::new()),
         }
     }
 }
