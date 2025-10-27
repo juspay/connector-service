@@ -287,7 +287,11 @@ impl Payments {
         };
 
         // Extract access token from Hyperswitch request
-        let cached_access_token = payload.access_token.clone();
+        let cached_access_token = payload
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(|access| (access.token.clone(), access.expires_in_seconds));
 
         // Check if connector supports access tokens
         let should_do_access_token = connector_data.connector.should_do_access_token();
@@ -295,13 +299,13 @@ impl Payments {
         // Conditional token generation - ONLY if not provided in request
         let payment_flow_data = if should_do_access_token {
             let access_token_data = match cached_access_token {
-                Some(token) => {
+                Some((token, expires_in)) => {
                     // If provided cached token - use it, don't generate new one
                     tracing::info!("Using cached access token from Hyperswitch");
                     Some(AccessTokenResponseData {
                         access_token: token,
                         token_type: None,
-                        expires_in: None,
+                        expires_in,
                     })
                 }
                 None => {
@@ -1621,7 +1625,11 @@ impl PaymentService for Payments {
                     .into_grpc_status()?;
 
                     // Extract access token from Hyperswitch request
-                    let cached_access_token = payload.access_token.clone();
+                    let cached_access_token = payload
+                        .state
+                        .as_ref()
+                        .and_then(|state| state.access_token.as_ref())
+                        .map(|access| (access.token.clone(), access.expires_in_seconds));
 
                     // Check if connector supports access tokens
                     let should_do_access_token = connector_data.connector.should_do_access_token();
@@ -1629,13 +1637,13 @@ impl PaymentService for Payments {
                     // Conditional token generation - ONLY if not provided in request
                     let payment_flow_data = if should_do_access_token {
                         let access_token_data = match cached_access_token {
-                            Some(token) => {
+                            Some((token, expires_in)) => {
                                 // If provided cached token - use it, don't generate new one
                                 tracing::info!("Using cached access token from Hyperswitch");
                                 Some(AccessTokenResponseData {
                                     access_token: token,
                                     token_type: None,
-                                    expires_in: None,
+                                    expires_in,
                                 })
                             }
                             None => {

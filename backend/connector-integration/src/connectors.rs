@@ -86,5 +86,8 @@ pub use self::stripe::Stripe;
 pub mod cybersource;
 pub use self::cybersource::Cybersource;
 
+pub mod worldpay;
+pub use self::worldpay::Worldpay;
+
 pub mod worldpayvantiv;
 pub use self::worldpayvantiv::Worldpayvantiv;
