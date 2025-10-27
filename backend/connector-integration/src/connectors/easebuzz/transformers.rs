@@ -254,7 +254,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .connector
             .amount_converter
             .convert(
-                1000, // Default minor amount
+                common_utils::types::MinorUnit(1000), // Default minor amount
                 common_enums::Currency::USD,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
