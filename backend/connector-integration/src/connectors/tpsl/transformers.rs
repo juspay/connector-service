@@ -2,8 +2,8 @@ use common_utils::{
     errors::CustomResult, request::Method,
 };
 use domain_types::{
-    connector_flow::{Authorize, PSync, PreAuthenticate, Authenticate, PostAuthenticate, CreateAccessToken, CreateConnectorCustomer, PaymentMethodToken},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsSyncData, PaymentsResponseData, ResponseId, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData, ConnectorCustomerResponse, PaymentMethodTokenizationData, PaymentMethodTokenResponse},
+    connector_flow::{Authorize, PSync},
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsSyncData, PaymentsResponseData, ResponseId},
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -14,6 +14,7 @@ use error_stack::ResultExt;
 use masking::ExposeInterface;
 use hyperswitch_masking::Secret;
 use chrono;
+use serde::{Deserialize, Serialize};
 
 use crate::{connectors::tpsl::TPSLRouterData, types::ResponseRouterData};
 
