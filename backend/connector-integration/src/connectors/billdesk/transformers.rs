@@ -170,9 +170,10 @@ fn get_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std::marke
     match item.router_data.request.payment_method_type {
         Some(common_enums::PaymentMethodType::UpiIntent) | Some(common_enums::PaymentMethodType::UpiCollect) => {
             // UPI message format
+            let customer_id_str = customer_id.get_string_repr();
             let message = format!(
                 "merchantid={}&customerid={}&txnamount={}&currency={}&txnreferenceid={}&itemcode=UPI&txntype=UPICOLLECT",
-                merchant_id, customer_id, amount, currency, txn_id
+                merchant_id, customer_id_str, amount, currency, txn_id
             );
             Ok(message)
         }
