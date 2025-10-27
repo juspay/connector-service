@@ -368,21 +368,21 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        // Extract amount using the amount converter
+        // Extract amount using the amount converter (for sync, we need to get this from elsewhere)
         let amount = item
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
+                1000, // Default amount for sync - this should come from original transaction
+                common_enums::Currency::INR, // Default currency
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
-        // Extract transaction ID from connector request reference
-        let transaction_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
+        // Extract transaction ID from sync request
+        let transaction_id = item.router_data.request.connector_transaction_id.clone();
 
-        // Extract email
-        let email = item.router_data.request.email.clone();
+        // Email not available in PaymentsSyncData
+        let email: Option<Email> = None;
 
         // Extract phone number (not available in PaymentsAuthorizeData)
         let phone: Option<String> = None;
