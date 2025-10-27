@@ -78,7 +78,6 @@ async fn process_webhook_and_get_response(
             body: request_body_bytes,
         }),
         webhook_secrets: None,
-        access_token: None,
         state: None,
     });
 

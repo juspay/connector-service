@@ -1246,9 +1246,6 @@ message PaymentServiceGetRequest {
   // Reference
   optional Identifier request_ref_id = 2; // Renamed from connector_request_reference_id
 
-  // Session and Token Information
-  optional string access_token = 3; // Access token for secure communication
-
   // Capture Settings
   optional CaptureMethod capture_method = 8; // Method for capturing the payment
 
@@ -1260,7 +1257,7 @@ message PaymentServiceGetRequest {
   Currency currency = 6; // The currency for the payment, in ISO 4217 three-letter code
 
   // State Information
-  optional ConnectorState state = 7; // State data for access token storage and other connector-specific state
+  optional ConnectorState state = 3; // State data for access token storage and other connector-specific state
 }
 
 // Response message for a payment status synchronization.
@@ -1327,9 +1324,6 @@ message PaymentServiceVoidRequest {
   // Browser Information
   optional BrowserInformation browser_info = 5; // Information about the customer's browser
 
-  // Session and Token Information
-  optional string access_token = 6; // Access token for secure communication
-
   // Amount Information
   optional int64 amount = 7; // Amount to void
   optional Currency currency = 8; // Currency of the void amount
@@ -1387,9 +1381,6 @@ message PaymentServiceCaptureRequest {
 
   // Browser Information
   optional BrowserInformation browser_info = 7; // Browser information, if relevant
-
-  // Session and Token Information
-  optional string access_token = 8; // Access token for secure communication
 
   // Capture Settings
   optional CaptureMethod capture_method = 9; // Method for capturing the payment
@@ -1457,9 +1448,6 @@ message PaymentServiceRefundRequest {
   // Browser Information
   optional BrowserInformation browser_info = 15; // Browser information, if relevant
 
-  // Session and Token Information
-  optional string access_token = 16; // Access token for secure communication
-
   // State Information
   optional ConnectorState state = 17; // State data for access token storage and other connector-specific state
 }
@@ -1516,9 +1504,6 @@ message PaymentServiceDisputeRequest {
   Identifier request_ref_id = 1; // Reference ID for tracking
   Identifier transaction_id = 2; // Transaction ID to raise the dispute for
   string dispute_id = 3; // Connector's unique identifier
-
-  // Session and Token Information
-  optional string access_token = 4; // Access token for secure communication
 
   // State Information
   optional ConnectorState state = 5; // State data for access token storage and other connector-specific state
@@ -1594,7 +1579,6 @@ message PaymentServiceRegisterRequest {
   optional string complete_authorize_url = 15; // URL to complete authorization
   
   // Session and Token Information
-  optional string access_token = 16; // Access token for secure communication
   optional string session_token = 17; // Session token, if applicable
   
   // Order Details
@@ -1675,9 +1659,6 @@ message PaymentServiceRepeatEverythingRequest {
   // Customer Information
   optional SecretString email = 12; // Email address of the customer
 
-  // Session and Token Information
-  optional string access_token = 20; // Access token for secure communication
-
   // Browser Information
   optional BrowserInformation browser_info = 13; // Browser information, if relevant
 
@@ -1757,9 +1738,6 @@ message PaymentServicePreAuthenticateRequest {
   optional string return_url = 11; // URL to redirect after authentication
   optional string continue_redirection_url = 12; // URL to complete authorization
   
-  // Session and Token Information
-  optional string access_token = 13; // Access token for secure communication
-  
   // Contextual Information
   optional BrowserInformation browser_info = 14; // Information about the customer's browser
 
@@ -1823,9 +1801,6 @@ message PaymentServiceAuthenticateRequest {
   // URLs for Redirection
   optional string return_url = 11; // URL to redirect after authentication
   optional string continue_redirection_url = 12; // URL to complete authorization
-  
-  // Session and Token Information
-  optional string access_token = 13; // Access token for secure communication
   
   // Contextual Information
   optional BrowserInformation browser_info = 14; // Information about the customer's browser
@@ -1894,9 +1869,6 @@ message PaymentServicePostAuthenticateRequest {
   optional string return_url = 11; // URL to redirect after authentication
   optional string continue_redirection_url = 12; // URL to complete authorization
   
-  // Session and Token Information
-  optional string access_token = 13; // Access token for secure communication
-  
   // Contextual Information
   optional BrowserInformation browser_info = 14; // Information about the customer's browser
 
@@ -1948,9 +1920,6 @@ message PaymentServiceTransformRequest {
   // Security
   optional WebhookSecrets webhook_secrets = 3; // Secrets for verifying authenticity
 
-  // Session and Token Information
-  optional string access_token = 4; // Access token for secure communication
-
   // State Information
   optional ConnectorState state = 5; // State data for access token storage and other connector-specific state
 }
@@ -1996,9 +1965,6 @@ message RefundServiceGetRequest {
 
   // Browser Information
   optional BrowserInformation browser_info = 5; // Information about the customer's browser
-
-  // Session and Token Information
-  optional string access_token = 6; // Access token for secure communication
 
 // Metadata
   map<string, string> refund_metadata = 7; // Metadata specific to the refund sync  
