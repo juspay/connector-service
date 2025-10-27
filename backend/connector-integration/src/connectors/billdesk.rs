@@ -525,7 +525,7 @@ macros::macro_connector_implementation!(
 
             let auth_type = transformers::BilldeskAuth::try_from(&req.connector_auth_type)?;
 
-            let checksum = generate_billdesk_checksum_sync(req, &auth_type)?;
+            let checksum = generate_billdesk_checksum_sync::<T>(req, &auth_type)?;
 
             header.push((headers::CHECKSUM.to_string(), checksum.into_masked()));
             Ok(header)
