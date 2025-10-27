@@ -489,7 +489,7 @@ impl<
                 transaction_type: "SALE".to_string(),
                 currency: item.router_data.request.currency.to_string(),
                 identifier: transaction_id,
-                date_time: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                date_time: "2024-01-01 00:00:00".to_string(), // Placeholder timestamp
                 sub_type: "UPI".to_string(),
                 request_type: "TXN".to_string(),
             },
