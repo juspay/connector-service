@@ -254,8 +254,8 @@ impl<
         // Extract email
         let email = item.router_data.request.email.clone();
 
-        // Extract phone number
-        let phone = item.router_data.request.phone.clone().map(|p| p.expose());
+        // Extract phone number (not available in PaymentsAuthorizeData)
+        let phone: Option<String> = None;
 
         // Extract IP address
         let ip_address = item.router_data.request.get_ip_address_as_optional()
@@ -387,8 +387,8 @@ impl<
         // Extract email
         let email = item.router_data.request.email.clone();
 
-        // Extract phone number
-        let phone = item.router_data.request.phone.clone().map(|p| p.expose());
+        // Extract phone number (not available in PaymentsAuthorizeData)
+        let phone: Option<String> = None;
 
         // Get authentication credentials
         let (key, hash) = get_easebuzz_auth_credentials(&item.router_data.connector_auth_type)?;
