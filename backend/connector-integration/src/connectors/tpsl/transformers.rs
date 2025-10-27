@@ -5,20 +5,19 @@ use common_utils::{
     Email,
 };
 use domain_types::{
-    connector_flow::{Authorize, PSync},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
+    connector_flow::{Authorize, PSync, PreAuthenticate, Authenticate, PostAuthenticate, CreateAccessToken, CreateConnectorCustomer, PaymentMethodToken},
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsSyncData, PaymentsResponseData, ResponseId, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData, ConnectorCustomerResponse, PaymentMethodTokenizationData, PaymentMethodTokenResponse},
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
 };
 use error_stack::ResultExt;
+use masking::ExposeInterface;
 use hyperswitch_masking::Secret;
-use serde::{Deserialize, Serialize};
 
-use crate::{connectors::tpsl::TpslRouterData, types::ResponseRouterData};
+use crate::{connectors::tpsl::TPSLRouterData, types::ResponseRouterData};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
