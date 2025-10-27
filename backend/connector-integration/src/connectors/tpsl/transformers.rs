@@ -374,7 +374,7 @@ impl<
 }
 
 impl<F> TryFrom<ResponseRouterData<TpslPaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<()>, PaymentsResponseData>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<domain_types::payment_method_data::DefaultPCIHolder>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
