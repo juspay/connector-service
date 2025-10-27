@@ -467,6 +467,9 @@ impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, Self>>
             .status
             .map(|s| s.into())
             .unwrap_or(common_enums::AttemptStatus::Pending);
+        
+        let txnrefno = response.txnrefno.clone();
+        let fallback_id = router_data.resource_common_data.connector_request_reference_id.clone();
 
         Ok(Self {
             resource_common_data: PaymentFlowData {
@@ -475,14 +478,14 @@ impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, Self>>
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(
-                    response
-                        .txnrefno
-                        .unwrap_or_else(|| router_data.resource_common_data.connector_request_reference_id.clone()),
+                    txnrefno
+                        .clone()
+                        .unwrap_or_else(|| fallback_id.clone()),
                 ),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
-                network_txn_id: response.txnrefno,
+                network_txn_id: txnrefno,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 status_code: http_code,
