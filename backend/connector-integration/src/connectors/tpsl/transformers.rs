@@ -68,24 +68,24 @@ pub struct TpslPaymentsSyncRequest {
     pub consumer: TpslConsumerDataType,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 pub struct TpslMerchantDataType {
     pub identifier: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 pub struct TpslPaymentDataType {
     pub instruction: TpslInstructionDataType,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 pub struct TpslInstructionDataType {
     pub amount: Option<String>,
     pub end_date_time: Option<String>,
     pub identifier: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 pub struct TpslTransactionDataType {
     pub device_identifier: String,
     #[serde(rename = "type")]
@@ -97,7 +97,7 @@ pub struct TpslTransactionDataType {
     pub request_type: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 pub struct TpslConsumerDataType {
     pub identifier: String,
 }
