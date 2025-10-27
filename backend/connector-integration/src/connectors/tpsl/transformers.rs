@@ -721,7 +721,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
                         network_txn_id: Some(upi_response.payment_method.payment_transaction.identifier.clone().unwrap_or_default()),
                         connector_response_reference_id: Some(upi_response.merchant_transaction_identifier),
                         incremental_authorization_allowed: None,
-                        status_code: Some(http_code),
+                        status_code: http_code,
                     }),
                 )
             }
@@ -741,7 +741,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
-                        status_code: Some(http_code),
+                        status_code: http_code,
                     }),
                 )
             }
@@ -768,7 +768,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
                         network_txn_id: decrypted_response.payment_method.payment_transaction.identifier,
                         connector_response_reference_id: decrypted_response.merchant_transaction_identifier,
                         incremental_authorization_allowed: None,
-                        status_code: Some(http_code),
+                        status_code: http_code,
                     }),
                 )
             }
@@ -839,7 +839,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
                         network_txn_id: sync_response.payment_method.payment_transaction.identifier,
                         connector_response_reference_id: Some(sync_response.merchant_transaction_identifier),
                         incremental_authorization_allowed: None,
-                        status_code: Some(http_code),
+                        status_code: http_code,
                     }),
                 )
             }
