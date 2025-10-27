@@ -881,7 +881,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub browser_info: Option<BrowserInformation>,
     pub order_category: Option<String>,
     pub session_token: Option<String>,
-    pub access_token: Option<String>,
+    pub access_token: Option<AccessTokenResponseData>,
     pub customer_acceptance: Option<CustomerAcceptance>,
     pub enrolled_for_3ds: bool,
     pub related_transaction_id: Option<String>,
@@ -1098,12 +1098,18 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     }
 
     pub fn set_access_token(mut self, access_token: Option<String>) -> Self {
-        self.access_token = access_token;
+        self.access_token = access_token.map(|token| AccessTokenResponseData {
+            access_token: token,
+            token_type: None,
+            expires_in: None,
+        });
         self
     }
 
     pub fn get_access_token_optional(&self) -> Option<&String> {
-        self.access_token.as_ref()
+        self.access_token
+            .as_ref()
+            .map(|token_data| &token_data.access_token)
     }
 }
 
@@ -1270,7 +1276,7 @@ pub struct AccessTokenRequestData {
     pub grant_type: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct AccessTokenResponseData {
     pub access_token: String,
     pub token_type: Option<String>,

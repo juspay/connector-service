@@ -1153,7 +1153,11 @@ impl<
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(|token| token.token.clone());
+            .map(|token| crate::connector_types::AccessTokenResponseData {
+                access_token: token.token.clone(),
+                token_type: None,
+                expires_in: token.expires_in_seconds,
+            });
         Ok(Self {
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
                 value.capture_method(),
