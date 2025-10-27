@@ -579,7 +579,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             device_identifier: "127.0.0.1".to_string(),
             r#type: Some("UPI".to_string()),
             sub_type: Some("UPI".to_string()),
-            amount: item.amount.get_amount_as_string(),
+            amount: item.connector.amount_converter.convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            ).change_context(errors::ConnectorError::RequestEncodingFailed)?,
             currency: item.router_data.request.currency.to_string(),
             date_time: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
             request_type: "STATUS".to_string(),
