@@ -507,7 +507,7 @@ impl<
                         Err(ErrorResponse {
                             code: response_data.status.to_string(),
                             status_code: item.http_code,
-                            message: response_data.error_desc.clone(),
+                            message: response_data.error_desc.clone().unwrap_or_default(),
                             reason: response_data.error_desc,
                             attempt_status: None,
                             connector_transaction_id: response_data.data.txnid,
