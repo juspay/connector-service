@@ -421,12 +421,7 @@ fn get_easebuzz_auth_credentials(
     connector_auth_type: &ConnectorAuthType,
 ) -> CustomResult<(String, String), ConnectorError> {
     match connector_auth_type {
-        ConnectorAuthType::SignatureKey { api_key, key, .. } => {
-            let key_str = key.peek().clone();
-            let api_key_str = api_key.peek().clone();
-            Ok((key_str, api_key_str))
-        }
-        ConnectorAuthType::Key { api_key, .. } => {
+        ConnectorAuthType::SignatureKey { api_key, .. } => {
             let api_key_str = api_key.peek().clone();
             Ok((api_key_str.clone(), api_key_str))
         }
