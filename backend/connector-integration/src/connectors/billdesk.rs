@@ -30,7 +30,26 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
-use transformers::{self as billdesk, BilldeskPaymentsRequest, BilldeskPaymentsResponse, BilldeskPaymentsSyncRequest, BilldeskPaymentsSyncResponse};
+use transformers::{
+    self as billdesk, 
+    BilldeskPaymentsRequest, BilldeskPaymentsResponse, BilldeskPaymentsSyncRequest, BilldeskPaymentsSyncResponse,
+    BilldeskPostAuthenticateRequest, BilldeskPostAuthenticateResponse,
+    BilldeskAuthenticateRequest, BilldeskAuthenticateResponse,
+    BilldeskPreAuthenticateRequest, BilldeskPreAuthenticateResponse,
+    BilldeskSessionTokenRequest, BilldeskSessionTokenResponse,
+    BilldeskAccessTokenRequest, BilldeskAccessTokenResponse,
+    BilldeskCreateCustomerRequest, BilldeskCreateCustomerResponse,
+    BilldeskVoidRequest, BilldeskVoidResponse,
+    BilldeskRefundRequest, BilldeskRefundResponse,
+    BilldeskCaptureRequest, BilldeskCaptureResponse,
+    BilldeskSetupMandateRequest, BilldeskSetupMandateResponse,
+    BilldeskAcceptDisputeRequest, BilldeskAcceptDisputeResponse,
+    BilldeskSubmitEvidenceRequest, BilldeskSubmitEvidenceResponse,
+    BilldeskDefendDisputeRequest, BilldeskDefendDisputeResponse,
+    BilldeskRepeatPaymentRequest, BilldeskRepeatPaymentResponse,
+    BilldeskCreateOrderRequest, BilldeskCreateOrderResponse,
+    BilldeskPaymentMethodTokenRequest, BilldeskPaymentMethodTokenResponse,
+};
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
