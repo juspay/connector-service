@@ -475,7 +475,7 @@ impl<
             item.router_data.request.get_phone_number().map(|p| p.to_string()).unwrap_or_default(),
             salt
         );
-        let hash = format!("{:x}", md5::compute(hash_string));
+        let hash = format!("{:x}", Sha256::digest(hash_string));
 
         Ok(Self {
             txnid: item
@@ -548,7 +548,7 @@ impl<
             merchant_refund_id,
             salt
         );
-        let hash = format!("{:x}", md5::compute(hash_string));
+        let hash = format!("{:x}", Sha256::digest(hash_string));
 
         Ok(Self {
             key,
