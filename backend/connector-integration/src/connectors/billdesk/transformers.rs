@@ -268,7 +268,7 @@ impl<
             .unwrap_or_else(|| "127.0.0.1".to_string());
 
         match item.router_data.resource_common_data.payment_method {
-            common_enums::PaymentMethod::Upi => Ok(Self {
+            common_enums::PaymentMethod::UpiCollect => Ok(Self {
                 msg,
                 useragent: user_agent,
                 ipaddress: Some(ip_address),
