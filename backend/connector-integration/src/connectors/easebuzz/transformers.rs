@@ -32,8 +32,8 @@ impl TryFrom<&ConnectorAuthType> for EaseBuzzAuth {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key } => {
-                let auth_data = key
+            ConnectorAuthType::SignatureKey { api_key, key1, api_secret, .. } => {
+                let auth_data = api_secret
                     .parse_value::<EaseBuzzAuth>("EaseBuzzAuth")
                     .change_context(errors::ConnectorError::InvalidDataFormat {
                         field_name: "auth_key",
