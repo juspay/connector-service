@@ -546,13 +546,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-impl TryFrom<crate::connectors::tpsl::TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, DefaultPCIHolder>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<crate::connectors::tpsl::TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
     for TpslPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: crate::connectors::tpsl::TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, DefaultPCIHolder>,
+        item: crate::connectors::tpsl::TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
         let merchant_code = auth.merchant_code
