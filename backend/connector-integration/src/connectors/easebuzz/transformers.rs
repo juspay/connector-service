@@ -406,10 +406,10 @@ fn extract_upi_vpa<T: PaymentMethodDataTypes>(payment_method_data: &domain_types
         domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
             match upi_data {
                 domain_types::payment_method_data::UpiData::UpiCollect(collect_data) => {
-                    Ok(collect_data.vpa.clone())
+                    Ok(collect_data.vpa_id.clone())
                 }
                 domain_types::payment_method_data::UpiData::UpiIntent(intent_data) => {
-                    Ok(intent_data.vpa.clone())
+                    Ok(intent_data.vpa_id.clone())
                 }
                 domain_types::payment_method_data::UpiData::UpiQr(qr_data) => {
                     Err(ConnectorError::MissingRequiredField {
