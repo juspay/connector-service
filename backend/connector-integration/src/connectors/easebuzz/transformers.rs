@@ -405,7 +405,7 @@ impl<
     }
 }
 
-fn extract_upi_vpa(payment_method_data: &Option<serde_json::Value>) -> CustomResult<String, ConnectorError> {
+fn extract_upi_vpa<T: PaymentMethodDataTypes>(payment_method_data: &domain_types::payment_method_data::PaymentMethodData<T>) -> CustomResult<String, ConnectorError> {
     match payment_method_data {
         Some(data) => {
             data.get("upi_vpa")
