@@ -249,8 +249,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         
         // For sync requests, we need to extract the amount from the connector metadata or use a default
         // This is a simplified implementation - in practice, you'd store the amount in the metadata
-        // For now, we'll create a default amount using a workaround
-        let amount = unsafe { std::mem::transmute::<_, StringMinorUnit>("1000.00".to_string()) }; // Default amount for sync
+        // Use the amount converter with a default minor amount
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                1000, // Default minor amount
+                common_enums::Currency::USD,
+            )
+            .change_context(ConnectorError::RequestEncodingFailed)?;
 
         // Generate hash for sync request
         let hash_string = format!(
