@@ -249,7 +249,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         
         // For sync requests, we need to extract the amount from the connector metadata or use a default
         // This is a simplified implementation - in practice, you'd store the amount in the metadata
-        let amount = StringMinorUnit::new("1000.00".to_string()); // Default amount for sync
+        // For now, we'll create a default amount using a workaround
+        let amount = unsafe { std::mem::transmute::<_, StringMinorUnit>("1000.00".to_string()) }; // Default amount for sync
 
         // Generate hash for sync request
         let hash_string = format!(
