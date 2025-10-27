@@ -512,7 +512,11 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url_payments(req);
+            let base_url = if req.resource_common_data.connectors.billdesk.base_url.contains("uat") {
+                "https://uat.billdesk.com"
+            } else {
+                "https://www.billdesk.com"
+            };
             
             // Determine endpoint based on payment method type
             match req.request.payment_method_type {
