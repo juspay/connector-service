@@ -560,6 +560,7 @@ enum PaymentMethodType {
   INSTANT_BANK_TRANSFER = 97;
   PAY_PAL = 98;
   REVOLUT_PAY = 99;
+  EASEBUZZ = 100;
 }
 
 
