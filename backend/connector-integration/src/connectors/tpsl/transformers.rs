@@ -547,7 +547,6 @@ impl<
                         connector_response_reference_id: response_data.tpsl_txn_id.clone(),
                         incremental_authorization_allowed: None,
                         status_code: http_code,
-                        amount_received,
                     }),
                 )
             }
