@@ -419,7 +419,7 @@ impl<
         + Serialize,
 >
     TryFrom<
-        BilldeskRouterData<
+        crate::types::RouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             T,
         >,
