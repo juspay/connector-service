@@ -8,7 +8,7 @@ use domain_types::{
     connector_flow::{
         AcceptDispute, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
         CreateSessionToken, DefendDispute, PaymentMethodToken, PostAuthenticate, PreAuthenticate,
-        PSync, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Psync, Rsync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, ConnectorCustomerData, ConnectorWebhookSecrets, DisputeDefendData,
