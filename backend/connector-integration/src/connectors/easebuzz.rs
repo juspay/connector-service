@@ -333,7 +333,12 @@ macros::create_all_prerequisites!(
             response_body: EaseBuzzRefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ),
-        (flow: Void, request_body: EaseBuzzVoidRequest, response_body: EaseBuzzVoidResponse, router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>),
+        (
+            flow: Void,
+            request_body: EaseBuzzVoidRequest,
+            response_body: EaseBuzzVoidResponse,
+            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
         (flow: Capture, request_body: EaseBuzzCaptureRequest, response_body: EaseBuzzCaptureResponse, router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>),
         (flow: Refund, request_body: EaseBuzzRefundRequest, response_body: EaseBuzzRefundResponse, router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>),
         (flow: CreateOrder, request_body: EaseBuzzCreateOrderRequest, response_body: EaseBuzzCreateOrderResponse, router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>),
