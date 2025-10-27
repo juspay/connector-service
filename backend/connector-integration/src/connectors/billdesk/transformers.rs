@@ -113,6 +113,14 @@ pub struct BilldeskPaymentsSyncResponse {
     pub txnrefno: Option<String>,
 }
 
+// PSync request type
+#[derive(Debug, Clone, Serialize)]
+pub struct BilldeskPaymentsSyncRequest {
+    pub msg: String,
+    pub useragent: Option<String>,
+    pub ipaddress: Option<String>,
+}
+
 // Stub types for unsupported flows
 #[derive(Debug, Clone, Serialize)]
 pub struct BilldeskVoidRequest;
