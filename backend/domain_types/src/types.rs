@@ -124,6 +124,7 @@ pub struct Connectors {
     pub trustpay: ConnectorParamsWithMoreUrls,
     pub stripe: ConnectorParams,
     pub cybersource: ConnectorParams,
+    pub easebuzz: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
