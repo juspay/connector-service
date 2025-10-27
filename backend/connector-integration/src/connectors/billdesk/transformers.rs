@@ -159,7 +159,10 @@ fn get_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std::marke
 ) -> CustomResult<String, errors::ConnectorError> {
     let customer_id = item.router_data.resource_common_data.get_customer_id()?;
     let merchant_id = auth_type.merchant_id.peek();
-    let amount = item.amount.get_amount_as_string();
+    let amount = item.connector.amount_converter.convert(
+        item.router_data.request.minor_amount,
+        item.router_data.request.currency,
+    ).change_context(ConnectorError::RequestEncodingFailed)?;
     let currency = item.router_data.request.currency.to_string();
     let txn_id = &item.router_data.resource_common_data.connector_request_reference_id;
     
