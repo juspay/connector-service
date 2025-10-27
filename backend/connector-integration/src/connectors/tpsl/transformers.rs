@@ -541,10 +541,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 .clone()
                 .map(|e| e.expose().expose().to_string())
                 .unwrap_or_else(|| format!("{}@example.com", customer_id.get_string_repr())),
-            mobile_number: item.router_data.request.payment_method_data.phone
-                .clone()
-                .map(|p| p.to_string())
-                .unwrap_or_else(|| "9999999999".to_string()),
+            mobile_number: "9999999999".to_string(),
             account_no: customer_id.get_string_repr().to_string(),
             account_type: "SAVINGS".to_string(),
             account_holder_name: item.router_data.request.customer_name
@@ -561,9 +558,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             transaction_type: "SALE".to_string(),
             description: "UPI Payment".to_string(),
             date_time: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-            device_identifier: item.router_data.request.get_ip_address_as_optional()
-                .map(|ip| ip.expose().to_string())
-                .unwrap_or_else(|| "127.0.0.1".to_string()),
+            device_identifier: "127.0.0.1".to_string(),
             token: None,
             security_token: None,
             is_registration: "N".to_string(),
@@ -617,7 +612,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 reference: item.router_data.resource_common_data.connector_request_reference_id.clone(),
                 s_k_u: "UPI_ITEM".to_string(),
                 description: "UPI Payment Item".to_string(),
-                amount: amount.get_amount_as_string(),
+                amount: amount.to_string(),
                 com_amt: "0".to_string(),
                 provider_identifier: "UPI".to_string(),
                 surcharge_or_discount_amount: "0".to_string(),
@@ -667,7 +662,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 .unwrap_or_else(|| "127.0.0.1".to_string()),
             r#type: Some("UPI".to_string()),
             sub_type: Some("UPI".to_string()),
-            amount: item.router_data.request.minor_amount.to_string(),
+            amount: item.router_data.request.amount.to_string(),
             currency: item.router_data.request.currency.to_string(),
             date_time: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
             request_type: "STATUS".to_string(),
