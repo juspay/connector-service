@@ -1,8 +1,5 @@
-use std::collections::HashMap;
-
 use common_utils::{
     errors::CustomResult,
-    ext_traits::ValueExt,
     request::Method,
     types::{StringMinorUnit, MinorUnit},
     Email,
