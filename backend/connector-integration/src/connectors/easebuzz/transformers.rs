@@ -4,7 +4,7 @@ use common_utils::{
     errors::CustomResult,
     ext_traits::ValueExt,
     request::Method,
-    types::StringMinorUnit,
+    types::{StringMinorUnit, MinorUnit},
     Email,
 };
 use domain_types::{
