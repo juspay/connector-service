@@ -342,14 +342,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    TryFrom<ResponseRouterData<EaseBuzzTxnSyncResponse, F>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<EaseBuzzTxnSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<EaseBuzzTxnSyncResponse, F>,
+        item: ResponseRouterData<EaseBuzzTxnSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
@@ -390,7 +390,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
                 Err(ErrorResponse {
                     code: "SYNC_ERROR".to_string(),
                     status_code: http_code,
-                    message: Some(error_msg.clone()),
+                    message: error_msg.clone(),
                     reason: Some(error_msg),
                     attempt_status: None,
                     connector_transaction_id: None,
