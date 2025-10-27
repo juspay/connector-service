@@ -4,6 +4,39 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## [2025-12-19] - EaseBuzz Connector Addition
+
+### Added
+- New EaseBuzz connector implementation
+- Payment methods supported: UPI, UPI Intent, UPI Collect
+- Transaction flows: Authorize, PSync
+- Full UCS v2 macro framework compliance
+- Proper error handling and status mapping
+- Type safety with guard rails
+
+### Files Created/Modified
+- `src/connectors/easebuzz.rs` - Main connector implementation
+- `src/connectors/easebuzz/transformers.rs` - Request/response transformers
+- `src/connectors/easebuzz/constants.rs` - API constants and endpoints
+- `src/connectors.rs` - Added connector registration
+- `src/types.rs` - Added connector to enum and conversion
+
+### Technical Details
+- Migrated from Hyperswitch/Euler Haskell implementation
+- Uses UCS v2 macro framework for trait implementations
+- Implements proper error handling and status mapping
+- Full type safety with guard rails
+- Supports test and production environments
+- Form-encoded request handling for EaseBuzz API
+
+### API Endpoints
+- Payment initiation: `/payment/initiateLink`
+- Transaction sync: `/payment/transaction/status`
+- UPI Intent: `/payment/upi/intent`
+- UPI Autopay: `/payment/upi/autopay`
+
+- - -
+
 ## 2025.10.27.0
 
 ### Features
