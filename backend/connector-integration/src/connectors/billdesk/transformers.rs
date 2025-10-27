@@ -301,7 +301,7 @@ impl<
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: crate::connectors::BilldeskRouterData<
+        item: BilldeskRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             T,
         >,
