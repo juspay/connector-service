@@ -44,8 +44,6 @@ use transformers::{self as easebuzz, EaseBuzzPaymentsRequest, EaseBuzzPaymentsRe
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
-pub type EaseBuzzRouterData<R, T> = (&R, &EaseBuzz<T>);
-
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
