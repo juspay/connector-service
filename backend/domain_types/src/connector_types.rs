@@ -38,6 +38,8 @@ use crate::{
 };
 use url::Url;
 
+pub use grpc_api_types::payments;
+
 // snake case for enum variants
 #[derive(Clone, Copy, Debug, Display, EnumString)]
 #[strum(serialize_all = "snake_case")]
