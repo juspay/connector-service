@@ -41,7 +41,10 @@ use serde::Serialize;
 use transformers::{self as billdesk, BilldeskPaymentsRequest, BilldeskPaymentsResponse};
 
 use super::macros;
-use crate::{types::ResponseRouterData, with_error_response_body};
+use crate::{connectors::ConnectorRouterData, types::ResponseRouterData, with_error_response_body};
+
+// Type alias for router data
+pub type BilldeskRouterData<R, T> = ConnectorRouterData<R, T>;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
