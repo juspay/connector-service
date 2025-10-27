@@ -176,8 +176,8 @@ pub struct BilldeskErrorResponse {
     pub errors: Option<Vec<BilldeskErrors>>,
 }
 
-fn create_billdesk_message(
-    router_data: &BilldeskRouterData<
+fn create_billdesk_message<T: PaymentMethodDataTypes>(
+    router_data: &crate::types::RouterData<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         T,
     >,
