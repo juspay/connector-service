@@ -88,3 +88,6 @@ pub use self::cybersource::Cybersource;
 
 pub mod worldpay;
 pub use self::worldpay::Worldpay;
+
+pub mod tpsl;
+pub use self::tpsl::TPSL;
