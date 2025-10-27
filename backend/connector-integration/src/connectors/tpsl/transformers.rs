@@ -420,19 +420,18 @@ pub enum TpslPaymentsSyncResponse {
     Error(TpslErrorResponse),
 }
 
-// CORRECT: Use proper types for TryFrom implementations
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+// CORRECT: Use proper types for TryFrom implementations expected by macro framework
+impl TryFrom<crate::connectors::tpsl::TPSLRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<()>, PaymentsResponseData>, ()>>
     for TpslPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        item: crate::connectors::tpsl::TPSLRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<()>, PaymentsResponseData>, ()>,
     ) -> Result<Self, Self::Error> {
-        let auth = TpslAuth::try_from(&item.connector_auth_type)?;
-        let customer_id = item.resource_common_data.get_customer_id()?;
-        let return_url = item.request.get_router_return_url()?;
+        let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
+        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let return_url = item.router_data.request.get_router_return_url()?;
         
         // CORRECT: Use proper amount framework
         let amount = item.amount.get_amount_as_string();
@@ -453,28 +452,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         let consumer = TpslConsumerPayload {
             identifier: customer_id.get_string_repr().to_string(),
-            email_id: item.request.email
+            email_id: item.router_data.request.email
                 .clone()
                 .map(|e| e.expose().expose().to_string())
                 .unwrap_or_else(|| format!("{}@example.com", customer_id.get_string_repr())),
             mobile_number: "9999999999".to_string(),
             account_no: customer_id.get_string_repr().to_string(),
             account_type: "SAVINGS".to_string(),
-            account_holder_name: item.request.customer_name
+            account_holder_name: item.router_data.request.customer_name
                 .clone()
                 .unwrap_or_else(|| "Customer".to_string()),
             aadhar_no: None,
         };
 
         let transaction = TpslTxnPayload {
-            identifier: item.resource_common_data.connector_request_reference_id.clone(),
+            identifier: item.router_data.resource_common_data.connector_request_reference_id.clone(),
             amount: amount.to_string(),
-            currency: item.request.currency.to_string(),
+            currency: item.router_data.request.currency.to_string(),
             request_type: "SALE".to_string(),
             transaction_type: "SALE".to_string(),
             description: "UPI Payment".to_string(),
             date_time: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-            device_identifier: item.request.get_ip_address_as_optional()
+            device_identifier: item.router_data.request.get_ip_address_as_optional()
                 .map(|ip| ip.expose())
                 .unwrap_or_else(|| "127.0.0.1".to_string()),
             token: None,
@@ -523,11 +522,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         let cart = TpslCartPayload {
             identifier: format!("CART_{}", customer_id.get_string_repr()),
-            reference: item.resource_common_data.connector_request_reference_id.clone(),
+            reference: item.router_data.resource_common_data.connector_request_reference_id.clone(),
             description: "UPI Payment Cart".to_string(),
             item: vec![TpslItemPayload {
                 identifier: "ITEM_1".to_string(),
-                reference: item.resource_common_data.connector_request_reference_id.clone(),
+                reference: item.router_data.resource_common_data.connector_request_reference_id.clone(),
                 s_k_u: "UPI_ITEM".to_string(),
                 description: "UPI Payment Item".to_string(),
                 amount: amount.to_string(),
@@ -547,16 +546,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+impl TryFrom<crate::connectors::tpsl::TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, ()>>
     for TpslPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: crate::connectors::tpsl::TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, ()>,
     ) -> Result<Self, Self::Error> {
-        let auth = TpslAuth::try_from(&item.connector_auth_type)?;
+        let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
         let merchant_code = auth.merchant_code
             .ok_or(errors::ConnectorError::FailedToObtainAuthType)?
             .expose()
@@ -567,7 +565,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         };
 
         let consumer = TpslConsumerDataType {
-            identifier: item.resource_common_data.get_customer_id()?.get_string_repr().to_string(),
+            identifier: item.router_data.resource_common_data.get_customer_id()?.get_string_repr().to_string(),
         };
 
         let payment = TpslPaymentUPISyncType {
@@ -575,16 +573,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         };
 
         let transaction = TpslTransactionUPITxnType {
-            device_identifier: item.request.get_ip_address_as_optional()
-                .map(|ip| ip.expose())
-                .unwrap_or_else(|| "127.0.0.1".to_string()),
+            device_identifier: "127.0.0.1".to_string(),
             r#type: Some("UPI".to_string()),
             sub_type: Some("UPI".to_string()),
             amount: item.amount.get_amount_as_string(),
-            currency: item.request.currency.to_string(),
+            currency: item.router_data.request.currency.to_string(),
             date_time: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
             request_type: "STATUS".to_string(),
-            token: item.request.connector_transaction_id
+            token: item.router_data.request.connector_transaction_id
                 .get_connector_transaction_id()
                 .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?
                 .to_string(),
