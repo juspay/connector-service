@@ -4,7 +4,6 @@ use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
 use common_utils::{
-    crypto,
     errors::CustomResult,
     ext_traits::ByteSliceExt,
     types::StringMinorUnit,
