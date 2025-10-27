@@ -200,8 +200,8 @@ impl From<BilldeskPaymentStatus> for common_enums::AttemptStatus {
     }
 }
 
-fn create_billdesk_message(
-    router_data: &BilldeskRouterData<
+fn create_billdesk_message<T>(
+    router_data: &crate::connectors::BilldeskRouterData<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         T,
     >,
