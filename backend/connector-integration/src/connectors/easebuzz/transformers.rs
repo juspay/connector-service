@@ -313,7 +313,7 @@ impl<
             country: None,
             zipcode: None,
             pg: None,
-            customer_unique_id: Some(customer_id.get_string_repr()),
+            customer_unique_id: Some(customer_id.get_string_repr().to_string()),
             split_payments: None,
             sub_merchant_id: None,
             customer_name: None,
