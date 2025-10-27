@@ -28,6 +28,87 @@ pub struct BilldeskPaymentsRequest {
     ipaddress: Option<String>,
 }
 
+// Stub types for unsupported flows
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskPostAuthenticateRequest;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskPostAuthenticateResponse;
+
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskAuthenticateRequest;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskAuthenticateResponse;
+
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskPreAuthenticateRequest;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskPreAuthenticateResponse;
+
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskSessionTokenRequest;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskSessionTokenResponse;
+
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskAccessTokenRequest;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskAccessTokenResponse;
+
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskCreateCustomerRequest;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskCreateCustomerResponse;
+
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskVoidRequest;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskVoidResponse;
+
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskRefundRequest;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskRefundResponse;
+
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskCaptureRequest;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskCaptureResponse;
+
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskSetupMandateRequest;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskSetupMandateResponse;
+
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskAcceptDisputeRequest;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskAcceptDisputeResponse;
+
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskSubmitEvidenceRequest;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskSubmitEvidenceResponse;
+
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskDefendDisputeRequest;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskDefendDisputeResponse;
+
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskRepeatPaymentRequest;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskRepeatPaymentResponse;
+
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskCreateOrderRequest;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskCreateOrderResponse;
+
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskPaymentMethodTokenRequest;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskPaymentMethodTokenResponse;
+
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BilldeskPaymentsSyncRequest {
