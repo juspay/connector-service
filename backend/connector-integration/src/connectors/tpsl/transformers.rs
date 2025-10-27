@@ -539,7 +539,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             identifier: customer_id.get_string_repr().to_string(),
             email_id: item.router_data.request.email
                 .clone()
-                .map(|e| e.to_string())
+                .map(|e| e.expose().expose().to_string())
                 .unwrap_or_else(|| format!("{}@example.com", customer_id.get_string_repr())),
             mobile_number: item.router_data.request.phone
                 .clone()
