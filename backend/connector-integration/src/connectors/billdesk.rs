@@ -489,7 +489,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
             match req.request.payment_method_type {
-                Some(common_enums::PaymentMethodType::Upi) => {
+                Some(common_enums::PaymentMethodType::UpiIntent) => {
                     Ok(format!("{}?reqid=BDRDF011", base_url))
                 }
                 Some(common_enums::PaymentMethodType::UpiCollect) => {
