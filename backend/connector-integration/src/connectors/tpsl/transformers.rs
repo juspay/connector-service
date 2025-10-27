@@ -434,7 +434,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let return_url = item.router_data.request.get_router_return_url()?;
         
         // CORRECT: Use proper amount framework
-        let amount = item.amount.get_amount_as_string();
+        let amount = item.connector.amount_converter.convert(
+            item.router_data.request.minor_amount,
+            item.router_data.request.currency,
+        ).change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         let merchant_code = auth.merchant_code
             .ok_or(errors::ConnectorError::FailedToObtainAuthType)?
