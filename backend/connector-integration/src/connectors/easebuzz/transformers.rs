@@ -140,9 +140,9 @@ pub enum EaseBuzzSyncMessageType {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EaseBuzzErrorResponse {
-    status: i32,
-    error_desc: Option<String>,
-    data: String,
+    pub status: i32,
+    pub error_desc: Option<String>,
+    pub data: String,
 }
 
 // Stub types for unsupported flows
