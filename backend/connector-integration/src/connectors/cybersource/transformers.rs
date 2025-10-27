@@ -35,6 +35,7 @@ use domain_types::{
         PazeDecryptedData,
     },
     router_data_v2::RouterDataV2,
+    router_request_types,
     router_response_types::RedirectForm,
     utils::CardIssuer,
 };
@@ -481,6 +482,39 @@ pub struct CybersourceConsumerAuthInformation {
     acs_transaction_id: Option<String>,
     /// This is the algorithm for generating a cardholder authentication verification value (CAVV) or universal cardholder authentication field (UCAF) data.
     cavv_algorithm: Option<String>,
+}
+
+impl From<router_request_types::AuthenticationData> for CybersourceConsumerAuthInformation {
+    fn from(value: router_request_types::AuthenticationData) -> Self {
+        let router_request_types::AuthenticationData {
+            eci,
+            cavv,
+            threeds_server_transaction_id: _,
+            message_version,
+            ds_trans_id,
+        } = value;
+
+        CybersourceConsumerAuthInformation {
+            pares_status: None,
+            ucaf_collection_indicator: None,
+            ucaf_authentication_data: Some(cavv.clone()),
+            cavv: Some(cavv),
+            xid: None,
+            directory_server_transaction_id: ds_trans_id.map(Secret::new),
+            specification_version: message_version,
+            pa_specification_version: None,
+            veres_enrolled: None,
+            eci_raw: eci,
+            authentication_date: None,
+            effective_authentication_type: None,
+            challenge_code: None,
+            signed_pares_status_reason: None,
+            challenge_cancel_code: None,
+            network_score: None,
+            acs_transaction_id: None,
+            cavv_algorithm: None,
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -1238,7 +1272,7 @@ impl<
                 number: ccard.card_number,
                 expiration_month: ccard.card_exp_month,
                 expiration_year: ccard.card_exp_year,
-                security_code: None,
+                security_code: Some(ccard.card_cvc),
                 card_type: card_type.clone(),
                 type_selection_indicator: Some("1".to_owned()),
             },
@@ -1257,12 +1291,18 @@ impl<
             .clone()
             .map(convert_metadata_to_merchant_defined_info);
 
+        let consumer_authentication_information = item
+            .router_data
+            .request
+            .authentication_data
+            .clone()
+            .map(From::from);
         Ok(Self {
             processing_information,
             payment_information,
             order_information,
             client_reference_information,
-            consumer_authentication_information: None,
+            consumer_authentication_information,
             merchant_defined_information,
         })
     }
@@ -2982,7 +3022,6 @@ impl<
                     ..item.router_data.resource_common_data
                 },
                 response: Ok(PaymentsResponseData::PreAuthenticateResponse {
-                    resource_id: ResponseId::NoResponseId,
                     redirection_data: Some(Box::new(RedirectForm::CybersourceAuthSetup {
                         access_token: info_response
                             .consumer_authentication_information
@@ -2994,7 +3033,6 @@ impl<
                             .consumer_authentication_information
                             .reference_id,
                     })),
-                    connector_metadata: None,
                     connector_response_reference_id: Some(
                         info_response
                             .client_reference_information
@@ -3305,18 +3343,6 @@ impl<
                         }
                         _ => None,
                     };
-                    let three_ds_data = serde_json::to_value(
-                        info_response
-                            .consumer_authentication_information
-                            .validate_response,
-                    )
-                    .change_context(errors::ConnectorError::ResponseHandlingFailed)?;
-
-                    let resource_id = info_response
-                        .consumer_authentication_information
-                        .authentication_transaction_id
-                        .map(ResponseId::ConnectorTransactionId)
-                        .unwrap_or(ResponseId::NoResponseId);
 
                     Ok(Self {
                         resource_common_data: PaymentFlowData {
@@ -3324,12 +3350,33 @@ impl<
                             ..item.router_data.resource_common_data
                         },
                         response: Ok(PaymentsResponseData::AuthenticateResponse {
-                            resource_id,
                             redirection_data: redirection_data.map(Box::new),
-                            connector_metadata: Some(serde_json::json!({
-                                "three_ds_data": three_ds_data
-                            })),
                             connector_response_reference_id,
+                            authentication_data: Some(router_request_types::AuthenticationData {
+                                eci: info_response
+                                    .consumer_authentication_information
+                                    .validate_response
+                                    .indicator
+                                    .clone(),
+                                cavv: info_response
+                                    .consumer_authentication_information
+                                    .validate_response
+                                    .cavv
+                                    .clone()
+                                    .unwrap_or_default(),
+                                threeds_server_transaction_id: info_response
+                                    .consumer_authentication_information
+                                    .validate_response
+                                    .directory_server_transaction_id
+                                    .clone()
+                                    .map(|secret| secret.expose()),
+                                message_version: info_response
+                                    .consumer_authentication_information
+                                    .validate_response
+                                    .specification_version
+                                    .clone(),
+                                ds_trans_id: None,
+                            }),
                             status_code: item.http_code,
                         }),
                         ..item.router_data
@@ -3598,45 +3645,37 @@ impl<
                             .unwrap_or(info_response.id.clone()),
                     );
 
-                    let redirection_data = match (
-                        info_response
-                            .consumer_authentication_information
-                            .access_token,
-                        info_response
-                            .consumer_authentication_information
-                            .step_up_url,
-                    ) {
-                        (Some(token), Some(step_up_url)) => {
-                            Some(RedirectForm::CybersourceConsumerAuth {
-                                access_token: token.expose(),
-                                step_up_url,
-                            })
-                        }
-                        _ => None,
-                    };
-                    let three_ds_data = serde_json::to_value(
-                        info_response
-                            .consumer_authentication_information
-                            .validate_response,
-                    )
-                    .change_context(errors::ConnectorError::ResponseHandlingFailed)?;
-                    let resource_id = info_response
-                        .consumer_authentication_information
-                        .authentication_transaction_id
-                        .map(ResponseId::ConnectorTransactionId)
-                        .unwrap_or(ResponseId::NoResponseId);
-
                     Ok(Self {
                         resource_common_data: PaymentFlowData {
                             status,
                             ..item.router_data.resource_common_data
                         },
                         response: Ok(PaymentsResponseData::PostAuthenticateResponse {
-                            resource_id,
-                            redirection_data: redirection_data.map(Box::new),
-                            connector_metadata: Some(serde_json::json!({
-                                "three_ds_data": three_ds_data
-                            })),
+                            authentication_data: Some(router_request_types::AuthenticationData {
+                                eci: info_response
+                                    .consumer_authentication_information
+                                    .validate_response
+                                    .indicator
+                                    .clone(), // eci_raw is not available in validate_response
+                                cavv: info_response
+                                    .consumer_authentication_information
+                                    .validate_response
+                                    .cavv
+                                    .clone()
+                                    .unwrap_or_else(|| Secret::new("".to_string())),
+                                threeds_server_transaction_id: info_response
+                                    .consumer_authentication_information
+                                    .validate_response
+                                    .directory_server_transaction_id
+                                    .clone()
+                                    .map(|secret| secret.expose()),
+                                message_version: info_response
+                                    .consumer_authentication_information
+                                    .validate_response
+                                    .specification_version
+                                    .clone(),
+                                ds_trans_id: None,
+                            }),
                             connector_response_reference_id,
                             status_code: item.http_code,
                         }),
