@@ -697,6 +697,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
         let (status, response_data) = match response.response {
             TpslResponseData::TpslUPISuccessTxnResponse(upi_response) => {
                 let merchant_transaction_identifier = upi_response.merchant_transaction_identifier.clone();
+                let network_txn_id = upi_response.payment_method.payment_transaction.identifier.clone().unwrap_or_default();
                 let redirection_data = get_redirect_form_data(upi_response)?;
                 (
                     common_enums::AttemptStatus::AuthenticationPending,
@@ -710,7 +711,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
                         redirection_data: Some(Box::new(redirection_data)),
                         mandate_reference: None,
                         connector_metadata: None,
-                        network_txn_id: Some(upi_response.payment_method.payment_transaction.identifier.clone().unwrap_or_default()),
+                        network_txn_id: Some(network_txn_id),
                         connector_response_reference_id: Some(merchant_transaction_identifier),
                         incremental_authorization_allowed: None,
                         status_code: http_code,
