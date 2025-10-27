@@ -20,6 +20,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
 
+// Type alias for Billdesk router data
+pub type BilldeskRouterData<T, R> = crate::connectors::macros::ConnectorRouterData<T, R>;
+
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BilldeskPaymentsRequest {
