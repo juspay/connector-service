@@ -561,11 +561,8 @@ impl<
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        if connectors.tpsl.test_mode.unwrap_or(false) {
-            constants::base_urls::TEST
-        } else {
-            constants::base_urls::PRODUCTION
-        }
+        // For now, use production URL. Test mode logic can be added later if needed
+        constants::base_urls::PRODUCTION
     }
 
     fn get_auth_header(
