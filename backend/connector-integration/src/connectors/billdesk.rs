@@ -524,12 +524,8 @@ macros::macro_connector_implementation!(
             
             // Determine endpoint based on payment method type
             match req.request.payment_method_type {
-                Some(common_enums::PaymentMethodType::Upi) => {
-                    Ok(format!("{}/pgidsk/PGIDirectRequest?reqid=BDRDF011", base_url))
-                }
-                Some(common_enums::PaymentMethodType::UpiCollect) => {
-                    Ok(format!("{}/pgidsk/PGIDirectRequest?reqid=BDRDF011", base_url))
-                }
+                Some(common_enums::PaymentMethodType::Upi) |
+                Some(common_enums::PaymentMethodType::UpiCollect) |
                 Some(common_enums::PaymentMethodType::UpiIntent) => {
                     Ok(format!("{}/pgidsk/PGIDirectRequest?reqid=BDRDF011", base_url))
                 }
