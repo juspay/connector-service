@@ -329,16 +329,9 @@ fn get_redirect_form_data(
 }
 
 impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize
-            + Serialize,
-    > TryFrom<ResponseRouterData<BilldeskPaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    F,
+> TryFrom<ResponseRouterData<BilldeskPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<common_utils::types::PaymentsCancelData>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     
@@ -401,15 +394,8 @@ impl<
 }
 
 impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize
-            + Serialize,
-    > TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, Self>>
+    F,
+> TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
