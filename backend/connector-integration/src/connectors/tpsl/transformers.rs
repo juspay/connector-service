@@ -32,12 +32,17 @@ impl TryFrom<&ConnectorAuthType> for TpslAuth {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key1 } => Ok(Self {
+            ConnectorAuthType::SignatureKey { api_key, key1, api_secret } => Ok(Self {
                 merchant_code: Some(api_key.clone()),
-                merchant_key: key1.clone(),
+                merchant_key: Some(key1.clone()),
                 salt_key: None,
             }),
-            ConnectorAuthType::Key { api_key } => Ok(Self {
+            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
+                merchant_code: Some(api_key.clone()),
+                merchant_key: Some(key1.clone()),
+                salt_key: None,
+            }),
+            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
                 merchant_code: Some(api_key.clone()),
                 merchant_key: None,
                 salt_key: None,
