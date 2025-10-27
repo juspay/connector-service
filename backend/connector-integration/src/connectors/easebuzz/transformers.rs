@@ -398,9 +398,10 @@ impl<
 fn extract_upi_vpa(payment_method_data: &Option<serde_json::Value>) -> CustomResult<String, ConnectorError> {
     match payment_method_data {
         Some(data) => {
-            data.get_str("upi_vpa")
-                .or_else(|| data.get_str("vpa"))
-                .or_else(|| data.get_str("virtual_payment_address"))
+            data.get("upi_vpa")
+                .or_else(|| data.get("vpa"))
+                .or_else(|| data.get("virtual_payment_address"))
+                .and_then(|v| v.as_str())
                 .map(|s| s.to_string())
                 .ok_or_else(|| {
                     ConnectorError::MissingRequiredField {
