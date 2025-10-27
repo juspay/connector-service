@@ -548,12 +548,8 @@ impl<
         "application/json"
     }
 
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        if connectors.test_mode.unwrap_or(false) {
-            "https://uat.billdesk.com"
-        } else {
-            "https://www.billdesk.com"
-        }
+    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
+        "https://www.billdesk.com"
     }
 
     fn get_auth_header(
