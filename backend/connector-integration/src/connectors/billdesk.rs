@@ -479,6 +479,167 @@ impl<
     }
 }
 
+// Manual implementations for unsupported flows
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_integration_v2::ConnectorIntegrationV2<
+        PostAuthenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_integration_v2::ConnectorIntegrationV2<
+        Authenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_integration_v2::ConnectorIntegrationV2<
+        PreAuthenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_integration_v2::ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        domain_types::connector_types::SessionTokenRequestData,
+        domain_types::connector_types::SessionTokenResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_integration_v2::ConnectorIntegrationV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        domain_types::connector_types::AccessTokenRequestData,
+        domain_types::connector_types::AccessTokenResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_integration_v2::ConnectorIntegrationV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        domain_types::connector_types::ConnectorCustomerData,
+        domain_types::connector_types::ConnectorCustomerResponse,
+    > for Billdesk<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_integration_v2::ConnectorIntegrationV2<
+        Void,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentVoidData,
+        PaymentsResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_integration_v2::ConnectorIntegrationV2<
+        Refund,
+        domain_types::connector_types::RefundFlowData,
+        domain_types::connector_types::RefundsData,
+        domain_types::connector_types::RefundsResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_integration_v2::ConnectorIntegrationV2<
+        Capture,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsCaptureData,
+        PaymentsResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_integration_v2::ConnectorIntegrationV2<
+        SetupMandate,
+        PaymentFlowData,
+        domain_types::connector_types::SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_integration_v2::ConnectorIntegrationV2<
+        Accept,
+        domain_types::connector_types::DisputeFlowData,
+        domain_types::connector_types::AcceptDisputeData,
+        domain_types::connector_types::DisputeResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_integration_v2::ConnectorIntegrationV2<
+        SubmitEvidence,
+        domain_types::connector_types::DisputeFlowData,
+        domain_types::connector_types::SubmitEvidenceData,
+        domain_types::connector_types::DisputeResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_integration_v2::ConnectorIntegrationV2<
+        DefendDispute,
+        domain_types::connector_types::DisputeFlowData,
+        domain_types::connector_types::DisputeDefendData,
+        domain_types::connector_types::DisputeResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_integration_v2::ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        domain_types::connector_types::RepeatPaymentData,
+        PaymentsResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_integration_v2::ConnectorIntegrationV2<
+        CreateOrder,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentCreateOrderData,
+        domain_types::connector_types::PaymentCreateOrderResponse,
+    > for Billdesk<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_integration_v2::ConnectorIntegrationV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentMethodTokenizationData<T>,
+        domain_types::connector_types::PaymentMethodTokenResponse,
+    > for Billdesk<T>
+{
+}
+
 fn generate_billdesk_checksum<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
     req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     auth_type: &transformers::BilldeskAuth,
