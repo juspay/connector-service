@@ -224,10 +224,6 @@ impl TryFrom<&ConnectorAuthType> for TpslAuth {
                 api_key: api_key.to_owned(),
                 merchant_code: "".to_string(), // Will be extracted from config
             }),
-            ConnectorAuthType::Key { api_key, .. } => Ok(Self {
-                api_key: api_key.to_owned(),
-                merchant_code: "".to_string(), // Will be extracted from config
-            }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
     }
