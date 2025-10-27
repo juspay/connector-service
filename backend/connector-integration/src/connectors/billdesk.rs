@@ -276,9 +276,7 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         )
     ],
-    amount_converters: [
-        amount_converter: StringMinorUnit
-    ],
+    amount_converters: [],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
