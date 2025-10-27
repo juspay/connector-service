@@ -391,7 +391,7 @@ macros::create_all_prerequisites!(
             request_body: TpslSubmitEvidenceRequest,
             response_body: TpslSubmitEvidenceResponse,
             router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
-        ),
+        )
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
