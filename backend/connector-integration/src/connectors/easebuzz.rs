@@ -227,7 +227,7 @@ impl<
         error_stack::Report<domain_types::errors::ConnectorError>,
     > {
         // TODO: Implement webhook processing based on EaseBuzz webhook structure
-        Err(errors::ConnectorError::WebhookNotImplemented.into())
+        Err(errors::ConnectorError::WebhooksNotImplemented.into())
     }
 }
 
