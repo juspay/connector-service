@@ -151,17 +151,17 @@ fn get_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std::marke
     >,
     auth_type: &BilldeskAuth,
 ) -> CustomResult<String, errors::ConnectorError> {
-    let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+    let customer_id = item.resource_common_data.get_customer_id()?;
     let merchant_id = auth_type.merchant_id.peek();
-    let amount = item.connector.amount_converter.convert(
-        item.router_data.request.minor_amount,
-        item.router_data.request.currency,
+    let amount = common_utils::types::StringMinorUnitForConnector.convert(
+        item.request.minor_amount,
+        item.request.currency,
     ).change_context(ConnectorError::RequestEncodingFailed)?;
-    let currency = item.router_data.request.currency.to_string();
-    let txn_id = &item.router_data.resource_common_data.connector_request_reference_id;
+    let currency = item.request.currency.to_string();
+    let txn_id = &item.resource_common_data.connector_request_reference_id;
     
     // Create Billdesk message format based on payment method
-    match item.router_data.request.payment_method_type {
+    match item.request.payment_method_type {
         Some(common_enums::PaymentMethodType::UpiIntent) | Some(common_enums::PaymentMethodType::UpiCollect) => {
             // UPI message format
             let customer_id_str = customer_id.get_string_repr();
