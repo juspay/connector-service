@@ -30,7 +30,7 @@ impl TryFrom<&ConnectorAuthType> for TpslAuth {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key1, api_secret } => Ok(Self {
+            ConnectorAuthType::SignatureKey { api_key, key1, api_secret: _ } => Ok(Self {
                 merchant_code: Some(api_key.clone()),
                 merchant_key: Some(key1.clone()),
                 salt_key: None,
@@ -657,9 +657,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         };
 
         let transaction = TpslTransactionUPITxnType {
-            device_identifier: item.router_data.request.get_ip_address_as_optional()
-                .map(|ip| ip.expose().to_string())
-                .unwrap_or_else(|| "127.0.0.1".to_string()),
+            device_identifier: "127.0.0.1".to_string(),
             r#type: Some("UPI".to_string()),
             sub_type: Some("UPI".to_string()),
             amount: item.router_data.request.amount.to_string(),
@@ -712,7 +710,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
                         mandate_reference: None,
                         connector_metadata: None,
                         network_txn_id: Some(upi_response.payment_method.payment_transaction.identifier.clone().unwrap_or_default()),
-                        connector_response_reference_id: Some(upi_response.merchant_transaction_identifier),
+                        connector_response_reference_id: Some(upi_response.merchant_transaction_identifier.clone()),
                         incremental_authorization_allowed: None,
                         status_code: http_code,
                     }),
