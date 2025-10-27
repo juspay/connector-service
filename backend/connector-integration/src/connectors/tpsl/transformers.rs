@@ -5,11 +5,12 @@ use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsSyncData, PaymentsResponseData, ResponseId},
     errors::{self, ConnectorError},
-    payment_method_data::{PaymentMethodDataTypes, DefaultPCIHolder},
+    payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
+use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use chrono;
 use serde::{Deserialize, Serialize};
