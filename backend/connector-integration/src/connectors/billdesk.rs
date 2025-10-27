@@ -43,10 +43,10 @@ use serde::Serialize;
 use transformers::{self as billdesk, BilldeskPaymentsRequest, BilldeskPaymentsResponse};
 
 use super::macros;
-use crate::{connectors::ConnectorRouterData, types::ResponseRouterData, with_error_response_body};
+use crate::{types::ResponseRouterData, with_error_response_body};
 
-// Type alias for router data
-pub type BilldeskRouterData<R, T> = ConnectorRouterData<R, T>;
+// Import base64 engine
+use base64::Engine;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
