@@ -412,12 +412,21 @@ fn extract_upi_vpa<T: PaymentMethodDataTypes>(payment_method_data: &domain_types
         domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
             match upi_data {
                 domain_types::payment_method_data::UpiData::UpiCollect(collect_data) => {
-                    Ok(collect_data.vpa_id.clone())
+                    match collect_data.vpa_id {
+                        Some(ref vpa) => Ok(vpa.peek().clone()),
+                        None => Err(ConnectorError::MissingRequiredField {
+                            field_name: "vpa_id",
+                        }
+                        .into()),
+                    }
                 }
-                domain_types::payment_method_data::UpiData::UpiIntent(intent_data) => {
-                    Ok(intent_data.vpa_id.clone())
+                domain_types::payment_method_data::UpiData::UpiIntent(_intent_data) => {
+                    Err(ConnectorError::MissingRequiredField {
+                        field_name: "vpa_not_available_for_intent",
+                    }
+                    .into())
                 }
-                domain_types::payment_method_data::UpiData::UpiQr(qr_data) => {
+                domain_types::payment_method_data::UpiData::UpiQr(_qr_data) => {
                     Err(ConnectorError::MissingRequiredField {
                         field_name: "vpa_not_available_for_qr",
                     }
