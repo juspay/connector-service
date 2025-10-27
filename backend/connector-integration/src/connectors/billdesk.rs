@@ -473,7 +473,7 @@ macros::macro_connector_implementation!(
             
             // UPI payment initiation endpoint
             match req.request.payment_method_type {
-                Some(common_enums::PaymentMethodType::Upi) => {
+                Some(common_enums::PaymentMethodType::UpiIntent) => {
                     Ok(format!("{}/pgidsk/PGIDirectRequest?reqid=BDRDF011", base_url))
                 }
                 Some(common_enums::PaymentMethodType::UpiCollect) => {
