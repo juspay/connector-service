@@ -18,7 +18,10 @@ use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::easebuzz::EaseBuzzRouterData, types::ResponseRouterData};
+use crate::{
+    connectors::easebuzz::EaseBuzzRouterData, 
+    types::ResponseRouterData,
+};
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
