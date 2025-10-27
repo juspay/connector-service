@@ -575,7 +575,7 @@ impl<
 
                 let amount_received = payment_data.amount.as_ref()
                     .and_then(|amt| amt.parse::<f64>().ok())
-                    .map(|amt| common_utils::types::MinorUnit::from_major_unit_as_i64(amt));
+                    .map(|amt| MinorUnit::from_major_unit_as_i64(amt));
 
                 (
                     attempt_status,
