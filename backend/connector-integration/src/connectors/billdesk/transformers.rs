@@ -153,7 +153,7 @@ fn get_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std::marke
 ) -> CustomResult<String, errors::ConnectorError> {
     let customer_id = item.resource_common_data.get_customer_id()?;
     let merchant_id = auth_type.merchant_id.peek();
-    let amount = req.request.minor_amount.to_string();
+    let amount = item.request.minor_amount.to_string();
     let currency = item.request.currency.to_string();
     let txn_id = &item.resource_common_data.connector_request_reference_id;
     
