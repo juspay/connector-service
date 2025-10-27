@@ -206,19 +206,17 @@ impl<
             + 'static
             + Serialize,
     >
-    TryFrom<
-        RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    > for BilldeskPaymentsRequest
+    TryFrom<&RouterDataV2<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    >> for BilldeskPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: RouterDataV2<
+        item: &RouterDataV2<
             Authorize,
             PaymentFlowData,
             PaymentsAuthorizeData<T>,
@@ -255,19 +253,17 @@ impl<
             + 'static
             + Serialize,
     >
-    TryFrom<
-        RouterDataV2<
-            PSync,
-            PaymentFlowData,
-            PaymentsSyncData,
-            PaymentsResponseData,
-        >,
-    > for BilldeskPaymentsSyncRequest
+    TryFrom<&RouterDataV2<
+        PSync,
+        PaymentFlowData,
+        PaymentsSyncData,
+        PaymentsResponseData,
+    >> for BilldeskPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: RouterDataV2<
+        item: &RouterDataV2<
             PSync,
             PaymentFlowData,
             PaymentsSyncData,
