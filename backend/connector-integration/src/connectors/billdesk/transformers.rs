@@ -256,31 +256,25 @@ impl<
             + Serialize,
     >
     TryFrom<
-        BilldeskRouterData<
-            RouterDataV2<
-                PSync,
-                PaymentFlowData,
-                PaymentsSyncData,
-                PaymentsResponseData,
-            >,
-            T,
+        RouterDataV2<
+            PSync,
+            PaymentFlowData,
+            PaymentsSyncData,
+            PaymentsResponseData,
         >,
     > for BilldeskPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: BilldeskRouterData<
-            RouterDataV2<
-                PSync,
-                PaymentFlowData,
-                PaymentsSyncData,
-                PaymentsResponseData,
-            >,
-            T,
+        item: RouterDataV2<
+            PSync,
+            PaymentFlowData,
+            PaymentsSyncData,
+            PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth_type = BilldeskAuth::try_from(&item.router_data.connector_auth_type)?;
+        let auth_type = BilldeskAuth::try_from(&item.connector_auth_type)?;
         
         let msg = get_billdesk_sync_message(&item, &auth_type)?;
         
