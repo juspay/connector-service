@@ -250,6 +250,8 @@ impl From<TpslPaymentStatus> for common_enums::AttemptStatus {
     }
 }
 
+pub type TPSLRouterData<'a, Flow, FlowData, Request, Response, T> = crate::connectors::macros::RouterDataWrapper<'a, Flow, FlowData, Request, Response, T, TPSL<T>>;
+
 impl<
     T: PaymentMethodDataTypes
         + std::fmt::Debug
@@ -259,21 +261,25 @@ impl<
         + Serialize,
 >
     TryFrom<
-        &RouterDataV2<
+        TPSLRouterData<
+            '_, 
             Authorize,
             PaymentFlowData,
             PaymentsAuthorizeData<T>,
             PaymentsResponseData,
+            T,
         >,
     > for TpslPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: &RouterDataV2<
+        item: TPSLRouterData<
+            '_, 
             Authorize,
             PaymentFlowData,
             PaymentsAuthorizeData<T>,
             PaymentsResponseData,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let customer_id = item.router_data.resource_common_data.get_customer_id()?;
