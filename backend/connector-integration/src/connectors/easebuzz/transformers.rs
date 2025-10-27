@@ -542,13 +542,6 @@ impl<
 
 impl<
     F,
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize
-        + Serialize,
 > TryFrom<ResponseRouterData<EaseBuzzPaymentsSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
