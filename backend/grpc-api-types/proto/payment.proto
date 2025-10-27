@@ -454,9 +454,9 @@ enum Connector {
   ZEN = 90;
   ZSL = 91;
   PHONEPE = 92;
-  CASHFREE = 92;
-  PAYTM = 93;
-  BLUECODE = 94;
+  CASHFREE = 93;
+  PAYTM = 94;
+  BLUECODE = 95;
 }
 
 // Payment method types.
