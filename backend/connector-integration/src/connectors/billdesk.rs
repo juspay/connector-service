@@ -277,7 +277,7 @@ macros::create_all_prerequisites!(
         )
     ],
     amount_converters: [
-        amount_converter: StringMinorUnit
+        amount_converter: StringMinorUnitForConnector
     ],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
@@ -462,11 +462,11 @@ fn generate_billdesk_checksum<T: PaymentMethodDataTypes + std::fmt::Debug + std:
     let checksum_key = auth_type.checksum_key.peek();
     
     // Create message for checksum (simplified version)
-    let amount_converter = common_utils::types::StringMinorUnit;
+    let amount_converter = common_utils::types::StringMinorUnitForConnector;
     let amount = amount_converter.convert(
         req.request.minor_amount,
         req.request.currency,
-    ).change_context(ConnectorError::RequestEncodingFailed)?;
+    ).change_context(errors::ConnectorError::RequestEncodingFailed)?;
     
     let message = format!(
         "{}{}{}{}",
