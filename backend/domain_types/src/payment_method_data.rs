@@ -103,6 +103,15 @@ impl<T: PaymentMethodDataTypes> Card<T> {
         }
         Secret::new(year)
     }
+
+    pub fn get_expiry_month_as_i8(&self) -> Result<Secret<i8>, Error> {
+        self.card_exp_month
+            .peek()
+            .clone()
+            .parse::<i8>()
+            .change_context(crate::errors::ConnectorError::ResponseDeserializationFailed)
+            .map(Secret::new)
+    }
 }
 
 impl Card<DefaultPCIHolder> {
@@ -131,14 +140,6 @@ impl Card<DefaultPCIHolder> {
         let year = self.get_card_expiry_year_2_digit()?.expose();
         let month = self.card_exp_month.clone().expose();
         Ok(Secret::new(format!("{year}{month}")))
-    }
-    pub fn get_expiry_month_as_i8(&self) -> Result<Secret<i8>, Error> {
-        self.card_exp_month
-            .peek()
-            .clone()
-            .parse::<i8>()
-            .change_context(crate::errors::ConnectorError::ResponseDeserializationFailed)
-            .map(Secret::new)
     }
     pub fn get_expiry_year_as_i32(&self) -> Result<Secret<i32>, Error> {
         self.card_exp_year
