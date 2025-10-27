@@ -508,7 +508,7 @@ impl<
                             code: response_data.status.to_string(),
                             status_code: item.http_code,
                             message: response_data.error_desc.clone().unwrap_or_default(),
-                            reason: response_data.error_desc,
+                            reason: response_data.error_desc.clone(),
                             attempt_status: None,
                             connector_transaction_id: response_data.data.txnid,
                             network_advice_code: None,
