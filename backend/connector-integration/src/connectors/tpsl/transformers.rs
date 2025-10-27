@@ -459,12 +459,26 @@ impl<
         + Serialize,
 >
     TryFrom<
-        &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        TPSLRouterData<
+            '_,
+            PSync,
+            PaymentFlowData,
+            PaymentsSyncData,
+            PaymentsResponseData,
+            T,
+        >,
     > for TpslPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: TPSLRouterData<
+            '_,
+            PSync,
+            PaymentFlowData,
+            PaymentsSyncData,
+            PaymentsResponseData,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let transaction_id = item.router_data.request.connector_transaction_id.get_connector_transaction_id()
