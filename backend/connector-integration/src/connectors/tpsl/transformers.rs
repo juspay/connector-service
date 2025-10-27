@@ -595,8 +595,8 @@ impl TryFrom<crate::connectors::tpsl::TPSLRouterData<RouterDataV2<PSync, Payment
     }
 }
 
-impl<F> TryFrom<ResponseRouterData<TpslPaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<()>, PaymentsResponseData>
+impl<F, T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
