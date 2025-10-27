@@ -531,8 +531,8 @@ impl<
                 };
 
                 let amount_received = response_data.txn_amt.as_ref()
-                    .and_then(|amt| amt.parse::<f64>().ok())
-                    .map(|amt| common_utils::types::MinorUnit::from_major_unit_as_i64(amt));
+                    .and_then(|amt| amt.parse::<i64>().ok())
+                    .map(common_utils::types::MinorUnit::new);
 
                 (
                     status,
