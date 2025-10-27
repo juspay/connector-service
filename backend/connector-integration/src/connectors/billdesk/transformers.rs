@@ -223,7 +223,7 @@ impl<
         + Serialize,
 >
     TryFrom<
-        crate::types::RouterData<
+        BilldeskRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
