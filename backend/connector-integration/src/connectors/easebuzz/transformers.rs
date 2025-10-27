@@ -459,7 +459,7 @@ impl<
                     code: error_data.status.to_string(),
                     status_code: item.http_code,
                     message: error_data.error_desc.clone().unwrap_or_default(),
-                    reason: error_data.error_desc,
+                    reason: error_data.error_desc.clone(),
                     attempt_status: None,
                     connector_transaction_id: None,
                     network_advice_code: None,
