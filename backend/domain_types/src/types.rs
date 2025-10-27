@@ -1148,6 +1148,12 @@ impl<
             .transpose()?;
 
         let customer_acceptance = value.customer_acceptance.clone();
+
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(|token| token.token.clone());
         Ok(Self {
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
                 value.capture_method(),
@@ -1201,7 +1207,7 @@ impl<
             off_session: value.off_session,
             order_category: value.order_category,
             session_token: None,
-            access_token: value.access_token,
+            access_token,
             customer_acceptance: customer_acceptance
                 .map(mandates::CustomerAcceptance::foreign_try_from)
                 .transpose()?,

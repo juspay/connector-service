@@ -1170,7 +1170,6 @@ message PaymentServiceAuthorizeRequest {
   optional string complete_authorize_url = 19; // URL to complete authorization
   
   // Session and Token Information
-  optional string access_token = 20; // Access token for secure communication
   optional string session_token = 21; // Session token, if applicable
   
   // Order Details
