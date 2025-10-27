@@ -1,3 +1,4 @@
+use common_enums::PaymentMethodType;
 use common_utils::{
     errors::CustomResult,
     request::Method,
