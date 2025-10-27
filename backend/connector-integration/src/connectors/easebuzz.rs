@@ -335,7 +335,7 @@ macros::create_all_prerequisites!(
         (flow: RepeatPayment, request_body: EaseBuzzRepeatPaymentRequest, response_body: EaseBuzzRepeatPaymentResponse, router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>),
         (flow: Accept, request_body: EaseBuzzAcceptDisputeRequest, response_body: EaseBuzzAcceptDisputeResponse, router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>),
         (flow: DefendDispute, request_body: EaseBuzzDefendDisputeRequest, response_body: EaseBuzzDefendDisputeResponse, router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>),
-        (flow: SubmitEvidence, request_body: EaseBuzzSubmitEvidenceRequest, response_body: EaseBuzzSubmitEvidenceResponse, router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>)
+        (flow: SubmitEvidence, request_body: EaseBuzzSubmitEvidenceRequest, response_body: EaseBuzzSubmitEvidenceResponse, router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>),
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
