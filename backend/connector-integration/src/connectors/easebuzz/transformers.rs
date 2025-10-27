@@ -407,21 +407,11 @@ impl<
 
 fn extract_upi_vpa<T: PaymentMethodDataTypes>(payment_method_data: &domain_types::payment_method_data::PaymentMethodData<T>) -> CustomResult<String, ConnectorError> {
     match payment_method_data {
-        Some(data) => {
-            data.get("upi_vpa")
-                .or_else(|| data.get("vpa"))
-                .or_else(|| data.get("virtual_payment_address"))
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-                .ok_or_else(|| {
-                    ConnectorError::MissingRequiredField {
-                        field_name: "upi_vpa",
-                    }
-                    .into()
-                })
+        domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
+            Ok(upi_data.vpa.clone())
         }
-        None => Err(ConnectorError::MissingRequiredField {
-            field_name: "payment_method_data",
+        _ => Err(ConnectorError::MissingRequiredField {
+            field_name: "upi_payment_method_data",
         }
         .into()),
     }
