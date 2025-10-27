@@ -223,7 +223,7 @@ where
 
     let message_data = HashMap::from([
         ("merchantid".to_string(), "MERCHANT_ID".to_string()), // Will be replaced with actual merchant ID
-        ("customerid".to_string(), customer_id.to_string()),
+        ("customerid".to_string(), customer_id.get_string_repr().to_string()),
         ("txnamount".to_string(), amount.to_string()),
         ("currency".to_string(), router_data.router_data.request.currency.to_string()),
         ("txnreferenceNo".to_string(), router_data.router_data.resource_common_data.connector_request_reference_id.clone()),
