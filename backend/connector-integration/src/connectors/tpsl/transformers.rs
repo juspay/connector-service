@@ -581,7 +581,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             r#type: Some("UPI".to_string()),
             sub_type: Some("UPI".to_string()),
             amount: item.connector.amount_converter.convert(
-                item.router_data.request.minor_amount,
+                item.router_data.request.amount,
                 item.router_data.request.currency,
             ).change_context(errors::ConnectorError::RequestEncodingFailed)?,
             currency: item.router_data.request.currency.to_string(),
