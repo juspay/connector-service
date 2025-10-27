@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use common_utils::{
     errors::CustomResult, request::Method,
 };
