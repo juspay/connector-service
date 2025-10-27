@@ -246,11 +246,7 @@ impl<
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .get_amount_as_string();
 
         // Extract transaction ID
         let transaction_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
@@ -379,11 +375,7 @@ impl<
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .get_amount_as_string();
 
         // Extract transaction ID from connector request reference
         let transaction_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
