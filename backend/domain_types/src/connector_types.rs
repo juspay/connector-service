@@ -73,6 +73,7 @@ pub enum ConnectorEnum {
     Stripe,
     Cybersource,
     Worldpay,
+    EaseBuzz,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
