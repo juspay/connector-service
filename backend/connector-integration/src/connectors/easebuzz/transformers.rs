@@ -373,7 +373,7 @@ impl<
             .connector
             .amount_converter
             .convert(
-                1000, // Default amount for sync - this should come from original transaction
+                MinorUnit::new(1000), // Default amount for sync - this should come from original transaction
                 common_enums::Currency::INR, // Default currency
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
