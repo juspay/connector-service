@@ -6,7 +6,7 @@ use common_enums::CurrencyUnit;
 use common_utils::{
     errors::CustomResult,
     ext_traits::ByteSliceExt,
-    types::{StringMinorUnit, StringMinorUnitForConnector},
+    types::{StringMinorUnitForConnector, AmountConvertor},
 };
 use domain_types::{
     connector_flow::{
@@ -15,7 +15,7 @@ use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
     },
-    errors::{self, ConnectorError},
+    errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
