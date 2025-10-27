@@ -18,6 +18,7 @@ use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
+use hyperswitch_masking::ExposeInterface;
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
