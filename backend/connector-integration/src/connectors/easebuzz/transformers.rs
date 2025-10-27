@@ -274,16 +274,16 @@ impl<
 
         // Handle UPI payment methods
         let (vpa, upi_intent, upi_collect) = match item.router_data.request.payment_method_type {
-            Some(common_enums::PaymentMethodType::Upi) => {
+            Some(PaymentMethodType::Upi) => {
                 // Extract UPI specific data from payment_method_data
                 let vpa = extract_upi_vpa(&item.router_data.request.payment_method_data)?;
                 (Some(vpa), Some(true), Some(false))
             }
-            Some(common_enums::PaymentMethodType::UpiCollect) => {
+            Some(PaymentMethodType::UpiCollect) => {
                 let vpa = extract_upi_vpa(&item.router_data.request.payment_method_data)?;
                 (Some(vpa), Some(false), Some(true))
             }
-            Some(common_enums::PaymentMethodType::UpiIntent) => {
+            Some(PaymentMethodType::UpiIntent) => {
                 let vpa = extract_upi_vpa(&item.router_data.request.payment_method_data)?;
                 (Some(vpa), Some(true), Some(false))
             }
