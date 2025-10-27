@@ -33,7 +33,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use base64::Engine;
 use interfaces::{
     api::ConnectorCommon,
