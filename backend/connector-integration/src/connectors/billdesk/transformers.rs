@@ -111,6 +111,7 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuth {
             ConnectorAuthType::SignatureKey { api_key, key1, api_secret, .. } => {
                 let auth_data: BilldeskAuth = key1
                     .to_owned()
+                    .expose()
                     .parse_value("BilldeskAuth")
                     .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
                 Ok(auth_data)
