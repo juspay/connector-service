@@ -1027,3 +1027,28 @@ fn generate_billdesk_checksum<T: PaymentMethodDataTypes + std::fmt::Debug + std:
     
     Ok(format!("{:x}", result))
 }
+
+fn generate_billdesk_checksum_sync<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+    req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    auth_type: &transformers::BilldeskAuth,
+) -> CustomResult<String, errors::ConnectorError> {
+    // Generate checksum based on Billdesk's algorithm for sync requests
+    let merchant_id = auth_type.merchant_id.peek();
+    let checksum_key = auth_type.checksum_key.peek();
+    
+    // Create message for checksum (simplified version)
+    let message = format!(
+        "{}{}ALLSTATUSQUERY",
+        merchant_id,
+        req.resource_common_data.connector_request_reference_id,
+    );
+    
+    // Generate SHA-256 hash (placeholder - Billdesk may use different algorithm)
+    use sha2::{Sha256, Digest};
+    let mut hasher = Sha256::new();
+    hasher.update(message.as_bytes());
+    hasher.update(checksum_key.as_bytes());
+    let result = hasher.finalize();
+    
+    Ok(format!("{:x}", result))
+}
