@@ -362,11 +362,36 @@ macros::create_all_prerequisites!(
             response_body: TpslSessionTokenResponse,
             router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
         ),
-        (flow: SetupMandate, request_body: TpslSetupMandateRequest, response_body: TpslSetupMandateResponse, router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>),
-        (flow: RepeatPayment, request_body: TpslRepeatPaymentRequest, response_body: TpslRepeatPaymentResponse, router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>),
-        (flow: Accept, request_body: TpslAcceptDisputeRequest, response_body: TpslAcceptDisputeResponse, router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>),
-        (flow: DefendDispute, request_body: TpslDefendDisputeRequest, response_body: TpslDefendDisputeResponse, router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>),
-        (flow: SubmitEvidence, request_body: TpslSubmitEvidenceRequest, response_body: TpslSubmitEvidenceResponse, router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>),
+        (
+            flow: SetupMandate,
+            request_body: TpslSetupMandateRequest,
+            response_body: TpslSetupMandateResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: TpslRepeatPaymentRequest,
+            response_body: TpslRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ),
+        (
+            flow: Accept,
+            request_body: TpslAcceptDisputeRequest,
+            response_body: TpslAcceptDisputeResponse,
+            router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        ),
+        (
+            flow: DefendDispute,
+            request_body: TpslDefendDisputeRequest,
+            response_body: TpslDefendDisputeResponse,
+            router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        ),
+        (
+            flow: SubmitEvidence,
+            request_body: TpslSubmitEvidenceRequest,
+            response_body: TpslSubmitEvidenceResponse,
+            router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        ),
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
