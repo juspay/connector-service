@@ -22,10 +22,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
-
-// Type alias for router data
-pub type BilldeskRouterData<R, T> = crate::types::RouterData<R, T>;
+use crate::types::ResponseRouterData;
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
