@@ -389,7 +389,7 @@ enum Connector {
   DEUTSCHEBANK = 25;
   DIGITALVIRGO = 26;
   DLOCAL = 27;
-  EBANX = 27;
+  EBANX = 28;
   ELAVON = 28;
   FISERV = 29;
   FISERVEMEA = 30;
