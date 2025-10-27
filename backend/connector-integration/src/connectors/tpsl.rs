@@ -427,11 +427,8 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
-                constants::base_urls::TEST
-            } else {
-                constants::base_urls::PRODUCTION
-            }
+            // Use a default or check from connectors if available
+            constants::base_urls::PRODUCTION
         }
 
         pub fn get_api_tag(&self, flow: &str) -> &'static str {
