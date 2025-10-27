@@ -290,7 +290,7 @@ impl<
             txnid: transaction_id,
             amount,
             productinfo: "Payment".to_string(),
-            firstname: Some(customer_id.get_string_repr()),
+            firstname: Some(customer_id.get_string_repr().to_string()),
             email,
             phone,
             surl: return_url.clone(),
