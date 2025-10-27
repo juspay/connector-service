@@ -287,10 +287,7 @@ impl<
         };
 
         Ok(Self {
-            txnid: match transaction_id {
-            domain_types::connector_types::ResponseId::ConnectorTransactionId(id) => id,
-            _ => "default_transaction_id".to_string(),
-        },
+            txnid: transaction_id,
             amount,
             productinfo: "Payment".to_string(),
             firstname: Some(customer_id.get_string_repr().to_string()),
@@ -394,10 +391,7 @@ impl<
         let (key, hash) = get_easebuzz_auth_credentials(&item.router_data.connector_auth_type)?;
 
         Ok(Self {
-            txnid: match transaction_id {
-            domain_types::connector_types::ResponseId::ConnectorTransactionId(id) => id,
-            _ => "default_transaction_id".to_string(),
-        },
+            txnid: transaction_id,
             amount,
             email,
             phone,
