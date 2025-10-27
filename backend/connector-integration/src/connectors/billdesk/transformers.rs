@@ -207,40 +207,34 @@ impl<
             + Serialize,
     >
     TryFrom<
-        BilldeskRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
+        RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
         >,
     > for BilldeskPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: BilldeskRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
+        item: RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth_type = BilldeskAuth::try_from(&item.router_data.connector_auth_type)?;
+        let auth_type = BilldeskAuth::try_from(&item.connector_auth_type)?;
         
         let msg = get_billdesk_message(&item, &auth_type)?;
         
         // Extract IP address and user agent
-        let ip_address = item.router_data.request.get_ip_address_as_optional()
+        let ip_address = item.request.get_ip_address_as_optional()
             .map(|ip| ip.expose())
             .unwrap_or_else(|| "127.0.0.1".to_string());
             
-        let user_agent = item.router_data.request.browser_info
+        let user_agent = item.browser_info
             .as_ref()
             .and_then(|info| info.user_agent.clone())
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
