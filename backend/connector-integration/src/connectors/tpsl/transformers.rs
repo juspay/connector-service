@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use common_utils::{
-    errors::CustomResult, ext_traits::ValueExt, request::Method, types::StringMinorUnit,
-    Email,
+    errors::CustomResult, request::Method,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync, PreAuthenticate, Authenticate, PostAuthenticate, CreateAccessToken, CreateConnectorCustomer, PaymentMethodToken},
