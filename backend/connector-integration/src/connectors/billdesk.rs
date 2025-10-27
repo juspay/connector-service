@@ -463,7 +463,7 @@ macros::create_all_prerequisites!(
 
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+            _req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
             "https://www.billdesk.com" // Base URL, will be modified in get_url based on test mode
         }
