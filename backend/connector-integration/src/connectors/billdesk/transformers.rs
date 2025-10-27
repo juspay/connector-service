@@ -246,7 +246,7 @@ impl<
         + 'static
         + serde::Serialize,
 > TryFrom<
-    crate::connectors::BilldeskRouterData<
+    BilldeskRouterData<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         T,
     >,
