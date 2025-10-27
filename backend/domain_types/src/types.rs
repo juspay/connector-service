@@ -1,6 +1,7 @@
 use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
+use crate::utils::extract_connector_request_reference_id;
 use common_enums::{CaptureMethod, CardNetwork, CountryAlpha2, PaymentMethod, PaymentMethodType};
 use common_utils::{
     consts::{self, NO_ERROR_CODE, X_EXTERNAL_VAULT_METADATA},
@@ -21,19 +22,6 @@ use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::Serialize;
 use tracing::info;
 use utoipa::ToSchema;
-// Helper function for extracting connector request reference ID
-fn extract_connector_request_reference_id(
-    identifier: &Option<grpc_api_types::payments::Identifier>,
-) -> String {
-    identifier
-        .as_ref()
-        .and_then(|id| id.id_type.as_ref())
-        .and_then(|id_type| match id_type {
-            grpc_api_types::payments::identifier::IdType::Id(id) => Some(id.clone()),
-            _ => None,
-        })
-        .unwrap_or_default()
-}
 
 /// Extract vault-related headers from gRPC metadata
 fn extract_headers_from_metadata(
@@ -1148,7 +1136,13 @@ impl<
             .transpose()?;
 
         let customer_acceptance = value.customer_acceptance.clone();
+        let authentication_data = value
+            .authentication_data
+            .clone()
+            .map(router_request_types::AuthenticationData::try_from)
+            .transpose()?;
         Ok(Self {
+            authentication_data,
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
                 value.capture_method(),
             )?),
@@ -1885,6 +1879,29 @@ impl ForeignTryFrom<ResponseId> for grpc_api_types::payments::Identifier {
             ResponseId::NoResponseId => Self {
                 id_type: Some(grpc_api_types::payments::identifier::IdType::NoResponseIdMarker(())),
             },
+        })
+    }
+}
+
+impl ForeignTryFrom<router_request_types::AuthenticationData>
+    for grpc_api_types::payments::AuthenticationData
+{
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        value: router_request_types::AuthenticationData,
+    ) -> error_stack::Result<Self, Self::Error> {
+        use hyperswitch_masking::ExposeInterface;
+
+        Ok(Self {
+            eci: value.eci,
+            cavv: value.cavv.expose().to_string(),
+            threeds_server_transaction_id: value.threeds_server_transaction_id.map(|id| {
+                grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                }
+            }),
+            message_version: value.message_version.map(|v| v.to_string()),
+            ds_transaction_id: value.ds_trans_id,
         })
     }
 }
