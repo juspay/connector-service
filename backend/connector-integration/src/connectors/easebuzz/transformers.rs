@@ -196,9 +196,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             "{}|{}|{}|{}|{}|{}|{}",
             auth.key.peek(),
             item.router_data.resource_common_data.connector_request_reference_id,
-            amount.get_amount_as_string(),
+            amount.to_string(),
             "Product", // productinfo
-            item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
+            item.router_data.request.email.as_ref().map(|e| e.peek().clone()).unwrap_or_default(),
             return_url,
             return_url
         );
@@ -208,9 +208,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             txnid: item.router_data.resource_common_data.connector_request_reference_id.clone(),
             amount,
             productinfo: "Product".to_string(),
-            firstname: item.router_data.request.get_customer_name().ok(),
+            firstname: None, // TODO: Extract from customer data if available
             email: item.router_data.request.email.clone(),
-            phone: item.router_data.request.get_phone_number().ok(),
+            phone: None, // TODO: Extract from customer data if available
             surl: return_url.clone(),
             furl: return_url,
             hash: Secret::new(hash_string),
