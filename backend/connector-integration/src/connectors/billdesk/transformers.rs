@@ -18,10 +18,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{Secret, PeekInterface, Maskable, ExposeInterface};
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
-
-// Type alias for Billdesk router data
-pub type BilldeskRouterData<T, R> = crate::connectors::macros::ConnectorRouterData<T, R>;
+use crate::types::ResponseRouterData;
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -146,14 +143,11 @@ impl From<BilldeskPaymentStatus> for common_enums::AttemptStatus {
 }
 
 fn get_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
-    item: &BilldeskRouterData<
-        RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-        T,
+    item: &RouterDataV2<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
     >,
     auth_type: &BilldeskAuth,
 ) -> CustomResult<String, errors::ConnectorError> {
@@ -185,14 +179,11 @@ fn get_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std::marke
 }
 
 fn get_billdesk_sync_message<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
-    item: &BilldeskRouterData<
-        RouterDataV2<
-            PSync,
-            PaymentFlowData,
-            PaymentsSyncData,
-            PaymentsResponseData,
-        >,
-        T,
+    item: &RouterDataV2<
+        PSync,
+        PaymentFlowData,
+        PaymentsSyncData,
+        PaymentsResponseData,
     >,
     auth_type: &BilldeskAuth,
 ) -> CustomResult<String, errors::ConnectorError> {
