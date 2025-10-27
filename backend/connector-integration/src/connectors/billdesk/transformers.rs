@@ -188,7 +188,7 @@ fn get_billdesk_sync_message<T: PaymentMethodDataTypes + std::fmt::Debug + std::
     auth_type: &BilldeskAuth,
 ) -> CustomResult<String, errors::ConnectorError> {
     let merchant_id = auth_type.merchant_id.peek();
-    let txn_id = &item.router_data.resource_common_data.connector_request_reference_id;
+    let txn_id = &item.resource_common_data.connector_request_reference_id;
     
     // Status check message format
     let message = format!(
