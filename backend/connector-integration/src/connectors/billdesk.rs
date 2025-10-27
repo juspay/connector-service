@@ -462,7 +462,8 @@ fn generate_billdesk_checksum<T: PaymentMethodDataTypes + std::fmt::Debug + std:
     let checksum_key = auth_type.checksum_key.peek();
     
     // Create message for checksum (simplified version)
-    let amount = req.amount_converter.convert(
+    let amount_converter = common_utils::types::StringMinorUnit;
+    let amount = amount_converter.convert(
         req.request.minor_amount,
         req.request.currency,
     ).change_context(ConnectorError::RequestEncodingFailed)?;
