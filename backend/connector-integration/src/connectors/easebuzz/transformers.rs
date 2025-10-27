@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use common_utils::{
-    errors::CustomResult, ext_traits::ValueExt, request::Method, types::StringMinorUnit,
+    ext_traits::ValueExt, request::Method, types::StringMinorUnit,
     Email,
 };
 use domain_types::{
@@ -12,10 +12,9 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::easebuzz::EaseBuzzRouterData, types::ResponseRouterData};
