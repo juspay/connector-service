@@ -349,7 +349,7 @@ impl<
                     amount,
                     item.router_data.request.currency.to_string(),
                     item.router_data.resource_common_data.connector_request_reference_id,
-                    chrono::Utc::now().format("%Y-%m-%d %H:%M:%S"),
+                    "2024-01-01 00:00:00", // Placeholder timestamp
                     item.router_data.request.browser_info.as_ref().and_then(|info| info.mobile_number.clone()).unwrap_or_default(),
                     item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
                     customer_id.get_string_repr(),
