@@ -320,7 +320,7 @@ impl<
                 
                 // Handle UPI payment response
                 match payment_method_type {
-                    common_enums::PaymentMethodType::Upi | common_enums::PaymentMethodType::UpiCollect => {
+                    common_enums::PaymentMethodType::UpiIntent | common_enums::PaymentMethodType::UpiCollect => {
                         if let Some(rdata) = response_data.rdata {
                             if let Some(url) = rdata.url {
                                 let redirection_data = RedirectForm::Form {
