@@ -560,7 +560,7 @@ impl<
         "application/json"
     }
 
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
+    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
         // For now, use production URL. Test mode logic can be added later if needed
         constants::base_urls::PRODUCTION
     }
