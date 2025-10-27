@@ -379,7 +379,10 @@ impl<
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         // Extract transaction ID from sync request
-        let transaction_id = item.router_data.request.connector_transaction_id.clone();
+        let transaction_id = match &item.router_data.request.connector_transaction_id {
+            domain_types::connector_types::ResponseId::ConnectorTransactionId(id) => id.clone(),
+            _ => "default_transaction_id".to_string(),
+        };
 
         // Email not available in PaymentsSyncData
         let email: Option<Email> = None;
