@@ -404,7 +404,20 @@ impl<
 fn extract_upi_vpa<T: PaymentMethodDataTypes>(payment_method_data: &domain_types::payment_method_data::PaymentMethodData<T>) -> CustomResult<String, ConnectorError> {
     match payment_method_data {
         domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
-            Ok(upi_data.vpa.clone())
+            match upi_data {
+                domain_types::payment_method_data::UpiData::UpiCollect(collect_data) => {
+                    Ok(collect_data.vpa.clone())
+                }
+                domain_types::payment_method_data::UpiData::UpiIntent(intent_data) => {
+                    Ok(intent_data.vpa.clone())
+                }
+                domain_types::payment_method_data::UpiData::UpiQr(qr_data) => {
+                    Err(ConnectorError::MissingRequiredField {
+                        field_name: "vpa_not_available_for_qr",
+                    }
+                    .into())
+                }
+            }
         }
         _ => Err(ConnectorError::MissingRequiredField {
             field_name: "upi_payment_method_data",
