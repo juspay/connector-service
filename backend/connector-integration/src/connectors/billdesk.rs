@@ -466,22 +466,14 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
-                "https://uat.billdesk.com"
-            } else {
-                "https://www.billdesk.com"
-            }
+            "https://www.billdesk.com" // Base URL, will be modified in get_url based on test mode
         }
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+            _req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
-                "https://uat.billdesk.com"
-            } else {
-                "https://www.billdesk.com"
-            }
+            "https://www.billdesk.com" // Base URL, will be modified based on test mode
         }
     }
 );
