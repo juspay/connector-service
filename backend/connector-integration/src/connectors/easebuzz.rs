@@ -590,9 +590,8 @@ impl<
         "application/x-www-form-urlencoded"
     }
 
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        // Use the base URL from connectors configuration
-        connectors.easebuzz.base_url.as_ref()
+    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
+        "https://pay.easebuzz.in" // Default base URL
     }
 
     fn get_auth_header(
