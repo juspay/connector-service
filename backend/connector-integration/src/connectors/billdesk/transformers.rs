@@ -186,7 +186,7 @@ pub struct BilldeskErrorResponse {
 }
 
 fn create_billdesk_message<T: PaymentMethodDataTypes>(
-    router_data: &crate::types::RouterData<
+    router_data: &BilldeskRouterData<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         T,
     >,
