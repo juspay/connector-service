@@ -308,7 +308,7 @@ impl<
         };
 
         response_router_data.try_into()
-            .map_err(|e| e.change_context(errors::ConnectorError::ResponseDeserializationFailed))
+            .map_err(|e: error_stack::Report<errors::ConnectorError>| e.change_context(errors::ConnectorError::ResponseDeserializationFailed))
     }
 
     fn get_error_response_v2(
