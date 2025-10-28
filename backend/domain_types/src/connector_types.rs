@@ -26,8 +26,9 @@ use crate::{
         AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
         CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
         PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
-        RefundIntegrityObject, RefundSyncIntegrityObject, RepeatPaymentIntegrityObject,
-        SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject, SyncRequestType,
+        PaymentVoidPostCaptureIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
+        RepeatPaymentIntegrityObject, SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
+        SyncRequestType,
     },
     router_response_types::RedirectForm,
     types::{
@@ -73,6 +74,7 @@ pub enum ConnectorEnum {
     Stripe,
     Cybersource,
     Worldpay,
+    Worldpayvantiv,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -111,6 +113,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Trustpay => Ok(Self::Trustpay),
             grpc_api_types::payments::Connector::Stripe => Ok(Self::Stripe),
             grpc_api_types::payments::Connector::Cybersource => Ok(Self::Cybersource),
+            grpc_api_types::payments::Connector::Worldpay => Ok(Self::Worldpayvantiv),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -849,6 +852,29 @@ impl PaymentVoidData {
     pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
         self.get_ip_address_as_optional()
             .ok_or_else(missing_field_err("browser_info.ip_address"))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PaymentsCancelPostCaptureData {
+    pub connector_transaction_id: String,
+    pub cancellation_reason: Option<String>,
+    pub integrity_object: Option<PaymentVoidPostCaptureIntegrityObject>,
+    pub raw_connector_response: Option<String>,
+    pub browser_info: Option<BrowserInformation>,
+}
+
+impl PaymentsCancelPostCaptureData {
+    pub fn get_cancellation_reason(&self) -> Result<String, Error> {
+        self.cancellation_reason
+            .clone()
+            .ok_or_else(missing_field_err("cancellation_reason"))
+    }
+
+    pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
     }
 }
 
