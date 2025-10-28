@@ -79,7 +79,7 @@ pub struct BilldeskVoidPCResponse;
 // PaymentMethodToken types (separate to avoid conflicts)
 #[derive(Debug, Clone, Serialize)]
 pub struct BilldeskPaymentMethodTokenRequest;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BilldeskPaymentMethodTokenResponse;
 
 // PostAuthenticate types (reuse payments types with different names to avoid conflicts)
@@ -90,7 +90,7 @@ pub struct BilldeskPostAuthenticateRequest {
     pub ipaddress: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BilldeskPostAuthenticateResponse {
     pub msg: Option<String>,
     pub rdata: Option<BilldeskRdata>,
@@ -105,7 +105,7 @@ pub struct BilldeskAuthenticateRequest {
     pub ipaddress: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BilldeskAuthenticateResponse {
     pub msg: Option<String>,
     pub rdata: Option<BilldeskRdata>,
@@ -120,7 +120,7 @@ pub struct BilldeskPreAuthenticateRequest {
     pub ipaddress: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BilldeskPreAuthenticateResponse {
     pub msg: Option<String>,
     pub rdata: Option<BilldeskRdata>,
