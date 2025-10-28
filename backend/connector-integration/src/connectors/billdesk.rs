@@ -69,20 +69,20 @@ macros::create_all_prerequisites!(
         // MANDATORY: Add all other flows even if not implemented
         (
             flow: Void,
-            request_body: transformers::BilldeskVoidRequest,
-            response_body: transformers::BilldeskVoidResponse,
+            request_body: BilldeskVoidRequest,
+            response_body: BilldeskVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, domain_types::connector_types::PaymentVoidData, PaymentsResponseData>,
         ),
         (
             flow: Capture,
-            request_body: transformers::BilldeskCaptureRequest,
-            response_body: transformers::BilldeskCaptureResponse,
+            request_body: BilldeskCaptureRequest,
+            response_body: BilldeskCaptureResponse,
             router_data: RouterDataV2<Capture, PaymentFlowData, domain_types::connector_types::PaymentsCaptureData, PaymentsResponseData>,
         ),
         (
             flow: Refund,
-            request_body: transformers::BilldeskRefundRequest,
-            response_body: transformers::BilldeskRefundResponse,
+            request_body: BilldeskRefundRequest,
+            response_body: BilldeskRefundResponse,
             router_data: RouterDataV2<Refund, domain_types::connector_types::RefundFlowData, domain_types::connector_types::RefundsData, domain_types::connector_types::RefundsResponseData>,
         ),
         (
