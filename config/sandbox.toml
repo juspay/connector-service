@@ -53,6 +53,9 @@ trustpay.base_url = "https://test-tpgw.trustpay.eu/"
 trustpay.base_url_bank_redirects = "https://aapi.trustpay.eu/"
 stripe.base_url = "https://api.stripe.com/"
 cybersource.base_url = "https://apitest.cybersource.com/"
+worldpay.base_url = "https://access.worldpay.com/"
+worldpayvantiv.base_url = "https://www.testvantivcnp.com/sandbox/new/sandbox/communicator/online"
+worldpayvantiv.secondary_base_url = "https://www.testvantivcnp.com/sandbox"
 
 # Generic Events Configuration
 [events]

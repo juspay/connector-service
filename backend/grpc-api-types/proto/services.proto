@@ -21,6 +21,9 @@ service PaymentService {
   // Voids an authorized payment.
   rpc Void(PaymentServiceVoidRequest) returns (PaymentServiceVoidResponse);
   
+  // Voids a captured payment (post-capture void).
+  rpc VoidPostCapture(PaymentServiceVoidPostCaptureRequest) returns (PaymentServiceVoidPostCaptureResponse);
+  
   // Captures a previously authorized payment.
   rpc Capture(PaymentServiceCaptureRequest) returns (PaymentServiceCaptureResponse);
 
