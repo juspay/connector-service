@@ -418,7 +418,7 @@ impl<
                 common_enums::AttemptStatus::Failure,
                 Err(ErrorResponse {
                     code: error_data.error.to_string(),
-                    status_code: item.http_code,
+                    status_code: http_code,
                     message: error_data.error_description.clone().unwrap_or_default(),
                     reason: error_data.error_description,
                     attempt_status: None,
@@ -468,14 +468,7 @@ impl<
     }
 }
 
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+impl TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -494,7 +487,7 @@ impl<
                 common_enums::AttemptStatus::Failure,
                 Err(ErrorResponse {
                     code: error_data.error.to_string(),
-                    status_code: item.http_code,
+                    status_code: http_code,
                     message: error_data.error_description.clone().unwrap_or_default(),
                     reason: error_data.error_description,
                     attempt_status: None,
