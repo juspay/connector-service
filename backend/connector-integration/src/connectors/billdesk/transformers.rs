@@ -15,7 +15,7 @@ use domain_types::{
     utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, Secret};
+use hyperswitch_masking::{Mask, Maskable, Secret, ExposeInterface};
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
@@ -57,11 +57,11 @@ pub struct BilldeskRdata {
     url: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BilldeskErrorResponse {
-    error: String,
-    error_description: Option<String>,
+    pub error: String,
+    pub error_description: Option<String>,
 }
 
 // Stub types for unsupported flows
@@ -131,7 +131,7 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuth {
     
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key1 } => Ok(Self {
+            ConnectorAuthType::SignatureKey { api_key, key1, api_secret } => Ok(Self {
                 merchant_id: api_key.clone(),
                 checksum_key: key1.clone().ok_or(errors::ConnectorError::FailedToObtainAuthType)?,
             }),
@@ -148,8 +148,11 @@ pub fn generate_checksum<T: PaymentMethodDataTypes + std::fmt::Debug + std::mark
     // This is a simplified implementation - in production, use proper checksum algorithm
     let checksum_input = format!(
         "{}{}{}",
-        req.router_data.resource_common_data.connector_request_reference_id,
-        req.amount.get_amount_as_string(),
+        req.resource_common_data.connector_request_reference_id,
+        req.connector.amount_converter.convert(
+            req.request.minor_amount,
+            req.request.currency,
+        )?,
         auth.checksum_key.expose()
     );
     
@@ -177,7 +180,10 @@ impl<
         item: BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let customer_id = item.router_data.resource_common_data.get_customer_id()?;
-        let amount = item.amount.get_amount_as_string();
+        let amount = item.connector.amount_converter.convert(
+            item.router_data.request.minor_amount,
+            item.router_data.request.currency,
+        )?;
         let currency = item.router_data.request.currency.to_string();
         
         // Extract IP address
@@ -193,11 +199,11 @@ impl<
         
         // Build message based on payment method type
         let msg = match item.router_data.request.payment_method_type {
-            Some(common_enums::PaymentMethodType::Upi) => {
+            Some(common_enums::PaymentMethodType::UpiCollect) => {
                 // UPI payment message format
                 format!(
                     r#"{{"merchantid":"{}","customerid":"{}","txnamount":"{}","currency":"{}","txntype":"UPI","itemcode":"DIRECT","txnreference":"{}"}}"#,
-                    item.router_data.resource_common_data.get_merchant_id()?,
+                    item.router_data.connector_auth_type.get_merchant_id()?,
                     customer_id.get_string_repr(),
                     amount,
                     currency,
@@ -208,7 +214,7 @@ impl<
                 // Default message format
                 format!(
                     r#"{{"merchantid":"{}","customerid":"{}","txnamount":"{}","currency":"{}","txntype":"DIRECT","itemcode":"DIRECT","txnreference":"{}"}}"#,
-                    item.router_data.resource_common_data.get_merchant_id()?,
+                    item.router_data.connector_auth_type.get_merchant_id()?,
                     customer_id.get_string_repr(),
                     amount,
                     currency,
@@ -242,7 +248,7 @@ impl<
     ) -> Result<Self, Self::Error> {
         let msg = format!(
             r#"{{"merchantid":"{}","txnreference":"{}"}}"#,
-            item.router_data.resource_common_data.get_merchant_id()?,
+            item.router_data.connector_auth_type.get_merchant_id()?,
             item.router_data.request.connector_transaction_id.get_connector_transaction_id()
                 .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?
         );
@@ -261,7 +267,7 @@ impl TryFrom<BilldeskPaymentsResponse> for PaymentsResponseData {
             common_enums::AttemptStatus::Failure
         };
         
-        Ok(Self {
+        Ok(PaymentsResponseData {
             status,
             amount_received: None,
             currency: None,
@@ -291,7 +297,7 @@ impl TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData {
             common_enums::AttemptStatus::Failure
         };
         
-        Ok(Self {
+        Ok(PaymentsResponseData {
             status,
             amount_received: None,
             currency: None,
