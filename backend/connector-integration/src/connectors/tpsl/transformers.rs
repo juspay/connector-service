@@ -548,8 +548,6 @@ impl<
                 connector_response_reference_id: response.identifier,
                 incremental_authorization_allowed: None,
                 status_code: http_code,
-                amount_received,
-                ..Default::default()
             }),
             ..router_data
         })
