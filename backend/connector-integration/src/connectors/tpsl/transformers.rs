@@ -540,9 +540,8 @@ impl<
                         tenure_id: "".to_string(),
                     },
                     consumer: ConsumerIntentPayload {
-                        mobile_number: item.router_data.request.browser_info
-                            .as_ref()
-                            .and_then(|bi| bi.get_optional_billing_phone_number())
+                        mobile_number: item.router_data.request.payment_method_data
+                            .get_optional_billing_phone_number()
                             .and_then(|phone| phone.expose().ok())
                             .unwrap_or_default(),
                         email_id: item.router_data.request.email
