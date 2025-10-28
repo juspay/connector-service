@@ -257,7 +257,7 @@ impl<
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let customer_id = item.resource_common_data.get_customer_id()?;
         let amount = item
             .connector
             .amount_converter
@@ -268,7 +268,7 @@ impl<
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         // Create transaction message based on UPI payment method
-        let transaction_message = match item.router_data.resource_common_data.payment_method {
+        let transaction_message = match item.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => {
                 format!(
                     r#"{{
@@ -335,12 +335,12 @@ impl<
                     }}"#,
                     customer_id.get_string_repr(),
                     amount,
-                    item.router_data.resource_common_data.connector_request_reference_id,
+                    item.resource_common_data.connector_request_reference_id,
                     amount,
                     item.router_data.request.currency,
-                    item.router_data.resource_common_data.connector_request_reference_id,
+                    item.resource_common_data.connector_request_reference_id,
                     time::now().format("%Y-%m-%d %H:%M:%S"),
-                    item.router_data.resource_common_data.connector_request_reference_id,
+                    item.resource_common_data.connector_request_reference_id,
                     item.router_data.request.get_router_return_url()?.as_str(),
                     item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
                     customer_id.get_string_repr()
@@ -458,7 +458,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let customer_id = item.resource_common_data.get_customer_id()?;
         let amount = item
             .connector
             .amount_converter
