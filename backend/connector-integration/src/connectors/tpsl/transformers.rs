@@ -539,6 +539,7 @@ for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsR
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
                             router_data
+                                .router_data
                                 .resource_common_data
                                 .connector_request_reference_id
                                 .clone(),
