@@ -345,7 +345,7 @@ impl<
                     amount,
                     item.router_data.request.currency,
                     item.router_data.resource_common_data.connector_request_reference_id,
-                    chrono::Utc::now().format("%Y-%m-%d %H:%M:%S"),
+                    time::now().format("%Y-%m-%d %H:%M:%S"),
                     item.router_data.resource_common_data.connector_request_reference_id,
                     item.router_data.request.get_router_return_url()?.as_str(),
                     item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
