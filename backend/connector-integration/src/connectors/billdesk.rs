@@ -424,7 +424,7 @@ macros::macro_connector_implementation!(
     curl_response: BilldeskVoidPCResponse,
     flow_name: VoidPC,
     resource_common_data: PaymentFlowData,
-    flow_request: domain_types::connector_types::PaymentVoidData,
+    flow_request: domain_types::connector_types::PaymentsCancelPostCaptureData,
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
@@ -432,7 +432,7 @@ macros::macro_connector_implementation!(
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<VoidPC, PaymentFlowData, domain_types::connector_types::PaymentVoidData, PaymentsResponseData>,
+            req: &RouterDataV2<VoidPC, PaymentFlowData, domain_types::connector_types::PaymentsCancelPostCaptureData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
@@ -461,7 +461,7 @@ macros::macro_connector_implementation!(
         
         fn get_url(
             &self,
-            req: &RouterDataV2<VoidPC, PaymentFlowData, domain_types::connector_types::PaymentVoidData, PaymentsResponseData>,
+            req: &RouterDataV2<VoidPC, PaymentFlowData, domain_types::connector_types::PaymentsCancelPostCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}?reqid={}", self.connector_base_url_payments(req), constants::BILLDESK_AUTH_REQUEST_ID))
         }
