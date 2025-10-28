@@ -15,7 +15,7 @@ use domain_types::{
         Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
-        PaymentFlowData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsMethodTokenData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -164,7 +164,7 @@ macros::create_all_prerequisites!(
             flow: PaymentMethodToken,
             request_body: BilldeskPaymentMethodTokenRequest,
             response_body: BilldeskPaymentMethodTokenResponse,
-            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentsMethodTokenData<T>, PaymentsResponseData>,
+            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         )
     ],
     amount_converters: [
