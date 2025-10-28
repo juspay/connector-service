@@ -182,32 +182,33 @@ impl<
     fn try_from(
         item: &BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
-        let amount = item.connector.amount_converter.convert(
-            item.router_data.request.minor_amount,
-            item.router_data.request.currency,
+        let (router_data, amount_converter) = item;
+        let customer_id = router_data.resource_common_data.get_customer_id()?;
+        let amount = amount_converter.convert(
+            router_data.request.minor_amount,
+            router_data.request.currency,
         ).map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
-        let currency = item.router_data.request.currency.to_string();
+        let currency = router_data.request.currency.to_string();
         
         // Extract IP address
-        let ip_address = item.router_data.request.get_ip_address_as_optional()
+        let ip_address = router_data.request.get_ip_address_as_optional()
             .map(|ip| ip.expose())
             .unwrap_or_else(|| "127.0.0.1".to_string());
         
         // Extract user agent
-        let user_agent = item.router_data.request.browser_info
+        let user_agent = router_data.request.browser_info
             .as_ref()
             .and_then(|info| info.user_agent.clone())
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
         
         // Get merchant ID from auth type
-        let merchant_id = match &item.router_data.connector_auth_type {
+        let merchant_id = match &router_data.connector_auth_type {
             ConnectorAuthType::SignatureKey { api_key, .. } => api_key.clone().expose(),
             _ => return Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         };
 
         // Build message based on payment method type
-        let msg = match item.router_data.request.payment_method_type {
+        let msg = match router_data.request.payment_method_type {
             Some(common_enums::PaymentMethodType::UpiCollect) => {
                 // UPI payment message format
                 format!(
@@ -216,7 +217,7 @@ impl<
                     customer_id.get_string_repr(),
                     amount,
                     currency,
-                    item.router_data.resource_common_data.connector_request_reference_id
+                    router_data.resource_common_data.connector_request_reference_id
                 )
             }
             _ => {
@@ -227,7 +228,7 @@ impl<
                     customer_id.get_string_repr(),
                     amount,
                     currency,
-                    item.router_data.resource_common_data.connector_request_reference_id
+                    router_data.resource_common_data.connector_request_reference_id
                 )
             }
         };
@@ -255,8 +256,9 @@ impl<
     fn try_from(
         item: &BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
+        let (router_data, _amount_converter) = item;
         // Get merchant ID from auth type
-        let merchant_id = match &item.router_data.connector_auth_type {
+        let merchant_id = match &router_data.connector_auth_type {
             ConnectorAuthType::SignatureKey { api_key, .. } => api_key.clone().expose(),
             _ => return Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         };
@@ -264,7 +266,7 @@ impl<
         let msg = format!(
             r#"{{"merchantid":"{}","txnreference":"{}"}}"#,
             merchant_id,
-            item.router_data.request.connector_transaction_id.get_connector_transaction_id()
+            router_data.request.connector_transaction_id.get_connector_transaction_id()
                 .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?
         );
         
