@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use common_utils::{
     errors::CustomResult,
     request::Method,
-    Email,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
@@ -13,10 +12,9 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Maskable, Secret};
+use hyperswitch_masking::{Maskable, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
@@ -163,7 +161,7 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key1 } => {
+            ConnectorAuthType::SignatureKey { api_key, key1, .. } => {
                 let merchant_id = api_key
                     .clone()
                     .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
@@ -182,10 +180,8 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuthType {
 }
 
 pub fn get_billdesk_auth_headers(
-    connector_auth_type: &ConnectorAuthType,
+    _connector_auth_type: &ConnectorAuthType,
 ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-    let auth = BilldeskAuthType::try_from(connector_auth_type)?;
-    
     // Billdesk typically uses custom headers for authentication
     // The actual authentication is done via checksum in the request body
     Ok(vec![])
@@ -331,53 +327,6 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        BilldeskRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for BilldeskPaymentsSyncRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-    
-    fn try_from(
-        item: BilldeskRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let transaction_id = item
-            .router_data
-            .resource_common_data
-            .connector_request_reference_id;
-
-        let auth = BilldeskAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let merchant_id = auth.merchant_id.peek();
-
-        let mut additional_params = HashMap::new();
-        additional_params.insert("RequestType".to_string(), "STATUSQUERY".to_string());
-        
-        let msg = create_billdesk_message(
-            merchant_id,
-            "", // Customer ID may not be needed for status query
-            &transaction_id,
-            "", // Amount may not be needed for status query
-            "", // Currency may not be needed for status query
-            &additional_params,
-        );
-
-        Ok(Self { msg })
-    }
-}
-
 fn get_redirect_form_data(
     payment_method_type: common_enums::PaymentMethodType,
     response_data: BilldeskPaymentsResponseData,
@@ -456,8 +405,8 @@ impl<
                 Err(ErrorResponse {
                     code: error_data.error.to_string(),
                     status_code: item.http_code,
-                    message: error_data.error_description.clone(),
-                    reason: Some(error_data.error_description),
+                    message: error_data.error_description.clone().unwrap_or_default(),
+                    reason: error_data.error_description,
                     attempt_status: None,
                     connector_transaction_id: None,
                     network_advice_code: None,
@@ -486,85 +435,6 @@ impl<
                         mandate_reference: None,
                         connector_metadata: None,
                         network_txn_id: None,
-                        connector_response_reference_id: None,
-                        incremental_authorization_allowed: None,
-                        status_code: http_code,
-                    }),
-                )
-            }
-        };
-
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                ..router_data.resource_common_data
-            },
-            response,
-            ..router_data
-        })
-    }
-}
-
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize
-            + Serialize,
-    > TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    
-    fn try_from(
-        item: ResponseRouterData<BilldeskPaymentsSyncResponse, Self>,
-    ) -> Result<Self, Self::Error> {
-        let ResponseRouterData {
-            response,
-            router_data,
-            http_code,
-        } = item;
-        
-        let (status, response) = match response {
-            BilldeskPaymentsSyncResponse::BilldeskError(error_data) => (
-                common_enums::AttemptStatus::Failure,
-                Err(ErrorResponse {
-                    code: error_data.error.to_string(),
-                    status_code: item.http_code,
-                    message: error_data.error_description.clone(),
-                    reason: Some(error_data.error_description),
-                    attempt_status: None,
-                    connector_transaction_id: None,
-                    network_advice_code: None,
-                    network_decline_code: None,
-                    network_error_message: None,
-                }),
-            ),
-            BilldeskPaymentsSyncResponse::BilldeskData(status_data) => {
-                let status = match status_data.auth_status.as_str() {
-                    "0300" | "0399" => common_enums::AttemptStatus::Charged,
-                    "0396" => common_enums::AttemptStatus::AuthorizationPending,
-                    "0397" => common_enums::AttemptStatus::Failure,
-                    _ => common_enums::AttemptStatus::Pending,
-                };
-
-                let amount_received = status_data.txn_amount.parse::<f64>()
-                    .ok()
-                    .map(|amt| common_utils::types::MinorUnit::from_major_unit_as_i64(amt));
-
-                (
-                    status,
-                    Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
-                            status_data.txn_reference_no.clone(),
-                        ),
-                        redirection_data: None,
-                        mandate_reference: None,
-                        connector_metadata: None,
-                        network_txn_id: Some(status_data.bank_reference_no.clone()),
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
                         status_code: http_code,
