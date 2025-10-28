@@ -474,7 +474,7 @@ impl<
             .connector
             .amount_converter
             .convert(
-                ucs_common_utils::types::MinorUnit::new(item.router_data.request.amount),
+                MinorUnit::new(item.router_data.request.amount),
                 item.router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
@@ -600,7 +600,7 @@ impl<
             .connector
             .amount_converter
             .convert(
-                ucs_common_utils::types::MinorUnit::new(item.router_data.request.amount),
+                MinorUnit::new(item.router_data.request.amount),
                 item.router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
