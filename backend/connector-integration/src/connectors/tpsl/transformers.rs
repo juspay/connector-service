@@ -33,7 +33,7 @@ pub struct TransactionMessage {
     pub msg: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct TpslTransactionResponse {
     #[serde(rename = "return")]
     pub response_data: String,
