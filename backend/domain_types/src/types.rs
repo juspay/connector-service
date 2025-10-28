@@ -3659,6 +3659,7 @@ impl
             vault_headers: None,
             minor_amount_capturable: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
