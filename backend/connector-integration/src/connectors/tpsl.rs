@@ -307,7 +307,13 @@ impl<
             http_code: res.status_code,
         };
 
-        response_router_data.try_into()
+        let response_router_data_owned = ResponseRouterData {
+            response: response_router_data.response,
+            router_data: response_router_data.router_data.clone(),
+            http_code: response_router_data.http_code,
+        };
+        
+        response_router_data_owned.try_into()
             .map_err(|e: error_stack::Report<errors::ConnectorError>| e.change_context(errors::ConnectorError::ResponseDeserializationFailed))
     }
 
