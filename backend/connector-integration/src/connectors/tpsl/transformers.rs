@@ -610,7 +610,7 @@ impl<
         };
 
         Ok(PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(response.merchant_transaction_identifier),
+            resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(response.merchant_transaction_identifier),
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
