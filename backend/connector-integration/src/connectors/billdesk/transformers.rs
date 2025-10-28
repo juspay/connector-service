@@ -396,9 +396,10 @@ impl TryFrom<BilldeskPaymentsResponse> for PaymentsResponseData {
         
         Ok(PaymentsResponseData::TransactionResponse {
             resource_id: response.txnrefno
+                .clone()
                 .map(ResponseId::ConnectorTransactionId)
                 .unwrap_or_else(|| ResponseId::NoResponseId),
-            redirection_data: response.rdata.and_then(|r| r.url).map(|url| {
+            redirection_data: response.rdata.clone().and_then(|r| r.url).map(|url| {
                 Box::new(RedirectForm::Form {
                     endpoint: url,
                     method: Method::Get,
@@ -408,7 +409,7 @@ impl TryFrom<BilldeskPaymentsResponse> for PaymentsResponseData {
             connector_metadata: Some(serde_json::json!(response)),
             mandate_reference: None,
             network_txn_id: None,
-            connector_response_reference_id: response.txnrefno,
+            connector_response_reference_id: response.txnrefno.clone(),
             incremental_authorization_allowed: None,
             status_code: if status == common_enums::AttemptStatus::Charged { 200 } else { 400 },
         })
@@ -427,9 +428,10 @@ impl TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData {
         
         Ok(PaymentsResponseData::TransactionResponse {
             resource_id: response.txnrefno
+                .clone()
                 .map(ResponseId::ConnectorTransactionId)
                 .unwrap_or_else(|| ResponseId::NoResponseId),
-            redirection_data: response.rdata.and_then(|r| r.url).map(|url| {
+            redirection_data: response.rdata.clone().and_then(|r| r.url).map(|url| {
                 Box::new(RedirectForm::Form {
                     endpoint: url,
                     method: Method::Get,
@@ -439,7 +441,7 @@ impl TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData {
             connector_metadata: Some(serde_json::json!(response)),
             mandate_reference: None,
             network_txn_id: None,
-            connector_response_reference_id: response.txnrefno,
+            connector_response_reference_id: response.txnrefno.clone(),
             incremental_authorization_allowed: None,
             status_code: if status == common_enums::AttemptStatus::Charged { 200 } else { 400 },
         })
