@@ -243,7 +243,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.error.clone(),
-            message: response.error_description.clone(),
+            message: response.error_description.clone().unwrap_or_else(|| "Unknown error".to_string()),
             reason: response.error_description.clone(),
             attempt_status: None,
             connector_transaction_id: None,
