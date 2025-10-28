@@ -307,9 +307,10 @@ impl<
             http_code: res.status_code,
         };
 
-        response_router_data
-            .try_into()
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+        Ok::<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, _>(
+            response_router_data
+                .try_into()?
+        ).change_context(errors::ConnectorError::ResponseDeserializationFailed)
     }
 
     fn get_error_response_v2(
