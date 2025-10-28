@@ -320,7 +320,7 @@ impl<
                         }}
                     }}"#,
                     customer_id.get_string_repr(),
-                    amount,
+                    amount: amount.to_string(),
                     item.router_data.resource_common_data.connector_request_reference_id,
                     amount,
                     item.router_data.request.currency,
