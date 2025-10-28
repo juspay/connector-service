@@ -267,7 +267,7 @@ impl<
     ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
         let request = TpslPaymentsRequest::try_from(TPSLRouterData {
             connector: self.clone(),
-            router_data: req,
+            router_data: req.clone(),
         })?;
         
         let url = format!("{}{}", "https://www.tpsl-india.in", constants::api_endpoints::UPI_TOKEN_GENERATION);
