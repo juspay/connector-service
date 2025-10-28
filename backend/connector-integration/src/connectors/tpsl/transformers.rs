@@ -411,7 +411,7 @@ pub enum TpslPaymentsResponse {
     Error(TpslErrorResponse),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct TpslErrorResponse {
     #[serde(rename = "ErrorCode")]
     pub error_code: String,
