@@ -338,7 +338,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: transformers::EaseBuzzErrorResponse = res
+        let response: easebuzz_transformers::EaseBuzzErrorResponse = res
             .response
             .parse_struct("EaseBuzzErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
