@@ -908,6 +908,12 @@ impl_source_verification_stub!(
     domain_types::connector_types::ConnectorCustomerData,
     ConnectorCustomerResponse
 );
+impl_source_verification_stub!(
+    CreateAccessToken,
+    PaymentFlowData,
+    domain_types::connector_types::SessionTokenRequestData,
+    SessionTokenResponseData
+);
 
 // MANDATORY: Add not-implemented flow handlers for all unsupported flows
 macro_rules! impl_not_implemented_flow {
