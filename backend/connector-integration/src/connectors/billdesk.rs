@@ -41,7 +41,7 @@ use transformers::{self as billdesk, BilldeskPaymentsRequest, BilldeskPaymentsRe
     BilldeskMandateRequest, BilldeskMandateResponse, BilldeskRepeatPaymentRequest, BilldeskRepeatPaymentResponse,
     BilldeskAcceptDisputeRequest, BilldeskAcceptDisputeResponse, BilldeskDefendDisputeRequest, BilldeskDefendDisputeResponse,
     BilldeskSubmitEvidenceRequest, BilldeskSubmitEvidenceResponse, BilldeskPostAuthenticateRequest, BilldeskPostAuthenticateResponse,
-    BilldeskAuthenticateRequest, BilldeskAuthenticateResponse
+    BilldeskAuthenticateRequest, BilldeskAuthenticateResponse, BilldeskPreAuthenticateRequest, BilldeskPreAuthenticateResponse
 };
 
 use super::macros;
@@ -150,8 +150,8 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PreAuthenticate,
-            request_body: BilldeskAuthenticateRequest,
-            response_body: BilldeskAuthenticateResponse,
+            request_body: BilldeskPreAuthenticateRequest,
+            response_body: BilldeskPreAuthenticateResponse,
             router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
         )
     ],
