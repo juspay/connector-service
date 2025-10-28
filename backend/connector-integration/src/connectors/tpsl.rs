@@ -428,7 +428,52 @@ macros::macro_connector_implementation!(
     }
 );
 
-// PSync implementation removed for now to focus on Authorize flow first
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsSyncRequest),
+    curl_response: TpslPaymentsSyncResponse,
+    flow_name: PSync,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsSyncData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let mut header = vec![(
+                constants::headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )];
+
+            let auth_type = tpsl::TpslAuth::try_from((
+                &req.connector_auth_type,
+                &req.request.currency,
+            ))?;
+
+            if let Some(merchant_code) = auth_type.merchant_code {
+                header.push((
+                    constants::headers::AUTHORIZATION.to_string(),
+                    format!("Bearer {}", merchant_code.peek()).into_masked(),
+                ));
+            }
+
+            Ok(header)
+        }
+        
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url_payments(req);
+            Ok(format!("{}{}", base_url, constants::endpoints::UPI_TOKEN_GENERATION))
+        }
+    }
+);
 
 impl<
     T: PaymentMethodDataTypes
