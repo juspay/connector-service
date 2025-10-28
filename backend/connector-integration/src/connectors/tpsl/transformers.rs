@@ -180,7 +180,7 @@ pub struct PaymentTxnPayload {
     pub reference: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct TpslPaymentMethodErrorPayload {
     pub code: String,
     pub desc: String,
