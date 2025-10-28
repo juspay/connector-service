@@ -642,15 +642,8 @@ impl<
 // Response transformers
 impl<
     F,
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + serde::Serialize
-        + serde::de::DeserializeOwned,
-> TryFrom<ResponseRouterData<TpslPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+> TryFrom<ResponseRouterData<TpslPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<domain_types::payment_method_data::PaymentMethodData>, PaymentsResponseData>>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<domain_types::payment_method_data::PaymentMethodData>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
