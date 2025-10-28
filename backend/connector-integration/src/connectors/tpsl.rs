@@ -37,7 +37,28 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use transformers::{self as tpsl, TpslPaymentsRequest, TpslPaymentsResponse};
+use transformers::{
+    self as tpsl, 
+    TpslPaymentsRequest, TpslPaymentsResponse,
+    TpslSyncRequest, TpslSyncResponse,
+    TpslCaptureRequest, TpslCaptureResponse,
+    TpslVoidRequest, TpslVoidResponse,
+    TpslRefundRequest, TpslRefundResponse,
+    TpslSetupMandateRequest, TpslSetupMandateResponse,
+    TpslCreateOrderRequest, TpslCreateOrderResponse,
+    TpslSessionTokenRequest, TpslSessionTokenResponse,
+    TpslAccessTokenRequest, TpslAccessTokenResponse,
+    TpslCreateCustomerRequest, TpslCreateCustomerResponse,
+    TpslPaymentTokenRequest, TpslPaymentTokenResponse,
+    TpslRepeatPaymentRequest, TpslRepeatPaymentResponse,
+    TpslAcceptDisputeRequest, TpslAcceptDisputeResponse,
+    TpslSubmitEvidenceRequest, TpslSubmitEvidenceResponse,
+    TpslDefendDisputeRequest, TpslDefendDisputeResponse,
+    TpslPreAuthenticateRequest, TpslPreAuthenticateResponse,
+    TpslAuthenticateRequest, TpslAuthenticateResponse,
+    TpslPostAuthenticateRequest, TpslPostAuthenticateResponse,
+    TpslRefundSyncRequest, TpslRefundSyncResponse,
+};
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
