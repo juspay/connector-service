@@ -41,6 +41,7 @@ use interfaces::{
 use serde::Serialize;
 
 use super::macros;
+use transformers as easebuzz_transformers;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub(crate) mod headers {
