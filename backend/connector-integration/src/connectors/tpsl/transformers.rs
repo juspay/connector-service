@@ -549,7 +549,7 @@ for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseD
                 (
                     common_enums::AttemptStatus::AuthenticationPending,
                     Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
+                        resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
                             router_data
                                 .resource_common_data
                                 .connector_request_reference_id
