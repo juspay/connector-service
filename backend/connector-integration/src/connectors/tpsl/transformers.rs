@@ -467,7 +467,7 @@ impl<
         + 'static
         + Serialize,
 > TryFrom<
-    TpslRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
+    TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
 > for TpslPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
