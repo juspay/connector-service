@@ -138,6 +138,13 @@ pub struct TpslRefundSyncRequest;
 #[derive(Debug, Deserialize)]
 pub struct TpslRefundSyncResponse;
 
+// Separate types for PSync to avoid templating conflicts
+#[derive(Debug, Serialize)]
+pub struct TpslSyncRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct TpslSyncResponse;
+
 // Stub TryFrom implementations for unsupported flows
 impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
     for TpslCaptureRequest
