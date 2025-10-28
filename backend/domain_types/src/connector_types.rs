@@ -112,7 +112,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Trustpay => Ok(Self::Trustpay),
             grpc_api_types::payments::Connector::Stripe => Ok(Self::Stripe),
             grpc_api_types::payments::Connector::Cybersource => Ok(Self::Cybersource),
-            grpc_api_types::payments::Connector::Tpsl => Ok(Self::Tpsl),
+            // TPSL mapping to be added when grpc proto is updated
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
