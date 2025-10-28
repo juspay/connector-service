@@ -29,7 +29,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::{Maskable, Secret};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -357,26 +357,6 @@ macros::create_all_prerequisites!(
     }
 );
 
-// Add PSync flow separately
-macros::create_all_prerequisites!(
-    connector_name: Billdesk,
-    generic_type: T,
-    api: [
-        (
-            flow: PSync,
-            request_body: BilldeskPaymentsSyncRequest,
-            response_body: BilldeskPaymentsSyncResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        )
-    ],
-    amount_converters: [
-        amount_converter: StringMinorUnit
-    ],
-    member_functions: {
-        // PSync specific functions can be added here if needed
-    }
-);
-
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Billdesk,
@@ -425,44 +405,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Billdesk,
-    curl_request: Json(BilldeskPaymentsSyncRequest),
-    curl_response: BilldeskPaymentsSyncResponse,
-    flow_name: PSync,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsSyncData,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut header = vec![(
-                headers::CONTENT_TYPE.to_string(),
-                self.common_get_content_type().to_string().into(),
-            )];
-
-            let auth_headers = billdesk::get_billdesk_auth_headers(&req.connector_auth_type)?;
-            header.extend(auth_headers);
-
-            Ok(header)
-        }
-
-        fn get_url(
-            &self,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}?reqid=BDRDF002", base_url)) // Status Check
-        }
-    }
-);
-
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -484,12 +426,8 @@ impl<
         "application/json"
     }
 
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        if connectors.test_mode.unwrap_or(false) {
-            "https://uat.billdesk.com/pgidsk/PGIDirectRequest"
-        } else {
-            "https://www.billdesk.com/pgidsk/PGIDirectRequest"
-        }
+    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
+        "https://www.billdesk.com/pgidsk/PGIDirectRequest"
     }
 
     fn get_auth_header(
@@ -515,8 +453,8 @@ impl<
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.error.to_string(),
-            message: response.error_description.clone(),
-            reason: Some(response.error_description),
+            message: response.error_description.clone().unwrap_or_default(),
+            reason: response.error_description,
             attempt_status: None,
             connector_transaction_id: None,
             network_advice_code: None,
@@ -535,6 +473,18 @@ impl<
             + 'static
             + Serialize,
     > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Billdesk<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
     for Billdesk<T>
 {
 }
@@ -585,10 +535,10 @@ impl<
             + Serialize,
     >
     ConnectorIntegrationV2<
-        PreAuthenticate,
+        CreateAccessToken,
         PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
+        domain_types::connector_types::AccessTokenRequestData,
+        domain_types::connector_types::AccessTokenResponseData,
     > for Billdesk<T>
 {
 }
@@ -602,27 +552,10 @@ impl<
             + Serialize,
     >
     ConnectorIntegrationV2<
-        Authenticate,
+        CreateConnectorCustomer,
         PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Billdesk<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
+        domain_types::connector_types::ConnectorCustomerData,
+        domain_types::connector_types::ConnectorCustomerResponse,
     > for Billdesk<T>
 {
 }
@@ -826,88 +759,20 @@ impl_source_verification_stub!(
     PaymentCreateOrderResponse
 );
 impl_source_verification_stub!(
-    PreAuthenticate,
+    CreateSessionToken,
     PaymentFlowData,
-    PaymentsPreAuthenticateData<T>,
-    PaymentsResponseData
+    SessionTokenRequestData,
+    SessionTokenResponseData
 );
 impl_source_verification_stub!(
-    Authenticate,
+    CreateAccessToken,
     PaymentFlowData,
-    PaymentsAuthenticateData<T>,
-    PaymentsResponseData
+    domain_types::connector_types::AccessTokenRequestData,
+    domain_types::connector_types::AccessTokenResponseData
 );
 impl_source_verification_stub!(
-    PostAuthenticate,
+    CreateConnectorCustomer,
     PaymentFlowData,
-    PaymentsPostAuthenticateData<T>,
-    PaymentsResponseData
+    domain_types::connector_types::ConnectorCustomerData,
+    domain_types::connector_types::ConnectorCustomerResponse
 );
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    interfaces::verification::SourceVerification<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Billdesk<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    interfaces::verification::SourceVerification<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-    > for Billdesk<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    interfaces::verification::SourceVerification<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    > for Billdesk<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    interfaces::verification::SourceVerification<
-        CreateConnectorCustomer,
-        PaymentFlowData,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-    > for Billdesk<T>
-{
-}
