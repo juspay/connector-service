@@ -85,6 +85,21 @@ pub struct BilldeskPostAuthenticateResponse {
     pub txnrefno: Option<String>,
 }
 
+// Authenticate types (separate to avoid conflicts)
+#[derive(Debug, Clone, Serialize)]
+pub struct BilldeskAuthenticateRequest {
+    pub msg: String,
+    pub useragent: String,
+    pub ipaddress: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct BilldeskAuthenticateResponse {
+    pub msg: Option<String>,
+    pub rdata: Option<BilldeskRdata>,
+    pub txnrefno: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct BilldeskCaptureRequest;
 #[derive(Debug, Clone)]
