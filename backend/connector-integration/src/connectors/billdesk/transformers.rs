@@ -197,13 +197,19 @@ impl<
             .and_then(|info| info.user_agent.clone())
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
         
+        // Get merchant ID from auth type
+        let merchant_id = match &item.router_data.connector_auth_type {
+            ConnectorAuthType::SignatureKey { api_key, .. } => api_key.expose(),
+            _ => return Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+        };
+
         // Build message based on payment method type
         let msg = match item.router_data.request.payment_method_type {
             Some(common_enums::PaymentMethodType::UpiCollect) => {
                 // UPI payment message format
                 format!(
                     r#"{{"merchantid":"{}","customerid":"{}","txnamount":"{}","currency":"{}","txntype":"UPI","itemcode":"DIRECT","txnreference":"{}"}}"#,
-                    item.router_data.connector_auth_type.get_merchant_id()?,
+                    merchant_id,
                     customer_id.get_string_repr(),
                     amount,
                     currency,
@@ -214,7 +220,7 @@ impl<
                 // Default message format
                 format!(
                     r#"{{"merchantid":"{}","customerid":"{}","txnamount":"{}","currency":"{}","txntype":"DIRECT","itemcode":"DIRECT","txnreference":"{}"}}"#,
-                    item.router_data.connector_auth_type.get_merchant_id()?,
+                    merchant_id,
                     customer_id.get_string_repr(),
                     amount,
                     currency,
