@@ -600,7 +600,7 @@ impl<
             .connector
             .amount_converter
             .convert(
-                MinorUnit::new(item.router_data.request.amount),
+                item.router_data.request.amount,
                 item.router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
