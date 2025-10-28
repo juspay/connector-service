@@ -11,11 +11,11 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PaymentMethodToken, PSync, PostAuthenticate, PreAuthenticate, RSync,
+        Accept, Authenticate, Authorize, Capture, CreateConnectorCustomer, CreateOrder, CreateSessionToken, DefendDispute, PaymentMethodToken, PSync, PostAuthenticate, PreAuthenticate, RSync,
         Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
+        ConnectorCustomerData, ConnectorCustomerResponse, PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -165,6 +165,12 @@ macros::create_all_prerequisites!(
             request_body: BilldeskPaymentMethodTokenRequest,
             response_body: BilldeskPaymentMethodTokenResponse,
             router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        ),
+        (
+            flow: CreateConnectorCustomer,
+            request_body: BilldeskVoidRequest,
+            response_body: BilldeskVoidResponse,
+            router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, domain_types::connector_types::ConnectorCustomerData, ConnectorCustomerResponse>,
         )
     ],
     amount_converters: [
