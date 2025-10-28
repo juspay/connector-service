@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use crate::types::ResponseRouterData;
 
 // Type alias for router data with connector
-pub type BilldeskRouterData<RouterData, _> = (RouterData, &'static dyn common_utils::types::AmountConvertor<Output = String>);
+pub type BilldeskRouterData<RouterData> = (RouterData, &'static dyn common_utils::types::AmountConvertor<Output = String>);
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
