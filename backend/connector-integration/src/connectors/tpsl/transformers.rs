@@ -527,49 +527,11 @@ for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsR
         item: crate::types::ResponseRouterData<TpslPaymentsResponse, TpslRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>,
     ) -> Result<Self, Self::Error> {
         let crate::types::ResponseRouterData {
-            response,
+            response: _response,
             router_data,
-            http_code,
+            http_code: _http_code,
         } = item;
         
-        let (status, response) = match response {
-            TpslPaymentsResponse::Success(_response_data) => {
-                (
-                    common_enums::AttemptStatus::AuthenticationPending,
-                    Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                            router_data
-                                .router_data
-                                .resource_common_data
-                                .connector_request_reference_id
-                                .clone(),
-                        ),
-                        redirection_data: None,
-                        mandate_reference: None,
-                        connector_metadata: None,
-                        network_txn_id: None,
-                        connector_response_reference_id: None,
-                        incremental_authorization_allowed: None,
-                        status_code: http_code,
-                    }),
-                )
-            }
-            TpslPaymentsResponse::Error(error_data) => (
-                common_enums::AttemptStatus::Failure,
-                Err(ErrorResponse {
-                    code: error_data.error_code,
-                    status_code: item.http_code,
-                    message: error_data.error_message.clone(),
-                    reason: Some(error_data.error_message),
-                    attempt_status: None,
-                    connector_transaction_id: None,
-                    network_advice_code: None,
-                    network_decline_code: None,
-                    network_error_message: None,
-                }),
-            ),
-        };
-
         Ok(router_data.router_data)
     }
 }
