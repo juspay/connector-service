@@ -356,7 +356,7 @@ impl<
         + 'static
         + Serialize,
 > TryFrom<
-    TpslRouterData<
+    TPSLRouterData<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         T,
     >,
