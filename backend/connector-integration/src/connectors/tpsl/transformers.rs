@@ -774,7 +774,6 @@ impl<
                     .amount
                     .parse::<f64>()
                     .ok()
-                    .and_then(|amt| amt.parse::<f64>().ok())
                     .map(|amt| (amt * 100.0) as i64);
 
                 (
