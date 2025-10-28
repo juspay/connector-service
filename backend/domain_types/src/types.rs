@@ -4522,7 +4522,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             setup_future_usage: Some(common_enums::FutureUsage::foreign_try_from(
                 setup_future_usage,
             )?),
-            off_session: None,
+            off_session: value.off_session,
             setup_mandate_details: Some(setup_mandate_details),
             router_return_url: value.return_url.clone(),
             webhook_url: value.webhook_url,
