@@ -11,20 +11,14 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
-        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Authorize, PSync,
     },
     connector_types::{
-        AcceptDisputeData, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -151,8 +145,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Billdesk,
-    curl_request: Json(billdesk::BilldeskPaymentsSyncRequest),
-    curl_response: billdesk::BilldeskPaymentsSyncResponse,
+    curl_request: Json(BilldeskPaymentsSyncRequest),
+    curl_response: BilldeskPaymentsSyncResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
@@ -254,92 +248,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
-// MANDATORY: Implement all connector_types traits (even for unused flows)
+// MANDATORY: Implement only the connector_types traits for flows we actually support
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Billdesk<T> {}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Billdesk<T> {}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::CreateConnectorCustomer for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidV2 for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundSyncV2 for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundV2 for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentCapture for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SetupMandateV2<T> for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::AcceptDispute for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SubmitEvidenceV2 for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::DisputeDefend for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::IncomingWebhook for Billdesk<T> {
-    fn verify_webhook_source(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secrets: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
-        // TODO: Implement webhook verification based on Billdesk's webhook signature
-        Ok(true)
-    }
 
-    fn get_event_type(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<
-        domain_types::connector_types::EventType,
-        error_stack::Report<domain_types::errors::ConnectorError>,
-    > {
-        Ok(domain_types::connector_types::EventType::PaymentIntentSuccess)
-    }
-
-    fn process_payment_webhook(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<
-        domain_types::connector_types::WebhookDetailsResponse,
-        error_stack::Report<domain_types::errors::ConnectorError>,
-    > {
-        // TODO: Implement webhook processing
-        Err(errors::ConnectorError::WebhooksNotImplemented.into())
-    }
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ValidationTrait for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentTokenV2<T> for Billdesk<T> {}
-
-// Authentication flow implementations
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPreAuthenticateV2<T> for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthenticateV2<T> for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPostAuthenticateV2<T> for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidPostCaptureV2 for Billdesk<T> {}
-
-// MANDATORY: SourceVerification implementations for all flows
+// MANDATORY: SourceVerification implementations for supported flows only
 macro_rules! impl_source_verification_stub {
     ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
         impl<
@@ -385,7 +302,7 @@ macro_rules! impl_source_verification_stub {
     };
 }
 
-// Apply to all flows
+// Apply to supported flows only
 impl_source_verification_stub!(
     Authorize,
     PaymentFlowData,
@@ -397,73 +314,4 @@ impl_source_verification_stub!(
     PaymentFlowData,
     PaymentsSyncData,
     PaymentsResponseData
-);
-impl_source_verification_stub!(
-    Capture,
-    PaymentFlowData,
-    PaymentsCaptureData,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
-impl_source_verification_stub!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
-impl_source_verification_stub!(RSync, RefundFlowData, RefundSyncData, RefundsResponseData);
-impl_source_verification_stub!(
-    SetupMandate,
-    PaymentFlowData,
-    SetupMandateRequestData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    RepeatPayment,
-    PaymentFlowData,
-    RepeatPaymentData,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    Accept,
-    DisputeFlowData,
-    AcceptDisputeData,
-    DisputeResponseData
-);
-impl_source_verification_stub!(
-    SubmitEvidence,
-    DisputeFlowData,
-    SubmitEvidenceData,
-    DisputeResponseData
-);
-impl_source_verification_stub!(
-    DefendDispute,
-    DisputeFlowData,
-    DisputeDefendData,
-    DisputeResponseData
-);
-impl_source_verification_stub!(
-    CreateOrder,
-    PaymentFlowData,
-    PaymentCreateOrderData,
-    PaymentCreateOrderResponse
-);
-impl_source_verification_stub!(
-    domain_types::connector_flow::PreAuthenticate,
-    PaymentFlowData,
-    domain_types::connector_types::PaymentsPreAuthenticateData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    domain_types::connector_flow::Authenticate,
-    PaymentFlowData,
-    domain_types::connector_types::PaymentsAuthenticateData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    domain_types::connector_flow::PostAuthenticate,
-    PaymentFlowData,
-    domain_types::connector_types::PaymentsPostAuthenticateData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    CreateSessionToken,
-    PaymentFlowData,
-    SessionTokenRequestData,
-    SessionTokenResponseData
 );
