@@ -1713,9 +1713,6 @@ message PaymentServiceRepeatEverythingRequest {
   optional SecretString email = 12; // Email address of the customer
   optional string connector_customer_id = 21; // Customer ID as recognized by the connector
 
-  // Session and Token Information
-  optional string access_token = 20; // Access token for secure communication
-
   // Browser Information
   optional BrowserInformation browser_info = 13; // Browser information, if relevant
 
