@@ -383,7 +383,7 @@ fn get_redirect_form_data(
     response_data: BilldeskPaymentsResponseData,
 ) -> CustomResult<RedirectForm, errors::ConnectorError> {
     match payment_method_type {
-        common_enums::PaymentMethodType::Upi => {
+        common_enums::PaymentMethodType::UpiCollect => {
             if let Some(rdata) = response_data.rdata {
                 let url = rdata.url.unwrap_or_else(|| "https://api.billdesk.com".to_string());
                 Ok(RedirectForm::Form {
@@ -402,12 +402,12 @@ fn get_redirect_form_data(
                 .into())
             }
         }
-        common_enums::PaymentMethodType::Nb => {
+        common_enums::PaymentMethodType::UpiIntent => {
             if let Some(rdata) = response_data.rdata {
                 let url = rdata.url.unwrap_or_else(|| "https://api.billdesk.com".to_string());
                 Ok(RedirectForm::Form {
                     endpoint: url,
-                    method: Method::Get,
+                    method: Method::Post,
                     form_fields: rdata
                         .parameters
                         .into_iter()
@@ -422,7 +422,7 @@ fn get_redirect_form_data(
             }
         }
         _ => Err(errors::ConnectorError::NotImplemented(
-            utils::get_unimplemented_payment_method_error_message("Billdesk"),
+            "Payment method not supported".to_string(),
         ))?,
     }
 }
