@@ -1800,3 +1800,12 @@ pub enum DecoupledAuthenticationType {
     Challenge,
     Frictionless,
 }
+
+/// Enum representing the different content types that can be dynamically selected
+/// for connector requests based on runtime conditions (e.g., payment method).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DynamicContentType {
+    Json,
+    FormUrlEncoded,
+    FormData,
+}
