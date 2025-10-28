@@ -51,9 +51,6 @@ use transformers::{self as billdesk, BilldeskPaymentsRequest, BilldeskPaymentsRe
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
-// Type alias for router data with connector
-pub type BilldeskRouterData<RouterData, T> = (RouterData, &'static dyn common_utils::types::AmountConvertor<Output = String>);
-
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const CHECKSUM: &str = "CheckSum";
