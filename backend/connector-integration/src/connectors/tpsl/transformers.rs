@@ -422,21 +422,23 @@ pub enum TpslPaymentsSyncResponse {
 }
 
 // CORRECT: Use proper types for TryFrom implementations expected by macro framework
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<TPSLRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
     for TpslPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        item: TPSLRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
-        let auth = TpslAuth::try_from(&item.connector_auth_type)?;
-        let customer_id = item.resource_common_data.get_customer_id()?;
-        let return_url = item.request.get_router_return_url()?;
+        let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
+        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let return_url = item.router_data.request.get_router_return_url()?;
         
-        // CORRECT: Use proper amount framework - need to get the connector instance
-        // For now, use a simple conversion since we don't have access to the connector instance
-        let amount = item.request.minor_amount.to_string();
+        // CORRECT: Use proper amount framework
+        let amount = item.connector.amount_converter.convert(
+            item.router_data.request.minor_amount,
+            item.router_data.request.currency,
+        ).change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         let merchant_code = auth.merchant_code
             .ok_or(errors::ConnectorError::FailedToObtainAuthType)?
