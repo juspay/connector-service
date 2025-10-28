@@ -223,7 +223,7 @@ macros::macro_connector_implementation!(
             let auth = billdesk::BilldeskAuth::try_from(&req.connector_auth_type)?;
             
             // Add checksum header for Billdesk authentication
-            let checksum = billdesk::generate_checksum(req, &auth, self.amount_converter)?;
+            let checksum = billdesk::generate_checksum(req, &auth, &*self.amount_converter)?;
             header.push((headers::CHECKSUM.to_string(), checksum.into_masked()));
 
             Ok(header)
