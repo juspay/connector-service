@@ -17,30 +17,8 @@ use chrono;
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
-use std::marker::PhantomData;
 
-// TPSLRouterData type definition
-#[derive(Debug, Clone)]
-pub struct TPSLRouterData<'a, F, FCD, Req, Resp> {
-    pub router_data: &'a RouterDataV2<F, FCD, Req, Resp>,
-}
 
-impl<'a, F, FCD, Req, Resp> crate::connectors::macros::FlowTypes for TPSLRouterData<'a, F, FCD, Req, Resp> {
-    type Flow = F;
-    type FlowCommonData = FCD;
-    type Request = Req;
-    type Response = Resp;
-}
-
-impl<'a, F, FCD, Req, Resp> TryFrom<&'a RouterDataV2<F, FCD, Req, Resp>> for TPSLRouterData<'a, F, FCD, Req, Resp> {
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(router_data: &'a RouterDataV2<F, FCD, Req, Resp>) -> Result<Self, Self::Error> {
-        Ok(Self {
-            router_data,
-        })
-    }
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -447,21 +425,20 @@ pub enum TpslPaymentsSyncResponse {
 }
 
 // CORRECT: Use proper types for TryFrom implementations expected by macro framework
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<TPSLRouterData<'_, Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<TPSLRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
     for TpslPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: TPSLRouterData<'_, Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        item: TPSLRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
         let customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let return_url = item.router_data.request.get_router_return_url()?;
         
         // CORRECT: Use proper amount framework
-        let converter = StringMinorUnitForConnector;
-        let amount = converter.convert(
+        let amount = item.connector.amount_converter.convert(
             item.router_data.request.minor_amount,
             item.router_data.request.currency,
         ).change_context(errors::ConnectorError::RequestEncodingFailed)?;
@@ -576,13 +553,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<TPSLRouterData<'_, PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
     for TpslPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: TPSLRouterData<'_, PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
         let merchant_code = auth.merchant_code
