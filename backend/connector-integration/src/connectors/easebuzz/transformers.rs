@@ -1,4 +1,4 @@
-use common_enums::PaymentMethodType;
+use common_enums::{PaymentMethodType, Currency};
 use common_utils::{
     errors::CustomResult,
     request::Method,
@@ -23,62 +23,62 @@ use crate::{connectors::easebuzz::EaseBuzzRouterData, types::ResponseRouterData}
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EaseBuzzPaymentsRequest {
-    txnid: String,
-    amount: StringMinorUnit,
-    productinfo: String,
-    firstname: Option<String>,
-    email: Option<Email>,
-    phone: Option<String>,
-    surl: String,
-    furl: String,
-    udf1: Option<String>,
-    udf2: Option<String>,
-    udf3: Option<String>,
-    udf4: Option<String>,
-    udf5: Option<String>,
-    udf6: Option<String>,
-    udf7: Option<String>,
-    udf8: Option<String>,
-    udf9: Option<String>,
-    udf10: Option<String>,
-    hash: Secret<String>,
-    address1: Option<String>,
-    address2: Option<String>,
-    city: Option<String>,
-    state: Option<String>,
-    country: Option<String>,
-    zipcode: Option<String>,
-    pg: Option<String>,
-    customer_unique_id: Option<String>,
-    split_payments: Option<String>,
-    sub_merchant_id: Option<String>,
-    customer_name: Option<String>,
-    enforce_paymentmethod: Option<String>,
-    show_paymentmethod: Option<String>,
-    card_type: Option<String>,
-    bank_code: Option<String>,
-    wallet: Option<String>,
-    emi_plan_id: Option<String>,
-    card_no: Option<Secret<String>>,
-    ccname: Option<String>,
-    ccvv: Option<Secret<String>>,
-    ccexpmon: Option<String>,
-    ccexpyr: Option<String>,
+    pub txnid: String,
+    pub amount: StringMinorUnit,
+    pub productinfo: String,
+    pub firstname: Option<String>,
+    pub email: Option<Email>,
+    pub phone: Option<String>,
+    pub surl: String,
+    pub furl: String,
+    pub udf1: Option<String>,
+    pub udf2: Option<String>,
+    pub udf3: Option<String>,
+    pub udf4: Option<String>,
+    pub udf5: Option<String>,
+    pub udf6: Option<String>,
+    pub udf7: Option<String>,
+    pub udf8: Option<String>,
+    pub udf9: Option<String>,
+    pub udf10: Option<String>,
+    pub hash: Secret<String>,
+    pub address1: Option<String>,
+    pub address2: Option<String>,
+    pub city: Option<String>,
+    pub state: Option<String>,
+    pub country: Option<String>,
+    pub zipcode: Option<String>,
+    pub pg: Option<String>,
+    pub customer_unique_id: Option<String>,
+    pub split_payments: Option<String>,
+    pub sub_merchant_id: Option<String>,
+    pub customer_name: Option<String>,
+    pub enforce_paymentmethod: Option<String>,
+    pub show_paymentmethod: Option<String>,
+    pub card_type: Option<String>,
+    pub bank_code: Option<String>,
+    pub wallet: Option<String>,
+    pub emi_plan_id: Option<String>,
+    pub card_no: Option<Secret<String>>,
+    pub ccname: Option<String>,
+    pub ccvv: Option<Secret<String>>,
+    pub ccexpmon: Option<String>,
+    pub ccexpyr: Option<String>,
     // UPI specific fields
-    vpa: Option<String>,
-    upi_intent: Option<bool>,
-    upi_collect: Option<bool>,
+    pub vpa: Option<String>,
+    pub upi_intent: Option<bool>,
+    pub upi_collect: Option<bool>,
 }
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EaseBuzzPaymentsSyncRequest {
-    txnid: String,
-    amount: StringMinorUnit,
-    email: Option<Email>,
-    phone: Option<String>,
-    key: String,
-    hash: Secret<String>,
+    pub txnid: String,
+    pub amount: StringMinorUnit,
+    pub email: Option<Email>,
+    pub phone: Option<String>,
+    pub key: String,
+    pub hash: Secret<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -91,45 +91,45 @@ pub enum EaseBuzzPaymentsResponse {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EaseBuzzPaymentsSuccessResponse {
-    status: i32,
-    error_desc: Option<String>,
-    data: EaseBuzzPaymentData,
+    pub status: i32,
+    pub error_desc: Option<String>,
+    pub data: EaseBuzzPaymentData,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EaseBuzzPaymentData {
-    payment_url: Option<String>,
-    txnid: Option<String>,
-    easebuzz_id: Option<String>,
-    status: Option<String>,
-    amount: Option<String>,
-    card_type: Option<String>,
-    bank_ref_num: Option<String>,
-    bank_code: Option<String>,
-    error_msg: Option<String>,
-    name_on_card: Option<String>,
-    card_no: Option<String>,
-    card_bin: Option<String>,
-    card_brand: Option<String>,
-    card_exp_month: Option<String>,
-    card_exp_year: Option<String>,
-    name: Option<String>,
-    email: Option<String>,
-    phone: Option<String>,
-    bank_name: Option<String>,
-    payment_source: Option<String>,
-    pg_type: Option<String>,
-    upi_vpa: Option<String>,
-    upi_intent_url: Option<String>,
-    upi_qr_code: Option<String>,
+    pub payment_url: Option<String>,
+    pub txnid: Option<String>,
+    pub easebuzz_id: Option<String>,
+    pub status: Option<String>,
+    pub amount: Option<String>,
+    pub card_type: Option<String>,
+    pub bank_ref_num: Option<String>,
+    pub bank_code: Option<String>,
+    pub error_msg: Option<String>,
+    pub name_on_card: Option<String>,
+    pub card_no: Option<String>,
+    pub card_bin: Option<String>,
+    pub card_brand: Option<String>,
+    pub card_exp_month: Option<String>,
+    pub card_exp_year: Option<String>,
+    pub name: Option<String>,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub bank_name: Option<String>,
+    pub payment_source: Option<String>,
+    pub pg_type: Option<String>,
+    pub upi_vpa: Option<String>,
+    pub upi_intent_url: Option<String>,
+    pub upi_qr_code: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EaseBuzzPaymentsSyncResponse {
-    status: bool,
-    msg: EaseBuzzSyncMessageType,
+    pub status: bool,
+    pub msg: EaseBuzzSyncMessageType,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -210,18 +210,17 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
->
-    TryFrom<
-        EaseBuzzRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
+> TryFrom<
+    EaseBuzzRouterData<
+        RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
         >,
-    > for EaseBuzzPaymentsRequest
+        T,
+    >,
+> for EaseBuzzPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
@@ -270,7 +269,7 @@ impl<
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
 
         // Get authentication credentials
-        let (key, hash) = get_easebuzz_auth_credentials(&item.router_data.connector_auth_type)?;
+        let (key, hash) = item.connector.get_easebuzz_auth_credentials(&item.router_data.connector_auth_type)?;
 
         // Handle UPI payment methods
         let (vpa, upi_intent, upi_collect) = match item.router_data.request.payment_method_type {
@@ -342,18 +341,17 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
->
-    TryFrom<
-        EaseBuzzRouterData<
-            RouterDataV2<
-                PSync,
-                PaymentFlowData,
-                PaymentsSyncData,
-                PaymentsResponseData,
-            >,
-            T,
+> TryFrom<
+    EaseBuzzRouterData<
+        RouterDataV2<
+            PSync,
+            PaymentFlowData,
+            PaymentsSyncData,
+            PaymentsResponseData,
         >,
-    > for EaseBuzzPaymentsSyncRequest
+        T,
+    >,
+> for EaseBuzzPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
@@ -374,7 +372,7 @@ impl<
             .amount_converter
             .convert(
                 MinorUnit::new(1000), // Default amount for sync - this should come from original transaction
-                common_enums::Currency::INR, // Default currency
+                Currency::INR, // Default currency
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
@@ -391,7 +389,7 @@ impl<
         let phone: Option<String> = None;
 
         // Get authentication credentials
-        let (key, hash) = get_easebuzz_auth_credentials(&item.router_data.connector_auth_type)?;
+        let (key, hash) = item.connector.get_easebuzz_auth_credentials(&item.router_data.connector_auth_type)?;
 
         Ok(Self {
             txnid: transaction_id,
@@ -438,18 +436,6 @@ fn extract_upi_vpa<T: PaymentMethodDataTypes>(payment_method_data: &domain_types
     }
 }
 
-fn get_easebuzz_auth_credentials(
-    connector_auth_type: &ConnectorAuthType,
-) -> CustomResult<(String, String), ConnectorError> {
-    match connector_auth_type {
-        ConnectorAuthType::SignatureKey { api_key, .. } => {
-            let api_key_str = api_key.peek().clone();
-            Ok((api_key_str.clone(), api_key_str))
-        }
-        _ => Err(ConnectorError::FailedToObtainAuthType.into()),
-    }
-}
-
 impl<
     F,
     T: PaymentMethodDataTypes
@@ -458,8 +444,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize
-        + Serialize,
-> TryFrom<ResponseRouterData<EaseBuzzPaymentsResponse, Self>>
+        + Serialize> TryFrom<ResponseRouterData<EaseBuzzPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
