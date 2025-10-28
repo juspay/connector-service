@@ -554,7 +554,12 @@ impl<
                         account_holder_name: item.router_data.request.customer_name.clone().unwrap_or_default(),
                         vpa: match &item.router_data.request.payment_method_data {
                             domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
-                                upi_data.vpa.as_ref().map(|vpa| vpa.to_string()).unwrap_or_default()
+                                match upi_data {
+                                    domain_types::payment_method_data::UpiData::UpiCollect(upi_collect) => {
+                                        upi_collect.vpa_id.as_ref().map(|vpa| vpa.peek().to_string()).unwrap_or_default()
+                                    }
+                                    _ => String::default(),
+                                }
                             }
                             _ => String::default(),
                         },
