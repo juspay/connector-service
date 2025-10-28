@@ -316,6 +316,16 @@ impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, RefundFlowData, RefundSyncData
     }
 }
 
+impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+    for TpslSyncRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
+        Err(errors::ConnectorError::NotImplemented("PSync flow not implemented".to_string()).into())
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslTransactionRequest {
