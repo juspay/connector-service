@@ -482,15 +482,15 @@ macros::macro_connector_implementation!(
     curl_response: BilldeskPaymentMethodTokenResponse,
     flow_name: PaymentMethodToken,
     resource_common_data: PaymentFlowData,
-    flow_request: domain_types::connector_types::PaymentsMethodTokenData<T>,
-    flow_response: PaymentsResponseData,
+    flow_request: domain_types::connector_types::PaymentMethodTokenizationData<T>,
+    flow_response: PaymentMethodTokenResponse,
     http_method: Post,
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentsMethodTokenData<T>, PaymentsResponseData>,
+            req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
@@ -519,7 +519,7 @@ macros::macro_connector_implementation!(
         
         fn get_url(
             &self,
-            req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentsMethodTokenData<T>, PaymentsResponseData>,
+            req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}?reqid={}", self.connector_base_url_payments(req), constants::BILLDESK_AUTH_REQUEST_ID))
         }
