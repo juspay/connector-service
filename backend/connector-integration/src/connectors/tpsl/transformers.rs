@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use common_utils::{
     request::Method,
+    types::MinorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
