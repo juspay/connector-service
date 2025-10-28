@@ -231,7 +231,7 @@ pub struct ConsumerDataType {
     pub identifier: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct TpslUPITokenResponse {
     pub merchant_code: String,
     pub merchant_transaction_identifier: String,
