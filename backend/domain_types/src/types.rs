@@ -775,9 +775,14 @@ impl CardConversionHelper<DefaultPCIHolder> for DefaultPCIHolder {
         payment_method_data::Card<DefaultPCIHolder>,
         error_stack::Report<ApplicationErrorResponse>,
     > {
-        let card_network = Some(common_enums::CardNetwork::foreign_try_from(
-            card.card_network(),
-        )?);
+        let card_network =
+            if card.card_network() != grpc_api_types::payments::CardNetwork::Unspecified {
+                Some(common_enums::CardNetwork::foreign_try_from(
+                    card.card_network(),
+                )?)
+            } else {
+                None
+            };
         Ok(payment_method_data::Card {
             card_number: RawCardNumber::<DefaultPCIHolder>(card.card_number.ok_or(
                 ApplicationErrorResponse::BadRequest(ApiError {
@@ -5731,14 +5736,20 @@ impl<
         // Clone payment_method to avoid ownership issues
         let payment_method_clone = value.payment_method.clone();
 
-        // Create redirect response from authentication data if present
         let redirect_response =
             value
-                .authentication_data
-                .map(|auth_data| ContinueRedirectionResponse {
-                    params: auth_data.ds_transaction_id.clone().map(Secret::new),
-                    payload: None,
+                .redirection_response
+                .map(|redirection_response| ContinueRedirectionResponse {
+                    params: redirection_response.params.map(Secret::new),
+                    payload: Some(Secret::new(serde_json::Value::Object(
+                        redirection_response
+                            .payload
+                            .into_iter()
+                            .map(|(k, v)| (k, serde_json::Value::String(v)))
+                            .collect(),
+                    ))),
                 });
+
         Ok(Self {
             payment_method_data: value
                 .payment_method

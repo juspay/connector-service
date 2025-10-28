@@ -964,6 +964,13 @@ message PaymentAddress {
   Address billing_address = 2;
 }
 
+message RedirectionResponse {
+  // query params
+  optional string params = 1;
+  // Body content
+  map<string, string> payload = 2;
+}
+
 // Data for a redirection, can be either form data, raw HTML, or URI.
 message RedirectForm {
   oneof form_type {
@@ -1802,6 +1809,9 @@ message PaymentServiceAuthenticateRequest {
   
   // Contextual Information
   optional BrowserInformation browser_info = 14; // Information about the customer's browser
+
+  // Redirection Information after DDC step
+  optional RedirectionResponse redirection_response = 15; // Redirection Response from client browser
 }
 
 // Response message for authentication step
