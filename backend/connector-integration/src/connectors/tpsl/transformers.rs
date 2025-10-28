@@ -646,8 +646,9 @@ impl<
 // Response transformers
 impl<
     F,
-> TryFrom<ResponseRouterData<TpslPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<domain_types::payment_method_data::PaymentMethodData<()>>, PaymentsResponseData>>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<domain_types::payment_method_data::PaymentMethodData<()>>, PaymentsResponseData>
+    T: PaymentMethodDataTypes
+> TryFrom<ResponseRouterData<TpslPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
