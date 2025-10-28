@@ -142,7 +142,7 @@ pub struct TpslUPISyncResponse {
     pub merchant_additional_details: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct UPIPaymentPayload {
     pub token: Option<String>,
     pub instrument_alias_name: String,
