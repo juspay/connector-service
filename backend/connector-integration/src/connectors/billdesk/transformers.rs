@@ -215,37 +215,42 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+> TryFrom<BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
     for BilldeskPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        item: BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.resource_common_data.get_customer_id()?;
+        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let transaction_id = item
+            .router_data
             .resource_common_data
-            .connector_request_reference_id;
+            .connector_request_reference_id.clone();
         
         let amount = item
-            .request
-            .minor_amount
-            .to_string();
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
+            .change_context(ConnectorError::RequestEncodingFailed)?;
 
-        let auth = BilldeskAuthType::try_from(&item.connector_auth_type)?;
+        let auth = BilldeskAuthType::try_from(&item.router_data.connector_auth_type)?;
         let merchant_id = auth.merchant_id.peek();
 
-        let ip_address = item.request.get_ip_address_as_optional()
+        let ip_address = item.router_data.request.get_ip_address_as_optional()
             .map(|ip| ip.expose())
             .unwrap_or_else(|| "127.0.0.1".to_string());
 
-        let user_agent = item.request.browser_info
+        let user_agent = item.router_data.request.browser_info
             .as_ref()
             .and_then(|info| info.user_agent.clone())
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
 
-        match item.request.payment_method_type {
+        match item.router_data.request.payment_method_type {
             Some(common_enums::PaymentMethodType::UpiCollect) => {
                 let mut additional_params = HashMap::new();
                 additional_params.insert("BankID".to_string(), "UPI".to_string());
@@ -255,8 +260,8 @@ impl<
                     merchant_id,
                     &customer_id.get_string_repr(),
                     &transaction_id,
-                    &amount,
-                    &item.request.currency.to_string(),
+                    &amount.to_string(),
+                    &item.router_data.request.currency.to_string(),
                     &additional_params,
                 );
 
@@ -278,8 +283,8 @@ impl<
                     merchant_id,
                     &customer_id.get_string_repr(),
                     &transaction_id,
-                    &amount,
-                    &item.request.currency.to_string(),
+                    &amount.to_string(),
+                    &item.router_data.request.currency.to_string(),
                     &additional_params,
                 );
 
@@ -300,20 +305,28 @@ impl<
     }
 }
 
-impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> TryFrom<BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
     for BilldeskPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.resource_common_data.get_customer_id()?;
+        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let transaction_id = item
+            .router_data
             .resource_common_data
-            .connector_request_reference_id;
+            .connector_request_reference_id.clone();
 
-        let auth = BilldeskAuthType::try_from(&item.connector_auth_type)?;
+        let auth = BilldeskAuthType::try_from(&item.router_data.connector_auth_type)?;
         let merchant_id = auth.merchant_id.peek();
 
         let additional_params = HashMap::new();
@@ -322,7 +335,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
             &customer_id.get_string_repr(),
             &transaction_id,
             "0", // Amount not needed for status check
-            &item.request.currency.to_string(),
+            &item.router_data.request.currency.to_string(),
             &additional_params,
         );
 
