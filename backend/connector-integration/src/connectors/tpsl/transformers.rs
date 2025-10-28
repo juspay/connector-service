@@ -345,7 +345,7 @@ impl From<TpslTransactionStatus> for common_enums::AttemptStatus {
 fn get_merchant_auth(
     connector_auth_type: &ConnectorAuthType,
     currency: common_enums::Currency,
-) -> Result<TpslAuth, errors::ConnectorError> {
+) -> error_stack::Result<TpslAuth, errors::ConnectorError> {
     TpslAuth::try_from((connector_auth_type, &currency))
 }
 
