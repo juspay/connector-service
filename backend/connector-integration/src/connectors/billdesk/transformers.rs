@@ -330,3 +330,68 @@ impl TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData {
         })
     }
 }
+
+// Implementation for ResponseRouterData to RouterDataV2 conversion (required by macro)
+impl<
+        F: domain_types::connector_flow::Flow,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > TryFrom<ResponseRouterData<BilldeskPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    
+    fn try_from(
+        item: ResponseRouterData<BilldeskPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+        
+        let payments_response = PaymentsResponseData::try_from(response)?;
+        
+        Ok(Self {
+            response: payments_response,
+            router_data,
+            http_code,
+        })
+    }
+}
+
+impl<
+        F: domain_types::connector_flow::Flow,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    
+    fn try_from(
+        item: ResponseRouterData<BilldeskPaymentsSyncResponse, RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+        
+        let payments_response = PaymentsResponseData::try_from(response)?;
+        
+        Ok(Self {
+            response: payments_response,
+            router_data,
+            http_code,
+        })
+    }
+}
