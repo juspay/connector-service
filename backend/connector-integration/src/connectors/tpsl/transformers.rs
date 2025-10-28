@@ -583,7 +583,7 @@ impl<
         + std::marker::Send
         + 'static
         + serde::Serialize,
-> TryFrom<TpslRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+> TryFrom<super::TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
     for TpslPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
