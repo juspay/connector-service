@@ -252,9 +252,15 @@ impl<
     fn try_from(
         item: BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
+        // Get merchant ID from auth type
+        let merchant_id = match &item.router_data.connector_auth_type {
+            ConnectorAuthType::SignatureKey { api_key, .. } => api_key.expose(),
+            _ => return Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+        };
+
         let msg = format!(
             r#"{{"merchantid":"{}","txnreference":"{}"}}"#,
-            item.router_data.connector_auth_type.get_merchant_id()?,
+            merchant_id,
             item.router_data.request.connector_transaction_id.get_connector_transaction_id()
                 .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?
         );
