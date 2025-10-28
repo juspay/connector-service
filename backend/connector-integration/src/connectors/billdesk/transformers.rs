@@ -279,22 +279,23 @@ impl TryFrom<BilldeskPaymentsResponse> for PaymentsResponseData {
             common_enums::AttemptStatus::Failure
         };
         
-        Ok(PaymentsResponseData {
-            status,
-            amount_received: None,
-            currency: None,
-            connector_transaction_id: response.txnrefno.map(ResponseId::ConnectorTransactionId),
-            error_message: response.msg,
-            redirect_url: response.rdata.and_then(|r| r.url),
+        Ok(PaymentsResponseData::TransactionResponse {
+            resource_id: response.txnrefno
+                .map(ResponseId::ConnectorTransactionId)
+                .unwrap_or_else(|| ResponseId::NoResponseId),
+            redirection_data: response.rdata.and_then(|r| r.url).map(|url| {
+                Box::new(RedirectForm::Form {
+                    endpoint: url,
+                    method: Method::Get,
+                    form_fields: std::collections::HashMap::new(),
+                })
+            }),
+            connector_metadata: Some(serde_json::json!(response)),
+            mandate_reference: None,
             network_txn_id: None,
-            connector_response: response,
-            authorization_id: None,
-            capture_method: None,
-            fraud_status: None,
-            mandate_id: None,
-            processor_response: None,
-            unified_code: None,
-            unified_message: None,
+            connector_response_reference_id: response.txnrefno,
+            incremental_authorization_allowed: None,
+            status_code: if status == common_enums::AttemptStatus::Charged { 200 } else { 400 },
         })
     }
 }
@@ -309,22 +310,23 @@ impl TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData {
             common_enums::AttemptStatus::Failure
         };
         
-        Ok(PaymentsResponseData {
-            status,
-            amount_received: None,
-            currency: None,
-            connector_transaction_id: response.txnrefno.map(ResponseId::ConnectorTransactionId),
-            error_message: response.msg,
-            redirect_url: response.rdata.and_then(|r| r.url),
+        Ok(PaymentsResponseData::TransactionResponse {
+            resource_id: response.txnrefno
+                .map(ResponseId::ConnectorTransactionId)
+                .unwrap_or_else(|| ResponseId::NoResponseId),
+            redirection_data: response.rdata.and_then(|r| r.url).map(|url| {
+                Box::new(RedirectForm::Form {
+                    endpoint: url,
+                    method: Method::Get,
+                    form_fields: std::collections::HashMap::new(),
+                })
+            }),
+            connector_metadata: Some(serde_json::json!(response)),
+            mandate_reference: None,
             network_txn_id: None,
-            connector_response: response,
-            authorization_id: None,
-            capture_method: None,
-            fraud_status: None,
-            mandate_id: None,
-            processor_response: None,
-            unified_code: None,
-            unified_message: None,
+            connector_response_reference_id: response.txnrefno,
+            incremental_authorization_allowed: None,
+            status_code: if status == common_enums::AttemptStatus::Charged { 200 } else { 400 },
         })
     }
 }
