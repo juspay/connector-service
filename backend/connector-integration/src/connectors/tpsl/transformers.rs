@@ -156,7 +156,7 @@ pub struct UPIPaymentPayload {
     pub payment_mode: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct AcsPayload {
     pub bank_acs_form_name: String,
     pub bank_acs_http_method: serde_json::Value,
