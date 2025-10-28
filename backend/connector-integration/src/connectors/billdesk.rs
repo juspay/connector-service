@@ -535,6 +535,74 @@ impl<
             + Serialize,
     >
     ConnectorIntegrationV2<
+        domain_types::connector_flow::PreAuthenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::Authenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::PostAuthenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::PaymentMethodToken,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentMethodTokenizationData<T>,
+        domain_types::connector_types::PaymentMethodTokenResponse,
+    > for Billdesk<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
         domain_types::connector_flow::CreateAccessToken,
         PaymentFlowData,
         domain_types::connector_types::AccessTokenRequestData,
