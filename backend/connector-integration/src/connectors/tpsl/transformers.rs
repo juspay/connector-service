@@ -237,31 +237,12 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
->
-    TryFrom<
-        TpslRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for TpslPaymentsRequest
+> TryFrom<(RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T)> for TpslPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: TpslRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
+        item: (RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T),
     ) -> Result<Self, Self::Error> {
         let (router_data, connector) = item;
         let customer_id = router_data.resource_common_data.get_customer_id()?;
@@ -441,20 +422,12 @@ impl<
     }
 }
 
-impl TryFrom<
-    TpslRouterData<
-        RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        (),
-    >,
-> for TpslPaymentsSyncRequest
+impl TryFrom<(RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, ())> for TpslPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: TpslRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            (),
-        >,
+        item: (RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, ()),
     ) -> Result<Self, Self::Error> {
         let (router_data, connector) = item;
         let customer_id = router_data.resource_common_data.get_customer_id()?;
