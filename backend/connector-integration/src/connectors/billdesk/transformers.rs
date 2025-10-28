@@ -73,7 +73,7 @@ pub struct BilldeskVoidResponse;
 // VoidPC types (separate to avoid conflicts)
 #[derive(Debug, Clone, Serialize)]
 pub struct BilldeskVoidPCRequest;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BilldeskVoidPCResponse;
 
 // PaymentMethodToken types (separate to avoid conflicts)
