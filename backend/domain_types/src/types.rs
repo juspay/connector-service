@@ -5416,17 +5416,15 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
             minor_amount: common_utils::types::MinorUnit::new(minor_amount),
             currency: common_enums::Currency::foreign_try_from(currency)?,
             merchant_order_reference_id,
-            metadata: if value.metadata.is_empty() {
-                None
-            } else {
-                Some(serde_json::Value::Object(
+            metadata: (!value.metadata.is_empty()).then(|| {
+                serde_json::Value::Object(
                     value
                         .metadata
                         .into_iter()
                         .map(|(k, v)| (k, serde_json::Value::String(v)))
                         .collect(),
-                ))
-            },
+                )
+            }),
             webhook_url,
             router_return_url: value.return_url,
             request_incremental_authorization: value.request_incremental_authorization,
