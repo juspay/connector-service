@@ -719,7 +719,7 @@ impl_source_verification_stub!(
 impl_source_verification_stub!(
     VoidPC,
     PaymentFlowData,
-    domain_types::connector_types::PaymentVoidData,
+    domain_types::connector_types::PaymentsCancelPostCaptureData,
     PaymentsResponseData
 );
 
