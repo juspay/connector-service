@@ -15,7 +15,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::tpsl::TPSL, types::ResponseRouterData};
+use crate::{connectors::tpsl::{TPSL, TPSLRouterData}, types::ResponseRouterData};
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
