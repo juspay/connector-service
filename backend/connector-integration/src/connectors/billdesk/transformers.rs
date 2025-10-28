@@ -199,7 +199,7 @@ impl<
         
         // Get merchant ID from auth type
         let merchant_id = match &item.router_data.connector_auth_type {
-            ConnectorAuthType::SignatureKey { api_key, .. } => api_key.expose(),
+            ConnectorAuthType::SignatureKey { api_key, .. } => api_key.clone().expose(),
             _ => return Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         };
 
@@ -254,7 +254,7 @@ impl<
     ) -> Result<Self, Self::Error> {
         // Get merchant ID from auth type
         let merchant_id = match &item.router_data.connector_auth_type {
-            ConnectorAuthType::SignatureKey { api_key, .. } => api_key.expose(),
+            ConnectorAuthType::SignatureKey { api_key, .. } => api_key.clone().expose(),
             _ => return Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         };
 
