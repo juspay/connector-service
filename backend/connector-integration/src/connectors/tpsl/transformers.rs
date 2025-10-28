@@ -15,7 +15,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use serde::{Deserialize, Serialize};
 
-use crate::types::ResponseRouterData;
+use crate::{connectors::tpsl::TPSL, types::ResponseRouterData};
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -329,7 +329,7 @@ impl<
                     date_time::now().format(&date_time::YYYYMMDDHHmmss)?,
                     router_data.resource_common_data.connector_request_reference_id,
                     router_data.request.get_router_return_url()?.as_str(),
-                    router_data.request.email.as_ref().map(|e| e.peek().clone()).unwrap_or_default(),
+                    router_data.request.email.as_ref().map(|e| e.clone()).unwrap_or_default(),
                     customer_id.get_string_repr()
                 )
             }
