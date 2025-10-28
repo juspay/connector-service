@@ -142,7 +142,7 @@ pub struct TpslRefundSyncResponse;
 #[derive(Debug, Serialize)]
 pub struct TpslSyncRequest;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct TpslSyncResponse;
 
 // Stub TryFrom implementations for unsupported flows
