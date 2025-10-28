@@ -5259,7 +5259,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
             customer_id: value.customer_id.map(Secret::new),
             email: email.map(Secret::new),
             name: value.customer_name.map(Secret::new),
-            description: value.description,
+            description: None,
             split_payments: None,
             phone: None,
             preprocessing_id: None,
