@@ -266,7 +266,7 @@ impl<
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
         let request = TpslPaymentsRequest::try_from(TPSLRouterData {
-            connector: *self,
+            connector: self,
             router_data: req,
         })?;
         
