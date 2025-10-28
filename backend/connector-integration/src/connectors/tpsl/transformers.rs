@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use common_utils::{
+    request::Method,
     types::StringMinorUnit,
 };
 use domain_types::{
