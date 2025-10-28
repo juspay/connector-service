@@ -1,6 +1,6 @@
 use common_utils::{
     errors::CustomResult, request::Method,
-    types::{AmountConvertor, StringMinorUnitForConnector},
+    types::AmountConvertor,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
@@ -16,7 +16,7 @@ use hyperswitch_masking::{ExposeInterface, Secret};
 use chrono;
 use serde::{Deserialize, Serialize};
 
-use crate::types::ResponseRouterData;
+use crate::{connectors::tpsl::TPSLRouterData, types::ResponseRouterData};
 
 
 
