@@ -322,7 +322,7 @@ impl<
                     customer_id.get_string_repr(),
                     amount.to_string(),
                     item.router_data.resource_common_data.connector_request_reference_id,
-                    amount,
+                    amount: amount.to_string(),
                     item.router_data.request.currency,
                     item.router_data.resource_common_data.connector_request_reference_id,
                     date_time::format_date(date_time::now(), date_time::DateFormat::YYYYMMDDHHmmss)
