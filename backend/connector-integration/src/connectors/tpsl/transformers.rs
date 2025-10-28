@@ -521,7 +521,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 TryFrom<
     crate::types::ResponseRouterData<
         TpslPaymentsResponse,
-        TPSLRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     >,
 > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
@@ -530,7 +530,7 @@ TryFrom<
     fn try_from(
         item: crate::types::ResponseRouterData<
             TpslPaymentsResponse,
-            TPSLRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
         let crate::types::ResponseRouterData {
@@ -541,7 +541,7 @@ TryFrom<
         
         // For now, just return the original router data
         // In a real implementation, you would process the response and update the router_data accordingly
-        Ok(router_data.router_data)
+        Ok(router_data)
     }
 }
 
