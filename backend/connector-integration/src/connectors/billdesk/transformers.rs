@@ -367,6 +367,8 @@ impl TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData {
 // Implementation for ResponseRouterData to RouterDataV2 conversion (required by macro)
 impl<T> TryFrom<ResponseRouterData<BilldeskPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+where
+    T: PaymentMethodDataTypes,
 {
     type Error = error_stack::Report<ConnectorError>;
     
