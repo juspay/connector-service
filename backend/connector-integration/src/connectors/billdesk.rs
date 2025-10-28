@@ -536,8 +536,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Billdesk,
-    curl_request: Json(BilldeskVoidRequest),
-    curl_response: BilldeskVoidResponse,
+    curl_request: Json(BilldeskCreateConnectorCustomerRequest),
+    curl_response: BilldeskCreateConnectorCustomerResponse,
     flow_name: CreateConnectorCustomer,
     resource_common_data: PaymentFlowData,
     flow_request: domain_types::connector_types::ConnectorCustomerData,
