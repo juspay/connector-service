@@ -644,7 +644,7 @@ impl<
         + 'static
         + serde::Serialize
         + serde::de::DeserializeOwned,
-> TryFrom<ResponseRouterData<TpslPaymentsResponse, Self>>
+> TryFrom<ResponseRouterData<TpslPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
