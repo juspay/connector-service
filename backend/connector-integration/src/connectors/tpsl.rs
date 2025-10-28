@@ -1,8 +1,6 @@
 pub mod transformers;
 pub mod constants;
 
-use std::fmt::Debug;
-
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit};
 use domain_types::{
@@ -19,7 +17,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -106,6 +104,7 @@ impl<
     }
 }
 
+// Use a single create_all_prerequisites call to avoid conflicts
 macros::create_all_prerequisites!(
     connector_name: TPSL,
     generic_type: T,
@@ -115,12 +114,6 @@ macros::create_all_prerequisites!(
             request_body: TpslPaymentsRequest,
             response_body: TpslPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: PSync,
-            request_body: TpslPaymentsRequest,
-            response_body: TpslPaymentsResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -142,7 +135,7 @@ macros::create_all_prerequisites!(
 
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+            _req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
             // Use a default base URL for now
             "https://www.tpsl-india.in"
@@ -161,6 +154,7 @@ macros::create_all_prerequisites!(
     }
 );
 
+// Only implement Authorize flow with macro
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: TPSL,
@@ -194,43 +188,6 @@ macros::macro_connector_implementation!(
             _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}{}", "https://www.tpsl-india.in", constants::api_endpoints::UPI_TRANSACTION))
-        }
-    }
-);
-
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: TPSL,
-    curl_request: Json(TpslPaymentsRequest),
-    curl_response: TpslPaymentsResponse,
-    flow_name: PSync,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsSyncData,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut headers = vec![(
-                headers::CONTENT_TYPE.to_string(),
-                self.common_get_content_type().to_string().into(),
-            )];
-
-            let auth_headers = self.get_auth_headers(&req.connector_auth_type)?;
-            headers.extend(auth_headers);
-
-            Ok(headers)
-        }
-
-        fn get_url(
-            &self,
-            _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}{}", "https://www.tpsl-india.in", constants::api_endpoints::UPI_TOKEN_GENERATION))
         }
     }
 );
@@ -291,6 +248,75 @@ impl<
             network_decline_code: None,
             network_error_message: None,
         })
+    }
+}
+
+// Manual implementation for PSync
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> for TPSL<T>
+{
+    fn build_request_v2(
+        &self,
+        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+        let request = TpslPaymentsRequest::try_from(TPSLRouterData {
+            connector: self,
+            router_data: req,
+        })?;
+        
+        let url = format!("{}{}", "https://www.tpsl-india.in", constants::api_endpoints::UPI_TOKEN_GENERATION);
+        
+        let mut headers = vec![(
+            headers::CONTENT_TYPE.to_string(),
+            self.common_get_content_type().to_string().into(),
+        )];
+
+        let auth_headers = self.get_auth_headers(&req.connector_auth_type)?;
+        headers.extend(auth_headers);
+
+        Ok(Some(common_utils::request::RequestBuilder::new()
+            .method(common_utils::request::Method::Post)
+            .url(&url)
+            .attach_default_headers()
+            .headers(headers)
+            .body(common_utils::request::RequestContent::Json(request))
+            .build()))
+    }
+
+    fn handle_response_v2(
+        &self,
+        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        res: Response,
+    ) -> CustomResult<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, errors::ConnectorError>
+    {
+        let response: TpslPaymentsResponse = res
+            .response
+            .parse_struct("TpslPaymentsResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        let response_router_data = ResponseRouterData {
+            response,
+            router_data: req,
+            http_code: res.status_code,
+        };
+
+        response_router_data
+            .try_into()
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
     }
 }
 
