@@ -227,7 +227,7 @@ pub fn generate_checksum<T: PaymentMethodDataTypes + std::fmt::Debug + std::mark
 pub fn generate_checksum_for_post_auth<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
     req: &RouterDataV2<PostAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
     auth: &BilldeskAuth,
-    amount_converter: &dyn common_utils::types::AmountConvertor<Output = String>,
+    _amount_converter: &dyn common_utils::types::AmountConvertor<Output = String>,
 ) -> CustomResult<String, errors::ConnectorError> {
     // Generate checksum based on Billdesk's requirements for PostAuthenticate
     let checksum_input = format!(
@@ -247,7 +247,7 @@ pub fn generate_checksum_for_post_auth<T: PaymentMethodDataTypes + std::fmt::Deb
 pub fn generate_checksum_for_auth<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
     req: &RouterDataV2<Authenticate, PaymentFlowData, domain_types::connector_types::PaymentsAuthenticateData<T>, PaymentsResponseData>,
     auth: &BilldeskAuth,
-    amount_converter: &dyn common_utils::types::AmountConvertor<Output = String>,
+    _amount_converter: &dyn common_utils::types::AmountConvertor<Output = String>,
 ) -> CustomResult<String, errors::ConnectorError> {
     // Generate checksum based on Billdesk's requirements for Authenticate
     let checksum_input = format!(
@@ -267,7 +267,7 @@ pub fn generate_checksum_for_auth<T: PaymentMethodDataTypes + std::fmt::Debug + 
 pub fn generate_checksum_for_pre_auth<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
     req: &RouterDataV2<PreAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
     auth: &BilldeskAuth,
-    amount_converter: &dyn common_utils::types::AmountConvertor<Output = String>,
+    _amount_converter: &dyn common_utils::types::AmountConvertor<Output = String>,
 ) -> CustomResult<String, errors::ConnectorError> {
     // Generate checksum based on Billdesk's requirements for PreAuthenticate
     let checksum_input = format!(
