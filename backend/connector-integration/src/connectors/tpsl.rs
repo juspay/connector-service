@@ -307,9 +307,8 @@ impl<
             http_code: res.status_code,
         };
 
-        Ok::<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, error_stack::Report<errors::ConnectorError>>(
-            response_router_data.try_into()
-        ).change_context(errors::ConnectorError::ResponseDeserializationFailed)
+        response_router_data.try_into()
+            .map_err(|e| e.change_context(errors::ConnectorError::ResponseDeserializationFailed))
     }
 
     fn get_error_response_v2(
