@@ -17,6 +17,31 @@ use serde::{Deserialize, Serialize};
 
 use crate::{connectors::tpsl::TPSLRouterData, types::ResponseRouterData};
 
+// TPSLRouterData type definition
+#[derive(Debug, Clone)]
+pub struct TPSLRouterData<'a, F, FCD, Req, Resp> {
+    pub router_data: &'a RouterDataV2<F, FCD, Req, Resp>,
+    pub connector: &'a T,
+}
+
+impl<'a, F, FCD, Req, Resp> FlowTypes for TPSLRouterData<'a, F, FCD, Req, Resp> {
+    type Flow = F;
+    type FlowCommonData = FCD;
+    type Request = Req;
+    type Response = Resp;
+}
+
+impl<'a, F, FCD, Req, Resp> TryFrom<&' RouterDataV2<F, FCD, Req, Resp>> for TPSLRouterData<'a, F, FCD, Req, Resp> {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(router_data: &'a RouterDataV2<F, FCD, Req, Resp>) -> Result<Self, Self::Error> {
+        Ok(Self {
+            router_data,
+            connector: PhantomData,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslAuth {
