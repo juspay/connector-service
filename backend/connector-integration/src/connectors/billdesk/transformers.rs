@@ -1,21 +1,18 @@
 use std::collections::HashMap;
 
 use common_utils::{
-    errors::CustomResult, ext_traits::ValueExt, id_type, request::Method, types::StringMinorUnit,
-    Email,
+    errors::CustomResult, request::Method,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
 };
-use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, Secret, ExposeInterface};
+use hyperswitch_masking::{Secret, ExposeInterface};
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
@@ -34,7 +31,7 @@ pub struct BilldeskPaymentsSyncRequest {
     msg: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BilldeskPaymentsResponse {
     msg: Option<String>,
@@ -42,7 +39,7 @@ pub struct BilldeskPaymentsResponse {
     txnrefno: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BilldeskPaymentsSyncResponse {
     msg: Option<String>,
@@ -131,9 +128,9 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuth {
     
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key1, api_secret } => Ok(Self {
+            ConnectorAuthType::SignatureKey { api_key, key1, .. } => Ok(Self {
                 merchant_id: api_key.clone(),
-                checksum_key: key1.clone().ok_or(errors::ConnectorError::FailedToObtainAuthType)?,
+                checksum_key: key1.clone().unwrap_or_else(|| Secret::new("".to_string())),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
@@ -143,16 +140,19 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuth {
 pub fn generate_checksum<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
     req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     auth: &BilldeskAuth,
+    amount_converter: &dyn common_utils::types::AmountConverterTrait<Output = String>,
 ) -> CustomResult<String, errors::ConnectorError> {
     // Generate checksum based on Billdesk's requirements
     // This is a simplified implementation - in production, use proper checksum algorithm
+    let amount = amount_converter.convert(
+        req.request.minor_amount,
+        req.request.currency,
+    ).map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+    
     let checksum_input = format!(
         "{}{}{}",
         req.resource_common_data.connector_request_reference_id,
-        req.connector.amount_converter.convert(
-            req.request.minor_amount,
-            req.request.currency,
-        )?,
+        amount,
         auth.checksum_key.expose()
     );
     
