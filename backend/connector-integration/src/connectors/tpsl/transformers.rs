@@ -574,34 +574,4 @@ for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsR
     }
 }
 
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> TryFrom<TpslPaymentsSyncResponse> for PaymentsResponseData {
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(response: TpslPaymentsSyncResponse) -> Result<Self, Self::Error> {
-        let status = match response.transaction_state.as_str() {
-            "SUCCESS" => common_enums::AttemptStatus::Charged,
-            "FAILURE" => common_enums::AttemptStatus::Failure,
-            "PENDING" => common_enums::AttemptStatus::Pending,
-            _ => common_enums::AttemptStatus::AuthenticationPending,
-        };
-
-        Ok(PaymentsResponseData::TransactionResponse {
-            resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(response.merchant_transaction_identifier),
-            redirection_data: None,
-            mandate_reference: None,
-            connector_metadata: None,
-            network_txn_id: response.payment_method.payment_transaction.bank_reference_identifier,
-            connector_response_reference_id: Some(response.merchant_transaction_identifier),
-            incremental_authorization_allowed: None,
-            status_code: response.status_code
-                .and_then(|s| s.parse::<u16>().ok())
-                .unwrap_or(200),
-        })
-    }
-}
+// Sync response implementation removed for now
