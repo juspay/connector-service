@@ -487,7 +487,7 @@ impl<
                 subType: Some("INTENT".to_string()),
                 amount,
                 currency: item.router_data.request.currency.to_string(),
-                dateTime: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                dateTime: time::now().format("%Y-%m-%d %H:%M:%S").to_string(),
                 requestType: "TXN".to_string(),
                 token: item.router_data.request.connector_transaction_id.get_connector_transaction_id()
                     .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?,
