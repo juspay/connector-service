@@ -15,7 +15,7 @@ use domain_types::{
         Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData,
+        PaymentFlowData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
