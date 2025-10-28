@@ -54,4 +54,21 @@ pub mod constants {
         pub const USER_ABORTED: &str = "user_aborted";
         pub const INITIATED: &str = "initiated";
     }
+
+    pub mod base_urls {
+        pub const PRODUCTION: &str = "https://pay.easebuzz.in";
+        pub const TEST: &str = "https://testpay.easebuzz.in";
+    }
+
+    pub mod auth {
+        pub const BASIC_AUTH_PREFIX: &str = "Basic";
+    }
+
+    pub mod defaults {
+        pub const PRODUCT_INFO: &str = "Payment";
+        pub const DEFAULT_IP_ADDRESS: &str = "127.0.0.1";
+        pub const DEFAULT_USER_AGENT: &str = "Mozilla/5.0";
+        pub const DEFAULT_CURRENCY: &str = "INR";
+        pub const DEFAULT_AMOUNT: i64 = 1000; // 10.00 INR in minor units
+    }
 }
