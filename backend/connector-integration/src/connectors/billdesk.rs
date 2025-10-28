@@ -51,9 +51,9 @@ pub(crate) mod headers {
 
 // MANDATORY: Use UCS v2 macro framework - NO manual trait implementations
 macros::create_all_prerequisites!(
-    Billdesk,
-    T,
-    [
+    connector_name: Billdesk,
+    generic_type: T,
+    api: [
         (
             Authorize,
             BilldeskPaymentsRequest,
