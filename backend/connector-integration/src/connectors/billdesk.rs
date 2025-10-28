@@ -35,7 +35,7 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{self as billdesk, BilldeskPaymentsRequest, BilldeskPaymentsResponse, BilldeskPaymentsSyncRequest, BilldeskPaymentsSyncResponse,
-    BilldeskVoidRequest, BilldeskVoidResponse, BilldeskVoidPCRequest, BilldeskVoidPCResponse, BilldeskCaptureRequest, BilldeskCaptureResponse,
+    BilldeskVoidRequest, BilldeskVoidResponse, BilldeskVoidPCRequest, BilldeskVoidPCResponse, BilldeskPaymentMethodTokenRequest, BilldeskPaymentMethodTokenResponse, BilldeskCaptureRequest, BilldeskCaptureResponse,
     BilldeskRefundRequest, BilldeskRefundResponse, BilldeskRefundSyncRequest, BilldeskRefundSyncResponse,
     BilldeskCreateOrderRequest, BilldeskCreateOrderResponse, BilldeskSessionTokenRequest, BilldeskSessionTokenResponse,
     BilldeskMandateRequest, BilldeskMandateResponse, BilldeskRepeatPaymentRequest, BilldeskRepeatPaymentResponse,
@@ -162,8 +162,8 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PaymentMethodToken,
-            request_body: BilldeskVoidRequest,
-            response_body: BilldeskVoidResponse,
+            request_body: BilldeskPaymentMethodTokenRequest,
+            response_body: BilldeskPaymentMethodTokenResponse,
             router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentsMethodTokenData<T>, PaymentsResponseData>,
         )
     ],
