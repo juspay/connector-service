@@ -320,19 +320,7 @@ macros::create_all_prerequisites!(
             request_body: BilldeskPaymentsSyncRequest,
             response_body: BilldeskPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ),
-        // Stub types for unsupported flows
-        (flow: Void, request_body: billdesk::BilldeskVoidRequest, response_body: billdesk::BilldeskVoidResponse, router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>),
-        (flow: Capture, request_body: billdesk::BilldeskCaptureRequest, response_body: billdesk::BilldeskCaptureResponse, router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>),
-        (flow: Refund, request_body: billdesk::BilldeskRefundRequest, response_body: billdesk::BilldeskRefundResponse, router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>),
-        (flow: RSync, request_body: billdesk::BilldeskRefundSyncRequest, response_body: billdesk::BilldeskRefundSyncResponse, router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>),
-        (flow: CreateOrder, request_body: billdesk::BilldeskCreateOrderRequest, response_body: billdesk::BilldeskCreateOrderResponse, router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>),
-        (flow: CreateSessionToken, request_body: billdesk::BilldeskSessionTokenRequest, response_body: billdesk::BilldeskSessionTokenResponse, router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>),
-        (flow: SetupMandate, request_body: billdesk::BilldeskSetupMandateRequest, response_body: billdesk::BilldeskSetupMandateResponse, router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>),
-        (flow: RepeatPayment, request_body: billdesk::BilldeskRepeatPaymentRequest, response_body: billdesk::BilldeskRepeatPaymentResponse, router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>),
-        (flow: Accept, request_body: billdesk::BilldeskAcceptDisputeRequest, response_body: billdesk::BilldeskAcceptDisputeResponse, router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>),
-        (flow: SubmitEvidence, request_body: billdesk::BilldeskSubmitEvidenceRequest, response_body: billdesk::BilldeskSubmitEvidenceResponse, router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>),
-        (flow: DefendDispute, request_body: billdesk::BilldeskDefendDisputeRequest, response_body: billdesk::BilldeskDefendDisputeResponse, router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>)
+        )
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
