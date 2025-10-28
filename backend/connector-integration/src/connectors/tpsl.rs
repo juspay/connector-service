@@ -374,13 +374,9 @@ macros::create_all_prerequisites!(
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+            _req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
-                constants::urls::TEST_BASE
-            } else {
-                constants::urls::PRODUCTION_BASE
-            }
+            constants::urls::PRODUCTION_BASE
         }
     }
 );
