@@ -483,7 +483,7 @@ impl<
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         match item.router_data.request.payment_method_type {
-            Some(common_enums::PaymentMethodType::Upi) => {
+            Some(common_enums::PaymentMethodType::UpiCollect) => {
                 // Create UPI transaction request
                 let request = TpslUPITxnRequest {
                     merchant: MerchantPayload {
