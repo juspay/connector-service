@@ -60,6 +60,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Stripe => Box::new(Stripe::new()),
             ConnectorEnum::Cybersource => Box::new(Cybersource::new()),
             ConnectorEnum::Worldpay => Box::new(Worldpay::new()),
+            ConnectorEnum::Tpsl => Box::new(TPSL::new()),
         }
     }
 }
