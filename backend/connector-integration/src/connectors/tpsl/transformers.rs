@@ -1,22 +1,21 @@
 use std::collections::HashMap;
 
 use common_utils::{
-    ext_traits::ValueExt, request::Method,
+    ext_traits::ValueExt,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData},
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
-    router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::{Maskable, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::tpsl::TpslRouterData, types::ResponseRouterData};
+use crate::connectors::tpsl::TpslRouterData;
 
 // TPSL Authentication Types
 #[derive(Default, Debug, Deserialize)]
@@ -388,10 +387,10 @@ impl<
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
-        let email = item.router_data.request.email.clone().unwrap_or_default();
+        let _email = item.router_data.request.email.clone().unwrap_or_default();
         // For UPI payments, we need to extract VPA from payment method data
         let vpa = match &item.router_data.request.payment_method_data {
-            domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
+            domain_types::payment_method_data::PaymentMethodData::Upi(_upi_data) => {
                 "test_vpa@upi".to_string() // Placeholder VPA
             }
             _ => return Err(errors::ConnectorError::MissingRequiredField { field_name: "vpa" }.into()),
@@ -532,6 +531,8 @@ for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsR
             http_code: _http_code,
         } = item;
         
+        // For now, just return the original router data
+        // In a real implementation, you would process the response and update the router_data accordingly
         Ok(router_data.router_data)
     }
 }
