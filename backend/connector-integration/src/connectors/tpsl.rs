@@ -874,7 +874,7 @@ macros::macro_connector_implementation!(
             )])
         }
 
-        fn get get_url(
+        fn get_url(
             &self,
             _req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
