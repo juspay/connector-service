@@ -138,6 +138,177 @@ pub struct TpslRefundSyncRequest;
 #[derive(Debug, Deserialize)]
 pub struct TpslRefundSyncResponse;
 
+// Stub TryFrom implementations for unsupported flows
+impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
+    for TpslCaptureRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
+        Err(errors::ConnectorError::NotImplemented("Capture flow not implemented".to_string()).into())
+    }
+}
+
+impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
+    for TpslVoidRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
+        Err(errors::ConnectorError::NotImplemented("Void flow not implemented".to_string()).into())
+    }
+}
+
+impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for TpslRefundRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>) -> Result<Self, Self::Error> {
+        Err(errors::ConnectorError::NotImplemented("Refund flow not implemented".to_string()).into())
+    }
+}
+
+impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>, T>>
+    for TpslSetupMandateRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<F, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
+        Err(errors::ConnectorError::NotImplemented("SetupMandate flow not implemented".to_string()).into())
+    }
+}
+
+impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>, T>>
+    for TpslCreateOrderRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>, T>) -> Result<Self, Self::Error> {
+        Err(errors::ConnectorError::NotImplemented("CreateOrder flow not implemented".to_string()).into())
+    }
+}
+
+impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>, T>>
+    for TpslSessionTokenRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<F, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>, T>) -> Result<Self, Self::Error> {
+        Err(errors::ConnectorError::NotImplemented("SessionToken flow not implemented".to_string()).into())
+    }
+}
+
+impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>, T>>
+    for TpslAccessTokenRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<F, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>, T>) -> Result<Self, Self::Error> {
+        Err(errors::ConnectorError::NotImplemented("AccessToken flow not implemented".to_string()).into())
+    }
+}
+
+impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>, T>>
+    for TpslCreateCustomerRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<F, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>, T>) -> Result<Self, Self::Error> {
+        Err(errors::ConnectorError::NotImplemented("CreateCustomer flow not implemented".to_string()).into())
+    }
+}
+
+impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>, T>>
+    for TpslPaymentTokenRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>, T>) -> Result<Self, Self::Error> {
+        Err(errors::ConnectorError::NotImplemented("PaymentToken flow not implemented".to_string()).into())
+    }
+}
+
+impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>, T>>
+    for TpslRepeatPaymentRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<F, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
+        Err(errors::ConnectorError::NotImplemented("RepeatPayment flow not implemented".to_string()).into())
+    }
+}
+
+impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, DisputeFlowData, AcceptDisputeData, DisputeResponseData>, T>>
+    for TpslAcceptDisputeRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<F, DisputeFlowData, AcceptDisputeData, DisputeResponseData>, T>) -> Result<Self, Self::Error> {
+        Err(errors::ConnectorError::NotImplemented("AcceptDispute flow not implemented".to_string()).into())
+    }
+}
+
+impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>, T>>
+    for TpslSubmitEvidenceRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<F, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>, T>) -> Result<Self, Self::Error> {
+        Err(errors::ConnectorError::NotImplemented("SubmitEvidence flow not implemented".to_string()).into())
+    }
+}
+
+impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, DisputeFlowData, DisputeDefendData, DisputeResponseData>, T>>
+    for TpslDefendDisputeRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<F, DisputeFlowData, DisputeDefendData, DisputeResponseData>, T>) -> Result<Self, Self::Error> {
+        Err(errors::ConnectorError::NotImplemented("DefendDispute flow not implemented".to_string()).into())
+    }
+}
+
+impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>, T>>
+    for TpslPreAuthenticateRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
+        Err(errors::ConnectorError::NotImplemented("PreAuthenticate flow not implemented".to_string()).into())
+    }
+}
+
+impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>, T>>
+    for TpslAuthenticateRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
+        Err(errors::ConnectorError::NotImplemented("Authenticate flow not implemented".to_string()).into())
+    }
+}
+
+impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>, T>>
+    for TpslPostAuthenticateRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
+        Err(errors::ConnectorError::NotImplemented("PostAuthenticate flow not implemented".to_string()).into())
+    }
+}
+
+impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
+    for TpslRefundSyncRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>, T>) -> Result<Self, Self::Error> {
+        Err(errors::ConnectorError::NotImplemented("RefundSync flow not implemented".to_string()).into())
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslTransactionRequest {
