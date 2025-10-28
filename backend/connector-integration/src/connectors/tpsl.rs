@@ -489,7 +489,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> interfaces::connector_types::RepeatPaymentV2<T> for TPSL<T>
+> interfaces::connector_types::RepeatPaymentV2 for TPSL<T>
 {
 }
 
