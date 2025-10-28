@@ -523,7 +523,7 @@ for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsR
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: crate::types::ResponseRouterData<TpslPaymentsResponse, TpslRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>,
+        item: crate::types::ResponseRouterData<TpslPaymentsResponse, TPSLRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>,
     ) -> Result<Self, Self::Error> {
         let crate::types::ResponseRouterData {
             response: _response,
