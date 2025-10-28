@@ -46,6 +46,9 @@ use transformers::{
     EaseBuzzVoidRequest, EaseBuzzVoidResponse, EaseBuzzCaptureRequest, EaseBuzzCaptureResponse,
     EaseBuzzRefundRequest, EaseBuzzRefundResponse, EaseBuzzRefundSyncRequest, EaseBuzzRefundSyncResponse,
     EaseBuzzCreateOrderRequest, EaseBuzzCreateOrderResponse, EaseBuzzSessionTokenRequest, EaseBuzzSessionTokenResponse,
+    EaseBuzzPreAuthenticateRequest, EaseBuzzPreAuthenticateResponse, EaseBuzzAuthenticateRequest, EaseBuzzAuthenticateResponse,
+    EaseBuzzPostAuthenticateRequest, EaseBuzzPostAuthenticateResponse, EaseBuzzCreateAccessTokenRequest, EaseBuzzCreateAccessTokenResponse,
+    EaseBuzzCreateConnectorCustomerRequest, EaseBuzzCreateConnectorCustomerResponse, EaseBuzzPaymentMethodTokenRequest, EaseBuzzPaymentMethodTokenResponse,
     EaseBuzzSetupMandateRequest, EaseBuzzSetupMandateResponse, EaseBuzzRepeatPaymentRequest, EaseBuzzRepeatPaymentResponse,
     EaseBuzzAcceptDisputeRequest, EaseBuzzAcceptDisputeResponse, EaseBuzzDefendDisputeRequest, EaseBuzzDefendDisputeResponse,
     EaseBuzzSubmitEvidenceRequest, EaseBuzzSubmitEvidenceResponse, EaseBuzzErrorResponse
