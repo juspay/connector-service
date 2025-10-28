@@ -17,7 +17,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Maskable, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
+use crate::types::ResponseRouterData;
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -209,66 +209,43 @@ fn create_billdesk_message(
 }
 
 impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        BilldeskRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for BilldeskPaymentsRequest
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+    for BilldeskPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: BilldeskRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
+        item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let customer_id = item.resource_common_data.get_customer_id()?;
         let transaction_id = item
-            .router_data
             .resource_common_data
             .connector_request_reference_id;
         
         let amount = item
-            .connector
-            .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .request
+            .minor_amount
+            .to_string();
 
-        let auth = BilldeskAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = BilldeskAuthType::try_from(&item.connector_auth_type)?;
         let merchant_id = auth.merchant_id.peek();
 
-        let ip_address = item.router_data.request.get_ip_address_as_optional()
+        let ip_address = item.request.get_ip_address_as_optional()
             .map(|ip| ip.expose())
             .unwrap_or_else(|| "127.0.0.1".to_string());
 
-        let user_agent = item.router_data.request.browser_info
+        let user_agent = item.request.browser_info
             .as_ref()
             .and_then(|info| info.user_agent.clone())
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
 
-        match item.router_data.request.payment_method_type {
+        match item.request.payment_method_type {
             Some(common_enums::PaymentMethodType::UpiCollect) => {
                 let mut additional_params = HashMap::new();
                 additional_params.insert("BankID".to_string(), "UPI".to_string());
@@ -278,8 +255,8 @@ impl<
                     merchant_id,
                     &customer_id.get_string_repr(),
                     &transaction_id,
-                    &amount.to_string(),
-                    &item.router_data.request.currency.to_string(),
+                    &amount,
+                    &item.request.currency.to_string(),
                     &additional_params,
                 );
 
@@ -301,8 +278,8 @@ impl<
                     merchant_id,
                     &customer_id.get_string_repr(),
                     &transaction_id,
-                    &amount.to_string(),
-                    &item.router_data.request.currency.to_string(),
+                    &amount,
+                    &item.request.currency.to_string(),
                     &additional_params,
                 );
 
@@ -320,6 +297,36 @@ impl<
             )
             .into()),
         }
+    }
+}
+
+impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+    for BilldeskPaymentsSyncRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    
+    fn try_from(
+        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    ) -> Result<Self, Self::Error> {
+        let customer_id = item.resource_common_data.get_customer_id()?;
+        let transaction_id = item
+            .resource_common_data
+            .connector_request_reference_id;
+
+        let auth = BilldeskAuthType::try_from(&item.connector_auth_type)?;
+        let merchant_id = auth.merchant_id.peek();
+
+        let additional_params = HashMap::new();
+        let msg = create_billdesk_message(
+            merchant_id,
+            &customer_id.get_string_repr(),
+            &transaction_id,
+            "0", // Amount not needed for status check
+            &item.request.currency.to_string(),
+            &additional_params,
+        );
+
+        Ok(Self { msg })
     }
 }
 
@@ -373,21 +380,19 @@ fn get_redirect_form_data(
 }
 
 impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize
-            + Serialize,
-    > TryFrom<ResponseRouterData<BilldeskPaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> TryFrom<ResponseRouterData<BilldeskPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: ResponseRouterData<BilldeskPaymentsResponse, Self>,
+        item: ResponseRouterData<BilldeskPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
@@ -431,6 +436,80 @@ impl<
                         mandate_reference: None,
                         connector_metadata: None,
                         network_txn_id: None,
+                        connector_response_reference_id: None,
+                        incremental_authorization_allowed: None,
+                        status_code: http_code,
+                    }),
+                )
+            }
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
+            response,
+            ..router_data
+        })
+    }
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    
+    fn try_from(
+        item: ResponseRouterData<BilldeskPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+        
+        let (status, response) = match response {
+            BilldeskPaymentsSyncResponse::BilldeskError(error_data) => (
+                common_enums::AttemptStatus::Failure,
+                Err(ErrorResponse {
+                    code: error_data.error.to_string(),
+                    status_code: item.http_code,
+                    message: error_data.error_description.clone().unwrap_or_default(),
+                    reason: error_data.error_description,
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    network_error_message: None,
+                }),
+            ),
+            BilldeskPaymentsSyncResponse::BilldeskData(response_data) => {
+                // Map Billdesk status to our status
+                let status = match response_data.auth_status.as_str() {
+                    "0300" => common_enums::AttemptStatus::Charged,
+                    "0396" => common_enums::AttemptStatus::AuthenticationPending,
+                    "0399" => common_enums::AttemptStatus::Pending,
+                    _ => common_enums::AttemptStatus::Failure,
+                };
+
+                (
+                    status,
+                    Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(
+                            response_data.txn_reference_no.clone(),
+                        ),
+                        redirection_data: None,
+                        mandate_reference: None,
+                        connector_metadata: None,
+                        network_txn_id: Some(response_data.bank_reference_no.clone()),
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
                         status_code: http_code,
