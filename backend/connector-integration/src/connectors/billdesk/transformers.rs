@@ -174,19 +174,19 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > TryFrom<BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
+    > TryFrom<&BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
     for BilldeskPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        item: &BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let amount = item.connector.amount_converter.convert(
             item.router_data.request.minor_amount,
             item.router_data.request.currency,
-        )?;
+        ).map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
         let currency = item.router_data.request.currency.to_string();
         
         // Extract IP address
@@ -247,13 +247,13 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > TryFrom<BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+    > TryFrom<&BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
     for BilldeskPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
+        item: &BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         // Get merchant ID from auth type
         let merchant_id = match &item.router_data.connector_auth_type {
