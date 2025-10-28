@@ -411,7 +411,7 @@ impl<
                     description: "UPI Payment".to_string(),
                     provider_identifier: "UPI".to_string(),
                     surcharge_or_discount_amount: "0".to_string(),
-                    amount: amount.clone(),
+                    amount: amount.to_string(),
                     com_amt: "0".to_string(),
                     s_k_u: "UPI".to_string(),
                     reference: item.router_data.resource_common_data.connector_request_reference_id.clone(),
