@@ -348,7 +348,7 @@ impl<
                     time::now().format("%Y-%m-%d %H:%M:%S"),
                     item.resource_common_data.connector_request_reference_id,
                     item.router_data.request.get_router_return_url()?.as_str(),
-                    item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
+                    item.router_data.request.email.as_ref().map(|e| e.peek().clone()).unwrap_or_default(),
                     customer_id.get_string_repr()
                 )
             }
