@@ -88,6 +88,12 @@ pub struct BilldeskCreateConnectorCustomerRequest;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BilldeskCreateConnectorCustomerResponse;
 
+// CreateAccessToken types (separate to avoid conflicts)
+#[derive(Debug, Clone, Serialize)]
+pub struct BilldeskCreateAccessTokenRequest;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BilldeskCreateAccessTokenResponse;
+
 // PostAuthenticate types (reuse payments types with different names to avoid conflicts)
 #[derive(Debug, Clone, Serialize)]
 pub struct BilldeskPostAuthenticateRequest {
