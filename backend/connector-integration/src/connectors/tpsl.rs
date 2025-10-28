@@ -52,8 +52,6 @@ use transformers::{
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
-pub type TpslRouterData<F, T> = domain_types::router_data_v2::ConnectorRouterData<F, T>;
-
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
