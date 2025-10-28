@@ -539,10 +539,7 @@ impl<
                         tenure_id: "".to_string(),
                     },
                     consumer: ConsumerIntentPayload {
-                        mobile_number: item.router_data.request.payment_method_data
-                            .get_optional_billing_phone_number()
-                            .and_then(|phone| phone.expose().ok())
-                            .unwrap_or_default(),
+                        mobile_number: String::default(), // TODO: Extract phone number from payment method data
                         email_id: item.router_data.request.email
                             .clone()
                             .map(|e| e.peek().to_string())
