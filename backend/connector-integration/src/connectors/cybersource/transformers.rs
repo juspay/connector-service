@@ -3895,9 +3895,17 @@ impl<
         let error_response =
             get_error_response_if_failure((&item.response, mandate_status, item.http_code));
 
+        let connector_response = item
+            .response
+            .processor_information
+            .as_ref()
+            .map(AdditionalPaymentMethodConnectorResponse::from)
+            .map(domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data);
+
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status: mandate_status,
+                connector_response,
                 ..item.router_data.resource_common_data
             },
             response: match error_response {
