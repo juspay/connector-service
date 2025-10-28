@@ -422,13 +422,13 @@ pub enum TpslPaymentsSyncResponse {
 }
 
 // CORRECT: Use proper types for TryFrom implementations expected by macro framework
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<crate::connectors::tpsl::TPSLRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
     for TpslPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: crate::connectors::tpsl::TPSLRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
         let customer_id = item.router_data.resource_common_data.get_customer_id()?;
