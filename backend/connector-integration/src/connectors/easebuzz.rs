@@ -1,7 +1,7 @@
 pub mod transformers;
 pub mod constants;
 
-use std::marker::PhantomData;
+use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
 use common_utils::{
@@ -24,13 +24,13 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -41,7 +41,15 @@ use interfaces::{
 use serde::Serialize;
 
 use super::macros;
-use transformers as easebuzz_transformers;
+use transformers::{
+    EaseBuzzPaymentsRequest, EaseBuzzPaymentsResponse, EaseBuzzPaymentsSyncRequest, EaseBuzzPaymentsSyncResponse,
+    EaseBuzzVoidRequest, EaseBuzzVoidResponse, EaseBuzzCaptureRequest, EaseBuzzCaptureResponse,
+    EaseBuzzRefundRequest, EaseBuzzRefundResponse, EaseBuzzRefundSyncRequest, EaseBuzzRefundSyncResponse,
+    EaseBuzzCreateOrderRequest, EaseBuzzCreateOrderResponse, EaseBuzzSessionTokenRequest, EaseBuzzSessionTokenResponse,
+    EaseBuzzSetupMandateRequest, EaseBuzzSetupMandateResponse, EaseBuzzRepeatPaymentRequest, EaseBuzzRepeatPaymentResponse,
+    EaseBuzzAcceptDisputeRequest, EaseBuzzAcceptDisputeResponse, EaseBuzzDefendDisputeRequest, EaseBuzzDefendDisputeResponse,
+    EaseBuzzSubmitEvidenceRequest, EaseBuzzSubmitEvidenceResponse, EaseBuzzErrorResponse
+};
 use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub(crate) mod headers {
