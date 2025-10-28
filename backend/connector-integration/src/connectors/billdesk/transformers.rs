@@ -278,7 +278,7 @@ impl<
                     merchant_id,
                     &customer_id.get_string_repr(),
                     &transaction_id,
-                    &amount,
+                    amount.as_str(),
                     &item.router_data.request.currency.to_string(),
                     &additional_params,
                 );
@@ -301,7 +301,7 @@ impl<
                     merchant_id,
                     &customer_id.get_string_repr(),
                     &transaction_id,
-                    &amount,
+                    amount.as_str(),
                     &item.router_data.request.currency.to_string(),
                     &additional_params,
                 );
