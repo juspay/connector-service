@@ -237,25 +237,24 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> TryFrom<(RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, TPSL<T>)> for TpslPaymentsRequest
+> TryFrom<TPSLRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>> for TpslPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: (RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, TPSL<T>),
+        item: TPSLRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
-        let (router_data, connector) = item;
-        let customer_id = router_data.resource_common_data.get_customer_id()?;
-        let amount = connector
+        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let amount = item.connector
             .amount_converter
             .convert(
-                router_data.request.minor_amount,
-                router_data.request.currency,
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         // Create transaction message based on UPI payment method
-        let transaction_message = match router_data.resource_common_data.payment_method {
+        let transaction_message = match item.router_data.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => {
                 format!(
                     r#"{{
@@ -423,20 +422,19 @@ impl<
     }
 }
 
-impl TryFrom<(RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, TPSL<domain_types::payment_method_data::DefaultPCIHolder>)> for TpslPaymentsSyncRequest
+impl TryFrom<TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, domain_types::payment_method_data::DefaultPCIHolder>> for TpslPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: (RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, TPSL<domain_types::payment_method_data::DefaultPCIHolder>),
+        item: TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, domain_types::payment_method_data::DefaultPCIHolder>,
     ) -> Result<Self, Self::Error> {
-        let (router_data, connector) = item;
-        let customer_id = router_data.resource_common_data.get_customer_id()?;
-        let amount = connector
+        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let amount = item.connector
             .amount_converter
             .convert(
-                router_data.request.amount,
-                router_data.request.currency,
+                item.router_data.request.amount,
+                item.router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
@@ -452,11 +450,11 @@ impl TryFrom<(RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
                 transaction_type: Some("SALE".to_string()),
                 subType: Some("INTENT".to_string()),
                 amount,
-                currency: router_data.request.currency.to_string(),
+                currency: item.router_data.request.currency.to_string(),
                 dateTime: date_time::format_date(date_time::now(), date_time::DateFormat::YYYYMMDDHHmmss)
                     .change_context(ConnectorError::RequestEncodingFailed)?,
                 requestType: "TXN".to_string(),
-                token: router_data.request.connector_transaction_id.get_connector_transaction_id()
+                token: item.router_data.request.connector_transaction_id.get_connector_transaction_id()
                     .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?,
             },
             consumer: TpslConsumerDataType {
