@@ -529,7 +529,11 @@ impl<
                         currency: item.router_data.request.currency.to_string(),
                         is_registration: "N".to_string(),
                         identifier: item.router_data.resource_common_data.connector_request_reference_id.clone(),
-                        date_time: chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string(),
+                        date_time: std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_secs()
+                        .to_string(),
                         token: auth.merchant_key.peek().to_string(),
                         security_token: auth.merchant_key.peek().to_string(),
                         sub_type: "SALE".to_string(),
@@ -617,7 +621,11 @@ impl<
                 sub_type: Some("SALE".to_string()),
                 amount: amount.get_amount_as_string(),
                 currency: item.router_data.request.currency.to_string(),
-                date_time: chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string(),
+                date_time: std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_secs()
+                        .to_string(),
                 request_type: "STATUS".to_string(),
                 token: auth.merchant_key.peek().to_string(),
             },
