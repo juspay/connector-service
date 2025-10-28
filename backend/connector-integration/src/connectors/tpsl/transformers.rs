@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use common_utils::{
-    errors::CustomResult, ext_traits::ValueExt, request::Method, types::StringMinorUnit,
-    Email,
+    types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
@@ -12,10 +11,9 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
@@ -72,14 +70,14 @@ pub enum TpslRedirectResponse {
     UPISyncResponse(TpslUPISyncResponse),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct TpslRedirectMessage {
     pub msg: String,
     pub tpsl_mrct_cd: String,
     pub tpsl_err_msg: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslDecodedRedirectionResponse {
     pub txn_status: String,
@@ -112,19 +110,19 @@ pub struct TpslDecodedRedirectionResponse {
     pub vpa: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct FailureResponse {
     pub error_message: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ValidationErrorResponse {
     pub message: String,
     pub error_code: String,
     pub response: serde_json::Value,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslUPISyncResponse {
     pub merchant_code: String,
