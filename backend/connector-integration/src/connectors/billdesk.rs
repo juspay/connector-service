@@ -716,6 +716,12 @@ impl_source_verification_stub!(
     domain_types::connector_types::PaymentsPreAuthenticateData<T>,
     PaymentsResponseData
 );
+impl_source_verification_stub!(
+    VoidPC,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentVoidData,
+    PaymentsResponseData
+);
 
 // MANDATORY: Add not-implemented flow handlers for all unsupported flows
 macro_rules! impl_not_implemented_flow {
