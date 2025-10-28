@@ -783,8 +783,8 @@ impl_source_verification_stub!(
 impl_source_verification_stub!(
     PaymentMethodToken,
     PaymentFlowData,
-    domain_types::connector_types::PaymentsMethodTokenData<T>,
-    PaymentsResponseData
+    domain_types::connector_types::PaymentMethodTokenizationData<T>,
+    PaymentMethodTokenResponse
 );
 
 // MANDATORY: Add not-implemented flow handlers for all unsupported flows
