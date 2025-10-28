@@ -517,23 +517,6 @@ impl<
 }
 
 // Response transformations
-// Simplified response handling for Authorize flow
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
-TryFrom<crate::types::ResponseRouterData<TpslPaymentsResponse, TpslRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>>
-for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: crate::types::ResponseRouterData<TpslPaymentsResponse, TpslRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>,
-    ) -> Result<Self, Self::Error> {
-        let crate::types::ResponseRouterData {
-            response: _response,
-            router_data,
-            http_code: _http_code,
-        } = item;
-        
-        Ok(router_data.router_data)
-    }
-}
+// Response handling will be handled by the macro framework
 
 // Sync response implementation removed for now
