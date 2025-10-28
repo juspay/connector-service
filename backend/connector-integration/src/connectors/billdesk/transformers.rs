@@ -174,13 +174,13 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > TryFrom<&BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
+    > TryFrom<&BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
     for BilldeskPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: &BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        item: &BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let (router_data, amount_converter) = item;
         let customer_id = router_data.resource_common_data.get_customer_id()?;
@@ -248,13 +248,13 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > TryFrom<&BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+    > TryFrom<&BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
     for BilldeskPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: &BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
+        item: &BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let (router_data, _amount_converter) = item;
         // Get merchant ID from auth type
