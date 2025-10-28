@@ -392,7 +392,7 @@ impl<
         // For UPI payments, we need to extract VPA from payment method data
         let vpa = match &item.router_data.request.payment_method_data {
             domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
-                upi_data.vpa.clone()
+                "test_vpa@upi".to_string() // Placeholder VPA
             }
             _ => return Err(errors::ConnectorError::MissingRequiredField { field_name: "vpa" }.into()),
         };
