@@ -753,7 +753,7 @@ impl TryFrom<ResponseRouterData<TpslPaymentsResponse, RouterDataV2<PSync, Paymen
                 let status = TpslTransactionStatus::from(sync_response.transaction_state.as_str());
                 let attempt_status = status.into();
 
-                let amount_received = sync_response
+                let _amount_received = sync_response
                     .payment_method
                     .payment_transaction
                     .amount
