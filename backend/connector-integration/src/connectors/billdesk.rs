@@ -30,7 +30,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::{Mask, Maskable, ExposeInterface};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -39,7 +39,7 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use transformers::{self as billdesk, BilldeskPaymentsRequest, BilldeskPaymentsResponse, BilldeskPaymentsSyncRequest, BilldeskPaymentsSyncResponse};
+use transformers::{self as billdesk, BilldeskPaymentsRequest, BilldeskPaymentsResponse};
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
@@ -59,7 +59,25 @@ macros::create_all_prerequisites!(
             request_body: BilldeskPaymentsRequest,
             response_body: BilldeskPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        )
+        ),
+        (
+            flow: PSync,
+            request_body: billdesk::BilldeskPaymentsSyncRequest,
+            response_body: billdesk::BilldeskPaymentsSyncResponse,
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        // Stub types for unsupported flows
+        (flow: Void, request_body: billdesk::BilldeskVoidRequest, response_body: billdesk::BilldeskVoidResponse, router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>),
+        (flow: Capture, request_body: billdesk::BilldeskCaptureRequest, response_body: billdesk::BilldeskCaptureResponse, router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>),
+        (flow: Refund, request_body: billdesk::BilldeskRefundRequest, response_body: billdesk::BilldeskRefundResponse, router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>),
+        (flow: RSync, request_body: billdesk::BilldeskRefundSyncRequest, response_body: billdesk::BilldeskRefundSyncResponse, router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>),
+        (flow: SetupMandate, request_body: billdesk::BilldeskMandateRequest, response_body: billdesk::BilldeskMandateResponse, router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>),
+        (flow: RepeatPayment, request_body: billdesk::BilldeskRepeatPaymentRequest, response_body: billdesk::BilldeskRepeatPaymentResponse, router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>),
+        (flow: CreateOrder, request_body: billdesk::BilldeskCreateOrderRequest, response_body: billdesk::BilldeskCreateOrderResponse, router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>),
+        (flow: CreateSessionToken, request_body: billdesk::BilldeskSessionTokenRequest, response_body: billdesk::BilldeskSessionTokenResponse, router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>),
+        (flow: Accept, request_body: billdesk::BilldeskAcceptDisputeRequest, response_body: billdesk::BilldeskAcceptDisputeResponse, router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>),
+        (flow: SubmitEvidence, request_body: billdesk::BilldeskSubmitEvidenceRequest, response_body: billdesk::BilldeskSubmitEvidenceResponse, router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>),
+        (flow: DefendDispute, request_body: billdesk::BilldeskDefendDisputeRequest, response_body: billdesk::BilldeskDefendDisputeResponse, router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>),
     ],
     amount_converters: [
         amount_converter: StringMinorUnit  // Billdesk expects amount in minor units as string
@@ -156,8 +174,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Billdesk,
-    curl_request: Json(BilldeskPaymentsSyncRequest),
-    curl_response: BilldeskPaymentsSyncResponse,
+    curl_request: Json(billdesk::BilldeskPaymentsSyncRequest),
+    curl_response: billdesk::BilldeskPaymentsSyncResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
@@ -221,7 +239,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.billdesk.base_url.as_ref()
+        // Use a default base URL since billdesk field might not exist in Connectors
+        if connectors.test_mode.unwrap_or(false) {
+            constants::BILLDESK_UAT_BASE_URL
+        } else {
+            constants::BILLDESK_PROD_BASE_URL
+        }
     }
 
     fn get_auth_header(
@@ -246,9 +269,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: response.error.to_string(),
+            code: response.error.clone(),
             message: response.error_description.clone(),
-            reason: Some(response.error_description),
+            reason: response.error_description.clone(),
             attempt_status: None,
             connector_transaction_id: None,
             network_advice_code: None,
@@ -321,7 +344,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         error_stack::Report<domain_types::errors::ConnectorError>,
     > {
         // TODO: Implement webhook processing
-        Err(errors::ConnectorError::WebhookNotImplemented)
+        Err(errors::ConnectorError::WebhooksNotImplemented.into())
     }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -342,81 +365,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentPostAuthenticateV2<T> for Billdesk<T> {}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidPostCaptureV2 for Billdesk<T> {}
-
-// MANDATORY: Implement ConnectorIntegrationV2 for all flows (even stubs)
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Billdesk<T> {}
-
-// Additional flow implementations
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Billdesk<T> {}
-
-// Authentication flow implementations
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::PreAuthenticate,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::Authenticate,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Billdesk<T> {}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::PostAuthenticate,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Billdesk<T> {}
 
 // MANDATORY: SourceVerification implementations for all flows
 macro_rules! impl_source_verification_stub {
