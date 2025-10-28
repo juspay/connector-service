@@ -1,6 +1,5 @@
 use common_utils::{
     errors::CustomResult, request::Method,
-    types::AmountConvertor,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
