@@ -12,10 +12,10 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::tpsl::{TPSL, TPSLRouterData}, types::ResponseRouterData};
+use crate::{connectors::tpsl::TPSLRouterData, types::ResponseRouterData};
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
