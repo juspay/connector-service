@@ -474,6 +474,58 @@ macros::macro_connector_implementation!(
     }
 );
 
+// MANDATORY: Use macro for PaymentMethodToken flow implementation
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Billdesk,
+    curl_request: Json(BilldeskVoidRequest),
+    curl_response: BilldeskVoidResponse,
+    flow_name: PaymentMethodToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: domain_types::connector_types::PaymentsMethodTokenData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentsMethodTokenData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let mut header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )];
+
+            let auth = billdesk::BilldeskAuth::try_from(&req.connector_auth_type)?;
+            
+            // Add checksum header for Billdesk authentication
+            let checksum_input = format!(
+                "{}{}",
+                req.resource_common_data.connector_request_reference_id,
+                auth.checksum_key.expose()
+            );
+            
+            use sha2::{Sha256, Digest};
+            let mut hasher = Sha256::new();
+            hasher.update(checksum_input.as_bytes());
+            let result = hasher.finalize();
+            let checksum = hex::encode(result);
+            
+            header.push((headers::CHECKSUM.to_string(), checksum.into_masked()));
+
+            Ok(header)
+        }
+        
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentsMethodTokenData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}?reqid={}", self.connector_base_url_payments(req), constants::BILLDESK_AUTH_REQUEST_ID))
+        }
+    }
+);
+
 // MANDATORY: Implement ConnectorCommon trait
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorCommon for Billdesk<T>
