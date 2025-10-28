@@ -239,14 +239,11 @@ impl<
         + Serialize,
 >
     TryFrom<
-        TpslRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
+        &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
         >,
     > for TpslPaymentsRequest
 {
