@@ -262,8 +262,8 @@ impl<
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
+                item.request.minor_amount,
+                item.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
@@ -337,12 +337,12 @@ impl<
                     amount,
                     item.resource_common_data.connector_request_reference_id,
                     amount,
-                    item.router_data.request.currency,
+                    item.request.currency,
                     item.resource_common_data.connector_request_reference_id,
                     time::now().format("%Y-%m-%d %H:%M:%S"),
                     item.resource_common_data.connector_request_reference_id,
-                    item.router_data.request.get_router_return_url()?.as_str(),
-                    item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
+                    item.request.get_router_return_url()?.as_str(),
+                    item.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
                     customer_id.get_string_repr()
                 )
             }
@@ -463,8 +463,8 @@ impl<
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
+                item.request.minor_amount,
+                item.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
@@ -480,10 +480,10 @@ impl<
                 transaction_type: Some("SALE".to_string()),
                 subType: Some("INTENT".to_string()),
                 amount,
-                currency: item.router_data.request.currency.to_string(),
+                currency: item.request.currency.to_string(),
                 dateTime: time::now().format("%Y-%m-%d %H:%M:%S").to_string(),
                 requestType: "TXN".to_string(),
-                token: item.router_data.request.connector_transaction_id.get_connector_transaction_id()
+                token: item.request.connector_transaction_id.get_connector_transaction_id()
                     .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?,
             },
             consumer: TpslConsumerDataType {
