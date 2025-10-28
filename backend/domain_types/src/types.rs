@@ -124,6 +124,7 @@ pub struct Connectors {
     pub trustpay: ConnectorParamsWithMoreUrls,
     pub stripe: ConnectorParams,
     pub cybersource: ConnectorParams,
+    pub worldpay: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -1148,6 +1149,16 @@ impl<
             .transpose()?;
 
         let customer_acceptance = value.customer_acceptance.clone();
+
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(|token| crate::connector_types::AccessTokenResponseData {
+                access_token: token.token.clone(),
+                token_type: None,
+                expires_in: token.expires_in_seconds,
+            });
         Ok(Self {
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
                 value.capture_method(),
@@ -1193,15 +1204,14 @@ impl<
             customer_name: None,
             statement_descriptor_suffix: None,
             statement_descriptor: None,
-
             router_return_url: value.return_url.clone(),
-            complete_authorize_url: None,
+            complete_authorize_url: value.complete_authorize_url,
             setup_future_usage,
             mandate_id: None,
             off_session: value.off_session,
             order_category: value.order_category,
             session_token: None,
-            access_token: value.access_token,
+            access_token,
             customer_acceptance: customer_acceptance
                 .map(mandates::CustomerAcceptance::foreign_try_from)
                 .transpose()?,
@@ -1771,6 +1781,16 @@ impl
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(|token| crate::connector_types::AccessTokenResponseData {
+                access_token: token.token.clone(),
+                token_type: None,
+                expires_in: token.expires_in_seconds,
+            });
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -1790,13 +1810,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
-            access_token: value.access_token.map(|token| {
-                crate::connector_types::AccessTokenResponseData {
-                    access_token: token,
-                    token_type: None,
-                    expires_in: None,
-                }
-            }),
+            access_token,
             session_token: None,
             reference_id: None,
             payment_method_token: None,
@@ -5052,7 +5066,14 @@ impl<
             customer_acceptance: customer_acceptance
                 .map(mandates::CustomerAcceptance::foreign_try_from)
                 .transpose()?,
-            setup_future_usage: None,
+            setup_future_usage: value
+                .setup_future_usage
+                .map(|fu| {
+                    common_enums::FutureUsage::foreign_try_from(
+                        grpc_api_types::payments::FutureUsage::try_from(fu).unwrap_or_default(),
+                    )
+                })
+                .transpose()?,
             mandate_id: None,
             setup_mandate_details: None,
             integrity_object: None,
@@ -5622,6 +5643,25 @@ impl<
         // Clone payment_method to avoid ownership issues
         let payment_method_clone = value.payment_method.clone();
 
+        // Create redirect response from metadata if present
+        // This is used to pass connector-specific data (e.g., collectionReference for Worldpay)
+        let redirect_response = if !value.metadata.is_empty() {
+            let params_string = serde_urlencoded::to_string(&value.metadata).change_context(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_METADATA".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Failed to serialize metadata".to_owned(),
+                    error_object: None,
+                }),
+            )?;
+            Some(ContinueRedirectionResponse {
+                params: Some(Secret::new(params_string)),
+                payload: None,
+            })
+        } else {
+            None
+        };
+
         Ok(Self {
             payment_method_data: value
                 .payment_method
@@ -5669,7 +5709,7 @@ impl<
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             enrolled_for_3ds,
-            redirect_response: None,
+            redirect_response,
         })
     }
 }
@@ -5814,14 +5854,31 @@ impl<
         // Clone payment_method to avoid ownership issues
         let payment_method_clone = value.payment_method.clone();
 
-        // Create redirect response from authentication data if present
-        let redirect_response =
+        // Create redirect response from metadata or authentication data
+        // Priority: metadata first, then authentication_data for backward compatibility
+        let redirect_response = if !value.metadata.is_empty() {
+            // Use metadata for connector-specific data (e.g., collectionReference for Worldpay)
+            let params_string = serde_urlencoded::to_string(&value.metadata).change_context(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_METADATA".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Failed to serialize metadata".to_owned(),
+                    error_object: None,
+                }),
+            )?;
+            Some(ContinueRedirectionResponse {
+                params: Some(Secret::new(params_string)),
+                payload: None,
+            })
+        } else {
+            // Fallback to authentication_data for backward compatibility
             value
                 .authentication_data
                 .map(|auth_data| ContinueRedirectionResponse {
                     params: auth_data.ds_transaction_id.clone().map(Secret::new),
                     payload: None,
-                });
+                })
+        };
         Ok(Self {
             payment_method_data: value
                 .payment_method
@@ -5925,9 +5982,27 @@ impl
             description: None,
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                value.metadata.get("connector_meta_data").map(|json_string| {
-                    Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
-                }).transpose()?
+                value
+                    .metadata
+                    .get("connector_meta_data")
+                    .map(|json_string| {
+                        serde_json::from_str::<serde_json::Value>(json_string)
+                            .map(Secret::new)
+                            .map_err(|e| {
+                                error_stack::Report::new(ApplicationErrorResponse::BadRequest(
+                                    ApiError {
+                                        sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
+                                        error_identifier: 400,
+                                        error_message: format!(
+                                            "Failed to parse connector_meta_data: {}",
+                                            e
+                                        ),
+                                        error_object: None,
+                                    },
+                                ))
+                            })
+                    })
+                    .transpose()?
             },
             amount_captured: None,
             minor_amount_captured: None,
@@ -6002,9 +6077,27 @@ impl
             description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                value.metadata.get("connector_meta_data").map(|json_string| {
-                    Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
-                }).transpose()?
+                value
+                    .metadata
+                    .get("connector_meta_data")
+                    .map(|json_string| {
+                        serde_json::from_str::<serde_json::Value>(json_string)
+                            .map(Secret::new)
+                            .map_err(|e| {
+                                error_stack::Report::new(ApplicationErrorResponse::BadRequest(
+                                    ApiError {
+                                        sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
+                                        error_identifier: 400,
+                                        error_message: format!(
+                                            "Failed to parse connector_meta_data: {}",
+                                            e
+                                        ),
+                                        error_object: None,
+                                    },
+                                ))
+                            })
+                    })
+                    .transpose()?
             },
             amount_captured: None,
             minor_amount_captured: None,
@@ -6079,9 +6172,27 @@ impl
             description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                value.metadata.get("connector_meta_data").map(|json_string| {
-                    Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
-                }).transpose()?
+                value
+                    .metadata
+                    .get("connector_meta_data")
+                    .map(|json_string| {
+                        serde_json::from_str::<serde_json::Value>(json_string)
+                            .map(Secret::new)
+                            .map_err(|e| {
+                                error_stack::Report::new(ApplicationErrorResponse::BadRequest(
+                                    ApiError {
+                                        sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
+                                        error_identifier: 400,
+                                        error_message: format!(
+                                            "Failed to parse connector_meta_data: {}",
+                                            e
+                                        ),
+                                        error_object: None,
+                                    },
+                                ))
+                            })
+                    })
+                    .transpose()?
             },
             amount_captured: None,
             minor_amount_captured: None,
