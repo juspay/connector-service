@@ -224,8 +224,8 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PSync,
-            request_body: TpslPaymentsRequest,
-            response_body: TpslPaymentsResponse,
+            request_body: TpslSyncRequest,
+            response_body: TpslSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
