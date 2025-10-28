@@ -473,7 +473,7 @@ impl<
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
+                item.router_data.request.amount,
                 item.router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
@@ -486,7 +486,7 @@ impl<
                         webhook_endpoint_url: item.router_data.request.get_router_return_url()?.to_string(),
                         response_type: "URL".to_string(),
                         response_endpoint_url: item.router_data.request.get_router_return_url()?.to_string(),
-                        description: item.router_data.request.description.clone().unwrap_or_default(),
+                        description: item.router_data.request.statement_descriptor.clone().unwrap_or_default(),
                         identifier: auth.merchant_code.peek().to_string(),
                         webhook_type: "HTTP".to_string(),
                     },
@@ -521,7 +521,7 @@ impl<
                         amount: amount.get_amount_as_string(),
                         forced_3ds_call: "N".to_string(),
                         txn_type: "SALE".to_string(),
-                        description: item.router_data.request.description.clone().unwrap_or_default(),
+                        description: item.router_data.request.statement_descriptor.clone().unwrap_or_default(),
                         currency: item.router_data.request.currency.to_string(),
                         is_registration: "N".to_string(),
                         identifier: item.router_data.resource_common_data.connector_request_reference_id.clone(),
@@ -539,21 +539,25 @@ impl<
                         tenure_id: "".to_string(),
                     },
                     consumer: ConsumerIntentPayload {
-                        mobile_number: item.router_data.request.phone.clone().map(|p| p.number).unwrap_or_default(),
-                        email_id: item.router_data.request.email.clone().map(|e| e.to_string()).unwrap_or_default(),
-                        identifier: customer_id.get_string_repr(),
+                        mobile_number: item.router_data.request.browser_info
+                            .as_ref()
+                            .and_then(|bi| bi.get_optional_billing_phone_number())
+                            .and_then(|phone| phone.expose().ok())
+                            .unwrap_or_default(),
+                        email_id: item.router_data.request.email
+                            .clone()
+                            .map(|e| e.peek().to_string())
+                            .unwrap_or_default(),
+                        identifier: customer_id.get_string_repr().to_string(),
                         account_no: "".to_string(),
                         account_type: "".to_string(),
-                        account_holder_name: item.router_data.request.get_customer_name().unwrap_or_default(),
-                        vpa: item
-                            .router_data
-                            .request
-                            .payment_method_data
-                            .as_ref()
-                            .and_then(|pm| pm.upi.as_ref())
-                            .and_then(|upi| upi.vpa.as_ref())
-                            .map(|vpa| vpa.to_string())
-                            .unwrap_or_default(),
+                        account_holder_name: item.router_data.request.customer_name.clone().unwrap_or_default(),
+                        vpa: match &item.router_data.request.payment_method_data {
+                            domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
+                                upi_data.vpa.as_ref().map(|vpa| vpa.to_string()).unwrap_or_default()
+                            }
+                            _ => String::default(),
+                        },
                         aadhar_no: "".to_string(),
                     },
                     merchant_input_flags: TpslFlagsType {
@@ -610,8 +614,8 @@ impl<
                 device_identifier: item
                     .router_data
                     .request
-                    .get_ip_address_as_optional()
-                    .map(|ip| ip.expose())
+                    .get_optional_billing_phone_number()
+                    .and_then(|phone| phone.expose().ok())
                     .unwrap_or_else(|| "127.0.0.1".to_string()),
                 txn_type: Some("SALE".to_string()),
                 sub_type: Some("SALE".to_string()),
@@ -626,7 +630,7 @@ impl<
                 token: auth.merchant_key.peek().to_string(),
             },
             consumer: ConsumerDataType {
-                identifier: item.router_data.resource_common_data.get_customer_id()?.get_string_repr(),
+                identifier: item.router_data.resource_common_data.get_customer_id()?.get_string_repr().to_string(),
             },
         };
 
