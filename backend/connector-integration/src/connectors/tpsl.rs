@@ -41,7 +41,7 @@ use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
 // Type alias for router data
-pub type TpslRouterData<F, T> = crate::ConnectorRouterData<F, T>;
+pub type TpslRouterData<F, T> = crate::types::ResponseRouterData<F, T>;
 
 // Trait implementations with generic type parameters
 impl<
