@@ -614,6 +614,7 @@ impl<
                 device_identifier: item
                     .router_data
                     .request
+                    .payment_method_data
                     .get_optional_billing_phone_number()
                     .and_then(|phone| phone.expose().ok())
                     .unwrap_or_else(|| "127.0.0.1".to_string()),
