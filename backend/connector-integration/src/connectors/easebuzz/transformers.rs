@@ -178,6 +178,37 @@ pub struct EaseBuzzSessionTokenRequest;
 #[derive(Debug, Clone)]
 pub struct EaseBuzzSessionTokenResponse;
 
+// Unique stub types for flows that would otherwise conflict
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzPreAuthenticateRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzPreAuthenticateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzAuthenticateRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzAuthenticateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzPostAuthenticateRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzPostAuthenticateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzCreateAccessTokenRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzCreateAccessTokenResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzCreateConnectorCustomerRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzCreateConnectorCustomerResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzPaymentMethodTokenRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzPaymentMethodTokenResponse;
+
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzSetupMandateRequest;
 #[derive(Debug, Clone)]
