@@ -428,3 +428,101 @@ impl_source_verification_stub!(
     PaymentsSyncData,
     PaymentsResponseData
 );
+
+// MANDATORY: Add source verification stubs for all flows
+impl_source_verification_stub!(
+    Void,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentVoidData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    Capture,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentsCaptureData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    Refund,
+    domain_types::connector_types::RefundFlowData,
+    domain_types::connector_types::RefundsData,
+    domain_types::connector_types::RefundsResponseData
+);
+impl_source_verification_stub!(
+    RSync,
+    domain_types::connector_types::RefundFlowData,
+    domain_types::connector_types::RefundSyncData,
+    domain_types::connector_types::RefundsResponseData
+);
+impl_source_verification_stub!(
+    CreateOrder,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::PaymentCreateOrderData,
+    domain_types::connector_types::PaymentCreateOrderResponse
+);
+impl_source_verification_stub!(
+    CreateSessionToken,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::SessionTokenRequestData,
+    domain_types::connector_types::SessionTokenResponseData
+);
+impl_source_verification_stub!(
+    SetupMandate,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::SetupMandateRequestData<T>,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    RepeatPayment,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::RepeatPaymentData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    Accept,
+    domain_types::connector_types::DisputeFlowData,
+    domain_types::connector_types::AcceptDisputeData,
+    domain_types::connector_types::DisputeResponseData
+);
+impl_source_verification_stub!(
+    DefendDispute,
+    domain_types::connector_types::DisputeFlowData,
+    domain_types::connector_types::DisputeDefendData,
+    domain_types::connector_types::DisputeResponseData
+);
+impl_source_verification_stub!(
+    SubmitEvidence,
+    domain_types::connector_types::DisputeFlowData,
+    domain_types::connector_types::SubmitEvidenceData,
+    domain_types::connector_types::DisputeResponseData
+);
+
+// MANDATORY: Add not-implemented flow handlers for all unsupported flows
+macro_rules! impl_not_implemented_flow {
+    ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
+        impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+            ConnectorIntegrationV2<$flow, $common_data, $req, $resp> for Billdesk<T>
+        {
+            fn build_request_v2(
+                &self,
+                _req: &RouterDataV2<$flow, $common_data, $req, $resp>,
+            ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+                let flow_name = stringify!($flow);
+                Err(errors::ConnectorError::NotImplemented(flow_name.to_string()).into())
+            }
+        }
+    };
+}
+
+// Use macro for all unimplemented flows
+impl_not_implemented_flow!(Void, PaymentFlowData, domain_types::connector_types::PaymentVoidData, PaymentsResponseData);
+impl_not_implemented_flow!(Capture, PaymentFlowData, domain_types::connector_types::PaymentsCaptureData, PaymentsResponseData);
+impl_not_implemented_flow!(Refund, domain_types::connector_types::RefundFlowData, domain_types::connector_types::RefundsData, domain_types::connector_types::RefundsResponseData);
+impl_not_implemented_flow!(RSync, domain_types::connector_types::RefundFlowData, domain_types::connector_types::RefundSyncData, domain_types::connector_types::RefundsResponseData);
+impl_not_implemented_flow!(CreateOrder, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentCreateOrderData, domain_types::connector_types::PaymentCreateOrderResponse);
+impl_not_implemented_flow!(CreateSessionToken, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::SessionTokenRequestData, domain_types::connector_types::SessionTokenResponseData);
+impl_not_implemented_flow!(SetupMandate, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::SetupMandateRequestData<T>, PaymentsResponseData);
+impl_not_implemented_flow!(RepeatPayment, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::RepeatPaymentData, PaymentsResponseData);
+impl_not_implemented_flow!(Accept, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::AcceptDisputeData, domain_types::connector_types::DisputeResponseData);
+impl_not_implemented_flow!(DefendDispute, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::DisputeDefendData, domain_types::connector_types::DisputeResponseData);
+impl_not_implemented_flow!(SubmitEvidence, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::SubmitEvidenceData, domain_types::connector_types::DisputeResponseData);
