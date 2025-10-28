@@ -238,13 +238,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         "application/json"
     }
 
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        // Use a default base URL since billdesk field might not exist in Connectors
-        if connectors.test_mode.unwrap_or(false) {
-            constants::BILLDESK_UAT_BASE_URL
-        } else {
-            constants::BILLDESK_PROD_BASE_URL
-        }
+    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
+        // Return production URL by default, individual methods will handle test mode
+        constants::BILLDESK_PROD_BASE_URL
     }
 
     fn get_auth_header(
