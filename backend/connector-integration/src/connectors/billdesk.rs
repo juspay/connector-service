@@ -158,11 +158,11 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             // Based on the Haskell implementation, use different endpoints for different request types
             match req.request.payment_method_type {
-                Some(common_enums::PaymentMethodType::Upi) => {
+                Some(common_enums::PaymentMethodType::UpiCollect) => {
                     Ok(format!("{}?reqid={}", self.connector_base_url_payments(req), constants::BILLDESK_UPI_REQUEST_ID))
                 }
-                Some(common_enums::PaymentMethodType::NetBanking) => {
-                    Ok(format!("{}?reqid={}", self.connector_base_url_payments(req), constants::BILLDESK_NB_REQUEST_ID))
+                Some(common_enums::PaymentMethodType::UpiIntent) => {
+                    Ok(format!("{}?reqid={}", self.connector_base_url_payments(req), constants::BILLDESK_UPI_REQUEST_ID))
                 }
                 _ => Ok(format!("{}?reqid={}", self.connector_base_url_payments(req), constants::BILLDESK_AUTH_REQUEST_ID))
             }
