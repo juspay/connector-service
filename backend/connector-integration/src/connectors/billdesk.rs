@@ -62,8 +62,8 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PSync,
-            request_body: billdesk::BilldeskPaymentsSyncRequest,
-            response_body: billdesk::BilldeskPaymentsSyncResponse,
+            request_body: BilldeskPaymentsSyncRequest,
+            response_body: BilldeskPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         // Stub types for unsupported flows
