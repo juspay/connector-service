@@ -320,16 +320,16 @@ impl<
                         }}
                     }}"#,
                     customer_id.get_string_repr(),
-                    amount: amount.to_string(),
-                    router_data.resource_common_data.connector_request_reference_id,
                     amount,
-                    router_data.request.currency,
-                    router_data.resource_common_data.connector_request_reference_id,
+                    item.router_data.resource_common_data.connector_request_reference_id,
+                    amount,
+                    item.router_data.request.currency,
+                    item.router_data.resource_common_data.connector_request_reference_id,
                     date_time::format_date(date_time::now(), date_time::DateFormat::YYYYMMDDHHmmss)
                         .change_context(ConnectorError::RequestEncodingFailed)?,
-                    router_data.resource_common_data.connector_request_reference_id,
-                    router_data.request.get_router_return_url()?.as_str(),
-                    router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
+                    item.router_data.resource_common_data.connector_request_reference_id,
+                    item.router_data.request.get_router_return_url()?.as_str(),
+                    item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
                     customer_id.get_string_repr()
                 )
             }
