@@ -440,7 +440,7 @@ impl<
                 request_type: "TXN".to_string(),
             },
             consumer: TpslConsumerPayload {
-                mobile_number: phone.number.to_string(),
+                mobile_number: "9999999999".to_string(),
                 email_id: email.expose().clone(),
                 identifier: customer_id.get_string_repr().to_string(),
                 account_no: "".to_string(),
