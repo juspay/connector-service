@@ -213,7 +213,7 @@ pub fn generate_checksum<T: PaymentMethodDataTypes + std::fmt::Debug + std::mark
         "{}{}{}",
         req.resource_common_data.connector_request_reference_id,
         amount,
-        auth.checksum_key.expose()
+        auth.checksum_key.clone().expose()
     );
     
     // Use SHA256 for checksum generation (adjust based on Billdesk's actual requirements)
@@ -233,7 +233,7 @@ pub fn generate_checksum_for_post_auth<T: PaymentMethodDataTypes + std::fmt::Deb
     let checksum_input = format!(
         "{}{}",
         req.resource_common_data.connector_request_reference_id,
-        auth.checksum_key.expose()
+        auth.checksum_key.clone().expose()
     );
     
     // Use SHA256 for checksum generation
