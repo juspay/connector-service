@@ -357,6 +357,26 @@ macros::create_all_prerequisites!(
     }
 );
 
+// Add PSync flow separately
+macros::create_all_prerequisites!(
+    connector_name: Billdesk,
+    generic_type: T,
+    api: [
+        (
+            flow: PSync,
+            request_body: BilldeskPaymentsSyncRequest,
+            response_body: BilldeskPaymentsSyncResponse,
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        )
+    ],
+    amount_converters: [
+        amount_converter: StringMinorUnit
+    ],
+    member_functions: {
+        // PSync specific functions can be added here if needed
+    }
+);
+
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Billdesk,
