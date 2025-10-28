@@ -456,28 +456,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         let consumer = TpslConsumerPayload {
             identifier: customer_id.get_string_repr().to_string(),
-            email_id: item.request.email
+            email_id: item.router_data.request.email
                 .clone()
                 .map(|e| e.expose().expose().to_string())
                 .unwrap_or_else(|| format!("{}@example.com", customer_id.get_string_repr())),
             mobile_number: "9999999999".to_string(),
             account_no: customer_id.get_string_repr().to_string(),
             account_type: "SAVINGS".to_string(),
-            account_holder_name: item.request.customer_name
+            account_holder_name: item.router_data.request.customer_name
                 .clone()
                 .unwrap_or_else(|| "Customer".to_string()),
             aadhar_no: None,
         };
 
         let transaction = TpslTxnPayload {
-            identifier: item.resource_common_data.connector_request_reference_id.clone(),
-            amount: amount,
-            currency: item.request.currency.to_string(),
+            identifier: item.router_data.resource_common_data.connector_request_reference_id.clone(),
+            amount: amount.to_string(),
+            currency: item.router_data.request.currency.to_string(),
             request_type: "SALE".to_string(),
             transaction_type: "SALE".to_string(),
             description: "UPI Payment".to_string(),
             date_time: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-            device_identifier: item.request.get_ip_address_as_optional()
+            device_identifier: item.router_data.request.get_ip_address_as_optional()
                 .map(|ip| ip.expose())
                 .unwrap_or_else(|| "127.0.0.1".to_string()),
             token: None,
