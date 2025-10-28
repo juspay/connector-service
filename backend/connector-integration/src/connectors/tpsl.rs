@@ -422,7 +422,23 @@ macros::macro_connector_implementation!(
     }
 );
 
-// PSync implementation removed for now
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for TPSL<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("PSync flow".to_string()).into())
+    }
+}
 
 impl<
     T: PaymentMethodDataTypes
