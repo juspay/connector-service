@@ -556,7 +556,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn try_from(
         item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let auth = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
+        let auth = TpslAuth::try_from(&item.connector_auth_type)?;
         let merchant_code = auth.merchant_code
             .ok_or(errors::ConnectorError::FailedToObtainAuthType)?
             .expose()
@@ -567,7 +567,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         };
 
         let consumer = TpslConsumerDataType {
-            identifier: item.router_data.resource_common_data.get_customer_id()?.get_string_repr().to_string(),
+            identifier: item.resource_common_data.get_customer_id()?.get_string_repr().to_string(),
         };
 
         let payment = TpslPaymentUPISyncType {
