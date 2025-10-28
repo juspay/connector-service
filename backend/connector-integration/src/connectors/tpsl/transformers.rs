@@ -449,7 +449,7 @@ impl TryFrom<TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncDat
                 deviceIdentifier: "WEB".to_string(),
                 transaction_type: Some("SALE".to_string()),
                 subType: Some("INTENT".to_string()),
-                amount,
+                amount: amount.to_string(),
                 currency: item.router_data.request.currency.to_string(),
                 dateTime: date_time::format_date(date_time::now(), date_time::DateFormat::YYYYMMDDHHmmss)
                     .change_context(ConnectorError::RequestEncodingFailed)?,
