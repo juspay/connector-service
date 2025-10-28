@@ -15,7 +15,10 @@ use domain_types::{
 use hyperswitch_masking::{Secret, ExposeInterface};
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
+use crate::types::ResponseRouterData;
+
+// Type alias for router data with connector
+pub type BilldeskRouterData<RouterData, T> = crate::connectors::ConnectorRouterData<RouterData, T>;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
