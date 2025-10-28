@@ -579,10 +579,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             r#type: Some("UPI".to_string()),
             sub_type: Some("UPI".to_string()),
             amount: "0".to_string(), // PSync doesn't need amount for status check
-            currency: item.router_data.request.currency.to_string(),
+            currency: item.request.currency.to_string(),
             date_time: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
             request_type: "STATUS".to_string(),
-            token: item.router_data.request.connector_transaction_id
+            token: item.request.connector_transaction_id
                 .get_connector_transaction_id()
                 .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?
                 .to_string(),
