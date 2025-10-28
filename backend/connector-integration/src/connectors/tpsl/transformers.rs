@@ -530,7 +530,7 @@ impl<
 
         let amount_received = response.paymentMethod.paymentTransaction.amount.parse::<i64>()
             .ok()
-            .map(|amt| common_utils::types::MinorUnit::from_major_unit_as_i64(amt as f64));
+            .map(|amt| common_utils::types::MinorUnit::new(amt));
 
         Ok(Self {
             resource_common_data: PaymentFlowData {
