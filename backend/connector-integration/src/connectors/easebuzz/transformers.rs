@@ -300,7 +300,7 @@ impl<
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
 
         // Get authentication credentials
-        let (_key, hash) = item.connector.get_easebuzz_auth_credentials(&item.router_data.connector_auth_type)?;
+        let (key, hash) = item.connector.get_easebuzz_auth_credentials(&item.router_data.connector_auth_type)?;
 
         // Handle UPI payment methods
         let (vpa, upi_intent, upi_collect) = match item.router_data.request.payment_method_type {
@@ -420,7 +420,7 @@ impl<
         let phone: Option<String> = None;
 
         // Get authentication credentials
-        let (_key, hash) = item.connector.get_easebuzz_auth_credentials(&item.router_data.connector_auth_type)?;
+        let (key, hash) = item.connector.get_easebuzz_auth_credentials(&item.router_data.connector_auth_type)?;
 
         Ok(Self {
             txnid: transaction_id,
