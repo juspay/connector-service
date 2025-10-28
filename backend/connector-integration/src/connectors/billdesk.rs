@@ -780,6 +780,12 @@ impl_source_verification_stub!(
     domain_types::connector_types::PaymentsCancelPostCaptureData,
     PaymentsResponseData
 );
+impl_source_verification_stub!(
+    PaymentMethodToken,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentsMethodTokenData<T>,
+    PaymentsResponseData
+);
 
 // MANDATORY: Add not-implemented flow handlers for all unsupported flows
 macro_rules! impl_not_implemented_flow {
