@@ -389,8 +389,13 @@ impl<
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         let email = item.router_data.request.email.clone().unwrap_or_default();
-        let phone = item.router_data.request.phone.clone().unwrap_or_default();
-        let vpa = item.router_data.request.payment_method_data.get_vpa()?;
+        // For UPI payments, we need to extract VPA from payment method data
+        let vpa = match &item.router_data.request.payment_method_data {
+            domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
+                upi_data.vpa.clone()
+            }
+            _ => return Err(errors::ConnectorError::MissingRequiredField { field_name: "vpa" }.into()),
+        };
 
         Ok(Self {
             merchant: TpslMerchantPayload {
