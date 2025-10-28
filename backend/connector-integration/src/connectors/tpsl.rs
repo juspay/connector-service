@@ -64,7 +64,16 @@ impl<
 > connector_types::PaymentAuthorizeV2<T> for TPSL<T>
 {
 }
-// PaymentSyncV2 implementation removed for now
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> connector_types::PaymentSyncV2 for TPSL<T>
+{
+}
 
 impl<
     T: PaymentMethodDataTypes
