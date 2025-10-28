@@ -4,6 +4,33 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## [2025-01-XX] - TPSL Connector Addition
+
+### Added
+- New TPSL connector implementation for UPI payment processing
+- Payment methods supported: UPI (Intent/Collect)
+- Transaction flows: Authorize, PSync
+- Full UCS v2 macro framework compliance
+- Comprehensive error handling and status mapping
+
+### Files Created/Modified
+- `src/connectors/tpsl.rs` - Main connector implementation
+- `src/connectors/tpsl/transformers.rs` - Request/response transformers
+- `src/connectors/tpsl/constants.rs` - API constants and endpoints
+- `src/connectors.rs` - Added connector registration
+- `src/types.rs` - Added connector to ConnectorEnum and convert_connector function
+- `backend/domain_types/src/connector_types.rs` - Added Tpsl to ConnectorEnum
+
+### Technical Details
+- Migrated from Hyperswitch/Euler Haskell implementation
+- Uses UCS v2 macro framework for trait implementations
+- Implements proper error handling and status mapping
+- Full type safety with guard rails
+- Supports test and production environments
+- Dynamic request body value extraction from router data
+
+- - -
+
 ## 2025.10.28.0
 
 ### Features
