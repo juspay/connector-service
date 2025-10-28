@@ -617,7 +617,9 @@ impl<
             network_txn_id: response.payment_method.payment_transaction.bank_reference_identifier,
             connector_response_reference_id: Some(response.merchant_transaction_identifier),
             incremental_authorization_allowed: None,
-            status_code: response.status_code.parse().unwrap_or(200),
+            status_code: response.status_code
+                .and_then(|s| s.parse::<u16>().ok())
+                .unwrap_or(200),
         })
     }
 }
