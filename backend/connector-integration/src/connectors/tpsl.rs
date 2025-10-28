@@ -36,6 +36,12 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
+// Implement ConnectorServiceTrait for TPSL
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::ConnectorServiceTrait<T> for TPSL<T>
+{
+}
+
 // Only implement the required traits for UPI and sync flows
 impl<
     T: PaymentMethodDataTypes
