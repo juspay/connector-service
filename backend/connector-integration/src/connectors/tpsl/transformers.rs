@@ -324,7 +324,7 @@ pub struct TpslFlagsType {
     pub mandate_details: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct TpslUPITxnResponse {
     pub merchant_code: String,
     pub merchant_transaction_identifier: String,
