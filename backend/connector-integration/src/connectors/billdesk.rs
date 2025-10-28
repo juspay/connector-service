@@ -51,94 +51,93 @@ pub(crate) mod headers {
 
 // MANDATORY: Use UCS v2 macro framework - NO manual trait implementations
 macros::create_all_prerequisites!(
-    connector_name: Billdesk,
-    generic_type: T,
-    api: [
-        // Implemented flows for UPI and sync
+    Billdesk,
+    T,
+    [
         (
-            flow: Authorize,
-            request_body: BilldeskPaymentsRequest,
-            response_body: BilldeskPaymentsResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            Authorize,
+            BilldeskPaymentsRequest,
+            BilldeskPaymentsResponse,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
-            flow: PSync,
-            request_body: BilldeskPaymentsSyncRequest,
-            response_body: BilldeskPaymentsSyncResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            PSync,
+            BilldeskPaymentsSyncRequest,
+            BilldeskPaymentsSyncResponse,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         // Stub implementations for other flows (MANDATORY for compilation)
         (
-            flow: Void,
-            request_body: BilldeskVoidRequest,
-            response_body: BilldeskVoidResponse,
-            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+            Void,
+            BilldeskVoidRequest,
+            BilldeskVoidResponse,
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
         ),
         (
-            flow: Capture,
-            request_body: BilldeskCaptureRequest,
-            response_body: BilldeskCaptureResponse,
-            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+            Capture,
+            BilldeskCaptureRequest,
+            BilldeskCaptureResponse,
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
         ),
         (
-            flow: Refund,
-            request_body: BilldeskRefundRequest,
-            response_body: BilldeskRefundResponse,
-            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+            Refund,
+            BilldeskRefundRequest,
+            BilldeskRefundResponse,
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
         ),
         (
-            flow: RSync,
-            request_body: BilldeskRefundSyncRequest,
-            response_body: BilldeskRefundSyncResponse,
-            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+            RSync,
+            BilldeskRefundSyncRequest,
+            BilldeskRefundSyncResponse,
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
         ),
         (
-            flow: SetupMandate,
-            request_body: BilldeskMandateRequest,
-            response_body: BilldeskMandateResponse,
-            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+            SetupMandate,
+            BilldeskMandateRequest,
+            BilldeskMandateResponse,
+            RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
         ),
         (
-            flow: RepeatPayment,
-            request_body: BilldeskRepeatPaymentRequest,
-            response_body: BilldeskRepeatPaymentResponse,
-            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+            RepeatPayment,
+            BilldeskRepeatPaymentRequest,
+            BilldeskRepeatPaymentResponse,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
         ),
         (
-            flow: CreateOrder,
-            request_body: BilldeskCreateOrderRequest,
-            response_body: BilldeskCreateOrderResponse,
-            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
+            CreateOrder,
+            BilldeskCreateOrderRequest,
+            BilldeskCreateOrderResponse,
+            RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
         ),
         (
-            flow: CreateSessionToken,
-            request_body: BilldeskSessionTokenRequest,
-            response_body: BilldeskSessionTokenResponse,
-            router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
+            CreateSessionToken,
+            BilldeskSessionTokenRequest,
+            BilldeskSessionTokenResponse,
+            RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
         ),
         (
-            flow: Accept,
-            request_body: BilldeskAcceptDisputeRequest,
-            response_body: BilldeskAcceptDisputeResponse,
-            router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+            Accept,
+            BilldeskAcceptDisputeRequest,
+            BilldeskAcceptDisputeResponse,
+            RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
         ),
         (
-            flow: DefendDispute,
-            request_body: BilldeskDefendDisputeRequest,
-            response_body: BilldeskDefendDisputeResponse,
-            router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+            DefendDispute,
+            BilldeskDefendDisputeRequest,
+            BilldeskDefendDisputeResponse,
+            RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
         ),
         (
-            flow: SubmitEvidence,
-            request_body: BilldeskSubmitEvidenceRequest,
-            response_body: BilldeskSubmitEvidenceResponse,
-            router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+            SubmitEvidence,
+            BilldeskSubmitEvidenceRequest,
+            BilldeskSubmitEvidenceResponse,
+            RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
         ),
     ],
-    amount_converters: [
-        amount_converter: StringMinorUnit  // Billdesk expects amount in minor units as string
+    [
+        StringMinorUnit  // Billdesk expects amount in minor units as string
     ],
-    member_functions: {
+    {
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
