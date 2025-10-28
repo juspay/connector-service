@@ -570,14 +570,7 @@ for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsR
             ),
         };
 
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                ..router_data.resource_common_data
-            },
-            response,
-            ..router_data
-        })
+        Ok(router_data.router_data)
     }
 }
 
