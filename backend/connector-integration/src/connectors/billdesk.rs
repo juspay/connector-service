@@ -134,10 +134,10 @@ macros::create_all_prerequisites!(
             RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
         ),
     ],
-    [
-        StringMinorUnit  // Billdesk expects amount in minor units as string
+    amount_converters: [
+        amount_converter: StringMinorUnit  // Billdesk expects amount in minor units as string
     ],
-    {
+    member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
