@@ -21,6 +21,109 @@ use crate::types::ResponseRouterData;
 
 // Request/Response types based on Haskell implementation
 
+// Stub types for unsupported flows
+#[derive(Debug, Serialize)]
+pub struct TpslCaptureRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct TpslCaptureResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslVoidRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct TpslVoidResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslRefundRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct TpslRefundResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslSetupMandateRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct TpslSetupMandateResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslCreateOrderRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct TpslCreateOrderResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslSessionTokenRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct TpslSessionTokenResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslAccessTokenRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct TpslAccessTokenResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslCreateCustomerRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct TpslCreateCustomerResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslPaymentTokenRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct TpslPaymentTokenResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslRepeatPaymentRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct TpslRepeatPaymentResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslAcceptDisputeRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct TpslAcceptDisputeResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslSubmitEvidenceRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct TpslSubmitEvidenceResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslDefendDisputeRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct TpslDefendDisputeResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslPreAuthenticateRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct TpslPreAuthenticateResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslAuthenticateRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct TpslAuthenticateResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslPostAuthenticateRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct TpslPostAuthenticateResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslRefundSyncRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct TpslRefundSyncResponse;
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslTransactionRequest {
