@@ -2031,8 +2031,7 @@ impl<
                 }
             });
 
-        let meta_data =
-            get_transaction_metadata(item.request.metadata.clone().map(Into::into), order_id);
+        let meta_data = get_transaction_metadata(item.request.metadata.clone(), order_id);
 
         // We pass browser_info only when payment_data exists.
         // Hence, we're pass Null during recurring payments as payment_method_data[type] is not passed
@@ -4850,8 +4849,7 @@ impl<
             payment_data = None
         };
 
-        let meta_data =
-            get_transaction_metadata(item.request.metadata.clone().map(Into::into), order_id);
+        let meta_data = get_transaction_metadata(item.request.metadata.clone(), order_id);
 
         // We pass browser_info only when payment_data exists.
         // Hence, we're pass Null during recurring payments as payment_method_data[type] is not passed

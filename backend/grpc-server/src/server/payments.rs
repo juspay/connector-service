@@ -236,17 +236,16 @@ impl Payments {
                 shadow_mode: metadata_payload.shadow_mode,
             };
 
-            let order_id = self
-                .handle_order_creation(
-                    connector_data.clone(),
-                    &payment_flow_data,
-                    connector_auth_details.clone(),
-                    &payload,
-                    &connector.to_string(),
-                    service_name,
-                    event_params,
-                )
-                .await?;
+            let order_id = Box::pin(self.handle_order_creation(
+                connector_data.clone(),
+                &payment_flow_data,
+                connector_auth_details.clone(),
+                &payload,
+                &connector.to_string(),
+                service_name,
+                event_params,
+            ))
+            .await?;
 
             tracing::info!("Order created successfully with order_id: {}", order_id);
             payment_flow_data.set_order_reference_id(Some(order_id))
@@ -368,17 +367,16 @@ impl Payments {
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
-                    let connector_customer_response = self
-                        .handle_connector_customer(
-                            connector_data.clone(),
-                            &payment_flow_data,
-                            connector_auth_details.clone(),
-                            &payload,
-                            &connector.to_string(),
-                            service_name,
-                            event_params,
-                        )
-                        .await?;
+                    let connector_customer_response = Box::pin(self.handle_connector_customer(
+                        connector_data.clone(),
+                        &payment_flow_data,
+                        connector_auth_details.clone(),
+                        &payload,
+                        &connector.to_string(),
+                        service_name,
+                        event_params,
+                    ))
+                    .await?;
 
                     payment_flow_data.set_connector_customer_id(Some(
                         connector_customer_response.connector_customer_id,
@@ -1043,14 +1041,16 @@ impl Payments {
             shadow_mode: event_params.shadow_mode,
         };
 
-        let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            connector_customer_router_data,
-            None,
-            external_event_params,
-            None,
-            common_enums::CallConnectorAction::Trigger,
+        let response = Box::pin(
+            external_services::service::execute_connector_processing_step(
+                &self.config.proxy,
+                connector_integration,
+                connector_customer_router_data,
+                None,
+                external_event_params,
+                None,
+                common_enums::CallConnectorAction::Trigger,
+            ),
         )
         .await
         .switch()
@@ -1143,14 +1143,16 @@ impl Payments {
             shadow_mode: event_params.shadow_mode,
         };
 
-        let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            connector_customer_router_data,
-            None,
-            external_event_params,
-            None,
-            common_enums::CallConnectorAction::Trigger,
+        let response = Box::pin(
+            external_services::service::execute_connector_processing_step(
+                &self.config.proxy,
+                connector_integration,
+                connector_customer_router_data,
+                None,
+                external_event_params,
+                None,
+                common_enums::CallConnectorAction::Trigger,
+            ),
         )
         .await
         .switch()
@@ -2193,7 +2195,7 @@ impl PaymentService for Payments {
                         };
 
                         Some(
-                            self.handle_order_creation_for_setup_mandate(
+                            Box::pin(self.handle_order_creation_for_setup_mandate(
                                 connector_data.clone(),
                                 &payment_flow_data,
                                 connector_auth_details.clone(),
@@ -2201,7 +2203,7 @@ impl PaymentService for Payments {
                                 &payload,
                                 &connector.to_string(),
                                 &service_name,
-                            )
+                            ))
                             .await?,
                         )
                     } else {
@@ -2230,8 +2232,8 @@ impl PaymentService for Payments {
                                     shadow_mode: metadata_payload.shadow_mode,
                                 };
 
-                                let connector_customer_response = self
-                                    .handle_connector_customer_for_setup_mandate(
+                                let connector_customer_response =
+                                    Box::pin(self.handle_connector_customer_for_setup_mandate(
                                         connector_data.clone(),
                                         &payment_flow_data,
                                         connector_auth_details.clone(),
@@ -2239,7 +2241,7 @@ impl PaymentService for Payments {
                                         &connector.to_string(),
                                         &service_name,
                                         event_params,
-                                    )
+                                    ))
                                     .await?;
 
                                 payment_flow_data.set_connector_customer_id(Some(
