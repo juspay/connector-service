@@ -15,7 +15,7 @@ use hyperswitch_masking::{ExposeInterface, Secret};
 use chrono;
 use serde::{Deserialize, Serialize};
 
-use crate::types::ResponseRouterData;
+use crate::{connectors::tpsl::TPSLRouterData, types::ResponseRouterData};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
