@@ -524,14 +524,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         let cart = TpslCartPayload {
             identifier: format!("CART_{}", customer_id.get_string_repr()),
-            reference: item.router_data.resource_common_data.connector_request_reference_id.clone(),
+            reference: item.resource_common_data.connector_request_reference_id.clone(),
             description: "UPI Payment Cart".to_string(),
             item: vec![TpslItemPayload {
                 identifier: "ITEM_1".to_string(),
-                reference: item.router_data.resource_common_data.connector_request_reference_id.clone(),
+                reference: item.resource_common_data.connector_request_reference_id.clone(),
                 s_k_u: "UPI_ITEM".to_string(),
                 description: "UPI Payment Item".to_string(),
-                amount: amount.to_string(),
+                amount: amount,
                 com_amt: "0".to_string(),
                 provider_identifier: "UPI".to_string(),
                 surcharge_or_discount_amount: "0".to_string(),
