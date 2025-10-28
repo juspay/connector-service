@@ -4,8 +4,8 @@ use common_utils::{
     errors::CustomResult, request::Method,
 };
 use domain_types::{
-    connector_flow::{Authorize, PSync, PostAuthenticate},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData, ResponseId},
+    connector_flow::{Authorize, Authenticate, PSync, PostAuthenticate},
+    connector_types::{PaymentFlowData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData, ResponseId},
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::ConnectorAuthType,
