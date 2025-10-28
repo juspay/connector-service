@@ -1,6 +1,6 @@
 use common_utils::{
     request::Method,
-    time,
+    date_time,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
@@ -263,18 +263,18 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
-        let amount = item
-            .connector
+        let (router_data, connector) = item;
+        let customer_id = router_data.resource_common_data.get_customer_id()?;
+        let amount = connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
+                router_data.request.minor_amount,
+                router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         // Create transaction message based on UPI payment method
-        let transaction_message = match item.resource_common_data.payment_method {
+        let transaction_message = match router_data.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => {
                 format!(
                     r#"{{
@@ -341,14 +341,14 @@ impl<
                     }}"#,
                     customer_id.get_string_repr(),
                     amount,
-                    item.resource_common_data.connector_request_reference_id,
+                    router_data.resource_common_data.connector_request_reference_id,
                     amount,
-                    item.router_data.request.currency,
-                    item.resource_common_data.connector_request_reference_id,
-                    time::now().format("%Y-%m-%d %H:%M:%S"),
-                    item.resource_common_data.connector_request_reference_id,
-                    item.router_data.request.get_router_return_url()?.as_str(),
-                    item.router_data.request.email.as_ref().map(|e| e.peek().clone()).unwrap_or_default(),
+                    router_data.request.currency,
+                    router_data.resource_common_data.connector_request_reference_id,
+                    date_time::now().format("%Y-%m-%d %H:%M:%S"),
+                    router_data.resource_common_data.connector_request_reference_id,
+                    router_data.request.get_router_return_url()?.as_str(),
+                    router_data.request.email.as_ref().map(|e| e.peek().clone()).unwrap_or_default(),
                     customer_id.get_string_repr()
                 )
             }
@@ -456,13 +456,13 @@ impl TryFrom<
             (),
         >,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
-        let amount = item
-            .connector
+        let (router_data, connector) = item;
+        let customer_id = router_data.resource_common_data.get_customer_id()?;
+        let amount = connector
             .amount_converter
             .convert(
-                item.router_data.request.amount,
-                item.router_data.request.currency,
+                router_data.request.amount,
+                router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
@@ -478,10 +478,10 @@ impl TryFrom<
                 transaction_type: Some("SALE".to_string()),
                 subType: Some("INTENT".to_string()),
                 amount,
-                currency: item.router_data.request.currency.to_string(),
-                dateTime: time::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                currency: router_data.request.currency.to_string(),
+                dateTime: date_time::now().format("%Y-%m-%d %H:%M:%S").to_string(),
                 requestType: "TXN".to_string(),
-                token: item.router_data.request.connector_transaction_id.get_connector_transaction_id()
+                token: router_data.request.connector_transaction_id.get_connector_transaction_id()
                     .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?,
             },
             consumer: TpslConsumerDataType {
@@ -512,7 +512,7 @@ impl<F> TryFrom<ResponseRouterData<TpslPaymentsSyncResponse, Self>>
             _ => common_enums::AttemptStatus::Pending,
         };
 
-        let amount_received = response.paymentMethod.paymentTransaction.amount.parse::<i64>()
+        let _amount_received = response.paymentMethod.paymentTransaction.amount.parse::<i64>()
             .ok()
             .map(|amt| common_utils::types::MinorUnit::new(amt));
 
