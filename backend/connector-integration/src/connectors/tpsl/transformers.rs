@@ -5,8 +5,22 @@ use common_utils::{
     types::MinorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, PSync},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
+    connector_flow::{
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, 
+        CreateOrder, CreateSessionToken, DefendDispute, PaymentMethodToken, PostAuthenticate, 
+        PreAuthenticate, PSync, Refund, RepeatPayment, RSync, SetupMandate, SubmitEvidence, Void
+    },
+    connector_types::{
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData, 
+        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData, 
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, 
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData, 
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData, 
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData, 
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, 
+        RepeatPaymentData, ResponseId, SessionTokenRequestData, SessionTokenResponseData, 
+        SetupMandateRequestData, SubmitEvidenceData
+    },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
