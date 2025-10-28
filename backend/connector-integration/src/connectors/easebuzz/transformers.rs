@@ -594,7 +594,7 @@ impl<
                     _ => common_enums::AttemptStatus::Pending,
                 };
 
-                let amount_received = payment_data.amount.as_ref()
+                let _amount_received = payment_data.amount.as_ref()
                     .and_then(|amt| amt.parse::<f64>().ok())
                     .map(|amt| MinorUnit::new((amt * 100.0) as i64));
 
