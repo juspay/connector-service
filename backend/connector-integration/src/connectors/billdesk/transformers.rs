@@ -182,6 +182,26 @@ pub fn generate_checksum<T: PaymentMethodDataTypes + std::fmt::Debug + std::mark
     Ok(hex::encode(result))
 }
 
+pub fn generate_checksum_for_post_auth<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+    req: &RouterDataV2<PostAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+    auth: &BilldeskAuth,
+    amount_converter: &dyn common_utils::types::AmountConvertor<Output = String>,
+) -> CustomResult<String, errors::ConnectorError> {
+    // Generate checksum based on Billdesk's requirements for PostAuthenticate
+    let checksum_input = format!(
+        "{}{}",
+        req.resource_common_data.connector_request_reference_id,
+        auth.checksum_key.expose()
+    );
+    
+    // Use SHA256 for checksum generation
+    use sha2::{Sha256, Digest};
+    let mut hasher = Sha256::new();
+    hasher.update(checksum_input.as_bytes());
+    let result = hasher.finalize();
+    Ok(hex::encode(result))
+}
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
