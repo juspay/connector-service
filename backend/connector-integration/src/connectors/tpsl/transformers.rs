@@ -492,7 +492,7 @@ impl<
                     },
                     cart: UPITokenCart {
                         item: vec![UPIItem {
-                            amount: amount.get_amount_as_string(),
+                            amount: amount.to_string(),
                             com_amt: "0".to_string(),
                             sku: "UPI".to_string(),
                             reference: item.router_data.resource_common_data.connector_request_reference_id.clone(),
@@ -518,7 +518,7 @@ impl<
                             .map(|ip| ip.expose())
                             .unwrap_or_else(|| "127.0.0.1".to_string()),
                         sms_sending: "N".to_string(),
-                        amount: amount.get_amount_as_string(),
+                        amount: amount.to_string(),
                         forced_3ds_call: "N".to_string(),
                         txn_type: "SALE".to_string(),
                         description: item.router_data.request.statement_descriptor.clone().unwrap_or_default(),
@@ -619,7 +619,7 @@ impl<
                     .unwrap_or_else(|| "127.0.0.1".to_string()),
                 txn_type: Some("SALE".to_string()),
                 sub_type: Some("SALE".to_string()),
-                amount: amount.get_amount_as_string(),
+                amount: amount.to_string(),
                 currency: item.router_data.request.currency.to_string(),
                 date_time: std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
