@@ -390,7 +390,7 @@ macros::create_all_prerequisites!(
     }
 );
 
-// Only implement Authorize flow with macro
+// Implement Authorize flow with macro
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: TPSL,
@@ -424,6 +424,589 @@ macros::macro_connector_implementation!(
             _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}{}", "https://www.tpsl-india.in", constants::api_endpoints::UPI_TRANSACTION))
+        }
+    }
+);
+
+// Implement PSync flow with macro
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslSyncRequest),
+    curl_response: TpslSyncResponse,
+    flow_name: PSync,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsSyncData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let mut headers = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )];
+
+            let auth_headers = self.get_auth_headers(&req.connector_auth_type)?;
+            headers.extend(auth_headers);
+
+            Ok(headers)
+        }
+
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}{}", "https://www.tpsl-india.in", constants::api_endpoints::UPI_TOKEN_GENERATION))
+        }
+    }
+);
+
+// Stub implementations for all other flows
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslCaptureRequest),
+    curl_response: TpslCaptureResponse,
+    flow_name: Capture,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsCaptureData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("Capture flow not implemented".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslVoidRequest),
+    curl_response: TpslVoidResponse,
+    flow_name: Void,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentVoidData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("Void flow not implemented".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslRefundRequest),
+    curl_response: TpslRefundResponse,
+    flow_name: Refund,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundsData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("Refund flow not implemented".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslSetupMandateRequest),
+    curl_response: TpslSetupMandateResponse,
+    flow_name: SetupMandate,
+    resource_common_data: PaymentFlowData,
+    flow_request: SetupMandateRequestData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("SetupMandate flow not implemented".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslCreateOrderRequest),
+    curl_response: TpslCreateOrderResponse,
+    flow_name: CreateOrder,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentCreateOrderData,
+    flow_response: PaymentCreateOrderResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("CreateOrder flow not implemented".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslSessionTokenRequest),
+    curl_response: TpslSessionTokenResponse,
+    flow_name: CreateSessionToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: SessionTokenRequestData,
+    flow_response: SessionTokenResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("CreateSessionToken flow not implemented".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslAccessTokenRequest),
+    curl_response: TpslAccessTokenResponse,
+    flow_name: CreateAccessToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: AccessTokenRequestData,
+    flow_response: AccessTokenResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("CreateAccessToken flow not implemented".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslCreateCustomerRequest),
+    curl_response: TpslCreateCustomerResponse,
+    flow_name: CreateConnectorCustomer,
+    resource_common_data: PaymentFlowData,
+    flow_request: ConnectorCustomerData,
+    flow_response: ConnectorCustomerResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("CreateConnectorCustomer flow not implemented".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentTokenRequest),
+    curl_response: TpslPaymentTokenResponse,
+    flow_name: PaymentMethodToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentMethodTokenizationData<T>,
+    flow_response: PaymentMethodTokenResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("PaymentMethodToken flow not implemented".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslRepeatPaymentRequest),
+    curl_response: TpslRepeatPaymentResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("RepeatPayment flow not implemented".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslAcceptDisputeRequest),
+    curl_response: TpslAcceptDisputeResponse,
+    flow_name: Accept,
+    resource_common_data: DisputeFlowData,
+    flow_request: AcceptDisputeData,
+    flow_response: DisputeResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("Accept dispute flow not implemented".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslSubmitEvidenceRequest),
+    curl_response: TpslSubmitEvidenceResponse,
+    flow_name: SubmitEvidence,
+    resource_common_data: DisputeFlowData,
+    flow_request: SubmitEvidenceData,
+    flow_response: DisputeResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("SubmitEvidence flow not implemented".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslDefendDisputeRequest),
+    curl_response: TpslDefendDisputeResponse,
+    flow_name: DefendDispute,
+    resource_common_data: DisputeFlowData,
+    flow_request: DisputeDefendData,
+    flow_response: DisputeResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn get get_url(
+            &self,
+            _req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("DefendDispute flow not implemented".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPreAuthenticateRequest),
+    curl_response: TpslPreAuthenticateResponse,
+    flow_name: PreAuthenticate,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsPreAuthenticateData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("PreAuthenticate flow not implemented".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslAuthenticateRequest),
+    curl_response: TpslAuthenticateResponse,
+    flow_name: Authenticate,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthenticateData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("Authenticate flow not implemented".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPostAuthenticateRequest),
+    curl_response: TpslPostAuthenticateResponse,
+    flow_name: PostAuthenticate,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsPostAuthenticateData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("PostAuthenticate flow not implemented".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslRefundSyncRequest),
+    curl_response: TpslRefundSyncResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("RSync flow not implemented".to_string()).into())
         }
     }
 );
