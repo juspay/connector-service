@@ -362,7 +362,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::DefendDispute for Billdesk<T> {}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SubmitEvidence for Billdesk<T> {}
+    connector_types::SubmitEvidenceV2 for Billdesk<T> {}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Billdesk<T> {}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
