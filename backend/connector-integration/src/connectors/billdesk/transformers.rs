@@ -70,6 +70,12 @@ pub struct BilldeskVoidRequest;
 #[derive(Debug, Clone)]
 pub struct BilldeskVoidResponse;
 
+// VoidPC types (separate to avoid conflicts)
+#[derive(Debug, Clone, Serialize)]
+pub struct BilldeskVoidPCRequest;
+#[derive(Debug, Clone)]
+pub struct BilldeskVoidPCResponse;
+
 // PostAuthenticate types (reuse payments types with different names to avoid conflicts)
 #[derive(Debug, Clone, Serialize)]
 pub struct BilldeskPostAuthenticateRequest {
