@@ -190,7 +190,7 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuth {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, key1, .. } => Ok(Self {
                 merchant_id: api_key.clone(),
-                checksum_key: key1.clone().unwrap_or_else(|| Secret::new("".to_string())),
+                checksum_key: key1.clone().unwrap_or(Secret::new("".to_string())),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
