@@ -143,7 +143,7 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuth {
 pub fn generate_checksum<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
     req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     auth: &BilldeskAuth,
-    amount_converter: &dyn common_utils::types::AmountConverterTrait<Output = String>,
+    amount_converter: &dyn common_utils::types::AmountConvertor<Output = String>,
 ) -> CustomResult<String, errors::ConnectorError> {
     // Generate checksum based on Billdesk's requirements
     // This is a simplified implementation - in production, use proper checksum algorithm
