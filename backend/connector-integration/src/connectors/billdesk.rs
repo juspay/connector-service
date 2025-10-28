@@ -59,6 +59,73 @@ macros::create_all_prerequisites!(
             request_body: BilldeskPaymentsSyncRequest,
             response_body: BilldeskPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        // MANDATORY: Add all other flows even if not implemented
+        (
+            flow: Void,
+            request_body: transformers::BilldeskVoidRequest,
+            response_body: transformers::BilldeskVoidResponse,
+            router_data: RouterDataV2<Void, PaymentFlowData, domain_types::connector_types::PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: Capture,
+            request_body: transformers::BilldeskCaptureRequest,
+            response_body: transformers::BilldeskCaptureResponse,
+            router_data: RouterDataV2<Capture, PaymentFlowData, domain_types::connector_types::PaymentsCaptureData, PaymentsResponseData>,
+        ),
+        (
+            flow: Refund,
+            request_body: transformers::BilldeskRefundRequest,
+            response_body: transformers::BilldeskRefundResponse,
+            router_data: RouterDataV2<Refund, domain_types::connector_types::RefundFlowData, domain_types::connector_types::RefundsData, domain_types::connector_types::RefundsResponseData>,
+        ),
+        (
+            flow: RSync,
+            request_body: transformers::BilldeskRefundSyncRequest,
+            response_body: transformers::BilldeskRefundSyncResponse,
+            router_data: RouterDataV2<RSync, domain_types::connector_types::RefundFlowData, domain_types::connector_types::RefundSyncData, domain_types::connector_types::RefundsResponseData>,
+        ),
+        (
+            flow: CreateOrder,
+            request_body: transformers::BilldeskCreateOrderRequest,
+            response_body: transformers::BilldeskCreateOrderResponse,
+            router_data: RouterDataV2<CreateOrder, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentCreateOrderData, domain_types::connector_types::PaymentCreateOrderResponse>,
+        ),
+        (
+            flow: CreateSessionToken,
+            request_body: transformers::BilldeskSessionTokenRequest,
+            response_body: transformers::BilldeskSessionTokenResponse,
+            router_data: RouterDataV2<CreateSessionToken, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::SessionTokenRequestData, domain_types::connector_types::SessionTokenResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: transformers::BilldeskMandateRequest,
+            response_body: transformers::BilldeskMandateResponse,
+            router_data: RouterDataV2<SetupMandate, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::SetupMandateRequestData<T>, domain_types::connector_types::PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: transformers::BilldeskRepeatPaymentRequest,
+            response_body: transformers::BilldeskRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::RepeatPaymentData, PaymentsResponseData>,
+        ),
+        (
+            flow: Accept,
+            request_body: transformers::BilldeskAcceptDisputeRequest,
+            response_body: transformers::BilldeskAcceptDisputeResponse,
+            router_data: RouterDataV2<Accept, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::AcceptDisputeData, domain_types::connector_types::DisputeResponseData>,
+        ),
+        (
+            flow: DefendDispute,
+            request_body: transformers::BilldeskDefendDisputeRequest,
+            response_body: transformers::BilldeskDefendDisputeResponse,
+            router_data: RouterDataV2<DefendDispute, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::DisputeDefendData, domain_types::connector_types::DisputeResponseData>,
+        ),
+        (
+            flow: SubmitEvidence,
+            request_body: transformers::BilldeskSubmitEvidenceRequest,
+            response_body: transformers::BilldeskSubmitEvidenceResponse,
+            router_data: RouterDataV2<SubmitEvidence, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::SubmitEvidenceData, domain_types::connector_types::DisputeResponseData>,
         )
     ],
     amount_converters: [
