@@ -473,7 +473,6 @@ where
             connector_auth_type: router_data.connector_auth_type,
             request: router_data.request,
             response: Ok(payments_response),
-            http_code,
         })
     }
 }
@@ -500,7 +499,6 @@ impl TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, RouterDataV2<PSync
             connector_auth_type: router_data.connector_auth_type,
             request: router_data.request,
             response: Ok(payments_response),
-            http_code,
         })
     }
 }
