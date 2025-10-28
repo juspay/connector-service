@@ -11,7 +11,7 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateConnectorCustomer, CreateOrder, CreateSessionToken, DefendDispute, PaymentMethodToken, PSync, PostAuthenticate, PreAuthenticate, RSync,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder, CreateSessionToken, DefendDispute, PaymentMethodToken, PSync, PostAuthenticate, PreAuthenticate, RSync,
         Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
@@ -171,6 +171,12 @@ macros::create_all_prerequisites!(
             request_body: BilldeskCreateConnectorCustomerRequest,
             response_body: BilldeskCreateConnectorCustomerResponse,
             router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, domain_types::connector_types::ConnectorCustomerData, ConnectorCustomerResponse>,
+        ),
+        (
+            flow: CreateAccessToken,
+            request_body: BilldeskVoidRequest,
+            response_body: BilldeskVoidResponse,
+            router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, domain_types::connector_types::SessionTokenRequestData, SessionTokenResponseData>,
         )
     ],
     amount_converters: [
