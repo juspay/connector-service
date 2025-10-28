@@ -12,7 +12,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::tpsl::TPSL, types::ResponseRouterData};
@@ -321,15 +321,16 @@ impl<
                         }}
                     }}"#,
                     customer_id.get_string_repr(),
-                    amount,
+                    amount: amount.to_string(),
                     router_data.resource_common_data.connector_request_reference_id,
                     amount,
                     router_data.request.currency,
                     router_data.resource_common_data.connector_request_reference_id,
-                    date_time::now().format(&date_time::YYYYMMDDHHmmss)?,
+                    date_time::format_date(date_time::now(), date_time::DateFormat::YYYYMMDDHHmmss)
+                        .change_context(ConnectorError::RequestEncodingFailed)?,
                     router_data.resource_common_data.connector_request_reference_id,
                     router_data.request.get_router_return_url()?.as_str(),
-                    router_data.request.email.as_ref().map(|e| e.clone()).unwrap_or_default(),
+                    router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
                     customer_id.get_string_repr()
                 )
             }
@@ -422,12 +423,12 @@ impl<
     }
 }
 
-impl TryFrom<(RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, TPSL<()>)> for TpslPaymentsSyncRequest
+impl TryFrom<(RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, TPSL<domain_types::payment_method_data::DefaultPCIHolder>)> for TpslPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: (RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, TPSL<()>),
+        item: (RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, TPSL<domain_types::payment_method_data::DefaultPCIHolder>),
     ) -> Result<Self, Self::Error> {
         let (router_data, connector) = item;
         let customer_id = router_data.resource_common_data.get_customer_id()?;
@@ -452,7 +453,8 @@ impl TryFrom<(RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
                 subType: Some("INTENT".to_string()),
                 amount,
                 currency: router_data.request.currency.to_string(),
-                dateTime: date_time::now().format(&date_time::YYYYMMDDHHmmss)?,
+                dateTime: date_time::format_date(date_time::now(), date_time::DateFormat::YYYYMMDDHHmmss)
+                    .change_context(ConnectorError::RequestEncodingFailed)?,
                 requestType: "TXN".to_string(),
                 token: router_data.request.connector_transaction_id.get_connector_transaction_id()
                     .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?,
