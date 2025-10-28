@@ -1,5 +1,6 @@
 use common_utils::{
     errors::CustomResult, request::Method,
+    types::{AmountConvertor, StringMinorUnitForConnector},
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
@@ -459,7 +460,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let return_url = item.router_data.request.get_router_return_url()?;
         
         // CORRECT: Use proper amount framework
-        let amount = item.connector.amount_converter.convert(
+        let converter = StringMinorUnitForConnector;
+        let amount = converter.convert(
             item.router_data.request.minor_amount,
             item.router_data.request.currency,
         ).change_context(errors::ConnectorError::RequestEncodingFailed)?;
