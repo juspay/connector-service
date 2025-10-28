@@ -58,20 +58,17 @@ pub struct WorldpayvantivPaymentsRequest<T: PaymentMethodDataTypes> {
     pub cnp_request: CnpOnlineRequest<T>,
 }
 
-// Custom Serialize implementation that generates proper XML using quick_xml
+// Serialize implementation
 impl<T: PaymentMethodDataTypes + Serialize> Serialize for WorldpayvantivPaymentsRequest<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        // Generate XML using quick_xml like Elavon does
-        let xml_content = quick_xml::se::to_string_with_root("cnpOnlineRequest", &self.cnp_request)
-            .map_err(serde::ser::Error::custom)?;
+        let full_xml =
+            crate::utils::serialize_to_xml_string_with_root("cnpOnlineRequest", &self.cnp_request)
+                .map_err(serde::ser::Error::custom)?;
 
-        // Add XML declaration as WorldpayVantiv expects it
-        let full_xml = format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>{}", xml_content);
-
-        // Serialize the complete XML string - the external service will handle unescaping
+        // Serialize the complete XML string 
         full_xml.serialize(serializer)
     }
 }
