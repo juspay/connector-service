@@ -400,7 +400,7 @@ pub enum TpslPaymentsRequest {
     Transaction(TpslTransactionRequest),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum TpslPaymentsResponse {
     UPIToken(TpslUPITokenResponse),
