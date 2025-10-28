@@ -68,7 +68,7 @@ impl<T: PaymentMethodDataTypes + Serialize> Serialize for WorldpayvantivPayments
             crate::utils::serialize_to_xml_string_with_root("cnpOnlineRequest", &self.cnp_request)
                 .map_err(serde::ser::Error::custom)?;
 
-        // Serialize the complete XML string 
+        // Serialize the complete XML string
         full_xml.serialize(serializer)
     }
 }
