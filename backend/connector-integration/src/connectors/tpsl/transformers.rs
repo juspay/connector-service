@@ -320,7 +320,7 @@ impl<
                         }}
                     }}"#,
                     customer_id.get_string_repr(),
-                    amount,
+                    amount: amount.to_string(),
                     item.router_data.resource_common_data.connector_request_reference_id,
                     amount,
                     item.router_data.request.currency,
@@ -329,7 +329,7 @@ impl<
                         .change_context(ConnectorError::RequestEncodingFailed)?,
                     item.router_data.resource_common_data.connector_request_reference_id,
                     item.router_data.request.get_router_return_url()?.as_str(),
-                    item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
+                    item.router_data.request.email.as_ref().map(|e| e.peek().clone()).unwrap_or_default(),
                     customer_id.get_string_repr()
                 )
             }
