@@ -517,32 +517,23 @@ impl<
 }
 
 // Response transformations
-// Response handling for Authorize flow
-impl<T> TryFrom<ResponseRouterData<TpslPaymentsResponse, TpslRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>>
+// Simplified response handling for Authorize flow
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
+TryFrom<crate::types::ResponseRouterData<TpslPaymentsResponse, TpslRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>>
 for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<TpslPaymentsResponse, TpslRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>,
+        item: crate::types::ResponseRouterData<TpslPaymentsResponse, TpslRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>,
     ) -> Result<Self, Self::Error> {
-        let ResponseRouterData {
+        let crate::types::ResponseRouterData {
             response,
             router_data,
             http_code,
         } = item;
         
         let (status, response) = match response {
-            TpslPaymentsResponse::Success(response_data) => {
-                let redirection_data = if !response_data.payment_method.a_c_s.bank_acs_url.is_null() {
-                    Some(Box::new(RedirectForm::Form {
-                        endpoint: response_data.payment_method.a_c_s.bank_acs_url.as_str().unwrap_or("").to_string(),
-                        method: Method::Post,
-                        form_fields: HashMap::new(),
-                    }))
-                } else {
-                    None
-                };
-
+            TpslPaymentsResponse::Success(_response_data) => {
                 (
                     common_enums::AttemptStatus::AuthenticationPending,
                     Ok(PaymentsResponseData::TransactionResponse {
@@ -552,11 +543,11 @@ for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsR
                                 .connector_request_reference_id
                                 .clone(),
                         ),
-                        redirection_data,
+                        redirection_data: None,
                         mandate_reference: None,
                         connector_metadata: None,
-                        network_txn_id: response_data.payment_method.payment_transaction.bank_reference_identifier,
-                        connector_response_reference_id: Some(response_data.merchant_transaction_identifier),
+                        network_txn_id: None,
+                        connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
                         status_code: http_code,
                     }),
