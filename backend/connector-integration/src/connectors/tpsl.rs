@@ -453,13 +453,9 @@ macros::create_all_prerequisites!(
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+            _req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
-                "https://www.tekprocess.co.in/PaymentGateway"
-            } else {
-                "https://www.tpsl-india.in/PaymentGateway"
-            }
+            "https://www.tpsl-india.in/PaymentGateway"
         }
     }
 );
