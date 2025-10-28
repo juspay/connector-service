@@ -29,7 +29,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Maskable, Secret};
+use hyperswitch_masking::Maskable;
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -226,7 +226,7 @@ impl<
         error_stack::Report<domain_types::errors::ConnectorError>,
     > {
         // TODO: Implement webhook processing based on Billdesk's webhook format
-        Err(errors::ConnectorError::WebhookNotImplemented.into())
+        Err(errors::ConnectorError::WebhooksNotImplemented.into())
     }
 }
 
@@ -535,7 +535,7 @@ impl<
             + Serialize,
     >
     ConnectorIntegrationV2<
-        CreateAccessToken,
+        domain_types::connector_flow::CreateAccessToken,
         PaymentFlowData,
         domain_types::connector_types::AccessTokenRequestData,
         domain_types::connector_types::AccessTokenResponseData,
@@ -552,7 +552,7 @@ impl<
             + Serialize,
     >
     ConnectorIntegrationV2<
-        CreateConnectorCustomer,
+        domain_types::connector_flow::CreateConnectorCustomer,
         PaymentFlowData,
         domain_types::connector_types::ConnectorCustomerData,
         domain_types::connector_types::ConnectorCustomerResponse,
@@ -765,13 +765,13 @@ impl_source_verification_stub!(
     SessionTokenResponseData
 );
 impl_source_verification_stub!(
-    CreateAccessToken,
+    domain_types::connector_flow::CreateAccessToken,
     PaymentFlowData,
     domain_types::connector_types::AccessTokenRequestData,
     domain_types::connector_types::AccessTokenResponseData
 );
 impl_source_verification_stub!(
-    CreateConnectorCustomer,
+    domain_types::connector_flow::CreateConnectorCustomer,
     PaymentFlowData,
     domain_types::connector_types::ConnectorCustomerData,
     domain_types::connector_types::ConnectorCustomerResponse
