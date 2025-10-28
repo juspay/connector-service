@@ -359,8 +359,11 @@ impl<
         let payments_response = PaymentsResponseData::try_from(response)?;
         
         Ok(Self {
-            response: payments_response,
-            router_data,
+            flow: router_data.flow,
+            resource_common_data: router_data.resource_common_data,
+            connector_auth_type: router_data.connector_auth_type,
+            request: router_data.request,
+            response: Ok(payments_response),
             http_code,
         })
     }
@@ -390,8 +393,11 @@ impl<
         let payments_response = PaymentsResponseData::try_from(response)?;
         
         Ok(Self {
-            response: payments_response,
-            router_data,
+            flow: router_data.flow,
+            resource_common_data: router_data.resource_common_data,
+            connector_auth_type: router_data.connector_auth_type,
+            request: router_data.request,
+            response: Ok(payments_response),
             http_code,
         })
     }
