@@ -468,7 +468,7 @@ impl TryFrom<
 
         Ok(Self {
             merchant: TpslMerchantDataType {
-                identifier: customer_id.get_string_repr(),
+                identifier: customer_id.get_string_repr().to_string(),
             },
             payment: TpslPaymentUPISyncType {
                 instruction: serde_json::Value::Null,
@@ -485,7 +485,7 @@ impl TryFrom<
                     .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?,
             },
             consumer: TpslConsumerDataType {
-                identifier: customer_id.get_string_repr(),
+                identifier: customer_id.get_string_repr().to_string(),
             },
         })
     }
