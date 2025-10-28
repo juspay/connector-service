@@ -224,10 +224,6 @@ impl TryFrom<&ConnectorAuthType> for TpslAuth {
                 merchant_id: api_key.clone(),
                 api_key: api_key.clone(),
             }),
-            ConnectorAuthType::Key { api_key, .. } => Ok(Self {
-                merchant_id: api_key.clone(),
-                api_key: api_key.clone(),
-            }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
     }
