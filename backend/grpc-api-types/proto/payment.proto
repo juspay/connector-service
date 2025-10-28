@@ -907,6 +907,15 @@ message OnlineMandate {
   string user_agent = 2;
 }
 
+// Setup mandate details for payment authorization
+message SetupMandateDetails {
+  // A way to update the mandate's payment method details
+  optional string update_mandate_id = 1;
+  
+  // A consent from the customer to store the payment method
+  optional CustomerAcceptance customer_acceptance = 2;
+}
+
 // Information about the customer's browser.
 message BrowserInformation {
   // Display Information
@@ -1187,11 +1196,18 @@ message PaymentServiceAuthorizeRequest {
   optional CustomerAcceptance customer_acceptance = 28; // Details of customer acceptance
   optional BrowserInformation browser_info = 29; // Information about the customer's browser
   optional PaymentExperience payment_experience = 30; // Preferred payment experience
+  optional string description = 35;
 
   optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
 
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 33; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  
+  // Mandate Setup Details
+  optional SetupMandateDetails setup_mandate_details = 34; // Setup mandate details for the authorization
+
+  optional string statement_descriptor_name = 36;
+  optional string statement_descriptor_suffix = 37;
 }
 
 // Response message for a payment authorization.
@@ -1556,7 +1572,6 @@ message PaymentServiceRegisterRequest {
   // Customer Information
   optional SecretString email = 5; // Email address of the customer
   optional string customer_name = 6; // Name of the customer
-  optional string customer_id = 29; // Merchant's customer ID
   optional string connector_customer_id = 7; // Customer ID as recognized by the connector
   optional string customer_id = 29; // Merchant's customer ID
   
@@ -1649,12 +1664,18 @@ message PaymentServiceRepeatEverythingRequest {
   optional string merchant_order_reference_id = 6; // Merchant's reference ID for the order
   map<string, string> metadata = 7; // Additional metadata for the connector
   optional string webhook_url = 8; // URL for webhook notifications
+  optional string return_url = 17; // URL to redirect after payment
+  optional string description = 18;
+  
+  // Address Information
+  optional PaymentAddress address = 19; // Billing and shipping address details
 
   // Capture Settings
   optional CaptureMethod capture_method = 11; // Method for capturing the payment
 
   // Customer Information
   optional SecretString email = 12; // Email address of the customer
+  optional string connector_customer_id = 21; // Customer ID as recognized by the connector
 
   // Session and Token Information
   optional string access_token = 20; // Access token for secure communication
@@ -1668,7 +1689,9 @@ message PaymentServiceRepeatEverythingRequest {
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 33; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 
+  // Behavioral Flags and Preferences
   optional bool off_session = 16; // Indicates if off-session process
+  bool request_incremental_authorization = 22; // Indicates if incremental authorization is requested
 }
 
 // Response message for repeat payment operation.
@@ -1699,6 +1722,13 @@ message PaymentServiceRepeatEverythingResponse {
 
   // Raw Request
   optional SecretString raw_connector_request = 11; // Raw request to the connector for debugging
+
+  // Payment Details
+  optional int64 captured_amount = 15; // Amount that has been captured
+  optional int64 minor_captured_amount = 16; // Captured amount in minor currency units
+
+  // Authorization Details
+  optional bool incremental_authorization_allowed = 17; // Indicates if incremental authorization is allowed
 
   optional ConnectorResponseData connector_response = 14; // Various data regarding the response from connector
 }

@@ -85,7 +85,7 @@ impl GetRequestIncrementalAuthorization for PaymentVoidData {
 
 impl GetRequestIncrementalAuthorization for RepeatPaymentData {
     fn get_request_incremental_authorization(&self) -> Option<bool> {
-        None
+        Some(self.request_incremental_authorization)
     }
 }
 
@@ -4916,7 +4916,11 @@ impl<
             statement_descriptor_suffix: None,
             statement_descriptor: None,
             meta_data,
-            return_url: "https://juspay.in/".to_string(),
+            return_url: item
+                .request
+                .router_return_url
+                .clone()
+                .unwrap_or_else(|| "https://juspay.in/".to_string()),
             confirm: true, // Stripe requires confirm to be true if return URL is present
             description: item.resource_common_data.description.clone(),
             shipping: shipping_address,

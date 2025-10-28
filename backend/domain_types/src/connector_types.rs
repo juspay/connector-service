@@ -2010,7 +2010,9 @@ pub struct RepeatPaymentData {
     pub payment_method_type: Option<common_enums::PaymentMethodType>,
     pub merchant_account_metadata: Option<common_utils::pii::SecretSerdeValue>,
     pub off_session: Option<bool>,
+    pub router_return_url: Option<String>,
     pub split_payments: Option<SplitPaymentsRequest>,
+    pub request_incremental_authorization: bool,
 }
 
 impl RepeatPaymentData {
