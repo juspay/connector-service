@@ -277,7 +277,7 @@ impl<
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
 
         match item.router_data.request.payment_method_type {
-            Some(common_enums::PaymentMethodType::Upi) => {
+            Some(common_enums::PaymentMethodType::UpiCollect) => {
                 let mut additional_params = HashMap::new();
                 additional_params.insert("BankID".to_string(), "UPI".to_string());
                 additional_params.insert("TxnType".to_string(), "PURCHASE".to_string());
@@ -300,8 +300,9 @@ impl<
                     mobile: None,
                 })
             }
-            Some(common_enums::PaymentMethodType::Nb) => {
+            Some(common_enums::PaymentMethodType::UpiIntent) => {
                 let mut additional_params = HashMap::new();
+                additional_params.insert("BankID".to_string(), "UPI".to_string());
                 additional_params.insert("TxnType".to_string(), "PURCHASE".to_string());
                 
                 let msg = create_billdesk_message(
@@ -315,8 +316,8 @@ impl<
 
                 Ok(Self {
                     msg,
-                    paydata: None,
-                    txtBankID: Some("NB".to_string()),
+                    paydata: None, // Will be populated with UPI specific data
+                    txtBankID: None,
                     ipaddress: ip_address,
                     useragent: Some(user_agent),
                     mobile: None,
