@@ -146,7 +146,8 @@ pub struct TpslSyncRequest;
 pub struct TpslSyncResponse;
 
 // Stub TryFrom implementations for unsupported flows
-impl<F, T> TryFrom<TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
+    TryFrom<TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
     for TpslCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
