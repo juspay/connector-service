@@ -776,7 +776,8 @@ impl<
                     .amount
                     .parse::<f64>()
                     .ok()
-                    .map(|amt| common_utils::types::MinorUnit::from_major_unit_as_i64(amt));
+                    .and_then(|amt| amt.parse::<f64>().ok())
+                    .map(|amt| (amt * 100.0) as i64);
 
                 (
                     attempt_status,
