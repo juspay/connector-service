@@ -150,10 +150,10 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
     TryFrom<TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
     for TpslCaptureRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = std::convert::Infallible;
 
     fn try_from(_item: TPSLRouterData<RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
-        Err(errors::ConnectorError::NotImplemented("Capture flow not implemented".to_string()).into())
+        Ok(TpslCaptureRequest)
     }
 }
 
