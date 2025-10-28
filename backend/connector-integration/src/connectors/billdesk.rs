@@ -360,7 +360,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::AcceptDispute for Billdesk<T> {}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::DefendDispute for Billdesk<T> {}
+    connector_types::DisputeDefend for Billdesk<T> {}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SubmitEvidenceV2 for Billdesk<T> {}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
