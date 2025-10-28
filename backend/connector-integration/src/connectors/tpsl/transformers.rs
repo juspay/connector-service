@@ -164,7 +164,7 @@ pub struct AcsPayload {
     pub bank_acs_url: serde_json::Value,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaymentTxnPayload {
     pub amount: String,
