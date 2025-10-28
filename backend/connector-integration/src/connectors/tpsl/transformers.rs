@@ -15,7 +15,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{Maskable, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::connectors::tpsl::TpslRouterData;
+use crate::connectors::tpsl::TPSLRouterData;
 
 // TPSL Authentication Types
 #[derive(Default, Debug, Deserialize)]
