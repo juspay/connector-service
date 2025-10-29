@@ -522,11 +522,11 @@ impl<
     fn try_from(response: TpslPaymentsSyncResponse) -> Result<Self, Self::Error> {
         let status = response
             .transaction_state
-            .as_deref()
-            .unwrap_or("processing")
-            .to_lowercase();
+            .as_ref()
+            .map(|s| s.to_lowercase())
+            .unwrap_or_else(|| "processing".to_string());
 
-        let attempt_status = match status {
+        let attempt_status = match status.as_str() {
             "success" | "completed" => common_enums::AttemptStatus::Charged,
             "pending" | "processing" => common_enums::AttemptStatus::Pending,
             "failed" | "failure" => common_enums::AttemptStatus::Failure,
