@@ -445,15 +445,14 @@ impl<
     fn build_request_v2(
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        _config: &Connectors,
-    ) -> CustomResult<Request, errors::ConnectorError> {
+    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
         let request = TpslUPISyncRequest::try_from(req)?;
-        Ok(RequestBuilder::new()
+        Ok(Some(RequestBuilder::new()
             .method(Method::Post)
             .url(&self.get_url(req)?)
             .headers(self.get_headers(req)?)
             .set_body(RequestContent::Json(Box::new(request)))
-            .build())
+            .build()))
     }
 
     fn handle_response_v2(
