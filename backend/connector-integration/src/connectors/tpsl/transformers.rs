@@ -763,8 +763,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslPreAuthenticateRe
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<TpslPreAuthenticateResponse, RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>>) -> Self {
-        item.router_data
+    fn try_from(item: ResponseRouterData<TpslPreAuthenticateResponse, RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>>) -> Result<Self, Self::Error> {
+        Ok(item.router_data)
     }
 }
 
@@ -784,8 +784,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslVoidResponse, Rou
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<TpslVoidResponse, RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>) -> Self {
-        item.router_data
+    fn try_from(item: ResponseRouterData<TpslVoidResponse, RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>) -> Result<Self, Self::Error> {
+        Ok(item.router_data)
     }
 }
 
@@ -805,8 +805,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslCaptureResponse, 
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<TpslCaptureResponse, RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>) -> Self {
-        item.router_data
+    fn try_from(item: ResponseRouterData<TpslCaptureResponse, RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>) -> Result<Self, Self::Error> {
+        Ok(item.router_data)
     }
 }
 
@@ -826,8 +826,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslRefundResponse, R
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<TpslRefundResponse, RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>) -> Self {
-        item.router_data
+    fn try_from(item: ResponseRouterData<TpslRefundResponse, RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>) -> Result<Self, Self::Error> {
+        Ok(item.router_data)
     }
 }
 
@@ -847,8 +847,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslRSyncResponse, Ro
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<TpslRSyncResponse, RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>) -> Self {
-        item.router_data
+    fn try_from(item: ResponseRouterData<TpslRSyncResponse, RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>) -> Result<Self, Self::Error> {
+        Ok(item.router_data)
     }
 }
 
@@ -868,8 +868,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslSetupMandateRespo
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<TpslSetupMandateResponse, RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>>) -> Self {
-        item.router_data
+    fn try_from(item: ResponseRouterData<TpslSetupMandateResponse, RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>>) -> Result<Self, Self::Error> {
+        Ok(item.router_data)
     }
 }
 
@@ -889,8 +889,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslRepeatPaymentResp
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<TpslRepeatPaymentResponse, RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>>) -> Self {
-        item.router_data
+    fn try_from(item: ResponseRouterData<TpslRepeatPaymentResponse, RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>>) -> Result<Self, Self::Error> {
+        Ok(item.router_data)
     }
 }
 
@@ -910,8 +910,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslAcceptDisputeResp
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<TpslAcceptDisputeResponse, RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>>) -> Self {
-        item.router_data
+    fn try_from(item: ResponseRouterData<TpslAcceptDisputeResponse, RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>>) -> Result<Self, Self::Error> {
+        Ok(item.router_data)
     }
 }
 
@@ -931,8 +931,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslSubmitEvidenceRes
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<TpslSubmitEvidenceResponse, RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>>) -> Self {
-        item.router_data
+    fn try_from(item: ResponseRouterData<TpslSubmitEvidenceResponse, RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>>) -> Result<Self, Self::Error> {
+        Ok(item.router_data)
     }
 }
 
@@ -952,8 +952,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslDefendDisputeResp
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<TpslDefendDisputeResponse, RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>>) -> Self {
-        item.router_data
+    fn try_from(item: ResponseRouterData<TpslDefendDisputeResponse, RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>>) -> Result<Self, Self::Error> {
+        Ok(item.router_data)
     }
 }
 
@@ -973,8 +973,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslCreateOrderRespon
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<TpslCreateOrderResponse, RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>>) -> Self {
-        item.router_data
+    fn try_from(item: ResponseRouterData<TpslCreateOrderResponse, RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>>) -> Result<Self, Self::Error> {
+        Ok(item.router_data)
     }
 }
 
@@ -994,8 +994,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslCreateSessionToke
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<TpslCreateSessionTokenResponse, RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>>) -> Self {
-        item.router_data
+    fn try_from(item: ResponseRouterData<TpslCreateSessionTokenResponse, RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>>) -> Result<Self, Self::Error> {
+        Ok(item.router_data)
     }
 }
 
@@ -1015,8 +1015,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslPaymentMethodToke
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<TpslPaymentMethodTokenResponse, RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>>) -> Self {
-        item.router_data
+    fn try_from(item: ResponseRouterData<TpslPaymentMethodTokenResponse, RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>>) -> Result<Self, Self::Error> {
+        Ok(item.router_data)
     }
 }
 
@@ -1036,8 +1036,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslCreateAccessToken
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<TpslCreateAccessTokenResponse, RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>>) -> Self {
-        item.router_data
+    fn try_from(item: ResponseRouterData<TpslCreateAccessTokenResponse, RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>>) -> Result<Self, Self::Error> {
+        Ok(item.router_data)
     }
 }
 
@@ -1057,8 +1057,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslCreateConnectorCu
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<TpslCreateConnectorCustomerResponse, RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>>) -> Self {
-        item.router_data
+    fn try_from(item: ResponseRouterData<TpslCreateConnectorCustomerResponse, RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>>) -> Result<Self, Self::Error> {
+        Ok(item.router_data)
     }
 }
 
@@ -1078,7 +1078,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslVoidPCResponse, R
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<TpslVoidPCResponse, RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>>) -> Self {
-        item.router_data
+    fn try_from(item: ResponseRouterData<TpslVoidPCResponse, RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>>) -> Result<Self, Self::Error> {
+        Ok(item.router_data)
     }
 }
