@@ -280,6 +280,102 @@ pub struct TpslErrorResponse {
     pub error_message: String,
 }
 
+// Stub types for additional flows to avoid macro conflicts
+#[derive(Debug, Serialize)]
+pub struct TpslPostAuthenticateRequest;
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TpslPostAuthenticateResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslAuthenticateRequest;
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TpslAuthenticateResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslPreAuthenticateRequest;
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TpslPreAuthenticateResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslVoidRequest;
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TpslVoidResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslCaptureRequest;
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TpslCaptureResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslRefundRequest;
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TpslRefundResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslRSyncRequest;
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TpslRSyncResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslSetupMandateRequest;
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TpslSetupMandateResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslRepeatPaymentRequest;
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TpslRepeatPaymentResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslAcceptDisputeRequest;
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TpslAcceptDisputeResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslSubmitEvidenceRequest;
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TpslSubmitEvidenceResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslDefendDisputeRequest;
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TpslDefendDisputeResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslCreateOrderRequest;
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TpslCreateOrderResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslCreateSessionTokenRequest;
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TpslCreateSessionTokenResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslPaymentMethodTokenRequest;
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TpslPaymentMethodTokenResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslCreateAccessTokenRequest;
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TpslCreateAccessTokenResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslCreateConnectorCustomerRequest;
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TpslCreateConnectorCustomerResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslVoidPCRequest;
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TpslVoidPCResponse;
+
+#[derive(Debug, Serialize)]
+pub struct TpslIncomingWebhookRequest;
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TpslIncomingWebhookResponse;
+
 // CRITICAL: Dynamic extraction functions - NEVER HARDCODE VALUES
 fn get_merchant_code(
     connector_auth_type: &ConnectorAuthType,
