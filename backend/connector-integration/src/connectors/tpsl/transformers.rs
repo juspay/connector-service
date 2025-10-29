@@ -985,7 +985,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<CreateSessio
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(_item: TPSLRouterData<RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>, T>) -> Result<Self, Self::Error> {
-        Ok(TpslCreateSessionTokenRequest
+        Ok(TpslCreateSessionTokenRequest)
     }
 }
 
