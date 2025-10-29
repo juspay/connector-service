@@ -11,19 +11,18 @@
 - Webhook processing capabilities
 
 ### Files Created/Modified
-- `src/connectors/billdesk.rs` - Main connector implementation with UCS v2 macro framework
-- `src/connectors/billdesk/transformers.rs` - Request/response transformers and data conversion logic
-- `src/connectors/billdesk/constants.rs` - API constants, endpoints, and response codes
-- `src/connectors.rs` - Added Billdesk connector registration
-- `src/types.rs` - Added Billdesk to connector imports and type mapping
-- `backend/domain_types/src/connector_types.rs` - Added Billdesk to ConnectorEnum
-- `backend/domain_types/src/types.rs` - Added Billdesk configuration to Connectors struct
+- `backend/connector-integration/src/connectors/billdesk.rs` - Main connector implementation using mandatory UCS v2 macro framework
+- `backend/connector-integration/src/connectors/billdesk/transformers.rs` - Request/response transformers and data conversion logic
+- `backend/connector-integration/src/connectors/billdesk/constants.rs` - API constants, endpoints, and response codes
+- `backend/connector-integration/src/connectors.rs` - Billdesk connector registration (already existed)
 
 ### Technical Details
+- **MANDATORY**: Uses UCS v2 macro framework - NO manual trait implementations
 - Migrated from Hyperswitch/Euler Haskell implementation to UCS v2 Rust
-- Uses UCS v2 macro framework for all trait implementations (no manual coding)
+- Uses `create_all_prerequisites!` and `macro_connector_implementation!` macros exclusively
 - Implements proper amount framework using StringMinorUnit converter
 - Full type safety with guard rails (Secret<String> for sensitive data, proper domain types)
+- **CRITICAL**: All request body values extracted dynamically from router data (NO hardcoded values)
 - Supports both UAT and production environments with automatic URL selection
 - Maintains business logic parity with original Haskell implementation
 - Comprehensive status code mapping from Billdesk to internal AttemptStatus/RefundStatus
