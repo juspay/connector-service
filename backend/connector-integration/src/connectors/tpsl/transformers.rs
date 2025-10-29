@@ -502,7 +502,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                             .resource_common_data
                             .connector_request_reference_id
                             .clone(),
-                        identifier: customer_id.0.clone(),
+                        identifier: customer_id.get_string_repr().to_string(),
                     }],
                     description: Some("UPI Payment".to_string()),
                 },
@@ -518,7 +518,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                     request_type: "SALE".to_string(),
                 },
                 consumer: TpslConsumerDataType {
-                    identifier: customer_id.0.clone(),
+                    identifier: customer_id.get_string_repr().to_string(),
                 },
             }),
             _ => Err(errors::ConnectorError::NotImplemented(
@@ -572,7 +572,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                     .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?,
             },
             consumer: TpslConsumerDataType {
-                identifier: customer_id.0.clone(),
+                identifier: customer_id.get_string_repr().to_string(),
             },
         })
     }
