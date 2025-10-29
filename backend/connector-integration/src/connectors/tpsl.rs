@@ -16,8 +16,8 @@ use domain_types::{
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        PaymentVoidData, PaymentsAccessTokenData, PaymentsAuthorizeData, PaymentsAuthenticateData, PaymentsCaptureData, PaymentsCancelPostCaptureData, PaymentsCreateConnectorCustomerData, PaymentsIncomingWebhookData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSyncData, PaymentsTokenData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
