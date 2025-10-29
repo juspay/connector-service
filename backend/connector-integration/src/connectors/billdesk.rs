@@ -9,7 +9,7 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
+        Accept, Authorize, Authenticate, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
         CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
         PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
@@ -512,7 +512,7 @@ impl<
         + Serialize
 >
     ConnectorIntegrationV2<
-        PaymentsAuthenticateData,
+        Authenticate,
         PaymentFlowData,
         PaymentsAuthenticateData<T>,
         PaymentsResponseData,
@@ -704,7 +704,7 @@ impl_source_verification_stub!(
     PaymentsResponseData
 );
 impl_source_verification_stub!(
-    PaymentsAuthenticateData,
+    Authenticate,
     PaymentFlowData,
     PaymentsAuthenticateData<T>,
     PaymentsResponseData
