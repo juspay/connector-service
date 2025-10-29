@@ -55,6 +55,13 @@ impl<T> TPSL<T> {
             _phantom: std::marker::PhantomData,
         }
     }
+
+    pub fn connector_base_url_payments<'a, F, Req, Res>(
+        &self,
+        req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+    ) -> &'a str {
+        &req.resource_common_data.connectors.tpsl.base_url
+    }
 }
  
 
