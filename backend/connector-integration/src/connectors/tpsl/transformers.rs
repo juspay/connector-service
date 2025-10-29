@@ -295,13 +295,13 @@ impl<
             .clone();
         
         let amount = item
-            .router_data
+            .connector
             .amount_converter
             .convert(
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         // Create transaction message based on UPI payment method
         let transaction_msg = match item.router_data.resource_common_data.payment_method {
