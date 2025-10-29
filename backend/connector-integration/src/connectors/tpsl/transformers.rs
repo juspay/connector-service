@@ -350,7 +350,7 @@ impl<
                     item.router_data.request.currency,
                     transaction_id,
                     customer_id.get_string_repr(),
-                    item.router_data.request.email.as_ref().map(|e| e.expose().expose().clone()).unwrap_or_default(),
+                    item.router_data.request.email.as_ref().map(|e| e.clone().expose().expose().clone()).unwrap_or_default(),
                     "".to_string() // Phone number not available in PaymentsAuthorizeData
                 )
             }
