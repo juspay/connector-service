@@ -45,7 +45,7 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 
 
 // Forward declaration
-pub(crate) mod headers {
+pub struct TPSL<T> {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
