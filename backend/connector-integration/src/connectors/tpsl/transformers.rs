@@ -17,7 +17,10 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::types::ResponseRouterData;
+use crate::{
+    connectors::tpsl::TpslRouterData,
+    types::ResponseRouterData,
+};
 
 
 
