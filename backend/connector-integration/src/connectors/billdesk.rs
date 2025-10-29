@@ -533,10 +533,12 @@ macros::macro_connector_implementation!(
             
             // Determine the endpoint based on payment method type
             match req.request.payment_method_type {
-                Some(common_enums::PaymentMethodType::Upi) => {
+                Some(common_enums::PaymentMethodType::UpiCollect) | Some(common_enums::PaymentMethodType::UpiIntent) => {
                     Ok(format!("{}?reqid={}", base_url, BILLDESK_UPI_INITIATE_REQID)) // UPI initiate
                 }
-                Some(common_enums::PaymentMethodType::NetBanking) => {
+                Some(common_enums::PaymentMethodType::OnlineBankingFpx) | Some(common_enums::PaymentMethodType::OnlineBankingPoland) |
+                Some(common_enums::PaymentMethodType::OnlineBankingCzechRepublic) | Some(common_enums::PaymentMethodType::OnlineBankingFinland) |
+                Some(common_enums::PaymentMethodType::OnlineBankingSlovakia) | Some(common_enums::PaymentMethodType::OnlineBankingThailand) => {
                     Ok(format!("{}?reqid={}", base_url, BILLDESK_NB_INITIATE_REQID)) // Net Banking initiate
                 }
                 _ => Ok(format!("{}?reqid={}", base_url, BILLDESK_AUTH_REQID)), // Default
