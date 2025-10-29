@@ -17,13 +17,13 @@ use crate::{connectors::tpsl::TpslRouterData, types::ResponseRouterData};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TpslPaymentsRequest {
+pub struct TpslUPITxnRequest {
     pub merchant: TpslMerchantPayload,
-    pub cart: TpslCartPayload,
-    pub payment: TpslPaymentPayload,
+    pub cart: TpslUPITokenCart,
+    pub payment: TpslPaymentIntentPayload,
     pub transaction: TpslTransactionPayload,
-    pub consumer: TpslConsumerPayload,
-    pub merchant_input_flags: Option<TpslFlagsType>,
+    pub consumer: TpslConsumerIntentPayload,
+    pub merchant_input_flags: TpslFlagsType,
 }
 
 #[derive(Debug, Serialize)]
@@ -39,19 +39,14 @@ pub struct TpslMerchantPayload {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TpslCartPayload {
-    pub item: Vec<TpslItemPayload>,
-    pub reference: String,
-    pub identifier: String,
-    pub description: String,
+pub struct TpslUPITokenCart {
+    pub item: Vec<TpslUPIItem>,
+    pub description: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TpslItemPayload {
-    pub description: String,
-    pub provider_identifier: String,
-    pub surcharge_or_discount_amount: String,
+pub struct TpslUPIItem {
     pub amount: String,
     pub com_amt: String,
     pub s_k_u: String,
@@ -61,95 +56,23 @@ pub struct TpslItemPayload {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TpslPaymentPayload {
-    pub method: TpslMethodPayload,
-    pub instrument: TpslInstrumentPayload,
-    pub instruction: TpslInstructionPayload,
+pub struct TpslPaymentIntentPayload {
+    pub method: TpslMethodUPIPayload,
+    pub instrument: TpslUPIInstrumentPayload,
+    pub instruction: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TpslMethodPayload {
+pub struct TpslMethodUPIPayload {
     pub token: String,
     pub r#type: String,
-    pub code: String,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TpslInstrumentPayload {
-    pub expiry: Option<TpslExpiryPayload>,
-    pub provider: String,
-    pub i_f_s_c: Option<String>,
-    pub holder: Option<TpslHolderPayload>,
-    pub b_i_c: Option<String>,
-    pub r#type: String,
-    pub action: String,
-    pub m_i_c_r: Option<String>,
-    pub verification_code: Option<String>,
-    pub i_b_a_n: Option<String>,
-    pub processor: String,
-    pub issuance: Option<TpslExpiryPayload>,
-    pub alias: String,
-    pub identifier: String,
-    pub token: String,
-    pub authentication: Option<TpslAuthenticationPayload>,
-    pub sub_type: String,
-    pub issuer: String,
-    pub acquirer: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TpslExpiryPayload {
-    pub year: String,
-    pub month: String,
-    pub date_time: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TpslHolderPayload {
-    pub name: String,
-    pub address: TpslAddressPayload,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TpslAddressPayload {
-    pub country: String,
-    pub street: String,
-    pub state: String,
-    pub city: String,
-    pub zip_code: Secret<String>,
-    pub county: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TpslAuthenticationPayload {
-    pub token: String,
-    pub r#type: String,
-    pub sub_type: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TpslInstructionPayload {
-    pub occurrence: String,
-    pub amount: String,
-    pub frequency: String,
-    pub r#type: String,
-    pub description: String,
-    pub action: String,
-    pub limit: String,
-    pub end_date_time: String,
-    pub debit_day: String,
-    pub debit_flag: String,
-    pub identifier: String,
-    pub reference: String,
-    pub start_date_time: String,
-    pub validity: String,
+pub struct TpslUPIInstrumentPayload {
+    pub expiry: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize)]
@@ -176,13 +99,14 @@ pub struct TpslTransactionPayload {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TpslConsumerPayload {
+pub struct TpslConsumerIntentPayload {
     pub mobile_number: String,
     pub email_i_d: String,
     pub identifier: String,
     pub account_no: String,
     pub account_type: String,
     pub account_holder_name: String,
+    pub vpa: String,
     pub aadhar_no: String,
 }
 
@@ -198,10 +122,10 @@ pub struct TpslFlagsType {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TpslUPITokenRequest {
+pub struct TpslPaymentsSyncRequest {
     pub merchant: TpslMerchantDataType,
-    pub cart: TpslUPITokenCart,
-    pub transaction: TpslUPITokenTxn,
+    pub payment: TpslPaymentUPISyncType,
+    pub transaction: TpslTransactionUPITxnType,
     pub consumer: TpslConsumerDataType,
 }
 
@@ -209,94 +133,6 @@ pub struct TpslUPITokenRequest {
 #[serde(rename_all = "camelCase")]
 pub struct TpslMerchantDataType {
     pub identifier: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TpslUPITokenCart {
-    pub item: Vec<TpslUPIItem>,
-    pub description: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TpslUPIItem {
-    pub amount: String,
-    pub com_amt: String,
-    pub s_k_u: String,
-    pub reference: String,
-    pub identifier: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TpslUPITokenTxn {
-    pub amount: String,
-    pub r#type: String,
-    pub currency: String,
-    pub identifier: String,
-    pub sub_type: String,
-    pub request_type: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TpslConsumerDataType {
-    pub identifier: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TpslUPITxnRequest {
-    pub merchant: TpslMerchantPayload,
-    pub cart: TpslUPITokenCart,
-    pub payment: TpslPaymentIntentPayload,
-    pub transaction: TpslTransactionPayload,
-    pub consumer: TpslConsumerIntentPayload,
-    pub merchant_input_flags: TpslFlagsType,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TpslPaymentIntentPayload {
-    pub method: TpslMethodUPIPayload,
-    pub instrument: TpslUPIInstrumentPayload,
-    pub instruction: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TpslMethodUPIPayload {
-    pub token: String,
-    pub r#type: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TpslUPIInstrumentPayload {
-    pub expiry: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TpslConsumerIntentPayload {
-    pub mobile_number: String,
-    pub email_i_d: String,
-    pub identifier: String,
-    pub account_no: String,
-    pub account_type: String,
-    pub account_holder_name: String,
-    pub vpa: String,
-    pub aadhar_no: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TpslPaymentsSyncRequest {
-    pub merchant: TpslMerchantDataType,
-    pub payment: TpslPaymentUPISyncType,
-    pub transaction: TpslTransactionUPITxnType,
-    pub consumer: TpslConsumerDataType,
 }
 
 #[derive(Debug, Serialize)]
@@ -316,6 +152,12 @@ pub struct TpslTransactionUPITxnType {
     pub date_time: String,
     pub request_type: String,
     pub token: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TpslConsumerDataType {
+    pub identifier: String,
 }
 
 // Response types
@@ -721,40 +563,6 @@ impl<
                 status_code: http_code,
             }),
             ..router_data
-        })
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<TpslPaymentsSyncResponse> for PaymentsResponseData
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(response: TpslPaymentsSyncResponse) -> Result<Self, Self::Error> {
-        let status = match response.transaction_state.as_str() {
-            "SUCCESS" | "SUCCESSFUL" => common_enums::AttemptStatus::Charged,
-            "PENDING" | "PROCESSING" => common_enums::AttemptStatus::AuthenticationPending,
-            "FAILED" => common_enums::AttemptStatus::Failure,
-            _ => common_enums::AttemptStatus::AuthenticationPending,
-        };
-
-        Ok(PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(
-                response.merchant_transaction_identifier.clone(),
-            ),
-            redirection_data: None,
-            mandate_reference: None,
-            connector_metadata: Some(serde_json::to_value(response).unwrap_or_default()),
-            network_txn_id: response.payment_method.payment_transaction.identifier.clone(),
-            connector_response_reference_id: Some(response.merchant_transaction_identifier),
-            incremental_authorization_allowed: None,
-            status_code: 200,
         })
     }
 }
