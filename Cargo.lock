@@ -1040,6 +1040,7 @@ dependencies = [
  "ucs_common_enums",
  "ucs_common_utils",
  "url",
+ "urlencoding",
  "uuid",
 ]
 
@@ -1366,6 +1367,7 @@ dependencies = [
  "router_derive",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "strum",
  "thiserror 1.0.69",
  "time",

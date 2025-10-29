@@ -85,6 +85,7 @@ mod tests {
                         bluecode: ConnectorParams {
                             base_url: "https://api.bluecode.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -230,6 +231,7 @@ mod tests {
                         bluecode: ConnectorParams {
                             base_url: "https://api.bluecode.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },

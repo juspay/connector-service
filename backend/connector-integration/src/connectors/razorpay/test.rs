@@ -94,6 +94,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -272,6 +273,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -401,6 +403,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -552,6 +555,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -871,6 +875,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        ..Default::default()
                     },
                     ..Default::default()
                 },
@@ -1056,6 +1061,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        ..Default::default()
                     },
                     ..Default::default()
                 },
@@ -1243,6 +1249,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -1343,6 +1350,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -1448,6 +1456,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -1598,6 +1607,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        ..Default::default()
                     },
                     ..Default::default()
                 },
@@ -1721,6 +1731,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        ..Default::default()
                     },
                     ..Default::default()
                 },
@@ -1833,6 +1844,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        ..Default::default()
                     },
                     ..Default::default()
                 },
