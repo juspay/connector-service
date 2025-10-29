@@ -357,7 +357,7 @@ pub struct TpslUPISyncResponse {
     pub merchant_additional_details: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslDecodedRedirectionResponse {
     #[serde(rename = "txn_status")]
