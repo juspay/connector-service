@@ -263,7 +263,7 @@ where
                     merchant_id,
                     &customer_id.get_string_repr(),
                     &transaction_id,
-                    &amount,
+                    &amount_str,
                     &item.router_data.request.currency.to_string(),
                     &additional_params,
                 );
@@ -286,7 +286,7 @@ where
                     merchant_id,
                     &customer_id.get_string_repr(),
                     &transaction_id,
-                    &amount,
+                    &amount_str,
                     &item.router_data.request.currency.to_string(),
                     &additional_params,
                 );
