@@ -407,7 +407,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             },
             cart: TpslUPITokenCart {
                 item: vec![TpslUPIItem {
-                    amount: amount.clone(),
+                    amount: amount.to_string(),
                     com_amt: "0".to_string(),
                     s_k_u: "UPI".to_string(),
                     reference: transaction_id.clone(),
