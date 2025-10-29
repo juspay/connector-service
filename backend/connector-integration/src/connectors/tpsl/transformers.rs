@@ -599,20 +599,6 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
                     }),
                 )
             }
-            _ => (
-                common_enums::AttemptStatus::Failure,
-                Err(ErrorResponse {
-                    code: "UNKNOWN_RESPONSE".to_string(),
-                    status_code: item.http_code,
-                    message: "Unknown response format".to_string(),
-                    reason: Some("Unknown response format".to_string()),
-                    attempt_status: None,
-                    connector_transaction_id: None,
-                    network_advice_code: None,
-                    network_decline_code: None,
-                    network_error_message: None,
-                }),
-            ),
         };
 
         Ok(Self {
@@ -671,20 +657,6 @@ impl TryFrom<ResponseRouterData<TpslPaymentsSyncResponse, RouterDataV2<PSync, Pa
                     }),
                 )
             }
-            _ => (
-                common_enums::AttemptStatus::Failure,
-                Err(ErrorResponse {
-                    code: "UNKNOWN_RESPONSE".to_string(),
-                    status_code: item.http_code,
-                    message: "Unknown response format".to_string(),
-                    reason: Some("Unknown response format".to_string()),
-                    attempt_status: None,
-                    connector_transaction_id: None,
-                    network_advice_code: None,
-                    network_decline_code: None,
-                    network_error_message: None,
-                }),
-            ),
         };
 
         Ok(Self {
