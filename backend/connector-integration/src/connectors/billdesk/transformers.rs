@@ -18,7 +18,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Maskable, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{types::ResponseRouterData, connectors::billdesk::BilldeskRouterData};
+use crate::{types::ResponseRouterData};
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -209,49 +209,46 @@ fn create_billdesk_message(
     msg_parts.join("|")
 }
 
-impl<
+impl<T>
+    TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+    for BilldeskPaymentsRequest
+where
     T: PaymentMethodDataTypes
         + std::fmt::Debug
         + std::marker::Sync
         + std::marker::Send
         + 'static
-        + Serialize,
-> TryFrom<BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
-    for BilldeskPaymentsRequest
+        + serde::Serialize,
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let customer_id = item.resource_common_data.get_customer_id()?;
         let transaction_id = item
-            .router_data
             .resource_common_data
-            .connector_request_reference_id.clone();
+            .connector_request_reference_id
+            .clone();
         
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+        // CRITICAL: Use proper amount framework - get amount as string from converter
+        let amount = item.amount.get_amount_as_string();
 
-        let auth = BilldeskAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = BilldeskAuthType::try_from(&item.connector_auth_type)?;
         let merchant_id = auth.merchant_id.peek();
 
-        let ip_address = item.router_data.request.get_ip_address_as_optional()
+        // CRITICAL: Use proper IP address extraction
+        let ip_address = item.request.get_ip_address_as_optional()
             .map(|ip| ip.expose())
             .unwrap_or_else(|| "127.0.0.1".to_string());
 
-        let user_agent = item.router_data.request.browser_info
+        // CRITICAL: Use proper user agent extraction
+        let user_agent = item.request.browser_info
             .as_ref()
             .and_then(|info| info.user_agent.clone())
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
 
-        match item.router_data.request.payment_method_type {
+        match item.request.payment_method_type {
             Some(common_enums::PaymentMethodType::UpiCollect) => {
                 let mut additional_params = HashMap::new();
                 additional_params.insert("BankID".to_string(), "UPI".to_string());
@@ -261,8 +258,8 @@ impl<
                     merchant_id,
                     &customer_id.get_string_repr(),
                     &transaction_id,
-                    &amount.to_string(),
-                    &item.router_data.request.currency.to_string(),
+                    &amount,
+                    &item.request.currency.to_string(),
                     &additional_params,
                 );
 
@@ -284,8 +281,8 @@ impl<
                     merchant_id,
                     &customer_id.get_string_repr(),
                     &transaction_id,
-                    &amount.to_string(),
-                    &item.router_data.request.currency.to_string(),
+                    &amount,
+                    &item.request.currency.to_string(),
                     &additional_params,
                 );
 
@@ -306,28 +303,21 @@ impl<
     }
 }
 
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> TryFrom<BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
     for BilldeskPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
+        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let customer_id = item.resource_common_data.get_customer_id()?;
         let transaction_id = item
-            .router_data
             .resource_common_data
-            .connector_request_reference_id.clone();
+            .connector_request_reference_id
+            .clone();
 
-        let auth = BilldeskAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = BilldeskAuthType::try_from(&item.connector_auth_type)?;
         let merchant_id = auth.merchant_id.peek();
 
         let additional_params = HashMap::new();
@@ -336,7 +326,7 @@ impl<
             &customer_id.get_string_repr(),
             &transaction_id,
             "0", // Amount not needed for status check
-            &item.router_data.request.currency.to_string(),
+            &item.request.currency.to_string(),
             &additional_params,
         );
 
@@ -393,15 +383,16 @@ fn get_redirect_form_data(
     }
 }
 
-impl<
+impl<T>
+    TryFrom<ResponseRouterData<BilldeskPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+where
     T: PaymentMethodDataTypes
         + std::fmt::Debug
         + std::marker::Sync
         + std::marker::Send
         + 'static
-        + Serialize,
-> TryFrom<ResponseRouterData<BilldeskPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
-    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+        + serde::Serialize,
 {
     type Error = error_stack::Report<ConnectorError>;
     
@@ -535,59 +526,3 @@ impl TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, RouterDataV2<PSync
         })
     }
 }
-
-// Stub types for unsupported flows
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskVoidRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskVoidResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskCaptureRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskCaptureResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskRefundRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskRefundResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskRefundSyncRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskRefundSyncResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskCreateOrderRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskCreateOrderResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskSessionTokenRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskSessionTokenResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskSetupMandateRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskSetupMandateResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskRepeatPaymentRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskRepeatPaymentResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskAcceptDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskAcceptDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskDefendDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskDefendDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskSubmitEvidenceRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskSubmitEvidenceResponse;
