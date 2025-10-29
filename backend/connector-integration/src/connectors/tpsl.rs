@@ -392,7 +392,7 @@ impl<
             http_code: res.status_code,
         };
 
-        <RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> as TryFrom<ResponseRouterData<TpslPaymentsResponse, _>>>::try_from(router_data)
+        <RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData> as TryFrom<ResponseRouterData<TpslPaymentsResponse, _>>>::try_from(router_data)
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)
     }
 
