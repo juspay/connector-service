@@ -264,7 +264,7 @@ pub struct TpslUPITxnResponse {
     pub pdf_download_url: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslUPIPaymentPayload {
     pub token: Option<String>,
