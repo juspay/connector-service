@@ -928,7 +928,7 @@ impl_source_verification_stub!(
     PaymentMethodToken,
     PaymentFlowData,
     PaymentMethodTokenizationData<T>,
-    PaymentsResponseData
+    PaymentMethodTokenResponse
 );
 impl_source_verification_stub!(
     CreateAccessToken,
