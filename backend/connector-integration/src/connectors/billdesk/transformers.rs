@@ -708,18 +708,19 @@ impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, Self>>
                 }
             });
 
+        let txn_reference_no = response.txn_reference_no.clone();
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
                 ..router_data.resource_common_data
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(response.txn_reference_no),
+                resource_id: ResponseId::ConnectorTransactionId(txn_reference_no.clone()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
-                network_txn_id: Some(response.txn_reference_no),
-                connector_response_reference_id: Some(response.txn_reference_no),
+                network_txn_id: Some(txn_reference_no.clone()),
+                connector_response_reference_id: Some(txn_reference_no),
                 incremental_authorization_allowed: None,
                 status_code: http_code,
             }),
