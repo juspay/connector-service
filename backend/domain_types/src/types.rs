@@ -112,6 +112,7 @@ pub struct Connectors {
     pub payu: ConnectorParams,
     pub cashtocode: ConnectorParams,
     pub novalnet: ConnectorParams,
+    pub tpsl: ConnectorParams,
     pub nexinets: ConnectorParams,
     pub noon: ConnectorParams,
     pub braintree: ConnectorParams,
