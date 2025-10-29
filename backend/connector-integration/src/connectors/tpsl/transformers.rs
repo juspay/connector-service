@@ -155,7 +155,7 @@ where
                 request_type: "STATUS".to_string(),
             },
             consumer: TpslConsumerDataType {
-                identifier: item.resource_common_data.get_customer_id()?.get_string_repr(),
+                identifier: item.resource_common_data.get_customer_id()?.get_string_repr().to_string(),
             },
         })
     }
