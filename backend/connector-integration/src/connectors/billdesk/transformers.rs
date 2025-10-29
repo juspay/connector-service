@@ -669,7 +669,7 @@ impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, Self>>
         };
 
         // CRITICAL: Proper amount handling using MinorUnit
-        let amount_received = response.txn_amount.parse::<f64>()
+        let _amount_received = response.txn_amount.parse::<f64>()
             .ok()
             .and_then(|amt| {
                 // Try to determine currency from response or default to INR
