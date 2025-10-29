@@ -352,7 +352,7 @@ impl<
                     ipaddress: Some(ip_address),
                     useragent: Some(user_agent),
                     paydata: None,
-                    txtbankid: Some("DEFAULT".to_string()), // Default bank ID
+                    txtbankid: Some(BILLDESK_DEFAULT_BANK_ID.to_string()), // Default bank ID
                 })
             }
             _ => Err(errors::ConnectorError::NotImplemented(
