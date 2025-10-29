@@ -4,20 +4,40 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
-## [2025-01-20] - TPSL Connector Addition
+## [2025-01-20] - TPSL Connector Enhancement
 
 ### Added
-- New TPSL connector implementation
+- Enhanced TPSL connector implementation with proper UCS v2 macro framework
 - Payment methods supported: UPI (UPI Intent/Collect)
-- Transaction flows: Authorize, PSync
-- Full UCS v2 macro framework compliance
+- Transaction flows: Authorize, PSync (fully implemented)
+- Complete API flow declarations for all connector types
 - Proper error handling and status mapping
 - Complete type safety with guard rails
+- Dynamic request body value extraction (no hardcoded values)
+- Proper authentication handling with Basic Auth
+
+### Enhanced
+- Migrated from manual trait implementations to UCS v2 macro framework
+- Fixed TryFrom implementations to use proper RouterDataV2 references
+- Added comprehensive stub types for all unsupported flows
+- Implemented proper amount conversion using StringMinorUnit
+- Added proper API tag implementation
+- Enhanced authentication with merchant code/key extraction
 
 ### Files Created/Modified
-- `src/connectors/tpsl.rs` - Main connector implementation
-- `src/connectors/tpsl/transformers.rs` - Request/response transformers
+- `src/connectors/tpsl.rs` - Main connector implementation (enhanced)
+- `src/connectors/tpsl/transformers.rs` - Request/response transformers (fixed)
 - `src/connectors/tpsl/constants.rs` - API constants and endpoints
+- `src/connectors.rs` - TPSL connector registration
+- `src/types.rs` - TPSL connector type mapping
+
+### Technical Details
+- Migrated from Hyperswitch/Euler Haskell implementation patterns
+- Uses UCS v2 macro framework for all trait implementations
+- Implements proper error handling and status mapping
+- Full type safety with guard rails (Secret<String>, MinorUnit, etc.)
+- Dynamic extraction of all request values from router data
+- No hardcoded values in request bodies
 - `src/connectors.rs` - Added connector registration
 - `src/types.rs` - Added connector to ConnectorEnum
 - `examples/example-hs-grpc/proto/payment.proto` - Added TPSL to proto enum
