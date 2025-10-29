@@ -85,7 +85,7 @@ impl GetRequestIncrementalAuthorization for PaymentVoidData {
 
 impl GetRequestIncrementalAuthorization for RepeatPaymentData {
     fn get_request_incremental_authorization(&self) -> Option<bool> {
-        Some(self.request_incremental_authorization)
+        None
     }
 }
 
@@ -251,7 +251,7 @@ pub struct StripeMetadata {
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
-pub struct SetupIntentRequest<
+pub struct SetupMandateRequest<
     T: PaymentMethodDataTypes
         + std::fmt::Debug
         + std::marker::Sync
@@ -355,7 +355,7 @@ pub struct StripeTokenResponse {
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
-pub struct CustomerRequest {
+pub struct CreateConnectorCustomerRequest {
     pub description: Option<String>,
     pub email: Option<Email>,
     pub phone: Option<Secret<String>>,
@@ -364,7 +364,7 @@ pub struct CustomerRequest {
 }
 
 #[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
-pub struct StripeCustomerResponse {
+pub struct CreateConnectorCustomerResponse {
     pub id: String,
     pub description: Option<String>,
     pub email: Option<Email>,
@@ -2031,7 +2031,8 @@ impl<
                 }
             });
 
-        let meta_data = get_transaction_metadata(item.request.metadata.clone(), order_id);
+        let meta_data =
+            get_transaction_metadata(item.request.metadata.clone().map(Into::into), order_id);
 
         // We pass browser_info only when payment_data exists.
         // Hence, we're pass Null during recurring payments as payment_method_data[type] is not passed
@@ -2514,11 +2515,11 @@ impl StripePaymentMethodDetailsResponse {
 #[derive(Deserialize)]
 pub struct SetupIntentSyncResponse {
     #[serde(flatten)]
-    setup_intent_fields: SetupIntentResponse,
+    setup_intent_fields: SetupMandateResponse,
 }
 
 impl Deref for SetupIntentSyncResponse {
-    type Target = SetupIntentResponse;
+    type Target = SetupMandateResponse;
 
     fn deref(&self) -> &Self::Target {
         &self.setup_intent_fields
@@ -2534,8 +2535,8 @@ impl From<SetupIntentSyncResponse> for PaymentIntentSyncResponse {
     }
 }
 
-impl From<SetupIntentResponse> for PaymentIntentResponse {
-    fn from(value: SetupIntentResponse) -> Self {
+impl From<SetupMandateResponse> for PaymentIntentResponse {
+    fn from(value: SetupMandateResponse) -> Self {
         Self {
             id: value.id,
             object: value.object,
@@ -2555,7 +2556,7 @@ impl From<SetupIntentResponse> for PaymentIntentResponse {
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
-pub struct SetupIntentResponse {
+pub struct SetupMandateResponse {
     pub id: String,
     pub object: String,
     pub status: StripePaymentStatus, // Change to SetupStatus
@@ -3004,11 +3005,11 @@ fn extract_payment_method_connector_response_from_latest_attempt(
     .map(ConnectorResponseData::with_additional_payment_method_data)
 }
 
-impl<F, T> TryFrom<ResponseRouterData<SetupIntentResponse, Self>>
+impl<F, T> TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<SetupIntentResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<SetupMandateResponse, Self>) -> Result<Self, Self::Error> {
         let redirect_data = item.response.next_action.clone();
         let redirection_data = redirect_data
             .and_then(|redirection_data| redirection_data.get_url())
@@ -3783,7 +3784,7 @@ pub struct DisputeObj {
 }
 
 fn get_transaction_metadata(
-    merchant_metadata: Option<Value>,
+    merchant_metadata: Option<Secret<Value>>,
     order_id: String,
 ) -> HashMap<String, String> {
     let mut meta_data = HashMap::from([("metadata[order_id]".to_string(), order_id)]);
@@ -3791,7 +3792,7 @@ fn get_transaction_metadata(
 
     if let Some(metadata) = merchant_metadata {
         let hashmap: HashMap<String, Value> =
-            serde_json::from_str(&metadata.to_string()).unwrap_or(HashMap::new());
+            serde_json::from_str(&metadata.peek().to_string()).unwrap_or(HashMap::new());
 
         for (key, value) in hashmap {
             request_hash_map.insert(format!("metadata[{key}]"), value.to_string());
@@ -3928,7 +3929,7 @@ pub(super) fn transform_headers_for_connect_platform(
 #[serde(untagged)]
 pub enum PaymentSyncResponse {
     PaymentIntentSyncResponse(PaymentIntentSyncResponse),
-    SetupIntentResponse(SetupIntentResponse),
+    SetupMandateResponse(SetupMandateResponse),
 }
 
 impl<F> TryFrom<ResponseRouterData<PaymentSyncResponse, Self>>
@@ -3939,7 +3940,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentSyncResponse, Self>>
         let id = item.router_data.request.connector_transaction_id.clone();
         match id.get_connector_transaction_id() {
             Ok(x) if x.starts_with("set") => match item.response {
-                PaymentSyncResponse::SetupIntentResponse(setup_intent_response) => {
+                PaymentSyncResponse::SetupMandateResponse(setup_intent_response) => {
                     RouterDataV2::try_from(ResponseRouterData {
                         response: setup_intent_response,
                         router_data: item.router_data,
@@ -4347,7 +4348,7 @@ impl<
             >,
             T,
         >,
-    > for SetupIntentRequest<T>
+    > for SetupMandateRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -4370,7 +4371,7 @@ impl<
         ))?;
 
         let meta_data = Some(get_transaction_metadata(
-            item.router_data.request.metadata.clone(),
+            item.router_data.request.metadata.clone().map(Into::into),
             item.router_data
                 .resource_common_data
                 .connector_request_reference_id
@@ -4575,7 +4576,7 @@ impl<
             >,
             T,
         >,
-    > for CustomerRequest
+    > for CreateConnectorCustomerRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -4608,12 +4609,12 @@ impl<
     }
 }
 
-impl<F, T> TryFrom<ResponseRouterData<StripeCustomerResponse, Self>>
+impl<F, T> TryFrom<ResponseRouterData<CreateConnectorCustomerResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, ConnectorCustomerResponse>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<StripeCustomerResponse, Self>,
+        item: ResponseRouterData<CreateConnectorCustomerResponse, Self>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(ConnectorCustomerResponse {
@@ -4763,24 +4764,25 @@ impl<
             _ => None,
         };
 
-        let (transfer_account_id, charge_type, application_fees) = if let Some(secret_value) =
-            mandate_metadata.as_ref().and_then(|s| s.as_ref())
-        {
-            let json_value = secret_value.clone().expose();
+        let (transfer_account_id, charge_type, application_fees) =
+            match mandate_metadata.as_ref().and_then(|s| s.as_ref()) {
+                Some(secret_value) => {
+                    let json_value = secret_value.clone().expose();
 
-            let parsed: Result<StripeSplitPaymentRequest, _> = serde_json::from_value(json_value);
+                    let parsed: Result<StripeSplitPaymentRequest, _> =
+                        serde_json::from_value(json_value);
 
-            match parsed {
-                Ok(data) => (
-                    data.transfer_account_id,
-                    data.charge_type,
-                    data.application_fees,
-                ),
-                Err(_) => (None, None, None),
-            }
-        } else {
-            (None, None, None)
-        };
+                    match parsed {
+                        Ok(data) => (
+                            data.transfer_account_id,
+                            data.charge_type,
+                            data.application_fees,
+                        ),
+                        Err(_) => (None, None, None),
+                    }
+                }
+                None => (None, None, None),
+            };
 
         let payment_method_token = match &item.request.split_payments {
             Some(domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(_)) => {
@@ -4801,10 +4803,9 @@ impl<
             .connector_request_reference_id
             .clone();
 
-        let shipping_address = if payment_method_token.is_some() {
-            None
-        } else {
-            Some(StripeShippingAddress {
+        let shipping_address = match payment_method_token {
+            Some(_) => None,
+            None => Some(StripeShippingAddress {
                 city: item.resource_common_data.get_optional_shipping_city(),
                 country: item.resource_common_data.get_optional_shipping_country(),
                 line1: item.resource_common_data.get_optional_shipping_line1(),
@@ -4815,7 +4816,7 @@ impl<
                 phone: item
                     .resource_common_data
                     .get_optional_shipping_phone_number(),
-            })
+            }),
         };
 
         let (

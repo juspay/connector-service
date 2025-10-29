@@ -914,7 +914,7 @@ message SetupMandateDetails {
   // A way to update the mandate's payment method details
   optional string update_mandate_id = 1;
   
-  // A consent from the customer to store the payment method
+  // Details of customer acceptance
   optional CustomerAcceptance customer_acceptance = 2;
 }
 
@@ -1197,7 +1197,7 @@ message PaymentServiceAuthorizeRequest {
   optional CustomerAcceptance customer_acceptance = 28; // Details of customer acceptance
   optional BrowserInformation browser_info = 29; // Information about the customer's browser
   optional PaymentExperience payment_experience = 30; // Preferred payment experience
-  optional string description = 35;
+  optional string description = 35; // An arbitrary string attached to the payment. Often useful for displaying to users or for your internal record-keeping
 
   optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
 
@@ -1207,8 +1207,8 @@ message PaymentServiceAuthorizeRequest {
   // Mandate Setup Details
   optional SetupMandateDetails setup_mandate_details = 34; // Setup mandate details for the authorization
 
-  optional string statement_descriptor_name = 36;
-  optional string statement_descriptor_suffix = 37;
+  optional string statement_descriptor_name = 36; // Complete description that appears on customers’ statements
+  optional string statement_descriptor_suffix = 37; // Provides information about a card payment that customers see on their statements
 
   // State Information
   optional ConnectorState state = 38; // State data for access token storage and other connector-specific state
@@ -1701,7 +1701,7 @@ message PaymentServiceRepeatEverythingRequest {
   map<string, string> metadata = 7; // Additional metadata for the connector
   optional string webhook_url = 8; // URL for webhook notifications
   optional string return_url = 17; // URL to redirect after payment
-  optional string description = 18;
+  optional string description = 18; // An arbitrary string attached to the payment. Often useful for displaying to users or for your internal record-keeping
   
   // Address Information
   optional PaymentAddress address = 19; // Billing and shipping address details
@@ -1724,10 +1724,9 @@ message PaymentServiceRepeatEverythingRequest {
 
   // Behavioral Flags and Preferences
   optional bool off_session = 16; // Indicates if off-session process
-  bool request_incremental_authorization = 22; // Indicates if incremental authorization is requested
 
   // State Information
-  optional ConnectorState state = 23; // State data for access token storage and other connector-specific state
+  optional ConnectorState state = 22; // State data for access token storage and other connector-specific state
 }
 
 // Response message for repeat payment operation.
@@ -1762,9 +1761,6 @@ message PaymentServiceRepeatEverythingResponse {
   // Payment Details
   optional int64 captured_amount = 15; // Amount that has been captured
   optional int64 minor_captured_amount = 16; // Captured amount in minor currency units
-
-  // Authorization Details
-  optional bool incremental_authorization_allowed = 17; // Indicates if incremental authorization is allowed
 
   optional ConnectorResponseData connector_response = 14; // Various data regarding the response from connector
 }

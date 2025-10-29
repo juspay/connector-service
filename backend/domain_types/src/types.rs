@@ -4486,19 +4486,22 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             }
             None => None,
         };
-        let customer_acceptance = value
-            .customer_acceptance
-            .as_ref()
-            .map(|customer_acceptance| {
-                mandates::CustomerAcceptance::foreign_try_from(customer_acceptance.clone())
-            })
-            .transpose()?;
+        let customer_acceptance = value.customer_acceptance.clone().ok_or_else(|| {
+            error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_CUSTOMER_ACCEPTANCE".to_owned(),
+                error_identifier: 400,
+                error_message: "Customer acceptance is missing".to_owned(),
+                error_object: None,
+            }))
+        })?;
 
         let setup_future_usage = value.setup_future_usage();
 
         let setup_mandate_details = MandateData {
             update_mandate_id: None,
-            customer_acceptance: customer_acceptance.clone(),
+            customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
+                customer_acceptance.clone(),
+            )?),
             mandate_type: None,
         };
 
@@ -4517,7 +4520,9 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             amount: Some(0),
             confirm: true,
             statement_descriptor_suffix: None,
-            customer_acceptance,
+            customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
+                customer_acceptance.clone(),
+            )?),
             mandate_id: None,
             setup_future_usage: Some(common_enums::FutureUsage::foreign_try_from(
                 setup_future_usage,
@@ -5417,17 +5422,16 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
             currency: common_enums::Currency::foreign_try_from(currency)?,
             merchant_order_reference_id,
             metadata: (!value.metadata.is_empty()).then(|| {
-                serde_json::Value::Object(
+                Secret::new(serde_json::Value::Object(
                     value
                         .metadata
                         .into_iter()
                         .map(|(k, v)| (k, serde_json::Value::String(v)))
                         .collect(),
-                )
+                ))
             }),
             webhook_url,
             router_return_url: value.return_url,
-            request_incremental_authorization: value.request_incremental_authorization,
             integrity_object: None,
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
                 capture_method,
@@ -5573,7 +5577,6 @@ pub fn generate_repeat_payment_response(
                 connector_metadata,
                 mandate_reference,
                 status_code,
-                incremental_authorization_allowed,
                 ..
             } => Ok(
                 grpc_api_types::payments::PaymentServiceRepeatEverythingResponse {
@@ -5617,7 +5620,6 @@ pub fn generate_repeat_payment_response(
                             grpc_api_types::payments::ConnectorResponseData::foreign_try_from(data)
                                 .ok()
                         }),
-                    incremental_authorization_allowed,
                     captured_amount: router_data_v2.resource_common_data.amount_captured,
                     minor_captured_amount: router_data_v2
                         .resource_common_data
@@ -5665,7 +5667,6 @@ pub fn generate_repeat_payment_response(
                     connector_response: None,
                     captured_amount: None,
                     minor_captured_amount: None,
-                    incremental_authorization_allowed: None,
                 },
             )
         }

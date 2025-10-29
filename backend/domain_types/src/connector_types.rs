@@ -1008,7 +1008,8 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     }
 
     pub fn is_mandate_payment(&self) -> bool {
-        (self.setup_future_usage == Some(common_enums::FutureUsage::OffSession))
+        ((self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
+            && self.setup_future_usage == Some(common_enums::FutureUsage::OffSession))
             || self
                 .mandate_id
                 .as_ref()
@@ -1085,7 +1086,7 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     // }
 
     pub fn is_customer_initiated_mandate_payment(&self) -> bool {
-        self.customer_acceptance.is_some()
+        (self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
             && self.setup_future_usage == Some(common_enums::FutureUsage::OffSession)
     }
 
@@ -2034,7 +2035,7 @@ pub struct RepeatPaymentData {
     pub minor_amount: MinorUnit,
     pub currency: Currency,
     pub merchant_order_reference_id: Option<String>,
-    pub metadata: Option<serde_json::Value>,
+    pub metadata: Option<SecretSerdeValue>,
     pub webhook_url: Option<String>,
     pub integrity_object: Option<RepeatPaymentIntegrityObject>,
     pub capture_method: Option<common_enums::CaptureMethod>,
@@ -2045,7 +2046,6 @@ pub struct RepeatPaymentData {
     pub off_session: Option<bool>,
     pub router_return_url: Option<String>,
     pub split_payments: Option<SplitPaymentsRequest>,
-    pub request_incremental_authorization: bool,
 }
 
 impl RepeatPaymentData {
@@ -2560,7 +2560,7 @@ pub struct DestinationChargeRefund {
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct RecurringMandatePaymentData {
     pub payment_method_type: Option<common_enums::PaymentMethodType>, //required for making recurring payment using saved payment method through stripe
-    pub original_payment_authorized_amount: Option<i64>,
+    pub original_payment_authorized_amount: Option<MinorUnit>,
     pub original_payment_authorized_currency: Option<common_enums::Currency>,
     pub mandate_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
