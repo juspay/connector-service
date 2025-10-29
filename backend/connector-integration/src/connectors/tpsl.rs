@@ -377,7 +377,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
+            if req.resource_common_data.connectors.tpsl.base_url.contains("tekprocess") {
                 "https://www.tekprocess.co.in/PaymentGateway"
             } else {
                 "https://www.tpsl-india.in/PaymentGateway"
@@ -388,7 +388,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
+            if req.resource_common_data.connectors.tpsl.base_url.contains("tekprocess") {
                 "https://www.tekprocess.co.in/PaymentGateway"
             } else {
                 "https://www.tpsl-india.in/PaymentGateway"
