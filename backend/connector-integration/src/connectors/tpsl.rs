@@ -48,6 +48,14 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 pub struct TPSL<T> {
     _phantom: std::marker::PhantomData<T>,
 }
+
+impl<T> TPSL<T> {
+    pub fn new() -> Self {
+        Self {
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
  
 
 // Implement all required traits for ConnectorServiceTrait with empty implementations
