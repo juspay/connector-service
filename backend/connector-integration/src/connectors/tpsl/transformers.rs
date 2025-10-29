@@ -535,14 +535,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn try_from(
         item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
-        let merchant_code = get_merchant_code(&item.router_data.connector_auth_type)?;
+        let customer_id = item.resource_common_data.get_customer_id()?;
+        let merchant_code = get_merchant_code(&item.connector_auth_type)?;
         let amount = item
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.amount,
-                item.router_data.request.currency,
+                item.request.amount,
+                item.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
