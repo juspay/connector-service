@@ -788,6 +788,74 @@ impl<
             + Serialize,
     >
     ConnectorIntegrationV2<
+        domain_types::connector_flow::PreAuthenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for TPSL<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::Authenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for TPSL<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::PostAuthenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for TPSL<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::VoidPC,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for TPSL<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
         CreateConnectorCustomer,
         PaymentFlowData,
         domain_types::connector_types::ConnectorCustomerData,
