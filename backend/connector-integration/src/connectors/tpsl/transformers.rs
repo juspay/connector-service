@@ -675,6 +675,57 @@ impl<
 }
 
 impl<
+        F,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > TryFrom<ResponseRouterData<TpslPaymentsSyncResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<TpslPaymentsSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        let status = match response.transaction_state.as_str() {
+            "SUCCESS" | "SUCCESSFUL" => common_enums::AttemptStatus::Charged,
+            "PENDING" | "PROCESSING" => common_enums::AttemptStatus::AuthenticationPending,
+            "FAILED" => common_enums::AttemptStatus::Failure,
+            _ => common_enums::AttemptStatus::AuthenticationPending,
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    response.merchant_transaction_identifier.clone(),
+                ),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: Some(serde_json::to_value(response).unwrap_or_default()),
+                network_txn_id: response.payment_method.payment_transaction.identifier.clone(),
+                connector_response_reference_id: Some(response.merchant_transaction_identifier),
+                incremental_authorization_allowed: None,
+                status_code: http_code,
+            }),
+            ..router_data
+        })
+    }
+}
+
+impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
             + std::marker::Sync
@@ -700,7 +751,7 @@ impl<
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: Some(serde_json::to_value(response).unwrap_or_default()),
-            network_txn_id: response.payment_method.payment_transaction.identifier,
+            network_txn_id: response.payment_method.payment_transaction.identifier.clone(),
             connector_response_reference_id: Some(response.merchant_transaction_identifier),
             incremental_authorization_allowed: None,
             status_code: 200,
