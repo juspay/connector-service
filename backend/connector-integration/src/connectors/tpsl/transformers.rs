@@ -562,7 +562,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 date_time: "2025-01-20 12:00:00".to_string(),
                 request_type: "STATUS".to_string(),
                 token: item
-                    .router_data
                     .request
                     .connector_transaction_id
                     .get_connector_transaction_id()
