@@ -187,6 +187,17 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
+    > interfaces::connector_types::ValidationTrait for TPSL<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     > ConnectorCommon for TPSL<T>
 {
     fn id(&self) -> &'static str {
