@@ -47,7 +47,7 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 // Forward declaration
 pub struct TPSL<T> {
     _phantom: std::marker::PhantomData<T>,
-    pub(crate) const AUTHORIZATION: &str = "Authorization";
+}
 }
 
 // Implement all required traits for ConnectorServiceTrait with empty implementations
