@@ -83,8 +83,7 @@ macros::create_all_prerequisites!(
                         auth_type.merchant_code.peek(),
                         auth_type.merchant_key.peek()
                     ))
-                )
-                .into_masked(),
+                ).into(),
             )];
 
             header.append(&mut auth_header);
