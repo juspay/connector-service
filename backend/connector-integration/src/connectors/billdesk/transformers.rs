@@ -466,9 +466,7 @@ impl<
         additional_info.insert("RefAmount".to_string(), amount.to_string());
         additional_info.insert("Currency".to_string(), item.router_data.request.currency.to_string());
         
-        if let Some(refund_id) = item.router_data.request.refund_id.clone() {
-            additional_info.insert("RefundId".to_string(), refund_id.clone());
-        }
+        additional_info.insert("RefundId".to_string(), item.router_data.request.refund_id.clone());
 
         let msg = create_billdesk_message(
             &merchant_id,
