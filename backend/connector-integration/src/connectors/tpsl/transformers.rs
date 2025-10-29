@@ -12,7 +12,7 @@ use domain_types::{
     router_response_types::RedirectForm,
     utils,
 };
-use hyperswitch_masking::{Secret, PeekInterface, Maskable};
+use hyperswitch_masking::{Secret, PeekInterface};
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::tpsl::TPSLRouterData, types::ResponseRouterData};
