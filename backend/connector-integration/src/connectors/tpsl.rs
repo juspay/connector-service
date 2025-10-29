@@ -460,8 +460,8 @@ impl<
     fn handle_response_v2(
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        event_builder: Option<&mut ConnectorEvent>,
         res: Response,
-        _config: &Connectors,
     ) -> CustomResult<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, errors::ConnectorError>
     {
         let response: TpslPaymentsResponse = res
