@@ -724,7 +724,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
                     .amount
                     .parse::<f64>()
                     .ok()
-                    .map(|amt| common_utils::types::MinorUnit::from_f64_major_units(amt));
+                    .and_then(|amt| amt.parse::<i64>().ok().map(common_utils::types::MinorUnit::new));
 
                 (
                     status,
@@ -751,7 +751,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
                     .txn_amt
                     .as_ref()
                     .and_then(|amt| amt.parse::<f64>().ok())
-                    .map(|amt| common_utils::types::MinorUnit::from_f64_major_units(amt));
+                    .and_then(|amt| amt.parse::<i64>().ok().map(common_utils::types::MinorUnit::new));
 
                 (
                     status,
