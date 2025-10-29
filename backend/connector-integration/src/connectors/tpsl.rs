@@ -291,83 +291,424 @@ macros::macro_connector_implementation!(
     }
 );
 
-// MANDATORY: Implement all required traits for ConnectorServiceTrait<T>
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentPostAuthenticateV2<T> for TPSL<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentAuthenticateV2<T> for TPSL<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentPreAuthenticateV2<T> for TPSL<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate for TPSL<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for TPSL<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for TPSL<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::CreateConnectorCustomer for TPSL<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentTokenV2<T> for TPSL<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentVoidV2 for TPSL<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentVoidPostCaptureV2 for TPSL<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::IncomingWebhook for TPSL<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::RefundV2 for TPSL<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentCapture for TPSL<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::SetupMandateV2<T> for TPSL<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for TPSL<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::AcceptDispute for TPSL<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::RefundSyncV2 for TPSL<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::DisputeDefend for TPSL<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::SubmitEvidenceV2 for TPSL<T>
-{
-}
+// MANDATORY: Add stub macro implementations for all additional flows
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: PostAuthenticate,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsPostAuthenticateData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("PostAuthenticate flow not implemented for TPSL".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: Authenticate,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthenticateData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("Authenticate flow not implemented for TPSL".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: PreAuthenticate,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsPreAuthenticateData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("PreAuthenticate flow not implemented for TPSL".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: Void,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentVoidData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("Void flow not implemented for TPSL".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: Capture,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsCaptureData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("Capture flow not implemented for TPSL".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: Refund,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundsData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("Refund flow not implemented for TPSL".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("RSync flow not implemented for TPSL".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: SetupMandate,
+    resource_common_data: PaymentFlowData,
+    flow_request: SetupMandateRequestData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("SetupMandate flow not implemented for TPSL".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("RepeatPayment flow not implemented for TPSL".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: Accept,
+    resource_common_data: DisputeFlowData,
+    flow_request: AcceptDisputeData,
+    flow_response: DisputeResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("Accept flow not implemented for TPSL".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: SubmitEvidence,
+    resource_common_data: DisputeFlowData,
+    flow_request: SubmitEvidenceData,
+    flow_response: DisputeResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("SubmitEvidence flow not implemented for TPSL".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: DefendDispute,
+    resource_common_data: DisputeFlowData,
+    flow_request: DisputeDefendData,
+    flow_response: DisputeResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("DefendDispute flow not implemented for TPSL".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: CreateOrder,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentCreateOrderData,
+    flow_response: PaymentCreateOrderResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("CreateOrder flow not implemented for TPSL".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: CreateSessionToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: SessionTokenRequestData,
+    flow_response: SessionTokenResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("CreateSessionToken flow not implemented for TPSL".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: PaymentMethodToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentMethodTokenizationData<T>,
+    flow_response: PaymentMethodTokenResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("PaymentMethodToken flow not implemented for TPSL".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: CreateAccessToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: AccessTokenRequestData,
+    flow_response: AccessTokenResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("CreateAccessToken flow not implemented for TPSL".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: CreateConnectorCustomer,
+    resource_common_data: PaymentFlowData,
+    flow_request: ConnectorCustomerData,
+    flow_response: ConnectorCustomerResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("CreateConnectorCustomer flow not implemented for TPSL".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: VoidPC,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsCancelPostCaptureData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("VoidPC flow not implemented for TPSL".to_string()).into())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: IncomingWebhook,
+    resource_common_data: PaymentFlowData,
+    flow_request: IncomingWebhookRequestData,
+    flow_response: IncomingWebhookResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<IncomingWebhook, PaymentFlowData, IncomingWebhookRequestData, IncomingWebhookResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Err(errors::ConnectorError::NotImplemented("IncomingWebhook flow not implemented for TPSL".to_string()).into())
+        }
+    }
+);
 
 // MANDATORY: Implement ConnectorServiceTrait<T> manually
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
