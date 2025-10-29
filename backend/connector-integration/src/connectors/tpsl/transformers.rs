@@ -880,7 +880,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<RepeatPaymen
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(_item: TPSLRouterData<RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
-        Ok(TpslRepeatPaymentRequest
+        Ok(TpslRepeatPaymentRequest)
     }
 }
 
