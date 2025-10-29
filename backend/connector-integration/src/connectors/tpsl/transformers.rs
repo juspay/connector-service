@@ -403,77 +403,7 @@ fn get_redirect_form_data(
     })
 }
 
-impl<
-    F,
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize
-        + Serialize,
-> TryFrom<ResponseRouterData<TpslPaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    
-    fn try_from(
-        item: ResponseRouterData<TpslPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
-        let ResponseRouterData {
-            response,
-            router_data,
-            http_code,
-        } = item;
-        
-        let (status, response) = match response {
-            TpslPaymentsResponse::TpslError(error_data) => (
-                common_enums::AttemptStatus::Failure,
-                Err(ErrorResponse {
-                    code: error_data.error_code.to_string(),
-                    status_code: item.http_code,
-                    message: error_data.error_message.clone(),
-                    reason: Some(error_data.error_message),
-                    attempt_status: None,
-                    connector_transaction_id: None,
-                    network_advice_code: None,
-                    network_decline_code: None,
-                    network_error_message: None,
-                }),
-            ),
-            TpslPaymentsResponse::TpslData(response_data) => {
-                let redirection_data = get_redirect_form_data(response_data)?;
-                (
-                    common_enums::AttemptStatus::AuthenticationPending,
-                    Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
-                            router_data
-                                .resource_common_data
-                                .connector_request_reference_id
-                                .clone(),
-                        ),
-                        redirection_data: Some(Box::new(redirection_data)),
-                        mandate_reference: None,
-                        connector_metadata: None,
-                        network_txn_id: None,
-                        connector_response_reference_id: None,
-                        incremental_authorization_allowed: None,
-                        status_code: http_code,
-                    }),
-                )
-            }
-        };
-
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                ..router_data.resource_common_data
-            },
-            response,
-            ..router_data
-        })
-    }
-}
+// Response handling will be implemented by the macro framework
 
 impl<
     T: PaymentMethodDataTypes
