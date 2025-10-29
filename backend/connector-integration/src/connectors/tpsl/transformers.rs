@@ -291,10 +291,11 @@ impl<
         let transaction_id = item
             .router_data
             .resource_common_data
-            .connector_request_reference_id;
+            .connector_request_reference_id
+            .clone();
         
         let amount = item
-            .connector
+            .router_data
             .amount_converter
             .convert(
                 item.router_data.request.minor_amount,
