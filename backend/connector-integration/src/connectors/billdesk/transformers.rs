@@ -457,7 +457,7 @@ impl<
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.refund_amount,
+                common_utils::types::MinorUnit::new(item.router_data.request.refund_amount),
                 item.router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
