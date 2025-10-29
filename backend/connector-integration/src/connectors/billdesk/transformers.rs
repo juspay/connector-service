@@ -756,16 +756,7 @@ impl<F> TryFrom<ResponseRouterData<BilldeskRefundResponse, Self>>
     }
 }
 
-impl<
-    F,
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize
-        + Serialize,
-> TryFrom<ResponseRouterData<BilldeskRefundStatusResponse, Self>>
+impl<F> TryFrom<ResponseRouterData<BilldeskRefundStatusResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
