@@ -2,19 +2,14 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
+use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit};
 use domain_types::{
-    connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
-        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
-    },
+    connector_flow::{Authorize, PSync},
     connector_types::{
-        AcceptDisputeData, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, RequestDetails, ResponseId, SessionTokenRequestData,
+        ConnectorWebhookSecrets, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RequestDetails, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
@@ -25,7 +20,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -34,7 +29,7 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use transformers::{self as tpsl, TpslPaymentsRequest, TpslPaymentsResponse, TpslPaymentsSyncRequest, TpslPaymentsSyncResponse};
+use transformers::{self as tpsl, TpslPaymentsResponse, TpslPaymentsSyncRequest, TpslPaymentsSyncResponse};
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
