@@ -198,32 +198,15 @@ impl<
         + 'static
         + Serialize,
 >
-    TryFrom<
-        TpslRouterData<
-            RouterDataV2<
-                PSync,
-                PaymentFlowData,
-                PaymentsSyncData,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for TpslPaymentsSyncRequest
+    TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+    for TpslPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: TpslRouterData<
-            RouterDataV2<
-                PSync,
-                PaymentFlowData,
-                PaymentsSyncData,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
+        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let connector_transaction_id = item.router_data.request.connector_transaction_id
+        let connector_transaction_id = item.request.connector_transaction_id
             .get_connector_transaction_id()
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
