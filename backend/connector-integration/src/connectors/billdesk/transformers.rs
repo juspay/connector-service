@@ -129,16 +129,16 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuth {
                 key1,
                 api_secret: _,
             } => Ok(Self {
-                merchant_id: Some(Secret::new(api_key.clone())),
-                checksum_key: Some(Secret::new(key1.clone())),
+                merchant_id: Some(Secret::new(api_key.peek().clone())),
+                checksum_key: Some(Secret::new(key1.peek().clone())),
             }),
             ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
-                merchant_id: Some(Secret::new(api_key.clone())),
+                merchant_id: Some(Secret::new(api_key.peek().clone())),
                 checksum_key: None,
             }),
             ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                merchant_id: Some(Secret::new(api_key.clone())),
-                checksum_key: Some(Secret::new(key1.clone())),
+                merchant_id: Some(Secret::new(api_key.peek().clone())),
+                checksum_key: Some(Secret::new(key1.peek().clone())),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
