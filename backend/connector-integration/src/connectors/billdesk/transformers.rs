@@ -750,26 +750,23 @@ impl<
             http_code,
         } = item;
 
-        let status = match response.refund_status.as_deref() {
-            Some("SUCCESS") => common_enums::AttemptStatus::Charged,
-            Some("FAILURE") => common_enums::AttemptStatus::Failure,
-            Some("PENDING") => common_enums::AttemptStatus::AuthenticationPending,
-            _ => common_enums::AttemptStatus::AuthenticationPending,
+        let refund_status = match response.refund_status.as_deref() {
+            Some("SUCCESS") => common_enums::RefundStatus::Success,
+            Some("FAILURE") => common_enums::RefundStatus::Failure,
+            Some("PENDING") => common_enums::RefundStatus::Pending,
+            _ => common_enums::RefundStatus::Pending,
         };
+
+        let connector_refund_id = response.refund_id.unwrap_or_else(|| "unknown".to_string());
 
         Ok(Self {
             resource_common_data: domain_types::connector_types::RefundFlowData {
-                status,
+                status: refund_status,
                 ..router_data.resource_common_data
             },
             response: Ok(RefundsResponseData {
-                refund_id: response.refund_id,
-                connector_transaction_id: None,
-                refund_status: status,
-                amount_captured: None,
-                connector_response_reference_id: response.refund_id,
-                error_code: response.error_status,
-                error_message: response.error_description,
+                connector_refund_id,
+                refund_status,
                 status_code: http_code,
             }),
             ..router_data
