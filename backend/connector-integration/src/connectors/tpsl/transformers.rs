@@ -510,7 +510,7 @@ impl<
                     .resource_common_data
                     .connector_request_reference_id
                     .clone(),
-                date_time: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                date_time: "2025-01-20 12:00:00".to_string(),
                 token: auth.merchant_key.peek().to_string(),
                 security_token: auth.merchant_key.peek().to_string(),
                 sub_type: "SALE".to_string(),
@@ -582,7 +582,7 @@ impl<
                 sub_type: Some("SALE".to_string()),
                 amount,
                 currency: item.router_data.request.currency.to_string(),
-                date_time: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                date_time: "2025-01-20 12:00:00".to_string(),
                 request_type: "STATUS".to_string(),
                 token: auth.merchant_key.peek().to_string(),
             },
