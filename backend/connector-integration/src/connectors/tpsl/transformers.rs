@@ -11,7 +11,7 @@ use domain_types::{
     router_response_types::RedirectForm,
     utils,
 };
-use hyperswitch_masking::{Secret, PeekInterface};
+use hyperswitch_masking::{Secret, PeekInterface, Maskable};
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
