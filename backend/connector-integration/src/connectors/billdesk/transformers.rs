@@ -18,7 +18,7 @@ use domain_types::{
 use hyperswitch_masking::{ExposeInterface, Maskable, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{types::ResponseRouterData};
+use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
