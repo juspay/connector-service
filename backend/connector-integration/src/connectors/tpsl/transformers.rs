@@ -752,7 +752,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                     .txn_amt
                     .as_ref()
                     .and_then(|amt| amt.parse::<f64>().ok())
-                    .and_then(|amt| (amt as i64).into_some().map(common_utils::types::MinorUnit::new));
+                    .and_then(|amt| Some(common_utils::types::MinorUnit::new(amt as i64)));
 
                 (
                     status,
