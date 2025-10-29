@@ -317,8 +317,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: TPSL,
-    curl_request: Json(TpslPaymentsRequest),
-    curl_response: TpslPaymentsResponse,
+    curl_request: Json(TpslAuthenticateRequest),
+    curl_response: TpslAuthenticateResponse,
     flow_name: Authenticate,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthenticateData<T>,
