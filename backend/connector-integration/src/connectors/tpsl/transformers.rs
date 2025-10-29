@@ -21,6 +21,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
 
+// Type alias for router data
+pub type TpslRouterData<R, T> = ResponseRouterData<R, T>;
+
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslPaymentsRequest {
