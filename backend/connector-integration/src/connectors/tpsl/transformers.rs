@@ -406,7 +406,7 @@ impl<
                 r#type: Some("SALE".to_string()),
                 sub_type: Some("SALE".to_string()),
                 amount,
-                currency: item.router_data.request.currency.to_string(),
+                currency: item.request.currency.to_string(),
                 date_time: "2025-01-20 12:00:00".to_string(),
                 request_type: "STATUS".to_string(),
                 token: auth.merchant_key.peek().to_string(),
