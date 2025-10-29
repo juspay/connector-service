@@ -302,16 +302,6 @@ impl<
     > connector_types::PaymentAuthorizeV2<T> for TPSL<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    
-
-
 // Manual implementation for Authorize flow
 impl<
     T: PaymentMethodDataTypes
