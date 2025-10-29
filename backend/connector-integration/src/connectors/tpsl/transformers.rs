@@ -727,7 +727,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslPostAuthenticateR
 }
 
 // Authenticate flow
-impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>, T>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TPSLRouterData<RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>, T>>
     for TpslAuthenticateRequest
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -748,7 +748,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslAuthenticateRespo
 }
 
 // PreAuthenticate flow
-impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>, T>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TPSLRouterData<RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>, T>>
     for TpslPreAuthenticateRequest
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -769,7 +769,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslPreAuthenticateRe
 }
 
 // Void flow
-impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TPSLRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
     for TpslVoidRequest
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -790,7 +790,7 @@ impl TryFrom<ResponseRouterData<TpslVoidResponse, RouterDataV2<Void, PaymentFlow
 }
 
 // Capture flow
-impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TPSLRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
     for TpslCaptureRequest
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -811,7 +811,7 @@ impl TryFrom<ResponseRouterData<TpslCaptureResponse, RouterDataV2<Capture, Payme
 }
 
 // Refund flow
-impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TPSLRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
     for TpslRefundRequest
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -832,7 +832,7 @@ impl TryFrom<ResponseRouterData<TpslRefundResponse, RouterDataV2<Refund, RefundF
 }
 
 // RSync flow
-impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TPSLRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
     for TpslRSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -853,7 +853,7 @@ impl TryFrom<ResponseRouterData<TpslRSyncResponse, RouterDataV2<RSync, RefundFlo
 }
 
 // SetupMandate flow
-impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>, T>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TPSLRouterData<RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>, T>>
     for TpslSetupMandateRequest
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -874,7 +874,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslSetupMandateRespo
 }
 
 // RepeatPayment flow
-impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>, T>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TPSLRouterData<RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>, T>>
     for TpslRepeatPaymentRequest
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -895,7 +895,7 @@ impl TryFrom<ResponseRouterData<TpslRepeatPaymentResponse, RouterDataV2<RepeatPa
 }
 
 // AcceptDispute flow
-impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>, T>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TPSLRouterData<RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>, T>>
     for TpslAcceptDisputeRequest
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -916,7 +916,7 @@ impl TryFrom<ResponseRouterData<TpslAcceptDisputeResponse, RouterDataV2<Accept, 
 }
 
 // SubmitEvidence flow
-impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>, T>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TPSLRouterData<RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>, T>>
     for TpslSubmitEvidenceRequest
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -937,7 +937,7 @@ impl TryFrom<ResponseRouterData<TpslSubmitEvidenceResponse, RouterDataV2<SubmitE
 }
 
 // DefendDispute flow
-impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>, T>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TPSLRouterData<RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>, T>>
     for TpslDefendDisputeRequest
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -958,7 +958,7 @@ impl TryFrom<ResponseRouterData<TpslDefendDisputeResponse, RouterDataV2<DefendDi
 }
 
 // CreateOrder flow
-impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>, T>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TPSLRouterData<RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>, T>>
     for TpslCreateOrderRequest
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -979,7 +979,7 @@ impl TryFrom<ResponseRouterData<TpslCreateOrderResponse, RouterDataV2<CreateOrde
 }
 
 // CreateSessionToken flow
-impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>, T>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TPSLRouterData<RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>, T>>
     for TpslCreateSessionTokenRequest
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -1000,7 +1000,7 @@ impl TryFrom<ResponseRouterData<TpslCreateSessionTokenResponse, RouterDataV2<Cre
 }
 
 // PaymentMethodToken flow
-impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>, T>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TPSLRouterData<RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>, T>>
     for TpslPaymentMethodTokenRequest
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -1021,7 +1021,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslPaymentMethodToke
 }
 
 // CreateAccessToken flow
-impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>, T>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TPSLRouterData<RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>, T>>
     for TpslCreateAccessTokenRequest
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -1042,7 +1042,7 @@ impl TryFrom<ResponseRouterData<TpslCreateAccessTokenResponse, RouterDataV2<Crea
 }
 
 // CreateConnectorCustomer flow
-impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>, T>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TPSLRouterData<RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>, T>>
     for TpslCreateConnectorCustomerRequest
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -1063,7 +1063,7 @@ impl TryFrom<ResponseRouterData<TpslCreateConnectorCustomerResponse, RouterDataV
 }
 
 // VoidPC flow
-impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>, T>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TPSLRouterData<RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>, T>>
     for TpslVoidPCRequest
 {
     type Error = error_stack::Report<ConnectorError>;
