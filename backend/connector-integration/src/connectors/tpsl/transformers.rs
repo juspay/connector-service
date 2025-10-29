@@ -727,19 +727,23 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslPostAuthenticateR
 }
 
 // Authenticate flow
-impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>, T>>
+impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>, T>>
     for TpslAuthenticateRequest
 {
-    fn from(_item: TPSLRouterData<RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>, T>) -> Self {
-        TpslAuthenticateRequest
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
+        Ok(TpslAuthenticateRequest)
     }
 }
 
-impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslAuthenticateResponse, RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>>>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslAuthenticateResponse, RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>>>
     for RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
 {
-    fn from(item: ResponseRouterData<TpslAuthenticateResponse, RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>>) -> Self {
-        item.router_data
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(item: ResponseRouterData<TpslAuthenticateResponse, RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>>) -> Result<Self, Self::Error> {
+        Ok(item.router_data)
     }
 }
 
