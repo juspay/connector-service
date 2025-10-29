@@ -362,16 +362,16 @@ impl<
 > connector_types::PaymentPostAuthenticateV2<T> for Billdesk<T>
 {
 }
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentVoidPostCaptureV2 for Billdesk<T>
-{
-}
+// impl<
+//     T: PaymentMethodDataTypes
+//         + std::fmt::Debug
+//         + std::marker::Sync
+//         + std::marker::Send
+//         + 'static
+//         + Serialize,
+// > connector_types::PaymentVoidPostCaptureV2 for Billdesk<T>
+// {
+// }
 
 macros::create_all_prerequisites!(
     connector_name: Billdesk,
