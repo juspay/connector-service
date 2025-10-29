@@ -940,7 +940,7 @@ impl_source_verification_stub!(
     CreateConnectorCustomer,
     PaymentFlowData,
     ConnectorCustomerData,
-    PaymentsResponseData
+    ConnectorCustomerResponse
 );
 impl_source_verification_stub!(
     VoidPC,
