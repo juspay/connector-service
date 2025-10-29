@@ -100,7 +100,7 @@ impl DisputeService for Disputes {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "DisputeService".to_string());
-        grpc_logging_wrapper(
+        Box::pin(grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
@@ -180,7 +180,7 @@ impl DisputeService for Disputes {
                     Ok(tonic::Response::new(dispute_response))
                 }
             },
-        )
+        ))
         .await
     }
 
