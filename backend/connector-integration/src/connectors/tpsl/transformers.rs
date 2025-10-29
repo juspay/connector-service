@@ -14,7 +14,7 @@ use domain_types::{
 use hyperswitch_masking::{Secret, PeekInterface, Maskable};
 use serde::{Deserialize, Serialize};
 
-use crate::types::ResponseRouterData;
+use crate::{connectors::tpsl::TPSLRouterData, types::ResponseRouterData};
 
 // CRITICAL: Authentication type based on Haskell implementation
 #[derive(Debug, Deserialize)]
@@ -291,35 +291,49 @@ fn get_merchant_code(
 
 // CRITICAL: Implement TryFrom for Authorize flow with proper router data extraction
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
-    for TpslPaymentsRequest
+    TryFrom<
+        TPSLRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
+        >,
+    > for TpslPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        item: TPSLRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         // CRITICAL: Extract customer ID dynamically - NEVER HARDCODE
-        let customer_id = item.resource_common_data.get_customer_id()?;
+        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let customer_id_string = customer_id.get_string_repr();
 
         // CRITICAL: Extract merchant code from auth type - NEVER HARDCODE
-        let merchant_code = get_merchant_code(&item.connector_auth_type)?;
+        let merchant_code = get_merchant_code(&item.router_data.connector_auth_type)?;
 
         // CRITICAL: Use amount converter properly - NEVER HARDCODE AMOUNTS
-        let amount = item.amount.get_amount_as_string();
-        let currency = item.request.currency.to_string();
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
+            .change_context(ConnectorError::RequestEncodingFailed)?;
+        let currency = item.router_data.request.currency.to_string();
 
         // CRITICAL: Extract transaction ID dynamically - NEVER HARDCODE
-        let transaction_id = item.resource_common_data.connector_request_reference_id.clone();
+        let transaction_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
 
         // CRITICAL: Extract return URL dynamically - NEVER HARDCODE
-        let return_url = item.request.get_router_return_url()?;
+        let return_url = item.router_data.request.get_router_return_url()?;
 
         // CRITICAL: Extract email dynamically - NEVER HARDCODE
-        let email = item.request.email.clone().unwrap_or_default();
+        let email = item.router_data.request.email.clone().unwrap_or_default();
 
-        match item.resource_common_data.payment_method {
+        match item.router_data.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => Ok(Self {
                 merchant: TpslMerchantDataType {
                     identifier: merchant_code.peek().clone(),
@@ -355,27 +369,35 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 // CRITICAL: Implement TryFrom for PSync flow with proper router data extraction
-impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
-    for TpslPaymentsSyncRequest
+impl TryFrom<
+    TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
+> for TpslPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         // CRITICAL: Extract customer ID dynamically - NEVER HARDCODE
-        let customer_id = item.resource_common_data.get_customer_id()?;
+        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let customer_id_string = customer_id.get_string_repr();
 
         // CRITICAL: Extract merchant code from auth type - NEVER HARDCODE
-        let merchant_code = get_merchant_code(&item.connector_auth_type)?;
+        let merchant_code = get_merchant_code(&item.router_data.connector_auth_type)?;
 
         // CRITICAL: Use amount converter properly - NEVER HARDCODE AMOUNTS
-        let amount = item.amount.get_amount_as_string();
-        let currency = item.request.currency.to_string();
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.amount,
+                item.router_data.request.currency,
+            )
+            .change_context(ConnectorError::RequestEncodingFailed)?;
+        let currency = item.router_data.request.currency.to_string();
 
         // CRITICAL: Extract transaction ID dynamically - NEVER HARDCODE
-        let transaction_id = item.resource_common_data.connector_request_reference_id.clone();
+        let transaction_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
 
         Ok(Self {
             merchant: TpslMerchantDataType {
