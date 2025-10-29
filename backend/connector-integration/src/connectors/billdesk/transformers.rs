@@ -365,19 +365,13 @@ impl<
         + Serialize
 >
     TryFrom<
-        BilldeskRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     > for BilldeskPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: BilldeskRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        item: BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = BilldeskAuth::try_from(&item.router_data.connector_auth_type)?;
         let merchant_id = auth
@@ -414,19 +408,13 @@ impl<
         + Serialize
 >
     TryFrom<
-        BilldeskRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        BilldeskRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for BilldeskRefundRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: BilldeskRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        item: BilldeskRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = BilldeskAuth::try_from(&item.router_data.connector_auth_type)?;
         let merchant_id = auth
@@ -479,19 +467,13 @@ impl<
         + Serialize
 >
     TryFrom<
-        BilldeskRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
+        BilldeskRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
     > for BilldeskRefundStatusRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: BilldeskRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
+        item: BilldeskRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = BilldeskAuth::try_from(&item.router_data.connector_auth_type)?;
         let merchant_id = auth
