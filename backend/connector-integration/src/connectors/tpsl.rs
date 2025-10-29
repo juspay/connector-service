@@ -49,11 +49,17 @@ pub struct TPSL<T> {
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T> TPSL<T> {
-    pub fn new() -> Self {
+impl<T> Default for TPSL<T> {
+    fn default() -> Self {
         Self {
             _phantom: std::marker::PhantomData,
         }
+    }
+}
+
+impl<T> TPSL<T> {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn connector_base_url_payments<'a, F, Req, Res>(
