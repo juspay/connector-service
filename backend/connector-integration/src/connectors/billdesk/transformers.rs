@@ -514,11 +514,8 @@ impl<
         let refund_id = item
             .router_data
             .request
-            .refund_id
-            .clone()
-            .ok_or(ConnectorError::MissingRequiredField {
-                field_name: "refund_id",
-            })?;
+            .connector_refund_id
+            .clone();
 
         let mut additional_info = HashMap::new();
         additional_info.insert("RefundId".to_string(), refund_id.clone());
