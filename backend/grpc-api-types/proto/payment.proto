@@ -120,6 +120,33 @@ enum AuthenticationType {
   NO_THREE_DS = 2;                     // No 3D Secure, or 3DS explicitly bypassed.
 }
 
+// Indicates the transaction status from authentication/verification process.
+enum TransactionStatus {
+  // Authentication/Account Verification Successful
+  TRANSACTION_STATUS_SUCCESS = 0;        // "Y"
+  
+  // Not Authenticated/Account Not Verified; Transaction denied
+  TRANSACTION_STATUS_FAILURE = 1;        // "N"
+  
+  // Authentication/Account Verification Could Not Be Performed; Technical or other problem
+  TRANSACTION_STATUS_VERIFICATION_NOT_PERFORMED = 2; // "U"
+  
+  // Attempts Processing Performed; Not Authenticated/Verified, but proof of attempted authentication/verification is provided
+  TRANSACTION_STATUS_NOT_VERIFIED = 3;   // "A"
+  
+  // Authentication/Account Verification Rejected; Issuer is rejecting authentication/verification
+  TRANSACTION_STATUS_REJECTED = 4;       // "R"
+  
+  // Challenge Required; Additional authentication is required using the Challenge Request (CReq) / Challenge Response (CRes)
+  TRANSACTION_STATUS_CHALLENGE_REQUIRED = 5; // "C"
+  
+  // Challenge Required; Decoupled Authentication confirmed
+  TRANSACTION_STATUS_CHALLENGE_REQUIRED_DECOUPLED_AUTHENTICATION = 6; // "D"
+  
+  // Informational Only; 3DS Requestor challenge preference acknowledged
+  TRANSACTION_STATUS_INFORMATION_ONLY = 7; // "I"
+}
+
 // Preferred payment experience for the customer.
 enum PaymentExperience {
   PAYMENT_EXPERIENCE_UNSPECIFIED = 0; // Default value
@@ -884,6 +911,9 @@ message AuthenticationData {
   
   // Directory Server Transaction ID (DS Trans ID).
   optional string ds_transaction_id = 5;
+  
+  // Transaction status from authentication/verification process.
+  optional TransactionStatus trans_status = 6;
 }
 
 // Details of customer acceptance for mandates or terms.

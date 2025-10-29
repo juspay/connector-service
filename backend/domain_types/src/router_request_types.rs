@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use common_enums::{CaptureMethod, Currency};
+use common_enums::{self, CaptureMethod, Currency};
 use common_utils::{
     pii::{self, IpAddress},
     types::SemanticVersion,
@@ -10,6 +10,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::Serialize;
 
+use crate::utils::ForeignFrom;
 use grpc_api_types::payments;
 
 use crate::{
@@ -118,6 +119,7 @@ pub struct PaymentsCancelData {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct AuthenticationData {
+    pub trans_status: Option<common_enums::TransactionStatus>,
     pub eci: Option<String>,
     pub cavv: Secret<String>,
     pub threeds_server_transaction_id: Option<String>,
@@ -134,6 +136,7 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
             threeds_server_transaction_id,
             message_version,
             ds_transaction_id,
+            trans_status,
         } = value;
         let threeds_server_transaction_id =
             utils::extract_optional_connector_request_reference_id(&threeds_server_transaction_id);
@@ -151,7 +154,22 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
                 })),
             }))
         }).transpose()?;
+        let trans_status = trans_status.map(|trans_status_i32| grpc_api_types::payments::TransactionStatus::try_from(trans_status_i32)).transpose()
+            .change_context(errors::ApplicationErrorResponse::BadRequest(errors::ApiError{
+                sub_code: "INVALID_SEMANTIC_VERSION_DATA".to_owned(),
+                error_identifier: 400,
+                error_message: "Invalid semantic version format. Expected format: 'major.minor.patch' (e.g., '2.1.0')".to_string(),
+                error_object: Some(serde_json::json!({
+                    "field": "message_version",
+                    "provided_value": message_version,
+                    "expected_format": "major.minor.patch",
+                    "examples": ["1.0.0", "2.1.0", "2.2.0"],
+                    "validation_rule": "Must be in format X.Y.Z where X, Y, Z are non-negative integers"
+                })),
+            }))?
+            .map(|trans_status| common_enums::TransactionStatus::foreign_from(trans_status));
         Ok(Self {
+            trans_status: trans_status,
             eci,
             cavv: Secret::new(cavv),
             threeds_server_transaction_id,
@@ -174,6 +192,32 @@ impl utils::ForeignFrom<AuthenticationData> for payments::AuthenticationData {
             }),
             message_version: value.message_version.map(|v| v.to_string()),
             ds_transaction_id: value.ds_trans_id,
+            trans_status: value.trans_status.map(|ts| match ts {
+                common_enums::TransactionStatus::Success => {
+                    payments::TransactionStatus::Success as i32
+                }
+                common_enums::TransactionStatus::Failure => {
+                    payments::TransactionStatus::Failure as i32
+                }
+                common_enums::TransactionStatus::VerificationNotPerformed => {
+                    payments::TransactionStatus::VerificationNotPerformed as i32
+                }
+                common_enums::TransactionStatus::NotVerified => {
+                    payments::TransactionStatus::NotVerified as i32
+                }
+                common_enums::TransactionStatus::Rejected => {
+                    payments::TransactionStatus::Rejected as i32
+                }
+                common_enums::TransactionStatus::ChallengeRequired => {
+                    payments::TransactionStatus::ChallengeRequired as i32
+                }
+                common_enums::TransactionStatus::ChallengeRequiredDecoupledAuthentication => {
+                    payments::TransactionStatus::ChallengeRequiredDecoupledAuthentication as i32
+                }
+                common_enums::TransactionStatus::InformationOnly => {
+                    payments::TransactionStatus::InformationOnly as i32
+                }
+            }),
         }
     }
 }

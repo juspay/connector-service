@@ -430,7 +430,7 @@ pub struct ProcessingInformation {
     payment_solution: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum CybersourceParesStatus {
     #[serde(rename = "Y")]
     AuthenticationSuccessful,
@@ -440,6 +440,25 @@ pub enum CybersourceParesStatus {
     AuthenticationFailed,
     #[serde(rename = "U")]
     AuthenticationNotCompleted,
+}
+
+impl From<CybersourceParesStatus> for common_enums::TransactionStatus {
+    fn from(status: CybersourceParesStatus) -> Self {
+        match status {
+            CybersourceParesStatus::AuthenticationSuccessful => {
+                common_enums::TransactionStatus::Success
+            }
+            CybersourceParesStatus::AuthenticationAttempted => {
+                common_enums::TransactionStatus::NotVerified
+            }
+            CybersourceParesStatus::AuthenticationFailed => {
+                common_enums::TransactionStatus::Failure
+            }
+            CybersourceParesStatus::AuthenticationNotCompleted => {
+                common_enums::TransactionStatus::VerificationNotPerformed
+            }
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -492,6 +511,7 @@ impl From<router_request_types::AuthenticationData> for CybersourceConsumerAuthI
             threeds_server_transaction_id: _,
             message_version,
             ds_trans_id,
+            trans_status: _,
         } = value;
 
         CybersourceConsumerAuthInformation {
@@ -3353,6 +3373,12 @@ impl<
                             redirection_data: redirection_data.map(Box::new),
                             connector_response_reference_id,
                             authentication_data: Some(router_request_types::AuthenticationData {
+                                trans_status: info_response
+                                    .consumer_authentication_information
+                                    .validate_response
+                                    .pares_status
+                                    .clone()
+                                    .map(common_enums::TransactionStatus::from),
                                 eci: info_response
                                     .consumer_authentication_information
                                     .validate_response
@@ -3652,6 +3678,12 @@ impl<
                         },
                         response: Ok(PaymentsResponseData::PostAuthenticateResponse {
                             authentication_data: Some(router_request_types::AuthenticationData {
+                                trans_status: info_response
+                                    .consumer_authentication_information
+                                    .validate_response
+                                    .pares_status
+                                    .clone()
+                                    .map(common_enums::TransactionStatus::from),
                                 eci: info_response
                                     .consumer_authentication_information
                                     .validate_response
@@ -3737,6 +3769,10 @@ pub enum CybersourceAuthEnrollmentStatus {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CybersourceConsumerAuthValidateResponse {
+    /// This field is supported only on Asia, Middle East, and Africa Gateway
+    /// Also needed for Credit Mutuel-CIC in France and Mastercard Identity Check transactions
+    /// This field is only applicable for Mastercard and Visa Transactions
+    pares_status: Option<CybersourceParesStatus>,
     ucaf_collection_indicator: Option<String>,
     cavv: Option<Secret<String>>,
     ucaf_authentication_data: Option<Secret<String>>,

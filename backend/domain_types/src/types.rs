@@ -1896,7 +1896,9 @@ impl ForeignTryFrom<router_request_types::AuthenticationData>
         value: router_request_types::AuthenticationData,
     ) -> error_stack::Result<Self, Self::Error> {
         use hyperswitch_masking::ExposeInterface;
-
+        let trans_status = value
+            .trans_status
+            .map(|ts| grpc_api_types::payments::TransactionStatus::foreign_from(ts).into());
         Ok(Self {
             eci: value.eci,
             cavv: value.cavv.expose().to_string(),
@@ -1907,7 +1909,38 @@ impl ForeignTryFrom<router_request_types::AuthenticationData>
             }),
             message_version: value.message_version.map(|v| v.to_string()),
             ds_transaction_id: value.ds_trans_id,
+            trans_status,
         })
+    }
+}
+
+impl ForeignFrom<common_enums::TransactionStatus> for grpc_api_types::payments::TransactionStatus {
+    fn foreign_from(from: common_enums::TransactionStatus) -> Self {
+        match from {
+            common_enums::TransactionStatus::Success => grpc_api_types::payments::TransactionStatus::Success,
+            common_enums::TransactionStatus::Failure => grpc_api_types::payments::TransactionStatus::Failure,
+            common_enums::TransactionStatus::VerificationNotPerformed => grpc_api_types::payments::TransactionStatus::VerificationNotPerformed,
+            common_enums::TransactionStatus::NotVerified => grpc_api_types::payments::TransactionStatus::NotVerified,
+            common_enums::TransactionStatus::Rejected => grpc_api_types::payments::TransactionStatus::Rejected,
+            common_enums::TransactionStatus::ChallengeRequired => grpc_api_types::payments::TransactionStatus::ChallengeRequired,
+            common_enums::TransactionStatus::ChallengeRequiredDecoupledAuthentication => grpc_api_types::payments::TransactionStatus::ChallengeRequiredDecoupledAuthentication,
+            common_enums::TransactionStatus::InformationOnly => grpc_api_types::payments::TransactionStatus::InformationOnly,
+        }
+    }
+}
+
+impl ForeignFrom<grpc_api_types::payments::TransactionStatus> for common_enums::TransactionStatus {
+    fn foreign_from(value: grpc_api_types::payments::TransactionStatus) -> Self {
+        match value {
+            grpc_api_types::payments::TransactionStatus::Success => common_enums::TransactionStatus::Success,
+            grpc_api_types::payments::TransactionStatus::Failure => common_enums::TransactionStatus::Failure,
+            grpc_api_types::payments::TransactionStatus::VerificationNotPerformed => common_enums::TransactionStatus::VerificationNotPerformed,
+            grpc_api_types::payments::TransactionStatus::NotVerified => common_enums::TransactionStatus::NotVerified,
+            grpc_api_types::payments::TransactionStatus::Rejected => common_enums::TransactionStatus::Rejected,
+            grpc_api_types::payments::TransactionStatus::ChallengeRequired => common_enums::TransactionStatus::ChallengeRequired,
+            grpc_api_types::payments::TransactionStatus::ChallengeRequiredDecoupledAuthentication => common_enums::TransactionStatus::ChallengeRequiredDecoupledAuthentication,
+            grpc_api_types::payments::TransactionStatus::InformationOnly => common_enums::TransactionStatus::InformationOnly,
+        }
     }
 }
 
