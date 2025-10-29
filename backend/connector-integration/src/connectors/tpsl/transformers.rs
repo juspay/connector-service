@@ -14,7 +14,7 @@ use domain_types::{
         PaymentsPostAuthenticateData, PaymentsAuthenticateData, PaymentsPreAuthenticateData,
         PaymentVoidData, PaymentsCaptureData, RefundFlowData, RefundsData, RefundsResponseData,
         RefundSyncData, SetupMandateRequestData, RepeatPaymentData, DisputeFlowData,
-        AcceptDisputeData, DisputeResponseData, SubmitEvidenceData, PaymentCreateOrderData,
+        AcceptDisputeData, DisputeDefendData, DisputeResponseData, SubmitEvidenceData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, SessionTokenRequestData, SessionTokenResponseData,
         PaymentMethodTokenizationData, PaymentMethodTokenResponse, AccessTokenRequestData,
         AccessTokenResponseData, ConnectorCustomerData, ConnectorCustomerResponse,
