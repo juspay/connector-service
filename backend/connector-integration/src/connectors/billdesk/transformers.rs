@@ -807,9 +807,9 @@ impl<
             _ => common_enums::AttemptStatus::AuthenticationPending,
         };
 
-        let amount_received = response.refund_amount.parse::<f64>()
-            .ok()
-            .map(|amt| common_utils::types::MinorUnit::from_major_unit_as_f64(amt));
+        let amount_received = common_utils::types::StringMajorUnit::new(response.refund_amount.clone())
+            .to_minor_unit_as_i64(common_enums::Currency::INR) // Default to INR, should be extracted from response
+            .ok();
 
         Ok(Self {
             resource_common_data: domain_types::connector_types::RefundFlowData {
