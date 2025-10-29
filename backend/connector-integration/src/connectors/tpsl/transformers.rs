@@ -17,7 +17,7 @@ use domain_types::{
     utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{Mask, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::tpsl::TPSLRouterData, types::ResponseRouterData};
