@@ -407,7 +407,7 @@ pub struct TpslDecodedRedirectionResponse {
     pub vpa: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslErrorResponse {
     #[serde(rename = "_ErrorCode")]
