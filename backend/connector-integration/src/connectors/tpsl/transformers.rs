@@ -509,7 +509,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                     txn_type: "SALE".to_string(),
                     currency: item.router_data.request.currency.to_string(),
                     identifier: item
-                        .router_data
                         .resource_common_data
                         .connector_request_reference_id,
                     sub_type: "UPI".to_string(),
