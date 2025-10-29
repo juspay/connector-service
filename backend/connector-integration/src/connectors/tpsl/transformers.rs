@@ -223,7 +223,7 @@ pub struct TpslTransactionUPITxnType {
 }
 
 // Response types
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslUPITokenResponse {
     #[serde(rename = "merchantCode")]
