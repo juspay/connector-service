@@ -416,7 +416,7 @@ pub struct TpslErrorResponse {
     pub error_message: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum TpslPaymentsResponse {
     TokenResponse(TpslUPITokenResponse),
