@@ -33,12 +33,13 @@
 - Authentication: Merchant ID and Checksum Key via ConnectorAuthType::SignatureKey
 - Message format: Pipe-separated key-value pairs with checksum validation
 
-### Payment Flow Support
-- **Authorize**: Initiates UPI and Net Banking payments with redirect flow
+### Payment Flow Support (UPI and Sync Only)
+- **Authorize**: Initiates UPI Collect and UPI Intent payments with redirect flow
 - **PSync**: Checks payment status using transaction reference
 - **Refund**: Processes refunds with amount validation
 - **RSync**: Checks refund status using refund ID
 - **Webhooks**: Processes payment status notifications
+- **Flow Restriction**: Only UPI and sync flows implemented as per requirements (no card payments, net banking, wallets, etc.)
 
 ### Error Handling
 - Comprehensive error response parsing
