@@ -475,18 +475,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn try_from(
         item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
-        let merchant_code = get_merchant_code(&item.router_data.connector_auth_type)?;
+        let customer_id = item.resource_common_data.get_customer_id()?;
+        let merchant_code = get_merchant_code(&item.connector_auth_type)?;
         let amount = item
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
+                item.request.minor_amount,
+                item.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
-        match item.router_data.resource_common_data.payment_method {
+        match item.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => Ok(Self {
                 merchant: TpslMerchantDataType {
                     identifier: merchant_code.peek().clone(),
