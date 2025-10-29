@@ -748,7 +748,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslAuthenticateRespo
 }
 
 // PreAuthenticate flow
-impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>, T>>
+impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>, T>>
     for TpslPreAuthenticateRequest
 {
     fn from(_item: TPSLRouterData<RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>, T>) -> Self {
@@ -765,7 +765,7 @@ impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslPreAuthenticateRespo
 }
 
 // Void flow
-impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
+impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
     for TpslVoidRequest
 {
     fn from(_item: TPSLRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>) -> Self {
@@ -782,7 +782,7 @@ impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslVoidResponse, Router
 }
 
 // Capture flow
-impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
+impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
     for TpslCaptureRequest
 {
     fn from(_item: TPSLRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>) -> Self {
@@ -799,7 +799,7 @@ impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslCaptureResponse, Rou
 }
 
 // Refund flow
-impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
     for TpslRefundRequest
 {
     fn from(_item: TPSLRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>) -> Self {
@@ -816,7 +816,7 @@ impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslRefundResponse, Rout
 }
 
 // RSync flow
-impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
+impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
     for TpslRSyncRequest
 {
     fn from(_item: TPSLRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>) -> Self {
@@ -833,7 +833,7 @@ impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslRSyncResponse, Route
 }
 
 // SetupMandate flow
-impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>, T>>
+impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>, T>>
     for TpslSetupMandateRequest
 {
     fn from(_item: TPSLRouterData<RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>, T>) -> Self {
@@ -850,7 +850,7 @@ impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslSetupMandateResponse
 }
 
 // RepeatPayment flow
-impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>, T>>
+impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>, T>>
     for TpslRepeatPaymentRequest
 {
     fn from(_item: TPSLRouterData<RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>, T>) -> Self {
@@ -867,7 +867,7 @@ impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslRepeatPaymentRespons
 }
 
 // AcceptDispute flow
-impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>, T>>
+impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>, T>>
     for TpslAcceptDisputeRequest
 {
     fn from(_item: TPSLRouterData<RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>, T>) -> Self {
@@ -884,7 +884,7 @@ impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslAcceptDisputeRespons
 }
 
 // SubmitEvidence flow
-impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>, T>>
+impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>, T>>
     for TpslSubmitEvidenceRequest
 {
     fn from(_item: TPSLRouterData<RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>, T>) -> Self {
@@ -901,7 +901,7 @@ impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslSubmitEvidenceRespon
 }
 
 // DefendDispute flow
-impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>, T>>
+impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>, T>>
     for TpslDefendDisputeRequest
 {
     fn from(_item: TPSLRouterData<RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>, T>) -> Self {
@@ -918,7 +918,7 @@ impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslDefendDisputeRespons
 }
 
 // CreateOrder flow
-impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>, T>>
+impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>, T>>
     for TpslCreateOrderRequest
 {
     fn from(_item: TPSLRouterData<RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>, T>) -> Self {
@@ -935,7 +935,7 @@ impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslCreateOrderResponse,
 }
 
 // CreateSessionToken flow
-impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>, T>>
+impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>, T>>
     for TpslCreateSessionTokenRequest
 {
     fn from(_item: TPSLRouterData<RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>, T>) -> Self {
@@ -952,7 +952,7 @@ impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslCreateSessionTokenRe
 }
 
 // PaymentMethodToken flow
-impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>, T>>
+impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>, T>>
     for TpslPaymentMethodTokenRequest
 {
     fn from(_item: TPSLRouterData<RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>, T>) -> Self {
@@ -969,7 +969,7 @@ impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslPaymentMethodTokenRe
 }
 
 // CreateAccessToken flow
-impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>, T>>
+impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>, T>>
     for TpslCreateAccessTokenRequest
 {
     fn from(_item: TPSLRouterData<RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>, T>) -> Self {
@@ -986,7 +986,7 @@ impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslCreateAccessTokenRes
 }
 
 // CreateConnectorCustomer flow
-impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>, T>>
+impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>, T>>
     for TpslCreateConnectorCustomerRequest
 {
     fn from(_item: TPSLRouterData<RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>, T>) -> Self {
@@ -1003,7 +1003,7 @@ impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslCreateConnectorCusto
 }
 
 // VoidPC flow
-impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>, T>>
+impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>, T>>
     for TpslVoidPCRequest
 {
     fn from(_item: TPSLRouterData<RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>, T>) -> Self {
