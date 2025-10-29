@@ -497,7 +497,7 @@ impl<
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        if connectors.tpsl.test_mode {
+        if connectors.tpsl.base_url.contains("tekprocess") {
             "https://www.tekprocess.co.in/PaymentGateway"
         } else {
             "https://www.tpsl-india.in/PaymentGateway"
