@@ -747,7 +747,7 @@ impl TryFrom<ResponseRouterData<TpslPaymentsResponse, RouterDataV2<PSync, Paymen
             }
             TpslPaymentsResponse::DecodedResponse(decoded_response) => {
                 let status = map_txn_status(&decoded_response.txn_status);
-                let amount_received = decoded_response
+                let _amount_received = decoded_response
                     .txn_amt
                     .as_ref()
                     .and_then(|amt| amt.parse::<f64>().ok())
