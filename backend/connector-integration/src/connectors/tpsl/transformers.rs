@@ -322,7 +322,7 @@ pub struct TpslPaymentTxnPayload {
     pub reference: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslPaymentMethodErrorPayload {
     pub code: String,
