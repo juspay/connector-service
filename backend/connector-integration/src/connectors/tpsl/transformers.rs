@@ -901,7 +901,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<Accept, Disp
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(_item: TPSLRouterData<RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>, T>) -> Result<Self, Self::Error> {
-        Ok(TpslAcceptDisputeRequest
+        Ok(TpslAcceptDisputeRequest)
     }
 }
 
