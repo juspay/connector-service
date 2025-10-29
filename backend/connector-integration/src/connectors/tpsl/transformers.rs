@@ -439,7 +439,7 @@ impl TryFrom<&ConnectorAuthType> for TpslAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key1 } => {
+            ConnectorAuthType::SignatureKey { api_key, .. } => {
                 let auth_data: TpslAuthType = api_key
                     .to_owned()
                     .parse_value("TpslAuthType")
