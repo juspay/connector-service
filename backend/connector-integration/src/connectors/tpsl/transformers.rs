@@ -553,7 +553,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         Ok(Self {
             merchant: TpslMerchantDataType {
-                identifier: merchant_code.expose().clone(),
+                identifier: merchant_code.peek().clone(),
             },
             payment: TpslPaymentUPISyncType {
                 instruction: serde_json::Value::Null,
