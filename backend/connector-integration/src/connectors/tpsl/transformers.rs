@@ -18,7 +18,7 @@ use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    connectors::tpsl::TpslRouterData,
+    connectors::tpsl::TPSLRouterData,
     types::ResponseRouterData,
 };
 
