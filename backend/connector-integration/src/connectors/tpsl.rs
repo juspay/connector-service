@@ -3,23 +3,28 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
-use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, request::{Method, Request, RequestBuilder, RequestContent},
+    errors::CustomResult, ext_traits::ByteSliceExt, request::Method,
+    types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder, CreateSessionToken, DefendDispute, PaymentMethodToken, PostAuthenticate, PreAuthenticate, PSync, RSync,
-        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        CreateOrder, CreateSessionToken, DefendDispute, PaymentMethodToken, PostAuthenticate,
+        PreAuthenticate, PSync, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        VoidPC,
     },
     connector_types::{
-        AcceptDisputeData, ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsAuthenticateData, PaymentsCaptureData, PaymentsCancelPostCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData, AccessTokenRequestData, AccessTokenResponseData,
-        ConnectorCustomerData, PaymentMethodTokenizationData, PaymentMethodTokenResponse, SetupMandateRequestData, SubmitEvidenceData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, RequestDetails, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -29,7 +34,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -38,491 +43,330 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use transformers::{self as tpsl, TpslUPITokenRequest, TpslUPISyncRequest, TpslPaymentsResponse};
+use transformers::{self as tpsl, TpslPaymentsRequest, TpslPaymentsResponse};
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
+// MANDATORY: Use UCS v2 macro framework - create_all_prerequisites! macro
+macros::create_all_prerequisites!(
+    connector_name: TPSL,
+    generic_type: T,
+    api: [
+        // UPI and Sync flows only as specified in requirements
+        (
+            flow: Authorize,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PSync,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        // MANDATORY: Add all other flows even if not implemented (stub types)
+        (
+            flow: Void,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: Capture,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ),
+        (
+            flow: Refund,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
+            flow: RSync,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: CreateOrder,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ),
+        (
+            flow: CreateSessionToken,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ),
+        (
+            flow: Accept,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        ),
+        (
+            flow: DefendDispute,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        ),
+        (
+            flow: SubmitEvidence,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        ),
+        (
+            flow: Authenticate,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PostAuthenticate,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PreAuthenticate,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PaymentMethodToken,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        ),
+        (
+            flow: CreateAccessToken,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        ),
+        (
+            flow: CreateConnectorCustomer,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+        ),
+        (
+            flow: VoidPC,
+            request_body: TpslPaymentsRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        ),
+    ],
+    amount_converters: [
+        // CRITICAL: TPSL expects amounts in minor units as string based on Haskell implementation
+        amount_converter: StringMinorUnit
+    ],
+    member_functions: {
+        pub fn build_headers<F, FCD, Req, Res>(
+            &self,
+            req: &RouterDataV2<F, FCD, Req, Res>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+        where
+            Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
+        {
+            let mut header = vec![(
+                crate::connectors::tpsl::constants::headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )];
 
-// Forward declaration
-pub struct TPSL<T> {
-    _phantom: std::marker::PhantomData<T>,
-}
+            let auth_type = tpsl::TpslAuthType::try_from(&req.connector_auth_type)?;
 
-impl<T> Default for TPSL<T> {
-    fn default() -> Self {
-        Self {
-            _phantom: std::marker::PhantomData,
+            let mut auth_header = vec![(
+                crate::connectors::tpsl::constants::headers::AUTHORIZATION.to_string(),
+                format!(
+                    "Basic {}",
+                    base64::engine::general_purpose::STANDARD.encode(format!(
+                        "{}:{}",
+                        auth_type.merchant_code.peek(),
+                        auth_type.merchant_key.peek()
+                    ))
+                )
+                .into_masked(),
+            )];
+
+            header.append(&mut auth_header);
+            Ok(header)
+        }
+
+        pub fn connector_base_url_payments<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.tpsl.base_url
+        }
+
+        pub fn get_api_tag<F, FCD, Req, Res>(
+            &self,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
+        ) -> &'static str {
+            // CRITICAL: Proper API tag implementation for routing
+            std::any::type_name::<F>()
+                .split("::")
+                .last()
+                .unwrap_or("unknown")
         }
     }
-}
+);
 
-impl<T> TPSL<T> {
-    pub fn new() -> &'static Self {
-        Box::leak(Box::new(Self::default()))
+// MANDATORY: Use macro_connector_implementation! for Authorize flow
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: Authorize,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthorizeData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+                "{}{}",
+                self.connector_base_url_payments(req),
+                constants::endpoints::UPI_TOKEN_GENERATION
+            ))
+        }
     }
+);
 
-    pub fn connector_base_url_payments<'a, F, Req, Res>(
-        &self,
-        req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-    ) -> &'a str {
-        &req.resource_common_data.connectors.tpsl.base_url
+// MANDATORY: Use macro_connector_implementation! for PSync flow
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslPaymentsRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: PSync,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsSyncData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+                "{}{}",
+                self.connector_base_url_payments(req),
+                constants::endpoints::UPI_TOKEN_GENERATION
+            ))
+        }
     }
-}
- 
+);
 
-// Implement all required traits for ConnectorServiceTrait with empty implementations
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentPostAuthenticateV2<T> for TPSL<T>
+// MANDATORY: Implement all connector_types traits (even for unused flows)
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentPostAuthenticateV2<T> for TPSL<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentAuthenticateV2<T> for TPSL<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentPreAuthenticateV2<T> for TPSL<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::SubmitEvidenceV2 for TPSL<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::DisputeDefend for TPSL<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::RefundSyncV2 for TPSL<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::AcceptDispute for TPSL<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::RepeatPaymentV2<T> for TPSL<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::SetupMandateV2<T> for TPSL<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentCapture for TPSL<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::RefundV2 for TPSL<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::IncomingWebhook for TPSL<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentVoidPostCaptureV2 for TPSL<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentVoidV2 for TPSL<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentTokenV2<T> for TPSL<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::CreateConnectorCustomer for TPSL<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentAccessToken for TPSL<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentSessionToken for TPSL<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentOrderCreate for TPSL<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentAuthenticateV2<T> for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentPreAuthenticateV2<T> for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::SubmitEvidenceV2 for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::DisputeDefend for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::RefundSyncV2 for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::AcceptDispute for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::RepeatPaymentV2 for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::SetupMandateV2<T> for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentCapture for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::RefundV2 for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::IncomingWebhook for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentVoidPostCaptureV2 for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentVoidV2 for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentTokenV2<T> for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::CreateConnectorCustomer for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentAccessToken for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentSessionToken for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentOrderCreate for TPSL<T>
-{
-}
-
-// Now implement the main ConnectorServiceTrait
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::ConnectorServiceTrait<T> for TPSL<T>
-{
-}
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentAuthorizeV2<T> for TPSL<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentSyncV2 for TPSL<T>
-{
-}
-
-// Manual implementation for Authorize flow
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-    for TPSL<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            crate::connectors::tpsl::constants::headers::CONTENT_TYPE.to_string(),
-            self.common_get_content_type().to_string().into(),
-        )];
-
-        let auth_type = tpsl::TpslAuthType::try_from(&req.connector_auth_type)?;
-
-        let mut auth_header = vec![(
-            crate::connectors::tpsl::constants::headers::AUTHORIZATION.to_string(),
-            format!("Basic {}", base64::engine::general_purpose::STANDARD.encode(format!(
-                "{}:{}",
-                auth_type.merchant_code.peek(),
-                auth_type.merchant_key.peek()
-            ))).into_masked(),
-        )];
-
-        header.append(&mut auth_header);
-        Ok(header)
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        Ok(format!(
-            "{}{}",
-            self.connector_base_url_payments(req),
-            constants::endpoints::UPI_TOKEN_GENERATION
-        ))
-    }
-
-    fn build_request_v2(
-        &self,
-        req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
-        let request = TpslUPITokenRequest::try_from(req)?;
-        Ok(Some(RequestBuilder::new()
-            .method(Method::Post)
-            .url(&self.get_url(req)?)
-            .headers(self.get_headers(req)?)
-            .set_body(RequestContent::Json(Box::new(request)))
-            .build()))
-    }
-
-    fn handle_response_v2(
-        &self,
-        req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, errors::ConnectorError>
-    {
-        let response: TpslPaymentsResponse = res
-            .response
-            .parse_struct("TpslPaymentsResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        let router_data = ResponseRouterData {
-            response,
-            router_data: req.clone(),
-            http_code: res.status_code,
-        };
-
-        <RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData> as TryFrom<ResponseRouterData<TpslPaymentsResponse, _>>>::try_from(router_data)
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        _event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, None)
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        self.common_get_content_type()
-    }
-}
-
-// Manual implementation for PSync flow
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for TPSL<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            crate::connectors::tpsl::constants::headers::CONTENT_TYPE.to_string(),
-            self.common_get_content_type().to_string().into(),
-        )];
-
-        let auth_type = tpsl::TpslAuthType::try_from(&req.connector_auth_type)?;
-
-        let mut auth_header = vec![(
-            crate::connectors::tpsl::constants::headers::AUTHORIZATION.to_string(),
-            format!("Basic {}", base64::engine::general_purpose::STANDARD.encode(format!(
-                "{}:{}",
-                auth_type.merchant_code.peek(),
-                auth_type.merchant_key.peek()
-            ))).into_masked(),
-        )];
-
-        header.append(&mut auth_header);
-        Ok(header)
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        Ok(format!(
-            "{}{}",
-            self.connector_base_url_payments(req),
-            constants::endpoints::UPI_TOKEN_GENERATION
-        ))
-    }
-
-    fn build_request_v2(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
-        let request = TpslUPISyncRequest::try_from(req)?;
-        Ok(Some(RequestBuilder::new()
-            .method(Method::Post)
-            .url(&self.get_url(req)?)
-            .headers(self.get_headers(req)?)
-            .set_body(RequestContent::Json(Box::new(request)))
-            .build()))
-    }
-
-    fn handle_response_v2(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, errors::ConnectorError>
-    {
-        let response: TpslPaymentsResponse = res
-            .response
-            .parse_struct("TpslPaymentsResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        let router_data = ResponseRouterData {
-            response,
-            router_data: req.clone(),
-            http_code: res.status_code,
-        };
-
-        <RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> as TryFrom<ResponseRouterData<TpslPaymentsResponse, _>>>::try_from(router_data)
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        _event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, None)
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        self.common_get_content_type()
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > interfaces::connector_types::ValidationTrait for TPSL<T>
-{
-}
-
-macros::create_amount_converter_wrapper!(connector_name: TPSL, amount_type: MinorUnit);
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorCommon for TPSL<T>
+// MANDATORY: ConnectorCommon implementation
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    ConnectorCommon for TPSL<T>
 {
     fn id(&self) -> &'static str {
         "tpsl"
@@ -574,333 +418,7 @@ impl<
     }
 }
 
-// Stub types for unsupported flows
-#[derive(Debug, Clone, Serialize)]
-pub struct TPSLVoidRequest;
-#[derive(Debug, Clone)]
-pub struct TPSLVoidResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TPSLAuthenticateRequest;
-#[derive(Debug, Clone)]
-pub struct TPSLAuthenticateResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TPSLPostAuthenticateRequest;
-#[derive(Debug, Clone)]
-pub struct TPSLPostAuthenticateResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TPSLPreAuthenticateRequest;
-#[derive(Debug, Clone)]
-pub struct TPSLPreAuthenticateResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TPSLTokenRequest;
-#[derive(Debug, Clone)]
-pub struct TPSLTokenResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TPSLAccessTokenRequest;
-#[derive(Debug, Clone)]
-pub struct TPSLAccessTokenResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TPSLCreateConnectorCustomerRequest;
-#[derive(Debug, Clone)]
-pub struct TPSLCreateConnectorCustomerResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TPSLIncomingWebhookRequest;
-#[derive(Debug, Clone)]
-pub struct TPSLIncomingWebhookResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TPSLCaptureRequest;
-#[derive(Debug, Clone)]
-pub struct TPSLCaptureResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TPSLRefundRequest;
-#[derive(Debug, Clone)]
-pub struct TPSLRefundResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TPSLRSyncRequest;
-#[derive(Debug, Clone)]
-pub struct TPSLRSyncResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TPSLCreateOrderRequest;
-#[derive(Debug, Clone)]
-pub struct TPSLCreateOrderResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TPSLSessionTokenRequest;
-#[derive(Debug, Clone)]
-pub struct TPSLSessionTokenResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TPSLSetupMandateRequest;
-#[derive(Debug, Clone)]
-pub struct TPSLSetupMandateResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TPSLRepeatPaymentRequest;
-#[derive(Debug, Clone)]
-pub struct TPSLRepeatPaymentResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TPSLAcceptDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct TPSLAcceptDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TPSLDefendDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct TPSLDefendDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TPSLSubmitEvidenceRequest;
-#[derive(Debug, Clone)]
-pub struct TPSLSubmitEvidenceResponse;
-
-// Stub implementations for unsupported flows
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<
-        SubmitEvidence,
-        DisputeFlowData,
-        SubmitEvidenceData,
-        DisputeResponseData,
-    > for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for TPSL<T>
-{
-}
-
-
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
-    for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
-    for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
-    for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
-    for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>
-    for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>
-    for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
-    for TPSL<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for TPSL<T>
-{
-}
-
-// SourceVerification implementations for all flows
+// MANDATORY: SourceVerification stub implementations for all flows
 macro_rules! impl_source_verification_stub {
     ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
         impl<
@@ -959,12 +477,7 @@ impl_source_verification_stub!(
     PaymentsSyncData,
     PaymentsResponseData
 );
-impl_source_verification_stub!(
-    Capture,
-    PaymentFlowData,
-    PaymentsCaptureData,
-    PaymentsResponseData
-);
+impl_source_verification_stub!(Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData);
 impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
 impl_source_verification_stub!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
 impl_source_verification_stub!(RSync, RefundFlowData, RefundSyncData, RefundsResponseData);
@@ -980,12 +493,7 @@ impl_source_verification_stub!(
     RepeatPaymentData,
     PaymentsResponseData
 );
-impl_source_verification_stub!(
-    Accept,
-    DisputeFlowData,
-    AcceptDisputeData,
-    DisputeResponseData
-);
+impl_source_verification_stub!(Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData);
 impl_source_verification_stub!(
     SubmitEvidence,
     DisputeFlowData,
