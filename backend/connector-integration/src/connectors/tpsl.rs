@@ -58,8 +58,8 @@ impl<T> Default for TPSL<T> {
 }
 
 impl<T> TPSL<T> {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new() -> &'static Self {
+        Box::leak(Box::new(Self::default()))
     }
 
     pub fn connector_base_url_payments<'a, F, Req, Res>(
