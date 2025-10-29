@@ -507,7 +507,55 @@ macros::macro_connector_implementation!(
     }
 );
 
-// PSync implementation removed temporarily to fix duplicate templating issue
+// PSync implementation
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TPSL,
+    curl_request: Json(TpslUPISyncRequest),
+    curl_response: TpslPaymentsResponse,
+    flow_name: PSync,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsSyncData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let mut header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )];
+
+            let auth_type = tpsl::TpslAuthType::try_from(&req.connector_auth_type)?;
+
+            let mut auth_header = vec![(
+                headers::AUTHORIZATION.to_string(),
+                format!("Basic {}", base64::engine::general_purpose::STANDARD.encode(format!(
+                    "{}:{}",
+                    auth_type.merchant_code.peek(),
+                    auth_type.merchant_key.peek()
+                ))).into_masked(),
+            )];
+
+            header.append(&mut auth_header);
+            Ok(header)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+                "{}{}",
+                self.connector_base_url_payments(req),
+                constants::endpoints::UPI_TOKEN_GENERATION
+            ))
+        }
+    }
+);
 
 impl<
         T: PaymentMethodDataTypes
