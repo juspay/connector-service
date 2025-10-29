@@ -163,16 +163,16 @@ impl<
                             "mandateDetails": false
                         }}
                     }}"#,
-                    get_merchant_id(&item.router_data.connector_auth_type)?,
+                    get_merchant_id(&item.connector_auth_type)?,
                     amount,
-                    item.router_data.resource_common_data.connector_request_reference_id,
+                    item.resource_common_data.connector_request_reference_id,
                     customer_id,
                     amount,
-                    item.router_data.request.currency.to_string(),
-                    item.router_data.resource_common_data.connector_request_reference_id,
+                    item.request.currency.to_string(),
+                    item.resource_common_data.connector_request_reference_id,
                     "2024-01-01 00:00:00".to_string(), // TODO: Use proper timestamp
-                    item.router_data.request.get_phone_number().unwrap_or_else(|| "".to_string()),
-                    item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_else(|| "".to_string()),
+                    item.request.get_phone_number().unwrap_or_else(|| "".to_string()),
+                    item.request.email.as_ref().map(|e| e.to_string()).unwrap_or_else(|| "".to_string()),
                     customer_id,
                     vpa
                 )
