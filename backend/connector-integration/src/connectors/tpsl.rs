@@ -404,55 +404,101 @@ impl<
     }
 }
 
-// PSync implementation
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: TPSL,
-    curl_request: Json(TpslUPISyncRequest),
-    curl_response: TpslPaymentsResponse,
-    flow_name: PSync,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsSyncData,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut header = vec![(
-                crate::connectors::tpsl::headers::CONTENT_TYPE.to_string(),
-                self.common_get_content_type().to_string().into(),
-            )];
+// Manual implementation for PSync flow
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for TPSL<T>
+{
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let mut header = vec![(
+            crate::connectors::tpsl::headers::CONTENT_TYPE.to_string(),
+            self.common_get_content_type().to_string().into(),
+        )];
 
-            let auth_type = tpsl::TpslAuthType::try_from(&req.connector_auth_type)?;
+        let auth_type = tpsl::TpslAuthType::try_from(&req.connector_auth_type)?;
 
-            let mut auth_header = vec![(
-                crate::connectors::tpsl::headers::AUTHORIZATION.to_string(),
-                format!("Basic {}", base64::engine::general_purpose::STANDARD.encode(format!(
-                    "{}:{}",
-                    auth_type.merchant_code.peek(),
-                    auth_type.merchant_key.peek()
-                ))).into_masked(),
-            )];
+        let mut auth_header = vec![(
+            crate::connectors::tpsl::headers::AUTHORIZATION.to_string(),
+            format!("Basic {}", base64::engine::general_purpose::STANDARD.encode(format!(
+                "{}:{}",
+                auth_type.merchant_code.peek(),
+                auth_type.merchant_key.peek()
+            ))).into_masked(),
+        )];
 
-            header.append(&mut auth_header);
-            Ok(header)
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!(
-                "{}{}",
-                self.connector_base_url_payments(req),
-                constants::endpoints::UPI_TOKEN_GENERATION
-            ))
-        }
+        header.append(&mut auth_header);
+        Ok(header)
     }
-);
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        Ok(format!(
+            "{}{}",
+            self.connector_base_url_payments(req),
+            constants::endpoints::UPI_TOKEN_GENERATION
+        ))
+    }
+
+    fn build_request(
+        &self,
+        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        _config: &Connectors,
+    ) -> CustomResult<Request, errors::ConnectorError> {
+        let request = TpslUPISyncRequest::try_from(req)?;
+        Ok(Request::builder()
+            .method(Method::Post)
+            .url(&self.get_url(req)?)
+            .headers(self.get_headers(req)?)
+            .body(common_utils::request::RequestContent::Json(Box::new(request)))
+            .build()?)
+    }
+
+    fn handle_response(
+        &self,
+        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        res: Response,
+        _config: &Connectors,
+    ) -> CustomResult<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, errors::ConnectorError>
+    {
+        let response: TpslPaymentsResponse = res
+            .response
+            .parse_struct("TpslPaymentsResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        let router_data = ResponseRouterData {
+            response,
+            data: req.clone(),
+            http_code: res.status_code,
+        };
+
+        router_data
+            .try_into()
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+    }
+
+    fn get_error_response(
+        &self,
+        res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, None)
+    }
+
+    fn get_content_type(&self) -> &'static str {
+        self.common_get_content_type()
+    }
+}
 
 impl<
         T: PaymentMethodDataTypes
