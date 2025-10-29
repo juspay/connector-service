@@ -507,7 +507,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 transaction: TpslUPITokenTxn {
                     amount: amount.to_string(),
                     txn_type: "SALE".to_string(),
-                    currency: item.router_data.request.currency.to_string(),
+                    currency: item.request.currency.to_string(),
                     identifier: item
                         .resource_common_data
                         .connector_request_reference_id,
@@ -558,7 +558,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 txn_type: Some("SALE".to_string()),
                 sub_type: Some("UPI".to_string()),
                 amount: amount.to_string(),
-                currency: item.router_data.request.currency.to_string(),
+                currency: item.request.currency.to_string(),
                 date_time: "2025-01-20 12:00:00".to_string(),
                 request_type: "STATUS".to_string(),
                 token: item
