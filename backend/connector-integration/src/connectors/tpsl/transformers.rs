@@ -737,7 +737,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<Authenticate
     }
 }
 
-impl TryFrom<ResponseRouterData<TpslAuthenticateResponse, RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>>>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslAuthenticateResponse, RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>>>
     for RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
