@@ -489,13 +489,10 @@ macros::create_all_prerequisites!(
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+            _req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
-                BILLDESK_UAT_BASE_URL
-            } else {
-                BILLDESK_PROD_BASE_URL
-            }
+            // For refunds, default to production - test mode should be determined from auth or config
+            BILLDESK_PROD_BASE_URL
         }
     }
 );
