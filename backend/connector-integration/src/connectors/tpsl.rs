@@ -451,7 +451,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}{}", base_url, crate::connectors::tpsl::TPSL_SI_TRANSACTION_URL))
+            Ok(format!("{}/PaymentGateway/services/TransactionDetailsNew", base_url))
         }
     }
 );
