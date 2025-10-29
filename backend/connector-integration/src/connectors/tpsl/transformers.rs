@@ -350,8 +350,8 @@ impl<
                     item.router_data.request.currency,
                     transaction_id,
                     customer_id,
-                    item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
-                    item.router_data.request.phone_number.as_ref().map(|p| p.to_string()).unwrap_or_default()
+                    item.router_data.request.email.as_ref().map(|e| e.expose().clone()).unwrap_or_default(),
+                    item.router_data.request.phone.as_ref().map(|p| p.expose().clone()).unwrap_or_default()
                 )
             }
             _ => return Err(errors::ConnectorError::NotImplemented("Payment method".to_string()).into()),
