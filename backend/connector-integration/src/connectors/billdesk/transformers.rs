@@ -472,7 +472,7 @@ impl<
             &merchant_id,
             "", // Customer ID not needed for refund
             &transaction_id,
-            &amount,
+            amount.to_string().as_str(),
             &item.router_data.request.currency.to_string(),
             &additional_info,
         );
