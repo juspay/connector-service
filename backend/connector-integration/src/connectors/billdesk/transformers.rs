@@ -317,8 +317,8 @@ impl<
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
 
         let mut additional_info = HashMap::new();
-        additional_info.insert("TxnType".to_string(), "D".to_string()); // Direct payment
-        additional_info.insert("ItemCode".to_string(), "DIRECT".to_string());
+        additional_info.insert("TxnType".to_string(), BILLDESK_DIRECT_TXN_TYPE.to_string());
+        additional_info.insert("ItemCode".to_string(), BILLDESK_DIRECT_ITEM_CODE.to_string());
         
         // Add return URL if available
         if let Ok(return_url) = item.router_data.request.get_router_return_url() {
