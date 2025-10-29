@@ -1027,7 +1027,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<CreateAccess
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(_item: TPSLRouterData<RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>, T>) -> Result<Self, Self::Error> {
-        Ok(TpslCreateAccessTokenRequest
+        Ok(TpslCreateAccessTokenRequest)
     }
 }
 
