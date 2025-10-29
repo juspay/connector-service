@@ -368,7 +368,7 @@ impl<
             .build())
     }
 
-    fn handle_response(
+    fn handle_response_v2(
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         res: Response,
@@ -464,7 +464,7 @@ impl<
             .build())
     }
 
-    fn handle_response(
+    fn handle_response_v2(
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         res: Response,
