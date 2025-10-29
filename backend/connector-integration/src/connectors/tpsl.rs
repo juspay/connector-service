@@ -532,8 +532,8 @@ impl<
         "application/json"
     }
 
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.tpsl.base_url.as_ref()
+    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
+        constants::base_urls::PRODUCTION
     }
 
     fn get_auth_header(
