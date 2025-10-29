@@ -560,7 +560,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 device_identifier: "WEB".to_string(),
                 txn_type: Some("SALE".to_string()),
                 sub_type: Some("UPI".to_string()),
-                amount,
+                amount: amount.to_string(),
                 currency: item.router_data.request.currency.to_string(),
                 date_time: "2025-01-20 12:00:00".to_string(),
                 request_type: "STATUS".to_string(),
