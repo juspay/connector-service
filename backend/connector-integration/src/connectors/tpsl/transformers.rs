@@ -350,7 +350,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                     description: Some("UPI Payment".to_string()),
                 },
                 transaction: TpslUPITokenTxn {
-                    amount,
+                    amount: amount.to_string(),
                     txn_type: "SALE".to_string(),
                     currency,
                     identifier: transaction_id.clone(),
