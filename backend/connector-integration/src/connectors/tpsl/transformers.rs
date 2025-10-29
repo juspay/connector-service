@@ -11,34 +11,47 @@ use domain_types::{
     router_response_types::RedirectForm,
     utils,
 };
-
 use hyperswitch_masking::{Secret, PeekInterface};
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
-use super::TPSLAmountConvertor;
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TpslTransactionRequest {
-    #[serde(rename = "getTransactionToken")]
-    pub get_transaction_token: TpslTransactionMessage,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TpslTransactionMessage {
-    pub msg: String,
-}
-
+// CRITICAL: Authentication type based on Haskell implementation
 #[derive(Debug, Deserialize)]
-pub struct TpslTransactionResponse {
-    #[serde(rename = "getTransactionTokenReturn")]
-    pub get_transaction_token_return: String,
+#[serde(rename_all = "camelCase")]
+pub struct TpslAuthType {
+    pub merchant_code: Secret<String>,
+    pub merchant_key: Secret<String>,
+    pub salt_key: Option<Secret<String>>,
 }
 
+impl TryFrom<&ConnectorAuthType> for TpslAuthType {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+        match auth_type {
+            ConnectorAuthType::SignatureKey { api_key, .. } => {
+                // Extract merchant code and key from the auth type
+                let parts: Vec<&str> = api_key.peek().split(':').collect();
+                if parts.len() >= 2 {
+                    Ok(TpslAuthType {
+                        merchant_code: Secret::new(parts[0].to_string()),
+                        merchant_key: Secret::new(parts[1].to_string()),
+                        salt_key: None,
+                    })
+                } else {
+                    Err(errors::ConnectorError::FailedToObtainAuthType.into())
+                }
+            }
+            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+        }
+    }
+}
+
+// Request types based on Haskell implementation
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TpslUPITokenRequest {
+pub struct TpslPaymentsRequest {
     pub merchant: TpslMerchantDataType,
     pub cart: TpslUPITokenCart,
     pub transaction: TpslUPITokenTxn,
@@ -83,147 +96,7 @@ pub struct TpslConsumerDataType {
     pub identifier: String,
 }
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TpslUPITxnRequest {
-    pub merchant: TpslMerchantPayload,
-    pub cart: TpslUPITokenCart,
-    pub payment: TpslPaymentIntentPayload,
-    pub transaction: TpslTxnPayload,
-    pub consumer: TpslConsumerIntentPayload,
-    #[serde(rename = "merchantInputFlags")]
-    pub merchant_input_flags: TpslFlagsType,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TpslMerchantPayload {
-    #[serde(rename = "webhookEndpointURL")]
-    pub webhook_endpoint_url: String,
-    #[serde(rename = "responseType")]
-    pub response_type: String,
-    #[serde(rename = "responseEndpointURL")]
-    pub response_endpoint_url: String,
-    pub description: String,
-    pub identifier: String,
-    #[serde(rename = "webhookType")]
-    pub webhook_type: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TpslPaymentIntentPayload {
-    pub method: TpslMethodUPIPayload,
-    pub instrument: TpslUPIInstrumentPayload,
-    pub instruction: serde_json::Value,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TpslMethodUPIPayload {
-    pub token: String,
-    #[serde(rename = "type")]
-    pub method_type: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TpslUPIInstrumentPayload {
-    pub expiry: serde_json::Value,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TpslTxnPayload {
-    #[serde(rename = "deviceIdentifier")]
-    pub device_identifier: String,
-    #[serde(rename = "smsSending")]
-    pub sms_sending: String,
-    pub amount: String,
-    #[serde(rename = "forced3DSCall")]
-    pub forced_3ds_call: String,
-    #[serde(rename = "type")]
-    pub txn_type: String,
-    pub description: String,
-    pub currency: String,
-    #[serde(rename = "isRegistration")]
-    pub is_registration: String,
-    pub identifier: String,
-    #[serde(rename = "dateTime")]
-    pub date_time: String,
-    pub token: String,
-    #[serde(rename = "securityToken")]
-    pub security_token: String,
-    #[serde(rename = "subType")]
-    pub sub_type: String,
-    #[serde(rename = "requestType")]
-    pub request_type: String,
-    pub reference: String,
-    #[serde(rename = "merchantInitiated")]
-    pub merchant_initiated: String,
-    #[serde(rename = "tenureId")]
-    pub tenure_id: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TpslConsumerIntentPayload {
-    #[serde(rename = "mobileNumber")]
-    pub mobile_number: String,
-    #[serde(rename = "emailID")]
-    pub email_id: String,
-    pub identifier: String,
-    #[serde(rename = "accountNo")]
-    pub account_no: String,
-    #[serde(rename = "accountType")]
-    pub account_type: String,
-    #[serde(rename = "accountHolderName")]
-    pub account_holder_name: String,
-    pub vpa: String,
-    #[serde(rename = "aadharNo")]
-    pub aadhar_no: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TpslFlagsType {
-    #[serde(rename = "accountNo")]
-    pub account_no: bool,
-    #[serde(rename = "mobileNumber")]
-    pub mobile_number: bool,
-    #[serde(rename = "emailID")]
-    pub email_id: bool,
-    #[serde(rename = "cardDetails")]
-    pub card_details: bool,
-    #[serde(rename = "mandateDetails")]
-    pub mandate_details: bool,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TpslUPISyncRequest {
-    pub merchant: TpslMerchantDataType,
-    pub payment: TpslPaymentUPISyncType,
-    pub transaction: TpslTransactionUPITxnType,
-    pub consumer: TpslConsumerDataType,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TpslPaymentUPISyncType {
-    pub instruction: serde_json::Value,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TpslTransactionUPITxnType {
-    #[serde(rename = "deviceIdentifier")]
-    pub device_identifier: String,
-    #[serde(rename = "type")]
-    pub txn_type: Option<String>,
-    #[serde(rename = "subType")]
-    pub sub_type: Option<String>,
-    pub amount: String,
-    pub currency: String,
-    #[serde(rename = "dateTime")]
-    pub date_time: String,
-    #[serde(rename = "requestType")]
-    pub request_type: String,
-    pub token: String,
-}
-
-// Response types
+// Response types based on Haskell implementation
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslUPITokenResponse {
@@ -242,7 +115,7 @@ pub struct TpslUPITokenResponse {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TpslUPITxnResponse {
+pub struct TpslUPISyncResponse {
     #[serde(rename = "merchantCode")]
     pub merchant_code: String,
     #[serde(rename = "merchantTransactionIdentifier")]
@@ -253,15 +126,20 @@ pub struct TpslUPITxnResponse {
     pub response_type: String,
     #[serde(rename = "transactionState")]
     pub transaction_state: String,
-    #[serde(rename = "merchantAdditionalDetails")]
-    pub merchant_additional_details: serde_json::Value,
     #[serde(rename = "paymentMethod")]
     pub payment_method: TpslUPIPaymentPayload,
     pub error: Option<serde_json::Value>,
     #[serde(rename = "merchantResponseString")]
     pub merchant_response_string: Option<serde_json::Value>,
-    #[serde(rename = "pdfDownloadUrl")]
-    pub pdf_download_url: Option<serde_json::Value>,
+    #[serde(rename = "statusCode")]
+    pub status_code: Option<String>,
+    #[serde(rename = "statusMessage")]
+    pub status_message: Option<String>,
+    pub identifier: Option<String>,
+    #[serde(rename = "bankReferenceIdentifier")]
+    pub bank_reference_identifier: Option<String>,
+    #[serde(rename = "merchantAdditionalDetails")]
+    pub merchant_additional_details: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -331,35 +209,6 @@ pub struct TpslPaymentMethodErrorPayload {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TpslUPISyncResponse {
-    #[serde(rename = "merchantCode")]
-    pub merchant_code: String,
-    #[serde(rename = "merchantTransactionIdentifier")]
-    pub merchant_transaction_identifier: String,
-    #[serde(rename = "merchantTransactionRequestType")]
-    pub merchant_transaction_request_type: String,
-    #[serde(rename = "responseType")]
-    pub response_type: String,
-    #[serde(rename = "transactionState")]
-    pub transaction_state: String,
-    #[serde(rename = "paymentMethod")]
-    pub payment_method: TpslUPIPaymentPayload,
-    pub error: Option<serde_json::Value>,
-    #[serde(rename = "merchantResponseString")]
-    pub merchant_response_string: Option<serde_json::Value>,
-    #[serde(rename = "statusCode")]
-    pub status_code: Option<String>,
-    #[serde(rename = "statusMessage")]
-    pub status_message: Option<String>,
-    pub identifier: Option<String>,
-    #[serde(rename = "bankReferenceIdentifier")]
-    pub bank_reference_identifier: Option<String>,
-    #[serde(rename = "merchantAdditionalDetails")]
-    pub merchant_additional_details: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct TpslDecodedRedirectionResponse {
     #[serde(rename = "txn_status")]
     pub txn_status: String,
@@ -421,34 +270,12 @@ pub struct TpslErrorResponse {
 #[serde(untagged)]
 pub enum TpslPaymentsResponse {
     TokenResponse(TpslUPITokenResponse),
-    TxnResponse(TpslUPITxnResponse),
     SyncResponse(TpslUPISyncResponse),
     DecodedResponse(TpslDecodedRedirectionResponse),
     ErrorResponse(TpslErrorResponse),
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TpslAuthType {
-    pub merchant_code: Secret<String>,
-    pub merchant_key: Secret<String>,
-    pub salt_key: Secret<String>,
-}
-
-impl TryFrom<&ConnectorAuthType> for TpslAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(_auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        // For now, return a default auth type - this should be properly implemented
-        // based on the actual auth structure needed for TPSL
-        Ok(TpslAuthType {
-            merchant_code: Secret::new("default_merchant_code".to_string()),
-            merchant_key: Secret::new("default_merchant_key".to_string()),
-            salt_key: Secret::new("default_salt_key".to_string()),
-        })
-    }
-}
-
+// CRITICAL: Dynamic extraction functions - NEVER HARDCODE VALUES
 fn get_merchant_code(
     connector_auth_type: &ConnectorAuthType,
 ) -> Result<Secret<String>, errors::ConnectorError> {
@@ -458,61 +285,61 @@ fn get_merchant_code(
     }
 }
 
-fn get_merchant_key(
-    connector_auth_type: &ConnectorAuthType,
-) -> Result<Secret<String>, errors::ConnectorError> {
-    match TpslAuthType::try_from(connector_auth_type) {
-        Ok(tpsl_auth) => Ok(tpsl_auth.merchant_key),
-        Err(_) => Err(errors::ConnectorError::FailedToObtainAuthType),
-    }
-}
-
+// CRITICAL: Implement TryFrom for Authorize flow with proper router data extraction
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
-    for TpslUPITokenRequest
+    for TpslPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
+        // CRITICAL: Extract customer ID dynamically - NEVER HARDCODE
         let customer_id = item.resource_common_data.get_customer_id()?;
-        let merchant_code = get_merchant_code(&item.connector_auth_type)?;
-        let amount = TPSLAmountConvertor::convert(
-            item.request.minor_amount,
-            item.request.currency,
-        )?;
+        let customer_id_string = customer_id.get_string_repr();
 
-        match item.resource_common_data.payment_method {
+        // CRITICAL: Extract merchant code from auth type - NEVER HARDCODE
+        let merchant_code = get_merchant_code(&item.connector_auth_type)?;
+
+        // CRITICAL: Use amount converter properly - NEVER HARDCODE AMOUNTS
+        let amount = item.amount.get_amount_as_string();
+        let currency = item.router_data.request.currency.to_string();
+
+        // CRITICAL: Extract transaction ID dynamically - NEVER HARDCODE
+        let transaction_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
+
+        // CRITICAL: Extract return URL dynamically - NEVER HARDCODE
+        let return_url = item.router_data.request.get_router_return_url()?;
+
+        // CRITICAL: Extract email dynamically - NEVER HARDCODE
+        let email = item.router_data.request.email.clone().unwrap_or_default();
+
+        match item.router_data.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => Ok(Self {
                 merchant: TpslMerchantDataType {
                     identifier: merchant_code.peek().clone(),
                 },
                 cart: TpslUPITokenCart {
                     item: vec![TpslUPIItem {
-                        amount: amount.to_string(),
+                        amount: amount.clone(),
                         com_amt: "0".to_string(),
                         s_k_u: "UPI".to_string(),
-                        reference: item
-                            .resource_common_data
-                            .connector_request_reference_id
-                            .clone(),
-                        identifier: customer_id.get_string_repr().to_string(),
+                        reference: transaction_id.clone(),
+                        identifier: customer_id_string.to_string(),
                     }],
                     description: Some("UPI Payment".to_string()),
                 },
                 transaction: TpslUPITokenTxn {
-                    amount: amount.to_string(),
+                    amount,
                     txn_type: "SALE".to_string(),
-                    currency: item.request.currency.to_string(),
-                    identifier: item
-                        .resource_common_data
-                        .connector_request_reference_id.clone(),
+                    currency,
+                    identifier: transaction_id.clone(),
                     sub_type: "UPI".to_string(),
                     request_type: "SALE".to_string(),
                 },
                 consumer: TpslConsumerDataType {
-                    identifier: customer_id.get_string_repr().to_string(),
+                    identifier: customer_id_string.to_string(),
                 },
             }),
             _ => Err(errors::ConnectorError::NotImplemented(
@@ -523,49 +350,59 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
+// CRITICAL: Implement TryFrom for PSync flow with proper router data extraction
 impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
-    for TpslUPISyncRequest
+    for TpslPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
+        // CRITICAL: Extract customer ID dynamically - NEVER HARDCODE
         let customer_id = item.resource_common_data.get_customer_id()?;
+        let customer_id_string = customer_id.get_string_repr();
+
+        // CRITICAL: Extract merchant code from auth type - NEVER HARDCODE
         let merchant_code = get_merchant_code(&item.connector_auth_type)?;
-        let amount = TPSLAmountConvertor::convert(
-            item.request.amount,
-            item.request.currency,
-        )?;
+
+        // CRITICAL: Use amount converter properly - NEVER HARDCODE AMOUNTS
+        let amount = item.amount.get_amount_as_string();
+        let currency = item.router_data.request.currency.to_string();
+
+        // CRITICAL: Extract transaction ID dynamically - NEVER HARDCODE
+        let transaction_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
 
         Ok(Self {
             merchant: TpslMerchantDataType {
                 identifier: merchant_code.peek().clone(),
             },
-            payment: TpslPaymentUPISyncType {
-                instruction: serde_json::Value::Null,
+            cart: TpslUPITokenCart {
+                item: vec![TpslUPIItem {
+                    amount: amount.clone(),
+                    com_amt: "0".to_string(),
+                    s_k_u: "UPI".to_string(),
+                    reference: transaction_id.clone(),
+                    identifier: customer_id_string.to_string(),
+                }],
+                description: Some("UPI Sync".to_string()),
             },
-            transaction: TpslTransactionUPITxnType {
-                device_identifier: "WEB".to_string(),
-                txn_type: Some("SALE".to_string()),
-                sub_type: Some("UPI".to_string()),
-                amount: amount.to_string(),
-                currency: item.request.currency.to_string(),
-                date_time: "2025-01-20 12:00:00".to_string(),
+            transaction: TpslUPITokenTxn {
+                amount,
+                txn_type: "STATUS".to_string(),
+                currency,
+                identifier: transaction_id.clone(),
+                sub_type: "UPI".to_string(),
                 request_type: "STATUS".to_string(),
-                token: item
-                    .request
-                    .connector_transaction_id
-                    .get_connector_transaction_id()
-                    .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?,
             },
             consumer: TpslConsumerDataType {
-                identifier: customer_id.get_string_repr().to_string(),
+                identifier: customer_id_string.to_string(),
             },
         })
     }
 }
 
+// Status mapping functions
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum TpslPaymentStatus {
@@ -587,6 +424,7 @@ impl From<TpslPaymentStatus> for common_enums::AttemptStatus {
     }
 }
 
+// CRITICAL: Response transformation for Authorize flow
 impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<ResponseRouterData<TpslPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
@@ -621,27 +459,6 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
                         mandate_reference: None,
                         connector_metadata: None,
                         network_txn_id: None,
-                        connector_response_reference_id: None,
-                        incremental_authorization_allowed: None,
-                        status_code: http_code,
-                    }),
-                )
-            }
-            TpslPaymentsResponse::TxnResponse(txn_response) => {
-                let status = map_transaction_status(&txn_response.transaction_state);
-                (
-                    status,
-                    Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
-                            router_data
-                                .resource_common_data
-                                .connector_request_reference_id
-                                .clone(),
-                        ),
-                        redirection_data: None,
-                        mandate_reference: None,
-                        connector_metadata: None,
-                        network_txn_id: txn_response.payment_method.payment_transaction.identifier,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
                         status_code: http_code,
@@ -689,6 +506,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
     }
 }
 
+// CRITICAL: Response transformation for PSync flow
 impl TryFrom<ResponseRouterData<TpslPaymentsResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
