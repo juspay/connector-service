@@ -463,10 +463,10 @@ impl<
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         let mut additional_info = HashMap::new();
-        additional_info.insert("RefAmount".to_string(), amount);
+        additional_info.insert("RefAmount".to_string(), amount.to_string());
         additional_info.insert("Currency".to_string(), item.router_data.request.currency.to_string());
         
-        if let Some(refund_id) = &item.router_data.request.refund_id {
+        if let Some(refund_id) = item.router_data.request.refund_id.clone() {
             additional_info.insert("RefundId".to_string(), refund_id.clone());
         }
 
