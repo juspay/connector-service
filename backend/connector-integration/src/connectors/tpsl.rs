@@ -675,6 +675,23 @@ pub struct TpslCreateConnectorCustomerRequest;
 #[derive(Debug, Clone)]
 pub struct TpslCreateConnectorCustomerResponse;
 
+// Import additional types needed for stub flows
+use domain_types::{
+    connector_flow::{
+        Accept, Authenticate, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
+        CreateSessionToken, DefendDispute, PaymentMethodToken, PostAuthenticate, PreAuthenticate,
+        SubmitEvidence, Void, VoidPC,
+    },
+    connector_types::{
+        AccessTokenRequestData, AccessTokenResponseData, AcceptDisputeData, ConnectorCustomerData,
+        ConnectorCustomerResponse, DisputeDefendData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentsAuthenticateData, PaymentsCancelPostCaptureData,
+        PaymentsPreAuthenticateData, PaymentsPostAuthenticateData, SessionTokenRequestData,
+        SessionTokenResponseData, SubmitEvidenceData,
+    },
+};
+
 // Stub implementations for unsupported flows
 impl<
         T: PaymentMethodDataTypes
