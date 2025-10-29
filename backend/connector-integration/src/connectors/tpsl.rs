@@ -297,7 +297,7 @@ macros::create_all_prerequisites!(
         (
             flow: Authorize,
             request_body: TpslUPITokenRequest,
-            response_body: TpslPaymentsResponse,
+            response_body: TpslAuthorizeResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
