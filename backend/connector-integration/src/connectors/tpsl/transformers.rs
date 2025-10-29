@@ -425,13 +425,9 @@ impl TryFrom<&ConnectorAuthType> for TpslAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key1 } => Ok(Self {
+            ConnectorAuthType::SignatureKey { api_key, key1, api_secret: _ } => Ok(Self {
                 merchant_code: api_key.clone(),
-                merchant_key: key1.clone().ok_or(errors::ConnectorError::FailedToObtainAuthType)?,
-            }),
-            ConnectorAuthType::Key { api_key } => Ok(Self {
-                merchant_code: api_key.clone(),
-                merchant_key: Secret::new("".to_string()),
+                merchant_key: key1.clone(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
