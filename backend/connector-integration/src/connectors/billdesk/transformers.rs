@@ -797,11 +797,11 @@ impl<
             http_code,
         } = item;
 
-        let status = match response.refund_status.as_str() {
-            "SUCCESS" => common_enums::AttemptStatus::Charged,
-            "FAILURE" => common_enums::AttemptStatus::Failure,
-            "PENDING" => common_enums::AttemptStatus::AuthenticationPending,
-            _ => common_enums::AttemptStatus::AuthenticationPending,
+        let refund_status = match response.refund_status.as_str() {
+            "SUCCESS" => common_enums::RefundStatus::Success,
+            "FAILURE" => common_enums::RefundStatus::Failure,
+            "PENDING" => common_enums::RefundStatus::Pending,
+            _ => common_enums::RefundStatus::Pending,
         };
 
         let amount_received = common_utils::types::StringMajorUnit::new(response.refund_amount.clone())
@@ -810,17 +810,12 @@ impl<
 
         Ok(Self {
             resource_common_data: domain_types::connector_types::RefundFlowData {
-                status,
+                status: refund_status,
                 ..router_data.resource_common_data
             },
             response: Ok(RefundsResponseData {
-                refund_id: Some(response.refund_id),
-                connector_transaction_id: None,
-                refund_status: status,
-                amount_captured: amount_received,
-                connector_response_reference_id: Some(response.refund_id),
-                error_code: response.error_status,
-                error_message: response.error_description,
+                connector_refund_id: response.refund_id,
+                refund_status,
                 status_code: http_code,
             }),
             ..router_data
