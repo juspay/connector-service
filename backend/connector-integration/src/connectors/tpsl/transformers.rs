@@ -150,8 +150,8 @@ pub fn get_tpsl_auth_headers(
     auth_type: &TpslAuth,
 ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError> {
     Ok(vec![
-        ("merchantCode".to_string(), auth_type.merchant_code.clone().into()),
-        ("merchantKey".to_string(), auth_type.merchant_key.clone().into()),
+        ("merchantCode".to_string(), hyperswitch_masking::Maskable::new(auth_type.merchant_code.clone())),
+        ("merchantKey".to_string(), hyperswitch_masking::Maskable::new(auth_type.merchant_key.clone())),
     ])
 }
 
