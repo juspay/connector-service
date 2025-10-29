@@ -718,7 +718,7 @@ impl TryFrom<ResponseRouterData<TpslPaymentsResponse, RouterDataV2<PSync, Paymen
         let (status, response) = match response {
             TpslPaymentsResponse::SyncResponse(sync_response) => {
                 let status = map_transaction_status(&sync_response.transaction_state);
-                let amount_received = sync_response
+                let _amount_received = sync_response
                     .payment_method
                     .payment_transaction
                     .amount
