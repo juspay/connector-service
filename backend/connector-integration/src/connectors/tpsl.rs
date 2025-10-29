@@ -501,7 +501,11 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url_payments(req);
+            let base_url = if req.resource_common_data.test_mode.unwrap_or(false) {
+                constants::base_urls::TEST
+            } else {
+                constants::base_urls::PRODUCTION
+            };
             Ok(format!("{}{}", base_url, constants::endpoints::UPI_TOKEN_GENERATION))
         }
     }
