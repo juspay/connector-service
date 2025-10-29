@@ -416,7 +416,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 description: Some("UPI Sync".to_string()),
             },
             transaction: TpslUPITokenTxn {
-                amount,
+                amount: amount.to_string(),
                 txn_type: "STATUS".to_string(),
                 currency,
                 identifier: transaction_id.clone(),
