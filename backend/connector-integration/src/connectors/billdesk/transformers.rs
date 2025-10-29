@@ -693,9 +693,9 @@ impl<
         } = item;
 
         let status = match response.auth_status.as_str() {
-            "0300" | "0399" => common_enums::AttemptStatus::Charged, // Success
-            "0396" => common_enums::AttemptStatus::Failure, // Failure
-            "0001" | "0002" => common_enums::AttemptStatus::AuthenticationPending, // Pending
+            BILLDESK_SUCCESS_CODE | BILLDESK_PARTIAL_SUCCESS_CODE => common_enums::AttemptStatus::Charged, // Success
+            BILLDESK_FAILURE_CODE => common_enums::AttemptStatus::Failure, // Failure
+            BILLDESK_PENDING_CODE_1 | BILLDESK_PENDING_CODE_2 => common_enums::AttemptStatus::AuthenticationPending, // Pending
             _ => common_enums::AttemptStatus::AuthenticationPending, // Default to pending
         };
 
