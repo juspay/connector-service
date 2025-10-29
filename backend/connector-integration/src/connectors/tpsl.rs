@@ -6,7 +6,7 @@ use std::fmt::Debug;
 use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, request::{Method, Request, RequestContent},
+    errors::CustomResult, ext_traits::ByteSliceExt, request::{Method, Request, RequestBuilder, RequestContent},
 };
 use domain_types::{
     connector_flow::{
