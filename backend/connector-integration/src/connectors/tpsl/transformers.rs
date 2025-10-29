@@ -775,7 +775,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<Void, Paymen
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(_item: TPSLRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
-        Ok(TpslVoidRequest
+        Ok(TpslVoidRequest)
     }
 }
 
