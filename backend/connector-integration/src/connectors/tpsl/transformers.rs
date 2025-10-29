@@ -337,10 +337,9 @@ impl<
                 forced3_d_s_call: "N".to_string(),
                 r#type: "SALE".to_string(),
                 description: "UPI Payment".to_string(),
-                currency: item.router_data.request.currency.to_string(),
+                currency: item.request.currency.to_string(),
                 is_registration: "N".to_string(),
                 identifier: item
-                    .router_data
                     .resource_common_data
                     .connector_request_reference_id
                     .clone(),
@@ -350,7 +349,6 @@ impl<
                 sub_type: "SALE".to_string(),
                 request_type: "TXN".to_string(),
                 reference: item
-                    .router_data
                     .resource_common_data
                     .connector_request_reference_id
                     .clone(),
