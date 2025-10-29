@@ -430,6 +430,7 @@ impl<
         } = item;
 
         let token_response = response.envelope.body.get_transaction_token_response;
+        let connector_request_reference_id = router_data.resource_common_data.connector_request_reference_id.clone();
         
         // For UPI payments, TPSL typically returns a redirect URL or payment instruction
         let redirection_data = Some(Box::new(RedirectForm::Form {
@@ -445,10 +446,7 @@ impl<
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(
-                    router_data
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone(),
+                    connector_request_reference_id,
                 ),
                 redirection_data,
                 mandate_reference: None,
