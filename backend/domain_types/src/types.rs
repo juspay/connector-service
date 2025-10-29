@@ -128,6 +128,7 @@ pub struct Connectors {
     pub cybersource: ConnectorParams,
     pub worldpay: ConnectorParams,
     pub worldpayvantiv: ConnectorParams,
+    pub tpsl: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
