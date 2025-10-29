@@ -5124,6 +5124,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
                         })
                 })
                 .transpose()?,
+            recurring_mandate_payment_data: None,
+            setup_mandate_details: None,
+            setup_future_usage: None,
         })
     }
 }

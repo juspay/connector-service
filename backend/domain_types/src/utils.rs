@@ -170,7 +170,7 @@ pub fn base64_decode(
         .change_context(errors::ConnectorError::ResponseDeserializationFailed)
 }
 
-pub(crate) fn to_currency_base_unit(
+pub fn to_currency_base_unit(
     amount: i64,
     currency: common_enums::Currency,
 ) -> core::result::Result<String, error_stack::Report<errors::ConnectorError>> {

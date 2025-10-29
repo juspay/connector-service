@@ -21,7 +21,7 @@ use crate::{
     mandates::{CustomerAcceptance, MandateData},
     payment_address::{self, Address, AddressDetails, PhoneDetails},
     payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorResponseData, PaymentMethodToken},
+    router_data::{ConnectorResponseData, PaymentMethodToken, RecurringMandatePaymentData},
     router_request_types::{
         AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
         CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
@@ -2003,6 +2003,9 @@ pub struct RepeatPaymentData {
     pub email: Option<common_utils::pii::Email>,
     pub payment_method_type: Option<common_enums::PaymentMethodType>,
     pub merchant_account_metadata: Option<common_utils::pii::SecretSerdeValue>,
+    pub recurring_mandate_payment_data: Option<RecurringMandatePaymentData>,
+    pub setup_mandate_details: Option<MandateData>,
+    pub setup_future_usage: Option<common_enums::FutureUsage>,
 }
 
 impl RepeatPaymentData {
@@ -2030,6 +2033,11 @@ impl RepeatPaymentData {
     }
     pub fn get_email(&self) -> Result<Email, Error> {
         self.email.clone().ok_or_else(missing_field_err("email"))
+    }
+    pub fn get_recurring_mandate_payment_data(&self) -> Result<RecurringMandatePaymentData, Error> {
+        self.recurring_mandate_payment_data
+            .to_owned()
+            .ok_or_else(missing_field_err("recurring_mandate_payment_data"))
     }
 }
 
