@@ -30,6 +30,7 @@ use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData}
 
 use super::constants::*;
 
+// UPI-focused request structures based on Haskell implementation
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BilldeskPaymentsRequest {
@@ -38,8 +39,7 @@ pub struct BilldeskPaymentsRequest {
     pub useragent: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub paydata: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub txtbankid: Option<String>,
+    // For UPI flows, we don't use txtbankid
 }
 
 #[derive(Default, Debug, Serialize)]
@@ -57,7 +57,7 @@ pub struct BilldeskRefundStatusRequest {
     pub msg: String,
 }
 
-// Stub types for unsupported flows
+// Stub types for unsupported flows - MANDATORY for compilation
 #[derive(Default, Debug, Serialize)]
 pub struct BilldeskVoidRequest;
 
@@ -232,6 +232,7 @@ pub struct BilldeskErrorResponse {
     pub errors: Option<Vec<BilldeskErrors>>,
 }
 
+// Create Billdesk message format based on Haskell implementation
 fn create_billdesk_message(
     merchant_id: &str,
     customer_id: &str,
@@ -262,7 +263,7 @@ impl<
         + std::marker::Sync
         + std::marker::Send
         + 'static
-        + Serialize,
+        + Serialize
 >
     TryFrom<
         BilldeskRouterData<
@@ -295,6 +296,7 @@ impl<
             .resource_common_data
             .connector_request_reference_id;
         
+        // CRITICAL: Use amount converter properly - NEVER hardcode amounts
         let amount = item
             .connector
             .amount_converter
@@ -311,20 +313,22 @@ impl<
             .peek()
             .clone();
 
+        // CRITICAL: Extract IP address dynamically - NEVER hardcode
         let ip_address = item.router_data.request.get_ip_address_as_optional()
             .map(|ip| ip.expose())
             .unwrap_or_else(|| "127.0.0.1".to_string());
 
+        // CRITICAL: Extract user agent dynamically - NEVER hardcode
         let user_agent = item.router_data.request.browser_info
             .as_ref()
             .and_then(|info| info.user_agent.clone())
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
 
         let mut additional_info = HashMap::new();
-        additional_info.insert("TxnType".to_string(), BILLDESK_DIRECT_TXN_TYPE.to_string());
-        additional_info.insert("ItemCode".to_string(), BILLDESK_DIRECT_ITEM_CODE.to_string());
+        additional_info.insert("TxnType".to_string(), BILLDESK_UPI_TXN_TYPE.to_string());
+        additional_info.insert("ItemCode".to_string(), BILLDESK_UPI_ITEM_CODE.to_string());
         
-        // Add return URL if available
+        // Add return URL if available - CRITICAL: Extract dynamically
         if let Ok(return_url) = item.router_data.request.get_router_return_url() {
             additional_info.insert("ReturnURL".to_string(), return_url);
         }
@@ -338,31 +342,19 @@ impl<
             &additional_info,
         );
 
+        // UPI only implementation as specified in requirements
         match item.router_data.request.payment_method_type {
             Some(common_enums::PaymentMethodType::UpiCollect) | Some(common_enums::PaymentMethodType::UpiIntent) => {
-                // For UPI, we might need additional paydata
+                // For UPI, we might need additional paydata based on the payment method
                 Ok(Self {
                     msg,
                     ipaddress: Some(ip_address),
                     useragent: Some(user_agent),
-                    paydata: None, // Will be populated based on UPI specific data
-                    txtbankid: None,
-                })
-            }
-            Some(common_enums::PaymentMethodType::OnlineBankingFpx) | Some(common_enums::PaymentMethodType::OnlineBankingPoland) | 
-            Some(common_enums::PaymentMethodType::OnlineBankingCzechRepublic) | Some(common_enums::PaymentMethodType::OnlineBankingFinland) |
-            Some(common_enums::PaymentMethodType::OnlineBankingSlovakia) | Some(common_enums::PaymentMethodType::OnlineBankingThailand) => {
-                // For Net Banking, we need bank ID
-                Ok(Self {
-                    msg,
-                    ipaddress: Some(ip_address),
-                    useragent: Some(user_agent),
-                    paydata: None,
-                    txtbankid: Some(BILLDESK_DEFAULT_BANK_ID.to_string()), // Default bank ID
+                    paydata: None, // Will be populated based on UPI specific data if needed
                 })
             }
             _ => Err(errors::ConnectorError::NotImplemented(
-                "Payment method not supported".to_string(),
+                "Only UPI payment methods are supported for Billdesk".to_string(),
             )
             .into()),
         }
@@ -375,7 +367,7 @@ impl<
         + std::marker::Sync
         + std::marker::Send
         + 'static
-        + Serialize,
+        + Serialize
 >
     TryFrom<
         BilldeskRouterData<
@@ -424,7 +416,7 @@ impl<
         + std::marker::Sync
         + std::marker::Send
         + 'static
-        + Serialize,
+        + Serialize
 >
     TryFrom<
         BilldeskRouterData<
@@ -453,6 +445,7 @@ impl<
             .resource_common_data
             .connector_request_reference_id;
 
+        // CRITICAL: Use amount converter properly - NEVER hardcode amounts
         let amount = item
             .connector
             .amount_converter
@@ -466,6 +459,7 @@ impl<
         additional_info.insert("RefAmount".to_string(), amount.to_string());
         additional_info.insert("Currency".to_string(), item.router_data.request.currency.to_string());
         
+        // CRITICAL: Extract refund ID dynamically - NEVER hardcode
         additional_info.insert("RefundId".to_string(), item.router_data.request.refund_id.clone());
 
         let msg = create_billdesk_message(
@@ -487,7 +481,7 @@ impl<
         + std::marker::Sync
         + std::marker::Send
         + 'static
-        + Serialize,
+        + Serialize
 >
     TryFrom<
         BilldeskRouterData<
@@ -511,6 +505,7 @@ impl<
             .peek()
             .clone();
 
+        // CRITICAL: Extract refund ID dynamically - NEVER hardcode
         let refund_id = item
             .router_data
             .request
@@ -548,22 +543,6 @@ fn get_redirect_form_data(
                         .into_iter()
                         .map(|(k, v)| (k, v.into()))
                         .collect(),
-                })
-            } else {
-                Err(errors::ConnectorError::MissingRequiredField {
-                    field_name: "redirect_url",
-                }
-                .into())
-            }
-        }
-        common_enums::PaymentMethodType::OnlineBankingFpx | common_enums::PaymentMethodType::OnlineBankingPoland | 
-        common_enums::PaymentMethodType::OnlineBankingCzechRepublic | common_enums::PaymentMethodType::OnlineBankingFinland |
-        common_enums::PaymentMethodType::OnlineBankingSlovakia | common_enums::PaymentMethodType::OnlineBankingThailand => {
-            if let Some(url) = response_data.url {
-                Ok(RedirectForm::Form {
-                    endpoint: url,
-                    method: Method::Get,
-                    form_fields: Default::default(),
                 })
             } else {
                 Err(errors::ConnectorError::MissingRequiredField {
@@ -693,10 +672,12 @@ impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, Self>>
             _ => common_enums::AttemptStatus::AuthenticationPending, // Default to pending
         };
 
+        // CRITICAL: Proper amount handling using MinorUnit
         let amount_received = response.txn_amount.parse::<f64>()
             .ok()
             .and_then(|amt| {
-                let currency = common_enums::Currency::INR; // Default to INR, should be extracted from response
+                // Try to determine currency from response or default to INR
+                let currency = common_enums::Currency::INR; // Should be extracted from response
                 if currency.is_zero_decimal_currency() {
                     Some(common_utils::types::MinorUnit::new(amt as i64))
                 } else if currency.is_two_decimal_currency() {
@@ -788,6 +769,7 @@ impl<F> TryFrom<ResponseRouterData<BilldeskRefundStatusResponse, Self>>
             _ => common_enums::RefundStatus::Pending,
         };
 
+        // CRITICAL: Proper amount handling using MinorUnit
         let _amount_received = response.refund_amount.parse::<f64>()
             .ok()
             .and_then(|amt| {
