@@ -43,6 +43,8 @@ use transformers::{self as tpsl, TpslUPITokenRequest, TpslPaymentsResponse};
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
+
+// Forward declaration\npub struct TPSL<T> {\n    _phantom: std::marker::PhantomData<T>,\n}\n
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
