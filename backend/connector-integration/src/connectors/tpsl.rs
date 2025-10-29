@@ -322,26 +322,14 @@ macros::create_all_prerequisites!(
             flow: Authorize,
             request_body: TpslUPITokenRequest,
             response_body: TpslPaymentsResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: PSync,
             request_body: TpslUPISyncRequest,
             response_body: TpslPaymentsResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-        ),
-        // Stub types for unsupported flows
-        (flow: Void, request_body: TPSLVoidRequest, response_body: TPSLVoidResponse, router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>),
-        (flow: Capture, request_body: TPSLCaptureRequest, response_body: TPSLCaptureResponse, router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>),
-        (flow: Refund, request_body: TPSLRefundRequest, response_body: TPSLRefundResponse, router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>),
-        (flow: RSync, request_body: TPSLRSyncRequest, response_body: TPSLRSyncResponse, router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>),
-        (flow: CreateOrder, request_body: TPSLCreateOrderRequest, response_body: TPSLCreateOrderResponse, router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>),
-        (flow: CreateSessionToken, request_body: TPSLSessionTokenRequest, response_body: TPSLSessionTokenResponse, router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>),
-        (flow: SetupMandate, request_body: TPSLSetupMandateRequest, response_body: TPSLSetupMandateResponse, router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>),
-        (flow: RepeatPayment, request_body: TPSLRepeatPaymentRequest, response_body: TPSLRepeatPaymentResponse, router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>),
-        (flow: Accept, request_body: TPSLAcceptDisputeRequest, response_body: TPSLAcceptDisputeResponse, router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>),
-        (flow: DefendDispute, request_body: TPSLDefendDisputeRequest, response_body: TPSLDefendDisputeResponse, router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>),
-        (flow: SubmitEvidence, request_body: TPSLSubmitEvidenceRequest, response_body: TPSLSubmitEvidenceResponse, router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>)
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        )
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
