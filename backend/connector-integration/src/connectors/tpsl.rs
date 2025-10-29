@@ -382,7 +382,7 @@ impl<
 
         let router_data = ResponseRouterData {
             response,
-            data: req.clone(),
+            router_data: req.clone(),
             http_code: res.status_code,
         };
 
@@ -478,7 +478,7 @@ impl<
 
         let router_data = ResponseRouterData {
             response,
-            data: req.clone(),
+            router_data: req.clone(),
             http_code: res.status_code,
         };
 
