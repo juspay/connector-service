@@ -1452,12 +1452,10 @@ where
         let status = enums::AttemptStatus::from(item.response.outcome.clone());
         let (redirection_data, connector_response_reference_id) =
             extract_redirection_data(&item.response)?;
-        let connector_metadata = extract_three_ds_metadata(&item.response);
+        let _connector_metadata = extract_three_ds_metadata(&item.response);
 
         let response = Ok(PaymentsResponseData::PreAuthenticateResponse {
-            resource_id: ResponseId::foreign_try_from((item.response.clone(), None))?,
             redirection_data: redirection_data.map(Box::new),
-            connector_metadata,
             connector_response_reference_id,
             status_code: item.http_code,
         });
@@ -1494,14 +1492,12 @@ where
         item: ResponseRouterData<WorldpayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = enums::AttemptStatus::from(item.response.outcome.clone());
-        let (redirection_data, connector_response_reference_id) =
+        let (_redirection_data, connector_response_reference_id) =
             extract_redirection_data(&item.response)?;
-        let connector_metadata = extract_three_ds_metadata(&item.response);
+        let _connector_metadata = extract_three_ds_metadata(&item.response);
 
         let response = Ok(PaymentsResponseData::PostAuthenticateResponse {
-            resource_id: ResponseId::foreign_try_from((item.response.clone(), None))?,
-            redirection_data: redirection_data.map(Box::new),
-            connector_metadata,
+            authentication_data: None,
             connector_response_reference_id,
             status_code: item.http_code,
         });
