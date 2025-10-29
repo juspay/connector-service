@@ -371,11 +371,6 @@ pub struct TpslVoidPCRequest;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TpslVoidPCResponse;
 
-#[derive(Debug, Serialize)]
-pub struct TpslIncomingWebhookRequest;
-#[derive(Debug, Deserialize, Serialize)]
-pub struct TpslIncomingWebhookResponse;
-
 // CRITICAL: Dynamic extraction functions - NEVER HARDCODE VALUES
 fn get_merchant_code(
     connector_auth_type: &ConnectorAuthType,
