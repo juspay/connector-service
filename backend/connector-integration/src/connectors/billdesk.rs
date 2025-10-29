@@ -446,9 +446,9 @@ macros::create_all_prerequisites!(
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
             if req.resource_common_data.test_mode.unwrap_or(false) {
-                "https://uat.billdesk.com/pgidsk/PGIDirectRequest"
+                BILLDESK_UAT_BASE_URL
             } else {
-                "https://www.billdesk.com/pgidsk/PGIDirectRequest"
+                BILLDESK_PROD_BASE_URL
             }
         }
 
