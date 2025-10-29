@@ -788,7 +788,7 @@ impl<F> TryFrom<ResponseRouterData<BilldeskRefundStatusResponse, Self>>
             _ => common_enums::RefundStatus::Pending,
         };
 
-        let amount_received = response.refund_amount.parse::<f64>()
+        let _amount_received = response.refund_amount.parse::<f64>()
             .ok()
             .and_then(|amt| {
                 let currency = common_enums::Currency::INR; // Default to INR, should be extracted from response
