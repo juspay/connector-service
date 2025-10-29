@@ -477,12 +477,8 @@ impl<
         "application/json"
     }
 
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        if connectors.tpsl.test_mode.unwrap_or(false) {
-            crate::connectors::tpsl::TPSL_TEST_BASE_URL
-        } else {
-            crate::connectors::tpsl::TPSL_PRODUCTION_BASE_URL
-        }
+    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
+        "https://www.tpsl-india.in"
     }
 
     fn get_auth_header(
