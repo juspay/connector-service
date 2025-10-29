@@ -318,7 +318,7 @@ macros::macro_connector_implementation!(
             let auth_type = tpsl::TpslAuthType::try_from(&req.connector_auth_type)?;
 
             let mut auth_header = vec![(
-                headers::AUTHORIZATION.to_string(),
+                crate::connectors::tpsl::headers::AUTHORIZATION.to_string(),
                 format!("Basic {}", base64::engine::general_purpose::STANDARD.encode(format!(
                     "{}:{}",
                     auth_type.merchant_code.peek(),
@@ -368,7 +368,7 @@ macros::macro_connector_implementation!(
             let auth_type = tpsl::TpslAuthType::try_from(&req.connector_auth_type)?;
 
             let mut auth_header = vec![(
-                headers::AUTHORIZATION.to_string(),
+                crate::connectors::tpsl::headers::AUTHORIZATION.to_string(),
                 format!("Basic {}", base64::engine::general_purpose::STANDARD.encode(format!(
                     "{}:{}",
                     auth_type.merchant_code.peek(),
