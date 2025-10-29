@@ -226,7 +226,7 @@ impl<
         error_stack::Report<domain_types::errors::ConnectorError>,
     > {
         // TPSL webhook processing to be implemented
-        Err(errors::ConnectorError::WebhookNotImplemented.into())
+        Err(errors::ConnectorError::WebhooksNotImplemented.into())
     }
 }
 
