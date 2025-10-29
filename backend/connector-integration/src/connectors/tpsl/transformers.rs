@@ -307,7 +307,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let merchant_code = get_merchant_code(&item.connector_auth_type)?;
 
         // CRITICAL: Use amount converter properly - NEVER HARDCODE AMOUNTS
-        let amount = item.amount.get_amount_as_string();
+        let amount = item.request.amount.get_amount_as_string();
         let currency = item.request.currency.to_string();
 
         // CRITICAL: Extract transaction ID dynamically - NEVER HARDCODE
@@ -371,7 +371,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
         let merchant_code = get_merchant_code(&item.connector_auth_type)?;
 
         // CRITICAL: Use amount converter properly - NEVER HARDCODE AMOUNTS
-        let amount = item.amount.get_amount_as_string();
+        let amount = item.request.amount.get_amount_as_string();
         let currency = item.request.currency.to_string();
 
         // CRITICAL: Extract transaction ID dynamically - NEVER HARDCODE
