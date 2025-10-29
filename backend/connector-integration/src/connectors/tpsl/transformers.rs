@@ -706,19 +706,23 @@ fn map_transaction_status(status: &str) -> common_enums::AttemptStatus {
 // These are required for the macro framework to work properly
 
 // PostAuthenticate flow
-impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>, T>>
+impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>, T>>
     for TpslPostAuthenticateRequest
 {
-    fn from(_item: TPSLRouterData<RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>, T>) -> Self {
-        TpslPostAuthenticateRequest
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(_item: TPSLRouterData<RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
+        Ok(TpslPostAuthenticateRequest)
     }
 }
 
-impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslPostAuthenticateResponse, RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>>>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslPostAuthenticateResponse, RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>>>
     for RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
 {
-    fn from(item: ResponseRouterData<TpslPostAuthenticateResponse, RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>>) -> Self {
-        item.router_data
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(item: ResponseRouterData<TpslPostAuthenticateResponse, RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>>) -> Result<Self, Self::Error> {
+        Ok(item.router_data)
     }
 }
 
