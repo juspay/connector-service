@@ -1,6 +1,7 @@
 use common_utils::{
     errors::CustomResult, request::Method,
 };
+use error_stack::ResultExt;
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
