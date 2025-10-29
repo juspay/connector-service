@@ -304,7 +304,11 @@ impl<
                     currency: currency.clone(),
                     is_registration: "N".to_string(),
                     identifier: transaction_id.clone(),
-                    date_time: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                    date_time: std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_secs()
+                        .to_string(),
                     token: transaction_id.clone(),
                     security_token: merchant_code.expose().clone(),
                     sub_type: "SALE".to_string(),
@@ -377,7 +381,11 @@ impl<
                 sub_type: Some("SALE".to_string()),
                 amount,
                 currency,
-                date_time: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                date_time: std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_secs()
+                        .to_string(),
                 request_type: "STATUS".to_string(),
                 token: transaction_id,
             },
