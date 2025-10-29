@@ -23,7 +23,7 @@ use domain_types::{
     connector_types::{PaymentsPreAuthenticateData, PaymentsAuthenticateData, PaymentsPostAuthenticateData, PaymentsCancelPostCaptureData, PaymentCreateOrderData, PaymentCreateOrderResponse, SessionTokenRequestData, SessionTokenResponseData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData, ConnectorCustomerResponse, PaymentMethodTokenizationData, PaymentMethodTokenResponse, DisputeFlowData, AcceptDisputeData, SubmitEvidenceData, DisputeDefendData, DisputeResponseData},
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Secret, PeekInterface};
+use hyperswitch_masking::{Secret, PeekInterface, ExposeInterface};
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
