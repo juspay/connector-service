@@ -322,13 +322,13 @@ macros::create_all_prerequisites!(
             flow: Authorize,
             request_body: TpslUPITokenRequest,
             response_body: TpslPaymentsResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
         ),
         (
             flow: PSync,
             request_body: TpslUPISyncRequest,
             response_body: TpslPaymentsResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
         ),
         // Stub types for unsupported flows
         (flow: Void, request_body: TPSLVoidRequest, response_body: TPSLVoidResponse, router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>),
@@ -341,7 +341,7 @@ macros::create_all_prerequisites!(
         (flow: RepeatPayment, request_body: TPSLRepeatPaymentRequest, response_body: TPSLRepeatPaymentResponse, router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>),
         (flow: Accept, request_body: TPSLAcceptDisputeRequest, response_body: TPSLAcceptDisputeResponse, router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>),
         (flow: DefendDispute, request_body: TPSLDefendDisputeRequest, response_body: TPSLDefendDisputeResponse, router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>),
-        (flow: SubmitEvidence, request_body: TPSLSubmitEvidenceRequest, response_body: TPSLSubmitEvidenceResponse, router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>),
+        (flow: SubmitEvidence, request_body: TPSLSubmitEvidenceRequest, response_body: TPSLSubmitEvidenceResponse, router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>)
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
