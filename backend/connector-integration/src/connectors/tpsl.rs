@@ -1,11 +1,10 @@
 pub mod constants;
 pub mod transformers;
 
-use std::fmt::Debug;
-
+use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, request::Method,
+    errors::CustomResult, ext_traits::ByteSliceExt,
     types::StringMinorUnit,
 };
 use domain_types::{
@@ -17,13 +16,13 @@ use domain_types::{
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
         PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, RequestDetails, SessionTokenRequestData,
+        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
@@ -34,7 +33,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::{Maskable, PeekInterface, Secret};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -207,7 +206,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 {
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2<T> for TPSL<T>
+    connector_types::RepeatPaymentV2 for TPSL<T>
 {
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
