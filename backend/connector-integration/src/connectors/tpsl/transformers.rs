@@ -964,7 +964,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<CreateOrder,
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(_item: TPSLRouterData<RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>, T>) -> Result<Self, Self::Error> {
-        Ok(TpslCreateOrderRequest
+        Ok(TpslCreateOrderRequest)
     }
 }
 
