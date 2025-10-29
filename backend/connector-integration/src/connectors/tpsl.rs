@@ -417,7 +417,7 @@ macros::create_all_prerequisites!(
         ),
     ],
     amount_converters: [
-        amount_converter: StringMinorUnit,
+        amount_converter: StringMinorUnit
     ],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
