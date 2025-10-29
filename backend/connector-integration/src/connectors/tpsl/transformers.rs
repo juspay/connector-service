@@ -127,13 +127,9 @@ impl TryFrom<&ConnectorAuthType> for TpslAuth {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key1 } => {
-                let merchant_code = api_key
-                    .clone()
-                    .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
-                let merchant_key = key1
-                    .clone()
-                    .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
+            ConnectorAuthType::SignatureKey { api_key, key1, .. } => {
+                let merchant_code = api_key.clone();
+                let merchant_key = key1.clone();
                 let merchant_salt = Secret::new("default_salt".to_string()); // Default salt, should be configurable
 
                 Ok(Self {
