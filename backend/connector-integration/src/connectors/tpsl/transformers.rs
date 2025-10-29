@@ -435,10 +435,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let transaction_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
 
         // CRITICAL: Extract return URL dynamically - NEVER HARDCODE
-        let return_url = item.router_data.request.get_router_return_url()?;
+        let _return_url = item.router_data.request.get_router_return_url()?;
 
         // CRITICAL: Extract email dynamically - NEVER HARDCODE
-        let email = item.router_data.request.email.clone().unwrap_or_default();
+        let _email = item.router_data.request.email.clone().unwrap_or_default();
 
         match item.router_data.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => Ok(Self {
