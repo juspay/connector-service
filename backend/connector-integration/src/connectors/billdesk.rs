@@ -1,8 +1,6 @@
 pub mod transformers;
 pub mod constants;
 
-use std::marker::PhantomData;
-
 use common_enums::CurrencyUnit;
 use common_utils::{
     errors::CustomResult,
@@ -11,9 +9,9 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync,
-        PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SetupMandate, SubmitEvidence, Void, VoidPC,
+        Accept, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
+        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
+        PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -43,6 +41,7 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
+use std::fmt::Debug;
 use transformers::{
     self as billdesk, 
     BilldeskPaymentsRequest, 
@@ -388,7 +387,7 @@ macros::macro_connector_implementation!(
     }
 );
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     ConnectorCommon for Billdesk<T>
 {
     fn id(&self) -> &'static str {
@@ -444,7 +443,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 // MANDATORY: Stub implementations for unsupported flows using macro
 macro_rules! impl_not_implemented_flow {
     ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
-        impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+        impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
             ConnectorIntegrationV2<$flow, $common_data, $req, $resp> for Billdesk<T>
         {
             fn build_request_v2(
@@ -472,7 +471,7 @@ impl_not_implemented_flow!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, 
 // Additional flow implementations (stub)
 impl<
     T: PaymentMethodDataTypes
-        + std::fmt::Debug
+        + Debug
         + std::marker::Sync
         + std::marker::Send
         + 'static
@@ -489,7 +488,7 @@ impl<
 
 impl<
     T: PaymentMethodDataTypes
-        + std::fmt::Debug
+        + Debug
         + std::marker::Sync
         + std::marker::Send
         + 'static
@@ -506,14 +505,14 @@ impl<
 
 impl<
     T: PaymentMethodDataTypes
-        + std::fmt::Debug
+        + Debug
         + std::marker::Sync
         + std::marker::Send
         + 'static
         + Serialize
 >
     ConnectorIntegrationV2<
-        Authenticate,
+        PaymentsAuthenticateData,
         PaymentFlowData,
         PaymentsAuthenticateData<T>,
         PaymentsResponseData,
@@ -523,7 +522,7 @@ impl<
 
 impl<
     T: PaymentMethodDataTypes
-        + std::fmt::Debug
+        + Debug
         + std::marker::Sync
         + std::marker::Send
         + 'static
@@ -540,7 +539,7 @@ impl<
 
 impl<
     T: PaymentMethodDataTypes
-        + std::fmt::Debug
+        + Debug
         + std::marker::Sync
         + std::marker::Send
         + 'static
@@ -557,7 +556,7 @@ impl<
 
 impl<
     T: PaymentMethodDataTypes
-        + std::fmt::Debug
+        + Debug
         + std::marker::Sync
         + std::marker::Send
         + 'static
@@ -574,7 +573,7 @@ impl<
 
 impl<
     T: PaymentMethodDataTypes
-        + std::fmt::Debug
+        + Debug
         + std::marker::Sync
         + std::marker::Send
         + 'static
@@ -594,7 +593,7 @@ macro_rules! impl_source_verification_stub {
     ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
         impl<
                 T: PaymentMethodDataTypes
-                    + std::fmt::Debug
+                    + Debug
                     + std::marker::Sync
                     + std::marker::Send
                     + 'static
@@ -705,7 +704,7 @@ impl_source_verification_stub!(
     PaymentsResponseData
 );
 impl_source_verification_stub!(
-    Authenticate,
+    PaymentsAuthenticateData,
     PaymentFlowData,
     PaymentsAuthenticateData<T>,
     PaymentsResponseData
@@ -748,63 +747,63 @@ impl_source_verification_stub!(
 );
 
 // MANDATORY: Implement all connector_types traits for Billdesk
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::RefundV2 for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentSessionToken for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentAccessToken for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::CreateConnectorCustomer for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentCapture for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::SetupMandateV2<T> for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::AcceptDispute for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::SubmitEvidenceV2 for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::DisputeDefend for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::IncomingWebhook for Billdesk<T>
 {
     fn verify_webhook_source(
@@ -865,37 +864,37 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         })
     }
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentOrderCreate for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::ValidationTrait for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::RepeatPaymentV2 for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentTokenV2<T> for Billdesk<T>
 {
 }
 
 // Authentication trait implementations
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentPreAuthenticateV2<T> for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentAuthenticateV2<T> for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentPostAuthenticateV2<T> for Billdesk<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentVoidPostCaptureV2 for Billdesk<T>
 {
 }
