@@ -309,9 +309,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > connector_types::PaymentSyncV2 for TPSL<T>
-{
-}
+    
 
 
 // Manual implementation for Authorize flow
