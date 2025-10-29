@@ -651,10 +651,10 @@ impl<
                         ),
                         redirection_data: None,
                         mandate_reference: None,
-                        connector_metadata: Some(serde_json::to_value(response_data).unwrap_or_default()),
-                        network_txn_id: response_data.payment_method.payment_transaction.identifier,
+                        connector_metadata: Some(serde_json::to_value(&response_data).unwrap_or_default()),
+                        network_txn_id: response_data.payment_method.payment_transaction.identifier.clone(),
                         connector_response_reference_id: Some(
-                            response_data.merchant_transaction_identifier,
+                            response_data.merchant_transaction_identifier.clone(),
                         ),
                         incremental_authorization_allowed: None,
                         status_code: http_code,
