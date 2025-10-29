@@ -11,8 +11,8 @@ use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, PaymentMethodToken, PostAuthenticate,
-        PreAuthenticate, PSync, RSync, Refund, RepeatPayment, SetupMendate, SubmitEvidence, Void,
-        VoidPC, IncomingWebhook,
+        PreAuthenticate, PSync, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -24,7 +24,6 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, RepeatPaymentData, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-        IncomingWebhookRequestData, IncomingWebhookResponseData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
