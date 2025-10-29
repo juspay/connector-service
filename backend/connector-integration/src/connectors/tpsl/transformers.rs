@@ -349,7 +349,7 @@ impl<
                     amount,
                     item.router_data.request.currency,
                     transaction_id,
-                    customer_id,
+                    customer_id.to_string(),
                     item.router_data.request.email.as_ref().map(|e| e.expose().clone()).unwrap_or_default(),
                     "".to_string() // Phone number not available in PaymentsAuthorizeData
                 )
