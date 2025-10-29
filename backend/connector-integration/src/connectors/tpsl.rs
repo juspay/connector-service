@@ -360,12 +360,12 @@ impl<
         _config: &Connectors,
     ) -> CustomResult<Request, errors::ConnectorError> {
         let request = TpslUPITokenRequest::try_from(req)?;
-        Ok(Request::builder()
+        Ok(RequestBuilder::new()
             .method(Method::Post)
             .url(&self.get_url(req)?)
             .headers(self.get_headers(req)?)
-            .body(common_utils::request::RequestContent::Json(Box::new(request)))
-            .build()?)
+            .set_body(RequestContent::Json(Box::new(request)))
+            .build())
     }
 
     fn handle_response(
@@ -456,12 +456,12 @@ impl<
         _config: &Connectors,
     ) -> CustomResult<Request, errors::ConnectorError> {
         let request = TpslUPISyncRequest::try_from(req)?;
-        Ok(Request::builder()
+        Ok(RequestBuilder::new()
             .method(Method::Post)
             .url(&self.get_url(req)?)
             .headers(self.get_headers(req)?)
-            .body(common_utils::request::RequestContent::Json(Box::new(request)))
-            .build()?)
+            .set_body(RequestContent::Json(Box::new(request)))
+            .build())
     }
 
     fn handle_response(
