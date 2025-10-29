@@ -299,7 +299,122 @@ macros::create_all_prerequisites!(
             request_body: TpslUPITokenRequest,
             response_body: TpslPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        )
+        ),
+        (
+            flow: PSync,
+            request_body: TpslUPISyncRequest,
+            response_body: TpslPaymentsResponse,
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        // Stub types for unsupported flows
+        (
+            flow: Void,
+            request_body: TPSLVoidRequest,
+            response_body: TPSLVoidResponse,
+            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: Capture,
+            request_body: TPSLCaptureRequest,
+            response_body: TPSLCaptureResponse,
+            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ),
+        (
+            flow: Refund,
+            request_body: TPSLRefundRequest,
+            response_body: TPSLRefundResponse,
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
+            flow: RSync,
+            request_body: TPSLRSyncRequest,
+            response_body: TPSLRSyncResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: CreateOrder,
+            request_body: TPSLCreateOrderRequest,
+            response_body: TPSLCreateOrderResponse,
+            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ),
+        (
+            flow: CreateSessionToken,
+            request_body: TPSLSessionTokenRequest,
+            response_body: TPSLSessionTokenResponse,
+            router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: TPSLSetupMandateRequest,
+            response_body: TPSLSetupMandateResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: TPSLRepeatPaymentRequest,
+            response_body: TPSLRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ),
+        (
+            flow: Accept,
+            request_body: TPSLAcceptDisputeRequest,
+            response_body: TPSLAcceptDisputeResponse,
+            router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        ),
+        (
+            flow: DefendDispute,
+            request_body: TPSLDefendDisputeRequest,
+            response_body: TPSLDefendDisputeResponse,
+            router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        ),
+        (
+            flow: SubmitEvidence,
+            request_body: TPSLSubmitEvidenceRequest,
+            response_body: TPSLSubmitEvidenceResponse,
+            router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        ),
+        (
+            flow: Authenticate,
+            request_body: TPSLAuthenticateRequest,
+            response_body: TPSLAuthenticateResponse,
+            router_data: RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PostAuthenticate,
+            request_body: TPSLPostAuthenticateRequest,
+            response_body: TPSLPostAuthenticateResponse,
+            router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PreAuthenticate,
+            request_body: TPSLPreAuthenticateRequest,
+            response_body: TPSLPreAuthenticateResponse,
+            router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PaymentMethodToken,
+            request_body: TPSLTokenRequest,
+            response_body: TPSLTokenResponse,
+            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        ),
+        (
+            flow: CreateAccessToken,
+            request_body: TPSLAccessTokenRequest,
+            response_body: TPSLAccessTokenResponse,
+            router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        ),
+        (
+            flow: CreateConnectorCustomer,
+            request_body: TPSLCreateConnectorCustomerRequest,
+            response_body: TPSLCreateConnectorCustomerResponse,
+            router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+        ),
+        (
+            flow: VoidPC,
+            request_body: TPSLVoidRequest,
+            response_body: TPSLVoidResponse,
+            router_data: RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        ),
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
@@ -335,6 +450,10 @@ macros::create_all_prerequisites!(
             _req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
             constants::base_urls::PRODUCTION
+        }
+
+        pub fn get_api_tag(&self) -> &'static str {
+            "tpsl"
         }
     }
 );
