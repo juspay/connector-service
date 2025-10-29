@@ -558,7 +558,7 @@ fn get_redirect_form_data(
             }
         }
         common_enums::PaymentMethodType::OnlineBankingFpx | common_enums::PaymentMethodType::OnlineBankingPoland | 
-        common_enums::PaymentMethodType::OnlineBankingCzechRepublic | common_enums::PaymentMethodType::OnlineBankingFinland) |
+        common_enums::PaymentMethodType::OnlineBankingCzechRepublic | common_enums::PaymentMethodType::OnlineBankingFinland |
         common_enums::PaymentMethodType::OnlineBankingSlovakia | common_enums::PaymentMethodType::OnlineBankingThailand => {
             if let Some(url) = response_data.url {
                 Ok(RedirectForm::Form {
