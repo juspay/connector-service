@@ -403,6 +403,8 @@ impl<
 {
 }
 
+macros::create_amount_converter_wrapper!(connector_name: TPSL, amount_type: MinorUnit);
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
