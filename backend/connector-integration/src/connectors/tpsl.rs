@@ -467,6 +467,41 @@ pub struct TPSLVoidRequest;
 pub struct TPSLVoidResponse;
 
 #[derive(Debug, Clone, Serialize)]
+pub struct TPSLAuthenticateRequest;
+#[derive(Debug, Clone)]
+pub struct TPSLAuthenticateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TPSLPostAuthenticateRequest;
+#[derive(Debug, Clone)]
+pub struct TPSLPostAuthenticateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TPSLPreAuthenticateRequest;
+#[derive(Debug, Clone)]
+pub struct TPSLPreAuthenticateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TPSLTokenRequest;
+#[derive(Debug, Clone)]
+pub struct TPSLTokenResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TPSLAccessTokenRequest;
+#[derive(Debug, Clone)]
+pub struct TPSLAccessTokenResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TPSLCreateConnectorCustomerRequest;
+#[derive(Debug, Clone)]
+pub struct TPSLCreateConnectorCustomerResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TPSLIncomingWebhookRequest;
+#[derive(Debug, Clone)]
+pub struct TPSLIncomingWebhookResponse;
+
+#[derive(Debug, Clone, Serialize)]
 pub struct TPSLCaptureRequest;
 #[derive(Debug, Clone)]
 pub struct TPSLCaptureResponse;
