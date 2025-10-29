@@ -533,14 +533,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     ) -> Result<Self, Self::Error> {
         let customer_id = item.resource_common_data.get_customer_id()?;
         let merchant_code = get_merchant_code(&item.connector_auth_type)?;
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(
-                item.request.amount,
-                item.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+        let amount = TpslAmountConvertor::convert(
+            item.request.amount,
+            item.request.currency,
+        )?;
 
         Ok(Self {
             merchant: TpslMerchantDataType {
