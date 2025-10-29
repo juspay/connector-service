@@ -391,7 +391,7 @@ impl<
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)
     }
 
-    fn get_error_response(
+    fn get_error_response_v2(
         &self,
         res: Response,
         _event_builder: Option<&mut ConnectorEvent>,
@@ -487,7 +487,7 @@ impl<
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)
     }
 
-    fn get_error_response(
+    fn get_error_response_v2(
         &self,
         res: Response,
         _event_builder: Option<&mut ConnectorEvent>,
