@@ -335,7 +335,7 @@ impl<
         );
 
         match item.router_data.request.payment_method_type {
-            Some(common_enums::PaymentMethodType::Upi) => {
+            Some(common_enums::PaymentMethodType::UpiCollect) | Some(common_enums::PaymentMethodType::UpiIntent) => {
                 // For UPI, we might need additional paydata
                 Ok(Self {
                     msg,
@@ -345,7 +345,9 @@ impl<
                     txtbankid: None,
                 })
             }
-            Some(common_enums::PaymentMethodType::NetBanking) => {
+            Some(common_enums::PaymentMethodType::OnlineBankingFpx) | Some(common_enums::PaymentMethodType::OnlineBankingPoland) | 
+            Some(common_enums::PaymentMethodType::OnlineBankingCzechRepublic) | Some(common_enums::PaymentMethodType::OnlineBankingFinland) |
+            Some(common_enums::PaymentMethodType::OnlineBankingSlovakia) | Some(common_enums::PaymentMethodType::OnlineBankingThailand) => {
                 // For Net Banking, we need bank ID
                 Ok(Self {
                     msg,
