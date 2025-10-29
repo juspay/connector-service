@@ -1,20 +1,13 @@
 pub mod transformers;
 
-use std::fmt::Debug;
-
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit};
+use common_utils::errors::CustomResult;
 use domain_types::{
-    connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync,
-        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
-    },
+    connector_flow::{Authorize, PSync},
     connector_types::{
-        AcceptDisputeData, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        ConnectorWebhookSecrets, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, RequestDetails, SetupMandateRequestData, SubmitEvidenceData,
+        RequestDetails,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -24,13 +17,12 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::{Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types,
     events::connector_api_logs::ConnectorEvent,
-    verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
 use transformers::{self as tpsl, TpslPaymentsRequest, TpslPaymentsResponse, TpslPaymentsSyncRequest, TpslPaymentsSyncResponse};
@@ -74,19 +66,6 @@ impl<
         + 'static
         + Serialize,
 > connector_types::PaymentSyncV2 for TPSL<T>
-{
-}
-
-
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::CreateConnectorCustomer for TPSL<T>
 {
 }
 
@@ -141,50 +120,6 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> connector_types::SetupMandateV2<T> for TPSL<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::AcceptDispute for TPSL<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::SubmitEvidenceV2 for TPSL<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::DisputeDefend for TPSL<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
 > connector_types::IncomingWebhook for TPSL<T>
 {
     fn verify_webhook_source(
@@ -219,19 +154,8 @@ impl<
         error_stack::Report<domain_types::errors::ConnectorError>,
     > {
         // TPSL webhook processing logic to be implemented
-        Err(errors::ConnectorError::WebhookNotImplemented.into())
+        Err(errors::ConnectorError::WebhooksNotImplemented.into())
     }
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentOrderCreate for TPSL<T>
-{
 }
 
 impl<
@@ -244,75 +168,6 @@ impl<
 > connector_types::ValidationTrait for TPSL<T>
 {
 }
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::RepeatPaymentV2 for TPSL<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentTokenV2<T> for TPSL<T>
-{
-}
-
-// Authentication trait implementations
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentPreAuthenticateV2<T> for TPSL<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentAuthenticateV2<T> for TPSL<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentPostAuthenticateV2<T> for TPSL<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentVoidPostCaptureV2 for TPSL<T>
-{
-}
-
-
 
 macros::create_all_prerequisites!(
     connector_name: TPSL,
@@ -523,7 +378,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+> ConnectorIntegrationV2<domain_types::connector_flow::Void, PaymentFlowData, domain_types::connector_types::PaymentVoidData, PaymentsResponseData>
     for TPSL<T>
 {
 }
@@ -535,7 +390,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+> ConnectorIntegrationV2<domain_types::connector_flow::Capture, PaymentFlowData, domain_types::connector_types::PaymentsCaptureData, PaymentsResponseData>
     for TPSL<T>
 {
 }
@@ -547,7 +402,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+> ConnectorIntegrationV2<domain_types::connector_flow::Refund, RefundFlowData, RefundsData, RefundsResponseData>
     for TPSL<T>
 {
 }
@@ -559,10 +414,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+> ConnectorIntegrationV2<domain_types::connector_flow::RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
     for TPSL<T>
 {
 }
-
-
-
