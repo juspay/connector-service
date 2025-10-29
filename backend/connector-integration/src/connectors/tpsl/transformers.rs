@@ -706,7 +706,7 @@ fn map_transaction_status(status: &str) -> common_enums::AttemptStatus {
 // These are required for the macro framework to work properly
 
 // PostAuthenticate flow
-impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>, T>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TPSLRouterData<RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>, T>>
     for TpslPostAuthenticateRequest
 {
     type Error = error_stack::Report<ConnectorError>;
