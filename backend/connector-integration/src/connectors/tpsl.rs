@@ -353,9 +353,9 @@ macros::create_all_prerequisites!(
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
             if req.resource_common_data.test_mode.unwrap_or(false) {
-                crate::connectors::tpsl::TPSL_TEST_BASE_URL
+                "https://www.tekprocess.co.in"
             } else {
-                crate::connectors::tpsl::TPSL_PRODUCTION_BASE_URL
+                "https://www.tpsl-india.in"
             }
         }
 
@@ -364,9 +364,9 @@ macros::create_all_prerequisites!(
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
             if req.resource_common_data.test_mode.unwrap_or(false) {
-                crate::connectors::tpsl::TPSL_TEST_BASE_URL
+                "https://www.tekprocess.co.in"
             } else {
-                crate::connectors::tpsl::TPSL_PRODUCTION_BASE_URL
+                "https://www.tpsl-india.in"
             }
         }
     }
