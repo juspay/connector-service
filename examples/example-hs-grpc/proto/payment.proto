@@ -204,6 +204,7 @@ enum Connector {
   XENDIT = 87;
   ZEN = 88;
   ZSL = 89;
+  TPSL = 90;
 }
 
 message ResponseId {
