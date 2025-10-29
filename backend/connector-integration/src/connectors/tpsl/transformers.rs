@@ -478,7 +478,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     ) -> Result<Self, Self::Error> {
         let customer_id = item.resource_common_data.get_customer_id()?;
         let merchant_code = get_merchant_code(&item.connector_auth_type)?;
-        let amount = TpslAmountConvertor::convert(
+        let amount = TPSLAmountConvertor::convert(
             item.request.minor_amount,
             item.request.currency,
         )?;
@@ -533,7 +533,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
     ) -> Result<Self, Self::Error> {
         let customer_id = item.resource_common_data.get_customer_id()?;
         let merchant_code = get_merchant_code(&item.connector_auth_type)?;
-        let amount = TpslAmountConvertor::convert(
+        let amount = TPSLAmountConvertor::convert(
             item.request.amount,
             item.request.currency,
         )?;
