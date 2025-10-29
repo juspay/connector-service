@@ -17,8 +17,6 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils,
-    connector_flow::{PreAuthenticate, Authenticate, PostAuthenticate, VoidPC, CreateOrder, SubmitEvidence, DefendDispute, Accept, SetupMandate, RepeatPayment, CreateSessionToken, CreateAccessToken, CreateConnectorCustomer, PaymentMethodToken},
-    connector_types::{PaymentsPreAuthenticateData, PaymentsAuthenticateData, PaymentsPostAuthenticateData, PaymentsCancelPostCaptureData, PaymentCreateOrderData, PaymentCreateOrderResponse, SessionTokenRequestData, SessionTokenResponseData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData, ConnectorCustomerResponse, PaymentMethodTokenizationData, PaymentMethodTokenResponse, DisputeFlowData, AcceptDisputeData, SubmitEvidenceData, DisputeDefendData, DisputeResponseData},
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{Secret, PeekInterface, ExposeInterface};
