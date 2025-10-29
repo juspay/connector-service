@@ -1045,7 +1045,7 @@ impl HeaderExt for Headers {
                 let header_value = header_value.into_inner();
                 let header_value = HeaderValue::from_str(&header_value)
                     .change_context(ApiClientError::HeaderMapConstructionFailed)?;
-                header_map.append(header_name, header_value);
+                header_map.insert(header_name, header_value);
                 Ok(header_map)
             },
         )
