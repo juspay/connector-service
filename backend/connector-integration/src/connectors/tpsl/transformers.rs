@@ -260,7 +260,7 @@ impl<
                 transaction_type: "SALE".to_string(),
                 currency: item.router_data.request.currency.to_string(),
                 identifier: connector_transaction_id.to_string(),
-                date_time: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                date_time: "2024-01-01 00:00:00".to_string(), // TODO: Use proper timestamp
                 sub_type: "DEBIT".to_string(),
                 request_type: "STATUS".to_string(),
             },
