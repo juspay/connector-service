@@ -492,7 +492,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         match item.router_data.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => Ok(Self {
                 merchant: TpslMerchantDataType {
-                    identifier: merchant_code.expose().clone(),
+                    identifier: merchant_code.peek().clone(),
                 },
                 cart: TpslUPITokenCart {
                     item: vec![TpslUPIItem {
