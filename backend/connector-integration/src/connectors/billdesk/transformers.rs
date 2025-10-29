@@ -2,10 +2,8 @@ use std::collections::HashMap;
 
 use common_utils::{
     errors::CustomResult,
-    ext_traits::ValueExt,
     request::Method,
-    types::{StringMinorUnit, StringMajorUnit},
-    Email,
+    types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync, Refund, RSync},
