@@ -311,7 +311,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let mut header = vec![(
-                headers::CONTENT_TYPE.to_string(),
+                crate::connectors::tpsl::headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
             )];
 
@@ -361,7 +361,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let mut header = vec![(
-                headers::CONTENT_TYPE.to_string(),
+                crate::connectors::tpsl::headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
             )];
 
