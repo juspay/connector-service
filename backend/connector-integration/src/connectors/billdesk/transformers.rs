@@ -539,7 +539,7 @@ fn get_redirect_form_data(
     response_data: BilldeskRdata,
 ) -> CustomResult<RedirectForm, errors::ConnectorError> {
     match payment_method_type {
-        common_enums::PaymentMethodType::Upi => {
+        common_enums::PaymentMethodType::UpiCollect | common_enums::PaymentMethodType::UpiIntent => {
             if let Some(url) = response_data.url {
                 Ok(RedirectForm::Form {
                     endpoint: url,
@@ -557,7 +557,9 @@ fn get_redirect_form_data(
                 .into())
             }
         }
-        common_enums::PaymentMethodType::NetBanking => {
+        common_enums::PaymentMethodType::OnlineBankingFpx | common_enums::PaymentMethodType::OnlineBankingPoland | 
+        common_enums::PaymentMethodType::OnlineBankingCzechRepublic | common_enums::PaymentMethodType::OnlineBankingFinland) |
+        common_enums::PaymentMethodType::OnlineBankingSlovakia | common_enums::PaymentMethodType::OnlineBankingThailand => {
             if let Some(url) = response_data.url {
                 Ok(RedirectForm::Form {
                     endpoint: url,
