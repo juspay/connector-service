@@ -102,7 +102,7 @@ impl<
         // Create transaction message based on UPI payment method
         let transaction_msg = match item.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => {
-                let vpa = item.router_data
+                let vpa = item
                     .request
                     .payment_method_data
                     .as_ref()
