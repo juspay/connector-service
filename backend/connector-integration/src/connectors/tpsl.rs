@@ -354,7 +354,7 @@ impl<
         ))
     }
 
-    fn build_request(
+    fn build_request_v2(
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         _config: &Connectors,
@@ -450,7 +450,7 @@ impl<
         ))
     }
 
-    fn build_request(
+    fn build_request_v2(
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         _config: &Connectors,
