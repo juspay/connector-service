@@ -3,8 +3,23 @@ use common_utils::{
 };
 use error_stack::ResultExt;
 use domain_types::{
-    connector_flow::{Authorize, PSync},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
+    connector_flow::{
+        Authorize, PSync, PostAuthenticate, Authenticate, PreAuthenticate, Void, Capture, 
+        Refund, RSync, SetupMandate, RepeatPayment, Accept, SubmitEvidence, DefendDispute,
+        CreateOrder, CreateSessionToken, PaymentMethodToken, CreateAccessToken, 
+        CreateConnectorCustomer, VoidPC
+    },
+    connector_types::{
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
+        PaymentsPostAuthenticateData, PaymentsAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentVoidData, PaymentsCaptureData, RefundFlowData, RefundsData, RefundsResponseData,
+        RefundSyncData, SetupMandateRequestData, RepeatPaymentData, DisputeFlowData,
+        AcceptDisputeData, DisputeResponseData, SubmitEvidenceData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, SessionTokenRequestData, SessionTokenResponseData,
+        PaymentMethodTokenizationData, PaymentMethodTokenResponse, AccessTokenRequestData,
+        AccessTokenResponseData, ConnectorCustomerData, ConnectorCustomerResponse,
+        PaymentsCancelPostCaptureData
+    },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
