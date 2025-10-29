@@ -714,3 +714,312 @@ fn map_transaction_status(status: &str) -> common_enums::AttemptStatus {
         _ => common_enums::AttemptStatus::Pending,
     }
 }
+
+// CRITICAL: TryFrom implementations for all request/response types
+// These are required for the macro framework to work properly
+
+// PostAuthenticate flow
+impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>, T>>
+    for TpslPostAuthenticateRequest
+{
+    fn from(_item: TPSLRouterData<RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>, T>) -> Self {
+        TpslPostAuthenticateRequest
+    }
+}
+
+impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslPostAuthenticateResponse, RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>>>
+    for RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
+{
+    fn from(item: ResponseRouterData<TpslPostAuthenticateResponse, RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>>) -> Self {
+        item.router_data
+    }
+}
+
+// Authenticate flow
+impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>, T>>
+    for TpslAuthenticateRequest
+{
+    fn from(_item: TPSLRouterData<RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>, T>) -> Self {
+        TpslAuthenticateRequest
+    }
+}
+
+impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslAuthenticateResponse, RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>>>
+    for RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
+{
+    fn from(item: ResponseRouterData<TpslAuthenticateResponse, RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>>) -> Self {
+        item.router_data
+    }
+}
+
+// PreAuthenticate flow
+impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>, T>>
+    for TpslPreAuthenticateRequest
+{
+    fn from(_item: TPSLRouterData<RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>, T>) -> Self {
+        TpslPreAuthenticateRequest
+    }
+}
+
+impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslPreAuthenticateResponse, RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>>>
+    for RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
+{
+    fn from(item: ResponseRouterData<TpslPreAuthenticateResponse, RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>>) -> Self {
+        item.router_data
+    }
+}
+
+// Void flow
+impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
+    for TpslVoidRequest
+{
+    fn from(_item: TPSLRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>) -> Self {
+        TpslVoidRequest
+    }
+}
+
+impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslVoidResponse, RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+{
+    fn from(item: ResponseRouterData<TpslVoidResponse, RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>) -> Self {
+        item.router_data
+    }
+}
+
+// Capture flow
+impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
+    for TpslCaptureRequest
+{
+    fn from(_item: TPSLRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>) -> Self {
+        TpslCaptureRequest
+    }
+}
+
+impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslCaptureResponse, RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+{
+    fn from(item: ResponseRouterData<TpslCaptureResponse, RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>) -> Self {
+        item.router_data
+    }
+}
+
+// Refund flow
+impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for TpslRefundRequest
+{
+    fn from(_item: TPSLRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>) -> Self {
+        TpslRefundRequest
+    }
+}
+
+impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslRefundResponse, RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+{
+    fn from(item: ResponseRouterData<TpslRefundResponse, RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>) -> Self {
+        item.router_data
+    }
+}
+
+// RSync flow
+impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
+    for TpslRSyncRequest
+{
+    fn from(_item: TPSLRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>) -> Self {
+        TpslRSyncRequest
+    }
+}
+
+impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslRSyncResponse, RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+{
+    fn from(item: ResponseRouterData<TpslRSyncResponse, RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>) -> Self {
+        item.router_data
+    }
+}
+
+// SetupMandate flow
+impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>, T>>
+    for TpslSetupMandateRequest
+{
+    fn from(_item: TPSLRouterData<RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>, T>) -> Self {
+        TpslSetupMandateRequest
+    }
+}
+
+impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslSetupMandateResponse, RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>>>
+    for RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+{
+    fn from(item: ResponseRouterData<TpslSetupMandateResponse, RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>>) -> Self {
+        item.router_data
+    }
+}
+
+// RepeatPayment flow
+impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>, T>>
+    for TpslRepeatPaymentRequest
+{
+    fn from(_item: TPSLRouterData<RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>, T>) -> Self {
+        TpslRepeatPaymentRequest
+    }
+}
+
+impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslRepeatPaymentResponse, RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>>>
+    for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+{
+    fn from(item: ResponseRouterData<TpslRepeatPaymentResponse, RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>>) -> Self {
+        item.router_data
+    }
+}
+
+// AcceptDispute flow
+impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>, T>>
+    for TpslAcceptDisputeRequest
+{
+    fn from(_item: TPSLRouterData<RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>, T>) -> Self {
+        TpslAcceptDisputeRequest
+    }
+}
+
+impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslAcceptDisputeResponse, RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>>>
+    for RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+{
+    fn from(item: ResponseRouterData<TpslAcceptDisputeResponse, RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>>) -> Self {
+        item.router_data
+    }
+}
+
+// SubmitEvidence flow
+impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>, T>>
+    for TpslSubmitEvidenceRequest
+{
+    fn from(_item: TPSLRouterData<RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>, T>) -> Self {
+        TpslSubmitEvidenceRequest
+    }
+}
+
+impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslSubmitEvidenceResponse, RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>>>
+    for RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+{
+    fn from(item: ResponseRouterData<TpslSubmitEvidenceResponse, RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>>) -> Self {
+        item.router_data
+    }
+}
+
+// DefendDispute flow
+impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>, T>>
+    for TpslDefendDisputeRequest
+{
+    fn from(_item: TPSLRouterData<RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>, T>) -> Self {
+        TpslDefendDisputeRequest
+    }
+}
+
+impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslDefendDisputeResponse, RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>>>
+    for RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+{
+    fn from(item: ResponseRouterData<TpslDefendDisputeResponse, RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>>) -> Self {
+        item.router_data
+    }
+}
+
+// CreateOrder flow
+impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>, T>>
+    for TpslCreateOrderRequest
+{
+    fn from(_item: TPSLRouterData<RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>, T>) -> Self {
+        TpslCreateOrderRequest
+    }
+}
+
+impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslCreateOrderResponse, RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>>>
+    for RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
+{
+    fn from(item: ResponseRouterData<TpslCreateOrderResponse, RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>>) -> Self {
+        item.router_data
+    }
+}
+
+// CreateSessionToken flow
+impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>, T>>
+    for TpslCreateSessionTokenRequest
+{
+    fn from(_item: TPSLRouterData<RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>, T>) -> Self {
+        TpslCreateSessionTokenRequest
+    }
+}
+
+impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslCreateSessionTokenResponse, RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>>>
+    for RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
+{
+    fn from(item: ResponseRouterData<TpslCreateSessionTokenResponse, RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>>) -> Self {
+        item.router_data
+    }
+}
+
+// PaymentMethodToken flow
+impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>, T>>
+    for TpslPaymentMethodTokenRequest
+{
+    fn from(_item: TPSLRouterData<RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>, T>) -> Self {
+        TpslPaymentMethodTokenRequest
+    }
+}
+
+impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslPaymentMethodTokenResponse, RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>>>
+    for RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
+{
+    fn from(item: ResponseRouterData<TpslPaymentMethodTokenResponse, RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>>) -> Self {
+        item.router_data
+    }
+}
+
+// CreateAccessToken flow
+impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>, T>>
+    for TpslCreateAccessTokenRequest
+{
+    fn from(_item: TPSLRouterData<RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>, T>) -> Self {
+        TpslCreateAccessTokenRequest
+    }
+}
+
+impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslCreateAccessTokenResponse, RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>>>
+    for RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>
+{
+    fn from(item: ResponseRouterData<TpslCreateAccessTokenResponse, RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>>) -> Self {
+        item.router_data
+    }
+}
+
+// CreateConnectorCustomer flow
+impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>, T>>
+    for TpslCreateConnectorCustomerRequest
+{
+    fn from(_item: TPSLRouterData<RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>, T>) -> Self {
+        TpslCreateConnectorCustomerRequest
+    }
+}
+
+impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslCreateConnectorCustomerResponse, RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>>>
+    for RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>
+{
+    fn from(item: ResponseRouterData<TpslCreateConnectorCustomerResponse, RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>>) -> Self {
+        item.router_data
+    }
+}
+
+// VoidPC flow
+impl<T: PaymentMethodDataTypes> From<TPSLRouterData<RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>, T>>
+    for TpslVoidPCRequest
+{
+    fn from(_item: TPSLRouterData<RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>, T>) -> Self {
+        TpslVoidPCRequest
+    }
+}
+
+impl<T: PaymentMethodDataTypes> From<ResponseRouterData<TpslVoidPCResponse, RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>>>
+    for RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+{
+    fn from(item: ResponseRouterData<TpslVoidPCResponse, RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>>) -> Self {
+        item.router_data
+    }
+}
