@@ -754,7 +754,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<PreAuthentic
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(_item: TPSLRouterData<RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
-        Ok(TpslPreAuthenticateRequest
+        Ok(TpslPreAuthenticateRequest)
     }
 }
 
