@@ -307,21 +307,22 @@ where
     }
 }
 
-impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+impl TryFrom<BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
     for BilldeskPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.resource_common_data.get_customer_id()?;
+        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let transaction_id = item
+            .router_data
             .resource_common_data
             .connector_request_reference_id
             .clone();
 
-        let auth = BilldeskAuthType::try_from(&item.connector_auth_type)?;
+        let auth = BilldeskAuthType::try_from(&item.router_data.connector_auth_type)?;
         let merchant_id = auth.merchant_id.peek();
 
         let additional_params = HashMap::new();
@@ -330,7 +331,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
             &customer_id.get_string_repr(),
             &transaction_id,
             "0", // Amount not needed for status check
-            &item.request.currency.to_string(),
+            &item.router_data.request.currency.to_string(),
             &additional_params,
         );
 
