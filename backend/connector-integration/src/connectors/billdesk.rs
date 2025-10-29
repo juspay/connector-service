@@ -506,12 +506,12 @@ macros::macro_connector_implementation!(
             // Determine the endpoint based on payment method type
             match req.request.payment_method_type {
                 Some(common_enums::PaymentMethodType::Upi) => {
-                    Ok(format!("{}?reqid=BDRDF011", base_url)) // UPI initiate
+                    Ok(format!("{}?reqid={}", base_url, BILLDESK_UPI_INITIATE_REQID)) // UPI initiate
                 }
                 Some(common_enums::PaymentMethodType::NetBanking) => {
-                    Ok(format!("{}?reqid=BDRDF002", base_url)) // Net Banking initiate
+                    Ok(format!("{}?reqid={}", base_url, BILLDESK_NB_INITIATE_REQID)) // Net Banking initiate
                 }
-                _ => Ok(format!("{}?reqid=BDRDF002", base_url)), // Default
+                _ => Ok(format!("{}?reqid={}", base_url, BILLDESK_AUTH_REQID)), // Default
             }
         }
     }
