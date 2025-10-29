@@ -369,9 +369,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 // CRITICAL: Implement TryFrom for PSync flow with proper router data extraction
-impl TryFrom<
-    TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
-> for TpslPaymentsSyncRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<
+        TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
+    > for TpslPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
