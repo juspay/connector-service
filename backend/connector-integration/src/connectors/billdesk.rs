@@ -39,7 +39,35 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use transformers::{self as billdesk, BilldeskPaymentsRequest, BilldeskPaymentsResponse};
+use transformers::{
+    self as billdesk, 
+    BilldeskPaymentsRequest, 
+    BilldeskPaymentsResponse,
+    BilldeskPaymentsSyncRequest,
+    BilldeskPaymentsSyncResponse,
+    BilldeskRefundRequest,
+    BilldeskRefundResponse,
+    BilldeskRefundStatusRequest,
+    BilldeskRefundStatusResponse,
+    BilldeskVoidRequest,
+    BilldeskVoidResponse,
+    BilldeskCaptureRequest,
+    BilldeskCaptureResponse,
+    BilldeskCreateOrderRequest,
+    BilldeskCreateOrderResponse,
+    BilldeskSessionTokenRequest,
+    BilldeskSessionTokenResponse,
+    BilldeskSetupMandateRequest,
+    BilldeskSetupMandateResponse,
+    BilldeskRepeatPaymentRequest,
+    BilldeskRepeatPaymentResponse,
+    BilldeskAcceptDisputeRequest,
+    BilldeskAcceptDisputeResponse,
+    BilldeskDefendDisputeRequest,
+    BilldeskDefendDisputeResponse,
+    BilldeskSubmitEvidenceRequest,
+    BilldeskSubmitEvidenceResponse,
+};
 use constants::*;
 
 use super::macros;
