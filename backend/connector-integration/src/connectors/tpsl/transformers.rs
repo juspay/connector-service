@@ -507,7 +507,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                     currency: item.request.currency.to_string(),
                     identifier: item
                         .resource_common_data
-                        .connector_request_reference_id,
+                        .connector_request_reference_id.clone(),
                     sub_type: "UPI".to_string(),
                     request_type: "SALE".to_string(),
                 },
