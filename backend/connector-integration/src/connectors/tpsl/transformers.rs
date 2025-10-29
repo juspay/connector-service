@@ -564,7 +564,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 sub_type: Some("UPI".to_string()),
                 amount,
                 currency: item.router_data.request.currency.to_string(),
-                date_time: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                date_time: "2025-01-20 12:00:00".to_string(),
                 request_type: "STATUS".to_string(),
                 token: item
                     .router_data
