@@ -290,63 +290,6 @@ impl<
 {
 }
 
-macros::create_all_prerequisites!(
-    connector_name: TPSL,
-    generic_type: T,
-    api: [
-        (
-            flow: Authorize,
-            request_body: TpslUPITokenRequest,
-            response_body: TpslAuthorizeResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: PSync,
-            response_body: TpslAuthorizeResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        )
-    ],
-    amount_converters: [
-        amount_converter: StringMinorUnit
-    ],
-    member_functions: {
-        pub fn build_headers<F, FCD, Req, Res>(
-            &self,
-            _req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
-        where
-            Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
-        {
-            Ok(vec![(
-                headers::CONTENT_TYPE.to_string(),
-                self.common_get_content_type().to_string().into(),
-            )])
-        }
-
-        pub fn connector_base_url_payments<'a, F, Req, Res>(
-            &self,
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            let is_test = req.resource_common_data.test_mode.unwrap_or(false);
-            if is_test {
-                constants::base_urls::TEST
-            } else {
-                constants::base_urls::PRODUCTION
-            }
-        }
-
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
-            &self,
-            _req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
-        ) -> &'a str {
-            constants::base_urls::PRODUCTION
-        }
-
-        pub fn get_api_tag(&self) -> &'static str {
-            "tpsl"
-        }
-    }
-);
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
