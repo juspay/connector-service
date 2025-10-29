@@ -449,10 +449,10 @@ macros::macro_connector_implementation!(
                 .request
                 .split_payments
                 .as_ref()
-                .and_then(|split_payments| {
+                .map(|split_payments| {
                     let domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(stripe_split_payment) =
                         split_payments;
-                    Some(stripe_split_payment)
+                    stripe_split_payment
                 })
                 .filter(|stripe_split_payment| {
                     matches!(stripe_split_payment.charge_type, common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct))
@@ -460,13 +460,13 @@ macros::macro_connector_implementation!(
                 .map(|stripe_split_payment| stripe_split_payment.transfer_account_id.clone())
                 .or_else(|| stripe_split_payment_metadata.transfer_account_id.clone());
 
-            transfer_account_id.map(|transfer_account_id| {
+            if let Some(transfer_account_id) = transfer_account_id {
                 let mut customer_account_header = vec![(
                     headers::STRIPE_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
                     transfer_account_id.clone().into_masked(),
                 )];
                 header.append(&mut customer_account_header);
-            });
+            };
             Ok(header)
         }
 
@@ -548,23 +548,23 @@ macros::macro_connector_implementation!(
                 .request
                 .split_payments
                 .as_ref()
-                .and_then(|split_payments| {
+                .map(|split_payments| {
                     let domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(stripe_split_payment) =
                         split_payments;
-                    Some(stripe_split_payment)
+                    stripe_split_payment
                 })
                 .filter(|stripe_split_payment| {
                     matches!(stripe_split_payment.charge_type, common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct))
                 })
                 .map(|stripe_split_payment| stripe_split_payment.transfer_account_id.clone());
 
-            transfer_account_id.map(|transfer_account_id| {
+            if let Some(transfer_account_id) = transfer_account_id {
                 let mut customer_account_header = vec![(
                     headers::STRIPE_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
                     transfer_account_id.clone().into_masked(),
                 )];
                 header.append(&mut customer_account_header);
-            });
+            };
 
             let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
             header.append(&mut api_key);
