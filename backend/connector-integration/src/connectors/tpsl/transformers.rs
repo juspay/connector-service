@@ -304,18 +304,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         // CRITICAL: Use amount converter properly - NEVER HARDCODE AMOUNTS
         let amount = item.amount.get_amount_as_string();
-        let currency = item.router_data.request.currency.to_string();
+        let currency = item.request.currency.to_string();
 
         // CRITICAL: Extract transaction ID dynamically - NEVER HARDCODE
-        let transaction_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
+        let transaction_id = item.resource_common_data.connector_request_reference_id.clone();
 
         // CRITICAL: Extract return URL dynamically - NEVER HARDCODE
-        let return_url = item.router_data.request.get_router_return_url()?;
+        let return_url = item.request.get_router_return_url()?;
 
         // CRITICAL: Extract email dynamically - NEVER HARDCODE
-        let email = item.router_data.request.email.clone().unwrap_or_default();
+        let email = item.request.email.clone().unwrap_or_default();
 
-        match item.router_data.resource_common_data.payment_method {
+        match item.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => Ok(Self {
                 merchant: TpslMerchantDataType {
                     identifier: merchant_code.peek().clone(),
@@ -368,10 +368,10 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
 
         // CRITICAL: Use amount converter properly - NEVER HARDCODE AMOUNTS
         let amount = item.amount.get_amount_as_string();
-        let currency = item.router_data.request.currency.to_string();
+        let currency = item.request.currency.to_string();
 
         // CRITICAL: Extract transaction ID dynamically - NEVER HARDCODE
-        let transaction_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
+        let transaction_id = item.resource_common_data.connector_request_reference_id.clone();
 
         Ok(Self {
             merchant: TpslMerchantDataType {
