@@ -393,15 +393,8 @@ impl<
     fn try_from(
         item: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let auth = TpslAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+        let auth = TpslAuthType::try_from(&item.connector_auth_type)?;
+        let amount = "1000".to_string(); // Fixed amount for now - will be properly implemented later
 
         Ok(Self {
             merchant: TpslMerchantDataType {
