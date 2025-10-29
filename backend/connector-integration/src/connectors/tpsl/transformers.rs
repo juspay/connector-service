@@ -943,7 +943,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<DefendDisput
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(_item: TPSLRouterData<RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>, T>) -> Result<Self, Self::Error> {
-        Ok(TpslDefendDisputeRequest
+        Ok(TpslDefendDisputeRequest)
     }
 }
 
