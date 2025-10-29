@@ -11,7 +11,7 @@ use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, PaymentMethodToken, PostAuthenticate,
-        PreAuthenticate, PSync, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        PreAuthenticate, PSync, RSync, Refund, RepeatPayment, SetupMendate, SubmitEvidence, Void,
         VoidPC, IncomingWebhook,
     },
     connector_types::{
