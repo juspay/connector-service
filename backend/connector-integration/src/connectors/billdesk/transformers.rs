@@ -787,9 +787,20 @@ impl<F> TryFrom<ResponseRouterData<BilldeskRefundStatusResponse, Self>>
             _ => common_enums::RefundStatus::Pending,
         };
 
-        let amount_received = common_utils::types::StringMajorUnit::new(response.refund_amount.clone())
-            .to_minor_unit_as_i64(common_enums::Currency::INR) // Default to INR, should be extracted from response
-            .ok();
+        let amount_received = response.refund_amount.parse::<f64>()
+            .ok()
+            .and_then(|amt| {
+                let currency = common_enums::Currency::INR; // Default to INR, should be extracted from response
+                if currency.is_zero_decimal_currency() {
+                    Some(common_utils::types::MinorUnit::new(amt as i64))
+                } else if currency.is_two_decimal_currency() {
+                    Some(common_utils::types::MinorUnit::new((amt * 100.0) as i64))
+                } else if currency.is_three_decimal_currency() {
+                    Some(common_utils::types::MinorUnit::new((amt * 1000.0) as i64))
+                } else {
+                    None
+                }
+            });
 
         Ok(Self {
             resource_common_data: domain_types::connector_types::RefundFlowData {
