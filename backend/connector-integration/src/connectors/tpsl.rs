@@ -173,12 +173,6 @@ macros::create_all_prerequisites!(
             request_body: TpslVoidPCRequest,
             response_body: TpslVoidPCResponse,
             router_data: RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
-        ),
-        (
-            flow: IncomingWebhook,
-            request_body: TpslIncomingWebhookRequest,
-            response_body: TpslIncomingWebhookResponse,
-            router_data: RouterDataV2<IncomingWebhook, PaymentFlowData, IncomingWebhookRequestData, IncomingWebhookResponseData>,
         )
     ],
     amount_converters: [
