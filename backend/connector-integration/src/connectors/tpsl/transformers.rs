@@ -1010,7 +1010,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<TPSLRouterData<RouterDataV2<PaymentMetho
     }
 }
 
-impl TryFrom<ResponseRouterData<TpslPaymentMethodTokenResponse, RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>>>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TpslPaymentMethodTokenResponse, RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>>>
     for RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
 {
     type Error = error_stack::Report<ConnectorError>;
