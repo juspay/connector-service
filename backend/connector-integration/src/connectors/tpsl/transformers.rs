@@ -48,10 +48,21 @@ impl TryFrom<&ConnectorAuthType> for TpslAuthType {
     }
 }
 
-// Request types based on Haskell implementation
+// CRITICAL: Separate request types for each flow to avoid macro conflicts
+// Authorize flow request types
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslPaymentsRequest {
+    pub merchant: TpslMerchantDataType,
+    pub cart: TpslUPITokenCart,
+    pub transaction: TpslUPITokenTxn,
+    pub consumer: TpslConsumerDataType,
+}
+
+// PSync flow request types (alias to avoid conflicts)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TpslPaymentsSyncRequest {
     pub merchant: TpslMerchantDataType,
     pub cart: TpslUPITokenCart,
     pub transaction: TpslUPITokenTxn,
@@ -96,10 +107,11 @@ pub struct TpslConsumerDataType {
     pub identifier: String,
 }
 
-// Response types based on Haskell implementation
+// CRITICAL: Separate response types for each flow to avoid macro conflicts
+// Authorize flow response types
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TpslUPITokenResponse {
+pub struct TpslPaymentsResponse {
     #[serde(rename = "merchantCode")]
     pub merchant_code: String,
     #[serde(rename = "merchantTransactionIdentifier")]
@@ -113,9 +125,10 @@ pub struct TpslUPITokenResponse {
     pub error: Option<serde_json::Value>,
 }
 
+// PSync flow response types (alias to avoid conflicts)
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TpslUPISyncResponse {
+pub struct TpslPaymentsSyncResponse {
     #[serde(rename = "merchantCode")]
     pub merchant_code: String,
     #[serde(rename = "merchantTransactionIdentifier")]
@@ -266,15 +279,6 @@ pub struct TpslErrorResponse {
     pub error_message: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(untagged)]
-pub enum TpslPaymentsResponse {
-    TokenResponse(TpslUPITokenResponse),
-    SyncResponse(TpslUPISyncResponse),
-    DecodedResponse(TpslDecodedRedirectionResponse),
-    ErrorResponse(TpslErrorResponse),
-}
-
 // CRITICAL: Dynamic extraction functions - NEVER HARDCODE VALUES
 fn get_merchant_code(
     connector_auth_type: &ConnectorAuthType,
@@ -352,7 +356,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
 // CRITICAL: Implement TryFrom for PSync flow with proper router data extraction
 impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
-    for TpslPaymentsRequest
+    for TpslPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
@@ -441,10 +445,10 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
         } = item;
 
         let (status, response) = match response {
-            TpslPaymentsResponse::TokenResponse(token_response) => {
+            TpslPaymentsResponse { .. } => {
                 let redirection_data = get_redirect_form_data(
                     common_enums::PaymentMethodType::UpiCollect,
-                    &token_response,
+                    &response,
                 )?;
                 (
                     common_enums::AttemptStatus::AuthenticationPending,
@@ -465,20 +469,6 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
                     }),
                 )
             }
-            TpslPaymentsResponse::ErrorResponse(error_response) => (
-                common_enums::AttemptStatus::Failure,
-                Err(ErrorResponse {
-                    code: error_response.error_code,
-                    status_code: item.http_code,
-                    message: error_response.error_message.clone(),
-                    reason: Some(error_response.error_message),
-                    attempt_status: None,
-                    connector_transaction_id: None,
-                    network_advice_code: None,
-                    network_decline_code: None,
-                    network_error_message: None,
-                }),
-            ),
             _ => (
                 common_enums::AttemptStatus::Failure,
                 Err(ErrorResponse {
@@ -507,13 +497,13 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
 }
 
 // CRITICAL: Response transformation for PSync flow
-impl TryFrom<ResponseRouterData<TpslPaymentsResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+impl TryFrom<ResponseRouterData<TpslPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<TpslPaymentsResponse, Self>,
+        item: ResponseRouterData<TpslPaymentsSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
@@ -522,9 +512,9 @@ impl TryFrom<ResponseRouterData<TpslPaymentsResponse, RouterDataV2<PSync, Paymen
         } = item;
 
         let (status, response) = match response {
-            TpslPaymentsResponse::SyncResponse(sync_response) => {
-                let status = map_transaction_status(&sync_response.transaction_state);
-                let _amount_received = sync_response
+            TpslPaymentsSyncResponse { .. } => {
+                let status = map_transaction_status(&response.transaction_state);
+                let _amount_received = response
                     .payment_method
                     .payment_transaction
                     .amount
@@ -544,51 +534,13 @@ impl TryFrom<ResponseRouterData<TpslPaymentsResponse, RouterDataV2<PSync, Paymen
                         redirection_data: None,
                         mandate_reference: None,
                         connector_metadata: None,
-                        network_txn_id: sync_response.payment_method.payment_transaction.identifier,
+                        network_txn_id: response.payment_method.payment_transaction.identifier,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
                         status_code: http_code,
                     }),
                 )
             }
-            TpslPaymentsResponse::DecodedResponse(decoded_response) => {
-                let status = map_txn_status(&decoded_response.txn_status);
-                let _amount_received = decoded_response
-                    .txn_amt
-                    .as_ref()
-                    .and_then(|amt| amt.parse::<f64>().ok())
-                    .and_then(|amt| Some(common_utils::types::MinorUnit::new(amt as i64)));
-
-                (
-                    status,
-                    Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
-                            decoded_response.clnt_txn_ref.clone(),
-                        ),
-                        redirection_data: None,
-                        mandate_reference: None,
-                        connector_metadata: None,
-                        network_txn_id: decoded_response.tpsl_txn_id.clone(),
-                        connector_response_reference_id: None,
-                        incremental_authorization_allowed: None,
-                        status_code: http_code,
-                    }),
-                )
-            }
-            TpslPaymentsResponse::ErrorResponse(error_response) => (
-                common_enums::AttemptStatus::Failure,
-                Err(ErrorResponse {
-                    code: error_response.error_code,
-                    status_code: item.http_code,
-                    message: error_response.error_message.clone(),
-                    reason: Some(error_response.error_message),
-                    attempt_status: None,
-                    connector_transaction_id: None,
-                    network_advice_code: None,
-                    network_decline_code: None,
-                    network_error_message: None,
-                }),
-            ),
             _ => (
                 common_enums::AttemptStatus::Failure,
                 Err(ErrorResponse {
@@ -618,7 +570,7 @@ impl TryFrom<ResponseRouterData<TpslPaymentsResponse, RouterDataV2<PSync, Paymen
 
 fn get_redirect_form_data(
     payment_method_type: common_enums::PaymentMethodType,
-    response_data: &TpslUPITokenResponse,
+    response_data: &TpslPaymentsResponse,
 ) -> CustomResult<RedirectForm, errors::ConnectorError> {
     match payment_method_type {
         common_enums::PaymentMethodType::UpiCollect => Ok(RedirectForm::Form {
@@ -639,16 +591,6 @@ fn get_redirect_form_data(
 }
 
 fn map_transaction_status(status: &str) -> common_enums::AttemptStatus {
-    match status.to_uppercase().as_str() {
-        "SUCCESS" | "COMPLETED" => common_enums::AttemptStatus::Charged,
-        "PENDING" | "PROCESSING" => common_enums::AttemptStatus::Pending,
-        "FAILURE" | "FAILED" => common_enums::AttemptStatus::Failure,
-        "AUTHENTICATION_PENDING" => common_enums::AttemptStatus::AuthenticationPending,
-        _ => common_enums::AttemptStatus::Pending,
-    }
-}
-
-fn map_txn_status(status: &str) -> common_enums::AttemptStatus {
     match status.to_uppercase().as_str() {
         "SUCCESS" | "COMPLETED" => common_enums::AttemptStatus::Charged,
         "PENDING" | "PROCESSING" => common_enums::AttemptStatus::Pending,
