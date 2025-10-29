@@ -681,28 +681,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: TPSL,
-    curl_request: Json(TpslIncomingWebhookRequest),
-    curl_response: TpslIncomingWebhookResponse,
-    flow_name: IncomingWebhook,
-    resource_common_data: PaymentFlowData,
-    flow_request: IncomingWebhookRequestData,
-    flow_response: IncomingWebhookResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
-    other_functions: {
-        fn get_url(
-            &self,
-            _req: &RouterDataV2<IncomingWebhook, PaymentFlowData, IncomingWebhookRequestData, IncomingWebhookResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Err(errors::ConnectorError::NotImplemented("IncomingWebhook flow not implemented for TPSL".to_string()).into())
-        }
-    }
-);
-
 // MANDATORY: Implement ConnectorServiceTrait<T> manually
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for TPSL<T>
