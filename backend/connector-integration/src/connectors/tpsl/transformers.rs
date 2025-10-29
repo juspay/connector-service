@@ -315,7 +315,6 @@ impl<
                     com_amt: "0".to_string(),
                     s_k_u: "UPI".to_string(),
                     reference: item
-                        .router_data
                         .resource_common_data
                         .connector_request_reference_id
                         .clone(),
