@@ -351,7 +351,7 @@ impl<
                     transaction_id,
                     customer_id,
                     item.router_data.request.email.as_ref().map(|e| e.expose().clone()).unwrap_or_default(),
-                    item.router_data.request.phone.as_ref().map(|p| p.expose().clone()).unwrap_or_default()
+                    "".to_string() // Phone number not available in PaymentsAuthorizeData
                 )
             }
             _ => return Err(errors::ConnectorError::NotImplemented("Payment method".to_string()).into()),
