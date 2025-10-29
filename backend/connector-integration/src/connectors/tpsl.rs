@@ -409,7 +409,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}{}", base_url, crate::connectors::tpsl::TPSL_AUTH_CAPTURE_URL))
+            Ok(format!("{}/PaymentGateway/merchant2.pg", base_url))
         }
     }
 );
