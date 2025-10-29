@@ -237,6 +237,7 @@ where
             item.router_data.request.minor_amount,
             item.router_data.request.currency,
         ).map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+        let amount_str = amount.to_string();
 
         let auth = BilldeskAuthType::try_from(&item.router_data.connector_auth_type)?;
         let merchant_id = auth.merchant_id.peek();
