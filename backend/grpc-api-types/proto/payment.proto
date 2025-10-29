@@ -1877,7 +1877,7 @@ message PaymentServiceAuthenticateRequest {
   optional ConnectorState state = 15; // State data for access token storage and other connector-specific state
 
   // Redirection Information after DDC step
-  optional RedirectionResponse redirection_response = 15; // Redirection Response from client browser
+  optional RedirectionResponse redirection_response = 16; // Redirection Response from client browser
 }
 
 // Response message for authentication step
