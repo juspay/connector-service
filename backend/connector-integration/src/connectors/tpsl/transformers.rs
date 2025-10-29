@@ -231,7 +231,7 @@ impl<
                 request_type: "STATUS".to_string(),
             },
             consumer: TpslConsumerDataType {
-                identifier: item.router_data.resource_common_data.get_customer_id()?,
+                identifier: item.resource_common_data.get_customer_id()?,
             },
         })
     }
