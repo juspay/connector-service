@@ -372,7 +372,7 @@ impl<
             + Serialize,
     >
     TryFrom<
-        TpslRouterData<
+        ResponseRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             T,
         >,
@@ -380,7 +380,7 @@ impl<
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: TpslRouterData<
+        item: ResponseRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             T,
         >,
