@@ -1,11 +1,11 @@
 # Changelog
 
-## [2024-01-XX] - Billdesk Connector Addition
+## [2025-01-XX] - Billdesk Connector Migration to UCS v2
 
 ### Added
-- New Billdesk connector implementation
-- Payment methods supported: UPI Collect, UPI Intent, Online Banking (FPX, Poland, Czech Republic, Finland, Slovakia, Thailand)
-- Transaction flows: Authorize, PSync, Refund, RSync
+- Complete Billdesk connector implementation using mandatory UCS v2 macro framework
+- Payment methods supported: UPI Collect, UPI Intent (UPI-focused as per requirements)
+- Transaction flows: Authorize, PSync, Refund, RSync (UPI and sync flows only)
 - Support for Billdesk's checksum-based authentication
 - Comprehensive error handling and status mapping
 - Webhook processing capabilities
