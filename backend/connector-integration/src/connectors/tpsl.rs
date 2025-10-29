@@ -19,7 +19,7 @@ use domain_types::{
         PaymentVoidData, PaymentsAuthorizeData, PaymentsAuthenticateData, PaymentsCaptureData, PaymentsCancelPostCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData, AccessTokenRequestData, AccessTokenResponseData,
-        ConnectorCustomerData, PaymentMethodTokenizationData, SetupMandateRequestData, SubmitEvidenceData,
+        ConnectorCustomerData, PaymentMethodTokenizationData, PaymentMethodTokenResponse, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
