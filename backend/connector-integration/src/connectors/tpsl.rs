@@ -2,6 +2,38 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
+// Basic trait implementations required by the framework
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> connector_types::ConnectorServiceTrait<T> for TPSL<T>
+{
+}
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> connector_types::PaymentAuthorizeV2<T> for TPSL<T>
+{
+}
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> connector_types::PaymentSyncV2 for TPSL<T>
+{
+}
+
 use common_enums::CurrencyUnit;
 use common_utils::{
     errors::CustomResult,
