@@ -392,8 +392,7 @@ impl<
             http_code: res.status_code,
         };
 
-        router_data
-            .try_into()
+        <RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData> as TryFrom<ResponseRouterData<TpslPaymentsResponse, _>>>::try_from(router_data)
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)
     }
 
@@ -488,8 +487,7 @@ impl<
             http_code: res.status_code,
         };
 
-        router_data
-            .try_into()
+        <RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData> as TryFrom<ResponseRouterData<TpslPaymentsResponse, _>>>::try_from(router_data)
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)
     }
 
