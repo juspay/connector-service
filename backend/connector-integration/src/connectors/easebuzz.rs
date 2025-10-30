@@ -46,6 +46,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 {
 }
 
+// Temporarily comment out ConnectorServiceTrait to focus on core functionality
+/*
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -56,6 +58,7 @@ impl<
     > connector_types::ConnectorServiceTrait<T> for EaseBuzz<T>
 {
 }
+*/
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
