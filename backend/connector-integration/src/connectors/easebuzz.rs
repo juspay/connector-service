@@ -69,8 +69,12 @@ impl<T> Default for EaseBuzz<T> {
 }
 
 impl<T> EaseBuzz<T> {
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn new() -> &'static Self {
+        &Self {
+            amount_converter: &common_utils::types::StringMinorUnitForConnector,
+            connector_name: "easebuzz",
+            payment_method_data: PhantomData,
+        }
     }
 }
 
