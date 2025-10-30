@@ -113,7 +113,7 @@ pub struct EaseBuzzPaymentsResponse {
     pub data: Option<EaseBuzzResponseData>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EaseBuzzResponseData {
     pub payment_url: Option<String>,
