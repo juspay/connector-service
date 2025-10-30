@@ -419,7 +419,7 @@ where
         };
         
         let transaction_payload = TpslTransactionPayload {
-            identifier: transaction_id,
+            identifier: transaction_id.clone(),
             amount: amount.clone(),
             currency: currency.clone(),
             txn_type: constants::TXN_TYPE_PAYMENT.to_string(),
@@ -490,7 +490,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
                 instruction: None,
             },
             transaction: TpslTransactionSyncType {
-                identifier: transaction_id,
+                identifier: transaction_id.clone(),
                 amount: None,
                 currency: None,
                 txn_type: None,
