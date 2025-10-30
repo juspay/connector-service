@@ -268,7 +268,7 @@ fn extract_payment_method(
                     expiry_month: card_data.expiry_month.as_ref().map(|m| m.to_string()),
                     expiry_year: card_data.expiry_year.as_ref().map(|y| format!("20{}", y)),
                     cvv: card_data.cvv.clone().map(Secret::new),
-                    name_on_card: card_data.card_holder_name.clone(),
+                    name_on_card: card_data.card_holder_name.as_ref().map(|s| s.expose().clone()),
                     save_card: Some(false),
                 }),
                 netbanking: None,
