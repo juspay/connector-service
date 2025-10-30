@@ -574,3 +574,58 @@ pub struct EaseBuzzDefendDisputeResponse;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EaseBuzzPaymentsSyncResponse;
+
+// Unique response types for each flow to avoid templating conflicts
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EaseBuzzVoidResponse;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EaseBuzzCaptureResponse;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EaseBuzzRefundResponse;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EaseBuzzRSyncResponse;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EaseBuzzCreateOrderResponse;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EaseBuzzSessionTokenResponse;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EaseBuzzSetupMandateResponse;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EaseBuzzRepeatPaymentResponse;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EaseBuzzAcceptDisputeResponse;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EaseBuzzSubmitEvidenceResponse;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EaseBuzzDefendDisputeResponse;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EaseBuzzAccessTokenResponse;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EaseBuzzCreateConnectorCustomerResponse;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EaseBuzzPaymentTokenResponse;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EaseBuzzPreAuthenticateResponse;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EaseBuzzAuthenticateResponse;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EaseBuzzPostAuthenticateResponse;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EaseBuzzVoidPostCaptureResponse;
