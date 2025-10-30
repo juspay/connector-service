@@ -110,7 +110,7 @@ macros::create_all_prerequisites!(
     connector_name: Billdesk,
     generic_type: T,
     api: [
-        // Implemented flows
+        // Implemented flows only
         (
             flow: Authorize,
             request_body: BilldeskPaymentsRequest,
@@ -122,26 +122,7 @@ macros::create_all_prerequisites!(
             request_body: BilldeskPaymentsSyncRequest,
             response_body: BilldeskPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ),
-        // MANDATORY: Add all other flows even if not implemented
-        (flow: Void, request_body: BilldeskVoidRequest, response_body: BilldeskVoidResponse, router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>),
-        (flow: Capture, request_body: BilldeskCaptureRequest, response_body: BilldeskCaptureResponse, router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>),
-        (flow: Refund, request_body: BilldeskRefundRequest, response_body: BilldeskRefundResponse, router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>),
-        (flow: RSync, request_body: BilldeskRefundSyncRequest, response_body: BilldeskRefundSyncResponse, router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>),
-        (flow: CreateOrder, request_body: BilldeskCreateOrderRequest, response_body: BilldeskCreateOrderResponse, router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>),
-        (flow: CreateSessionToken, request_body: BilldeskSessionTokenRequest, response_body: BilldeskSessionTokenResponse, router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>),
-        (flow: SetupMandate, request_body: BilldeskSetupMandateRequest, response_body: BilldeskSetupMandateResponse, router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>),
-        (flow: RepeatPayment, request_body: BilldeskRepeatPaymentRequest, response_body: BilldeskRepeatPaymentResponse, router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>),
-        (flow: Accept, request_body: BilldeskAcceptDisputeRequest, response_body: BilldeskAcceptDisputeResponse, router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>),
-        (flow: SubmitEvidence, request_body: BilldeskSubmitEvidenceRequest, response_body: BilldeskSubmitEvidenceResponse, router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>),
-        (flow: DefendDispute, request_body: BilldeskDefendDisputeRequest, response_body: BilldeskDefendDisputeResponse, router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>),
-        (flow: PreAuthenticate, request_body: BilldeskVoidRequest, response_body: BilldeskVoidResponse, router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>),
-        (flow: Authenticate, request_body: BilldeskVoidRequest, response_body: BilldeskVoidResponse, router_data: RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>),
-        (flow: PostAuthenticate, request_body: BilldeskVoidRequest, response_body: BilldeskVoidResponse, router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>),
-        (flow: VoidPC, request_body: BilldeskVoidRequest, response_body: BilldeskVoidResponse, router_data: RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>),
-        (flow: CreateAccessToken, request_body: BilldeskVoidRequest, response_body: BilldeskVoidResponse, router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>),
-        (flow: CreateConnectorCustomer, request_body: BilldeskVoidRequest, response_body: BilldeskVoidResponse, router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>),
-        (flow: PaymentMethodToken, request_body: BilldeskVoidRequest, response_body: BilldeskVoidResponse, router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>),
+        )
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
