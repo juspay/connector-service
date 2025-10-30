@@ -19,7 +19,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::easebuzz::EaseBuzzRouterData, types::ResponseRouterData};
+use crate::types::ResponseRouterData;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
