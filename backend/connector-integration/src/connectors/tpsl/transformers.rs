@@ -77,7 +77,7 @@ pub struct TpslInstrumentPayload {
     pub token: Option<String>,
     pub alias: Option<String>,
     pub provider: Option<String>,
-    pub #[serde(rename = "type")]
+    #[serde(rename = "type")]
     pub instrument_type: Option<String>,
     pub action: Option<String>,
     pub processor: Option<String>,
