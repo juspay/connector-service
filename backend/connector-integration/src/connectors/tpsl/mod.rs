@@ -48,7 +48,7 @@ pub struct Tpsl<T> {
 impl<T> Tpsl<T> {
     pub fn new() -> Self {
         Self {
-            amount_converter: &types::StringMinorUnit,
+            amount_converter: &common_utils::types::StringMinorUnit,
             connector_name: "tpsl",
             payment_method_data: PhantomData,
         }
