@@ -12,7 +12,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
