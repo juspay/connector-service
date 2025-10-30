@@ -34,7 +34,7 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuth {
             }),
             ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
                 merchant_id: api_key.clone(),
-                checksum_key: key1,
+                checksum_key: key1.clone(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
