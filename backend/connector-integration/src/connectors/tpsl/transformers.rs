@@ -7,7 +7,7 @@ use domain_types::{
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData},
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
-
+    router_data::ConnectorAuthType,
     router_response_types::Response,
     errors::ConnectorError,
 };
