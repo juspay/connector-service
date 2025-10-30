@@ -34,6 +34,7 @@ use interfaces::{
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types,
     events::connector_api_logs::ConnectorEvent,
+    validation::ValidationTrait,
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
