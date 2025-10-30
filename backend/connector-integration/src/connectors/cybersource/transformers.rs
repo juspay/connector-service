@@ -4579,14 +4579,11 @@ impl<
             .router_data
             .request
             .metadata
-            .clone()
+            .as_ref()
             .map(|metadata_map| {
-                let metadata_value = serde_json::to_value(metadata_map)
-                    .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-
-                Ok::<Vec<MerchantDefinedInformation>, error_stack::Report<errors::ConnectorError>>(
-                    convert_metadata_to_merchant_defined_info(metadata_value),
-                )
+                serde_json::to_value(metadata_map)
+                    .change_context(errors::ConnectorError::RequestEncodingFailed)
+                    .map(convert_metadata_to_merchant_defined_info)
             })
             .transpose()?;
         Ok(Self {
