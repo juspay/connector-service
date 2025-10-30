@@ -1,8 +1,10 @@
 use common_enums::AttemptStatus;
 use common_utils::{
     errors::CustomResult,
+    id_type::CustomerId,
     pii::{Email, SecretSerdeValue},
     types::{StringMinorUnit, MinorUnit},
+    masking::Secret,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
@@ -11,8 +13,6 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_data::ConnectorAuthType,
     errors::ConnectorError,
-    id_type::CustomerId,
-    masking::Secret,
 };
 use error_stack::ResultExt;
 use serde::{Deserialize, Serialize};
