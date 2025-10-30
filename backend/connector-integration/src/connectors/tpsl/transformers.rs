@@ -647,28 +647,10 @@ pub fn get_content_type() -> &'static str {
 pub fn get_error_response_v2(
     response: &Response,
 ) -> CustomResult<ErrorResponse, ConnectorError> {
-    let response_body: serde_json::Value = response
-        .response
-        .clone()
-        .parse_json("ErrorResponse")
-        .change_context(ConnectorError::ResponseDeserializationFailed)?;
-    
-    let error_code = response_body
-        .get("error_code")
-        .and_then(|v| v.as_str())
-        .unwrap_or("UNKNOWN")
-        .to_string();
-    
-    let error_message = response_body
-        .get("error_message")
-        .and_then(|v| v.as_str())
-        .unwrap_or("Unknown error occurred")
-        .to_string();
-    
     Ok(ErrorResponse {
         status_code: response.status_code,
-        code: error_code,
-        message: error_message,
+        code: "UNKNOWN".to_string(),
+        message: "Unknown error occurred".to_string(),
         reason: None,
         status_message: None,
     })
