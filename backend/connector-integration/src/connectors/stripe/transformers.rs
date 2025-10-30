@@ -4684,9 +4684,7 @@ impl TryFrom<&RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, Pa
                 let mismatched_fields = ["transfer_account_id", "application_fees", "charge_type"];
 
                 let field_str = mismatched_fields.join(", ");
-                return Err(error_stack::Report::from(
-                    ConnectorError::MandatePaymentDataMismatch { fields: field_str },
-                ));
+                Err(ConnectorError::MandatePaymentDataMismatch { fields: field_str })?
             }
         }
 
