@@ -216,7 +216,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         Ok(Self {
             key: auth.key,
-            txnid: item.router_data.resource_common_data.connector_request_reference_id.clone(),
+            txnid: item.resource_common_data.connector_request_reference_id.clone(),
             amount,
             productinfo: "Payment".to_string(),
             firstname: Some(Secret::new(customer_id.get_string_repr().to_string())),
@@ -318,7 +318,6 @@ where
                                 Ok(PaymentsResponseData::TransactionResponse {
                                     resource_id: ResponseId::ConnectorTransactionId(
                                         router_data
-                                            .router_data
                                             .resource_common_data
                                             .connector_request_reference_id
                                             .clone(),
@@ -338,7 +337,6 @@ where
                                 Ok(PaymentsResponseData::TransactionResponse {
                                     resource_id: ResponseId::ConnectorTransactionId(
                                         router_data
-                                            .router_data
                                             .resource_common_data
                                             .connector_request_reference_id
                                             .clone(),
@@ -359,7 +357,6 @@ where
                             Ok(PaymentsResponseData::TransactionResponse {
                                 resource_id: ResponseId::ConnectorTransactionId(
                                     router_data
-                                        .router_data
                                         .resource_common_data
                                         .connector_request_reference_id
                                         .clone(),
@@ -450,7 +447,6 @@ impl TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<PSync
                             Ok(PaymentsResponseData::TransactionResponse {
                                 resource_id: ResponseId::ConnectorTransactionId(
                                     router_data
-                                        .router_data
                                         .resource_common_data
                                         .connector_request_reference_id
                                         .clone(),
@@ -470,7 +466,6 @@ impl TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<PSync
                             Ok(PaymentsResponseData::TransactionResponse {
                                 resource_id: ResponseId::ConnectorTransactionId(
                                     router_data
-                                        .router_data
                                         .resource_common_data
                                         .connector_request_reference_id
                                         .clone(),
