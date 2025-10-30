@@ -363,7 +363,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
 // Implement required traits for the connector service
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    ValidationTrait for EaseBuzz<T>
+    connector_types::ValidationTrait for EaseBuzz<T>
 {
 }
 
