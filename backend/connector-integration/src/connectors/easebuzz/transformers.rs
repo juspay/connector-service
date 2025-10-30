@@ -1,19 +1,16 @@
-use std::collections::HashMap;
-
 use common_utils::{
     request::Method, types::StringMinorUnit,
     Email,
 };
 use hyperswitch_masking::{PeekInterface, ExposeInterface};
 use domain_types::{
-    connector_flow::{Authorize, PSync},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
+    connector_flow::{Authorize},
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
@@ -118,16 +115,6 @@ pub struct EaseBuzzWalletMethod {
     pub wallet_code: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
-pub struct EaseBuzzPaymentsSyncRequest {
-    pub txnid: String,
-    pub amount: StringMinorUnit,
-    pub email: String,
-    pub phone: String,
-    pub key: String,
-    pub hash: String,
-}
-
 impl<
     T: PaymentMethodDataTypes
         + std::fmt::Debug
@@ -223,33 +210,11 @@ impl<
     }
 }
 
-impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
-    for EaseBuzzPaymentsSyncRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        // Extract API key from auth type
-        let (key, hash) = extract_auth_credentials(&item.connector_auth_type)?;
-
-        Ok(Self {
-            txnid: item.resource_common_data.connector_request_reference_id.clone(),
-            amount: StringMinorUnit::from_str("0").map_err(|_| ConnectorError::RequestEncodingFailed)?, // Placeholder
-            email: "".to_string(), // Placeholder - will be populated from actual sync data
-            phone: "".to_string(), // Placeholder - will be populated from actual sync data
-            key,
-            hash,
-        })
-    }
-}
-
 fn extract_payment_method<T: PaymentMethodDataTypes>(
     payment_method_data: &domain_types::payment_method_data::PaymentMethodData<T>,
 ) -> Result<EaseBuzzPaymentMethod, ConnectorError> {
     match payment_method_data {
-        domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
+        domain_types::payment_method_data::PaymentMethodData::Upi(_upi_data) => {
             Ok(EaseBuzzPaymentMethod {
                 upi: Some(EaseBuzzUpiMethod {
                     vpa: None, // UPI data structure needs to be checked
@@ -301,19 +266,6 @@ fn extract_device_info(
     })
 }
 
-fn extract_auth_credentials(
-    connector_auth_type: &ConnectorAuthType,
-) -> Result<(String, String), ConnectorError> {
-    match connector_auth_type {
-        ConnectorAuthType::SignatureKey { api_key, api_secret, .. } => {
-            let key = api_key.peek().to_string();
-            let hash = api_secret.peek().to_string();
-            Ok((key, hash))
-        }
-        _ => Err(errors::ConnectorError::FailedToObtainAuthType),
-    }
-}
-
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum EaseBuzzPaymentsResponse {
@@ -348,7 +300,7 @@ pub struct EaseBuzzTransactionDetails {
     pub bank_code: Option<String>,
     pub error_message: Option<String>,
     pub name_on_card: Option<String>,
-    pg_type: Option<String>,
+    pub pg_type: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -525,86 +477,6 @@ impl<
                     }
                 }
             }
-        };
-
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                ..router_data.resource_common_data
-            },
-            response,
-            ..router_data
-        })
-    }
-}
-
-impl TryFrom<ResponseRouterData<EaseBuzzPaymentsSyncResponse, Self>>
-    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        item: ResponseRouterData<EaseBuzzPaymentsSyncResponse, Self>,
-    ) -> Result<Self, Self::Error> {
-        let ResponseRouterData {
-            response,
-            router_data,
-            http_code,
-        } = item;
-
-        let (status, response) = if response.status {
-            match response.msg {
-                EaseBuzzSyncMessage::Success(txn_details) => {
-                    let status = if txn_details.status == "success" {
-                        common_enums::AttemptStatus::Charged
-                    } else {
-                        common_enums::AttemptStatus::Failure
-                    };
-
-                    (
-                        status,
-                        Ok(PaymentsResponseData::TransactionResponse {
-                            resource_id: ResponseId::ConnectorTransactionId(txn_details.txnid),
-                            redirection_data: None,
-                            mandate_reference: None,
-                            connector_metadata: None,
-                            network_txn_id: txn_details.bank_ref_num,
-                            connector_response_reference_id: None,
-                            incremental_authorization_allowed: None,
-                            status_code: http_code,
-                        }),
-                    )
-                }
-                EaseBuzzSyncMessage::Error(error_msg) => (
-                    common_enums::AttemptStatus::Failure,
-                    Err(ErrorResponse {
-                        code: "SYNC_ERROR".to_string(),
-                        status_code: item.http_code,
-                        message: error_msg.clone(),
-                        reason: Some(error_msg),
-                        attempt_status: None,
-                        connector_transaction_id: None,
-                        network_advice_code: None,
-                        network_decline_code: None,
-                        network_error_message: None,
-                    }),
-                ),
-            }
-        } else {
-            (
-                common_enums::AttemptStatus::Failure,
-                Err(ErrorResponse {
-                    code: "SYNC_FAILED".to_string(),
-                    status_code: item.http_code,
-                    message: "Transaction sync failed".to_string(),
-                    reason: Some("Transaction sync failed".to_string()),
-                    attempt_status: None,
-                    connector_transaction_id: None,
-                    network_advice_code: None,
-                    network_decline_code: None,
-                    network_error_message: None,
-                }),
-            )
         };
 
         Ok(Self {
