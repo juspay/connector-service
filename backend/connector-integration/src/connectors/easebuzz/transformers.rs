@@ -458,7 +458,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                             Ok(PaymentsResponseData::TransactionResponse {
                                 resource_id: ResponseId::ConnectorTransactionId(
                                     router_data
-                                        .resource_common_data
+                                        .router_data.resource_common_data
                                         .connector_request_reference_id
                                         .clone(),
                                 ),
