@@ -1,12 +1,26 @@
 pub mod transformers;
 pub mod constants;
 
+use std::marker::PhantomData;
+
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit};
+use common_utils::{
+    errors::CustomResult,
+    ext_traits::ByteSliceExt,
+    types::StringMinorUnit,
+};
 use domain_types::{
-    connector_flow::{Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder, CreateSessionToken, DefendDispute, PaymentMethodToken, PostAuthenticate, PreAuthenticate, PSync, Refund, RepeatPayment, RSync, SetupMandate, SubmitEvidence, Void, VoidPC},
+    connector_flow::{
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, SetupMandate, SubmitEvidence, Void,
+    },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData, ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData, DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        AcceptDisputeData, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -25,9 +39,10 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use transformers::{self as easebuzz, 
-    EaseBuzzAcceptDisputeRequest, EaseBuzzAcceptDisputeResponse, EaseBuzzAccessTokenRequest, EaseBuzzAccessTokenResponse, EaseBuzzAuthenticateRequest, EaseBuzzAuthenticateResponse, EaseBuzzCaptureRequest, EaseBuzzCaptureResponse,
-    EaseBuzzCreateConnectorCustomerRequest, EaseBuzzCreateConnectorCustomerResponse, EaseBuzzCreateOrderRequest, EaseBuzzCreateOrderResponse, EaseBuzzDefendDisputeRequest, EaseBuzzDefendDisputeResponse, EaseBuzzPaymentsRequest, EaseBuzzPaymentsResponseEnum, EaseBuzzPaymentsSyncRequest, EaseBuzzPaymentsSyncResponse, EaseBuzzPaymentTokenRequest, EaseBuzzPaymentTokenResponse, EaseBuzzPostAuthenticateRequest, EaseBuzzPostAuthenticateResponse, EaseBuzzPreAuthenticateRequest, EaseBuzzPreAuthenticateResponse, EaseBuzzRefundRequest, EaseBuzzRefundResponse, EaseBuzzRepeatPaymentRequest, EaseBuzzRepeatPaymentResponse, EaseBuzzRSyncRequest, EaseBuzzRSyncResponse, EaseBuzzSessionTokenRequest, EaseBuzzSessionTokenResponse, EaseBuzzSetupMandateRequest, EaseBuzzSetupMandateResponse, EaseBuzzSubmitEvidenceRequest, EaseBuzzSubmitEvidenceResponse, EaseBuzzVoidPostCaptureRequest, EaseBuzzVoidPostCaptureResponse, EaseBuzzVoidRequest, EaseBuzzVoidResponse
+use transformers::{
+    self as easebuzz, EaseBuzzPaymentsRequest, EaseBuzzPaymentsResponse, EaseBuzzPaymentsSyncRequest,
+    EaseBuzzPaymentsSyncResponse, EaseBuzzRefundRequest, EaseBuzzRefundResponse,
+    EaseBuzzRSyncRequest, EaseBuzzRSyncResponse,
 };
 
 use super::macros;
@@ -38,252 +53,366 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
-// Trait implementations with generic type parameters
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::ConnectorServiceTrait<T> for EaseBuzz<T>
-{
-}
+// Stub types for flows not implemented yet
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzVoidRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzVoidResponse;
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentSyncV2 for EaseBuzz<T>
-{
-}
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentAuthorizeV2<T> for EaseBuzz<T>
-{
-}
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzCaptureRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzCaptureResponse;
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for EaseBuzz<T>
-{
-}
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzCreateOrderRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzCreateOrderResponse;
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for EaseBuzz<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::CreateConnectorCustomer for EaseBuzz<T>
-{
-}
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzSessionTokenRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzSessionTokenResponse;
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentVoidV2 for EaseBuzz<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::RefundSyncV2 for EaseBuzz<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::RefundV2 for EaseBuzz<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentCapture for EaseBuzz<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::SetupMandateV2<T> for EaseBuzz<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::AcceptDispute for EaseBuzz<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::SubmitEvidenceV2 for EaseBuzz<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::DisputeDefend for EaseBuzz<T>
-{
-}
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::IncomingWebhook for EaseBuzz<T>
-{
-    fn verify_webhook_source(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secrets: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
-        // TODO: Implement webhook verification based on EaseBuzz webhook signature
-        Ok(true)
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzSetupMandateRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzSetupMandateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzAcceptDisputeRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzAcceptDisputeResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzSubmitEvidenceRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzSubmitEvidenceResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzDefendDisputeRequest;
+#[derive(Debug, Clone)]
+pub struct EaseBuzzDefendDisputeResponse;
+
+// MANDATORY: Use create_all_prerequisites! macro - this is the foundation
+macros::create_all_prerequisites!(
+    connector_name: EaseBuzz,
+    generic_type: T,
+    api: [
+        // UPI and Sync flows only - as per requirements
+        (
+            flow: Authorize,
+            request_body: EaseBuzzPaymentsRequest,
+            response_body: EaseBuzzPaymentsResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PSync,
+            request_body: EaseBuzzPaymentsSyncRequest,
+            response_body: EaseBuzzPaymentsSyncResponse,
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
+            flow: Refund,
+            request_body: EaseBuzzRefundRequest,
+            response_body: EaseBuzzRefundResponse,
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
+            flow: RSync,
+            request_body: EaseBuzzRSyncRequest,
+            response_body: EaseBuzzRSyncResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        // MANDATORY: Add all other flows even if not implemented
+        (
+            flow: Void,
+            request_body: EaseBuzzVoidRequest,
+            response_body: EaseBuzzVoidResponse,
+            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: Capture,
+            request_body: EaseBuzzCaptureRequest,
+            response_body: EaseBuzzCaptureResponse,
+            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ),
+        (
+            flow: CreateOrder,
+            request_body: EaseBuzzCreateOrderRequest,
+            response_body: EaseBuzzCreateOrderResponse,
+            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ),
+        (
+            flow: CreateSessionToken,
+            request_body: EaseBuzzSessionTokenRequest,
+            response_body: EaseBuzzSessionTokenResponse,
+            router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: EaseBuzzSetupMandateRequest,
+            response_body: EaseBuzzSetupMandateResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: Accept,
+            request_body: EaseBuzzAcceptDisputeRequest,
+            response_body: EaseBuzzAcceptDisputeResponse,
+            router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        ),
+        (
+            flow: SubmitEvidence,
+            request_body: EaseBuzzSubmitEvidenceRequest,
+            response_body: EaseBuzzSubmitEvidenceResponse,
+            router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        ),
+        (
+            flow: DefendDispute,
+            request_body: EaseBuzzDefendDisputeRequest,
+            response_body: EaseBuzzDefendDisputeResponse,
+            router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        )
+    ],
+    amount_converters: [
+        amount_converter: StringMinorUnit  // Based on Haskell implementation expecting string amounts
+    ],
+    member_functions: {
+        fn build_headers<F, FCD, Req, Res>(
+            &self,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+        where
+            Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
+        {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn connector_base_url_payments<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> &'a str {
+            let is_test = req.resource_common_data.test_mode.unwrap_or(false);
+            if is_test {
+                constants::api_urls::TEST_BASE_URL
+            } else {
+                constants::api_urls::PROD_BASE_URL
+            }
+        }
+
+        fn connector_base_url_refunds<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> &'a str {
+            let is_test = req.resource_common_data.test_mode.unwrap_or(false);
+            if is_test {
+                constants::api_urls::TEST_BASE_URL
+            } else {
+                constants::api_urls::PROD_BASE_URL
+            }
+        }
     }
+);
 
-    fn get_event_type(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<
-        domain_types::connector_types::EventType,
-        error_stack::Report<domain_types::errors::ConnectorError>,
-    > {
-        Ok(domain_types::connector_types::EventType::PaymentIntentSuccess)
+// MANDATORY: Use macro_connector_implementation! for Authorize flow
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: EaseBuzz,
+    curl_request: Json(EaseBuzzPaymentsRequest),
+    curl_response: EaseBuzzPaymentsResponse,
+    flow_name: Authorize,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthorizeData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )];
+
+            Ok(header)
+        }
+        
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url_payments(req);
+            Ok(format!("{}{}", base_url, constants::api_urls::INITIATE_PAYMENT))
+        }
     }
+);
 
-    fn process_payment_webhook(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<
-        domain_types::connector_types::WebhookDetailsResponse,
-        error_stack::Report<domain_types::errors::ConnectorError>,
-    > {
-        // TODO: Implement webhook processing
-        Err(errors::ConnectorError::WebhooksNotImplemented.into())
+// MANDATORY: Use macro_connector_implementation! for PSync flow
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: EaseBuzz,
+    curl_request: Json(EaseBuzzPaymentsSyncRequest),
+    curl_response: EaseBuzzPaymentsSyncResponse,
+    flow_name: PSync,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsSyncData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )];
+
+            Ok(header)
+        }
+        
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url_payments(req);
+            Ok(format!("{}{}", base_url, constants::api_urls::TRANSACTION_SYNC))
+        }
     }
+);
+
+// MANDATORY: Use macro_connector_implementation! for Refund flow
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: EaseBuzz,
+    curl_request: Json(EaseBuzzRefundRequest),
+    curl_response: EaseBuzzRefundResponse,
+    flow_name: Refund,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundsData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )];
+
+            Ok(header)
+        }
+        
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url_refunds(req);
+            Ok(format!("{}{}", base_url, constants::api_urls::REFUND))
+        }
+    }
+);
+
+// MANDATORY: Use macro_connector_implementation! for RSync flow
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: EaseBuzz,
+    curl_request: Json(EaseBuzzRSyncRequest),
+    curl_response: EaseBuzzRSyncResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )];
+
+            Ok(header)
+        }
+        
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url_refunds(req);
+            Ok(format!("{}{}", base_url, constants::api_urls::REFUND_SYNC))
+        }
+    }
+);
+
+// MANDATORY: Implement all connector_types traits even for unused flows
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentOrderCreate for EaseBuzz<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentSessionToken for EaseBuzz<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentVoidV2 for EaseBuzz<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentCapture for EaseBuzz<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::SetupMandateV2<T> for EaseBuzz<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::AcceptDispute for EaseBuzz<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::SubmitEvidenceV2 for EaseBuzz<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::DisputeDefend for EaseBuzz<T> {}
+
+// MANDATORY: Manual implementations for unimplemented flows that return NotImplemented errors
+macro_rules! impl_not_implemented_flow {
+    ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
+        impl<
+                T: PaymentMethodDataTypes
+                    + std::fmt::Debug
+                    + std::marker::Sync
+                    + std::marker::Send
+                    + 'static
+                    + Serialize,
+            > ConnectorIntegrationV2<$flow, $common_data, $req, $resp> for EaseBuzz<T>
+        {
+            fn build_request_v2(
+                &self,
+                _req: &RouterDataV2<$flow, $common_data, $req, $resp>,
+            ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+                let flow_name = stringify!($flow);
+                Err(errors::ConnectorError::NotImplemented(flow_name.to_string()).into())
+            }
+        }
+    };
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate for EaseBuzz<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::ValidationTrait for EaseBuzz<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for EaseBuzz<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentTokenV2<T> for EaseBuzz<T>
-{
-}
+// Use macro for all unimplemented flows
+impl_not_implemented_flow!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
+impl_not_implemented_flow!(Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData);
+impl_not_implemented_flow!(CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse);
+impl_not_implemented_flow!(CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData);
+impl_not_implemented_flow!(SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData);
+impl_not_implemented_flow!(Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData);
+impl_not_implemented_flow!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
+impl_not_implemented_flow!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
 
-// Authentication trait implementations
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentPreAuthenticateV2<T> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentAuthenticateV2<T> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentPostAuthenticateV2<T> for EaseBuzz<T>
-{
-}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentVoidPostCaptureV2 for EaseBuzz<T>
-{
-}
-
-// ConnectorIntegrationV2 implementations for all flows
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData> for EaseBuzz<T>
-{
-}
-
-// SourceVerification implementations for all flows
+// MANDATORY: Add impl_source_verification_stub! for ALL flows
 macro_rules! impl_source_verification_stub {
     ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
         impl<
@@ -329,328 +458,23 @@ macro_rules! impl_source_verification_stub {
     };
 }
 
-// Apply to all flows
-impl_source_verification_stub!(
-    Authorize,
-    PaymentFlowData,
-    PaymentsAuthorizeData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    PSync,
-    PaymentFlowData,
-    PaymentsSyncData,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    Void,
-    PaymentFlowData,
-    PaymentVoidData,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    VoidPC,
-    PaymentFlowData,
-    PaymentsCancelPostCaptureData,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    Capture,
-    PaymentFlowData,
-    PaymentsCaptureData,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    Refund,
-    RefundFlowData,
-    RefundsData,
-    RefundsResponseData
-);
-impl_source_verification_stub!(
-    RSync,
-    RefundFlowData,
-    RefundSyncData,
-    RefundsResponseData
-);
-impl_source_verification_stub!(
-    CreateOrder,
-    PaymentFlowData,
-    PaymentCreateOrderData,
-    PaymentCreateOrderResponse
-);
-impl_source_verification_stub!(
-    CreateSessionToken,
-    PaymentFlowData,
-    SessionTokenRequestData,
-    SessionTokenResponseData
-);
-impl_source_verification_stub!(
-    CreateAccessToken,
-    PaymentFlowData,
-    AccessTokenRequestData,
-    AccessTokenResponseData
-);
-impl_source_verification_stub!(
-    CreateConnectorCustomer,
-    PaymentFlowData,
-    ConnectorCustomerData,
-    ConnectorCustomerResponse
-);
-impl_source_verification_stub!(
-    SetupMandate,
-    PaymentFlowData,
-    SetupMandateRequestData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    RepeatPayment,
-    PaymentFlowData,
-    RepeatPaymentData,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    PaymentMethodToken,
-    PaymentFlowData,
-    PaymentMethodTokenizationData<T>,
-    PaymentMethodTokenResponse
-);
-impl_source_verification_stub!(
-    Accept,
-    DisputeFlowData,
-    AcceptDisputeData,
-    DisputeResponseData
-);
-impl_source_verification_stub!(
-    SubmitEvidence,
-    DisputeFlowData,
-    SubmitEvidenceData,
-    DisputeResponseData
-);
-impl_source_verification_stub!(
-    DefendDispute,
-    DisputeFlowData,
-    DisputeDefendData,
-    DisputeResponseData
-);
-impl_source_verification_stub!(
-    PreAuthenticate,
-    PaymentFlowData,
-    PaymentsPreAuthenticateData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    Authenticate,
-    PaymentFlowData,
-    PaymentsAuthenticateData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    PostAuthenticate,
-    PaymentFlowData,
-    PaymentsPostAuthenticateData<T>,
-    PaymentsResponseData
-);
+// Add this for EVERY flow defined in create_all_prerequisites! macro
+impl_source_verification_stub!(Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData);
+impl_source_verification_stub!(PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData);
+impl_source_verification_stub!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
+impl_source_verification_stub!(RSync, RefundFlowData, RefundSyncData, RefundsResponseData);
+impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
+impl_source_verification_stub!(Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData);
+impl_source_verification_stub!(CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse);
+impl_source_verification_stub!(CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData);
+impl_source_verification_stub!(SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData);
+impl_source_verification_stub!(Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData);
+impl_source_verification_stub!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
+impl_source_verification_stub!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
 
-macros::create_all_prerequisites!(
-    connector_name: EaseBuzz,
-    generic_type: T,
-    api: [
-        (
-            flow: Authorize,
-            request_body: EaseBuzzPaymentsRequest,
-            response_body: EaseBuzzPaymentsResponseEnum,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: PSync,
-            request_body: EaseBuzzPaymentsSyncRequest,
-            response_body: EaseBuzzPaymentsSyncResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ),
-        (
-            flow: Void,
-            request_body: EaseBuzzVoidRequest,
-            response_body: EaseBuzzVoidResponse,
-            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ),
-        (
-            flow: VoidPC,
-            request_body: EaseBuzzVoidPostCaptureRequest,
-            response_body: EaseBuzzVoidPostCaptureResponse,
-            router_data: RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
-        ),
-        (
-            flow: Capture,
-            request_body: EaseBuzzCaptureRequest,
-            response_body: EaseBuzzCaptureResponse,
-            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ),
-        (
-            flow: Refund,
-            request_body: EaseBuzzRefundRequest,
-            response_body: EaseBuzzRefundResponse,
-            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ),
-        (
-            flow: RSync,
-            request_body: EaseBuzzRSyncRequest,
-            response_body: EaseBuzzRSyncResponse,
-            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ),
-        (
-            flow: CreateOrder,
-            request_body: EaseBuzzCreateOrderRequest,
-            response_body: EaseBuzzCreateOrderResponse,
-            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
-        ),
-        (
-            flow: CreateSessionToken,
-            request_body: EaseBuzzSessionTokenRequest,
-            response_body: EaseBuzzSessionTokenResponse,
-            router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
-        ),
-        (
-            flow: CreateAccessToken,
-            request_body: EaseBuzzAccessTokenRequest,
-            response_body: EaseBuzzAccessTokenResponse,
-            router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
-        ),
-        (
-            flow: CreateConnectorCustomer,
-            request_body: EaseBuzzCreateConnectorCustomerRequest,
-            response_body: EaseBuzzCreateConnectorCustomerResponse,
-            router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
-        ),
-        (
-            flow: SetupMandate,
-            request_body: EaseBuzzSetupMandateRequest,
-            response_body: EaseBuzzSetupMandateResponse,
-            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: RepeatPayment,
-            request_body: EaseBuzzRepeatPaymentRequest,
-            response_body: EaseBuzzRepeatPaymentResponse,
-            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-        ),
-        (
-            flow: PaymentMethodToken,
-            request_body: EaseBuzzPaymentTokenRequest,
-            response_body: EaseBuzzPaymentTokenResponse,
-            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
-        ),
-        (
-            flow: Accept,
-            request_body: EaseBuzzAcceptDisputeRequest,
-            response_body: EaseBuzzAcceptDisputeResponse,
-            router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
-        ),
-        (
-            flow: SubmitEvidence,
-            request_body: EaseBuzzSubmitEvidenceRequest,
-            response_body: EaseBuzzSubmitEvidenceResponse,
-            router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
-        ),
-        (
-            flow: DefendDispute,
-            request_body: EaseBuzzDefendDisputeRequest,
-            response_body: EaseBuzzDefendDisputeResponse,
-            router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
-        ),
-        (
-            flow: PreAuthenticate,
-            request_body: EaseBuzzPreAuthenticateRequest,
-            response_body: EaseBuzzPreAuthenticateResponse,
-            router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: Authenticate,
-            request_body: EaseBuzzAuthenticateRequest,
-            response_body: EaseBuzzAuthenticateResponse,
-            router_data: RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: PostAuthenticate,
-            request_body: EaseBuzzPostAuthenticateRequest,
-            response_body: EaseBuzzPostAuthenticateResponse,
-            router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
-        )
-    ],
-    amount_converters: [
-        amount_converter: StringMinorUnit
-    ],
-    member_functions: {
-        pub fn build_headers<F, FCD, Req, Res>(
-            &self,
-            _req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
-        where
-            Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
-        {
-            Ok(vec![(
-                headers::CONTENT_TYPE.to_string(),
-                self.common_get_content_type().to_string().into(),
-            )])
-        }
-
-        pub fn connector_base_url_payments<'a, F, Req, Res>(
-            &self,
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            let is_test = req.resource_common_data.test_mode.unwrap_or(false);
-            if is_test {
-                constants::api_urls::TEST_BASE_URL
-            } else {
-                constants::api_urls::PROD_BASE_URL
-            }
-        }
-    }
-);
-
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: EaseBuzz,
-    curl_request: Json(EaseBuzzPaymentsRequest),
-    curl_response: EaseBuzzPaymentsResponseEnum,
-    flow_name: Authorize,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsAuthorizeData<T>,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let header = vec![(
-                headers::CONTENT_TYPE.to_string(),
-                self.common_get_content_type().to_string().into(),
-            )];
-
-            Ok(header)
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}{}", base_url, constants::api_urls::INITIATE_PAYMENT))
-        }
-    }
-);
-
-
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorCommon for EaseBuzz<T>
+// MANDATORY: ConnectorCommon implementation
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    ConnectorCommon for EaseBuzz<T>
 {
     fn id(&self) -> &'static str {
         "easebuzz"
