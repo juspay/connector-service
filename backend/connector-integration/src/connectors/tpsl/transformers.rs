@@ -432,8 +432,7 @@ where
             token: None,
             security_token: None,
             reference: transaction_id,
-            device_identifier: item.request.get_ip_address_as_optional()
-                .map(|ip| ip.expose()),
+            device_identifier: None, // TODO: implement IP address extraction
             sms_sending: Some("N".to_string()),
             forced_3ds_call: Some("N".to_string()),
             is_registration: Some("N".to_string()),
