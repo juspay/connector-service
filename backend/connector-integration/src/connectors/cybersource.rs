@@ -857,7 +857,7 @@ macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Cybersource,
     curl_request: Json(CybersourceRepeatPaymentRequest),
-    curl_response: AuthorizedotnetRepeatPaymentResponse,
+    curl_response: CybersourceRepeatPaymentResponse,
     flow_name: RepeatPayment,
     resource_common_data: PaymentFlowData,
     flow_request: RepeatPaymentData,
