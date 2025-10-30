@@ -764,6 +764,72 @@ impl_source_verification_stub!(
     PaymentsAuthorizeData<T>,
     PaymentsResponseData
 );
+impl_source_verification_stub!(
+    Void,
+    PaymentFlowData,
+    PaymentVoidData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    Capture,
+    PaymentFlowData,
+    PaymentsCaptureData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    Refund,
+    RefundFlowData,
+    RefundsData,
+    RefundsResponseData
+);
+impl_source_verification_stub!(
+    RSync,
+    RefundFlowData,
+    RefundSyncData,
+    RefundsResponseData
+);
+impl_source_verification_stub!(
+    CreateOrder,
+    PaymentFlowData,
+    PaymentCreateOrderData,
+    PaymentCreateOrderResponse
+);
+impl_source_verification_stub!(
+    CreateSessionToken,
+    PaymentFlowData,
+    SessionTokenRequestData,
+    SessionTokenResponseData
+);
+impl_source_verification_stub!(
+    SetupMandate,
+    PaymentFlowData,
+    SetupMandateRequestData<T>,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    RepeatPayment,
+    PaymentFlowData,
+    RepeatPaymentData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    Accept,
+    DisputeFlowData,
+    AcceptDisputeData,
+    DisputeResponseData
+);
+impl_source_verification_stub!(
+    SubmitEvidence,
+    DisputeFlowData,
+    SubmitEvidenceData,
+    DisputeResponseData
+);
+impl_source_verification_stub!(
+    DefendDispute,
+    DisputeFlowData,
+    DisputeDefendData,
+    DisputeResponseData
+);
 
 fn get_easebuzz_auth_header(
     connector_auth_type: &ConnectorAuthType,
