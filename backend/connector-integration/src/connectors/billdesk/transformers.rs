@@ -13,11 +13,11 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
-use error_stack::ResultExt;
+
 use hyperswitch_masking::{Secret, ExposeInterface, PeekInterface, Mask, Maskable};
 use serde::{Deserialize, Serialize};
 
-use crate::types::ResponseRouterData;
+use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
