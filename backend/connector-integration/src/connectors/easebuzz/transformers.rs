@@ -8,6 +8,7 @@ use domain_types::{
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors::ConnectorError,
     payment_method_data::PaymentMethodDataTypes,
+    router_data::{ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
