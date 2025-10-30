@@ -419,7 +419,7 @@ where
         };
         
         let transaction_payload = TpslTransactionPayload {
-            identifier: transaction_id.clone(),
+            identifier: transaction_id,
             amount: amount.clone(),
             currency: currency.clone(),
             txn_type: constants::TXN_TYPE_PAYMENT.to_string(),
