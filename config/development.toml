@@ -16,17 +16,41 @@ buffer_limit = 100000
 
 [server]
 host = "127.0.0.1"
-port = 8000
+port = 9001
 type = "grpc"
 
 [metrics]
 host = "127.0.0.1"
-port = 8080
+port = 9080
 
 [proxy]
 idle_pool_connection_timeout = 90
 bypass_proxy_urls = []
 mitm_proxy_enabled = false
+# http_url = "http://localhost:8081"
+# https_url = "http://localhost:8081"
+# mitm_proxy_enabled = true
+# mitm_ca_cert = """-----BEGIN CERTIFICATE-----
+# MIIDNTCCAh2gAwIBAgIUKBHpszj1CTSrtwWKy5MEALqINeYwDQYJKoZIhvcNAQEL
+# BQAwKDESMBAGA1UEAwwJbWl0bXByb3h5MRIwEAYDVQQKDAltaXRtcHJveHkwHhcN
+# MjUxMDI1MTIyNTU2WhcNMzUxMDI1MTIyNTU2WjAoMRIwEAYDVQQDDAltaXRtcHJv
+# eHkxEjAQBgNVBAoMCW1pdG1wcm94eTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC
+# AQoCggEBAOOBHEdH849XFbUYFH7/HKfavJmHsvKV4fBnF6r3B8XAUuvQZ7r8WPBZ
+# mBGQccn5e7tKXL0iPQn78+jibAvLNlFm+zMG24FgUcqllZr/Y7pF/DbZaOCLkhw2
+# SnANe1hEXN5X5yIj0gYr3J55fZp3LZviPt8yYZziZm45phyRW0WdS06eDXBJUNQf
+# oMbckaQFgeFtrRfEx2xR+WYlbhxe6bD/FHKmjzH2QEbIQTwWqwcfzeJNjdBJGg5A
+# WM0QDYnlhZkd2j+tbSJa6yzrWkOw5tu3SFe4IhXhrWfA2bLNMps+OSysYHyvBHMs
+# DFM3AjIvHRDRFgH9LtEKKuPbWWdMND8CAwEAAaNXMFUwDwYDVR0TAQH/BAUwAwEB
+# /zATBgNVHSUEDDAKBggrBgEFBQcDATAOBgNVHQ8BAf8EBAMCAQYwHQYDVR0OBBYE
+# FDi7reBPiBu7CSRuB8B/m1ihNyxqMA0GCSqGSIb3DQEBCwUAA4IBAQCCYLX83qO+
+# /Xxpe+PnceBvsx9VA6tLzjfNKl0HwLOSkUzQNr88bMLbDu42lCBcrlHnbDSsyHNB
+# gBS+iHKaVEoH3B91m6LDLRv4qZv8WnqVitbJBZZNDYa3sfzlH2tLPlnaKjwrEAtv
+# +jx/Ph2AscSXdWrAs9513CKOrmFR00gc37A7b4SUcNc86yyI0W4BXBybyKPbWVR6
+# 1ibUXIpjctFA8Z5t2pdNVMVs6YlxpCIZVGNQ55TQBqo3nRKV9vm3wwwqo5EPEVWU
+# HyxW03hjKGVNkp0ov4LZlUgTwZsalfym+xO0n+ZS+Ot0Zx8xbpyMszP6DPPNzG8k
+# 4JS84fCIE0Ya
+# -----END CERTIFICATE-----"""
+
 
 [connectors]
 adyen.base_url = "https://checkout-test.adyen.com/"

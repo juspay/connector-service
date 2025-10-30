@@ -154,7 +154,7 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
                 })),
             }))
         }).transpose()?;
-        let trans_status = trans_status.map(|trans_status_i32| grpc_api_types::payments::TransactionStatus::try_from(trans_status_i32)).transpose()
+        let trans_status = trans_status.map(grpc_api_types::payments::TransactionStatus::try_from).transpose()
             .change_context(errors::ApplicationErrorResponse::BadRequest(errors::ApiError{
                 sub_code: "INVALID_SEMANTIC_VERSION_DATA".to_owned(),
                 error_identifier: 400,
@@ -167,9 +167,9 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
                     "validation_rule": "Must be in format X.Y.Z where X, Y, Z are non-negative integers"
                 })),
             }))?
-            .map(|trans_status| common_enums::TransactionStatus::foreign_from(trans_status));
+            .map(common_enums::TransactionStatus::foreign_from);
         Ok(Self {
-            trans_status: trans_status,
+            trans_status,
             eci,
             cavv: Secret::new(cavv),
             threeds_server_transaction_id,
