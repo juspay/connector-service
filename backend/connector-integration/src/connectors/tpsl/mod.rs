@@ -482,6 +482,53 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
+// Macro to generate empty ConnectorIntegrationV2 implementations
+macro_rules! impl_empty_flow {
+    ($flow:ty, $data:ty, $req:ty, $resp:ty) => {
+        impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+            ConnectorIntegrationV2<$flow, $data, $req, $resp> for Tpsl<T>
+        {
+            fn build_request_v2(
+                &self,
+                _req: &RouterDataV2<$flow, $data, $req, $resp>,
+            ) -> CustomResult<Option<common_utils::request::Request>, ConnectorError> {
+                Ok(None)
+            }
+
+            fn handle_response_v2(
+                &self,
+                _req: &RouterDataV2<$flow, $data, $req, $resp>,
+                _event: Option<&mut ConnectorEvent>,
+                _response: Response,
+            ) -> CustomResult<RouterDataV2<$flow, $data, $req, $resp>, ConnectorError> {
+                Err(ConnectorError::NotImplemented("Response handling not implemented".to_string()).into())
+            }
+
+            fn get_error_response_v2(
+                &self,
+                _response: Response,
+                _event: Option<&mut ConnectorEvent>,
+            ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
+                Err(ConnectorError::NotImplemented("Error handling not implemented".to_string()).into())
+            }
+        }
+    };
+}
+
+// Implement all remaining flows using the macro
+impl_empty_flow!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
+impl_empty_flow!(Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData);
+impl_empty_flow!(Refund, domain_types::connector_types::RefundFlowData, RefundsData, domain_types::connector_types::RefundsResponseData);
+impl_empty_flow!(RSync, domain_types::connector_types::RefundFlowData, RefundSyncData, domain_types::connector_types::RefundsResponseData);
+impl_empty_flow!(SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData);
+impl_empty_flow!(RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData);
+impl_empty_flow!(CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse);
+impl_empty_flow!(CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData);
+impl_empty_flow!(CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData);
+impl_empty_flow!(PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse);
+impl_empty_flow!(domain_types::connector_flow::CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse);
+impl_empty_flow!(VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData);
+
 // Implement all the required traits with empty implementations like ACI does
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     connector_types::PaymentPreAuthenticateV2<T> for Tpsl<T>
