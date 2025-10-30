@@ -4,19 +4,13 @@ pub mod transformers;
 
 use std::marker::PhantomData;
 
-use common_utils::{
-    types::MinorUnit,
-};
 use domain_types::{
     connector_types::ConnectorSpecifications,
     payment_method_data::PaymentMethodDataTypes,
 };
 use interfaces::{
     api::ConnectorCommon,
-    connector_integration_v2::ConnectorIntegrationV2,
-    connector_types::{ConnectorServiceTrait, PaymentAuthorizeV2, PaymentSyncV2},
-    events::connector_api_logs::ConnectorEvent,
-    verification::SourceVerification,
+    connector_types::{ConnectorServiceTrait, PaymentAuthorizeV2, PaymentSyncV2, ValidationTrait},
 };
 
 #[derive(Debug, Clone)]
