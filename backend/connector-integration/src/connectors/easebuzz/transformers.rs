@@ -148,7 +148,7 @@ pub struct EaseBuzzUpiIntentResponse {
     pub msg_title: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EaseBuzzErrorResponse {
     pub status: i32,
