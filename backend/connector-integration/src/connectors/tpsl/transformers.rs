@@ -389,10 +389,10 @@ where
                 amount: amount.clone(),
                 com_amt: "0".to_string(),
                 sku: "UPI_001".to_string(),
-                reference: transaction_id.clone(),
+                reference: transaction_id,
                 identifier: "item_001".to_string(),
             }],
-            reference: transaction_id.clone(),
+            reference: transaction_id,
             identifier: "cart_001".to_string(),
             description: Some("UPI Payment Transaction".to_string()),
         };
