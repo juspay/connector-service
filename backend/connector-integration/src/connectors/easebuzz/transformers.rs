@@ -516,9 +516,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-// Stub types for unsupported flows
+// Unique request types for each flow to avoid templating conflicts
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzVoidRequest;
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzVoidPostCaptureRequest;
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzCaptureRequest;
 #[derive(Debug, Clone, Serialize)]
@@ -530,15 +532,27 @@ pub struct EaseBuzzCreateOrderRequest;
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzSessionTokenRequest;
 #[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzAccessTokenRequest;
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzCreateConnectorCustomerRequest;
+#[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzSetupMandateRequest;
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzRepeatPaymentRequest;
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzPaymentTokenRequest;
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzAcceptDisputeRequest;
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzSubmitEvidenceRequest;
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzDefendDisputeRequest;
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzPreAuthenticateRequest;
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzAuthenticateRequest;
+#[derive(Debug, Clone, Serialize)]
+pub struct EaseBuzzPostAuthenticateRequest;
 
 // Unique response types for each flow to avoid templating conflicts
 #[derive(Debug, Clone, Deserialize, Serialize)]
