@@ -9,7 +9,7 @@ use common_utils::{
     errors::CustomResult,
     id_type::CustomerId,
     pii::SecretSerdeValue,
-    types::{StringMinorUnit, MinorUnit},
+    types::{StringMinorUnit, MinorUnit, AmountConverterTrait},
 };
 use domain_types::{
     connector_flow::{
@@ -28,6 +28,7 @@ use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
     router_data::ConnectorAuthType,
+    router_response_types::Response,
     errors::ConnectorError,
     utils,
 };
