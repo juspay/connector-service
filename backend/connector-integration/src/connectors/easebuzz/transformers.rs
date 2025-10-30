@@ -297,7 +297,7 @@ fn extract_payment_method(
 }
 
 fn extract_device_info(
-    request_data: &domain_types::router_request_types::PaymentsAuthorizeData<impl PaymentMethodDataTypes>,
+    request_data: &PaymentsAuthorizeData<impl PaymentMethodDataTypes>,
 ) -> Option<EaseBuzzDevice> {
     request_data.browser_info.as_ref().map(|browser_info| EaseBuzzDevice {
         ip: request_data.get_ip_address_as_optional().map(|ip| ip.expose()),
