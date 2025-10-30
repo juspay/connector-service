@@ -482,19 +482,19 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PreAuthenticate,
-            request_body: EaseBuzzSessionTokenRequest,
+            request_body: EaseBuzzPreAuthenticateRequest,
             response_body: EaseBuzzPreAuthenticateResponse,
             router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
         ),
         (
             flow: Authenticate,
-            request_body: EaseBuzzSessionTokenRequest,
+            request_body: EaseBuzzAuthenticateRequest,
             response_body: EaseBuzzAuthenticateResponse,
             router_data: RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
         ),
         (
             flow: PostAuthenticate,
-            request_body: EaseBuzzSessionTokenRequest,
+            request_body: EaseBuzzPostAuthenticateRequest,
             response_body: EaseBuzzPostAuthenticateResponse,
             router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
         )
