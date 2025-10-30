@@ -252,7 +252,7 @@ fn extract_payment_method(
         domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
             Ok(EaseBuzzPaymentMethod {
                 upi: Some(EaseBuzzUpiMethod {
-                    vpa: upi_data.vpa.as_ref().map(|vpa| vpa.to_string()),
+                    vpa: None, // UPI data structure needs to be checked
                     intent_flow: Some(true),
                 }),
                 card: None,
