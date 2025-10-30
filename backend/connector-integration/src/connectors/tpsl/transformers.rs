@@ -622,7 +622,7 @@ fn get_merchant_id(auth_type: &ConnectorAuthType) -> CustomResult<String, Connec
             Ok(api_key.expose().to_string())
         },
         ConnectorAuthType::BodyKey { api_key, .. } => {
-            Ok(api_key.expose().clone())
+            Ok(api_key.expose().to_string())
         },
         _ => Err(ConnectorError::RequestEncodingFailed)?,
     }
