@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use common_utils::{
-    errors::CustomResult, request::Method, types::StringMinorUnit,
-    pii::IpAddress,
+    errors::CustomResult, request::Method,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
