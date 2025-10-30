@@ -138,6 +138,7 @@ macro_rules! impl_not_implemented_flow {
             fn handle_response_v2(
                 &self,
                 _req: &RouterDataV2<$flow, $common_data, $req, $resp>,
+                _event: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
                 _response: &Response,
             ) -> CustomResult<RouterDataV2<$flow, $common_data, $req, $resp>, ConnectorError> {
                 let flow_name = stringify!($flow);
@@ -146,7 +147,8 @@ macro_rules! impl_not_implemented_flow {
 
             fn get_error_response_v2(
                 &self,
-                _response: &reqwest::Response,
+                _response: &Response,
+                _event: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
             ) -> CustomResult<ErrorResponse, ConnectorError> {
                 Err(ConnectorError::NotImplemented("Error handling not implemented".to_string()).into())
             }
