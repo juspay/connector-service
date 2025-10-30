@@ -146,7 +146,7 @@ macro_rules! impl_not_implemented_flow {
 
             fn get_error_response_v2(
                 &self,
-                _response: &Response,
+                _response: Response,
                 _event: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
             ) -> CustomResult<ErrorResponse, ConnectorError> {
                 Err(ConnectorError::NotImplemented("Error handling not implemented".to_string()).into())
