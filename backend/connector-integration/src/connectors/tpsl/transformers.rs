@@ -604,13 +604,14 @@ impl TryFrom<TpslPaymentsSyncResponse> for PaymentsResponseData
             response.payment_method.payment_transaction.error_message
         };
         
-        Ok(Self {
-            status,
-            amount_received: Some(amount),
-            currency: Some(currency),
-            transaction_id: Some(transaction_id.into()),
-            error_message,
-            ..Default::default()
+        Ok(PaymentsResponseData::TransactionResponse {
+            resource_id: response.merchant_transaction_identifier.into(),
+            redirect: None,
+            mandate_reference: None,
+            network_txn_id: None,
+            connector_metadata: None,
+            incremental_authorization_allowed: None,
+            status_code: 200,
         })
     }
 }
