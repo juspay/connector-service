@@ -386,8 +386,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 Err(ErrorResponse {
                     status_code: http_code,
                     code: error_data.status.to_string(),
-                    message: error_data.error_desc.or(error_data.message).clone().unwrap_or_default(),
-                    reason: error_data.error_desc.or(error_data.message),
+                    message: error_data.error_desc.as_ref().or(error_data.message.as_ref()).cloned().unwrap_or_default(),
+                    reason: error_data.error_desc.as_ref().or(error_data.message.as_ref()).cloned(),
                     attempt_status: None,
                     connector_transaction_id: None,
                     network_advice_code: None,
@@ -496,8 +496,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 Err(ErrorResponse {
                     status_code: http_code,
                     code: error_data.status.to_string(),
-                    message: error_data.error_desc.or(error_data.message).clone().unwrap_or_default(),
-                    reason: error_data.error_desc.or(error_data.message),
+                    message: error_data.error_desc.as_ref().or(error_data.message.as_ref()).cloned().unwrap_or_default(),
+                    reason: error_data.error_desc.as_ref().or(error_data.message.as_ref()).cloned(),
                     attempt_status: None,
                     connector_transaction_id: None,
                     network_advice_code: None,
