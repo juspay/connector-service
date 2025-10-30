@@ -132,9 +132,9 @@ impl TryFrom<
             common_enums::PaymentMethod::Upi => {
                 // Create the message payload for Billdesk UPI initiation
                 let msg_payload = create_upi_initiate_message(
-                    &item.router_data,
-                    &customer_id,
-                    &amount.to_string(),
+                    item,
+                    &customer_id.get_string_repr(),
+                    &amount,
                 )?;
 
                 let ip_address = item.router_data.request.get_ip_address_as_optional()
