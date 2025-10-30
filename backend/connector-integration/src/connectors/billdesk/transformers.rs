@@ -29,11 +29,11 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuth {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key1 } => Ok(Self {
+            ConnectorAuthType::SignatureKey { api_key, key1, .. } => Ok(Self {
                 merchant_id: api_key.clone(),
-                checksum_key: key1.clone().ok_or(errors::ConnectorError::FailedToObtainAuthType)?,
+                checksum_key: key1.clone().unwrap_or_else(|| Secret::new("".to_string())),
             }),
-            ConnectorAuthType::Key { api_key } => Ok(Self {
+            ConnectorAuthType::BodyKey { api_key, .. } => Ok(Self {
                 merchant_id: api_key.clone(),
                 checksum_key: Secret::new("".to_string()), // Default empty checksum key
             }),
