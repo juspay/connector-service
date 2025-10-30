@@ -728,11 +728,7 @@ impl<
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        if connectors.is_sandbox() {
-            constants::BILLDESK_UAT_BASE_URL
-        } else {
-            constants::BILLDESK_PROD_BASE_URL
-        }
+        &connectors.billdesk.base_url
     }
 
     fn get_auth_header(
