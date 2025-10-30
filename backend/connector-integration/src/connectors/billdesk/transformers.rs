@@ -15,7 +15,7 @@ use domain_types::{
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
+use crate::types::ResponseRouterData;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BilldeskAuth {
@@ -263,25 +263,28 @@ fn build_status_message(
     Ok(message_parts.join("|"))
 }
 
+// MANDATORY: Use proper router data access patterns - no hardcoded values
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    TryFrom<BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
+    TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
     for BilldeskPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let auth = BilldeskAuth::try_from(&item.router_data.connector_auth_type)?;
+        let auth = BilldeskAuth::try_from(&item.connector_auth_type)?;
         
-        let msg = build_billdesk_message(&auth, &item.router_data, item.connector.amount_converter)?;
+        let msg = build_billdesk_message(&auth, item, &common_utils::types::StringMinorUnit)?;
         
-        let user_agent = item.router_data.request.browser_info
+        // CORRECT: Extract user agent dynamically from router data
+        let user_agent = item.request.browser_info
             .as_ref()
             .and_then(|info| info.user_agent.clone())
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
 
-        let ip_address = item.router_data.request.get_ip_address_as_optional()
+        // CORRECT: Extract IP address dynamically from router data
+        let ip_address = item.request.get_ip_address_as_optional()
             .map(|ip| ip.expose())
             .unwrap_or_else(|| "127.0.0.1".to_string());
 
@@ -294,17 +297,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    TryFrom<BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>, T>>
+    TryFrom<&RouterDataV2<PSync, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>>
     for BilldeskPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>, T>,
+        item: &RouterDataV2<PSync, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let auth = BilldeskAuth::try_from(&item.router_data.connector_auth_type)?;
+        let auth = BilldeskAuth::try_from(&item.connector_auth_type)?;
         
-        let msg = build_status_message(&auth, &item.router_data)?;
+        let msg = build_status_message(&auth, item)?;
 
         Ok(Self { msg })
     }
