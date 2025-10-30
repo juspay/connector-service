@@ -1,8 +1,6 @@
 pub mod transformers;
 pub mod constants;
 
-use std::marker::PhantomData;
-
 use common_enums::CurrencyUnit;
 use common_utils::{
     errors::CustomResult,
