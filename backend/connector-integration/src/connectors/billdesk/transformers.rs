@@ -199,7 +199,7 @@ impl TryFrom<
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let connector_transaction_id = item.router_data.request.connector_transaction_id
+        let connector_transaction_id = item.request.connector_transaction_id
             .get_connector_transaction_id()
             .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
 
