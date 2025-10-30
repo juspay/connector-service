@@ -2,6 +2,7 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
+use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{
     errors::CustomResult,
