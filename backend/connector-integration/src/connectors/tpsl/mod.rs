@@ -313,6 +313,91 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
+// Implement ConnectorIntegrationV2 for all the remaining flows
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData> for Tpsl<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+    ) -> CustomResult<Option<common_utils::request::Request>, ConnectorError> {
+        Ok(None)
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        _event: Option<&mut ConnectorEvent>,
+        _response: Response,
+    ) -> CustomResult<RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>, ConnectorError> {
+        Err(ConnectorError::NotImplemented("Response handling not implemented".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        _response: Response,
+        _event: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
+        Err(ConnectorError::NotImplemented("Error handling not implemented".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData> for Tpsl<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+    ) -> CustomResult<Option<common_utils::request::Request>, ConnectorError> {
+        Ok(None)
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        _event: Option<&mut ConnectorEvent>,
+        _response: Response,
+    ) -> CustomResult<RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>, ConnectorError> {
+        Err(ConnectorError::NotImplemented("Response handling not implemented".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        _response: Response,
+        _event: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
+        Err(ConnectorError::NotImplemented("Error handling not implemented".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData> for Tpsl<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+    ) -> CustomResult<Option<common_utils::request::Request>, ConnectorError> {
+        Ok(None)
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        _event: Option<&mut ConnectorEvent>,
+        _response: Response,
+    ) -> CustomResult<RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>, ConnectorError> {
+        Err(ConnectorError::NotImplemented("Response handling not implemented".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        _response: Response,
+        _event: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
+        Err(ConnectorError::NotImplemented("Error handling not implemented".to_string()).into())
+    }
+}
+
 // Implement all the required traits with empty implementations like ACI does
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     connector_types::PaymentPreAuthenticateV2<T> for Tpsl<T>
