@@ -191,11 +191,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
             auth.key.peek(),
             item.router_data.resource_common_data.connector_request_reference_id,
-            amount.get_amount_as_string(),
+            amount.to_string(),
             "Payment", // productinfo
             customer_id.get_string_repr(),
             item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
-            item.router_data.request.get_phone_number_as_optional().map(|p| p.to_string()).unwrap_or_default(),
+            String::new(), // Phone number not available in standard flow
             return_url,
             return_url, // furl same as surl
             "", "", "", "", "", "", "", "", "", "", "", "", "", "", // udf fields
@@ -211,7 +211,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             productinfo: "Payment".to_string(),
             firstname: Some(Secret::new(customer_id.get_string_repr())),
             email: item.router_data.request.email.clone(),
-            phone: item.router_data.request.get_phone_number_as_optional().map(|p| Secret::new(p.to_string())),
+            phone: None, // Phone number not available in standard flow
             surl: return_url.clone(),
             furl: return_url,
             hash,
