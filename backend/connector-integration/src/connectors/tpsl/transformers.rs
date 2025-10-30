@@ -354,7 +354,7 @@ where
     fn try_from(
         item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let amount = item.request.amount.get_amount_as_string();
+        let amount = item.request.amount.to_string();
         let currency = item.request.currency.to_string();
         
         let customer_id = item.resource_common_data.get_customer_id()?;
