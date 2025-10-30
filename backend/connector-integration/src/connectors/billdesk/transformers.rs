@@ -422,8 +422,7 @@ where
     }
 }
 
-impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    TryFrom<ResponseRouterData<BilldeskPaymentsResponse, RouterDataV2<F, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>>>
+impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsResponse, RouterDataV2<F, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>>>
     for RouterDataV2<F, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
