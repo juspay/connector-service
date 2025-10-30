@@ -209,7 +209,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             txnid: item.router_data.resource_common_data.connector_request_reference_id.clone(),
             amount,
             productinfo: "Payment".to_string(),
-            firstname: Some(Secret::new(customer_id.get_string_repr())),
+            firstname: Some(Secret::new(customer_id.get_string_repr().to_string())),
             email: None, // Email not available in sync request
             phone: None, // Phone number not available in standard flow
             surl: return_url.clone(),
