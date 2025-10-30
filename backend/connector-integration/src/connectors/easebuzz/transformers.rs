@@ -305,7 +305,7 @@ fn extract_auth_credentials(
     connector_auth_type: &ConnectorAuthType,
 ) -> Result<(String, String), ConnectorError> {
     match connector_auth_type {
-        ConnectorAuthType::SignatureKey { api_key, api_secret } => {
+        ConnectorAuthType::SignatureKey { api_key, api_secret, .. } => {
             let key = api_key.peek().to_string();
             let hash = api_secret.peek().to_string();
             Ok((key, hash))
