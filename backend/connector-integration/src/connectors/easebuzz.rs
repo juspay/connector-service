@@ -386,6 +386,186 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
 // Stub implementations for missing flows
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("Accept".to_string()).into())
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: Response,
+    ) -> CustomResult<RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>, errors::ConnectorError>
+    {
+        Err(errors::ConnectorError::NotImplemented("Accept".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, None)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
+    for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("CreateOrder".to_string()).into())
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: Response,
+    ) -> CustomResult<RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>, errors::ConnectorError>
+    {
+        Err(errors::ConnectorError::NotImplemented("CreateOrder".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, None)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
+    for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
+    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("CreateSessionToken".to_string()).into())
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: Response,
+    ) -> CustomResult<RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>, errors::ConnectorError>
+    {
+        Err(errors::ConnectorError::NotImplemented("CreateSessionToken".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, None)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("DefendDispute".to_string()).into())
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: Response,
+    ) -> CustomResult<RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>, errors::ConnectorError>
+    {
+        Err(errors::ConnectorError::NotImplemented("DefendDispute".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, None)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+    for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("SetupMandate".to_string()).into())
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: Response,
+    ) -> CustomResult<RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>, errors::ConnectorError>
+    {
+        Err(errors::ConnectorError::NotImplemented("SetupMandate".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, None)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("SubmitEvidence".to_string()).into())
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: Response,
+    ) -> CustomResult<RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>, errors::ConnectorError>
+    {
+        Err(errors::ConnectorError::NotImplemented("SubmitEvidence".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, None)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     ConnectorIntegrationV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
     for EaseBuzz<T>
 {
