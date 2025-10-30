@@ -442,8 +442,8 @@ where
         };
         
         let consumer_payload = TpslConsumerPayload {
-            identifier: customer_id_string,
-            email_id: email.map(|e| e.get_string_repr()),
+            identifier: customer_id_string.to_string(),
+            email_id: email.map(|e| e.to_string()),
             mobile_number: phone.map(|p| p.get_string_repr()),
             account_no: None,
             account_type: None,
