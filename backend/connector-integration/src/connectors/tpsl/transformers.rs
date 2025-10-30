@@ -541,10 +541,9 @@ impl TryFrom<TpslPaymentsResponse> for PaymentsResponseData
                 (Some(amount), Some(currency), Some(transaction_id), error_message)
             },
             TpslResponseData::UpiResponse(upi) => {
-                let amount = MinorUnit::from_major_unit_as_i64(
-                    upi.payment_method.payment_transaction.amount.parse::<f64>()
-                        .unwrap_or(0.0)
-                );
+                let amount = MinorUnit::new(
+                    (upi.payment_method.payment_transaction.amount.parse::<f64>()
+                        .unwrap_or(0.0) * 100.0) as i64);
                 let currency = constants::DEFAULT_CURRENCY.to_string();
                 let transaction_id = upi.merchant_transaction_identifier;
                 let error_message = if upi.payment_method.payment_transaction.status_code == "000" {
