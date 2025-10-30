@@ -124,11 +124,13 @@ fn default_api_tags() -> std::collections::HashMap<common_utils::events::FlowNam
     // Load from environment variables or use defaults
     tags.insert(
         common_utils::events::FlowName::Authorize,
-        std::env::var("API_TAG_AUTHORIZE").unwrap_or_else(|_| "GW_INIT_INTENT".to_string()),
+        std::env::var("CS_API_TAGS__TAGS__AUTHORIZE")
+            .unwrap_or_else(|_| "GW_INIT_COLLECT".to_string()),
     );
     tags.insert(
         common_utils::events::FlowName::CreateOrder,
-        std::env::var("API_TAG_CREATE_ORDER").unwrap_or_else(|_| "GW_CREATE_ORDER".to_string()),
+        std::env::var("CS_API_TAGS__TAGS__CREATE_ORDER")
+            .unwrap_or_else(|_| "GW_CREATE_ORDER".to_string()),
     );
 
     tags
