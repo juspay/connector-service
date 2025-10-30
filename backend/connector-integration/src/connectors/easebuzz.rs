@@ -725,7 +725,7 @@ impl<
         + Serialize,
 >
     ConnectorIntegrationV2<
-        connector_flow::PaymentMethodToken,
+        PaymentMethodToken,
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
         PaymentMethodTokenResponse,
@@ -742,7 +742,7 @@ impl<
         + Serialize,
 >
     ConnectorIntegrationV2<
-        connector_flow::CreateAccessToken,
+        CreateAccessToken,
         PaymentFlowData,
         AccessTokenRequestData,
         AccessTokenResponseData,
@@ -759,7 +759,7 @@ impl<
         + Serialize,
 >
     ConnectorIntegrationV2<
-        connector_flow::CreateConnectorCustomer,
+        CreateConnectorCustomer,
         PaymentFlowData,
         ConnectorCustomerData,
         ConnectorCustomerResponse,
@@ -776,7 +776,7 @@ impl<
         + Serialize,
 >
     ConnectorIntegrationV2<
-        connector_flow::VoidPC,
+        VoidPC,
         PaymentFlowData,
         PaymentsCancelPostCaptureData,
         PaymentsResponseData,
@@ -793,7 +793,7 @@ impl<
         + Serialize,
 >
     ConnectorIntegrationV2<
-        connector_flow::PSync,
+        PSync,
         PaymentFlowData,
         PaymentsSyncData,
         PaymentsResponseData,
