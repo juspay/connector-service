@@ -970,49 +970,49 @@ impl_source_verification_stub!(
     DisputeResponseData
 );
 impl_source_verification_stub!(
-    connector_flow::VoidPC,
+    VoidPC,
     PaymentFlowData,
     PaymentsCancelPostCaptureData,
     PaymentsResponseData
 );
 impl_source_verification_stub!(
-    connector_flow::PaymentMethodToken,
+    PaymentMethodToken,
     PaymentFlowData,
     PaymentMethodTokenizationData<T>,
     PaymentMethodTokenResponse
 );
 impl_source_verification_stub!(
-    connector_flow::CreateAccessToken,
+    CreateAccessToken,
     PaymentFlowData,
     AccessTokenRequestData,
     AccessTokenResponseData
 );
 impl_source_verification_stub!(
-    connector_flow::CreateConnectorCustomer,
+    CreateConnectorCustomer,
     PaymentFlowData,
     ConnectorCustomerData,
     ConnectorCustomerResponse
 );
 impl_source_verification_stub!(
-    connector_flow::PSync,
+    PSync,
     PaymentFlowData,
     PaymentsSyncData,
     PaymentsResponseData
 );
 impl_source_verification_stub!(
-    connector_flow::PreAuthenticate,
+    PreAuthenticate,
     PaymentFlowData,
     PaymentsPreAuthenticateData<T>,
     PaymentsResponseData
 );
 impl_source_verification_stub!(
-    connector_flow::Authenticate,
+    Authenticate,
     PaymentFlowData,
     PaymentsAuthenticateData<T>,
     PaymentsResponseData
 );
 impl_source_verification_stub!(
-    connector_flow::PostAuthenticate,
+    PostAuthenticate,
     PaymentFlowData,
     PaymentsPostAuthenticateData<T>,
     PaymentsResponseData
