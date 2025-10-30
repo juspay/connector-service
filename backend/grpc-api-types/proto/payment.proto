@@ -909,6 +909,15 @@ message OnlineMandate {
   string user_agent = 2;
 }
 
+// Setup mandate details for payment authorization
+message SetupMandateDetails {
+  // A way to update the mandate's payment method details
+  optional string update_mandate_id = 1;
+  
+  // Details of customer acceptance
+  optional CustomerAcceptance customer_acceptance = 2;
+}
+
 // Information about the customer's browser.
 message BrowserInformation {
   // Display Information
@@ -1188,14 +1197,21 @@ message PaymentServiceAuthorizeRequest {
   optional CustomerAcceptance customer_acceptance = 28; // Details of customer acceptance
   optional BrowserInformation browser_info = 29; // Information about the customer's browser
   optional PaymentExperience payment_experience = 30; // Preferred payment experience
+  optional string description = 35; // An arbitrary string attached to the payment. Often useful for displaying to users or for your internal record-keeping
 
   optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
 
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 33; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  
+  // Mandate Setup Details
+  optional SetupMandateDetails setup_mandate_details = 34; // Setup mandate details for the authorization
+
+  optional string statement_descriptor_name = 36; // Complete description that appears on customers’ statements
+  optional string statement_descriptor_suffix = 37; // Provides information about a card payment that customers see on their statements
 
   // State Information
-  optional ConnectorState state = 34; // State data for access token storage and other connector-specific state
+  optional ConnectorState state = 38; // State data for access token storage and other connector-specific state
 }
 
 // Response message for a payment authorization.
@@ -1655,6 +1671,7 @@ message PaymentServiceRegisterResponse {
   optional RedirectForm redirection_data = 6; // Data for redirecting the customer's browser
   optional string network_txn_id = 7; // Renamed from network_transaction_id
   optional Identifier response_ref_id = 8; // Renamed from connector_response_reference_id
+  optional ConnectorResponseData connector_response = 14; // Various data regarding the response from connector
   
   // Authorization Details
   optional bool incremental_authorization_allowed = 9; // Indicates if incremental authorization is allowed
@@ -1683,24 +1700,33 @@ message PaymentServiceRepeatEverythingRequest {
   optional string merchant_order_reference_id = 6; // Merchant's reference ID for the order
   map<string, string> metadata = 7; // Additional metadata for the connector
   optional string webhook_url = 8; // URL for webhook notifications
+  optional string return_url = 17; // URL to redirect after payment
+  optional string description = 18; // An arbitrary string attached to the payment. Often useful for displaying to users or for your internal record-keeping
+  
+  // Address Information
+  optional PaymentAddress address = 19; // Billing and shipping address details
 
   // Capture Settings
   optional CaptureMethod capture_method = 11; // Method for capturing the payment
 
   // Customer Information
   optional SecretString email = 12; // Email address of the customer
+  optional string connector_customer_id = 21; // Customer ID as recognized by the connector
 
   // Browser Information
   optional BrowserInformation browser_info = 13; // Browser information, if relevant
 
-  optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
-  optional PaymentMethodType payment_method_type = 32; // Indicates the sub type of payment method. Eg: 'google_pay' & 'apple_pay'
+  optional bool test_mode = 14; // A boolean value to indicate if the connector is in Test mode
+  optional PaymentMethodType payment_method_type = 15; // Indicates the sub type of payment method. Eg: 'google_pay' & 'apple_pay'
 
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 33; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 
+  // Behavioral Flags and Preferences
+  optional bool off_session = 16; // Indicates if off-session process
+
   // State Information
-  optional ConnectorState state = 14; // State data for access token storage and other connector-specific state
+  optional ConnectorState state = 22; // State data for access token storage and other connector-specific state
 }
 
 // Response message for repeat payment operation.
@@ -1731,6 +1757,10 @@ message PaymentServiceRepeatEverythingResponse {
 
   // Raw Request
   optional SecretString raw_connector_request = 11; // Raw request to the connector for debugging
+
+  // Payment Details
+  optional int64 captured_amount = 15; // Amount that has been captured
+  optional int64 minor_captured_amount = 16; // Captured amount in minor currency units
 
   optional ConnectorResponseData connector_response = 14; // Various data regarding the response from connector
 }
