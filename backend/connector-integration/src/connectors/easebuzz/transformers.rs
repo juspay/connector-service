@@ -747,10 +747,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzRSyncResponse, RouterDataV2<RSync, Refun
                             .map(|r| r.refund_id.clone()),
                         refund_status,
                         connector_transaction_id: Some(success_data.easebuzz_id),
-                        amount_received: success_data.refunds.as_ref()
-                            .and_then(|r| r.first())
-                            .and_then(|r| r.refund_amount.parse::<f64>().ok())
-                            .map(|f| common_utils::types::MinorUnit::new((f * 100.0) as i64)),
+                        
                     }),
                 )
             }
