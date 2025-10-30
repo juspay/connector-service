@@ -594,7 +594,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PSync,
-            request_body: transformers::EaseBuzzPaymentsSyncRequest,
+            request_body: EaseBuzzPaymentsSyncRequest,
             response_body: EaseBuzzPaymentsResponseEnum,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
