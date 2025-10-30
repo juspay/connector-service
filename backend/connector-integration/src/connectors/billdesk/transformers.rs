@@ -212,11 +212,9 @@ fn build_billdesk_message(
     message_data.insert("txntype".to_string(), "UPI".to_string());
     
     // Add UPI specific fields
-    if let Some(payment_method) = &router_data.resource_common_data.payment_method {
-        if matches!(payment_method, common_enums::PaymentMethod::Upi) {
-            message_data.insert("additionalInfo1".to_string(), "UPI".to_string());
-            message_data.insert("additionalInfo2".to_string(), "COLLECT".to_string());
-        }
+    if matches!(router_data.resource_common_data.payment_method, common_enums::PaymentMethod::Upi) {
+        message_data.insert("additionalInfo1".to_string(), "UPI".to_string());
+        message_data.insert("additionalInfo2".to_string(), "COLLECT".to_string());
     }
 
     // Create the message string in the format expected by Billdesk
