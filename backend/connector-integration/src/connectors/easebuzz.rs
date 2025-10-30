@@ -155,10 +155,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         Ok(Some(Request {
             url,
             method: Method::Post,
-            headers: vec![(
+            headers: std::collections::HashSet::from([(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
-            )],
+            )]),
             body: Some(RequestContent::Json(Box::new(request))),
             certificate: None,
             certificate_key: None,
@@ -219,10 +219,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         Ok(Some(Request {
             url,
             method: Method::Post,
-            headers: vec![(
+            headers: std::collections::HashSet::from([(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
-            )],
+            )]),
             body: Some(RequestContent::Json(Box::new(request))),
             certificate: None,
             certificate_key: None,
@@ -279,10 +279,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         Ok(Some(Request {
             url,
             method: Method::Post,
-            headers: vec![(
+            headers: std::collections::HashSet::from([(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
-            )],
+            )]),
             body: Some(RequestContent::Json(Box::new(request))),
             certificate: None,
             certificate_key: None,
@@ -339,10 +339,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         Ok(Some(Request {
             url,
             method: Method::Post,
-            headers: vec![(
+            headers: std::collections::HashSet::from([(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
-            )],
+            )]),
             body: Some(RequestContent::Json(Box::new(request))),
             certificate: None,
             certificate_key: None,
