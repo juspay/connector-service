@@ -187,7 +187,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         item: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = EaseBuzzAuth::try_from(&item.connector_auth_type)?;
-        let customer_id = item.router_data.get_customer_id()?;
+        let customer_id = item.resource_common_data.get_customer_id()?;
         let return_url = item.request.get_router_return_url()?;
         
         // For now, use a default amount converter since we don't have access to the connector
