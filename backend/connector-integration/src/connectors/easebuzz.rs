@@ -45,6 +45,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     connector_types::PaymentSyncV2 for EaseBuzz<T>
 {
 }
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::ConnectorServiceTrait<T> for EaseBuzz<T>
+{
+}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
