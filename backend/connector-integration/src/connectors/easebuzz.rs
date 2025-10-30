@@ -205,12 +205,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            let is_test = req.resource_common_data.test_mode.unwrap_or(false);
-            if is_test {
-                constants::api_urls::TEST_BASE_URL
-            } else {
-                constants::api_urls::PROD_BASE_URL
-            }
+            &req.resource_common_data.connectors.easebuzz.base_url
         }
     }
 );
