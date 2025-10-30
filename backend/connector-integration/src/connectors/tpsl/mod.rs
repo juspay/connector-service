@@ -21,6 +21,7 @@ use domain_types::{
         RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        ConnectorSpecifications,
     },
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
