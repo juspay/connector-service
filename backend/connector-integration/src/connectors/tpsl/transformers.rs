@@ -432,7 +432,7 @@ where
             sub_type: constants::UPI_COLLECT_TYPE.to_string(),
             request_type: constants::DEFAULT_REQUEST_TYPE.to_string(),
             description: Some("UPI Payment Transaction".to_string()),
-            date_time: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+            date_time: "2024-01-01 00:00:00".to_string(),
             token: None,
             security_token: None,
             reference: transaction_id,
@@ -507,7 +507,7 @@ where
                 txn_type: None,
                 sub_type: None,
                 request_type: constants::RESPONSE_TYPE_SYNC.to_string(),
-                date_time: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                date_time: "2024-01-01 00:00:00".to_string(),
                 token: "sync_token".to_string(),
                 device_identifier: item.router_data.request.get_ip_address_as_optional()
                     .map(|ip| ip.expose()),
