@@ -28,39 +28,43 @@ pub fn get_endpoint(flow: &str, test_mode: bool) -> String {
     }
 }
 
-pub static ERROR_RESPONSE_MAPPING: HashMap<String, String> = std::collections::HashMap::from([
-    ("000".to_string(), "Success".to_string()),
-    ("001".to_string(), "Invalid Request".to_string()),
-    ("002".to_string(), "Authentication Failed".to_string()),
-    ("003".to_string(), "Transaction Failed".to_string()),
-    ("004".to_string(), "Invalid Merchant".to_string()),
-    ("005".to_string(), "Invalid Amount".to_string()),
-    ("006".to_string(), "Invalid Currency".to_string()),
-    ("007".to_string(), "Invalid Payment Method".to_string()),
-    ("008".to_string(), "Bank Timeout".to_string()),
-    ("009".to_string(), "Bank Declined".to_string()),
-    ("010".to_string(), "Insufficient Funds".to_string()),
-    ("011".to_string(), "Invalid Card".to_string()),
-    ("012".to_string(), "Expired Card".to_string()),
-    ("013".to_string(), "Invalid UPI ID".to_string()),
-    ("014".to_string(), "UPI Timeout".to_string()),
-    ("015".to_string(), "UPI Declined".to_string()),
-    ("016".to_string(), "Mandate Failed".to_string()),
-    ("017".to_string(), "Invalid Mandate".to_string()),
-    ("018".to_string(), "Refund Failed".to_string()),
-    ("019".to_string(), "Invalid Refund".to_string()),
-    ("020".to_string(), "Duplicate Transaction".to_string()),
-    ("021".to_string(), "System Error".to_string()),
-    ("022".to_string(), "Network Error".to_string()),
-    ("023".to_string(), "Invalid Customer".to_string()),
-    ("024".to_string(), "Invalid Order".to_string()),
-    ("025".to_string(), "Invalid Signature".to_string()),
-    ("026".to_string(), "Invalid Token".to_string()),
-    ("027".to_string(), "Token Expired".to_string()),
-    ("028".to_string(), "Invalid Response".to_string()),
-    ("029".to_string(), "Processing Error".to_string()),
-    ("030".to_string(), "Service Unavailable".to_string()),
-]);
+use std::sync::LazyLock;
+
+pub static ERROR_RESPONSE_MAPPING: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
+    std::collections::HashMap::from([
+        ("000".to_string(), "Success".to_string()),
+        ("001".to_string(), "Invalid Request".to_string()),
+        ("002".to_string(), "Authentication Failed".to_string()),
+        ("003".to_string(), "Transaction Failed".to_string()),
+        ("004".to_string(), "Invalid Merchant".to_string()),
+        ("005".to_string(), "Invalid Amount".to_string()),
+        ("006".to_string(), "Invalid Currency".to_string()),
+        ("007".to_string(), "Invalid Payment Method".to_string()),
+        ("008".to_string(), "Bank Timeout".to_string()),
+        ("009".to_string(), "Bank Declined".to_string()),
+        ("010".to_string(), "Insufficient Funds".to_string()),
+        ("011".to_string(), "Invalid Card".to_string()),
+        ("012".to_string(), "Expired Card".to_string()),
+        ("013".to_string(), "Invalid UPI ID".to_string()),
+        ("014".to_string(), "UPI Timeout".to_string()),
+        ("015".to_string(), "UPI Declined".to_string()),
+        ("016".to_string(), "Mandate Failed".to_string()),
+        ("017".to_string(), "Invalid Mandate".to_string()),
+        ("018".to_string(), "Refund Failed".to_string()),
+        ("019".to_string(), "Invalid Refund".to_string()),
+        ("020".to_string(), "Duplicate Transaction".to_string()),
+        ("021".to_string(), "System Error".to_string()),
+        ("022".to_string(), "Network Error".to_string()),
+        ("023".to_string(), "Invalid Customer".to_string()),
+        ("024".to_string(), "Invalid Order".to_string()),
+        ("025".to_string(), "Invalid Signature".to_string()),
+        ("026".to_string(), "Invalid Token".to_string()),
+        ("027".to_string(), "Token Expired".to_string()),
+        ("028".to_string(), "Invalid Response".to_string()),
+        ("029".to_string(), "Processing Error".to_string()),
+        ("030".to_string(), "Service Unavailable".to_string()),
+    ])
+});
 
 pub const DEFAULT_CURRENCY: &str = "INR";
 pub const DEFAULT_PAYMENT_METHOD: &str = "UPI";
