@@ -587,7 +587,7 @@ impl TryFrom<TpslPaymentsSyncResponse> for PaymentsResponseData
                 .unwrap_or(0.0) * 100.0) as i64);
         
         let currency = constants::DEFAULT_CURRENCY.to_string();
-        let transaction_id = response.merchant_transaction_identifier;
+        let transaction_id = response.merchant_transaction_identifier.clone();
         
         let error_message = if response.payment_method.payment_transaction.status_code == "000" {
             None
@@ -596,7 +596,7 @@ impl TryFrom<TpslPaymentsSyncResponse> for PaymentsResponseData
         };
         
         Ok(PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(response.merchant_transaction_identifier),
+            resource_id: ResponseId::ConnectorTransactionId(transaction_id),
             redirection_data: None,
             connector_metadata: None,
             network_txn_id: None,
