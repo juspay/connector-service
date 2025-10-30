@@ -205,6 +205,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 {
 }
 
+// ConnectorSpecifications implementation
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorSpecifications for Tpsl<T>
+{
+}
+
 // Default implementation
 impl<T> Default for Tpsl<T> {
     fn default() -> Self {
