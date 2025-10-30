@@ -244,14 +244,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     ) -> Result<Self, Self::Error> {
         let auth = EaseBuzzAuth::try_from(&item.connector_auth_type)?;
         
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(
-                item.request.amount,
-                item.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+        // For now, use a default amount converter since we don't have access to the connector
+        let amount = common_utils::types::StringMinorUnit::from_minor(
+            item.request.amount,
+            item.request.currency,
+        );
 
         // Generate hash for sync request
         let hash_string = format!(
