@@ -42,7 +42,6 @@ use interfaces::{
 
 #[derive(Debug, Clone)]
 pub struct Tpsl<T> {
-    amount_converter: &'static (dyn AmountConvertor<Output = String> + Sync),
     connector_name: &'static str,
     payment_method_data: PhantomData<T>,
 }
@@ -50,7 +49,6 @@ pub struct Tpsl<T> {
 impl<T> Tpsl<T> {
     pub fn new() -> Self {
         Self {
-            amount_converter: &common_utils::types::StringMinorUnit,
             connector_name: "tpsl",
             payment_method_data: PhantomData,
         }
