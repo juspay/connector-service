@@ -11,7 +11,7 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
-        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, PreAuthenticate, Authenticate, PostAuthenticate, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
@@ -20,6 +20,8 @@ use domain_types::{
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, RequestDetails, ResponseId, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData, ConnectorCustomerResponse,
+        PaymentMethodTokenizationData, PaymentMethodTokenResponse,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -27,6 +29,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
+    router_request_types::{PaymentsCancelPostCaptureData, PaymentsPreAuthenticateData, PaymentsAuthenticateData, PaymentsPostAuthenticateData},
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
