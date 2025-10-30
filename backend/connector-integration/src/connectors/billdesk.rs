@@ -680,7 +680,7 @@ macros::macro_connector_implementation!(
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let header = vec![
                 (
