@@ -1,8 +1,6 @@
 pub mod transformers;
 pub mod constants;
 
-use std::marker::PhantomData;
-
 use common_enums::CurrencyUnit;
 use common_utils::{
     errors::CustomResult,
@@ -15,11 +13,11 @@ use domain_types::{
         Refund, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        AcceptDisputeData, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData,
     },
     errors,
@@ -362,6 +360,9 @@ macros::macro_connector_implementation!(
 );
 
 // MANDATORY: Implement all connector_types traits even for unused flows
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::ConnectorServiceTrait<T> for EaseBuzz<T>
+{}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentOrderCreate for EaseBuzz<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
