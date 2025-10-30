@@ -175,14 +175,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     ) -> Result<Self, Self::Error> {
         let auth = EaseBuzzAuth::try_from(&item.connector_auth_type)?;
         let customer_id = item.resource_common_data.get_customer_id()?;
-        let return_url = item.router_data.request.get_router_return_url()?;
+        let return_url = item.request.get_router_return_url()?;
         
         let amount = item
             .connector
             .amount_converter
             .convert(
-                common_utils::types::MinorUnit(item.router_data.request.amount),
-                item.router_data.request.currency,
+                common_utils::types::MinorUnit(item.request.amount),
+                item.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
@@ -251,8 +251,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.amount,
-                item.router_data.request.currency,
+                item.request.amount,
+                item.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
@@ -260,7 +260,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let hash_string = format!(
             "{}|{}|{}|{}|{}|{}",
             auth.key.peek(),
-            item.router_data.request.connector_transaction_id.get_connector_transaction_id().map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
+            item.request.connector_transaction_id.get_connector_transaction_id().map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             amount.to_string(),
             String::new(), // Email not available in sync request
             String::new(), // Phone number not available in sync request
@@ -271,7 +271,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         Ok(Self {
             key: auth.key,
-            txnid: item.router_data.request.connector_transaction_id.get_connector_transaction_id().map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
+            txnid: item.request.connector_transaction_id.get_connector_transaction_id().map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             amount,
             email: None, // Email not available in sync request
             phone: None, // Phone number not available in sync request
