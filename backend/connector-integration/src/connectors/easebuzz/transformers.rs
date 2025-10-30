@@ -575,7 +575,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzPaymentsSyncResponse, RouterDataV2<PSync
             http_code,
         } = item;
 
-        let (_status, response) = if response.status {
+        let (attempt_status, response) = if response.status {
             match response.msg {
                 EaseBuzzTxnSyncMessageType::Success(data) => {
                     let attempt_status = match data.status.as_deref() {
@@ -639,7 +639,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzPaymentsSyncResponse, RouterDataV2<PSync
         Ok(Self {
             flow: router_data.flow,
             resource_common_data: PaymentFlowData {
-                status: status,
+                status: attempt_status,
                 ..router_data.resource_common_data
             },
             connector_auth_type: router_data.connector_auth_type,
