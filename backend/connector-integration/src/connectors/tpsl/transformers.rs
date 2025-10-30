@@ -1,21 +1,18 @@
 use common_enums::AttemptStatus;
 use common_utils::{
     errors::CustomResult,
-    id_type::CustomerId,
-    pii::{Email, SecretSerdeValue},
-    types::{StringMinorUnit, MinorUnit},
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData},
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
-    router_data::ConnectorAuthType,
+
     router_response_types::Response,
     errors::ConnectorError,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+
 use serde::{Deserialize, Serialize};
 
 use super::constants;
