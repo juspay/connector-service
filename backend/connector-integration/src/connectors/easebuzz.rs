@@ -6,17 +6,11 @@ use std::fmt::Debug;
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit};
 use domain_types::{
-    connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, 
-        RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
-    },
+    connector_flow::{Authorize, PSync},
     connector_types::{
-        AcceptDisputeData, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        ConnectorWebhookSecrets, PaymentFlowData,
+        PaymentsAuthorizeData, PaymentsResponseData,
+        PaymentsSyncData, RequestDetails,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
