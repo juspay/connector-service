@@ -354,7 +354,8 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
 
         Ok(Self {
             key: auth.key,
-            txnid: item.request.connector_transaction_id.clone(),
+            txnid: item.request.get_connector_transaction_id()
+                .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             amount,
             email: None, // Email not available in sync request
             phone: None, // Phone number not available in sync request
