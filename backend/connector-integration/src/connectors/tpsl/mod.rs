@@ -158,7 +158,7 @@ macro_rules! impl_not_implemented_flow {
 // Implement not implemented flows
 // impl_not_implemented_flow!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
 // impl_not_implemented_flow!(Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData);
-impl_not_implemented_flow!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
+// impl_not_implemented_flow!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
 impl_not_implemented_flow!(RSync, RefundSyncData, RefundSyncData, RefundsResponseData);
 impl_not_implemented_flow!(CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse);
 impl_not_implemented_flow!(CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData);
