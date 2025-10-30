@@ -13,7 +13,7 @@ use domain_types::{
     errors::ConnectorError,
 };
 use error_stack::ResultExt;
-
+use hyperswitch_masking::ExposeInterface;
 use serde::{Deserialize, Serialize};
 
 use super::constants;
