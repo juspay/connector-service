@@ -125,20 +125,72 @@ impl<T> Default for Tpsl<T> {
     }
 }
 
-// Implement required traits for ConnectorServiceTrait
+// Implement ConnectorIntegrationV2 for Authorize flow
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    ConnectorServiceTrait<T> for Tpsl<T>
+    ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData> for Tpsl<T>
 {
+    fn build_request_v2(
+        &self,
+        req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    ) -> CustomResult<Option<common_utils::request::Request>, ConnectorError> {
+        // Use the transformer to build the request
+        let tpsl_request = crate::connectors::tpsl::transformers::TpslPaymentsRequest::try_from(req)
+            .map_err(|_| ConnectorError::RequestEncodingFailed)?;
+        
+        // For now, return None as we need to implement the actual request building
+        Ok(None)
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        _event: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
+        _response: Response,
+    ) -> CustomResult<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, ConnectorError> {
+        Err(ConnectorError::NotImplemented("Response handling not implemented".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        _response: Response,
+        _event: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
+    ) -> CustomResult<interfaces::router_data::ErrorResponse, ConnectorError> {
+        Err(ConnectorError::NotImplemented("Error handling not implemented".to_string()).into())
+    }
 }
 
+// Implement ConnectorIntegrationV2 for PSync flow
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    PaymentAuthorizeV2<T> for Tpsl<T>
+    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> for Tpsl<T>
 {
-}
+    fn build_request_v2(
+        &self,
+        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    ) -> CustomResult<Option<common_utils::request::Request>, ConnectorError> {
+        // Use the transformer to build the request
+        let tpsl_request = crate::connectors::tpsl::transformers::TpslPaymentsSyncRequest::try_from(req)
+            .map_err(|_| ConnectorError::RequestEncodingFailed)?;
+        
+        // For now, return None as we need to implement the actual request building
+        Ok(None)
+    }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    PaymentSyncV2 for Tpsl<T>
-{
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        _event: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
+        _response: Response,
+    ) -> CustomResult<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, ConnectorError> {
+        Err(ConnectorError::NotImplemented("Response handling not implemented".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        _response: Response,
+        _event: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
+    ) -> CustomResult<interfaces::router_data::ErrorResponse, ConnectorError> {
+        Err(ConnectorError::NotImplemented("Error handling not implemented".to_string()).into())
+    }
 }
 
 // Implement empty traits for unsupported flows
