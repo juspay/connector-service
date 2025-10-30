@@ -237,10 +237,8 @@ impl<
             .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)?;
 
         Ok(domain_types::connector_types::WebhookDetailsResponse {
-            resource_id: Some(
-                domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                    webhook.txn_reference_no.clone(),
-                ),
+            resource_id: webhook.txn_reference_no.clone().map(
+                domain_types::connector_types::ResponseId::ConnectorTransactionId
             ),
             status: common_enums::AttemptStatus::Charged,
             status_code: 200,
