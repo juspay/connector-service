@@ -848,7 +848,6 @@ impl_source_verification_stub!(
     PaymentsCaptureData,
     PaymentsResponseData
 );
-impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
 impl_source_verification_stub!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
 impl_source_verification_stub!(RSync, RefundFlowData, RefundSyncData, RefundsResponseData);
 impl_source_verification_stub!(
