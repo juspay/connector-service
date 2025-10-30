@@ -8,12 +8,9 @@ use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::String
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{
-        ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        ConnectorWebhookSecrets, PaymentFlowData,
+        PaymentsAuthorizeData, PaymentsResponseData,
+        PaymentsSyncData, RequestDetails,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
