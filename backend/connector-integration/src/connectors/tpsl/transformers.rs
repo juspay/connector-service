@@ -527,10 +527,9 @@ impl TryFrom<TpslPaymentsResponse> for PaymentsResponseData
         
         let (amount, currency, transaction_id, error_message) = match response.response {
             TpslResponseData::DecryptedResponse(decrypted) => {
-                let amount = MinorUnit::from_major_unit_as_i64(
-                    decrypted.payment_method.payment_transaction.amount.parse::<f64>()
-                        .unwrap_or(0.0)
-                );
+                let amount = MinorUnit::new(
+                    (decrypted.payment_method.payment_transaction.amount.parse::<f64>()
+                        .unwrap_or(0.0) * 100.0) as i64);
                 let currency = constants::DEFAULT_CURRENCY.to_string();
                 let transaction_id = decrypted.merchant_transaction_identifier
                     .unwrap_or_else(|| "unknown".to_string());
