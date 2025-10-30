@@ -293,11 +293,11 @@ fn extract_device_info(
         accept_header: browser_info.accept_header.clone(),
         language: browser_info.language.clone(),
         java_enabled: browser_info.java_enabled.map(|j| j.to_string()),
-        javascript_enabled: browser_info.javascript_enabled.map(|j| j.to_string()),
+        javascript_enabled: browser_info.java_script_enabled.map(|j| j.to_string()),
         screen_height: browser_info.screen_height.map(|h| h.to_string()),
         screen_width: browser_info.screen_width.map(|w| w.to_string()),
         color_depth: browser_info.color_depth.map(|d| d.to_string()),
-        timezone: browser_info.timezone.clone(),
+        timezone: browser_info.time_zone.clone(),
     })
 }
 
