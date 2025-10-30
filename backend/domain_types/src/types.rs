@@ -806,9 +806,12 @@ impl CardConversionHelper<DefaultPCIHolder> for DefaultPCIHolder {
         payment_method_data::Card<DefaultPCIHolder>,
         error_stack::Report<ApplicationErrorResponse>,
     > {
-        let card_network = Some(common_enums::CardNetwork::foreign_try_from(
-            card.card_network(),
-        )?);
+        let card_network = match card.card_network() {
+            grpc_api_types::payments::CardNetwork::Unspecified => None,
+            _ => Some(common_enums::CardNetwork::foreign_try_from(
+                card.card_network(),
+            )?),
+        };
         Ok(payment_method_data::Card {
             card_number: RawCardNumber::<DefaultPCIHolder>(card.card_number.ok_or(
                 ApplicationErrorResponse::BadRequest(ApiError {
@@ -1220,8 +1223,9 @@ impl<
             minor_amount: common_utils::types::MinorUnit::new(value.minor_amount),
             email,
             customer_name: None,
-            statement_descriptor_suffix: None,
-            statement_descriptor: None,
+            statement_descriptor_suffix: value.statement_descriptor_suffix,
+            statement_descriptor: value.statement_descriptor_name,
+
             router_return_url: value.return_url.clone(),
             complete_authorize_url: value.complete_authorize_url,
             setup_future_usage,
@@ -1268,7 +1272,10 @@ impl<
             all_keys_required: None, // Field not available in new proto structure
             split_payments: None,
             enable_overcapture: None,
-            setup_mandate_details: None,
+            setup_mandate_details: value
+                .setup_mandate_details
+                .map(mandates::MandateData::foreign_try_from)
+                .transpose()?,
             request_extended_authorization: value.request_extended_authorization,
             merchant_account_metadata,
         })
@@ -1680,7 +1687,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
                     error_object: None,
                 }))?,
             connector_customer: value.connector_customer_id,
-            description: value.metadata.get("description").cloned(),
+            description: value.description,
             return_url: value.return_url.clone(),
             connector_meta_data: {
                 value.metadata.get("connector_meta_data").map(|json_string| {
@@ -1705,6 +1712,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             connector_response_headers: None,
             connector_response: None,
             vault_headers,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -1726,13 +1734,22 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let address = match &value.address {
+            // Borrow value.address
             Some(address_value) => {
                 // address_value is &grpc_api_types::payments::PaymentAddress
                 payment_address::PaymentAddress::foreign_try_from(
                     (*address_value).clone(), // Clone the grpc_api_types::payments::PaymentAddress
                 )?
             }
-            None => payment_address::PaymentAddress::default(),
+            None => {
+                // For repeat payment operations, address information is typically not available or required
+                payment_address::PaymentAddress::new(
+                    None,        // shipping
+                    None,        // billing
+                    None,        // payment_method_billing
+                    Some(false), // should_unify_address = false for repeat operations
+                )
+            }
         };
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
@@ -1749,8 +1766,8 @@ impl
                 &value.request_ref_id,
             ),
             customer_id: None,
-            connector_customer: None,
-            description: None,
+            connector_customer: value.connector_customer_id,
+            description: value.description,
             return_url: None,
             connector_meta_data: None,
             amount_captured: None,
@@ -1771,6 +1788,7 @@ impl
             connector_response_headers: None,
             connector_response: None,
             vault_headers: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -1845,6 +1863,7 @@ impl
             connector_response_headers: None,
             vault_headers: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -1900,6 +1919,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             connector_response_headers: None,
             vault_headers: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -2417,6 +2437,7 @@ impl
             connector_response_headers: None,
             vault_headers: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -3639,6 +3660,7 @@ impl
             vault_headers: None,
             minor_amount_capturable: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -4166,6 +4188,7 @@ impl
             connector_response_headers: None,
             vault_headers: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -4222,6 +4245,7 @@ impl
             connector_response_headers: None,
             vault_headers: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -4405,7 +4429,17 @@ impl
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
             ),
-            customer_id: None,
+            customer_id: value
+                .customer_id
+                .clone()
+                .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
+                .transpose()
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_CUSTOMER_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Failed to parse Customer Id".to_owned(),
+                    error_object: None,
+                }))?,
             connector_customer: value.connector_customer_id,
             description: value.metadata.get("description").cloned(),
             return_url: None,
@@ -4428,6 +4462,7 @@ impl
             connector_response_headers: None,
             vault_headers: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -4493,27 +4528,14 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             setup_future_usage: Some(common_enums::FutureUsage::foreign_try_from(
                 setup_future_usage,
             )?),
-            off_session: Some(false),
+            off_session: value.off_session,
             setup_mandate_details: Some(setup_mandate_details),
             router_return_url: value.return_url.clone(),
             webhook_url: value.webhook_url,
-            browser_info: value.browser_info.map(|info| BrowserInformation {
-                color_depth: None,
-                java_enabled: info.java_enabled,
-                java_script_enabled: info.java_script_enabled,
-                language: info.language,
-                screen_height: info.screen_height,
-                screen_width: info.screen_width,
-                time_zone: None,
-                ip_address: None,
-                accept_header: info.accept_header,
-                user_agent: info.user_agent,
-                os_type: info.os_type,
-                os_version: info.os_version,
-                device_model: info.device_model,
-                accept_language: info.accept_language,
-                referer: info.referer,
-            }),
+            browser_info: value
+                .browser_info
+                .map(BrowserInformation::foreign_try_from)
+                .transpose()?,
             email,
             customer_name: None,
             return_url: value.return_url.clone(),
@@ -4536,7 +4558,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             minor_amount: Some(common_utils::types::MinorUnit::new(0)),
             shipping_cost: None,
             customer_id: value
-                .connector_customer_id
+                .customer_id
                 .clone()
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
@@ -4578,6 +4600,22 @@ impl ForeignTryFrom<grpc_api_types::payments::CustomerAcceptance> for mandates::
             acceptance_type: mandates::AcceptanceType::Offline,
             accepted_at: None,
             online: None,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::SetupMandateDetails> for mandates::MandateData {
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        value: grpc_api_types::payments::SetupMandateDetails,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            update_mandate_id: value.update_mandate_id,
+            customer_acceptance: value
+                .customer_acceptance
+                .map(mandates::CustomerAcceptance::foreign_try_from)
+                .transpose()?,
+            mandate_type: None,
         })
     }
 }
@@ -4648,6 +4686,17 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
     let raw_connector_request = router_data_v2
         .resource_common_data
         .get_raw_connector_request();
+
+    let connector_response = router_data_v2
+        .resource_common_data
+        .connector_response
+        .as_ref()
+        .map(|connector_response_data| {
+            grpc_api_types::payments::ConnectorResponseData::foreign_try_from(
+                connector_response_data.clone(),
+            )
+        })
+        .transpose()?;
 
     let response = match transaction_response {
         Ok(response) => match response {
@@ -4720,6 +4769,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                         .get_connector_response_headers_as_map(),
                     state,
                     raw_connector_request,
+                    connector_response,
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -4751,6 +4801,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 .get_connector_response_headers_as_map(),
             state,
             raw_connector_request,
+            connector_response: None,
         },
     };
     Ok(response)
@@ -5215,6 +5266,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
             email: email.map(Secret::new),
             name: value.customer_name.map(Secret::new),
             description: None,
+            split_payments: None,
+            phone: None,
+            preprocessing_id: None,
         })
     }
 }
@@ -5236,6 +5290,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRegisterRequest>
             email: email.map(Secret::new),
             name: value.customer_name.map(Secret::new),
             description: None,
+            split_payments: None,
+            phone: None,
+            preprocessing_id: None,
         })
     }
 }
@@ -5313,7 +5370,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
             <Option<PaymentMethodType>>::foreign_try_from(value.payment_method_type())?;
         let capture_method = value.capture_method();
         let merchant_order_reference_id = value.merchant_order_reference_id;
-        let metadata = value.metadata;
         let webhook_url = value.webhook_url;
 
         // Extract mandate reference
@@ -5366,12 +5422,17 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
             minor_amount: common_utils::types::MinorUnit::new(minor_amount),
             currency: common_enums::Currency::foreign_try_from(currency)?,
             merchant_order_reference_id,
-            metadata: if metadata.is_empty() {
-                None
-            } else {
-                Some(metadata)
-            },
+            metadata: (!value.metadata.is_empty()).then(|| {
+                Secret::new(serde_json::Value::Object(
+                    value
+                        .metadata
+                        .into_iter()
+                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .collect(),
+                ))
+            }),
             webhook_url,
+            router_return_url: value.return_url,
             integrity_object: None,
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
                 capture_method,
@@ -5399,6 +5460,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
                         })
                 })
                 .transpose()?,
+            off_session: value.off_session,
+            split_payments: None,
             recurring_mandate_payment_data: value.recurring_mandate_payment_data.map(|v| {
                 RecurringMandatePaymentData {
                     payment_method_type: None,
@@ -5466,6 +5529,7 @@ impl
             connector_response_headers: None,
             vault_headers: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -5570,6 +5634,11 @@ pub fn generate_repeat_payment_response(
                             grpc_api_types::payments::ConnectorResponseData::foreign_try_from(data)
                                 .ok()
                         }),
+                    captured_amount: router_data_v2.resource_common_data.amount_captured,
+                    minor_captured_amount: router_data_v2
+                        .resource_common_data
+                        .minor_amount_captured
+                        .map(|amount_captured| amount_captured.get_amount_as_i64()),
                 },
             ),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -5610,6 +5679,8 @@ pub fn generate_repeat_payment_response(
                     mandate_reference: None,
                     raw_connector_request,
                     connector_response: None,
+                    captured_amount: None,
+                    minor_captured_amount: None,
                 },
             )
         }
@@ -6251,6 +6322,7 @@ impl
             vault_headers,
             raw_connector_request: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -6346,6 +6418,7 @@ impl
             raw_connector_request: None,
             minor_amount_capturable: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -6441,6 +6514,7 @@ impl
             raw_connector_request: None,
             minor_amount_capturable: None,
             connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
