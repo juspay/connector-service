@@ -177,11 +177,7 @@ impl<T> Default for Tpsl<T> {
     }
 }
 
-// Finally implement ConnectorServiceTrait
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    ConnectorServiceTrait<T> for Tpsl<T>
-{
-}
+
 
 #[derive(Debug, Default)]
 pub struct ErrorResponse {
