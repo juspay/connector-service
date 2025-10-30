@@ -137,11 +137,11 @@ impl TryFrom<
                     &amount,
                 )?;
 
-                let ip_address = item.router_data.request.get_ip_address_as_optional()
+                let ip_address = item.request.get_ip_address_as_optional()
                     .map(|ip| ip.expose())
                     .unwrap_or_else(|| "127.0.0.1".to_string());
 
-                let user_agent = item.router_data.request.browser_info
+                let user_agent = item.request.browser_info
                     .as_ref()
                     .and_then(|info| info.user_agent.clone())
                     .unwrap_or_else(|| "Mozilla/5.0".to_string());
