@@ -507,3 +507,63 @@ impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsResponse, RouterDataV2<F, Pay
         })
     }
 }
+
+impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, RouterDataV2<F, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>>>
+    for RouterDataV2<F, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<BilldeskPaymentsSyncResponse, RouterDataV2<F, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        // Parse the response message to extract status
+        let response_str = response.msg;
+        let parts: Vec<&str> = response_str.split('|').collect();
+        let auth_status = parts.get(14).unwrap_or(&"0399"); // Default to failure
+        
+        let status = map_billdesk_status(auth_status);
+        let txn_reference_no = parts.get(2).unwrap_or(&"").to_string();
+        let bank_reference_no = parts.get(3).unwrap_or(&"").to_string();
+        let _txn_amount = parts.get(4).unwrap_or(&"0").to_string();
+
+        let response_data = if status == common_enums::AttemptStatus::Charged {
+            Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(txn_reference_no),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: Some(bank_reference_no),
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                status_code: http_code,
+            })
+        } else {
+            Err(ErrorResponse {
+                code: auth_status.to_string(),
+                status_code: http_code,
+                message: format!("Transaction status: {}", auth_status),
+                reason: Some(format!("Transaction status: {}", auth_status)),
+                attempt_status: Some(status),
+                connector_transaction_id: Some(txn_reference_no),
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+            })
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
+            response: response_data,
+            ..router_data
+        })
+    }
+}
