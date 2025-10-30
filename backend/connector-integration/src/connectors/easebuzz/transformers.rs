@@ -210,7 +210,7 @@ impl<
             country: None,
             zipcode: None,
             pg: None,
-            customer_unique_id: Some(customer_id.to_string()),
+            customer_unique_id: Some(customer_id.get_string_repr().to_string()),
             split_payments: None,
             show_payment_mode: None,
             card_bin: None,
