@@ -1,25 +1,22 @@
-use std::collections::HashMap;
-
-use common_enums::{AttemptStatus, PaymentMethodType};
+use common_enums::AttemptStatus;
 use common_utils::{
     errors::CustomResult,
-    ext_traits::BytesExt,
-    pii::{Email, PhoneNumber},
-    request::RequestContent,
-    types::{self, StringMinorUnit},
+    pii::Email,
+    types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData},
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
-    types::{
-        AmountConverterTrait, ConnectorAuthType, ConnectorError, CustomerId, MerchantId, MinorUnit,
-        Secret,
-    },
+    router_data::ConnectorAuthType,
+    errors::ConnectorError,
+    id_type::CustomerId,
+    masking::Secret,
+    types::MinorUnit,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::SecretSerdeValue;
+use masking::SecretSerdeValue;
 use serde::{Deserialize, Serialize};
 
 use super::constants;
