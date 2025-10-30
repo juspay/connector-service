@@ -274,7 +274,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         // Generate hash - this would typically involve SHA512 of parameters + salt
         let hash_string = format!(
-            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
+            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
             auth.key.peek(),
             item.resource_common_data.connector_request_reference_id,
             amount.to_string(),
@@ -335,7 +335,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
         // CRITICAL: Use amount converter properly - never hardcode amounts
         let amount_converter = common_utils::types::StringMinorUnitForConnector;
         let amount = amount_converter
-            .convert(item.request.minor_amount, item.request.currency)
+            .convert(item.request.amount, item.request.currency)
             .map_err(|_| ConnectorError::RequestEncodingFailed)?;
 
         // Generate hash for sync request
@@ -345,7 +345,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
             item.request.connector_transaction_id.get_connector_transaction_id()
                 .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             amount.to_string(),
-            item.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
+            String::new(), // Email not available in sync request
             String::new(), // Phone number not available in sync request
             auth.salt.peek()
         );
@@ -357,7 +357,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
             txnid: item.request.connector_transaction_id.get_connector_transaction_id()
                 .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             amount,
-            email: item.request.email.clone(),
+            email: None, // Email not available in sync request
             phone: None, // Phone number not available in sync request
             hash,
         })
@@ -671,12 +671,12 @@ impl TryFrom<ResponseRouterData<EaseBuzzRefundResponse, RouterDataV2<Refund, Ref
             (
                 common_enums::AttemptStatus::Charged,
                 Ok(RefundsResponseData {
-                    refund_id: response.refund_id,
+                    refund_id: response.refund_id.clone(),
                     connector_refund_id: response.refund_id,
                     refund_status: common_enums::RefundStatus::Success,
                     connector_transaction_id: response.easebuzz_id,
                     amount_received: response.refund_amount.and_then(|amt| {
-                        amt.parse::<f64>().ok().map(|f| common_utils::types::MinorUnit::from_major_unit_as_i64(f))
+                        amt.parse::<f64>().ok().map(|f| common_utils::types::MinorUnit::new((f * 100.0) as i64))
                     }),
                 }),
             )
@@ -752,7 +752,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzRSyncResponse, RouterDataV2<RSync, Refun
                         amount_received: success_data.refunds.as_ref()
                             .and_then(|r| r.first())
                             .and_then(|r| r.refund_amount.parse::<f64>().ok())
-                            .map(|f| common_utils::types::MinorUnit::from_major_unit_as_i64(f)),
+                            .map(|f| common_utils::types::MinorUnit::new((f * 100.0) as i64)),
                     }),
                 )
             }
