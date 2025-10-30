@@ -5,7 +5,7 @@ use common_enums::CurrencyUnit;
 use common_utils::{
     errors::CustomResult,
     ext_traits::ByteSliceExt,
-    request::{Method, Request, RequestContent, Headers},
+    request::{Method, Request, RequestContent},
     types::StringMinorUnit,
 };
 use domain_types::{
