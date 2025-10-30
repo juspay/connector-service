@@ -125,6 +125,118 @@ impl<T> Default for Tpsl<T> {
     }
 }
 
+// Implement required traits for ConnectorServiceTrait
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorServiceTrait<T> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    PaymentAuthorizeV2<T> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    PaymentSyncV2 for Tpsl<T>
+{
+}
+
+// Implement empty traits for unsupported flows
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<domain_types::connector_flow::Void, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentVoidData, domain_types::connector_types::PaymentsResponseData> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<domain_types::connector_flow::Capture, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsCaptureData, domain_types::connector_types::PaymentsResponseData> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<domain_types::connector_flow::Refund, domain_types::connector_types::RefundFlowData, domain_types::connector_types::RefundsData, domain_types::connector_types::RefundsResponseData> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<domain_types::connector_flow::RSync, domain_types::connector_types::RefundSyncData, domain_types::connector_types::RefundSyncData, domain_types::connector_types::RefundsResponseData> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<domain_types::connector_flow::CreateOrder, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentCreateOrderData, domain_types::connector_types::PaymentCreateOrderResponse> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<domain_types::connector_flow::CreateSessionToken, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::SessionTokenRequestData, domain_types::connector_types::SessionTokenResponseData> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<domain_types::connector_flow::SetupMandate, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::SetupMandateRequestData<T>, domain_types::connector_types::PaymentsResponseData> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<domain_types::connector_flow::RepeatPayment, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::RepeatPaymentData, domain_types::connector_types::PaymentsResponseData> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<domain_types::connector_flow::Accept, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::AcceptDisputeData, domain_types::connector_types::DisputeResponseData> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<domain_types::connector_flow::DefendDispute, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::DisputeDefendData, domain_types::connector_types::DisputeResponseData> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<domain_types::connector_flow::SubmitEvidence, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::SubmitEvidenceData, domain_types::connector_types::DisputeResponseData> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<domain_types::connector_flow::PaymentMethodToken, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentMethodTokenizationData<T>, domain_types::connector_types::PaymentMethodTokenResponse> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<domain_types::connector_flow::CreateAccessToken, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::AccessTokenRequestData, domain_types::connector_types::AccessTokenResponseData> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<domain_types::connector_flow::CreateConnectorCustomer, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::ConnectorCustomerData, domain_types::connector_types::ConnectorCustomerResponse> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<domain_types::connector_flow::PaymentVoidPostCapture, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsCancelPostCaptureData, domain_types::connector_types::PaymentsResponseData> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<domain_types::connector_flow::RefundSync, domain_types::connector_types::RefundSyncData, domain_types::connector_types::RefundSyncData, domain_types::connector_types::RefundsResponseData> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<domain_types::connector_flow::PreAuthenticate, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsPreAuthenticateData<T>, domain_types::connector_types::PaymentsResponseData> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<domain_types::connector_flow::Authenticate, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsAuthenticateData<T>, domain_types::connector_types::PaymentsResponseData> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<domain_types::connector_flow::PostAuthenticate, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsPostAuthenticateData<T>, domain_types::connector_types::PaymentsResponseData> for Tpsl<T>
+{
+}
+
 
 
 #[derive(Debug, Default)]
