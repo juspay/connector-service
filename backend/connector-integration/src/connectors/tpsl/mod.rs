@@ -26,7 +26,7 @@ use domain_types::{
     },
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::ConnectorAuthType,
     errors::ConnectorError,
     id_type::CustomerId,
     masking::Secret,
