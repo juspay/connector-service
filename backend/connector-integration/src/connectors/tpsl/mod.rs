@@ -63,44 +63,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         self.connector_name
     }
 
-    fn get_connector_type(&self) -> domain_types::connector_types::ConnectorType {
-        domain_types::connector_types::ConnectorType::PaymentProcessor
-    }
-
-    fn get_payment_method_types(&self) -> Vec<PaymentMethodType> {
-        vec![PaymentMethodType::Upi]
-    }
-
-    fn get_connector_specifications(&self) -> domain_types::connector_types::ConnectorSpecifications {
-        domain_types::connector_types::ConnectorSpecifications {
-            connector_name: self.get_name().to_string(),
-            connector_type: self.get_connector_type(),
-            payment_method_types: self.get_payment_method_types(),
-            ..Default::default()
-        }
-    }
-
-    fn get_webhook_details(&self) -> Option<ConnectorWebhookSecrets> {
-        None
-    }
-
-    fn get_test_mode(&self) -> bool {
-        false
-    }
-
-    fn get_auth_type(&self) -> domain_types::router_data::ConnectorAuthType {
-        domain_types::router_data::ConnectorAuthType::SignatureKey {
-            api_key: Secret::new("".to_string()),
-            key1: Secret::new("".to_string()),
-        }
-    }
-
-    fn get_base_url(&self) -> &'static str {
+    fn base_url<'a>(&self, _connectors: &'a domain_types::types::Connectors) -> &'a str {
         constants::get_base_url()
-    }
-
-    fn get_error_response_mapping(&self) -> Option<&'static std::collections::HashMap<String, String>> {
-        Some(&constants::ERROR_RESPONSE_MAPPING)
     }
 }
 
