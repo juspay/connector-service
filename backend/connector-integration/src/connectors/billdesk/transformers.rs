@@ -219,7 +219,7 @@ impl TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData {
     fn try_from(response: BilldeskPaymentsSyncResponse) -> Result<Self, Self::Error> {
         let status = match response._AuthStatus.as_str() {
             "0300" | "0399" => common_enums::AttemptStatus::Charged,
-            "0396" => common_enums::AttemptStatus::AuthorizationPending,
+            "0396" => common_enums::AttemptStatus::AuthenticationPending,
             "0397" => common_enums::AttemptStatus::Failure,
             _ => common_enums::AttemptStatus::Failure,
         };
