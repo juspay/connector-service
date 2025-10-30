@@ -4,20 +4,34 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
-## [2025-01-XX] - Billdesk Connector Addition
+## [2025-06-18] - Billdesk Connector Migration and Enhancement
 
 ### Added
-- New Billdesk connector implementation
+- Complete Billdesk connector implementation using UCS v2 macro framework
 - Payment methods supported: UPI (Intent/Collect)
 - Transaction flows: Authorize, PSync
-- Full UCS v2 macro framework implementation
-- Proper error handling and status mapping
-- Complete type safety with guard rails
+- Proper error handling and status mapping from Haskell implementation
+- Complete type safety with guard rails (Secret<String>, MinorUnit, etc.)
+- Dynamic request body value extraction from router data (no hardcoded values)
+- Authentication handling via ConnectorAuthType (SignatureKey/BodyKey)
+- Comprehensive webhook verification stubs for all flows
 
 ### Files Created/Modified
-- `src/connectors/billdesk.rs` - Main connector implementation
-- `src/connectors/billdesk/transformers.rs` - Request/response transformers
+- `src/connectors/billdesk.rs` - Main connector implementation with UCS v2 macros
+- `src/connectors/billdesk/transformers.rs` - Request/response transformers for UPI and sync flows
 - `src/connectors/billdesk/constants.rs` - API constants and endpoints
+- `src/connectors.rs` - Billdesk connector registration (already present)
+
+### Technical Details
+- Migrated from Hyperswitch/Euler Haskell implementation to UCS v2 Rust
+- Uses `create_all_prerequisites!` and `macro_connector_implementation!` macros
+- Implements proper amount framework with StringMinorUnit converter
+- All request values extracted dynamically from router data (no hardcoding)
+- Supports UPI-specific business logic with additional info fields
+- Status mapping: 0300 (Charged), 0002 (Pending), 0399 (Failure)
+- Message format: pipe-separated values following Billdesk API specification
+- Redirect flow handling for UPI payment initiation
+- Comprehensive error response parsing and mapping
 - `src/connectors.rs` - Added connector registration
 - `src/types.rs` - Added connector to ConnectorEnum
 - `backend/domain_types/src/connector_types.rs` - Added Billdesk to enum and mappings
