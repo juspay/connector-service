@@ -18,6 +18,7 @@ use hyperswitch_masking::{Secret, ExposeInterface, PeekInterface, Mask, Maskable
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
+use crate::connectors::billdesk::BilldeskRouterData;
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
