@@ -371,8 +371,8 @@ where
         
         let merchant_id = get_merchant_id(&item.connector_auth_type)?;
         
-        // Extract UPI specific data
-        let vpa = extract_upi_vpa(&item.request.payment_method_data)?;
+        // Extract UPI specific data - placeholder for now
+        let vpa: Option<String> = None;
         
         let merchant_payload = TpslMerchantPayload {
             identifier: merchant_id,
