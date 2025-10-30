@@ -274,13 +274,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-impl TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<()>, PaymentsResponseData>>>
-    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<()>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+where
+    T: std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<()>, PaymentsResponseData>>,
+        item: ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
