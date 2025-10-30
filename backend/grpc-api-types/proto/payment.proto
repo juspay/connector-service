@@ -1727,6 +1727,17 @@ message PaymentServiceRepeatEverythingRequest {
 
   // State Information
   optional ConnectorState state = 22; // State data for access token storage and other connector-specific state
+
+  optional RecurringMandatePaymentData recurring_mandate_payment_data = 9; // Mandate payment details
+}
+
+// Container for recurring mandate payment data
+message RecurringMandatePaymentData {
+  // Shipping address.
+  optional int64 original_payment_authorized_amount = 1;
+  
+  // Customer Billing address.
+  optional Currency original_payment_authorized_currency = 2;
 }
 
 // Response message for repeat payment operation.
