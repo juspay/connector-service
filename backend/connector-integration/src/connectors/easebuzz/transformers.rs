@@ -157,7 +157,7 @@ pub struct EaseBuzzErrorResponse {
     pub message: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum EaseBuzzPaymentsResponseEnum {
     Success(EaseBuzzPaymentsResponse),
