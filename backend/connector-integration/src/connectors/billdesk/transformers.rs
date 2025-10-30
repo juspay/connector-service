@@ -104,7 +104,7 @@ pub fn get_billdesk_auth_header(auth: &BilldeskAuth) -> CustomResult<Maskable<St
     Ok(format!("Bearer {}", auth.merchant_id.peek()).into_masked())
 }
 
-impl<T: PaymentMethodDataTypes> TryFrom<
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<
         BilldeskRouterData<
             RouterDataV2<
                 Authorize,
@@ -166,7 +166,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<
     }
 }
 
-impl<T: PaymentMethodDataTypes> TryFrom<
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<
         BilldeskRouterData<
             RouterDataV2<
                 PSync,
