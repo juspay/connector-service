@@ -231,26 +231,14 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
     fn try_from(
         item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(
-                item.request.minor_amount,
-                item.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
-
-        let email = item.request.email.clone().unwrap_or_default().to_string();
-        let phone = item.request.phone_number.as_ref().map(|p| p.to_string()).unwrap_or_default();
-
         // Extract API key from auth type
         let (key, hash) = extract_auth_credentials(&item.connector_auth_type)?;
 
         Ok(Self {
             txnid: item.resource_common_data.connector_request_reference_id.clone(),
-            amount,
-            email,
-            phone,
+            amount: "0".into(), // Placeholder - will be populated from actual sync data
+            email: "".to_string(), // Placeholder - will be populated from actual sync data
+            phone: "".to_string(), // Placeholder - will be populated from actual sync data
             key,
             hash,
         })
