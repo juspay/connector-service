@@ -734,13 +734,12 @@ impl TryFrom<ResponseRouterData<EaseBuzzRSyncResponse, RouterDataV2<RSync, Refun
                 (
                     common_enums::AttemptStatus::Charged,
                     Ok(RefundsResponseData {
-                        refund_id: success_data.refunds.as_ref()
-                            .and_then(|r| r.first())
-                            .map(|r| r.refund_id.clone()),
                         connector_refund_id: success_data.refunds.as_ref()
                             .and_then(|r| r.first())
-                            .map(|r| r.refund_id.clone()),
+                            .map(|r| r.refund_id.clone())
+                            .unwrap_or_default(),
                         refund_status,
+                        status_code: 200,
                         
                         
                     }),
