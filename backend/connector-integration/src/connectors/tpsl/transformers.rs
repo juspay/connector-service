@@ -480,12 +480,12 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
     fn try_from(
         item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let merchant_id = get_merchant_id(&item.router_data.connector_auth_type)?;
-        let transaction_id = item.router_data.request.connector_transaction_id
+        let merchant_id = get_merchant_id(&item.connector_auth_type)?;
+        let transaction_id = item.request.connector_transaction_id
             .get_connector_transaction_id()
             .map_err(|_e| ConnectorError::RequestEncodingFailed)?;
         
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let customer_id = item.resource_common_data.get_customer_id()?;
         let customer_id_string = customer_id.get_string_repr();
         
         Ok(Self {
@@ -504,7 +504,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
                 request_type: constants::RESPONSE_TYPE_SYNC.to_string(),
                 date_time: "2024-01-01 00:00:00".to_string(),
                 token: "sync_token".to_string(),
-                device_identifier: item.router_data.request.get_ip_address_as_optional()
+                device_identifier: item.request.get_ip_address_as_optional()
                     .map(|ip| ip.expose()),
             },
             consumer: TpslConsumerDataType {
