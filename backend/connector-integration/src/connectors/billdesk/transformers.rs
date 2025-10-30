@@ -68,7 +68,7 @@ pub struct BilldeskPaymentsSyncResponse {
     pub msg: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BilldeskSuccessResponse {
     pub msg: Option<String>,
