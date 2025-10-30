@@ -179,7 +179,7 @@ impl<T> Default for Tpsl<T> {
 
 // Finally implement ConnectorServiceTrait
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    domain_types::connector_types::ConnectorServiceTrait<T> for Tpsl<T>
+    ConnectorServiceTrait<T> for Tpsl<T>
 {
 }
 
