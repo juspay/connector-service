@@ -410,7 +410,7 @@ where
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
-                ..router_data.router_data
+                ..router_data.resource_common_data
             },
             response,
             flow: router_data.flow,
@@ -519,7 +519,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<PSync
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
-                ..router_data.router_data
+                ..router_data.resource_common_data
             },
             response,
             flow: router_data.flow,
