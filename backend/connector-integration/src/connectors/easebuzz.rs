@@ -431,6 +431,18 @@ impl_not_implemented_flow!(Accept, DisputeFlowData, AcceptDisputeData, DisputeRe
 impl_not_implemented_flow!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
 impl_not_implemented_flow!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
 
+// Additional stub implementations for authentication flows
+impl_not_implemented_flow!(connector_flow::PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData);
+impl_not_implemented_flow!(connector_flow::Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData);
+impl_not_implemented_flow!(connector_flow::PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData);
+
+// Additional stub implementations for other required flows
+impl_not_implemented_flow!(connector_flow::CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData);
+impl_not_implemented_flow!(connector_flow::CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse);
+impl_not_implemented_flow!(connector_flow::PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData, PaymentMethodTokenResponse);
+impl_not_implemented_flow!(connector_flow::VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData);
+impl_not_implemented_flow!(connector_flow::RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData);
+
 // MANDATORY: Add impl_source_verification_stub! for ALL flows
 macro_rules! impl_source_verification_stub {
     ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
