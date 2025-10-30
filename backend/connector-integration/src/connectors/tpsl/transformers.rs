@@ -11,6 +11,7 @@ use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
     router_data::ConnectorAuthType,
+    router_response_types::Response,
     errors::ConnectorError,
 };
 use error_stack::ResultExt;
