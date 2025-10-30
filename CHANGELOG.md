@@ -17,10 +17,10 @@ All notable changes to Connector Service will be documented here.
 - Comprehensive webhook verification stubs for all flows
 
 ### Files Created/Modified
-- `src/connectors/billdesk.rs` - Main connector implementation with UCS v2 macros
-- `src/connectors/billdesk/transformers.rs` - Request/response transformers for UPI and sync flows
-- `src/connectors/billdesk/constants.rs` - API constants and endpoints
-- `src/connectors.rs` - Billdesk connector registration (already present)
+- `backend/connector-integration/src/connectors/billdesk.rs` - Main connector implementation with UCS v2 macros
+- `backend/connector-integration/src/connectors/billdesk/transformers.rs` - Request/response transformers for UPI and sync flows
+- `backend/connector-integration/src/connectors/billdesk/constants.rs` - API constants and endpoints
+- `backend/connector-integration/src/connectors.rs` - Billdesk connector registration (already present)
 
 ### Technical Details
 - Migrated from Hyperswitch/Euler Haskell implementation to UCS v2 Rust
@@ -32,16 +32,7 @@ All notable changes to Connector Service will be documented here.
 - Message format: pipe-separated values following Billdesk API specification
 - Redirect flow handling for UPI payment initiation
 - Comprehensive error response parsing and mapping
-- `src/connectors.rs` - Added connector registration
-- `src/types.rs` - Added connector to ConnectorEnum
-- `backend/domain_types/src/connector_types.rs` - Added Billdesk to enum and mappings
-
-### Technical Details
-- Migrated from Hyperswitch/Euler Haskell implementation
-- Uses UCS v2 macro framework for trait implementations
-- Implements proper amount handling with StringMinorUnit converter
-- Supports UPI-specific business logic from original implementation
-- Includes comprehensive error response handling
+- Connector already registered in ConnectorEnum and types.rs
 - Maintains business logic parity with the original Haskell connector
 
 - - -
