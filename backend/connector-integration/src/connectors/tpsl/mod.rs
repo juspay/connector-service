@@ -36,7 +36,7 @@ use hyperswitch_masking::Secret;
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
-    ConnectorValidation,
+    connector_types::ConnectorValidation,
 };
 
 #[derive(Debug, Clone)]
