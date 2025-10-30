@@ -6,7 +6,7 @@ use std::marker::PhantomData;
 
 use common_utils::errors::CustomResult;
 use domain_types::{
-    connector_flow::{Authorize, PSync, Void, Capture, Refund, RSync, CreateOrder, CreateSessionToken, SetupMandate, RepeatPayment, Accept, DefendDispute, SubmitEvidence, PaymentMethodToken, CreateAccessToken, PaymentVoidPostCapture, RefundSync, PreAuthenticate, Authenticate, PostAuthenticate},
+    connector_flow::{Authorize, PSync, Void, Capture, Refund, RSync, CreateOrder, CreateSessionToken, SetupMandate, RepeatPayment, Accept, DefendDispute, SubmitEvidence, PaymentMethodToken, CreateAccessToken, VoidPC, PreAuthenticate, Authenticate, PostAuthenticate},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, PaymentVoidData, PaymentsCaptureData, RefundsData, RefundSyncData, PaymentCreateOrderData, PaymentCreateOrderResponse, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData, AcceptDisputeData, DisputeResponseData, DisputeFlowData, DisputeDefendData, SubmitEvidenceData, RepeatPaymentData, PaymentMethodTokenizationData, PaymentMethodTokenResponse, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData, ConnectorCustomerResponse, PaymentsCancelPostCaptureData, PaymentsPreAuthenticateData, PaymentsAuthenticateData, PaymentsPostAuthenticateData},
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
@@ -18,8 +18,8 @@ use interfaces::{
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types,
     events::connector_api_logs::ConnectorEvent,
+    verification::SourceVerification,
 };
-use hyperswitch_masking::Secret;
 
 #[derive(Debug, Clone)]
 pub struct Tpsl<T> {
@@ -28,8 +28,8 @@ pub struct Tpsl<T> {
 }
 
 impl<T> Tpsl<T> {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> &'static Self {
+        &Self {
             connector_name: "tpsl",
             payment_method_data: PhantomData,
         }
@@ -46,6 +46,207 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn base_url<'a>(&self, _connectors: &'a domain_types::types::Connectors) -> &'a str {
         constants::get_base_url()
     }
+}
+
+// SourceVerification implementations for all flows
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    > for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        PSync,
+        PaymentFlowData,
+        PaymentsSyncData,
+        PaymentsResponseData,
+    > for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        Capture,
+        PaymentFlowData,
+        PaymentsCaptureData,
+        PaymentsResponseData,
+    > for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        Void,
+        PaymentFlowData,
+        PaymentVoidData,
+        PaymentsResponseData,
+    > for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        Refund,
+        domain_types::connector_types::RefundFlowData,
+        RefundsData,
+        domain_types::connector_types::RefundsResponseData,
+    > for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        RSync,
+        domain_types::connector_types::RefundFlowData,
+        RefundSyncData,
+        domain_types::connector_types::RefundsResponseData,
+    > for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    > for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        Accept,
+        DisputeFlowData,
+        AcceptDisputeData,
+        DisputeResponseData,
+    > for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        SubmitEvidence,
+        DisputeFlowData,
+        SubmitEvidenceData,
+        DisputeResponseData,
+    > for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        DefendDispute,
+        DisputeFlowData,
+        DisputeDefendData,
+        DisputeResponseData,
+    > for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Tpsl<T>
+{
 }
 
 // Implement ConnectorIntegrationV2 for Authorize flow
@@ -125,6 +326,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     connector_types::PaymentPostAuthenticateV2<T> for Tpsl<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    connector_types::ValidationTrait for Tpsl<T>
 {
 }
 
@@ -221,13 +427,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     connector_types::SubmitEvidenceV2 for Tpsl<T>
 {
-}
-
-// Default implementation
-impl<T> Default for Tpsl<T> {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 #[derive(Debug, Default)]
