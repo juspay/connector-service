@@ -99,53 +99,7 @@ pub struct TpslSubmitEvidenceRequest;
 #[derive(Debug, Clone)]
 pub struct TpslSubmitEvidenceResponse;
 
-// Macro for not implemented flows
-macro_rules! impl_not_implemented_flow {
-    ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
-        impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-            ConnectorIntegrationV2<$flow, $common_data, $req, $resp> for Tpsl<T>
-        {
-            fn build_request_v2(
-                &self,
-                _req: &RouterDataV2<$flow, $common_data, $req, $resp>,
-            ) -> CustomResult<Option<common_utils::request::Request>, ConnectorError> {
-                let flow_name = stringify!($flow);
-                Err(ConnectorError::NotImplemented(flow_name.to_string()).into())
-            }
 
-            fn handle_response_v2(
-                &self,
-                _req: &RouterDataV2<$flow, $common_data, $req, $resp>,
-                _event: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
-                _response: Response,
-            ) -> CustomResult<RouterDataV2<$flow, $common_data, $req, $resp>, ConnectorError> {
-                let flow_name = stringify!($flow);
-                Err(ConnectorError::NotImplemented(flow_name.to_string()).into())
-            }
-
-            fn get_error_response_v2(
-                &self,
-                _response: Response,
-                _event: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
-            ) -> CustomResult<ErrorResponse, ConnectorError> {
-                Err(ConnectorError::NotImplemented("Error handling not implemented".to_string()).into())
-            }
-        }
-    };
-}
-
-// Implement not implemented flows
-// impl_not_implemented_flow!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
-// impl_not_implemented_flow!(Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData);
-// impl_not_implemented_flow!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
-// impl_not_implemented_flow!(RSync, RefundSyncData, RefundSyncData, RefundsResponseData);
-// impl_not_implemented_flow!(CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse);
-// impl_not_implemented_flow!(CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData);
-// impl_not_implemented_flow!(SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData);
-// impl_not_implemented_flow!(RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData);
-// impl_not_implemented_flow!(Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData);
-// impl_not_implemented_flow!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
-// impl_not_implemented_flow!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
 
 // Implement connector types traits - simplified for compilation
 
