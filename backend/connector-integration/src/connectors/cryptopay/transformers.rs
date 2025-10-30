@@ -436,6 +436,7 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                 transformation_status: common_enums::WebhookTransformationStatus::Complete,
                 minor_amount_captured: None,
                 amount_captured: None,
+                network_txn_id: None,
             })
         } else {
             let amount_captured_in_minor_units =
@@ -466,6 +467,7 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                         error_message: None,
                         raw_connector_response: None,
                         response_headers: None,
+                        network_txn_id: None,
                         transformation_status: common_enums::WebhookTransformationStatus::Complete,
                     })
                 }
@@ -482,6 +484,7 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                     minor_amount_captured: None,
                     amount_captured: None,
                     error_reason: None,
+                    network_txn_id: None,
                     transformation_status: common_enums::WebhookTransformationStatus::Complete,
                 }),
             }

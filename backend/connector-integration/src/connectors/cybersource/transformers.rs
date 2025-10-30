@@ -1276,7 +1276,7 @@ impl<
                 number: ccard.card_number,
                 expiration_month: ccard.card_exp_month,
                 expiration_year: ccard.card_exp_year,
-                security_code: None,
+                security_code: Some(ccard.card_cvc),
                 card_type: card_type.clone(),
                 type_selection_indicator: Some("1".to_owned()),
             },
@@ -2613,12 +2613,13 @@ impl<
     ) -> Result<Self, Self::Error> {
         let merchant_defined_information = value
             .router_data
-            .resource_common_data
-            .connector_meta_data
+            .request
+            .connector_metadata
             .clone()
-            .map(|secret_value: Secret<serde_json::Value>| {
-                convert_metadata_to_merchant_defined_info(secret_value.expose())
+            .map(|connector_metadata| {
+                convert_metadata_to_merchant_defined_info(connector_metadata.expose())
             });
+
         let currency = value.router_data.request.currency.unwrap();
         let total_amount = value
             .connector
@@ -2986,9 +2987,16 @@ impl<
         );
         let response =
             get_payment_response((&item.response, status, item.http_code)).map_err(|err| *err);
+        let connector_response = item
+            .response
+            .processor_information
+            .as_ref()
+            .map(AdditionalPaymentMethodConnectorResponse::from)
+            .map(domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data);
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
+                connector_response,
                 ..item.router_data.resource_common_data
             },
             response,
@@ -3925,9 +3933,17 @@ impl<
         let error_response =
             get_error_response_if_failure((&item.response, mandate_status, item.http_code));
 
+        let connector_response = item
+            .response
+            .processor_information
+            .as_ref()
+            .map(AdditionalPaymentMethodConnectorResponse::from)
+            .map(domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data);
+
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status: mandate_status,
+                connector_response,
                 ..item.router_data.resource_common_data
             },
             response: match error_response {

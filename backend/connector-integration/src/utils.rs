@@ -18,7 +18,7 @@ pub use xml_utils::preprocess_xml_response_bytes;
 
 type Error = error_stack::Report<errors::ConnectorError>;
 use common_enums::enums;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[macro_export]
 macro_rules! with_error_response_body {
@@ -199,4 +199,16 @@ impl<T: PaymentMethodDataTypes> SplitPaymentData for SetupMandateRequestData<T> 
     ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
         None
     }
+}
+
+pub fn serialize_to_xml_string_with_root<T: Serialize>(
+    root_name: &str,
+    data: &T,
+) -> Result<String, Error> {
+    let xml_content = quick_xml::se::to_string_with_root(root_name, data)
+        .change_context(errors::ConnectorError::RequestEncodingFailed)
+        .attach_printable("Failed to serialize XML with root")?;
+
+    let full_xml = format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>{}", xml_content);
+    Ok(full_xml)
 }

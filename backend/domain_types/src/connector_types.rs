@@ -26,8 +26,9 @@ use crate::{
         AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
         CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
         PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
-        RefundIntegrityObject, RefundSyncIntegrityObject, RepeatPaymentIntegrityObject,
-        SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject, SyncRequestType,
+        PaymentVoidPostCaptureIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
+        RepeatPaymentIntegrityObject, SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
+        SyncRequestType,
     },
     router_response_types::RedirectForm,
     types::{
@@ -72,6 +73,8 @@ pub enum ConnectorEnum {
     Trustpay,
     Stripe,
     Cybersource,
+    Worldpay,
+    Worldpayvantiv,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -110,6 +113,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Trustpay => Ok(Self::Trustpay),
             grpc_api_types::payments::Connector::Stripe => Ok(Self::Stripe),
             grpc_api_types::payments::Connector::Cybersource => Ok(Self::Cybersource),
+            grpc_api_types::payments::Connector::Worldpay => Ok(Self::Worldpayvantiv),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -812,6 +816,7 @@ pub struct PaymentVoidData {
     pub browser_info: Option<BrowserInformation>,
     pub amount: Option<MinorUnit>,
     pub currency: Option<Currency>,
+    pub connector_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
 
 impl PaymentVoidData {
@@ -850,6 +855,29 @@ impl PaymentVoidData {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct PaymentsCancelPostCaptureData {
+    pub connector_transaction_id: String,
+    pub cancellation_reason: Option<String>,
+    pub integrity_object: Option<PaymentVoidPostCaptureIntegrityObject>,
+    pub raw_connector_response: Option<String>,
+    pub browser_info: Option<BrowserInformation>,
+}
+
+impl PaymentsCancelPostCaptureData {
+    pub fn get_cancellation_reason(&self) -> Result<String, Error> {
+        self.cancellation_reason
+            .clone()
+            .ok_or_else(missing_field_err("cancellation_reason"))
+    }
+
+    pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub payment_method_data: payment_method_data::PaymentMethodData<T>,
@@ -880,7 +908,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub browser_info: Option<BrowserInformation>,
     pub order_category: Option<String>,
     pub session_token: Option<String>,
-    pub access_token: Option<String>,
+    pub access_token: Option<AccessTokenResponseData>,
     pub customer_acceptance: Option<CustomerAcceptance>,
     pub enrolled_for_3ds: bool,
     pub related_transaction_id: Option<String>,
@@ -1097,12 +1125,18 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     }
 
     pub fn set_access_token(mut self, access_token: Option<String>) -> Self {
-        self.access_token = access_token;
+        self.access_token = access_token.map(|token| AccessTokenResponseData {
+            access_token: token,
+            token_type: None,
+            expires_in: None,
+        });
         self
     }
 
     pub fn get_access_token_optional(&self) -> Option<&String> {
-        self.access_token.as_ref()
+        self.access_token
+            .as_ref()
+            .map(|token_data| &token_data.access_token)
     }
 }
 
@@ -1269,7 +1303,7 @@ pub struct AccessTokenRequestData {
     pub grant_type: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct AccessTokenResponseData {
     pub access_token: String,
     pub token_type: Option<String>,
@@ -1373,6 +1407,7 @@ pub struct WebhookDetailsResponse {
     pub amount_captured: Option<i64>,
     // minor amount for amount framework
     pub minor_amount_captured: Option<MinorUnit>,
+    pub network_txn_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]

@@ -201,7 +201,6 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         minor_amount: REPEAT_AMOUNT,
         merchant_order_reference_id: Some(format!("repeat_order_{}", get_timestamp())),
         metadata,
-        access_token: None,
         webhook_url: Some("https://your-webhook-url.com/payments/webhook".to_string()),
         capture_method: None,
         email: None,
@@ -209,6 +208,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         test_mode: None,
         payment_method_type: None,
         merchant_account_metadata: HashMap::new(),
+        state: None,
     }
 }
 
@@ -394,11 +394,11 @@ fn create_payment_get_request(transaction_id: &str) -> PaymentServiceGetRequest 
     PaymentServiceGetRequest {
         transaction_id: Some(transaction_id_obj),
         request_ref_id: Some(request_ref_id),
-        access_token: None,
         capture_method: None,
         handle_response: None,
         amount: TEST_AMOUNT,
         currency: 146, // Currency value from working grpcurl
+        state: None,
     }
 }
 
@@ -418,10 +418,10 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         amount_to_capture: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
-        metadata: HashMap::new(),
+        connector_metadata: HashMap::new(),
         browser_info: None,
-        access_token: None,
         capture_method: None,
+        state: None,
     }
 }
 
@@ -441,9 +441,9 @@ fn create_void_request(transaction_id: &str) -> PaymentServiceVoidRequest {
         cancellation_reason: None,
         all_keys_required: None,
         browser_info: None,
-        access_token: None,
         amount: None,
         currency: None,
+        ..Default::default()
     }
 }
 
@@ -487,7 +487,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         metadata: HashMap::new(),
         refund_metadata,
         browser_info: None,
-        access_token: None,
+        state: None,
     }
 }
 
@@ -508,7 +508,7 @@ fn create_refund_get_request(transaction_id: &str, refund_id: &str) -> RefundSer
         browser_info: None,
         refund_reason: None,
         refund_metadata: HashMap::new(),
-        access_token: None,
+        state: None,
     }
 }
 
