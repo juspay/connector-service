@@ -210,6 +210,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         merchant_account_metadata: HashMap::new(),
         state: None,
         address: None,
+        recurring_mandate_payment_data: None,
     }
 }
 

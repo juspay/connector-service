@@ -85,6 +85,7 @@ use crate::{
     },
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ConnectorResponseData,
+        RecurringMandatePaymentData,
     },
     router_data_v2::RouterDataV2,
     router_request_types,
@@ -5398,7 +5399,19 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
                         })
                 })
                 .transpose()?,
-            recurring_mandate_payment_data: None,
+            recurring_mandate_payment_data: value.recurring_mandate_payment_data.map(|v| {
+                RecurringMandatePaymentData {
+                    payment_method_type: None,
+                    original_payment_authorized_amount: v.original_payment_authorized_amount,
+                    original_payment_authorized_currency: Some(
+                        common_enums::Currency::foreign_try_from(
+                            v.original_payment_authorized_currency(),
+                        )
+                        .unwrap_or_default(),
+                    ),
+                    mandate_metadata: None,
+                }
+            }),
         })
     }
 }
