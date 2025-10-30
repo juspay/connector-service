@@ -99,7 +99,7 @@ pub struct TpslInstructionPayload {
     pub identifier: String,
     pub amount: String,
     pub currency: String,
-    pub #[serde(rename = "type")]
+    #[serde(rename = "type")]
     pub instruction_type: String,
     pub description: Option<String>,
     pub action: Option<String>,
