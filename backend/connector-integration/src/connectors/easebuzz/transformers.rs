@@ -434,7 +434,7 @@ impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsRespons
     }
 }
 
-impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 where
     T: std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
