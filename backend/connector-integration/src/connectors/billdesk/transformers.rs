@@ -203,7 +203,7 @@ TryFrom<
             common_enums::PaymentMethod::Upi => Ok(Self {
                 msg,
                 paydata: None, // Will be populated based on UPI specific data
-                ipaddress,
+                ipaddress: ip_address,
                 useragent: user_agent,
             }),
             _ => Err(errors::ConnectorError::NotImplemented(
