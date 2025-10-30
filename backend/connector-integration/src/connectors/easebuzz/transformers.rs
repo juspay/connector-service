@@ -402,7 +402,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             response,
             flow: router_data.flow,
             connector_auth_type: router_data.connector_auth_type,
-            request: router_data.router_data.request,
+            request: router_data.request,
         })
     }
 }
