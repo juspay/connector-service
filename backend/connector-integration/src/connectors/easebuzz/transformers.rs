@@ -257,10 +257,10 @@ impl TryFrom<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResp
         let auth = EaseBuzzAuth::try_from(&item.connector_auth_type)?;
         
         // For now, use a default amount converter since we don't have access to the connector
-        let amount = common_utils::types::StringMinorUnit::from_minor(
-            item.request.amount,
-            item.request.currency,
-        );
+        let amount_converter = common_utils::types::StringMinorUnitForConnector;
+        let amount = amount_converter
+            .convert(item.request.amount, item.request.currency)
+            .map_err(|_| ConnectorError::RequestEncodingFailed)?;
 
         // Generate hash for sync request
         let hash_string = format!(
