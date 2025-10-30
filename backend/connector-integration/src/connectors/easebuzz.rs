@@ -384,6 +384,12 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
         (
+            flow: VoidPC,
+            request_body: EaseBuzzVoidPostCaptureRequest,
+            response_body: EaseBuzzVoidPostCaptureResponse,
+            router_data: RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        ),
+        (
             flow: Capture,
             request_body: EaseBuzzCaptureRequest,
             response_body: EaseBuzzCaptureResponse,
@@ -396,10 +402,52 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
         (
+            flow: RSync,
+            request_body: EaseBuzzRSyncRequest,
+            response_body: EaseBuzzRSyncResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: CreateOrder,
+            request_body: EaseBuzzCreateOrderRequest,
+            response_body: EaseBuzzCreateOrderResponse,
+            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ),
+        (
+            flow: CreateSessionToken,
+            request_body: EaseBuzzSessionTokenRequest,
+            response_body: EaseBuzzSessionTokenResponse,
+            router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
+        ),
+        (
+            flow: CreateAccessToken,
+            request_body: EaseBuzzAccessTokenRequest,
+            response_body: EaseBuzzAccessTokenResponse,
+            router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        ),
+        (
+            flow: CreateConnectorCustomer,
+            request_body: EaseBuzzCreateConnectorCustomerRequest,
+            response_body: EaseBuzzCreateConnectorCustomerResponse,
+            router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+        ),
+        (
             flow: SetupMandate,
             request_body: EaseBuzzSetupMandateRequest,
             response_body: EaseBuzzSetupMandateResponse,
             router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: EaseBuzzRepeatPaymentRequest,
+            response_body: EaseBuzzRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ),
+        (
+            flow: PaymentMethodToken,
+            request_body: EaseBuzzPaymentTokenRequest,
+            response_body: EaseBuzzPaymentTokenResponse,
+            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         ),
         (
             flow: Accept,
@@ -412,6 +460,30 @@ macros::create_all_prerequisites!(
             request_body: EaseBuzzSubmitEvidenceRequest,
             response_body: EaseBuzzSubmitEvidenceResponse,
             router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        ),
+        (
+            flow: DefendDispute,
+            request_body: EaseBuzzDefendDisputeRequest,
+            response_body: EaseBuzzDefendDisputeResponse,
+            router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        ),
+        (
+            flow: PreAuthenticate,
+            request_body: EaseBuzzPreAuthenticateRequest,
+            response_body: EaseBuzzPreAuthenticateResponse,
+            router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: Authenticate,
+            request_body: EaseBuzzAuthenticateRequest,
+            response_body: EaseBuzzAuthenticateResponse,
+            router_data: RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PostAuthenticate,
+            request_body: EaseBuzzPostAuthenticateRequest,
+            response_body: EaseBuzzPostAuthenticateResponse,
+            router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [
