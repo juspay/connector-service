@@ -398,6 +398,90 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for Tpsl<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+    ) -> CustomResult<Option<common_utils::request::Request>, ConnectorError> {
+        Ok(None)
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        _event: Option<&mut ConnectorEvent>,
+        _response: Response,
+    ) -> CustomResult<RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>, ConnectorError> {
+        Err(ConnectorError::NotImplemented("Response handling not implemented".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        _response: Response,
+        _event: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
+        Err(ConnectorError::NotImplemented("Error handling not implemented".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData> for Tpsl<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+    ) -> CustomResult<Option<common_utils::request::Request>, ConnectorError> {
+        Ok(None)
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        _event: Option<&mut ConnectorEvent>,
+        _response: Response,
+    ) -> CustomResult<RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>, ConnectorError> {
+        Err(ConnectorError::NotImplemented("Response handling not implemented".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        _response: Response,
+        _event: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
+        Err(ConnectorError::NotImplemented("Error handling not implemented".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Tpsl<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+    ) -> CustomResult<Option<common_utils::request::Request>, ConnectorError> {
+        Ok(None)
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        _event: Option<&mut ConnectorEvent>,
+        _response: Response,
+    ) -> CustomResult<RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>, ConnectorError> {
+        Err(ConnectorError::NotImplemented("Response handling not implemented".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        _response: Response,
+        _event: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
+        Err(ConnectorError::NotImplemented("Error handling not implemented".to_string()).into())
+    }
+}
+
 // Implement all the required traits with empty implementations like ACI does
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     connector_types::PaymentPreAuthenticateV2<T> for Tpsl<T>
