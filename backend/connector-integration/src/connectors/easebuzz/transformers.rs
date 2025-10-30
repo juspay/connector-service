@@ -565,7 +565,7 @@ where
     }
 }
 
-impl TryFrom<ResponseRouterData<EaseBuzzPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+impl TryFrom<ResponseRouterData<EaseBuzzPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
