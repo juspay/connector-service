@@ -7,12 +7,12 @@ pub mod api_urls {
     pub const TEST_BASE_URL: &str = "https://testpay.easebuzz.in";
     pub const PROD_BASE_URL: &str = "https://pay.easebuzz.in";
     
-    // Payment endpoints
+    // Payment endpoints - based on Haskell implementation
     pub const INITIATE_PAYMENT: &str = "/payment/initiateLink";
     pub const SEAMLESS_TRANSACTION: &str = "/transaction/v1/redirect";
     pub const TRANSACTION_SYNC: &str = "/transaction/v1/sync";
     
-    // UPI endpoints
+    // UPI endpoints - UPI focused as per requirements
     pub const UPI_INTENT: &str = "/upi/intent";
     pub const UPI_AUTOPAY: &str = "/upi/autopay";
     pub const UPI_MANDATE_EXECUTE: &str = "/upi/mandate/execute";
