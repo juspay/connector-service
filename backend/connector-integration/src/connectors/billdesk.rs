@@ -8,7 +8,7 @@ use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::String
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Authenticate, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder, CreateSessionToken, DefendDispute, PaymentMethodToken, PostAuthenticate, PreAuthenticate, PSync, RSync,
-        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData, ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
