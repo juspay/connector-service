@@ -4,12 +4,18 @@ pub mod transformers;
 
 use std::marker::PhantomData;
 
+use common_utils::errors::CustomResult;
 use domain_types::{
-    connector_types::ConnectorSpecifications,
+    connector_flow::{Authorize, PSync},
+    connector_types::{ConnectorSpecifications, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData},
     payment_method_data::PaymentMethodDataTypes,
+    router_data_v2::RouterDataV2,
+    router_response_types::Response,
+    errors::ConnectorError,
 };
 use interfaces::{
     api::ConnectorCommon,
+    connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{ConnectorServiceTrait, PaymentAuthorizeV2, PaymentSyncV2, ValidationTrait},
 };
 
