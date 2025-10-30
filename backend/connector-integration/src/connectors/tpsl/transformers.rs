@@ -498,8 +498,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
                 request_type: constants::RESPONSE_TYPE_SYNC.to_string(),
                 date_time: "2024-01-01 00:00:00".to_string(),
                 token: "sync_token".to_string(),
-                device_identifier: item.request.get_ip_address_as_optional()
-                    .map(|ip| ip.expose()),
+                device_identifier: None,
             },
             consumer: TpslConsumerDataType {
                 identifier: customer_id_string.to_string(),
