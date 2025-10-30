@@ -56,7 +56,7 @@ pub struct BilldeskPaymentsSyncRequest {
     pub msg: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum BilldeskPaymentsResponse {
     Success(BilldeskSuccessResponse),
