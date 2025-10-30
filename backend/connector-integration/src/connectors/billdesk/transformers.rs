@@ -225,7 +225,7 @@ impl TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData {
         };
 
         let amount = response._TxnAmount.parse::<i64>()
-            .map(|amt| common_utils::types::MinorUnit::from_i64(amt))
+            .map(|amt| common_utils::types::MinorUnit::new(amt))
             .ok();
 
         Ok(PaymentsResponseData::TransactionResponse {
