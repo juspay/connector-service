@@ -191,17 +191,21 @@ fn get_redirect_form_data(
     }
 }
 
-// Simplified response conversion - will be implemented with proper types later
-impl TryFrom<BilldeskPaymentsResponse> for PaymentsResponseData {
+// Response conversion for Authorize flow
+impl<T> TryFrom<crate::types::ResponseRouterData<BilldeskPaymentsResponse, domain_types::router_data_v2::RouterDataV2<domain_types::connector_flow::Authorize, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsAuthorizeData<T>, domain_types::connector_types::PaymentsResponseData>>> for domain_types::router_data_v2::RouterDataV2<domain_types::connector_flow::Authorize, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsAuthorizeData<T>, domain_types::connector_types::PaymentsResponseData>
+where
+    T: domain_types::payment_method_data::PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(response: BilldeskPaymentsResponse) -> Result<Self, Self::Error> {
-        match response {
-            BilldeskPaymentsResponse::BilldeskError(error_data) => {
+    fn try_from(response: crate::types::ResponseRouterData<BilldeskPaymentsResponse, domain_types::router_data_v2::RouterDataV2<domain_types::connector_flow::Authorize, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsAuthorizeData<T>, domain_types::connector_types::PaymentsResponseData>>) -> Result<Self, Self::Error> {
+        match response.response {
+            BilldeskPaymentsResponse::BilldeskError(_error_data) => {
                 Err(errors::ConnectorError::RequestEncodingFailed.into())
             }
             BilldeskPaymentsResponse::BilldeskData(_) => {
-                Ok(PaymentsResponseData::TransactionResponse {
+                let mut router_data = response.router_data;
+                router_data.response = Ok(PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::ConnectorTransactionId("txn_id".to_string()),
                     redirection_data: None,
                     mandate_reference: None,
@@ -210,7 +214,8 @@ impl TryFrom<BilldeskPaymentsResponse> for PaymentsResponseData {
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
                     status_code: 200,
-                })
+                });
+                Ok(router_data)
             }
         }
     }
