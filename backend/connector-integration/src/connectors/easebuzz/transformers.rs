@@ -232,7 +232,7 @@ fn extract_payment_method<T: PaymentMethodDataTypes>(
                     expiry_month: Some(card_data.card_exp_month.clone().expose()),
                     expiry_year: Some(format!("20{}", card_data.card_exp_year.clone().expose())),
                     cvv: Some(card_data.card_cvc.clone()),
-                    name_on_card: card_data.card_holder_name.as_ref().map(|s| s.expose().clone()),
+                    name_on_card: card_data.card_holder_name.as_ref().map(|s| s.clone().expose()),
                     save_card: Some(false),
                 }),
                 netbanking: None,
