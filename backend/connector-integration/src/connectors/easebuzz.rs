@@ -30,16 +30,10 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{self as easebuzz, 
-    EaseBuzzAcceptDisputeRequest, EaseBuzzAcceptDisputeResponse, EaseBuzzAccessTokenRequest, EaseBuzzAccessTokenResponse,
-    EaseBuzzAuthenticateRequest, EaseBuzzAuthenticateResponse, EaseBuzzCaptureRequest, EaseBuzzCaptureResponse,
-    EaseBuzzCreateConnectorCustomerRequest, EaseBuzzCreateConnectorCustomerResponse, EaseBuzzCreateOrderRequest, EaseBuzzCreateOrderResponse,
-    EaseBuzzDefendDisputeRequest, EaseBuzzDefendDisputeResponse, EaseBuzzPaymentsRequest, EaseBuzzPaymentsResponseEnum,
-    EaseBuzzPaymentsSyncRequest, EaseBuzzPaymentsSyncResponse, EaseBuzzPaymentTokenRequest, EaseBuzzPaymentTokenResponse,
-    EaseBuzzPostAuthenticateRequest, EaseBuzzPostAuthenticateResponse, EaseBuzzPreAuthenticateRequest, EaseBuzzPreAuthenticateResponse,
-    EaseBuzzRefundRequest, EaseBuzzRefundResponse, EaseBuzzRepeatPaymentRequest, EaseBuzzRepeatPaymentResponse,
-    EaseBuzzRSyncRequest, EaseBuzzRSyncResponse, EaseBuzzSessionTokenRequest, EaseBuzzSessionTokenResponse,
-    EaseBuzzSetupMandateRequest, EaseBuzzSetupMandateResponse, EaseBuzzSubmitEvidenceRequest, EaseBuzzSubmitEvidenceResponse,
-    EaseBuzzVoidRequest, EaseBuzzVoidResponse, EaseBuzzVoidPostCaptureRequest, EaseBuzzVoidPostCaptureResponse
+    EaseBuzzAcceptDisputeRequest, EaseBuzzAcceptDisputeResponse, EaseBuzzCaptureRequest, EaseBuzzCaptureResponse,
+    EaseBuzzPaymentsRequest, EaseBuzzPaymentsResponseEnum, EaseBuzzPaymentsSyncRequest, EaseBuzzPaymentsSyncResponse,
+    EaseBuzzRefundRequest, EaseBuzzRefundResponse, EaseBuzzSetupMandateRequest, EaseBuzzSetupMandateResponse,
+    EaseBuzzSubmitEvidenceRequest, EaseBuzzSubmitEvidenceResponse, EaseBuzzVoidRequest, EaseBuzzVoidResponse
 };
 
 use super::macros;
