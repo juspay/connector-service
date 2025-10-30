@@ -205,7 +205,8 @@ fn build_billdesk_message(
     let amount = amount_converter.convert(
         router_data.request.minor_amount,
         router_data.request.currency,
-    ).map_err(|_| errors::ConnectorError::AmountConversionFailed)?;
+    ).map_err(|_| errors::ConnectorError::AmountConversionFailed)?
+    .to_string();
 
     let mut message_data = HashMap::new();
     message_data.insert("merchantid".to_string(), auth.merchant_id.peek().to_string());
