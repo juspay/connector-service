@@ -72,7 +72,7 @@ pub struct EaseBuzzPaymentsRequest {
     pub udf5: Option<String>,
     pub udf6: Option<String>,
     pub udf7: Option<String>,
-    pub udf8: Option<String>,
+    pub pub udf8: Option<String>,
     pub udf9: Option<String>,
     pub udf10: Option<String>,
     pub address1: Option<String>,
@@ -274,7 +274,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         // Generate hash - this would typically involve SHA512 of parameters + salt
         let hash_string = format!(
-            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
+            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
             auth.key.peek(),
             item.resource_common_data.connector_request_reference_id,
             amount.to_string(),
@@ -284,7 +284,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             String::new(), // Phone number not available in standard flow
             return_url.clone(),
             return_url, // furl same as surl
-            "", "", "", "", "", "", "", "", "", "", "", "", "", // udf fields
+            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", // udf fields
             auth.salt.peek()
         );
         
@@ -377,7 +377,7 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
         // CRITICAL: Use amount converter properly - never hardcode amounts
         let amount_converter = common_utils::types::StringMinorUnitForConnector;
         let refund_amount = amount_converter
-            .convert(item.request.minor_amount, item.request.currency)
+            .convert(item.request.minor_refund_amount, item.request.currency)
             .map_err(|_| ConnectorError::RequestEncodingFailed)?;
 
         // Generate hash for refund request
@@ -434,7 +434,7 @@ impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsRespons
     }
 }
 
-impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 where
     T: std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
@@ -565,7 +565,7 @@ where
     }
 }
 
-impl TryFrom<ResponseRouterData<EaseBuzzPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+impl TryFrom<ResponseRouterData<EaseBuzzPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -653,7 +653,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzPaymentsSyncResponse, RouterDataV2<PSync
     }
 }
 
-impl TryFrom<ResponseRouterData<EaseBuzzRefundResponse, RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>>
+impl TryFrom<ResponseRouterData<EaseBuzzRefundResponse, RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -707,7 +707,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzRefundResponse, RouterDataV2<Refund, Ref
     }
 }
 
-impl TryFrom<ResponseRouterData<EaseBuzzRSyncResponse, RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>>
+impl TryFrom<ResponseRouterData<EaseBuzzRSyncResponse, RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
