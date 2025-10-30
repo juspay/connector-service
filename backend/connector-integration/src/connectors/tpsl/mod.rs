@@ -10,7 +10,6 @@ use common_utils::{
     id_type::CustomerId,
     pii::SecretSerdeValue,
     types::{StringMinorUnit, MinorUnit},
-    masking::Secret,
 };
 use domain_types::{
     connector_flow::{
@@ -32,6 +31,7 @@ use domain_types::{
     errors::ConnectorError,
     utils,
 };
+use hyperswitch_masking::Secret;
 
 use interfaces::{
     api::ConnectorCommon,
