@@ -389,10 +389,10 @@ where
                 amount: amount.clone(),
                 com_amt: "0".to_string(),
                 sku: "UPI_001".to_string(),
-                reference: transaction_id,
+                reference: transaction_id.clone(),
                 identifier: "item_001".to_string(),
             }],
-            reference: transaction_id,
+            reference: transaction_id.clone(),
             identifier: "cart_001".to_string(),
             description: Some("UPI Payment Transaction".to_string()),
         };
@@ -429,7 +429,7 @@ where
             date_time: "2024-01-01 00:00:00".to_string(),
             token: None,
             security_token: None,
-            reference: transaction_id,
+            reference: transaction_id.clone(),
             device_identifier: None, // TODO: implement IP address extraction
             sms_sending: Some("N".to_string()),
             forced_3ds_call: Some("N".to_string()),
