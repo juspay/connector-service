@@ -203,7 +203,7 @@ fn build_billdesk_message(
     )?;
 
     let mut message_data = HashMap::new();
-    message_data.insert("merchantid".to_string(), auth.merchant_id.peek().to_string());
+    message_data.insert("merchantid".to_string(), auth.merchant_id.clone().into_inner());
     message_data.insert("customerid".to_string(), customer_id.get_string_repr().to_string());
     message_data.insert("txnreferenceNo".to_string(), router_data.resource_common_data.connector_request_reference_id.clone());
     message_data.insert("txnamount".to_string(), amount);
@@ -239,7 +239,7 @@ fn build_status_message(
     router_data: &RouterDataV2<PSync, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>,
 ) -> CustomResult<String, errors::ConnectorError> {
     let mut message_data = HashMap::new();
-    message_data.insert("merchantid".to_string(), auth.merchant_id.peek().to_string());
+    message_data.insert("merchantid".to_string(), auth.merchant_id.clone().into_inner());
     message_data.insert("customerid".to_string(), "".to_string()); // Will be filled from response
     message_data.insert("txnreferenceNo".to_string(), router_data.resource_common_data.connector_request_reference_id.clone());
     message_data.insert("requesttype".to_string(), "STATUS".to_string());
