@@ -370,6 +370,12 @@ macros::create_all_prerequisites!(
             request_body: EaseBuzzPaymentsRequest,
             response_body: EaseBuzzPaymentsResponseEnum,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PSync,
+            request_body: EaseBuzzPaymentsSyncRequest,
+            response_body: EaseBuzzPaymentsResponseEnum,
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         )
     ],
     amount_converters: [
