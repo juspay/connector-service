@@ -595,7 +595,7 @@ impl TryFrom<TpslPaymentsSyncResponse> for PaymentsResponseData
         };
         
         Ok(PaymentsResponseData::TransactionResponse {
-            resource_id: response.merchant_transaction_identifier.into(),
+            resource_id: ResponseId::from(response.merchant_transaction_identifier),
             redirection_data: None,
             mandate_reference: None,
             network_txn_id: None,
