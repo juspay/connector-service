@@ -119,7 +119,7 @@ pub struct TpslTransactionPayload {
     pub identifier: String,
     pub amount: String,
     pub currency: String,
-    pub #[serde(rename = "type")]
+    #[serde(rename = "type")]
     pub txn_type: String,
     pub sub_type: String,
     pub request_type: String,
