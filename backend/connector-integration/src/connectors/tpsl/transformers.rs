@@ -513,9 +513,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
     }
 }
 
-impl<T> TryFrom<TpslPaymentsResponse> for PaymentsResponseData
-where
-    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+impl TryFrom<TpslPaymentsResponse> for PaymentsResponseData
 {
     type Error = error_stack::Report<ConnectorError>;
 
