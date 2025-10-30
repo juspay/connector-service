@@ -914,6 +914,7 @@ impl_source_verification_stub!(
     PaymentsResponseData
 );
 impl_source_verification_stub!(Void, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData);
+impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
 
 impl<
     T: PaymentMethodDataTypes
