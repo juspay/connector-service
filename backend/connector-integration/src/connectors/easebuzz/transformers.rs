@@ -262,7 +262,7 @@ fn extract_device_info(
         screen_height: browser_info.screen_height.map(|h| h.to_string()),
         screen_width: browser_info.screen_width.map(|w| w.to_string()),
         color_depth: browser_info.color_depth.map(|d| d.to_string()),
-        timezone: browser_info.time_zone.clone(),
+        timezone: browser_info.time_zone.map(|tz| tz.to_string()),
     })
 }
 
