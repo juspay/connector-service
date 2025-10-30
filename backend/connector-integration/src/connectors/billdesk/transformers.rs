@@ -451,7 +451,7 @@ impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsResponse, RouterDataV2<F, Pay
                     response: Err(ErrorResponse {
                         code: error.error,
                         status_code: http_code,
-                        message: error.error_description.clone(),
+                        message: error.error_description.clone().unwrap_or_default(),
                         reason: error.error_description.clone(),
                         attempt_status: None,
                         connector_transaction_id: None,
