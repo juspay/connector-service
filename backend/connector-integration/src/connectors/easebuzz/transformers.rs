@@ -370,7 +370,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                         Err(ErrorResponse {
                             status_code: http_code,
                             code: success_data.status.to_string(),
-                            message: success_data.error_desc.clone(),
+                            message: success_data.error_desc.clone().unwrap_or_default(),
                             reason: success_data.error_desc,
                             attempt_status: None,
                             connector_transaction_id: None,
@@ -386,7 +386,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 Err(ErrorResponse {
                     status_code: http_code,
                     code: error_data.status.to_string(),
-                    message: error_data.error_desc.or(error_data.message).clone(),
+                    message: error_data.error_desc.or(error_data.message).clone().unwrap_or_default(),
                     reason: error_data.error_desc.or(error_data.message),
                     attempt_status: None,
                     connector_transaction_id: None,
@@ -400,7 +400,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
-                ..router_data.resource_common_data
+                ..router_data.router_data.router_data.resource_common_data
             },
             response,
             ..router_data
