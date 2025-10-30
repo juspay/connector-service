@@ -9,25 +9,13 @@ use common_utils::{
     errors::CustomResult,
 };
 use domain_types::{
-    connector_flow::{
-        Accept, Capture, CreateOrder, CreateSessionToken, DefendDispute, RSync,
-        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
-    },
-    connector_types::{
-        AcceptDisputeData, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsCaptureData,
-        PaymentsResponseData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-        ConnectorSpecifications,
-    },
+    connector_types::ConnectorSpecifications,
     payment_method_data::PaymentMethodDataTypes,
-    router_data_v2::RouterDataV2,
-    router_response_types::Response,
-    errors::ConnectorError,
-
+};
+use interfaces::{
+    api::ConnectorCommon,
+    connector_integration_v2::ConnectorIntegrationV2,
+    connector_types::{BoxedConnector, ConnectorServiceTrait, ConnectorValidation},
 };
 
 
