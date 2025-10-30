@@ -5,6 +5,7 @@ use common_enums::CurrencyUnit;
 use common_utils::{
     errors::CustomResult,
     types::StringMinorUnit,
+    ext_traits::ByteSliceExt,
 };
 use domain_types::{
     connector_flow::{
