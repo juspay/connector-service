@@ -39,7 +39,7 @@ impl TryFrom<&ConnectorAuthType> for EaseBuzzAuth {
                 salt: key1.clone(),
                 merchant_id: None,
             }),
-            ConnectorAuthType::MultiAccountingKey { api_key, key1, .. } => Ok(Self {
+            ConnectorAuthType::MultiAuthKey { api_key, key1, .. } => Ok(Self {
                 key: api_key.clone(),
                 salt: key1.clone(),
                 merchant_id: None,
