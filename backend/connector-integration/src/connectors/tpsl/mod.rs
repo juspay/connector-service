@@ -6,7 +6,7 @@ use std::marker::PhantomData;
 
 
 use common_utils::{
-    errors::CustomResult,
+    types::MinorUnit,
 };
 use domain_types::{
     connector_types::ConnectorSpecifications,
@@ -14,8 +14,6 @@ use domain_types::{
 };
 use interfaces::{
     api::ConnectorCommon,
-    connector_integration_v2::ConnectorIntegrationV2,
-    connector_types::{BoxedConnector, ConnectorServiceTrait, ConnectorValidation},
 };
 
 #[derive(Debug, Clone)]
