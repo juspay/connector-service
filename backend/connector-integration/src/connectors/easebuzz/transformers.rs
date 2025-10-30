@@ -571,3 +571,6 @@ pub struct EaseBuzzSubmitEvidenceResponse;
 pub struct EaseBuzzDefendDisputeRequest;
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EaseBuzzDefendDisputeResponse;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EaseBuzzPaymentsSyncResponse;
