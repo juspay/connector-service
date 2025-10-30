@@ -180,26 +180,32 @@ impl<T: PaymentMethodDataTypes> TryFrom<
     }
 }
 
-impl TryFrom<
-        &RouterDataV2<
-            PSync,
-            PaymentFlowData,
-            PaymentsSyncData,
-            PaymentsResponseData,
+impl<T: PaymentMethodDataTypes> TryFrom<
+        BilldeskRouterData<
+            RouterDataV2<
+                PSync,
+                PaymentFlowData,
+                PaymentsSyncData,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     > for BilldeskPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: &RouterDataV2<
-            PSync,
-            PaymentFlowData,
-            PaymentsSyncData,
-            PaymentsResponseData,
+        item: BilldeskRouterData<
+            RouterDataV2<
+                PSync,
+                PaymentFlowData,
+                PaymentsSyncData,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
-        let connector_transaction_id = item.request.connector_transaction_id
+        let connector_transaction_id = item.router_data.request.connector_transaction_id
             .get_connector_transaction_id()
             .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
 
