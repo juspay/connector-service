@@ -280,7 +280,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             amount.to_string(),
             "Payment", // productinfo
             customer_id.get_string_repr(),
-            item.request.email.as_ref().map(|e| e.get_string_repr().to_string()).unwrap_or_default(),
+            item.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
             String::new(), // Phone number not available in standard flow
             return_url.clone(),
             return_url, // furl same as surl
