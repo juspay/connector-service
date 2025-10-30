@@ -91,8 +91,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         false
     }
 
-    fn get_auth_type(&self) -> ConnectorAuthType {
-        ConnectorAuthType::SignatureKey {
+    fn get_auth_type(&self) -> domain_types::router_data::ConnectorAuthType {
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
             api_key: Secret::new("".to_string()),
             key1: Secret::new("".to_string()),
         }
