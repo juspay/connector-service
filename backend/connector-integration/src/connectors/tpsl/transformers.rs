@@ -1,6 +1,7 @@
 use common_enums::AttemptStatus;
 use common_utils::{
     errors::CustomResult,
+    types::MinorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
