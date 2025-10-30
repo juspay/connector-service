@@ -236,7 +236,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
 
         Ok(Self {
             txnid: item.resource_common_data.connector_request_reference_id.clone(),
-            amount: "0".into(), // Placeholder - will be populated from actual sync data
+            amount: StringMinorUnit::from_str("0").map_err(|_| ConnectorError::RequestEncodingFailed)?, // Placeholder
             email: "".to_string(), // Placeholder - will be populated from actual sync data
             phone: "".to_string(), // Placeholder - will be populated from actual sync data
             key,
