@@ -655,7 +655,7 @@ pub fn get_content_type() -> &'static str {
 }
 
 pub fn get_error_response_v2(
-    response: &common_utils::request::Response,
+    response: &Response,
 ) -> CustomResult<ErrorResponse, ConnectorError> {
     let response_body: serde_json::Value = response
         .response
