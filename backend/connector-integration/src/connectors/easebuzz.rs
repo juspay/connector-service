@@ -606,19 +606,7 @@ macros::create_all_prerequisites!(
             request_body: EaseBuzzPaymentsSyncRequest,
             response_body: EaseBuzzPaymentsResponseEnum,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ),
-        // Stub flows for compilation
-        (flow: Void, request_body: EaseBuzzVoidRequest, response_body: EaseBuzzVoidResponse, router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>),
-        (flow: Capture, request_body: EaseBuzzCaptureRequest, response_body: EaseBuzzCaptureResponse, router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>),
-        (flow: Refund, request_body: EaseBuzzRefundRequest, response_body: EaseBuzzRefundResponse, router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>),
-        (flow: RSync, request_body: EaseBuzzRSyncRequest, response_body: EaseBuzzRSyncResponse, router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>),
-        (flow: CreateOrder, request_body: EaseBuzzCreateOrderRequest, response_body: EaseBuzzCreateOrderResponse, router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>),
-        (flow: CreateSessionToken, request_body: EaseBuzzSessionTokenRequest, response_body: EaseBuzzSessionTokenResponse, router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>),
-        (flow: SetupMandate, request_body: EaseBuzzSetupMandateRequest, response_body: EaseBuzzSetupMandateResponse, router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>),
-        (flow: RepeatPayment, request_body: EaseBuzzRepeatPaymentRequest, response_body: EaseBuzzRepeatPaymentResponse, router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>),
-        (flow: Accept, request_body: EaseBuzzAcceptDisputeRequest, response_body: EaseBuzzAcceptDisputeResponse, router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>),
-        (flow: SubmitEvidence, request_body: EaseBuzzSubmitEvidenceRequest, response_body: EaseBuzzSubmitEvidenceResponse, router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>),
-        (flow: DefendDispute, request_body: EaseBuzzDefendDisputeRequest, response_body: EaseBuzzDefendDisputeResponse, router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>)
+        )
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
