@@ -66,8 +66,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         "TPSL"
     }
 
-    fn get_connector_type(&self) -> common_enums::ConnectorType {
-        common_enums::ConnectorType::PaymentProcessor
+    fn get_connector_type(&self) -> domain_types::connector_types::ConnectorType {
+        domain_types::connector_types::ConnectorType::PaymentProcessor
     }
 
     fn get_payment_method_types(&self) -> Vec<PaymentMethodType> {
