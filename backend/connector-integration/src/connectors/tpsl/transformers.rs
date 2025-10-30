@@ -190,7 +190,7 @@ pub struct TpslTransactionSyncType {
     pub identifier: String,
     pub amount: Option<String>,
     pub currency: Option<String>,
-    pub #[serde(rename = "type")]
+    #[serde(rename = "type")]
     pub txn_type: Option<String>,
     pub sub_type: Option<String>,
     pub request_type: String,
