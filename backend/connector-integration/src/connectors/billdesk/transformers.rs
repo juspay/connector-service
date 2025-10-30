@@ -273,18 +273,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn try_from(
         item: crate::connectors::billdesk::BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
-        let auth = BilldeskAuth::try_from(&item.connector_auth_type)?;
+        let auth = BilldeskAuth::try_from(&item.router_data.connector_auth_type)?;
         
-        let msg = build_billdesk_message(&auth, item, &StringMinorUnit)?;
+        let msg = build_billdesk_message(&auth, &item.router_data, &StringMinorUnit)?;
         
         // CORRECT: Extract user agent dynamically from router data
-        let user_agent = item.request.browser_info
+        let user_agent = item.router_data.request.browser_info
             .as_ref()
             .and_then(|info| info.user_agent.clone())
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
 
         // CORRECT: Extract IP address dynamically from router data
-        let ip_address = item.request.get_ip_address_as_optional()
+        let ip_address = item.router_data.request.get_ip_address_as_optional()
             .map(|ip| ip.expose())
             .unwrap_or_else(|| "127.0.0.1".to_string());
 
