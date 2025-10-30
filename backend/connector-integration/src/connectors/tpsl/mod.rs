@@ -28,8 +28,8 @@ pub struct Tpsl<T> {
 }
 
 impl<T> Tpsl<T> {
-    pub fn new() -> &'static Self {
-        &Self {
+    pub fn new() -> Self {
+        Self {
             connector_name: "tpsl",
             payment_method_data: PhantomData,
         }
