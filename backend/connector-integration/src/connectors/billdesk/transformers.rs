@@ -78,7 +78,7 @@ pub struct BilldeskResponseData {
     pub url: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BilldeskErrorResponse {
     pub error: String,
