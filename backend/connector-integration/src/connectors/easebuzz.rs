@@ -8,10 +8,17 @@ use common_utils::{
     request::{Method, Request, RequestContent},
 };
 use domain_types::{
-    connector_flow::{Authorize, PSync, Refund, RSync},
+    connector_flow::{
+        Authenticate, Authorize, CreateAccessToken, CreateConnectorCustomer, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, PSync, Refund, RepeatPayment, RSync, Void, VoidPC,
+    },
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData,
+        AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentsAuthenticateData, PaymentsAuthorizeData,
+        PaymentsCancelPostCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
