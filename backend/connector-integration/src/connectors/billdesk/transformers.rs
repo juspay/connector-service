@@ -319,9 +319,10 @@ fn map_billdesk_status(status: &str) -> common_enums::AttemptStatus {
     }
 }
 
-impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    TryFrom<ResponseRouterData<BilldeskPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
+impl<F, T> TryFrom<ResponseRouterData<BilldeskPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
 {
     type Error = error_stack::Report<ConnectorError>;
 
