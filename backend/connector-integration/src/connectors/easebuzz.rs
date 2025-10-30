@@ -364,17 +364,39 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentSessionToken for EaseBuzz<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentAccessToken for EaseBuzz<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::CreateConnectorCustomer for EaseBuzz<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentTokenV2<T> for EaseBuzz<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for EaseBuzz<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentVoidPostCaptureV2 for EaseBuzz<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::IncomingWebhook for EaseBuzz<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::RefundV2 for EaseBuzz<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentCapture for EaseBuzz<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::SetupMandateV2<T> for EaseBuzz<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::RepeatPaymentV2 for EaseBuzz<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::AcceptDispute for EaseBuzz<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::RefundSyncV2 for EaseBuzz<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::DisputeDefend for EaseBuzz<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::SubmitEvidenceV2 for EaseBuzz<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::DisputeDefend for EaseBuzz<T> {}
+    connector_types::PaymentPreAuthenticateV2<T> for EaseBuzz<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentAuthenticateV2<T> for EaseBuzz<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentPostAuthenticateV2<T> for EaseBuzz<T> {}
 
 // MANDATORY: Manual implementations for unimplemented flows that return NotImplemented errors
 macro_rules! impl_not_implemented_flow {
