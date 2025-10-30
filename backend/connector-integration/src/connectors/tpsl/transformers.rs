@@ -575,13 +575,11 @@ impl TryFrom<TpslPaymentsResponse> for PaymentsResponseData
     }
 }
 
-impl<T> TryFrom<TpslPaymentsSyncResponse> for PaymentsResponseData
-where
-    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+impl TryFrom<TpslPaymentsSyncResponse> for PaymentsResponseData
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(response: TpslPaymentsSyncResponse) -> Result<Self, Self::Error> {
+    fn try from(response: TpslPaymentsSyncResponse) -> Result<Self, Self::Error> {
         let status = match response.transaction_state.to_uppercase().as_str() {
             "SUCCESS" | "COMPLETED" => AttemptStatus::Charged,
             "PENDING" | "PROCESSING" | "INITIATED" => AttemptStatus::Pending,
