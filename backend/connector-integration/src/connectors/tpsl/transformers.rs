@@ -365,7 +365,7 @@ where
         let return_url = item.request.get_router_return_url()?;
         
         let email = item.request.email.clone();
-        let phone = item.request.get_optional_phone_number();
+        let phone = item.request.get_optional_billing_phone_number();
         
         let merchant_id = get_merchant_id(&item.connector_auth_type)?;
         
