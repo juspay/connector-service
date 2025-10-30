@@ -513,7 +513,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 ..router_data.router_data.resource_common_data
             },
             response,
-            ..router_data
+            flow: router_data.router_data.flow,
+            connector_auth_type: router_data.router_data.connector_auth_type,
+            request: router_data.router_data.request,
         })
     }
 }
