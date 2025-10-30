@@ -173,7 +173,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         item: EaseBuzzRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         // Convert from EaseBuzzRouterData to RouterDataV2 and then to EaseBuzzPaymentsRequest
-        EaseBuzzPaymentsRequest::try_from(item.resource_common_data)
+        EaseBuzzPaymentsRequest::try_from(item.router_data)
     }
 }
 
