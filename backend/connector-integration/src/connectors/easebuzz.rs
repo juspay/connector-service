@@ -367,6 +367,277 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
+// Stub implementations for missing flows
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
+    for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("PreAuthenticate".to_string()).into())
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: Response,
+    ) -> CustomResult<RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>, errors::ConnectorError>
+    {
+        Err(errors::ConnectorError::NotImplemented("PreAuthenticate".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, None)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
+    for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("Authenticate".to_string()).into())
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: Response,
+    ) -> CustomResult<RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>, errors::ConnectorError>
+    {
+        Err(errors::ConnectorError::NotImplemented("Authenticate".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, None)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
+    for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("PostAuthenticate".to_string()).into())
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: Response,
+    ) -> CustomResult<RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>, errors::ConnectorError>
+    {
+        Err(errors::ConnectorError::NotImplemented("PostAuthenticate".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, None)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>
+    for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("CreateAccessToken".to_string()).into())
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: Response,
+    ) -> CustomResult<RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>, errors::ConnectorError>
+    {
+        Err(errors::ConnectorError::NotImplemented("CreateAccessToken".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, None)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>
+    for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("CreateConnectorCustomer".to_string()).into())
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: Response,
+    ) -> CustomResult<RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>, errors::ConnectorError>
+    {
+        Err(errors::ConnectorError::NotImplemented("CreateConnectorCustomer".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, None)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData, PaymentMethodTokenResponse>
+    for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData, PaymentMethodTokenResponse>,
+    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("PaymentMethodToken".to_string()).into())
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData, PaymentMethodTokenResponse>,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: Response,
+    ) -> CustomResult<RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData, PaymentMethodTokenResponse>, errors::ConnectorError>
+    {
+        Err(errors::ConnectorError::NotImplemented("PaymentMethodToken".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, None)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<Void, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("Void".to_string()).into())
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<Void, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: Response,
+    ) -> CustomResult<RouterDataV2<Void, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>, errors::ConnectorError>
+    {
+        Err(errors::ConnectorError::NotImplemented("Void".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, None)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("VoidPC".to_string()).into())
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: Response,
+    ) -> CustomResult<RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>, errors::ConnectorError>
+    {
+        Err(errors::ConnectorError::NotImplemented("VoidPC".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, None)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for EaseBuzz<T>
+{
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("RepeatPayment".to_string()).into())
+    }
+
+    fn handle_response_v2(
+        &self,
+        _req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: Response,
+    ) -> CustomResult<RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>, errors::ConnectorError>
+    {
+        Err(errors::ConnectorError::NotImplemented("RepeatPayment".to_string()).into())
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, None)
+    }
+}
+
 // Implement required traits for the connector service
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     connector_types::ValidationTrait for EaseBuzz<T>
