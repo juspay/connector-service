@@ -54,7 +54,7 @@ pub(crate) mod headers {
 
 #[derive(Clone)]
 pub struct EaseBuzz<T> {
-    amount_converter: &'static (dyn common_utils::types::AmountConvertor<Output = String> + Sync),
+    amount_converter: &'static (dyn common_utils::types::AmountConvertor<Output = StringMinorUnit> + Sync),
     connector_name: &'static str,
     payment_method_data: PhantomData<T>,
 }
