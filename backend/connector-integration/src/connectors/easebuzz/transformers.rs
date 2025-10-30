@@ -273,7 +273,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             key: auth.key,
             txnid: item.router_data.request.connector_transaction_id.get_connector_transaction_id().map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             amount,
-            email: item.router_data.request.email.clone(),
+            email: None, // Email not available in sync request
             phone: None, // Phone number not available in sync request
             hash,
         })
