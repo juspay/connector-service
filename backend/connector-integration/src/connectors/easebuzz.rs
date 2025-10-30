@@ -357,12 +357,6 @@ macros::create_all_prerequisites!(
             response_body: EaseBuzzPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
-        (
-            flow: PSync,
-            request_body: EaseBuzzPaymentsSyncRequest,
-            response_body: EaseBuzzPaymentsSyncResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ),
         // Stub implementations for unsupported flows
         (
             flow: Void,
