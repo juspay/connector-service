@@ -200,7 +200,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let hash_string = format!(
             "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
             auth.key.peek(),
-            item.router_data.connector_request_reference_id,
+            item.resource_common_data.connector_request_reference_id,
             amount.to_string(),
             "Payment", // productinfo
             customer_id.get_string_repr(),
