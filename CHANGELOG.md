@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.10.30.0
+
+### Bug Fixes
+
+- **audit:** Ensure grpc audit events emit even for early request parsing failures ([#234](https://github.com/juspay/connector-service/pull/234)) ([`8fdfbbd`](https://github.com/juspay/connector-service/commit/8fdfbbd6fa638c46f7b96bde344af1f5df988add))
+
+**Full Changelog:** [`2025.10.29.0...2025.10.30.0`](https://github.com/juspay/connector-service/compare/2025.10.29.0...2025.10.30.0)
+
+- - -
+
 ## 2025.10.29.0
 
 ### Features
