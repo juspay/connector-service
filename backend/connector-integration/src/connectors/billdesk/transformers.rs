@@ -275,7 +275,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     ) -> Result<Self, Self::Error> {
         let auth = BilldeskAuth::try_from(&item.connector_auth_type)?;
         
-        let msg = build_billdesk_message(&auth, item, &common_utils::types::StringMinorUnit)?;
+        let msg = build_billdesk_message(&auth, item, &StringMinorUnit)?;
         
         // CORRECT: Extract user agent dynamically from router data
         let user_agent = item.request.browser_info
