@@ -11,7 +11,7 @@ use domain_types::{
     router_response_types::RedirectForm,
     utils,
 };
-use hyperswitch_masking::{Maskable, Secret, PeekInterface};
+use hyperswitch_masking::{Maskable, Secret};
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Debug, Serialize)]
