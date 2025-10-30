@@ -173,7 +173,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         item: EaseBuzzRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         // Convert from EaseBuzzRouterData to RouterDataV2 and then to EaseBuzzPaymentsRequest
-        EaseBuzzPaymentsRequest::try_from(item.router_data)
+        EaseBuzzPaymentsRequest::try_from(item.resource_common_data)
     }
 }
 
@@ -318,8 +318,8 @@ where
                                 Ok(PaymentsResponseData::TransactionResponse {
                                     resource_id: ResponseId::ConnectorTransactionId(
                                         router_data
-                                            .router_data
-                                            .router_data
+                                            .resource_common_data
+                                            .resource_common_data
                                             .connector_request_reference_id
                                             .clone(),
                                     ),
@@ -338,8 +338,8 @@ where
                                 Ok(PaymentsResponseData::TransactionResponse {
                                     resource_id: ResponseId::ConnectorTransactionId(
                                         router_data
-                                            .router_data
-                                            .router_data
+                                            .resource_common_data
+                                            .resource_common_data
                                             .connector_request_reference_id
                                             .clone(),
                                     ),
@@ -359,8 +359,8 @@ where
                             Ok(PaymentsResponseData::TransactionResponse {
                                 resource_id: ResponseId::ConnectorTransactionId(
                                     router_data
-                                        .router_data
-                                        .router_data
+                                        .resource_common_data
+                                        .resource_common_data
                                         .connector_request_reference_id
                                         .clone(),
                                 ),
@@ -410,7 +410,7 @@ where
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
-                ..router_data.resource_common_data
+                ..resource_common_data.resource_common_data
             },
             response,
             flow: router_data.flow,
@@ -450,7 +450,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<PSync
                             Ok(PaymentsResponseData::TransactionResponse {
                                 resource_id: ResponseId::ConnectorTransactionId(
                                     router_data
-                                        .router_data
+                                        .resource_common_data
                                         .connector_request_reference_id
                                         .clone(),
                                 ),
@@ -469,7 +469,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<PSync
                             Ok(PaymentsResponseData::TransactionResponse {
                                 resource_id: ResponseId::ConnectorTransactionId(
                                     router_data
-                                        .router_data
+                                        .resource_common_data
                                         .connector_request_reference_id
                                         .clone(),
                                 ),
@@ -519,7 +519,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<PSync
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
-                ..router_data.resource_common_data
+                ..resource_common_data.resource_common_data
             },
             response,
             flow: router_data.flow,
