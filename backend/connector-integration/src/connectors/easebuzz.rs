@@ -398,7 +398,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: VoidPC,
-            request_body: EaseBuzzVoidRequest,
+            request_body: EaseBuzzVoidPostCaptureRequest,
             response_body: EaseBuzzVoidPostCaptureResponse,
             router_data: RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
         ),
