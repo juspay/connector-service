@@ -342,7 +342,8 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
         let hash_string = format!(
             "{}|{}|{}|{}|{}|{}",
             auth.key.peek(),
-            item.request.connector_transaction_id.clone(),
+            item.request.get_connector_transaction_id()
+                .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             amount.to_string(),
             String::new(), // Email not available in sync request
             String::new(), // Phone number not available in sync request
