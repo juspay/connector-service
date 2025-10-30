@@ -115,6 +115,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Stripe => Ok(Self::Stripe),
             grpc_api_types::payments::Connector::Cybersource => Ok(Self::Cybersource),
             grpc_api_types::payments::Connector::Worldpay => Ok(Self::Worldpayvantiv),
+            grpc_api_types::payments::Connector::Easebuzz => Ok(Self::EaseBuzz),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
