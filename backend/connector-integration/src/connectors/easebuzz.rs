@@ -302,74 +302,9 @@ impl<
 {
 }
 
-// Add all the missing trait implementations that ConnectorServiceTrait requires
+// Add only the missing trait implementations that ConnectorServiceTrait requires
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentCapture for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::RefundV2 for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::RefundSyncV2 for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::SetupMandateV2<T> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::AcceptDispute for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::SubmitEvidenceV2 for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::DisputeDefend for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentTokenV2<T> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentPreAuthenticateV2<T> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentAuthenticateV2<T> for EaseBuzz<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentPostAuthenticateV2<T> for EaseBuzz<T>
 {
 }
 
