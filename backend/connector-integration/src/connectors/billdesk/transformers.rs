@@ -126,11 +126,14 @@ impl From<BilldeskPaymentStatus> for common_enums::AttemptStatus {
     }
 }
 
-// Simplified request conversion - will be implemented with proper types later
-impl TryFrom<()> for BilldeskPaymentsRequest {
+// Request conversion for Authorize flow
+impl<T> TryFrom<crate::connectors::billdesk::BilldeskRouterData<domain_types::router_data_v2::RouterDataV2<domain_types::connector_flow::Authorize, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsAuthorizeData<T>, domain_types::connector_types::PaymentsResponseData>, T>> for BilldeskPaymentsRequest
+where
+    T: domain_types::payment_method_data::PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(_item: ()) -> Result<Self, Self::Error> {
+    fn try_from(_item: crate::connectors::billdesk::BilldeskRouterData<domain_types::router_data_v2::RouterDataV2<domain_types::connector_flow::Authorize, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsAuthorizeData<T>, domain_types::connector_types::PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
         Ok(Self {
             msg: "test_message".to_string(),
             paydata: None,
