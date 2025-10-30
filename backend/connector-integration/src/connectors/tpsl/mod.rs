@@ -142,7 +142,7 @@ macro_rules! impl_not_implemented_flow {
             fn handle_response_v2(
                 &self,
                 _req: &RouterDataV2<$flow, $common_data, $req, $resp>,
-                _response: &common_utils::request::Response,
+                _response: &Response,
             ) -> CustomResult<RouterDataV2<$flow, $common_data, $req, $resp>, ConnectorError> {
                 let flow_name = stringify!($flow);
                 Err(ConnectorError::NotImplemented(flow_name.to_string()).into())
