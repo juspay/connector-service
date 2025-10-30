@@ -358,22 +358,22 @@ where
         let amount = item.amount.get_amount_as_string();
         let currency = item.router_data.request.currency.to_string();
         
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let customer_id = item.resource_common_data.get_customer_id()?;
         let customer_id_string = customer_id.get_string_repr();
         
-        let transaction_id = item.router_data.request.connector_transaction_id
+        let transaction_id = item.request.connector_transaction_id
             .get_connector_transaction_id()
             .map_err(|_e| ConnectorError::RequestEncodingFailed)?;
         
-        let return_url = item.router_data.request.get_router_return_url()?;
+        let return_url = item.request.get_router_return_url()?;
         
-        let email = item.router_data.request.email.clone();
-        let phone = item.router_data.request.phone.clone();
+        let email = item.request.email.clone();
+        let phone = item.request.phone.clone();
         
-        let merchant_id = get_merchant_id(&item.router_data.connector_auth_type)?;
+        let merchant_id = get_merchant_id(&item.connector_auth_type)?;
         
         // Extract UPI specific data
-        let vpa = extract_upi_vpa(&item.router_data.request.payment_method_data)?;
+        let vpa = extract_upi_vpa(&item.request.payment_method_data)?;
         
         let merchant_payload = TpslMerchantPayload {
             identifier: merchant_id,
@@ -433,7 +433,7 @@ where
             token: None,
             security_token: None,
             reference: transaction_id,
-            device_identifier: item.router_data.request.get_ip_address_as_optional()
+            device_identifier: item.request.get_ip_address_as_optional()
                 .map(|ip| ip.expose()),
             sms_sending: Some("N".to_string()),
             forced_3ds_call: Some("N".to_string()),
