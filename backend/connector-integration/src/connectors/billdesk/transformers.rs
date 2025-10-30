@@ -382,7 +382,7 @@ impl<
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(
-                    response.txn_reference_no.unwrap_or_default(),
+                    response.txn_reference_no.clone().unwrap_or_default(),
                 ),
                 redirection_data: None,
                 mandate_reference: None,
