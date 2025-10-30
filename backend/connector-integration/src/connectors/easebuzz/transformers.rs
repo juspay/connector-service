@@ -551,7 +551,7 @@ where
         Ok(Self {
             flow: router_data.flow,
             resource_common_data: PaymentFlowData {
-                status,
+                status: _status,
                 ..router_data.resource_common_data
             },
             connector_auth_type: router_data.connector_auth_type,
@@ -639,7 +639,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzPaymentsSyncResponse, RouterDataV2<PSync
         Ok(Self {
             flow: router_data.flow,
             resource_common_data: PaymentFlowData {
-                status,
+                status: _status,
                 ..router_data.resource_common_data
             },
             connector_auth_type: router_data.connector_auth_type,
