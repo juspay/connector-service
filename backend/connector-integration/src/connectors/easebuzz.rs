@@ -209,7 +209,7 @@ macros::create_all_prerequisites!(
             if is_test {
                 constants::api_urls::TEST_BASE_URL
             } else {
-                constants::api_urls::API_BASE_URL
+                constants::api_urls::PROD_BASE_URL
             }
         }
     }
