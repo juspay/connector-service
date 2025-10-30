@@ -228,10 +228,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     domain_types::connector_types::DisputeDefend for Tpsl<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     domain_types::connector_types::DisputeSubmitEvidence for Tpsl<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    domain_types::connector_types::MandateSetup for Tpsl<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    domain_types::connector_types::PaymentRepeat for Tpsl<T> {}
 
 // Source verification stubs
 macro_rules! impl_source_verification_stub {
