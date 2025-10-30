@@ -968,6 +968,54 @@ impl_source_verification_stub!(
     DisputeDefendData,
     DisputeResponseData
 );
+impl_source_verification_stub!(
+    connector_flow::VoidPC,
+    PaymentFlowData,
+    PaymentsCancelPostCaptureData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    connector_flow::PaymentMethodToken,
+    PaymentFlowData,
+    PaymentMethodTokenizationData<T>,
+    PaymentMethodTokenResponse
+);
+impl_source_verification_stub!(
+    connector_flow::CreateAccessToken,
+    PaymentFlowData,
+    AccessTokenRequestData,
+    AccessTokenResponseData
+);
+impl_source_verification_stub!(
+    connector_flow::CreateConnectorCustomer,
+    PaymentFlowData,
+    ConnectorCustomerData,
+    ConnectorCustomerResponse
+);
+impl_source_verification_stub!(
+    connector_flow::PSync,
+    PaymentFlowData,
+    PaymentsSyncData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    connector_flow::PreAuthenticate,
+    PaymentFlowData,
+    PaymentsPreAuthenticateData<T>,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    connector_flow::Authenticate,
+    PaymentFlowData,
+    PaymentsAuthenticateData<T>,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    connector_flow::PostAuthenticate,
+    PaymentFlowData,
+    PaymentsPostAuthenticateData<T>,
+    PaymentsResponseData
+);
 
 fn get_easebuzz_auth_header(
     connector_auth_type: &ConnectorAuthType,
