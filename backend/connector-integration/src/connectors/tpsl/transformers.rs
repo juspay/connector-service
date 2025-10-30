@@ -625,7 +625,7 @@ fn get_merchant_id(auth_type: &ConnectorAuthType) -> CustomResult<String, Connec
     }
 }
 
-fn _extract_upi_vpa<T>(payment_method_data: &T) -> CustomResult<Option<String>, ConnectorError>
+fn _extract_upi_vpa<T>(_payment_method_data: &T) -> CustomResult<Option<String>, ConnectorError>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
 {
