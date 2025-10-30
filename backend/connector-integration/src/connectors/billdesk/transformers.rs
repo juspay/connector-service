@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use common_utils::{
     errors::CustomResult,
     request::Method,
-    types::StringMinorUnit,
 };
 use domain_types::{
     connector_types::{PaymentsResponseData, ResponseId},
