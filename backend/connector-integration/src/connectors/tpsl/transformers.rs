@@ -506,7 +506,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
                     .map(|ip| ip.expose()),
             },
             consumer: TpslConsumerDataType {
-                identifier: customer_id_string,
+                identifier: customer_id_string.to_string(),
             },
         })
     }
