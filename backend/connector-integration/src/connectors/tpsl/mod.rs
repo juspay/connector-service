@@ -42,7 +42,7 @@ use interfaces::{
 
 #[derive(Debug, Clone)]
 pub struct Tpsl<T> {
-    amount_converter: &'static (dyn AmountConverterTrait<Output = String> + Sync),
+    amount_converter: &'static (dyn AmountConvertor<Output = String> + Sync),
     connector_name: &'static str,
     payment_method_data: PhantomData<T>,
 }
