@@ -541,6 +541,116 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        let (status, response) = match response {
+            EaseBuzzPaymentsResponseEnum::Success(success_data) => {
+                if success_data.status == 1 {
+                    if let Some(data) = success_data.data {
+                        let attempt_status = match data.status.as_deref() {
+                            Some("success") => common_enums::AttemptStatus::Charged,
+                            Some("pending") => common_enums::AttemptStatus::Pending,
+                            Some("failure") => common_enums::AttemptStatus::Failure,
+                            _ => common_enums::AttemptStatus::Pending,
+                        };
+
+                        (
+                            attempt_status,
+                            Ok(PaymentsResponseData::TransactionResponse {
+                                resource_id: ResponseId::ConnectorTransactionId(
+                                    router_data
+                                        .resource_common_data
+                                        .connector_request_reference_id
+                                        .clone(),
+                                ),
+                                redirection_data: None,
+                                mandate_reference: None,
+                                connector_metadata: None,
+                                network_txn_id: data.easebuzz_id,
+                                connector_response_reference_id: data.transaction_id,
+                                incremental_authorization_allowed: None,
+                                status_code: http_code,
+                            }),
+                        )
+                    } else {
+                        (
+                            common_enums::AttemptStatus::Pending,
+                            Ok(PaymentsResponseData::TransactionResponse {
+                                resource_id: ResponseId::ConnectorTransactionId(
+                                    router_data
+                                        .resource_common_data
+                                        .connector_request_reference_id
+                                        .clone(),
+                                ),
+                                redirection_data: None,
+                                mandate_reference: None,
+                                connector_metadata: None,
+                                network_txn_id: None,
+                                connector_response_reference_id: None,
+                                incremental_authorization_allowed: None,
+                                status_code: http_code,
+                            }),
+                        )
+                    }
+                } else {
+                    (
+                        common_enums::AttemptStatus::Failure,
+                        Err(ErrorResponse {
+                            status_code: http_code,
+                            code: success_data.status.to_string(),
+                            message: success_data.error_desc.clone().unwrap_or_default(),
+                            reason: success_data.error_desc,
+                            attempt_status: None,
+                            connector_transaction_id: None,
+                            network_advice_code: None,
+                            network_decline_code: None,
+                            network_error_message: None,
+                        }),
+                    )
+                }
+            }
+            EaseBuzzPaymentsResponseEnum::Error(error_data) => (
+                common_enums::AttemptStatus::Failure,
+                Err(ErrorResponse {
+                    status_code: http_code,
+                    code: error_data.status.to_string(),
+                    message: error_data.error_desc.or(error_data.message).clone().unwrap_or_default(),
+                    reason: error_data.error_desc.or(error_data.message),
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    network_error_message: None,
+                }),
+            ),
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
+            response,
+            flow: router_data.flow,
+            connector_auth_type: router_data.connector_auth_type,
+            request: router_data.request,
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, EaseBuzzRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
