@@ -35,7 +35,16 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use transformers::{self as easebuzz, EaseBuzzPaymentsRequest, EaseBuzzPaymentsResponseEnum, EaseBuzzPaymentsSyncRequest};
+use transformers::{
+    self as easebuzz, EaseBuzzPaymentsRequest, EaseBuzzPaymentsResponseEnum, EaseBuzzPaymentsSyncRequest,
+    EaseBuzzVoidRequest, EaseBuzzVoidResponse, EaseBuzzCaptureRequest, EaseBuzzCaptureResponse,
+    EaseBuzzRefundRequest, EaseBuzzRefundResponse, EaseBuzzRSyncRequest, EaseBuzzRSyncResponse,
+    EaseBuzzCreateOrderRequest, EaseBuzzCreateOrderResponse, EaseBuzzSessionTokenRequest,
+    EaseBuzzSessionTokenResponse, EaseBuzzSetupMandateRequest, EaseBuzzSetupMandateResponse,
+    EaseBuzzRepeatPaymentRequest, EaseBuzzRepeatPaymentResponse, EaseBuzzAcceptDisputeRequest,
+    EaseBuzzAcceptDisputeResponse, EaseBuzzSubmitEvidenceRequest, EaseBuzzSubmitEvidenceResponse,
+    EaseBuzzDefendDisputeRequest, EaseBuzzDefendDisputeResponse
+};
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
