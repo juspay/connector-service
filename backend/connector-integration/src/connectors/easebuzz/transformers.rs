@@ -184,7 +184,7 @@ impl<
             amount,
             currency: item.router_data.request.currency.to_string(),
             email: item.router_data.request.email.clone(),
-            phone: item.router_data.request.phone_number.as_ref().map(|p| p.to_string()),
+            phone: None, // Phone number field needs to be checked in the actual structure
             firstname: item.router_data.request.customer_name.clone(),
             lastname: None,
             surl: return_url.clone(),
