@@ -3,16 +3,7 @@ use common_utils::{
     errors::CustomResult,
     types::MinorUnit,
 };
-use domain_types::{
-    connector_flow::{Authorize, PSync},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
-    payment_method_data::PaymentMethodDataTypes,
-    router_data_v2::RouterDataV2,
-    router_data::ConnectorAuthType,
-    router_response_types::Response,
-    errors::ConnectorError,
-};
-use hyperswitch_masking::ExposeInterface;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use super::constants;
