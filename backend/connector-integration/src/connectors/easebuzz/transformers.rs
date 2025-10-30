@@ -342,7 +342,8 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
         let hash_string = format!(
             "{}|{}|{}|{}|{}|{}",
             auth.key.peek(),
-            item.request.connector_transaction_id.clone(),
+            item.request.get_connector_transaction_id()
+                .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             amount.to_string(),
             String::new(), // Email not available in sync request
             String::new(), // Phone number not available in sync request
@@ -353,7 +354,8 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
 
         Ok(Self {
             key: auth.key,
-            txnid: item.request.connector_transaction_id.clone(),
+            txnid: item.request.get_connector_transaction_id()
+                .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             amount,
             email: None, // Email not available in sync request
             phone: None, // Phone number not available in sync request
@@ -382,7 +384,8 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
         let hash_string = format!(
             "{}|{}|{}|{}|{}",
             auth.key.peek(),
-            item.request.connector_transaction_id.clone(),
+            item.request.get_connector_transaction_id()
+                .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             refund_amount.to_string(),
             item.request.refund_id.clone(),
             auth.salt.peek()
@@ -392,7 +395,8 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
 
         Ok(Self {
             key: auth.key,
-            txnid: item.request.connector_transaction_id.clone(),
+            txnid: item.request.get_connector_transaction_id()
+                .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             refund_amount,
             refund_refid: item.request.refund_id.clone(),
             hash,
@@ -414,7 +418,8 @@ impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsRespons
         let hash_string = format!(
             "{}|{}|{}",
             auth.key.peek(),
-            item.request.connector_transaction_id.clone(),
+            item.request.get_connector_transaction_id()
+                .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             auth.salt.peek()
         );
         
@@ -422,7 +427,8 @@ impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsRespons
 
         Ok(Self {
             key: auth.key,
-            easebuzz_id: item.request.connector_transaction_id.clone(),
+            easebuzz_id: item.request.get_connector_transaction_id()
+                .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             hash,
         })
     }
