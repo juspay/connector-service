@@ -5,8 +5,8 @@ use common_enums::CurrencyUnit;
 use common_utils::{
     errors::CustomResult,
     ext_traits::ByteSliceExt,
-    request::{Method, Request, RequestContent},
-    types::Headers,
+    request::{Method, Request, RequestContent, Headers},
+    types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{
