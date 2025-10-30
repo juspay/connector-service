@@ -155,8 +155,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn handle_response_v2(
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        res: Response,
         _event_builder: Option<&mut ConnectorEvent>,
+        res: Response,
     ) -> CustomResult<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, errors::ConnectorError>
     {
         let response: EaseBuzzPaymentsResponseEnum = res
