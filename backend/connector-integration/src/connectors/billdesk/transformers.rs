@@ -348,14 +348,7 @@ impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsResponse, Self>>
     }
 }
 
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData {
+impl TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: BilldeskPaymentsSyncResponse) -> Result<Self, Self::Error> {
