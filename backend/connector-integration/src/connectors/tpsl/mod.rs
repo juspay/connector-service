@@ -7,6 +7,7 @@ use std::marker::PhantomData;
 use common_enums::PaymentMethodType;
 use common_utils::{
     errors::CustomResult,
+    pii::SecretSerdeValue,
     types::StringMinorUnit,
 };
 use domain_types::{
@@ -25,17 +26,18 @@ use domain_types::{
     },
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
-    router_data::ConnectorAuthType,
+    router_data::{ConnectorAuthType, ErrorResponse},
     errors::ConnectorError,
     id_type::CustomerId,
     masking::Secret,
     types::MinorUnit,
+    utils,
 };
 
-use masking::SecretSerdeValue;
-
-use crate::{
-    services::{self, ConnectorIntegrationV2, ConnectorValidation},
+use interfaces::{
+    api::ConnectorCommon,
+    ConnectorIntegrationV2,
+    ConnectorValidation,
 };
 
 #[derive(Debug, Clone)]
