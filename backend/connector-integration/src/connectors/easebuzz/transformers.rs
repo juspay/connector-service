@@ -216,7 +216,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         Ok(Self {
             key: auth.key,
-            txnid: item.router_data.connector_request_reference_id.clone(),
+            txnid: item.router_data.resource_common_data.connector_request_reference_id.clone(),
             amount,
             productinfo: "Payment".to_string(),
             firstname: Some(Secret::new(customer_id.get_string_repr().to_string())),
@@ -319,7 +319,7 @@ where
                                     resource_id: ResponseId::ConnectorTransactionId(
                                         router_data
                                             .router_data
-                                            .router_data
+                                            .resource_common_data
                                             .connector_request_reference_id
                                             .clone(),
                                     ),
@@ -339,7 +339,7 @@ where
                                     resource_id: ResponseId::ConnectorTransactionId(
                                         router_data
                                             .router_data
-                                            .router_data
+                                            .resource_common_data
                                             .connector_request_reference_id
                                             .clone(),
                                     ),
@@ -360,7 +360,7 @@ where
                                 resource_id: ResponseId::ConnectorTransactionId(
                                     router_data
                                         .router_data
-                                        .router_data
+                                        .resource_common_data
                                         .connector_request_reference_id
                                         .clone(),
                                 ),
@@ -408,14 +408,14 @@ where
         };
 
         Ok(Self {
-            router_data: PaymentFlowData {
-                status,
-                ..router_data.router_data
-            },
-            response,
             flow: router_data.flow,
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
             connector_auth_type: router_data.connector_auth_type,
             request: router_data.request,
+            response,
         })
     }
 }
@@ -451,6 +451,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<PSync
                                 resource_id: ResponseId::ConnectorTransactionId(
                                     router_data
                                         .router_data
+                                        .resource_common_data
                                         .connector_request_reference_id
                                         .clone(),
                                 ),
@@ -470,6 +471,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<PSync
                                 resource_id: ResponseId::ConnectorTransactionId(
                                     router_data
                                         .router_data
+                                        .resource_common_data
                                         .connector_request_reference_id
                                         .clone(),
                                 ),
@@ -517,14 +519,14 @@ impl TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<PSync
         };
 
         Ok(Self {
-            router_data: PaymentFlowData {
-                status,
-                ..router_data.router_data
-            },
-            response,
             flow: router_data.flow,
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
             connector_auth_type: router_data.connector_auth_type,
             request: router_data.request,
+            response,
         })
     }
 }
