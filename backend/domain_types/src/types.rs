@@ -1731,9 +1731,7 @@ impl
                     (*address_value).clone(), // Clone the grpc_api_types::payments::PaymentAddress
                 )?
             }
-            None => {
-                payment_address::PaymentAddress::default()
-            }
+            None => payment_address::PaymentAddress::default(),
         };
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;

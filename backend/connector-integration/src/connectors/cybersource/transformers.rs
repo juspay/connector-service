@@ -4549,15 +4549,24 @@ impl<
         let tokenized_card = match item.router_data.request.payment_method_type {
             Some(common_enums::PaymentMethodType::GooglePay)
             | Some(common_enums::PaymentMethodType::ApplePay)
-            | Some(common_enums::PaymentMethodType::SamsungPay) => Some(MandatePaymentTokenizedCard {
-                transaction_type: TransactionType::StoredCredentials,
-            }),
+            | Some(common_enums::PaymentMethodType::SamsungPay) => {
+                Some(MandatePaymentTokenizedCard {
+                    transaction_type: TransactionType::StoredCredentials,
+                })
+            }
             _ => None,
         };
         let bill_to = item
-            .router_data.resource_common_data
+            .router_data
+            .resource_common_data
             .get_optional_billing_email()
-            .and_then(|email| build_bill_to(item.router_data.resource_common_data.get_optional_billing(), email).ok());
+            .and_then(|email| {
+                build_bill_to(
+                    item.router_data.resource_common_data.get_optional_billing(),
+                    email,
+                )
+                .ok()
+            });
         let order_information = OrderInformationWithBill::try_from((&item, bill_to))?;
         let payment_information =
             RepeatPaymentInformation::MandatePayment(Box::new(MandatePaymentInformation {
@@ -4712,8 +4721,9 @@ impl<
             }
         };
 
-        let (action_list, action_token_types, authorization_options) = 
-        if !connector_mandate_id.is_empty() {
+        let (action_list, action_token_types, authorization_options) = if !connector_mandate_id
+            .is_empty()
+        {
             match item.router_data.request.mandate_reference.clone() {
                 MandateReferenceId::ConnectorMandateId(_) => {
                     let original_amount = item
