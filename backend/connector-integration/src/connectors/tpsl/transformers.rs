@@ -627,9 +627,7 @@ fn get_merchant_id(auth_type: &ConnectorAuthType) -> CustomResult<String, Connec
         ConnectorAuthType::BodyKey { api_key, .. } => {
             Ok(api_key.expose().clone())
         },
-        _ => Err(ConnectorError::InvalidCredentials {
-            message: "Invalid authentication type for TPSL".to_string(),
-        })?,
+        _ => Err(ConnectorError::RequestEncodingFailed)?,
     }
 }
 
