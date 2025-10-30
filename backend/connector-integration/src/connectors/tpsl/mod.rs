@@ -102,7 +102,7 @@ pub struct TpslSubmitEvidenceResponse;
 
 // Validation implementation
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    ConnectorValidation for Tpsl<T>
+    ValidationTrait for Tpsl<T>
 {
 }
 
