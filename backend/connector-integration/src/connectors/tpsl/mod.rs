@@ -4,12 +4,9 @@ pub mod transformers;
 
 use std::marker::PhantomData;
 
-use common_enums::PaymentMethodType;
+
 use common_utils::{
     errors::CustomResult,
-    id_type::CustomerId,
-    pii::SecretSerdeValue,
-    types::{StringMinorUnit, MinorUnit},
 };
 use domain_types::{
     connector_flow::{
@@ -17,7 +14,7 @@ use domain_types::{
         Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, ConnectorWebhookSecrets, DisputeDefendData,
+        AcceptDisputeData, DisputeDefendData,
         DisputeFlowData, DisputeResponseData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
@@ -27,12 +24,12 @@ use domain_types::{
     },
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
-    router_data::ConnectorAuthType,
+
     router_response_types::Response,
     errors::ConnectorError,
-    utils,
+
 };
-use hyperswitch_masking::Secret;
+
 
 use interfaces::{
     api::ConnectorCommon,
