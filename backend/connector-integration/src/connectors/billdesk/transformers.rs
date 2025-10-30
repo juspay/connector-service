@@ -75,7 +75,7 @@ pub struct BilldeskSuccessResponse {
     pub txnrefno: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BilldeskResponseData {
     pub parameters: HashMap<String, String>,
