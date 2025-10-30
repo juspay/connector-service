@@ -565,11 +565,6 @@ impl TryFrom<TpslPaymentsResponse> for PaymentsResponseData
             incremental_authorization_allowed: None,
             mandate_reference: None,
             status_code: 200,
-            mandate_reference: None,
-            network_txn_id: None,
-            connector_metadata: None,
-            incremental_authorization_allowed: None,
-            status_code: 200,
         })
     }
 }
