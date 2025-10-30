@@ -63,6 +63,11 @@ pub enum BilldeskPaymentsResponse {
     Error(BilldeskErrorResponse),
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct BilldeskPaymentsSyncResponse {
+    pub msg: String,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BilldeskSuccessResponse {
