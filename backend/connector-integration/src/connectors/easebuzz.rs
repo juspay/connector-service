@@ -6,6 +6,7 @@ use common_utils::{
     errors::CustomResult,
     ext_traits::ByteSliceExt,
     request::{Method, Request, RequestContent},
+    types::Headers,
 };
 use domain_types::{
     connector_flow::{
