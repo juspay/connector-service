@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use common_utils::{
-    request::Method, types::{StringMinorUnit, AmountConvertor, StringMinorUnitForConnector},
+    request::Method, types::{StringMinorUnit, AmountConvertor},
     Email,
 };
 use sha2::Digest;
