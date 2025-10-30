@@ -177,9 +177,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let return_url = item.request.get_router_return_url()?;
         
         // For now, use a default amount converter since we don't have access to the connector
-        let amount = common_utils::types::StringMinorUnit::from_minor(
-            common_utils::types::MinorUnit(item.request.amount),
-            item.request.currency,
+        let amount = common_utils::types::StringMinorUnit::new(
+            item.request.amount.to_string(),
         );
 
         // Generate hash - this would typically involve SHA512 of parameters + salt
