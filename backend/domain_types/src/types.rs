@@ -1724,13 +1724,17 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        // For repeat payment operations, address information is typically not available or required
-        let address: PaymentAddress = crate::payment_address::PaymentAddress::new(
-            None,        // shipping
-            None,        // billing
-            None,        // payment_method_billing
-            Some(false), // should_unify_address = false for repeat operations
-        );
+        let address = match &value.address {
+            Some(address_value) => {
+                // address_value is &grpc_api_types::payments::PaymentAddress
+                payment_address::PaymentAddress::foreign_try_from(
+                    (*address_value).clone(), // Clone the grpc_api_types::payments::PaymentAddress
+                )?
+            }
+            None => {
+                payment_address::PaymentAddress::default()
+            }
+        };
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
@@ -5397,8 +5401,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
                 })
                 .transpose()?,
             recurring_mandate_payment_data: None,
-            setup_mandate_details: None,
-            setup_future_usage: None,
         })
     }
 }

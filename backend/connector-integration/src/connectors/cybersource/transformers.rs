@@ -624,7 +624,8 @@ pub struct MandateCard {
 #[serde(rename_all = "camelCase")]
 pub struct MandatePaymentInformation {
     payment_instrument: CybersoucrePaymentInstrument,
-    tokenized_card: MandatePaymentTokenizedCard,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tokenized_card: Option<MandatePaymentTokenizedCard>,
     card: Option<MandateCard>,
 }
 
@@ -4548,33 +4549,20 @@ impl<
         let tokenized_card = match item.router_data.request.payment_method_type {
             Some(common_enums::PaymentMethodType::GooglePay)
             | Some(common_enums::PaymentMethodType::ApplePay)
-            | Some(common_enums::PaymentMethodType::SamsungPay) => {
-                Some(MandatePaymentTokenizedCard {
-                    transaction_type: TransactionType::StoredCredentials,
-                })
-            }
+            | Some(common_enums::PaymentMethodType::SamsungPay) => Some(MandatePaymentTokenizedCard {
+                transaction_type: TransactionType::StoredCredentials,
+            }),
             _ => None,
         };
-
         let bill_to = item
-            .router_data
-            .resource_common_data
+            .router_data.resource_common_data
             .get_optional_billing_email()
-            .or(Some(
-                item.router_data.resource_common_data.get_billing_email()?,
-            ))
-            .and_then(|email| {
-                build_bill_to(
-                    item.router_data.resource_common_data.get_optional_billing(),
-                    email,
-                )
-                .ok()
-            });
+            .and_then(|email| build_bill_to(item.router_data.resource_common_data.get_optional_billing(), email).ok());
         let order_information = OrderInformationWithBill::try_from((&item, bill_to))?;
         let payment_information =
             RepeatPaymentInformation::MandatePayment(Box::new(MandatePaymentInformation {
                 payment_instrument,
-                tokenized_card: tokenized_card.unwrap(),
+                tokenized_card,
                 card: mandate_card_information,
             }));
         let client_reference_information = ClientReferenceInformation::from(&item);
@@ -4724,36 +4712,8 @@ impl<
             }
         };
 
-        let (action_list, action_token_types, authorization_options) = if item
-            .router_data
-            .request
-            .setup_future_usage
-            == Some(common_enums::FutureUsage::OffSession)
-            && (item
-                .router_data
-                .request
-                .setup_mandate_details
-                .clone()
-                .is_some_and(|mandate_details| mandate_details.customer_acceptance.is_some()))
-        {
-            (
-                Some(vec![CybersourceActionsList::TokenCreate]),
-                Some(vec![
-                    CybersourceActionsTokenType::PaymentInstrument,
-                    CybersourceActionsTokenType::Customer,
-                ]),
-                Some(CybersourceAuthorizationOptions {
-                    initiator: Some(CybersourcePaymentInitiator {
-                        initiator_type: Some(CybersourcePaymentInitiatorTypes::Customer),
-                        credential_stored_on_file: Some(true),
-                        stored_credential_used: None,
-                    }),
-                    ignore_avs_result: connector_merchant_config.disable_avs,
-                    ignore_cv_result: connector_merchant_config.disable_cvn,
-                    merchant_initiated_transaction: None,
-                }),
-            )
-        } else if !connector_mandate_id.is_empty() {
+        let (action_list, action_token_types, authorization_options) = 
+        if !connector_mandate_id.is_empty() {
             match item.router_data.request.mandate_reference.clone() {
                 MandateReferenceId::ConnectorMandateId(_) => {
                     let original_amount = item

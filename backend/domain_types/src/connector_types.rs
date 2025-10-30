@@ -2039,8 +2039,6 @@ pub struct RepeatPaymentData {
     pub payment_method_type: Option<common_enums::PaymentMethodType>,
     pub merchant_account_metadata: Option<common_utils::pii::SecretSerdeValue>,
     pub recurring_mandate_payment_data: Option<RecurringMandatePaymentData>,
-    pub setup_mandate_details: Option<MandateData>,
-    pub setup_future_usage: Option<common_enums::FutureUsage>,
 }
 
 impl RepeatPaymentData {

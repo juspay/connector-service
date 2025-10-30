@@ -878,7 +878,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
-                "{}risk/v1/authentication-setups",
+                "{}pts/v2/payments/",
                 self.connector_base_url_payments(req),
             ))
         }

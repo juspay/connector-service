@@ -1701,6 +1701,9 @@ message PaymentServiceRepeatEverythingRequest {
 
   // State Information
   optional ConnectorState state = 14; // State data for access token storage and other connector-specific state
+
+  // Address Information
+  optional PaymentAddress address = 17; // Billing and shipping address details
 }
 
 // Response message for repeat payment operation.
