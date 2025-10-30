@@ -954,6 +954,216 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
 // Source verification stub implementations for all required flows
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for EaseBuzz<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<Box<dyn common_utils::crypto::VerifySignature + Send>, errors::ConnectorError> {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm))
+    }
+
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+
+    fn get_message(
+        &self,
+        payload: &[u8],
+        _router_data: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse> for EaseBuzz<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<Box<dyn common_utils::crypto::VerifySignature + Send>, errors::ConnectorError> {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm))
+    }
+
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+
+    fn get_message(
+        &self,
+        payload: &[u8],
+        _router_data: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData> for EaseBuzz<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<Box<dyn common_utils::crypto::VerifySignature + Send>, errors::ConnectorError> {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm))
+    }
+
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+
+    fn get_message(
+        &self,
+        payload: &[u8],
+        _router_data: &RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData> for EaseBuzz<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<Box<dyn common_utils::crypto::VerifySignature + Send>, errors::ConnectorError> {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm))
+    }
+
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+
+    fn get_message(
+        &self,
+        payload: &[u8],
+        _router_data: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData> for EaseBuzz<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<Box<dyn common_utils::crypto::VerifySignature + Send>, errors::ConnectorError> {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm))
+    }
+
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+
+    fn get_message(
+        &self,
+        payload: &[u8],
+        _router_data: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    SourceVerification<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for EaseBuzz<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<Box<dyn common_utils::crypto::VerifySignature + Send>, errors::ConnectorError> {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm))
+    }
+
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+
+    fn get_message(
+        &self,
+        payload: &[u8],
+        _router_data: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     SourceVerification<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData> for EaseBuzz<T>
 {
     fn get_secrets(
