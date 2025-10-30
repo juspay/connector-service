@@ -306,7 +306,7 @@ impl TryFrom<crate::connectors::billdesk::BilldeskRouterData<RouterDataV2<PSync,
     ) -> Result<Self, Self::Error> {
         let auth = BilldeskAuth::try_from(&item.router_data.connector_auth_type)?;
         
-        let msg = build_status_message(&auth, item)?;
+        let msg = build_status_message(&auth, &item.router_data)?;
 
         Ok(Self { msg })
     }
