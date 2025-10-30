@@ -231,7 +231,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     SourceVerification<
-        CreateConnectorCustomer,
+        domain_types::connector_flow::CreateConnectorCustomer,
         PaymentFlowData,
         ConnectorCustomerData,
         ConnectorCustomerResponse,
