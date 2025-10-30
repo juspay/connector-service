@@ -648,7 +648,7 @@ macros::create_all_prerequisites!(
             request_body: BilldeskDefendDisputeRequest,
             response_body: BilldeskDefendDisputeResponse,
             router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
-        ),
+        )
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
