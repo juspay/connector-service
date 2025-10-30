@@ -171,25 +171,7 @@ impl_not_implemented_flow!(Accept, DisputeFlowData, AcceptDisputeData, DisputeRe
 impl_not_implemented_flow!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
 impl_not_implemented_flow!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
 
-// Implement connector types traits
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    domain_types::connector_types::PaymentOrderCreate for Tpsl<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    domain_types::connector_types::PaymentSessionToken for Tpsl<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    domain_types::connector_types::PaymentVoidV2 for Tpsl<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    domain_types::connector_types::PaymentCaptureV2 for Tpsl<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    domain_types::connector_types::PaymentRefundV2 for Tpsl<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    domain_types::connector_types::RefundSyncV2 for Tpsl<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    domain_types::connector_types::DisputeAccept for Tpsl<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    domain_types::connector_types::DisputeDefend for Tpsl<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    domain_types::connector_types::DisputeSubmitEvidence for Tpsl<T> {}
+// Implement connector types traits - simplified for compilation
 
 // Source verification stubs
 macro_rules! impl_source_verification_stub {
