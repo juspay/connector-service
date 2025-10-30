@@ -746,7 +746,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzRSyncResponse, RouterDataV2<RSync, Refun
                             .and_then(|r| r.first())
                             .map(|r| r.refund_id.clone()),
                         refund_status,
-                        connector_transaction_id: Some(success_data.easebuzz_id),
+                        
                         
                     }),
                 )
