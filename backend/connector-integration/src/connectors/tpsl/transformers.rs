@@ -623,13 +623,13 @@ impl TryFrom<TpslPaymentsSyncResponse> for PaymentsResponseData
 fn get_merchant_id(auth_type: &ConnectorAuthType) -> CustomResult<String, ConnectorError> {
     match auth_type {
         ConnectorAuthType::SignatureKey { api_key, .. } => {
-            Ok(api_key.expose().to_string())
+            Ok(api_key.clone().expose().to_string())
         },
         ConnectorAuthType::HeaderKey { api_key, .. } => {
-            Ok(api_key.expose().to_string())
+            Ok(api_key.clone().expose().to_string())
         },
         ConnectorAuthType::BodyKey { api_key, .. } => {
-            Ok(api_key.expose().to_string())
+            Ok(api_key.clone().expose().to_string())
         },
         _ => Err(ConnectorError::RequestEncodingFailed)?,
     }
