@@ -174,7 +174,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         item: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = EaseBuzzAuth::try_from(&item.connector_auth_type)?;
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let customer_id = item.resource_common_data.get_customer_id()?;
         let return_url = item.router_data.request.get_router_return_url()?;
         
         let amount = item
@@ -190,7 +190,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let hash_string = format!(
             "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
             auth.key.peek(),
-            item.router_data.resource_common_data.connector_request_reference_id,
+            item.resource_common_data.connector_request_reference_id,
             amount.to_string(),
             "Payment", // productinfo
             customer_id.get_string_repr(),
@@ -206,7 +206,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         Ok(Self {
             key: auth.key,
-            txnid: item.router_data.resource_common_data.connector_request_reference_id.clone(),
+            txnid: item.resource_common_data.connector_request_reference_id.clone(),
             amount,
             productinfo: "Payment".to_string(),
             firstname: Some(Secret::new(customer_id.get_string_repr().to_string())),
