@@ -1,13 +1,17 @@
 use std::collections::HashMap;
 
 use common_utils::{
-    request::Method, types::{StringMinorUnit, AmountConvertor},
+    request::Method,
+    types::{StringMinorUnit, AmountConvertor},
     Email,
 };
 use sha2::Digest;
 use domain_types::{
-    connector_flow::{Authorize, PSync},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
+    connector_flow::{Authorize, PSync, Refund, RSync},
+    connector_types::{
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, 
+        RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData, ResponseId
+    },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -18,7 +22,7 @@ use domain_types::{
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::easebuzz::EaseBuzzRouterData, types::ResponseRouterData};
+use crate::{types::ResponseRouterData};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -104,6 +108,24 @@ pub struct EaseBuzzPaymentsSyncRequest {
     pub hash: Secret<String>,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EaseBuzzRefundRequest {
+    pub key: Secret<String>,
+    pub txnid: String,
+    pub refund_amount: StringMinorUnit,
+    pub refund_refid: String,
+    pub hash: Secret<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EaseBuzzRSyncRequest {
+    pub key: Secret<String>,
+    pub easebuzz_id: String,
+    pub hash: Secret<String>,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EaseBuzzPaymentsResponse {
@@ -149,6 +171,74 @@ pub struct EaseBuzzUpiIntentResponse {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct EaseBuzzPaymentsSyncResponse {
+    pub status: bool,
+    pub msg: EaseBuzzTxnSyncMessageType,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum EaseBuzzTxnSyncMessageType {
+    Success(EaseBuzzResponseData),
+    Error(String),
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EaseBuzzRefundResponse {
+    pub status: bool,
+    pub reason: Option<String>,
+    pub easebuzz_id: Option<String>,
+    pub refund_id: Option<String>,
+    pub refund_amount: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EaseBuzzRSyncResponse {
+    pub code: i32,
+    pub status: String,
+    pub response: EaseBuzzRefundSyncResponse,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum EaseBuzzRefundSyncResponse {
+    Success(EaseBuzzRefundSyncSuccessResponse),
+    Failure(EaseBuzzRefundSyncFailureResponse),
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EaseBuzzRefundSyncSuccessResponse {
+    pub txnid: String,
+    pub easebuzz_id: String,
+    pub net_amount_debit: String,
+    pub amount: String,
+    pub refunds: Option<Vec<EaseBuzzRefundSyncType>>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EaseBuzzRefundSyncFailureResponse {
+    pub status: String,
+    pub message: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EaseBuzzRefundSyncType {
+    pub refund_id: String,
+    pub refund_status: String,
+    pub merchant_refund_id: String,
+    pub merchant_refund_date: String,
+    pub refund_settled_date: Option<String>,
+    pub refund_amount: String,
+    pub arn_number: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct EaseBuzzErrorResponse {
     pub status: i32,
     pub error_desc: Option<String>,
@@ -164,36 +254,22 @@ pub enum EaseBuzzPaymentsResponseEnum {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    TryFrom<EaseBuzzRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
+    TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
     for EaseBuzzPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: EaseBuzzRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
-    ) -> Result<Self, Self::Error> {
-        // Convert from EaseBuzzRouterData to RouterDataV2 and then to EaseBuzzPaymentsRequest
-        EaseBuzzPaymentsRequest::try_from(item.router_data)
-    }
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    TryFrom<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
-    for EaseBuzzPaymentsRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        item: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = EaseBuzzAuth::try_from(&item.connector_auth_type)?;
         let customer_id = item.resource_common_data.get_customer_id()?;
         let return_url = item.request.get_router_return_url()?;
-        
-        // For now, use a default amount converter since we don't have access to the connector
+
+        // CRITICAL: Use amount converter properly - never hardcode amounts
         let amount_converter = common_utils::types::StringMinorUnitForConnector;
         let amount = amount_converter
-            .convert(common_utils::types::MinorUnit::new(item.request.amount), item.request.currency)
+            .convert(item.request.minor_amount, item.request.currency)
             .map_err(|_| ConnectorError::RequestEncodingFailed)?;
 
         // Generate hash - this would typically involve SHA512 of parameters + salt
@@ -204,11 +280,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             amount.to_string(),
             "Payment", // productinfo
             customer_id.get_string_repr(),
-            String::new(), // Email not available in sync request
+            item.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
             String::new(), // Phone number not available in standard flow
-            return_url,
+            return_url.clone(),
             return_url, // furl same as surl
-            "", "", "", "", "", "", "", "", "", "", "", "", "", "", // udf fields
+            "", "", "", "", "", "", "", "", "", "", "", "", "", // udf fields
             auth.salt.peek()
         );
         
@@ -220,7 +296,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             amount,
             productinfo: "Payment".to_string(),
             firstname: Some(Secret::new(customer_id.get_string_repr().to_string())),
-            email: None, // Email not available in sync request
+            email: item.request.email.clone(),
             phone: None, // Phone number not available in standard flow
             surl: return_url.clone(),
             furl: return_url,
@@ -241,34 +317,35 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             state: None,
             country: None,
             zipcode: None,
-            pg: Some("upi".to_string()),
+            pg: Some("upi".to_string()), // UPI focused as per requirements
         })
     }
 }
 
-impl TryFrom<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
     for EaseBuzzPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = EaseBuzzAuth::try_from(&item.connector_auth_type)?;
         
-        // For now, use a default amount converter since we don't have access to the connector
+        // CRITICAL: Use amount converter properly - never hardcode amounts
         let amount_converter = common_utils::types::StringMinorUnitForConnector;
         let amount = amount_converter
-            .convert(item.request.amount, item.request.currency)
+            .convert(item.request.minor_amount, item.request.currency)
             .map_err(|_| ConnectorError::RequestEncodingFailed)?;
 
         // Generate hash for sync request
         let hash_string = format!(
             "{}|{}|{}|{}|{}|{}",
             auth.key.peek(),
-            item.request.connector_transaction_id.get_connector_transaction_id().map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
+            item.request.connector_transaction_id.get_connector_transaction_id()
+                .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             amount.to_string(),
-            String::new(), // Email not available in sync request
+            item.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
             String::new(), // Phone number not available in sync request
             auth.salt.peek()
         );
@@ -277,10 +354,81 @@ impl TryFrom<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResp
 
         Ok(Self {
             key: auth.key,
-            txnid: item.request.connector_transaction_id.get_connector_transaction_id().map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
+            txnid: item.request.connector_transaction_id.get_connector_transaction_id()
+                .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             amount,
-            email: None, // Email not available in sync request
+            email: item.request.email.clone(),
             phone: None, // Phone number not available in sync request
+            hash,
+        })
+    }
+}
+
+impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
+    for EaseBuzzRefundRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+    ) -> Result<Self, Self::Error> {
+        let auth = EaseBuzzAuth::try_from(&item.connector_auth_type)?;
+        
+        // CRITICAL: Use amount converter properly - never hardcode amounts
+        let amount_converter = common_utils::types::StringMinorUnitForConnector;
+        let refund_amount = amount_converter
+            .convert(item.request.minor_amount, item.request.currency)
+            .map_err(|_| ConnectorError::RequestEncodingFailed)?;
+
+        // Generate hash for refund request
+        let hash_string = format!(
+            "{}|{}|{}|{}|{}",
+            auth.key.peek(),
+            item.request.connector_transaction_id.get_connector_transaction_id()
+                .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
+            refund_amount.to_string(),
+            item.request.refund_id.clone(),
+            auth.salt.peek()
+        );
+        
+        let hash = Secret::new(format!("{:x}", sha2::Sha512::digest(hash_string)));
+
+        Ok(Self {
+            key: auth.key,
+            txnid: item.request.connector_transaction_id.get_connector_transaction_id()
+                .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
+            refund_amount,
+            refund_refid: item.request.refund_id.clone(),
+            hash,
+        })
+    }
+}
+
+impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>
+    for EaseBuzzRSyncRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+    ) -> Result<Self, Self::Error> {
+        let auth = EaseBuzzAuth::try_from(&item.connector_auth_type)?;
+
+        // Generate hash for refund sync request
+        let hash_string = format!(
+            "{}|{}|{}",
+            auth.key.peek(),
+            item.request.connector_transaction_id.get_connector_transaction_id()
+                .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
+            auth.salt.peek()
+        );
+        
+        let hash = Secret::new(format!("{:x}", sha2::Sha512::digest(hash_string)));
+
+        Ok(Self {
+            key: auth.key,
+            easebuzz_id: item.request.connector_transaction_id.get_connector_transaction_id()
+                .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             hash,
         })
     }
@@ -417,13 +565,13 @@ where
     }
 }
 
-impl TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+impl TryFrom<ResponseRouterData<EaseBuzzPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
+        item: ResponseRouterData<EaseBuzzPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
@@ -431,86 +579,65 @@ impl TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<PSync
             http_code,
         } = item;
 
-        let (status, response) = match response {
-            EaseBuzzPaymentsResponseEnum::Success(success_data) => {
-                if success_data.status == 1 {
-                    if let Some(data) = success_data.data {
-                        let attempt_status = match data.status.as_deref() {
-                            Some("success") => common_enums::AttemptStatus::Charged,
-                            Some("pending") => common_enums::AttemptStatus::Pending,
-                            Some("failure") => common_enums::AttemptStatus::Failure,
-                            _ => common_enums::AttemptStatus::Pending,
-                        };
+        let (status, response) = if response.status {
+            match response.msg {
+                EaseBuzzTxnSyncMessageType::Success(data) => {
+                    let attempt_status = match data.status.as_deref() {
+                        Some("success") => common_enums::AttemptStatus::Charged,
+                        Some("pending") => common_enums::AttemptStatus::Pending,
+                        Some("failure") => common_enums::AttemptStatus::Failure,
+                        _ => common_enums::AttemptStatus::Pending,
+                    };
 
-                        (
-                            attempt_status,
-                            Ok(PaymentsResponseData::TransactionResponse {
-                                resource_id: ResponseId::ConnectorTransactionId(
-                                    router_data
-                                        .resource_common_data
-                                        .connector_request_reference_id
-                                        .clone(),
-                                ),
-                                redirection_data: None,
-                                mandate_reference: None,
-                                connector_metadata: None,
-                                network_txn_id: data.easebuzz_id,
-                                connector_response_reference_id: data.transaction_id,
-                                incremental_authorization_allowed: None,
-                                status_code: http_code,
-                            }),
-                        )
-                    } else {
-                        (
-                            common_enums::AttemptStatus::Pending,
-                            Ok(PaymentsResponseData::TransactionResponse {
-                                resource_id: ResponseId::ConnectorTransactionId(
-                                    router_data
-                                        .resource_common_data
-                                        .connector_request_reference_id
-                                        .clone(),
-                                ),
-                                redirection_data: None,
-                                mandate_reference: None,
-                                connector_metadata: None,
-                                network_txn_id: None,
-                                connector_response_reference_id: None,
-                                incremental_authorization_allowed: None,
-                                status_code: http_code,
-                            }),
-                        )
-                    }
-                } else {
                     (
-                        common_enums::AttemptStatus::Failure,
-                        Err(ErrorResponse {
+                        attempt_status,
+                        Ok(PaymentsResponseData::TransactionResponse {
+                            resource_id: ResponseId::ConnectorTransactionId(
+                                router_data
+                                    .resource_common_data
+                                    .connector_request_reference_id
+                                    .clone(),
+                            ),
+                            redirection_data: None,
+                            mandate_reference: None,
+                            connector_metadata: None,
+                            network_txn_id: data.easebuzz_id,
+                            connector_response_reference_id: data.transaction_id,
+                            incremental_authorization_allowed: None,
                             status_code: http_code,
-                            code: success_data.status.to_string(),
-                            message: success_data.error_desc.clone().unwrap_or_default(),
-                            reason: success_data.error_desc,
-                            attempt_status: None,
-                            connector_transaction_id: None,
-                            network_advice_code: None,
-                            network_decline_code: None,
-                            network_error_message: None,
                         }),
                     )
                 }
+                EaseBuzzTxnSyncMessageType::Error(_) => (
+                    common_enums::AttemptStatus::Failure,
+                    Err(ErrorResponse {
+                        status_code: http_code,
+                        code: "SYNC_ERROR".to_string(),
+                        message: "Transaction sync failed".to_string(),
+                        reason: Some("Transaction sync failed".to_string()),
+                        attempt_status: None,
+                        connector_transaction_id: None,
+                        network_advice_code: None,
+                        network_decline_code: None,
+                        network_error_message: None,
+                    }),
+                ),
             }
-            EaseBuzzPaymentsResponseEnum::Error(error_data) => (
+        } else {
+            (
                 common_enums::AttemptStatus::Failure,
                 Err(ErrorResponse {
                     status_code: http_code,
-                    code: error_data.status.to_string(),
-                    message: error_data.error_desc.as_ref().or(error_data.message.as_ref()).cloned().unwrap_or_default(),
-                    reason: error_data.error_desc.as_ref().or(error_data.message.as_ref()).cloned(),
+                    code: "SYNC_FAILED".to_string(),
+                    message: "Transaction sync failed".to_string(),
+                    reason: Some("Transaction sync failed".to_string()),
                     attempt_status: None,
                     connector_transaction_id: None,
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
                 }),
-            ),
+            )
         };
 
         Ok(Self {
@@ -526,80 +653,131 @@ impl TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<PSync
     }
 }
 
-// Unique request types for each flow to avoid templating conflicts
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzVoidRequest;
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzVoidPostCaptureRequest;
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzCaptureRequest;
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzRefundRequest;
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzRSyncRequest;
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzCreateOrderRequest;
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzSessionTokenRequest;
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzAccessTokenRequest;
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzCreateConnectorCustomerRequest;
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzSetupMandateRequest;
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzRepeatPaymentRequest;
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzPaymentTokenRequest;
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzAcceptDisputeRequest;
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzSubmitEvidenceRequest;
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzDefendDisputeRequest;
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzPreAuthenticateRequest;
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzAuthenticateRequest;
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzPostAuthenticateRequest;
+impl TryFrom<ResponseRouterData<EaseBuzzRefundResponse, RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
 
-// Unique response types for each flow to avoid templating conflicts
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EaseBuzzPaymentsSyncResponse;
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EaseBuzzVoidResponse;
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EaseBuzzCaptureResponse;
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EaseBuzzRefundResponse;
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EaseBuzzRSyncResponse;
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EaseBuzzCreateOrderResponse;
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EaseBuzzSessionTokenResponse;
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EaseBuzzSetupMandateResponse;
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EaseBuzzRepeatPaymentResponse;
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EaseBuzzAcceptDisputeResponse;
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EaseBuzzSubmitEvidenceResponse;
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EaseBuzzDefendDisputeResponse;
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EaseBuzzAccessTokenResponse;
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EaseBuzzCreateConnectorCustomerResponse;
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EaseBuzzPaymentTokenResponse;
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EaseBuzzPreAuthenticateResponse;
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EaseBuzzAuthenticateResponse;
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EaseBuzzPostAuthenticateResponse;
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct EaseBuzzVoidPostCaptureResponse;
+    fn try_from(
+        item: ResponseRouterData<EaseBuzzRefundResponse, RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        let (status, response) = if response.status {
+            (
+                common_enums::AttemptStatus::Charged,
+                Ok(RefundsResponseData {
+                    refund_id: response.refund_id,
+                    connector_refund_id: response.refund_id,
+                    refund_status: common_enums::RefundStatus::Success,
+                    connector_transaction_id: response.easebuzz_id,
+                    amount_received: response.refund_amount.and_then(|amt| {
+                        amt.parse::<f64>().ok().map(|f| common_utils::types::MinorUnit::from_major_unit_as_i64(f))
+                    }),
+                }),
+            )
+        } else {
+            (
+                common_enums::AttemptStatus::Failure,
+                Err(ErrorResponse {
+                    status_code: http_code,
+                    code: "REFUND_FAILED".to_string(),
+                    message: response.reason.clone().unwrap_or_default(),
+                    reason: response.reason,
+                    attempt_status: None,
+                    connector_transaction_id: response.easebuzz_id,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    network_error_message: None,
+                }),
+            )
+        };
+
+        Ok(Self {
+            flow: router_data.flow,
+            resource_common_data: router_data.resource_common_data,
+            connector_auth_type: router_data.connector_auth_type,
+            request: router_data.request,
+            response,
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<EaseBuzzRSyncResponse, RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<EaseBuzzRSyncResponse, RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        let (status, response) = match response.response {
+            EaseBuzzRefundSyncResponse::Success(success_data) => {
+                let refund_status = if let Some(refunds) = success_data.refunds {
+                    if let Some(refund) = refunds.first() {
+                        match refund.refund_status.as_str() {
+                            "success" => common_enums::RefundStatus::Success,
+                            "pending" => common_enums::RefundStatus::Pending,
+                            "failure" => common_enums::RefundStatus::Failure,
+                            _ => common_enums::RefundStatus::Pending,
+                        }
+                    } else {
+                        common_enums::RefundStatus::Pending
+                    }
+                } else {
+                    common_enums::RefundStatus::Pending
+                };
+
+                (
+                    common_enums::AttemptStatus::Charged,
+                    Ok(RefundsResponseData {
+                        refund_id: success_data.refunds.as_ref()
+                            .and_then(|r| r.first())
+                            .map(|r| r.refund_id.clone()),
+                        connector_refund_id: success_data.refunds.as_ref()
+                            .and_then(|r| r.first())
+                            .map(|r| r.refund_id.clone()),
+                        refund_status,
+                        connector_transaction_id: Some(success_data.easebuzz_id),
+                        amount_received: success_data.refunds.as_ref()
+                            .and_then(|r| r.first())
+                            .and_then(|r| r.refund_amount.parse::<f64>().ok())
+                            .map(|f| common_utils::types::MinorUnit::from_major_unit_as_i64(f)),
+                    }),
+                )
+            }
+            EaseBuzzRefundSyncResponse::Failure(failure_data) => (
+                common_enums::AttemptStatus::Failure,
+                Err(ErrorResponse {
+                    status_code: http_code,
+                    code: "REFUND_SYNC_FAILED".to_string(),
+                    message: failure_data.message.clone(),
+                    reason: Some(failure_data.message),
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    network_error_message: None,
+                }),
+            ),
+        };
+
+        Ok(Self {
+            flow: router_data.flow,
+            resource_common_data: router_data.resource_common_data,
+            connector_auth_type: router_data.connector_auth_type,
+            request: router_data.request,
+            response,
+        })
+    }
+}
