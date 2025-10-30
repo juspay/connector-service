@@ -303,7 +303,7 @@ impl<T> TryFrom<crate::connectors::billdesk::BilldeskRouterData<RouterDataV2<PSy
 
     fn try_from(
         item: crate::connectors::billdesk::BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>, T>,
-    ) -> Result<Self, Self::Error> {
+    ) -> Result<Self, Self::Error> where T: PaymentMethodDataTypes {
         let auth = BilldeskAuth::try_from(&item.router_data.connector_auth_type)?;
         
         let msg = build_status_message(&auth, &item.router_data)?;
