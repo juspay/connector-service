@@ -229,8 +229,8 @@ fn extract_payment_method<T: PaymentMethodDataTypes>(
                 upi: None,
                 card: Some(EaseBuzzCardMethod {
                     number: None, // TODO: Implement proper card number extraction
-                    expiry_month: Some(card_data.card_exp_month.expose().clone()),
-                    expiry_year: Some(format!("20{}", card_data.card_exp_year.expose())),
+                    expiry_month: Some(card_data.card_exp_month.clone().expose()),
+                    expiry_year: Some(format!("20{}", card_data.card_exp_year.clone().expose())),
                     cvv: Some(card_data.card_cvc.clone()),
                     name_on_card: card_data.card_holder_name.as_ref().map(|s| s.expose().clone()),
                     save_card: Some(false),
