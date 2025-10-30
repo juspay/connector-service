@@ -406,7 +406,7 @@ where
             instrument: TpslInstrumentPayload {
                 identifier: vpa.clone().unwrap_or_else(|| "default_vpa".to_string()),
                 token: None,
-                alias: vpa,
+                alias: vpa.clone(),
                 provider: Some("UPI".to_string()),
                 instrument_type: Some("VPA".to_string()),
                 action: Some("COLLECT".to_string()),
