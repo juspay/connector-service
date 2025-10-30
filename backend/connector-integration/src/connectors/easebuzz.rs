@@ -31,7 +31,7 @@ use interfaces::{
 };
 
 use transformers::{
-    self as easebuzz, EaseBuzzPaymentsRequest, EaseBuzzPaymentsResponse, EaseBuzzPaymentsSyncRequest,
+    self as easebuzz, EaseBuzzPaymentsRequest, EaseBuzzPaymentsSyncRequest,
     EaseBuzzPaymentsSyncResponse, EaseBuzzRefundRequest, EaseBuzzRefundResponse,
     EaseBuzzRSyncRequest, EaseBuzzRSyncResponse, EaseBuzzPaymentsResponseEnum,
 };
