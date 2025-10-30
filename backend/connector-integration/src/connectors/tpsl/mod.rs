@@ -75,7 +75,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         &self,
         _response: Response,
         _event: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
-    ) -> CustomResult<interfaces::router_data::ErrorResponse, ConnectorError> {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
         Err(ConnectorError::NotImplemented("Error handling not implemented".to_string()).into())
     }
 }
@@ -109,7 +109,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         &self,
         _response: Response,
         _event: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
-    ) -> CustomResult<interfaces::router_data::ErrorResponse, ConnectorError> {
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
         Err(ConnectorError::NotImplemented("Error handling not implemented".to_string()).into())
     }
 }
