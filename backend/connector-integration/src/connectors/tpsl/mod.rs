@@ -74,8 +74,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         vec![PaymentMethodType::Upi]
     }
 
-    fn get_connector_specifications(&self) -> ConnectorSpecifications {
-        ConnectorSpecifications {
+    fn get_connector_specifications(&self) -> domain_types::connector_types::ConnectorSpecifications {
+        domain_types::connector_types::ConnectorSpecifications {
             connector_name: self.get_name().to_string(),
             connector_type: self.get_connector_type(),
             payment_method_types: self.get_payment_method_types(),
