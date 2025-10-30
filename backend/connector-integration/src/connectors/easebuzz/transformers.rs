@@ -72,7 +72,7 @@ pub struct EaseBuzzPaymentsRequest {
     pub udf5: Option<String>,
     pub udf6: Option<String>,
     pub udf7: Option<String>,
-    pub pub udf8: Option<String>,
+    pub udf8: Option<String>,
     pub udf9: Option<String>,
     pub udf10: Option<String>,
     pub address1: Option<String>,
