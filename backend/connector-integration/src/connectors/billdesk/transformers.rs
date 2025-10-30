@@ -134,7 +134,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let amount = item.router_data.request.minor_amount.to_string();
 
         // Only support UPI payments
-        match item.resource_common_data.payment_method {
+        match item.router_data.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => {
                 // Create the message payload for Billdesk UPI initiation
                 let msg_payload = create_upi_initiate_message(
