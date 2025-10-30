@@ -184,7 +184,7 @@ fn get_redirect_form_data(
         }
         _ => Err(errors::ConnectorError::NotImplemented(
             utils::get_unimplemented_payment_method_error_message("Billdesk"),
-        )),
+        ).into()),
     }
 }
 
