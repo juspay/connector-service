@@ -283,16 +283,8 @@ fn get_redirect_form_data(
     }
 }
 
-impl<
-    F,
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> TryFrom<ResponseRouterData<BilldeskPaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<common_enums::PaymentMethod>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
