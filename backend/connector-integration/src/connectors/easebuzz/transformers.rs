@@ -519,55 +519,55 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 // Stub types for unsupported flows
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzVoidRequest;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EaseBuzzVoidResponse;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzCaptureRequest;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EaseBuzzCaptureResponse;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzRefundRequest;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EaseBuzzRefundResponse;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzRSyncRequest;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EaseBuzzRSyncResponse;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzCreateOrderRequest;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EaseBuzzCreateOrderResponse;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzSessionTokenRequest;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EaseBuzzSessionTokenResponse;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzSetupMandateRequest;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EaseBuzzSetupMandateResponse;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzRepeatPaymentRequest;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EaseBuzzRepeatPaymentResponse;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzAcceptDisputeRequest;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EaseBuzzAcceptDisputeResponse;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzSubmitEvidenceRequest;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EaseBuzzSubmitEvidenceResponse;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct EaseBuzzDefendDisputeRequest;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EaseBuzzDefendDisputeResponse;
