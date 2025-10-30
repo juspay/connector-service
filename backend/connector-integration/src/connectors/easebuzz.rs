@@ -524,17 +524,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 {
     fn build_request_v2(
         &self,
-        _req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData, PaymentMethodTokenResponse>,
+        _req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
     ) -> CustomResult<Option<Request>, errors::ConnectorError> {
         Err(errors::ConnectorError::NotImplemented("PaymentMethodToken".to_string()).into())
     }
 
     fn handle_response_v2(
         &self,
-        _req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData, PaymentMethodTokenResponse>,
+        _req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         _event_builder: Option<&mut ConnectorEvent>,
         _res: Response,
-    ) -> CustomResult<RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData, PaymentMethodTokenResponse>, errors::ConnectorError>
+    ) -> CustomResult<RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>, errors::ConnectorError>
     {
         Err(errors::ConnectorError::NotImplemented("PaymentMethodToken".to_string()).into())
     }
