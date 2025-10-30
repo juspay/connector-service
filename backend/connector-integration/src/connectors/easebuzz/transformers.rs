@@ -675,9 +675,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzRefundResponse, RouterDataV2<Refund, Ref
                     connector_refund_id: response.refund_id,
                     refund_status: common_enums::RefundStatus::Success,
                     connector_transaction_id: response.easebuzz_id,
-                    amount_received: response.refund_amount.and_then(|amt| {
-                        amt.parse::<f64>().ok().map(|f| common_utils::types::MinorUnit::new((f * 100.0) as i64))
-                    }),
+                    
                 }),
             )
         } else {
