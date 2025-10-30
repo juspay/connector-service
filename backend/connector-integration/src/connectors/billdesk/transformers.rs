@@ -199,7 +199,7 @@ pub struct BilldeskStatusResponseMsg {
 fn build_billdesk_message(
     auth: &BilldeskAuth,
     router_data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<impl PaymentMethodDataTypes>, PaymentsResponseData>,
-    amount_converter: &dyn common_utils::types::AmountConvertor<Output = String>,
+    amount_converter: &dyn common_utils::types::AmountConvertor<Output = common_utils::types::StringMajorUnit>,
 ) -> CustomResult<String, errors::ConnectorError> {
     let customer_id = router_data.resource_common_data.get_customer_id()?;
     let amount = amount_converter.convert(
