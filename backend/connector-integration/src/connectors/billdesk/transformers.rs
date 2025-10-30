@@ -366,7 +366,7 @@ impl<
             _ => common_enums::AttemptStatus::Pending,
         };
 
-        let amount_received = response.txn_amount.as_ref().and_then(|amt| {
+        let _amount_received = response.txn_amount.as_ref().and_then(|amt| {
             amt.parse::<f64>()
                 .ok()
                 .map(|major_amount| {
