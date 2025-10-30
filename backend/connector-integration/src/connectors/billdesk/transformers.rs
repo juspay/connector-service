@@ -104,40 +104,26 @@ pub fn get_billdesk_auth_header(auth: &BilldeskAuth) -> CustomResult<Maskable<St
     Ok(format!("Bearer {}", auth.merchant_id.peek()).into_masked())
 }
 
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
->
-    TryFrom<
-        BilldeskRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
+impl TryFrom<
+        &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<impl PaymentMethodDataTypes>,
+            PaymentsResponseData,
         >,
     > for BilldeskPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: BilldeskRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
+        item: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<impl PaymentMethodDataTypes>,
+            PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let customer_id = item.resource_common_data.get_customer_id()?;
         let amount = item
             .connector
             .amount_converter
