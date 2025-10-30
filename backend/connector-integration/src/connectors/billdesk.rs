@@ -906,6 +906,12 @@ impl_source_verification_stub!(
     PaymentsResponseData
 );
 impl_source_verification_stub!(
+    Void,
+    PaymentFlowData,
+    PaymentVoidData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
     VoidPC,
     PaymentFlowData,
     PaymentsCancelPostCaptureData,
