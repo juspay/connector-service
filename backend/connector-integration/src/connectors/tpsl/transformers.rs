@@ -512,7 +512,7 @@ impl TryFrom<TpslPaymentsResponse> for PaymentsResponseData
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: TpslPaymentsResponse) -> Result<Self, Self::Error> {
-        let status = match response.status.to_uppercase().as_str() {
+        let _status = match response.status.to_uppercase().as_str() {
             "SUCCESS" | "OK" => AttemptStatus::Charged,
             "PENDING" | "PROCESSING" => AttemptStatus::Pending,
             "FAILED" | "ERROR" => AttemptStatus::Failure,
@@ -520,12 +520,12 @@ impl TryFrom<TpslPaymentsResponse> for PaymentsResponseData
             _ => AttemptStatus::Pending,
         };
         
-        let (amount, currency, transaction_id, error_message) = match response.response {
+        let (_amount, _currency, _transaction_id, _error_message) = match response.response {
             TpslResponseData::DecryptedResponse(decrypted) => {
-                let amount = MinorUnit::new(
+                let _amount = MinorUnit::new(
                     (decrypted.payment_method.payment_transaction.amount.parse::<f64>()
                         .unwrap_or(0.0) * 100.0) as i64);
-                let currency = constants::DEFAULT_CURRENCY.to_string();
+                let _currency = constants::DEFAULT_CURRENCY.to_string();
                 let transaction_id = decrypted.merchant_transaction_identifier
                     .unwrap_or_else(|| "unknown".to_string());
                 let error_message = if decrypted.payment_method.payment_transaction.status_code == "000" {
@@ -574,7 +574,7 @@ impl TryFrom<TpslPaymentsSyncResponse> for PaymentsResponseData
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: TpslPaymentsSyncResponse) -> Result<Self, Self::Error> {
-        let status = match response.transaction_state.to_uppercase().as_str() {
+        let _status = match response.transaction_state.to_uppercase().as_str() {
             "SUCCESS" | "COMPLETED" => AttemptStatus::Charged,
             "PENDING" | "PROCESSING" | "INITIATED" => AttemptStatus::Pending,
             "FAILED" | "ERROR" | "DECLINED" => AttemptStatus::Failure,
@@ -589,7 +589,7 @@ impl TryFrom<TpslPaymentsSyncResponse> for PaymentsResponseData
         let currency = constants::DEFAULT_CURRENCY.to_string();
         let transaction_id = response.merchant_transaction_identifier.clone();
         
-        let error_message = if response.payment_method.payment_transaction.status_code == "000" {
+        let _error_message = if response.payment_method.payment_transaction.status_code == "000" {
             None
         } else {
             response.payment_method.payment_transaction.error_message
