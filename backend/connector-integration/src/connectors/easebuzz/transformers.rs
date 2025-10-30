@@ -734,7 +734,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzRSyncResponse, RouterDataV2<RSync, Refun
                 (
                     common_enums::AttemptStatus::Charged,
                     Ok(RefundsResponseData {
-                        connector_refund_id: success_data.refunds.as_ref()
+                        connector_refund_id: success_data.refunds.as_ref().or_else(|| Some(&vec![]))
                             .and_then(|r| r.first())
                             .map(|r| r.refund_id.clone())
                             .unwrap_or_default(),
