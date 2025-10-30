@@ -611,11 +611,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.is_sandbox() {
-                constants::BILLDESK_UAT_BASE_URL
-            } else {
-                constants::BILLDESK_PROD_BASE_URL
-            }
+            &req.resource_common_data.connectors.billdesk.base_url
         }
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
