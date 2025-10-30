@@ -224,23 +224,6 @@ impl_source_verification_stub!(SubmitEvidence, DisputeFlowData, SubmitEvidenceDa
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     ConnectorValidation for Tpsl<T>
 {
-    fn validate_merchant_id(&self, merchant_id: &str) -> CustomResult<(), ConnectorError> {
-        if merchant_id.is_empty() {
-            Err(ConnectorError::InvalidCredentials {
-                message: "Merchant ID cannot be empty".to_string(),
-            })?;
-        }
-        Ok(())
-    }
-
-    fn validate_api_key(&self, api_key: &str) -> CustomResult<(), ConnectorError> {
-        if api_key.is_empty() {
-            Err(ConnectorError::InvalidCredentials {
-                message: "API key cannot be empty".to_string(),
-            })?;
-        }
-        Ok(())
-    }
 }
 
 // Default implementation
