@@ -356,9 +356,6 @@ macros::macro_connector_implementation!(
 
 // MANDATORY: Implement all connector_types traits even for unused flows
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::ConnectorServiceTrait<T> for EaseBuzz<T>
-{}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentOrderCreate for EaseBuzz<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::PaymentSessionToken for EaseBuzz<T> {}
