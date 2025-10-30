@@ -163,7 +163,7 @@ fn get_redirect_form_data(
     response_data: BilldeskPaymentsResponseData,
 ) -> CustomResult<RedirectForm, errors::ConnectorError> {
     match payment_method_type {
-        common_enums::PaymentMethodType::Upi => {
+        common_enums::PaymentMethodType::UpiCollect => {
             if let Some(rdata) = response_data.rdata {
                 let url = rdata.url.unwrap_or_default();
                 Ok(RedirectForm::Form {
