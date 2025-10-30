@@ -557,7 +557,7 @@ impl TryFrom<TpslPaymentsResponse> for PaymentsResponseData
         };
         
         Ok(PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::from("unknown".to_string()),
+            resource_id: ResponseId::ConnectorTransactionId("unknown".to_string()),
             redirection_data: None,
             connector_metadata: None,
             network_txn_id: None,
