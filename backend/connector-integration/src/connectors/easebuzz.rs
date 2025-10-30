@@ -1,8 +1,6 @@
 pub mod transformers;
 pub mod constants;
 
-use std::collections::HashMap;
-
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit};
 use domain_types::{
