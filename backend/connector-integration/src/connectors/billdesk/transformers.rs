@@ -282,7 +282,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
 
         let ip_address = item.router_data.request.get_ip_address_as_optional()
-            .map(|ip| ip.peek().to_string())
+            .map(|ip| ip.expose())
             .unwrap_or_else(|| "127.0.0.1".to_string());
 
         Ok(Self {
