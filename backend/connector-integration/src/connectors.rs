@@ -91,3 +91,6 @@ pub use self::worldpay::Worldpay;
 
 pub mod worldpayvantiv;
 pub use self::worldpayvantiv::Worldpayvantiv;
+
+pub mod billdesk;
+pub use self::billdesk::Billdesk;
