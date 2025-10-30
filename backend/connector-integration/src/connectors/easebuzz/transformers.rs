@@ -653,7 +653,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzPaymentsSyncResponse, RouterDataV2<PSync
     }
 }
 
-impl TryFrom<ResponseRouterData<EaseBuzzRefundResponse, RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
+impl TryFrom<ResponseRouterData<EaseBuzzRefundResponse, RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
