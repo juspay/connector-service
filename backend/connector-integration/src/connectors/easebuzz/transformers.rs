@@ -245,8 +245,8 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
     }
 }
 
-fn extract_payment_method(
-    payment_method_data: &domain_types::payment_method_data::PaymentMethodData,
+fn extract_payment_method<T: PaymentMethodDataTypes>(
+    payment_method_data: &domain_types::payment_method_data::PaymentMethodData<T>,
 ) -> Result<EaseBuzzPaymentMethod, ConnectorError> {
     match payment_method_data {
         domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
