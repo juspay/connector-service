@@ -9,7 +9,7 @@ use common_utils::{
     errors::CustomResult,
     id_type::CustomerId,
     pii::SecretSerdeValue,
-    types::{StringMinorUnit, MinorUnit, AmountConvertor},
+    types::{StringMinorUnit, MinorUnit},
 };
 use domain_types::{
     connector_flow::{
