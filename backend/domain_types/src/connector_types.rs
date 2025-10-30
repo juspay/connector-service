@@ -2075,7 +2075,9 @@ impl RepeatPaymentData {
     pub fn get_email(&self) -> Result<Email, Error> {
         self.email.clone().ok_or_else(missing_field_err("email"))
     }
-    pub fn get_recurring_mandate_payment_data(&self) -> Result<router_data::RecurringMandatePaymentData, Error> {
+    pub fn get_recurring_mandate_payment_data(
+        &self,
+    ) -> Result<router_data::RecurringMandatePaymentData, Error> {
         self.recurring_mandate_payment_data
             .to_owned()
             .ok_or_else(missing_field_err("recurring_mandate_payment_data"))
