@@ -18,13 +18,6 @@ use interfaces::{
     connector_types::{BoxedConnector, ConnectorServiceTrait, ConnectorValidation},
 };
 
-
-use interfaces::{
-    api::ConnectorCommon,
-    connector_integration_v2::ConnectorIntegrationV2,
-    connector_types::ConnectorValidation,
-};
-
 #[derive(Debug, Clone)]
 pub struct Tpsl<T> {
     connector_name: &'static str,
