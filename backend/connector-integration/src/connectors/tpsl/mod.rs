@@ -4,13 +4,10 @@ pub mod transformers;
 
 use std::marker::PhantomData;
 
-use common_enums::{AttemptStatus, PaymentMethodType};
+use common_enums::PaymentMethodType;
 use common_utils::{
     errors::CustomResult,
-    ext_traits::BytesExt,
-    pii::{Email, PhoneNumber},
-    request::RequestContent,
-    types::{self, StringMinorUnit},
+    types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -18,30 +15,27 @@ use domain_types::{
         Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData,
+        AcceptDisputeData, ConnectorWebhookSecrets, DisputeDefendData,
+        DisputeFlowData, DisputeResponseData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
-        RepeatPaymentData, RequestDetails, ResponseId, SessionTokenRequestData,
+        RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
-    types::{
-        AmountConverterTrait, ConnectorAuthType, ConnectorCommonData, ConnectorConfig,
-        ConnectorError, ConnectorRequestReferenceId, CustomerId, MerchantId, MinorUnit,
-        PaymentId, RefundId, Secret, TokenId,
-    },
+    router_data::ConnectorAuthType,
+    errors::ConnectorError,
+    id_type::CustomerId,
+    masking::Secret,
+    types::MinorUnit,
 };
 
-use hyperswitch_masking::SecretSerdeValue;
-use transformers as tpsl_transformers;
+use masking::SecretSerdeValue;
 
 use crate::{
-    connector::ConnectorCommon,
     services::{self, ConnectorIntegrationV2, ConnectorValidation},
-    utils,
 };
 
 #[derive(Debug, Clone)]
