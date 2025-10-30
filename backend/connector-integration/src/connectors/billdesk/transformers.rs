@@ -99,10 +99,10 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuth {
             ConnectorAuthType::SignatureKey { api_key, key1, .. } => {
                 let merchant_id = api_key
                     .clone()
-                    .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
+                    .ok_or_else(|| errors::ConnectorError::FailedToObtainAuthType)?;
                 let checksum_key = key1
                     .clone()
-                    .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
+                    .ok_or_else(|| errors::ConnectorError::FailedToObtainAuthType)?;
                 Ok(Self {
                     merchant_id: Secret::new(merchant_id),
                     checksum_key: Secret::new(checksum_key),
