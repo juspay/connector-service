@@ -240,7 +240,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: EaseBuzzRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
+        item: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = EaseBuzzAuth::try_from(&item.connector_auth_type)?;
         
