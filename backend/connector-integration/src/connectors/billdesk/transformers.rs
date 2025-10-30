@@ -23,7 +23,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
+use crate::types::ResponseRouterData;
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
