@@ -7,8 +7,10 @@ use std::marker::PhantomData;
 use common_enums::PaymentMethodType;
 use common_utils::{
     errors::CustomResult,
+    id_type::CustomerId,
     pii::SecretSerdeValue,
-    types::StringMinorUnit,
+    types::{StringMinorUnit, MinorUnit},
+    masking::Secret,
 };
 use domain_types::{
     connector_flow::{
@@ -28,15 +30,12 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_data::ConnectorAuthType,
     errors::ConnectorError,
-    id_type::CustomerId,
-    masking::Secret,
-    types::MinorUnit,
     utils,
 };
 
 use interfaces::{
     api::ConnectorCommon,
-    ConnectorIntegrationV2,
+    connector_integration_v2::ConnectorIntegrationV2,
     ConnectorValidation,
 };
 
