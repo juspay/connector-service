@@ -2,13 +2,12 @@ use common_utils::{
     request::Method, types::StringMinorUnit,
     Email,
 };
-use hyperswitch_masking::{PeekInterface, ExposeInterface};
+use hyperswitch_masking::ExposeInterface;
 use domain_types::{
     connector_flow::{Authorize},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
-    errors::{self, ConnectorError},
+    errors::ConnectorError,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -229,10 +228,10 @@ fn extract_payment_method<T: PaymentMethodDataTypes>(
             Ok(EaseBuzzPaymentMethod {
                 upi: None,
                 card: Some(EaseBuzzCardMethod {
-                    number: Some(Secret::new(card_data.card_number.clone().into_inner())),
-                    expiry_month: card_data.card_exp_month.map(|m| m.to_string()),
-                    expiry_year: card_data.card_exp_year.map(|y| format!("20{}", y)),
-                    cvv: card_data.card_cvc.map(|c| Secret::new(c.into_inner())),
+                    number: Some(Secret::new(card_data.card_number.clone().expose().clone())),
+                    expiry_month: card_data.card_exp_month.map(|m| m.expose().clone()),
+                    expiry_year: card_data.card_exp_year.map(|y| format!("20{}", y.expose().clone())),
+                    cvv: card_data.card_cvc.map(|c| Secret::new(c.expose().clone())),
                     name_on_card: card_data.card_holder_name.as_ref().map(|s| s.expose().clone()),
                     save_card: Some(false),
                 }),
