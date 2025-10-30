@@ -333,8 +333,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn handle_response_v2(
         &self,
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        res: Response,
         _event_builder: Option<&mut ConnectorEvent>,
+        res: Response,
     ) -> CustomResult<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, errors::ConnectorError>
     {
         let response: EaseBuzzRSyncResponse = res
