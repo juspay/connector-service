@@ -1476,6 +1476,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            api_tag: None,
         })
     }
 }
@@ -1536,6 +1537,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            api_tag: None,
         })
     }
 }
@@ -1596,6 +1598,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            api_tag: None,
         })
     }
 }
@@ -1657,6 +1660,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            api_tag: None,
         })
     }
 }
@@ -2039,6 +2043,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            api_tag: None,
         })
     }
 }
@@ -3412,6 +3417,7 @@ impl
             external_latency: None,
             connectors,
             connector_response_headers: None,
+            api_tag: None,
         })
     }
 }
@@ -3464,6 +3470,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            api_tag: None,
         })
     }
 }
@@ -3615,6 +3622,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            api_tag: None,
         })
     }
 }
@@ -4413,6 +4421,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            api_tag: None,
         })
     }
 }

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use common_utils::errors::CustomResult;
+use common_utils::{errors::CustomResult, events};
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{Accept, DefendDispute, FlowName, SubmitEvidence},
@@ -153,7 +153,7 @@ impl DisputeService for Disputes {
                     let event_params = external_services::service::EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
-                        flow_name: common_utils::events::FlowName::SubmitEvidence,
+                        flow_name: events::FlowName::SubmitEvidence,
                         event_config: &self.config.events,
                         raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                             payload.masked_serialize().unwrap_or_default(),
@@ -163,6 +163,12 @@ impl DisputeService for Disputes {
                         reference_id: &reference_id,
                     };
 
+                    // Get API tag for SubmitEvidence flow
+                    let api_tag = self
+                        .config
+                        .api_tags
+                        .get_tag_for_flow(events::FlowName::SubmitEvidence);
+
                     let response = external_services::service::execute_connector_processing_step(
                         &self.config.proxy,
                         connector_integration,
@@ -170,6 +176,7 @@ impl DisputeService for Disputes {
                         None,
                         event_params,
                         None, // TODO: Add test context support for disputes
+                        api_tag,
                     )
                     .await
                     .switch()
@@ -346,7 +353,7 @@ impl DisputeService for Disputes {
                     let event_params = external_services::service::EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
-                        flow_name: common_utils::events::FlowName::AcceptDispute,
+                        flow_name: events::FlowName::AcceptDispute,
                         event_config: &self.config.events,
                         raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                             payload.masked_serialize().unwrap_or_default(),
@@ -356,6 +363,12 @@ impl DisputeService for Disputes {
                         reference_id: &reference_id,
                     };
 
+                    // Get API tag for AcceptDispute flow
+                    let api_tag = self
+                        .config
+                        .api_tags
+                        .get_tag_for_flow(events::FlowName::AcceptDispute);
+
                     let response = external_services::service::execute_connector_processing_step(
                         &self.config.proxy,
                         connector_integration,
@@ -363,6 +376,7 @@ impl DisputeService for Disputes {
                         None,
                         event_params,
                         None,
+                        api_tag,
                     )
                     .await
                     .switch()

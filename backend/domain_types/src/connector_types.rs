@@ -279,11 +279,18 @@ pub struct PaymentFlowData {
     pub external_latency: Option<u128>,
     pub connectors: Connectors,
     pub raw_connector_response: Option<String>,
+    /// API tag from centralized configuration for the current flow
+    pub api_tag: Option<String>,
 }
 
 impl PaymentFlowData {
     pub fn set_status(&mut self, status: AttemptStatus) {
         self.status = status;
+    }
+
+    pub fn set_api_tag(mut self, api_tag: Option<String>) -> Self {
+        self.api_tag = api_tag;
+        self
     }
 
     pub fn get_billing(&self) -> Result<&Address, Error> {
