@@ -520,7 +520,7 @@ impl TryFrom<TpslPaymentsResponse> for PaymentsResponseData
             _ => AttemptStatus::Pending,
         };
         
-        let (_amount, _currency, _transaction_id, _error_message) = match response.response {
+        let (_amount, _currency, transaction_id, _error_message) = match response.response {
             TpslResponseData::DecryptedResponse(decrypted) => {
                 let _amount = MinorUnit::new(
                     (decrypted.payment_method.payment_transaction.amount.parse::<f64>()
