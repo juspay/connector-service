@@ -229,10 +229,10 @@ fn extract_payment_method<T: PaymentMethodDataTypes>(
             Ok(EaseBuzzPaymentMethod {
                 upi: None,
                 card: Some(EaseBuzzCardMethod {
-                    number: card_data.card_number.clone().map(Secret::new),
-                    expiry_month: card_data.expiry_month.as_ref().map(|m| m.to_string()),
-                    expiry_year: card_data.expiry_year.as_ref().map(|y| format!("20{}", y)),
-                    cvv: card_data.cvv.clone().map(Secret::new),
+                    number: Some(Secret::new(card_data.card_number.clone().into_inner())),
+                    expiry_month: card_data.card_exp_month.map(|m| m.to_string()),
+                    expiry_year: card_data.card_exp_year.map(|y| format!("20{}", y)),
+                    cvv: card_data.card_cvc.map(|c| Secret::new(c.into_inner())),
                     name_on_card: card_data.card_holder_name.as_ref().map(|s| s.expose().clone()),
                     save_card: Some(false),
                 }),
