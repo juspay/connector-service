@@ -470,7 +470,7 @@ impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsResponse, RouterDataV2<F, Pay
         let status = map_billdesk_status(auth_status);
         let txn_reference_no = parts.get(2).unwrap_or(&"").to_string();
         let bank_reference_no = parts.get(3).unwrap_or(&"").to_string();
-        let txn_amount = parts.get(4).unwrap_or(&"0").to_string();
+        let _txn_amount = parts.get(4).unwrap_or(&"0").to_string();
 
         let response_data = if status == common_enums::AttemptStatus::Charged {
             Ok(PaymentsResponseData::TransactionResponse {
