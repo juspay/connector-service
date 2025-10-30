@@ -296,15 +296,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>>
+impl TryFrom<crate::connectors::billdesk::BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>, T>>
     for BilldeskPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<PSync, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>,
+        item: crate::connectors::billdesk::BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
-        let auth = BilldeskAuth::try_from(&item.connector_auth_type)?;
+        let auth = BilldeskAuth::try_from(&item.router_data.connector_auth_type)?;
         
         let msg = build_status_message(&auth, item)?;
 
