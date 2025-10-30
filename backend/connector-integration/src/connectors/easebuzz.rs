@@ -810,7 +810,7 @@ impl<
         + Serialize,
 >
     ConnectorIntegrationV2<
-        connector_flow::PreAuthenticate,
+        PreAuthenticate,
         PaymentFlowData,
         PaymentsPreAuthenticateData<T>,
         PaymentsResponseData,
@@ -827,7 +827,7 @@ impl<
         + Serialize,
 >
     ConnectorIntegrationV2<
-        connector_flow::Authenticate,
+        Authenticate,
         PaymentFlowData,
         PaymentsAuthenticateData<T>,
         PaymentsResponseData,
@@ -844,7 +844,7 @@ impl<
         + Serialize,
 >
     ConnectorIntegrationV2<
-        connector_flow::PostAuthenticate,
+        PostAuthenticate,
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
