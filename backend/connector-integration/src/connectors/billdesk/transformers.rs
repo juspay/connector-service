@@ -152,16 +152,16 @@ impl<T: PaymentMethodDataTypes> TryFrom<
             common_enums::PaymentMethod::Upi => {
                 // Create the message payload for Billdesk UPI initiation
                 let msg_payload = create_upi_initiate_message(
-                    item,
+                    &item.router_data,
                     &customer_id.get_string_repr(),
                     &amount,
                 )?;
 
-                let ip_address = item.request.get_ip_address_as_optional()
+                let ip_address = item.router_data.request.get_ip_address_as_optional()
                     .map(|ip| ip.expose())
                     .unwrap_or_else(|| "127.0.0.1".to_string());
 
-                let user_agent = item.request.browser_info
+                let user_agent = item.router_data.request.browser_info
                     .as_ref()
                     .and_then(|info| info.user_agent.clone())
                     .unwrap_or_else(|| "Mozilla/5.0".to_string());
