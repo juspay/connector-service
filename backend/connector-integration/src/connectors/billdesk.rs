@@ -803,7 +803,7 @@ impl<
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        if connectors.test_mode.unwrap_or(false) {
+        if connectors.is_sandbox() {
             constants::BILLDESK_UAT_BASE_URL
         } else {
             constants::BILLDESK_PROD_BASE_URL
