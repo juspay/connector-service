@@ -172,7 +172,7 @@ fn get_redirect_form_data(
                     form_fields: rdata
                         .parameters
                         .into_iter()
-                        .map(|(k, v)| (k, v.mask()))
+                        .map(|(k, v)| (k, v.clone().into()))
                         .collect(),
                 })
             } else {
