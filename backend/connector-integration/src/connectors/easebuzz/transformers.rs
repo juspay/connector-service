@@ -408,7 +408,7 @@ where
         };
 
         Ok(Self {
-            router_data: PaymentFlowData {
+            resource_common_data: PaymentFlowData {
                 status,
                 ..resource_common_data.resource_common_data
             },
@@ -517,7 +517,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzPaymentsResponseEnum, RouterDataV2<PSync
         };
 
         Ok(Self {
-            router_data: PaymentFlowData {
+            resource_common_data: PaymentFlowData {
                 status,
                 ..resource_common_data.resource_common_data
             },
