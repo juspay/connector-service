@@ -159,7 +159,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 self.common_get_content_type().to_string().into(),
             )],
             body: RequestContent::Json(Box::new(request)),
-            encode_body: true,
+            certificate: None,
+            certificate_key: None,
+            ca_certificate: None,
         }))
     }
 
@@ -221,7 +223,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 self.common_get_content_type().to_string().into(),
             )],
             body: RequestContent::Json(Box::new(request)),
-            encode_body: true,
+            certificate: None,
+            certificate_key: None,
+            ca_certificate: None,
         }))
     }
 
@@ -279,7 +283,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 self.common_get_content_type().to_string().into(),
             )],
             body: RequestContent::Json(Box::new(request)),
-            encode_body: true,
+            certificate: None,
+            certificate_key: None,
+            ca_certificate: None,
         }))
     }
 
@@ -337,7 +343,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 self.common_get_content_type().to_string().into(),
             )],
             body: RequestContent::Json(Box::new(request)),
-            encode_body: true,
+            certificate: None,
+            certificate_key: None,
+            ca_certificate: None,
         }))
     }
 
