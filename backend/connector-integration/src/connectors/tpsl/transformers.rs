@@ -565,13 +565,14 @@ impl TryFrom<TpslPaymentsResponse> for PaymentsResponseData
             },
         };
         
-        Ok(Self {
-            status,
-            amount_received: amount,
-            currency,
-            transaction_id: transaction_id.map(|id| id.into()),
-            error_message,
-            ..Default::default()
+        Ok(PaymentsResponseData::TransactionResponse {
+            resource_id: transaction_id.map(|id| id.into()).unwrap_or_else(|| "unknown".into()),
+            redirect: None,
+            mandate_reference: None,
+            network_txn_id: None,
+            connector_metadata: None,
+            incremental_authorization_allowed: None,
+            status_code: 200,
         })
     }
 }
