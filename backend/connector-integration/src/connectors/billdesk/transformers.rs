@@ -12,7 +12,7 @@ use domain_types::{
     router_response_types::RedirectForm,
     utils,
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{Secret, PeekInterface};
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Debug, Serialize)]
