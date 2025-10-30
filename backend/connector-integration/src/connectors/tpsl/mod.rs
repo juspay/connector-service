@@ -555,10 +555,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    connector_types::ConnectorServiceTrait<T> for &'static Tpsl<T>
-{
-}
+
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     connector_types::PaymentAuthorizeV2<T> for Tpsl<T>
