@@ -10,7 +10,7 @@ All notable changes to Connector Service will be documented here.
 
 - New EaseBuzz connector implementation
 - Payment methods supported: UPI (Intent, Collect, QR)
-- Transaction flows: Authorize, PSync
+- Transaction flows: Authorize, PSync, Refund, RSync
 - Migrated from Hyperswitch/Euler Haskell implementation
 - Uses UCS v2 macro framework for trait implementations
 - Implements proper error handling and status mapping
@@ -18,6 +18,17 @@ All notable changes to Connector Service will be documented here.
 
 ### Files Created/Modified
 - `src/connectors/easebuzz.rs` - Main connector implementation
+- `src/connectors/easebuzz/transformers.rs` - Request/response transformers
+- `src/connectors/easebuzz/constants.rs` - API constants and endpoints
+- `src/connectors.rs` - Added connector registration
+- `src/types.rs` - Added connector to ConnectorEnum
+
+### Technical Details
+- Migrated from Haskell to Rust using UCS v2 framework
+- Implements SHA512 hash-based authentication
+- Supports test and production environments
+- UPI-focused implementation as per requirements
+- Comprehensive error handling with proper status mapping
 - `src/connectors/easebuzz/transformers.rs` - Request/response transformers
 - `src/connectors/easebuzz/constants.rs` - API constants and endpoints
 - `src/connectors.rs` - Added connector registration
