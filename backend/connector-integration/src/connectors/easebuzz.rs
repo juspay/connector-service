@@ -865,12 +865,6 @@ impl_source_verification_stub!(
     PaymentsResponseData
 );
 impl_source_verification_stub!(
-    PSync,
-    PaymentFlowData,
-    PaymentsSyncData,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
     Capture,
     PaymentFlowData,
     PaymentsCaptureData,
