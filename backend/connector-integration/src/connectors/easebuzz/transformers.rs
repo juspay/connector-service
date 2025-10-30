@@ -231,7 +231,7 @@ fn extract_payment_method<T: PaymentMethodDataTypes>(
                     number: Some(Secret::new(card_data.card_number.0.clone())),
                     expiry_month: card_data.card_exp_month.clone().map(|s| s.expose().clone()),
                     expiry_year: card_data.card_exp_year.clone().map(|y| format!("20{}", y.expose().clone())),
-                    cvv: card_data.card_cvc.clone(),
+                    cvv: Some(card_data.card_cvc.clone()),
                     name_on_card: card_data.card_holder_name.as_ref().map(|s| s.expose().clone()),
                     save_card: Some(false),
                 }),
