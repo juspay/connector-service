@@ -29,7 +29,7 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
-use serde::Serialize;
+
 use transformers::{
     self as easebuzz, EaseBuzzPaymentsRequest, EaseBuzzPaymentsResponse, EaseBuzzPaymentsSyncRequest,
     EaseBuzzPaymentsSyncResponse, EaseBuzzRefundRequest, EaseBuzzRefundResponse,
