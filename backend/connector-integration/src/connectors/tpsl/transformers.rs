@@ -440,7 +440,7 @@ where
         
         let consumer_payload = TpslConsumerPayload {
             identifier: customer_id_string.to_string(),
-            email_id: email.map(|e| e.expose().to_string()),
+            email_id: email.map(|e| e.expose().into_inner()),
             mobile_number: phone.map(|p| p.expose().clone()),
             account_no: None,
             account_type: None,
