@@ -434,13 +434,13 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: CreateAccessToken,
-            request_body: EaseBuzzSessionTokenRequest,
+            request_body: EaseBuzzAccessTokenRequest,
             response_body: EaseBuzzAccessTokenResponse,
             router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         ),
         (
             flow: CreateConnectorCustomer,
-            request_body: EaseBuzzCreateOrderRequest,
+            request_body: EaseBuzzCreateConnectorCustomerRequest,
             response_body: EaseBuzzCreateConnectorCustomerResponse,
             router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
         ),
