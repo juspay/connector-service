@@ -105,7 +105,7 @@ pub struct EaseBuzzPaymentsSyncRequest {
     pub hash: Secret<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EaseBuzzPaymentsResponse {
     pub status: i32,
