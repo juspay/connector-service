@@ -38,7 +38,15 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{self as easebuzz, 
-    EaseBuzzPaymentsRequest, EaseBuzzPaymentsResponseEnum, EaseBuzzPaymentsSyncRequest, EaseBuzzPaymentsSyncResponse
+    EaseBuzzAcceptDisputeRequest, EaseBuzzAcceptDisputeResponse, EaseBuzzAccessTokenResponse, EaseBuzzCaptureRequest,
+    EaseBuzzCaptureResponse, EaseBuzzCreateConnectorCustomerResponse, EaseBuzzCreateOrderRequest, EaseBuzzCreateOrderResponse,
+    EaseBuzzDefendDisputeRequest, EaseBuzzDefendDisputeResponse, EaseBuzzPaymentsRequest, EaseBuzzPaymentsResponseEnum,
+    EaseBuzzPaymentsSyncRequest, EaseBuzzPaymentsSyncResponse, EaseBuzzPaymentTokenResponse, EaseBuzzPreAuthenticateResponse,
+    EaseBuzzRefundRequest, EaseBuzzRefundResponse, EaseBuzzRepeatPaymentRequest, EaseBuzzRepeatPaymentResponse,
+    EaseBuzzRSyncRequest, EaseBuzzRSyncResponse, EaseBuzzSessionTokenRequest, EaseBuzzSessionTokenResponse,
+    EaseBuzzSetupMandateRequest, EaseBuzzSetupMandateResponse, EaseBuzzSubmitEvidenceRequest, EaseBuzzSubmitEvidenceResponse,
+    EaseBuzzAuthenticateResponse, EaseBuzzPostAuthenticateResponse, EaseBuzzVoidRequest, EaseBuzzVoidResponse,
+    EaseBuzzVoidPostCaptureResponse
 };
 
 use super::macros;
