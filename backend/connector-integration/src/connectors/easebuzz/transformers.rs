@@ -667,7 +667,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzRefundResponse, RouterDataV2<Refund, Ref
             (
                 common_enums::AttemptStatus::Charged,
                 Ok(RefundsResponseData {
-                    refund_id: response.refund_id.clone(),
+                    connector_refund_id: response.refund_id.clone().unwrap_or_default(),
                     connector_refund_id: response.refund_id,
                     refund_status: common_enums::RefundStatus::Success,
                     connector_transaction_id: response.easebuzz_id,
