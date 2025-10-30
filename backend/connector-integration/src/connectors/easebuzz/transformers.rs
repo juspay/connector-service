@@ -716,8 +716,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzRSyncResponse, RouterDataV2<RSync, Refun
 
         let (status, response) = match response.response {
             EaseBuzzRefundSyncResponse::Success(success_data) => {
-                let refunds = &success_data.refunds;
-                let refund_status = if let Some(refunds) = refunds {
+                let refund_status = if let Some(refunds) = &success_data.refunds {
                     if let Some(refund) = refunds.first() {
                         match refund.refund_status.as_str() {
                             "success" => common_enums::RefundStatus::Success,
@@ -732,13 +731,16 @@ impl TryFrom<ResponseRouterData<EaseBuzzRSyncResponse, RouterDataV2<RSync, Refun
                     common_enums::RefundStatus::Pending
                 };
 
+                let connector_refund_id = success_data.refunds
+                    .as_ref()
+                    .and_then(|r| r.first())
+                    .map(|r| r.refund_id.clone())
+                    .unwrap_or_default();
+
                 (
                     common_enums::AttemptStatus::Charged,
                     Ok(RefundsResponseData {
-                        connector_refund_id: refunds.clone()
-                            .and_then(|r| r.first())
-                            .map(|r| r.refund_id.clone())
-                            .unwrap_or_default(),
+                        connector_refund_id,
                         refund_status,
                         status_code: 200,
                         
