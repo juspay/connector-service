@@ -31,7 +31,7 @@ bypass_proxy_urls = ["localhost", "local"]
 
 [test]
 enabled = false
-mock_server_url = "http://localhost:3000"
+mock_server_url = "http://localhost:3000/mockGateway"
 
 [api_tags.tags]
 # Payment Flow API Tags
