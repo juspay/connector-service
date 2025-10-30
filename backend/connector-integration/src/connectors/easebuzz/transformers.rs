@@ -177,14 +177,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let customer_id = item.resource_common_data.get_customer_id()?;
         let return_url = item.request.get_router_return_url()?;
         
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(
-                common_utils::types::MinorUnit(item.request.amount),
-                item.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+        // For now, use a default amount converter since we don't have access to the connector
+        let amount = common_utils::types::StringMinorUnit::from_minor(
+            common_utils::types::MinorUnit(item.request.amount),
+            item.request.currency,
+        );
 
         // Generate hash - this would typically involve SHA512 of parameters + salt
         let hash_string = format!(
