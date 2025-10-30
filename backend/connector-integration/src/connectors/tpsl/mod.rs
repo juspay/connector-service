@@ -59,12 +59,8 @@ impl<T> Tpsl<T> {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     ConnectorCommon for Tpsl<T>
 {
-    fn get_id(&self) -> &'static str {
+    fn id(&self) -> &'static str {
         self.connector_name
-    }
-
-    fn get_name(&self) -> &'static str {
-        "TPSL"
     }
 
     fn get_connector_type(&self) -> domain_types::connector_types::ConnectorType {
