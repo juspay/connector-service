@@ -458,7 +458,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PaymentMethodToken,
-            request_body: EaseBuzzSetupMandateRequest,
+            request_body: EaseBuzzPaymentTokenRequest,
             response_body: EaseBuzzPaymentTokenResponse,
             router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         ),
