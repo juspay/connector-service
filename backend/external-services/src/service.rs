@@ -984,7 +984,6 @@ fn extract_raw_connector_request(connector_request: &Request) -> String {
         }
         None => serde_json::Value::Null,
     };
-    dbg!(&body_content);
     // Extract unmasked headers
     let headers_content = connector_request
         .headers
