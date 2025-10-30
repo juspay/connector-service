@@ -714,7 +714,7 @@ impl TryFrom<ResponseRouterData<EaseBuzzRSyncResponse, RouterDataV2<RSync, Refun
             http_code,
         } = item;
 
-        let (status, response) = match response.response {
+        let (_status, response) = match response.response {
             EaseBuzzRefundSyncResponse::Success(success_data) => {
                 let refund_status = if let Some(refunds) = &success_data.refunds {
                     if let Some(refund) = refunds.first() {
