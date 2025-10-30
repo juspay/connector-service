@@ -4,7 +4,6 @@ use common_utils::{
     id_type::CustomerId,
     pii::{Email, SecretSerdeValue},
     types::{StringMinorUnit, MinorUnit},
-    masking::Secret,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
@@ -15,6 +14,7 @@ use domain_types::{
     errors::ConnectorError,
 };
 use error_stack::ResultExt;
+use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 use super::constants;
