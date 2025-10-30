@@ -302,6 +302,12 @@ impl<
 {
 }
 
+// Add all the missing trait implementations that ConnectorServiceTrait requires
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentSyncV2 for EaseBuzz<T>
+{
+}
+
 // SourceVerification implementations for all flows
 macro_rules! impl_source_verification_stub {
     ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
