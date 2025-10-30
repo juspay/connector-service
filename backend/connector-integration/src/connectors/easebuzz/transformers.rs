@@ -181,7 +181,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
+                item.router_data.request.amount,
                 item.router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
@@ -194,7 +194,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             amount.to_string(),
             "Payment", // productinfo
             customer_id.get_string_repr(),
-            item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
+            String::new(), // Email not available in sync request
             String::new(), // Phone number not available in standard flow
             return_url,
             return_url, // furl same as surl
@@ -210,7 +210,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             amount,
             productinfo: "Payment".to_string(),
             firstname: Some(Secret::new(customer_id.get_string_repr())),
-            email: item.router_data.request.email.clone(),
+            email: None, // Email not available in sync request
             phone: None, // Phone number not available in standard flow
             surl: return_url.clone(),
             furl: return_url,
@@ -261,9 +261,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             "{}|{}|{}|{}|{}|{}",
             auth.key.peek(),
             item.router_data.request.connector_transaction_id.get_connector_transaction_id().map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
-            amount.get_amount_as_string(),
+            amount.to_string(),
             item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
-            item.router_data.request.get_phone_number_as_optional().map(|p| p.to_string()).unwrap_or_default(),
+            String::new(), // Phone number not available in sync request
             auth.salt.peek()
         );
         
@@ -274,7 +274,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             txnid: item.router_data.request.connector_transaction_id.get_connector_transaction_id().map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?,
             amount,
             email: item.router_data.request.email.clone(),
-            phone: item.router_data.request.get_phone_number_as_optional().map(|p| Secret::new(p.to_string())),
+            phone: None, // Phone number not available in sync request
             hash,
         })
     }
