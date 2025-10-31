@@ -231,7 +231,8 @@ impl<
         Ok(domain_types::connector_types::WebhookDetailsResponse {
             resource_id: Some(
                 domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                    webhook.order_detail.as_ref()
+                    webhook.orders.first()
+                        .and_then(|order| order.order_detail.as_ref())
                         .and_then(|od| od.order_id.clone())
                         .unwrap_or_default(),
                 ),
