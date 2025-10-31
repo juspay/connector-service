@@ -251,7 +251,7 @@ impl<
         
         // For UPI payments, we need to construct the paydata
         let paydata = match item.router_data.request.payment_method_type {
-            Some(common_enums::PaymentMethodType::Upi) => {
+            Some(common_enums::PaymentMethodType::UpiCollect) => {
                 // Construct UPI specific paydata
                 Some(format!(
                     "payment_method=UPI&vpa={}",
