@@ -1053,3 +1053,6 @@ fn get_billdesk_auth_header(
         _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
     }
 }
+
+#[cfg(test)]
+mod test;
