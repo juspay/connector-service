@@ -449,8 +449,8 @@ impl<
                         field_name: "IP address"
                     })
                 })?,
-            s2s_device_info: DEVICE_INFO.to_string(),
-            api_version: Some(API_VERSION.to_string()), // As per PayU analysis
+            s2s_device_info: crate::connectors::payu::constants::DEVICE_INFO.to_string(),
+            api_version: Some(crate::connectors::payu::constants::API_VERSION.to_string()), // As per PayU analysis
 
             // Will be calculated after struct creation
             hash: String::new(),
