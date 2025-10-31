@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use common_utils::{
-    types::StringMinorUnit,
     Email,
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -265,7 +264,7 @@ impl TryFrom<&ConnectorAuthType> for ZaakPayAuthType {
                 merchant_identifier: api_key.clone(),
                 secret_key: api_secret.clone(),
             }),
-            ConnectorAuthType::HeaderKey { api_key } => Err(errors::ConnectorError::FailedToObtainAuthType
+            ConnectorAuthType::HeaderKey { api_key: _ } => Err(errors::ConnectorError::FailedToObtainAuthType
                 .into()),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
@@ -332,7 +331,7 @@ impl<
         let return_url = item.router_data.request.get_router_return_url()?;
 
         let email_str = match &item.router_data.request.email {
-            Some(e) => format!("{:?}", e.expose()),
+            Some(e) => format!("{:?}", e.clone().expose()),
             None => "".to_string(),
         };
 
@@ -601,7 +600,7 @@ impl TryFrom<ResponseRouterData<ZaakPayPaymentsSyncResponse, RouterDataV2<PSync,
             _ => common_enums::AttemptStatus::Pending,
         };
 
-        let amount_received = order
+        let _amount_received = order
             .order_detail
             .as_ref()
             .and_then(|od| od.amount.as_ref())
