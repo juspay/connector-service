@@ -280,6 +280,7 @@ fn get_merchant_identifier(
     Ok(auth.merchant_identifier)
 }
 
+#[allow(dead_code)]
 fn get_secret_key(
     connector_auth_type: &ConnectorAuthType,
 ) -> Result<Secret<String>, error_stack::Report<errors::ConnectorError>> {
