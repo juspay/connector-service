@@ -4,6 +4,48 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## [2025-01-XX] - Payu Connector Migration
+
+### Added
+- Complete Payu connector implementation using UCS v2 macro framework
+- Payment methods supported: UPI Collect, UPI Intent, UPI QR
+- Transaction flows: Authorize, PSync (Payment Status Sync)
+- Full compliance with UCS v2 mandatory macro framework requirements
+- Comprehensive error handling and status mapping
+- Support for PayU's SHA-512 hash authentication
+- Dynamic request/response transformation from router data
+- Type-safe implementation with proper guard rails
+
+### Files Created/Modified
+- `src/connectors/payu.rs` - Main connector implementation with macro framework
+- `src/connectors/payu/transformers.rs` - Request/response transformers and business logic
+- `src/connectors/payu/constants.rs` - API constants and configuration values
+- `src/connectors.rs` - Connector registration (already existed)
+- `src/types.rs` - Connector enum registration (already existed)
+
+### Technical Details
+- Migrated from Haskell euler-api-txns implementation to Rust UCS v2
+- Uses `create_all_prerequisites!` macro for connector setup
+- Uses `macro_connector_implementation!` for flow implementations
+- Implements proper amount conversion using StringMajorUnit converter
+- Full type safety with Secret<String> for sensitive data
+- Comprehensive stub implementations for all unsupported flows
+- Source verification framework stubs for all flows
+- Dynamic extraction of all request values from router data (no hardcoding)
+- Proper error response handling with status code mapping
+- Support for both UPI Collect and UPI Intent payment flows
+
+### API Endpoints
+- Authorize: `/_payment` (UPI transaction initiation)
+- PSync: `/merchant/postservice.php?form=2` (Payment verification)
+
+### Authentication
+- API Key + Merchant Salt (BodyKey authentication type)
+- SHA-512 hash signature generation
+- Form-based request encoding
+
+- - -
+
 ## 2025.10.31.0
 
 ### Features
