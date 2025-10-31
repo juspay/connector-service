@@ -165,7 +165,7 @@ pub struct ZaakPayPaymentsSyncRequest {
     pub checksum: String,
 }
 
-#[derive(Default, Debug, Serialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CheckDataRequest {
     pub merchant_identifier: String,
