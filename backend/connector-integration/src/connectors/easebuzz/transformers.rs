@@ -167,16 +167,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         // Extract phone from billing address
         let phone = item.router_data.resource_common_data.get_billing_phone_number()
             .ok()
-            .map(|s| s.to_string());
+            .map(|s| s.expose().to_string());
         let email = item.router_data.request.email.clone();
 
         // Extract name from billing address
         let firstname = item.router_data.resource_common_data.get_billing_first_name()
             .ok()
-            .map(|s| s.to_string());
+            .map(|s| s.expose().to_string());
         let lastname = item.router_data.resource_common_data.get_billing_last_name()
             .ok()
-            .map(|s| s.to_string());
+            .map(|s| s.expose().to_string());
 
         Ok(Self {
             txnid: item.router_data.resource_common_data.connector_request_reference_id.clone(),
