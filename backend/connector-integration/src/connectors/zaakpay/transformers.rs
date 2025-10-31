@@ -1,8 +1,5 @@
 use std::collections::HashMap;
 
-use common_utils::{
-    // Email removed as it's not used directly
-};
 use hyperswitch_masking::{ExposeInterface, Secret};
 use domain_types::{
     connector_flow::{Authorize, PSync},
