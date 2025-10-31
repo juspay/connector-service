@@ -402,7 +402,7 @@ macros::macro_connector_implementation!(
         }
 
         fn get_content_type(&self) -> &'static str {
-            "application/x-www-form-urlencoded"
+            CONTENT_TYPE_FORM_URLENCODED
         }
 
         fn get_error_response_v2(
@@ -480,7 +480,7 @@ macros::macro_connector_implementation!(
             Ok(format!("{base_url}/_payment"))
         }
         fn get_content_type(&self) -> &'static str {
-            "application/x-www-form-urlencoded"
+            CONTENT_TYPE_FORM_URLENCODED
         }
         fn get_error_response_v2(
             &self,
