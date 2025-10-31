@@ -43,7 +43,7 @@ pub struct ZaakPayTransactDataRequest {
     pub payment_instrument: ZaakPayPaymentInstrumentTransType,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayOrderDetailTransType {
     pub order_id: String,
@@ -149,7 +149,7 @@ pub struct ZaakPayTransactResponse {
     pub bank_post_data: Option<HashMap<String, serde_json::Value>>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayPaymentInstrumentResType {
     pub payment_mode: String,
@@ -157,7 +157,7 @@ pub struct ZaakPayPaymentInstrumentResType {
     pub netbanking: Option<ZaakPayNetBankingRespType>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayCardResType {
     pub card_token: Option<String>,
@@ -169,7 +169,7 @@ pub struct ZaakPayCardResType {
     pub payment_method: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayNetBankingRespType {
     pub bankid: String,
@@ -201,7 +201,7 @@ pub struct ZaakPayOrderDetailsResponse {
     pub refund_details: Option<Vec<ZaakPayRefundDetails>>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayRefundDetails {
     pub amount: String,
@@ -209,7 +209,7 @@ pub struct ZaakPayRefundDetails {
     pub merchant_ref_id: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayOrderDetailResType {
     pub order_id: String,
@@ -223,14 +223,14 @@ pub struct ZaakPayOrderDetailResType {
     pub product4_description: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayPaymentinstrumentType {
     pub payment_mode: Option<String>,
     pub card: Option<ZaakPayCardType>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayCardType {
     pub card_token: String,
