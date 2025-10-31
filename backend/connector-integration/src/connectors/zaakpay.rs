@@ -327,16 +327,23 @@ macro_rules! impl_not_implemented_flow {
 
 // Use macro for all unimplemented flows
 impl_not_implemented_flow!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
+impl_not_implemented_flow!(VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData);
 impl_not_implemented_flow!(Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData);
 impl_not_implemented_flow!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
 impl_not_implemented_flow!(RSync, RefundFlowData, RefundSyncData, RefundsResponseData);
 impl_not_implemented_flow!(CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse);
 impl_not_implemented_flow!(CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData);
+impl_not_implemented_flow!(CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData);
+impl_not_implemented_flow!(CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse);
+impl_not_implemented_flow!(PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse);
 impl_not_implemented_flow!(SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData);
 impl_not_implemented_flow!(RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData);
 impl_not_implemented_flow!(Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData);
 impl_not_implemented_flow!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
 impl_not_implemented_flow!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
+impl_not_implemented_flow!(PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData);
+impl_not_implemented_flow!(Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData);
+impl_not_implemented_flow!(PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData);
 
 // SourceVerification implementations for all flows
 macro_rules! impl_source_verification_stub {
