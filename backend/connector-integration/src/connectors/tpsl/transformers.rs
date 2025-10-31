@@ -678,17 +678,8 @@ impl<
     }
 }
 
-impl<
-    F,
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize
-        + Serialize,
-> TryFrom<ResponseRouterData<TpslPaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<F> TryFrom<ResponseRouterData<TpslPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, domain_types::connector_types::PaymentsAuthorizeData<()>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
