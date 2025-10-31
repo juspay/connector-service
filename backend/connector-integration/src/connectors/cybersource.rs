@@ -53,9 +53,10 @@ use transformers::{
     CybersourcePaymentsCaptureRequest, CybersourcePaymentsRequest, CybersourcePaymentsResponse,
     CybersourcePaymentsResponse as CybersourceCaptureResponse,
     CybersourcePaymentsResponse as CybersourceVoidResponse,
-    CybersourcePaymentsResponse as CybersourceSetupMandateResponse, CybersourceRefundRequest,
-    CybersourceRefundResponse, CybersourceRsyncResponse, CybersourceTransactionResponse,
-    CybersourceVoidRequest, CybersourceZeroMandateRequest,
+    CybersourcePaymentsResponse as CybersourceSetupMandateResponse,
+    CybersourcePaymentsResponse as CybersourceRepeatPaymentResponse, CybersourceRefundRequest,
+    CybersourceRefundResponse, CybersourceRepeatPaymentRequest, CybersourceRsyncResponse,
+    CybersourceTransactionResponse, CybersourceVoidRequest, CybersourceZeroMandateRequest,
 };
 
 use super::macros;
@@ -234,6 +235,12 @@ macros::create_all_prerequisites!(
             flow: RSync,
             response_body: CybersourceRsyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: CybersourceRepeatPaymentRequest,
+            response_body: CybersourceRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -846,12 +853,39 @@ macros::macro_connector_implementation!(
     }
 );
 
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Cybersource,
+    curl_request: Json(CybersourceRepeatPaymentRequest),
+    curl_response: CybersourceRepeatPaymentResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+                "{}pts/v2/payments/",
+                self.connector_base_url_payments(req),
+            ))
+        }
+    }
+);
+
 // Stub implementations for unsupported flows
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Cybersource<T>
-{
-}
 
 impl<
         T: PaymentMethodDataTypes

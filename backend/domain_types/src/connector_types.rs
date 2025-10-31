@@ -21,7 +21,7 @@ use crate::{
     mandates::{CustomerAcceptance, MandateData},
     payment_address::{self, Address, AddressDetails, PhoneDetails},
     payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorResponseData, PaymentMethodToken},
+    router_data::{self, ConnectorResponseData, PaymentMethodToken},
     router_request_types::{
         self, AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
         CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
@@ -323,6 +323,7 @@ pub struct PaymentFlowData {
     pub vault_headers: Option<std::collections::HashMap<String, Secret<String>>>,
     /// This field is used to store various data regarding the response from connector
     pub connector_response: Option<ConnectorResponseData>,
+    pub recurring_mandate_payment_data: Option<RecurringMandatePaymentData>,
 }
 
 impl PaymentFlowData {
@@ -1008,7 +1009,8 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     }
 
     pub fn is_mandate_payment(&self) -> bool {
-        (self.setup_future_usage == Some(common_enums::FutureUsage::OffSession))
+        ((self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
+            && self.setup_future_usage == Some(common_enums::FutureUsage::OffSession))
             || self
                 .mandate_id
                 .as_ref()
@@ -1085,7 +1087,7 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     // }
 
     pub fn is_customer_initiated_mandate_payment(&self) -> bool {
-        self.customer_acceptance.is_some()
+        (self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
             && self.setup_future_usage == Some(common_enums::FutureUsage::OffSession)
     }
 
@@ -1315,6 +1317,9 @@ pub struct ConnectorCustomerData {
     pub email: Option<Secret<Email>>,
     pub name: Option<Secret<String>>,
     pub description: Option<String>,
+    pub phone: Option<Secret<String>>,
+    pub preprocessing_id: Option<String>,
+    pub split_payments: Option<SplitPaymentsRequest>,
 }
 
 #[derive(Debug, Clone)]
@@ -2029,7 +2034,7 @@ pub struct RepeatPaymentData {
     pub minor_amount: MinorUnit,
     pub currency: Currency,
     pub merchant_order_reference_id: Option<String>,
-    pub metadata: Option<HashMap<String, String>>,
+    pub metadata: Option<SecretSerdeValue>,
     pub webhook_url: Option<String>,
     pub integrity_object: Option<RepeatPaymentIntegrityObject>,
     pub capture_method: Option<common_enums::CaptureMethod>,
@@ -2037,6 +2042,10 @@ pub struct RepeatPaymentData {
     pub email: Option<common_utils::pii::Email>,
     pub payment_method_type: Option<common_enums::PaymentMethodType>,
     pub merchant_account_metadata: Option<common_utils::pii::SecretSerdeValue>,
+    pub off_session: Option<bool>,
+    pub router_return_url: Option<String>,
+    pub split_payments: Option<SplitPaymentsRequest>,
+    pub recurring_mandate_payment_data: Option<router_data::RecurringMandatePaymentData>,
 }
 
 impl RepeatPaymentData {
@@ -2064,6 +2073,13 @@ impl RepeatPaymentData {
     }
     pub fn get_email(&self) -> Result<Email, Error> {
         self.email.clone().ok_or_else(missing_field_err("email"))
+    }
+    pub fn get_recurring_mandate_payment_data(
+        &self,
+    ) -> Result<router_data::RecurringMandatePaymentData, Error> {
+        self.recurring_mandate_payment_data
+            .to_owned()
+            .ok_or_else(missing_field_err("recurring_mandate_payment_data"))
     }
 }
 
@@ -2546,4 +2562,12 @@ pub struct DirectChargeRefund {
 pub struct DestinationChargeRefund {
     pub revert_platform_fee: bool,
     pub revert_transfer: bool,
+}
+
+#[derive(Debug, Default, Clone, Serialize)]
+pub struct RecurringMandatePaymentData {
+    pub payment_method_type: Option<common_enums::PaymentMethodType>, //required for making recurring payment using saved payment method through stripe
+    pub original_payment_authorized_amount: Option<MinorUnit>,
+    pub original_payment_authorized_currency: Option<common_enums::Currency>,
+    pub mandate_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
