@@ -427,7 +427,7 @@ impl<
             .ok()
             .map(|amt| common_utils::types::MinorUnit::new(amt));
         
-        Ok(Self {
+        Ok(PaymentsResponseData {
             status,
             amount_received,
             connector_transaction_id: Some(response._TxnReferenceNo),
