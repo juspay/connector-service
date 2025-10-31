@@ -528,7 +528,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<domain_types::connector_flow::PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentMethodTokenizationData, domain_types::connector_types::PaymentMethodTokenResponse>
+> ConnectorIntegrationV2<domain_types::connector_flow::PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentMethodTokenizationData<T>, domain_types::connector_types::PaymentMethodTokenResponse>
     for TPSL<T>
 {
 }
@@ -612,7 +612,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<domain_types::connector_flow::AcceptDispute, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::AcceptDisputeData, domain_types::connector_types::DisputeResponseData>
+> ConnectorIntegrationV2<domain_types::connector_flow::Accept, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::AcceptDisputeData, domain_types::connector_types::DisputeResponseData>
     for TPSL<T>
 {
 }
