@@ -45,7 +45,7 @@ Void = "GW_VOID"
 Refund = "GW_REFUND"
 
 # Sync Flow API Tags
-Psync = "GW_PSYNC"
+Psync = "GW_TXN_SYNC"
 Rsync = "GW_RSYNC"
 Dsync = "GW_DSYNC"
 
