@@ -355,38 +355,38 @@ impl<
             address: item
                 .router_data
                 .request
-                .billing_address
-                .as_ref()
+                .payment_method_data
+                .get_billing_address()
                 .map(|addr| addr.address.to_string())
-                .unwrap_or_else(|| "".to_string()),
+                .unwrap_or_else(|_| "".to_string()),
             city: item
                 .router_data
                 .request
-                .billing_address
-                .as_ref()
+                .payment_method_data
+                .get_billing_address()
                 .map(|addr| addr.city.to_string())
-                .unwrap_or_else(|| "".to_string()),
+                .unwrap_or_else(|_| "".to_string()),
             state: item
                 .router_data
                 .request
-                .billing_address
-                .as_ref()
+                .payment_method_data
+                .get_billing_address()
                 .map(|addr| addr.state.to_string())
-                .unwrap_or_else(|| "".to_string()),
+                .unwrap_or_else(|_| "".to_string()),
             country: item
                 .router_data
                 .request
-                .billing_address
-                .as_ref()
+                .payment_method_data
+                .get_billing_address()
                 .map(|addr| addr.country.to_string())
-                .unwrap_or_else(|| "".to_string()),
+                .unwrap_or_else(|_| "".to_string()),
             pincode: Secret::new(
                 item.router_data
                     .request
-                    .billing_address
-                    .as_ref()
+                    .payment_method_data
+                    .get_billing_address()
                     .map(|addr| addr.zip.to_string())
-                    .unwrap_or_else(|| "".to_string()),
+                    .unwrap_or_else(|_| "".to_string()),
             ),
         };
 
