@@ -674,15 +674,19 @@ impl<
 }
 
 // Add SourceVerification implementations
-impl<
+// Add SourceVerification implementations for all flows - stub implementations
+impl<F, FCD, Req, Res, T> SourceVerification<F, FCD, Req, Res> for Billdesk<T>
+where
     T: PaymentMethodDataTypes
         + std::fmt::Debug
         + std::marker::Sync
         + std::marker::Send
         + 'static
         + Serialize,
-> SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Billdesk<T>
+    F: domain_types::connector_flow::ConnectorAction,
+    FCD: domain_types::connector_types::FlowData,
+    Req: serde::Serialize,
+    Res: serde::de::DeserializeOwned,
 {
     fn get_secrets(
         &self,
@@ -701,7 +705,7 @@ impl<
     fn get_signature(
         &self,
         _payload: &[u8],
-        _router_data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        _router_data: &RouterDataV2<F, FCD, Req, Res>,
         _secrets: &[u8],
     ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
         Ok(Vec::new())
@@ -709,49 +713,7 @@ impl<
     fn get_message(
         &self,
         payload: &[u8],
-        _router_data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        _secrets: &[u8],
-    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
-        Ok(payload.to_owned())
-    }
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-    for Billdesk<T>
-{
-    fn get_secrets(
-        &self,
-        _secrets: interfaces::verification::ConnectorSourceVerificationSecrets,
-    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
-        Ok(Vec::new())
-    }
-    fn get_algorithm(
-        &self,
-    ) -> CustomResult<
-        Box<dyn common_utils::crypto::VerifySignature + Send>,
-        errors::ConnectorError,
-    > {
-        Ok(Box::new(common_utils::crypto::NoAlgorithm))
-    }
-    fn get_signature(
-        &self,
-        _payload: &[u8],
-        _router_data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        _secrets: &[u8],
-    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
-        Ok(Vec::new())
-    }
-    fn get_message(
-        &self,
-        payload: &[u8],
-        _router_data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        _router_data: &RouterDataV2<F, FCD, Req, Res>,
         _secrets: &[u8],
     ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
         Ok(payload.to_owned())
