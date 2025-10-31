@@ -165,12 +165,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         // Extract phone from billing address
-        let phone = item.router_data.resource_common_data.get_optional_billing_phone_number();
+        let phone = item.router_data.resource_common_data.get_optional_billing_phone_number()
+            .map(|s| s.peek().to_string());
         let email = item.router_data.request.email.clone();
 
         // Extract name from billing address
-        let firstname = item.router_data.resource_common_data.get_optional_billing_first_name();
-        let lastname = item.router_data.resource_common_data.get_optional_billing_last_name();
+        let firstname = item.router_data.resource_common_data.get_optional_billing_first_name()
+            .map(|s| s.peek().to_string());
+        let lastname = item.router_data.resource_common_data.get_optional_billing_last_name()
+            .map(|s| s.peek().to_string());
 
         Ok(Self {
             txnid: item.router_data.resource_common_data.connector_request_reference_id.clone(),
