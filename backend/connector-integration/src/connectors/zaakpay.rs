@@ -699,7 +699,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<connector_flow::SubmitEvidence, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::SubmitEvidenceData, domain_types::connector_types::DisputeResponseData>
+> ConnectorIntegrationV2<SubmitEvidence, domain_types::connector_types::DisputeFlowData, domain_types::connector_types::SubmitEvidenceData, domain_types::connector_types::DisputeResponseData>
     for ZaakPay<T>
 {
 }
