@@ -182,6 +182,7 @@ where
             router_data.router_data.request.currency,
         )
         .change_context(ConnectorError::RequestEncodingFailed)
+        .map_err(|e| e.change_context(ConnectorError::RequestEncodingFailed))
         .change_context(ConnectorError::RequestEncodingFailed)?;
     
     let merchant_id = get_merchant_id(&router_data.router_data.connector_auth_type)?;
