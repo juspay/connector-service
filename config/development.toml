@@ -99,4 +99,4 @@ field_prefix = "lineage_"
 "message.log_type" = "API_CALL"
 
 [unmasked_headers]
-keys = ["x-request-id","x-merchant-id","x-lineage-ids","x-reference-id","x-connector","x-tenant-id"]
+keys = ["x-request-id","x-merchant-id","x-lineage-ids","x-reference-id","x-connector","x-tenant-id","x-shadow-mode"]
