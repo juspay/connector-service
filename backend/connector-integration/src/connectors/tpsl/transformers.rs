@@ -659,14 +659,14 @@ impl<
                     .request
                     .browser_info
                     .as_ref()
-                    .and_then(|info| info.mobile_number.clone())
+                    .and_then(|info| info.language.clone())
                     .unwrap_or_else(|| "9999999999".to_string()),
                 email_i_d: item
                     .router_data
                     .request
                     .email
                     .clone()
-                    .map(|e| e.to_string())
+                    .map(|e| e.expose().to_string())
                     .unwrap_or_else(|| "test@example.com".to_string()),
                 identifier: customer_id.get_string_repr().to_string(),
                 account_no: "".to_string(),
