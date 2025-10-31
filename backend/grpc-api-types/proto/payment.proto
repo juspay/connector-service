@@ -1811,6 +1811,9 @@ message PaymentServicePreAuthenticateRequest {
 
   // State Information
   optional ConnectorState state = 15; // State data for access token storage and other connector-specific state
+
+  // Account-Specific Configuration
+  map<string, string> merchant_account_metadata = 16; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for pre-authentication step
@@ -1878,6 +1881,9 @@ message PaymentServiceAuthenticateRequest {
 
   // Redirection Information after DDC step
   optional RedirectionResponse redirection_response = 16; // Redirection Response from client browser
+
+  // Account-Specific Configuration
+  map<string, string> merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for authentication step
@@ -1945,6 +1951,12 @@ message PaymentServicePostAuthenticateRequest {
 
   // State Information
   optional ConnectorState state = 15; // State data for access token storage and other connector-specific state
+
+  // Redirection Information after DDC step
+  optional RedirectionResponse redirection_response = 16; // Redirection Response from client browser
+
+  // Account-Specific Configuration
+  map<string, string> merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for post-authentication step
