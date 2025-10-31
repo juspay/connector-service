@@ -77,7 +77,7 @@ pub struct ShippingAddressType {
     pub pincode: Option<Secret<String>>,
 }
 
-#[derive(Default, Debug, Serialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaymentInstrumentTransType {
     pub payment_mode: String,
