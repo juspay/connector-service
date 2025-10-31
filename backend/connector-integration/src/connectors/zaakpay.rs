@@ -11,7 +11,7 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken,
         CreateOrder, CreateSessionToken, DefendDispute, PaymentMethodToken,
         PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
         SubmitEvidence, Void, VoidPC, PSync,
