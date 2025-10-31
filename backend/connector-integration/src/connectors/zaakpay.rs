@@ -913,6 +913,12 @@ impl_source_verification_stub!(
     domain_types::connector_types::PaymentsPostAuthenticateData<T>,
     PaymentsResponseData
 );
+impl_source_verification_stub!(
+    CreateConnectorCustomer,
+    PaymentFlowData,
+    domain_types::connector_types::ConnectorCustomerData,
+    domain_types::connector_types::ConnectorCustomerResponse
+);
 
 fn get_auth_header_zaakpay(
     auth_type: &transformers::ZaakPayAuth,
