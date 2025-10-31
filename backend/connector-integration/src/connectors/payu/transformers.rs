@@ -661,10 +661,10 @@ fn determine_upi_flow<
                     // UPI Intent flow - uses S2S flow "2" for intent-based transactions
                     // pg=UPI, bankcode=INTENT for intent flows
                     Ok((
-                        Some(constants::UPI_PG.to_string()),
-                        Some(constants::UPI_INTENT_BANKCODE.to_string()),
+                        Some(UPI_PG.to_string()),
+                        Some(UPI_INTENT_BANKCODE.to_string()),
                         None,
-                        constants::UPI_S2S_FLOW.to_string(),
+                        UPI_S2S_FLOW.to_string(),
                     ))
                 }
             }
