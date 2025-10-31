@@ -344,10 +344,10 @@ impl<
 
         let order_detail = ZaakPayOrderDetailTransType {
             order_id: order_id.clone(),
-            amount: amount.get_amount_as_string(),
+            amount: amount.to_string(),
             currency: item.router_data.request.currency.to_string(),
             product_description: "Payment".to_string(),
-            email: email.expose().unwrap_or_default(),
+            email: email.expose().unwrap_or_else(|| "".to_string()),
             phone,
         };
 
