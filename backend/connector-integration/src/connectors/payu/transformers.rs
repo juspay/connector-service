@@ -308,7 +308,7 @@ impl<
                 .clone(),
             amount,
             currency: router_data.request.currency,
-            productinfo: constants::PRODUCT_INFO.to_string(), // Default product info
+            productinfo: DEFAULT_PRODUCT_INFO.to_string(), // Default product info
 
             // Customer info - extract from billing address if available
             firstname: router_data.resource_common_data.get_billing_first_name()?,
