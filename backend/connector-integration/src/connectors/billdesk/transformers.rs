@@ -17,6 +17,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils,
+    router_request_types::{PaymentsCancelPostCaptureData, PaymentsPreAuthenticateData, PaymentsAuthenticateData, PaymentsPostAuthenticateData},
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
