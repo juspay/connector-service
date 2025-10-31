@@ -683,10 +683,6 @@ where
         + std::marker::Send
         + 'static
         + Serialize,
-    F: domain_types::connector_flow::ConnectorAction,
-    FCD: domain_types::connector_types::FlowData,
-    Req: serde::Serialize,
-    Res: serde::de::DeserializeOwned,
 {
     fn get_secrets(
         &self,
