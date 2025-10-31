@@ -268,7 +268,7 @@ impl TryFrom<&ConnectorAuthType> for ZaakPayAuthType {
                 secret_key: api_secret.clone(),
             }),
             ConnectorAuthType::HeaderKey { api_key } => Err(errors::ConnectorError::FailedToObtainAuthType
-                .into_change_context("ZaakPay requires both merchant identifier and secret key")),
+                .into()),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
     }
@@ -592,7 +592,7 @@ impl TryFrom<ResponseRouterData<ZaakPayPaymentsSyncResponse, RouterDataV2<PSync,
 
         let order = response.orders.first().ok_or_else(|| {
             errors::ConnectorError::ResponseDeserializationFailed
-                .into_change_context("No order found in response")
+                .into()
         })?;
 
         let attempt_status = match order.response_code.as_str() {
