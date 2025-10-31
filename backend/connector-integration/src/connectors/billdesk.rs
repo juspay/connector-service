@@ -370,73 +370,6 @@ macros::create_all_prerequisites!(
             request_body: BilldeskPaymentsSyncRequest,
             response_body: BilldeskPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ),
-        // Stub implementations for unsupported flows
-        (
-            flow: Void,
-            request_body: BilldeskVoidRequest,
-            response_body: BilldeskVoidResponse,
-            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ),
-        (
-            flow: Capture,
-            request_body: BilldeskCaptureRequest,
-            response_body: BilldeskCaptureResponse,
-            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ),
-        (
-            flow: Refund,
-            request_body: BilldeskRefundRequest,
-            response_body: BilldeskRefundResponse,
-            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ),
-        (
-            flow: RSync,
-            request_body: BilldeskRefundSyncRequest,
-            response_body: BilldeskRefundSyncResponse,
-            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ),
-        (
-            flow: CreateOrder,
-            request_body: BilldeskCreateOrderRequest,
-            response_body: BilldeskCreateOrderResponse,
-            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
-        ),
-        (
-            flow: CreateSessionToken,
-            request_body: BilldeskSessionTokenRequest,
-            response_body: BilldeskSessionTokenResponse,
-            router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
-        ),
-        (
-            flow: SetupMandate,
-            request_body: BilldeskSetupMandateRequest,
-            response_body: BilldeskSetupMandateResponse,
-            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: RepeatPayment,
-            request_body: BilldeskRepeatPaymentRequest,
-            response_body: BilldeskRepeatPaymentResponse,
-            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-        ),
-        (
-            flow: Accept,
-            request_body: BilldeskAcceptDisputeRequest,
-            response_body: BilldeskAcceptDisputeResponse,
-            router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
-        ),
-        (
-            flow: SubmitEvidence,
-            request_body: BilldeskSubmitEvidenceRequest,
-            response_body: BilldeskSubmitEvidenceResponse,
-            router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
-        ),
-        (
-            flow: DefendDispute,
-            request_body: BilldeskDefendDisputeRequest,
-            response_body: BilldeskDefendDisputeResponse,
-            router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
         )
     ],
     amount_converters: [
@@ -459,17 +392,6 @@ macros::create_all_prerequisites!(
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
-                "https://uat.billdesk.com/pgidsk/PGIDirectRequest"
-            } else {
-                "https://www.billdesk.com/pgidsk/PGIDirectRequest"
-            }
-        }
-
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
-            &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
             if req.resource_common_data.test_mode.unwrap_or(false) {
                 "https://uat.billdesk.com/pgidsk/PGIDirectRequest"
