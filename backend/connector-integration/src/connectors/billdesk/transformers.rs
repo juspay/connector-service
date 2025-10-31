@@ -425,7 +425,7 @@ impl<
         
         let amount_received = response._TxnAmount.parse::<i64>()
             .ok()
-            .map(|amt| common_utils::types::MinorUnit::from_i64(amt));
+            .map(|amt| common_utils::types::MinorUnit::new(amt));
         
         Ok(Self {
             status,
