@@ -24,7 +24,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> connector_types::SubmitEvidenceV2 for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> connector_types::PaymentPreAuthenticateV2<T> for ZaakPay<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> connector_types::PaymentAuthenticateV2<T> for ZaakPay<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> connector_types::PaymentPostAuthenticateV2<T> for ZaakPay<T> {}pub mod transformers;
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> connector_types::PaymentPostAuthenticateV2<T> for ZaakPay<T> {}
+
+pub mod transformers;
 pub mod constants;
 
 use std::fmt::Debug;
