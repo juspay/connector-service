@@ -661,6 +661,7 @@ impl<
                     .request
                     .email
                     .clone()
+                    .map(|_e| "test@example.com".to_string())
                     .unwrap_or_else(|| "test@example.com".to_string()),
                 identifier: customer_id.get_string_repr().to_string(),
                 account_no: "".to_string(),
