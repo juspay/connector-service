@@ -747,7 +747,6 @@ impl<
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 status_code: http_code,
-                amount_received,
             }),
             ..router_data
         })
