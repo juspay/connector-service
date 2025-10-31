@@ -566,7 +566,7 @@ impl<
                     provider: "UPI".to_string(),
                     i_f_s_c: "".to_string(),
                     holder: TpslHolderPayload {
-                        name: customer_id.get_string_repr(),
+                        name: customer_id.get_string_repr().to_string(),
                         address: TpslAddressPayload {
                             country: "IN".to_string(),
                             street: "".to_string(),
@@ -607,7 +607,7 @@ impl<
                     instruction_type: "PAYMENT".to_string(),
                     description: "UPI Payment".to_string(),
                     action: "DEBIT".to_string(),
-                    limit: amount.clone(),
+                    limit: amount.to_string(),
                     end_date_time: chrono::Utc::now().to_rfc3339(),
                     debit_day: "1".to_string(),
                     debit_flag: "Y".to_string(),
@@ -668,10 +668,10 @@ impl<
                     .clone()
                     .map(|e| e.to_string())
                     .unwrap_or_else(|| "test@example.com".to_string()),
-                identifier: customer_id.get_string_repr(),
+                identifier: customer_id.get_string_repr().to_string(),
                 account_no: "".to_string(),
                 account_type: "SAVINGS".to_string(),
-                account_holder_name: customer_id.get_string_repr(),
+                account_holder_name: customer_id.get_string_repr().to_string(),
                 aadhar_no: "".to_string(),
             },
         })
@@ -825,7 +825,7 @@ impl<
                     .router_data
                     .resource_common_data
                     .get_customer_id()?
-                    .get_string_repr(),
+                    .get_string_repr().to_string(),
             },
         })
     }
