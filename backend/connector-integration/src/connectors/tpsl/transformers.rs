@@ -928,7 +928,8 @@ impl<
         let amount_received = response.txn_amt.as_ref().and_then(|amt| {
             amt.parse::<f64>()
                 .ok()
-                .map(|amt_f64| common_utils::types::MinorUnit::from_major_unit_as_i64(amt_f64))
+                .map(|amt_f64| (amt_f64 * 100.0) as i64)
+                .map(common_utils::types::MinorUnit::new)
         });
 
         Ok(Self {
