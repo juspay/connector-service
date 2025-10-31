@@ -347,10 +347,7 @@ impl<
             amount: amount.to_string(),
             currency: item.router_data.request.currency.to_string(),
             product_description: "Payment".to_string(),
-            email: match email {
-                Some(email) => email.expose().to_string(),
-                None => "".to_string(),
-            },
+            email: email.as_ref().map(|e| e.expose().to_string()).unwrap_or_default(),
             phone,
         };
 
