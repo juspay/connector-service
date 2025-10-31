@@ -328,8 +328,8 @@ macros::create_all_prerequisites!(
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {
             Ok(vec![
-                ("Content-Type".to_string(), "application/x-www-form-urlencoded".into()),
-                ("Accept".to_string(), "application/json".into()),
+                ("Content-Type".to_string(), CONTENT_TYPE_FORM_URLENCODED.into()),
+                ("Accept".to_string(), ACCEPT_JSON.into()),
             ])
         }
 
@@ -386,8 +386,8 @@ macros::macro_connector_implementation!(
             _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             Ok(vec![
-                ("Content-Type".to_string(), "application/x-www-form-urlencoded".into()),
-                ("Accept".to_string(), "application/json".into()),
+                ("Content-Type".to_string(), CONTENT_TYPE_FORM_URLENCODED.into()),
+                ("Accept".to_string(), ACCEPT_JSON.into()),
             ])
         }
 
