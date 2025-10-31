@@ -645,7 +645,10 @@ impl<
             .as_ref()
             .and_then(|od| od.amount.as_ref())
             .and_then(|amt| amt.parse::<f64>().ok())
-            .map(|amt| common_utils::types::MinorUnit::from_major_unit_as_i64(amt));
+            .map(|amt| {
+                let minor_amount = (amt * 100.0).round() as i64;
+                common_utils::types::MinorUnit::new(minor_amount)
+            });
 
         Ok(Self {
             resource_common_data: PaymentFlowData {
