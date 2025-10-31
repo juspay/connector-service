@@ -5,6 +5,7 @@ use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
 use common_utils::{
+    errors::CustomResult,
     ext_traits::ByteSliceExt,
     types::StringMinorUnit,
 };
