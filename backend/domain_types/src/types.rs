@@ -6256,27 +6256,23 @@ impl
             description: None,
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                value
-                    .metadata
-                    .get("connector_meta_data")
-                    .map(|json_string| {
-                        serde_json::from_str::<serde_json::Value>(json_string)
-                            .map(Secret::new)
-                            .map_err(|e| {
-                                error_stack::Report::new(ApplicationErrorResponse::BadRequest(
-                                    ApiError {
-                                        sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: format!(
-                                            "Failed to parse connector_meta_data: {}",
-                                            e
-                                        ),
-                                        error_object: None,
-                                    },
-                                ))
-                            })
-                    })
-                    .transpose()?
+                 (!value.merchant_account_metadata.is_empty())
+                .then(|| {
+                    serde_json::to_value(&value.merchant_account_metadata)
+                        .map(common_utils::pii::SecretSerdeValue::new)
+                        .map_err(|_| {
+                            error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
+                                crate::errors::ApiError {
+                                    sub_code: "SERDE_JSON_ERROR".to_owned(),
+                                    error_identifier: 500,
+                                    error_message: "Failed to serialize merchant_account_metadata"
+                                        .to_owned(),
+                                    error_object: None,
+                                },
+                            ))
+                        })
+                })
+                .transpose()?
             },
             amount_captured: None,
             minor_amount_captured: None,
@@ -6351,27 +6347,23 @@ impl
             description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                value
-                    .metadata
-                    .get("connector_meta_data")
-                    .map(|json_string| {
-                        serde_json::from_str::<serde_json::Value>(json_string)
-                            .map(Secret::new)
-                            .map_err(|e| {
-                                error_stack::Report::new(ApplicationErrorResponse::BadRequest(
-                                    ApiError {
-                                        sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: format!(
-                                            "Failed to parse connector_meta_data: {}",
-                                            e
-                                        ),
-                                        error_object: None,
-                                    },
-                                ))
-                            })
-                    })
-                    .transpose()?
+                  (!value.merchant_account_metadata.is_empty())
+                .then(|| {
+                    serde_json::to_value(&value.merchant_account_metadata)
+                        .map(common_utils::pii::SecretSerdeValue::new)
+                        .map_err(|_| {
+                            error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
+                                crate::errors::ApiError {
+                                    sub_code: "SERDE_JSON_ERROR".to_owned(),
+                                    error_identifier: 500,
+                                    error_message: "Failed to serialize merchant_account_metadata"
+                                        .to_owned(),
+                                    error_object: None,
+                                },
+                            ))
+                        })
+                })
+                .transpose()?
             },
             amount_captured: None,
             minor_amount_captured: None,
@@ -6446,27 +6438,23 @@ impl
             description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                value
-                    .metadata
-                    .get("connector_meta_data")
-                    .map(|json_string| {
-                        serde_json::from_str::<serde_json::Value>(json_string)
-                            .map(Secret::new)
-                            .map_err(|e| {
-                                error_stack::Report::new(ApplicationErrorResponse::BadRequest(
-                                    ApiError {
-                                        sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: format!(
-                                            "Failed to parse connector_meta_data: {}",
-                                            e
-                                        ),
-                                        error_object: None,
-                                    },
-                                ))
-                            })
-                    })
-                    .transpose()?
+                 (!value.merchant_account_metadata.is_empty())
+                .then(|| {
+                    serde_json::to_value(&value.merchant_account_metadata)
+                        .map(common_utils::pii::SecretSerdeValue::new)
+                        .map_err(|_| {
+                            error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
+                                crate::errors::ApiError {
+                                    sub_code: "SERDE_JSON_ERROR".to_owned(),
+                                    error_identifier: 500,
+                                    error_message: "Failed to serialize merchant_account_metadata"
+                                        .to_owned(),
+                                    error_object: None,
+                                },
+                            ))
+                        })
+                })
+                .transpose()?
             },
             amount_captured: None,
             minor_amount_captured: None,
