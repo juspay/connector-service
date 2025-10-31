@@ -79,6 +79,16 @@ impl<
     > connector_types::PaymentSyncV2 for Payu<T>
 {
 }
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::ValidationTrait for Payu<T>
+{
+}
 
 // Set up connector using macros with all framework integrations
 macros::create_all_prerequisites!(
