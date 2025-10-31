@@ -50,6 +50,17 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
+> connector_types::ConnectorServiceTrait<T> for Billdesk<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
 > connector_types::PaymentAuthorizeV2<T> for Billdesk<T>
 {
 }
