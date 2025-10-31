@@ -382,73 +382,6 @@ macros::create_all_prerequisites!(
             request_body: ZaakPayPaymentsSyncRequest,
             response_body: ZaakPayPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ),
-        (
-            flow: RSync,
-            request_body: ZaakPayRefundSyncRequest,
-            response_body: ZaakPayRefundSyncResponse,
-            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ),
-        // Stub types for unsupported flows
-        (
-            flow: Void,
-            request_body: ZaakPayVoidRequest,
-            response_body: ZaakPayVoidResponse,
-            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ),
-        (
-            flow: Capture,
-            request_body: ZaakPayCaptureRequest,
-            response_body: ZaakPayCaptureResponse,
-            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ),
-        (
-            flow: Refund,
-            request_body: ZaakPayRefundRequest,
-            response_body: ZaakPayRefundResponse,
-            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ),
-        (
-            flow: CreateOrder,
-            request_body: ZaakPayCreateOrderRequest,
-            response_body: ZaakPayCreateOrderResponse,
-            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
-        ),
-        (
-            flow: CreateSessionToken,
-            request_body: ZaakPaySessionTokenRequest,
-            response_body: ZaakPaySessionTokenResponse,
-            router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
-        ),
-        (
-            flow: SetupMandate,
-            request_body: ZaakPaySetupMandateRequest,
-            response_body: ZaakPaySetupMandateResponse,
-            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: RepeatPayment,
-            request_body: ZaakPayRepeatPaymentRequest,
-            response_body: ZaakPayRepeatPaymentResponse,
-            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-        ),
-        (
-            flow: Accept,
-            request_body: ZaakPayAcceptDisputeRequest,
-            response_body: ZaakPayAcceptDisputeResponse,
-            router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
-        ),
-        (
-            flow: DefendDispute,
-            request_body: ZaakPayDefendDisputeRequest,
-            response_body: ZaakPayDefendDisputeResponse,
-            router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
-        ),
-        (
-            flow: SubmitEvidence,
-            request_body: ZaakPaySubmitEvidenceRequest,
-            response_body: ZaakPaySubmitEvidenceResponse,
-            router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
         )
     ],
     amount_converters: [
@@ -471,13 +404,6 @@ macros::create_all_prerequisites!(
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.zaakpay.base_url
-        }
-
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
-            &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
             &req.resource_common_data.connectors.zaakpay.base_url
         }
