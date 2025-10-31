@@ -174,7 +174,7 @@ pub struct CheckDataRequest {
     pub refund_detail: Option<RefundDetail>,
 }
 
-#[derive(Default, Debug, Serialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderDetailType {
     pub order_id: String,
