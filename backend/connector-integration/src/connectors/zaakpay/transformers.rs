@@ -333,7 +333,10 @@ impl<
 
         let return_url = item.router_data.request.get_router_return_url()?;
 
-        let email = item.router_data.request.email.clone().unwrap_or_default();
+        let email_str = match &email {
+            Some(e) => e.expose().to_string(),
+            None => "".to_string(),
+        };
 
         let phone = match &item.router_data.request.payment_method_data {
             domain_types::payment_method_data::PaymentMethodData::Card(_card) => {
