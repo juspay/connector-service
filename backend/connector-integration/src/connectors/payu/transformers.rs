@@ -576,7 +576,7 @@ impl<
                 field_name: "connector_transaction_id",
             })?;
 
-        let command = COMMAND_VERIFY_PAYMENT;
+        let command = crate::connectors::payu::constants::COMMAND_VERIFY_PAYMENT;
 
         // Build sync request
         let mut request = Self {
