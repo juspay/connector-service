@@ -267,7 +267,7 @@ impl TryFrom<&ConnectorAuthType> for ZaakPayAuthType {
                 secret_key: api_secret.clone(),
             }),
             ConnectorAuthType::HeaderKey { api_key } => Err(errors::ConnectorError::FailedToObtainAuthType
-                .into_change_context("ZaakPay requires both merchant identifier and secret key")),
+                .with_context("ZaakPay requires both merchant identifier and secret key")),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
     }
@@ -276,14 +276,14 @@ impl TryFrom<&ConnectorAuthType> for ZaakPayAuthType {
 // Helper functions
 fn get_merchant_identifier(
     connector_auth_type: &ConnectorAuthType,
-) -> Result<Secret<String>, errors::ConnectorError> {
+) -> Result<Secret<String>, error_stack::Report<errors::ConnectorError>> {
     let auth = ZaakPayAuthType::try_from(connector_auth_type)?;
     Ok(auth.merchant_identifier)
 }
 
 fn get_secret_key(
     connector_auth_type: &ConnectorAuthType,
-) -> Result<Secret<String>, errors::ConnectorError> {
+) -> Result<Secret<String>, error_stack::Report<errors::ConnectorError>> {
     let auth = ZaakPayAuthType::try_from(connector_auth_type)?;
     Ok(auth.secret_key)
 }
