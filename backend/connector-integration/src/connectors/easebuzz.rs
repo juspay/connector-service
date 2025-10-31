@@ -563,7 +563,7 @@ impl<
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.easebuzz.base_url.as_ref()
+        connectors.adyen.base_url.as_ref() // TODO: Update when EaseBuzz is added to Connectors struct
     }
 
     fn get_auth_header(
