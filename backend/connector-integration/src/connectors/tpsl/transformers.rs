@@ -481,7 +481,7 @@ impl<
         + Serialize,
 >
     TryFrom<
-        crate::connectors::TPSLRouterData<
+        super::TPSLRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -494,7 +494,7 @@ impl<
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: crate::connectors::TPSLRouterData<
+        item: super::TPSLRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -752,7 +752,7 @@ impl<
         + Serialize,
 >
     TryFrom<
-        crate::connectors::TPSLRouterData<
+        super::TPSLRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             T,
         >,
@@ -760,7 +760,7 @@ impl<
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: crate::connectors::TPSLRouterData<
+        item: super::TPSLRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             T,
         >,
