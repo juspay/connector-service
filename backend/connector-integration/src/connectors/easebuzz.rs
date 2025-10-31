@@ -407,6 +407,50 @@ macros::create_all_prerequisites!(
             request_body: EaseBuzzDefendDisputeRequest,
             response_body: EaseBuzzDefendDisputeResponse,
             router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        ),
+        // Authentication flows
+        (
+            flow: domain_types::connector_flow::PreAuthenticate,
+            request_body: EaseBuzzVoidRequest,
+            response_body: EaseBuzzVoidResponse,
+            router_data: RouterDataV2<domain_types::connector_flow::PreAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: domain_types::connector_flow::Authenticate,
+            request_body: EaseBuzzVoidRequest,
+            response_body: EaseBuzzVoidResponse,
+            router_data: RouterDataV2<domain_types::connector_flow::Authenticate, PaymentFlowData, domain_types::connector_types::PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: domain_types::connector_flow::PostAuthenticate,
+            request_body: EaseBuzzVoidRequest,
+            response_body: EaseBuzzVoidResponse,
+            router_data: RouterDataV2<domain_types::connector_flow::PostAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: domain_types::connector_flow::VoidPC,
+            request_body: EaseBuzzVoidRequest,
+            response_body: EaseBuzzVoidResponse,
+            router_data: RouterDataV2<domain_types::connector_flow::VoidPC, PaymentFlowData, domain_types::connector_types::PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        ),
+        // Additional flows
+        (
+            flow: domain_types::connector_flow::PaymentMethodToken,
+            request_body: EaseBuzzVoidRequest,
+            response_body: EaseBuzzVoidResponse,
+            router_data: RouterDataV2<domain_types::connector_flow::PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentMethodTokenizationData<T>, domain_types::connector_types::PaymentMethodTokenResponse>,
+        ),
+        (
+            flow: domain_types::connector_flow::CreateAccessToken,
+            request_body: EaseBuzzVoidRequest,
+            response_body: EaseBuzzVoidResponse,
+            router_data: RouterDataV2<domain_types::connector_flow::CreateAccessToken, PaymentFlowData, domain_types::connector_types::AccessTokenRequestData, domain_types::connector_types::AccessTokenResponseData>,
+        ),
+        (
+            flow: domain_types::connector_flow::CreateConnectorCustomer,
+            request_body: EaseBuzzVoidRequest,
+            response_body: EaseBuzzVoidResponse,
+            router_data: RouterDataV2<domain_types::connector_flow::CreateConnectorCustomer, PaymentFlowData, domain_types::connector_types::ConnectorCustomerData, domain_types::connector_types::ConnectorCustomerResponse>,
         )
     ],
     amount_converters: [
