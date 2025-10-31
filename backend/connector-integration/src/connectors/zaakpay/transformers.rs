@@ -89,7 +89,7 @@ pub struct PaymentInstrumentTransType {
 #[derive(Default, Debug, Serialize)]
 pub struct CardTransType;
 
-#[derive(Default, Debug, Serialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NetTransType {
     pub bankid: String,
