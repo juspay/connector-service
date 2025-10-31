@@ -169,12 +169,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let phone = item.router_data.resource_common_data.get_optional_billing_phone_number();
         let email = item.router_data.request.email.clone();
 
-        // Extract name from customer_name
-        let (firstname, lastname) = if let Some(customer_name) = &item.router_data.request.customer_name {
-            (customer_name.first_name.clone(), customer_name.last_name.clone())
-        } else {
-            (None, None)
-        };
+        // Extract name from billing address
+        let firstname = item.router_data.resource_common_data.get_optional_billing_first_name();
+        let lastname = item.router_data.resource_common_data.get_optional_billing_last_name();
 
         Ok(Self {
             txnid: item.router_data.resource_common_data.connector_request_reference_id.clone(),
