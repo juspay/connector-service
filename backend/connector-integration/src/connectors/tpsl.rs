@@ -9,8 +9,8 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder, CreateSessionToken,
-        DefendDispute, PaymentMethodToken, PSync, Refund, RSync, SetupMandate, SubmitEvidence, Void,
+        Accept, Authenticate, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder, CreateSessionToken,
+        DefendDispute, PaymentMethodToken, PostAuthenticate, PreAuthenticate, PSync, Refund, RSync, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData},
     errors,
