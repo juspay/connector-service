@@ -915,19 +915,19 @@ impl_source_verification_stub!(
 impl_source_verification_stub!(
     domain_types::connector_flow::PreAuthenticate,
     PaymentFlowData,
-    domain_types::connector_types::PaymentsPreAuthenticateData,
+    domain_types::connector_types::PaymentsPreAuthenticateData<T>,
     PaymentsResponseData
 );
 impl_source_verification_stub!(
     domain_types::connector_flow::Authenticate,
     PaymentFlowData,
-    domain_types::connector_types::PaymentsAuthenticateData,
+    domain_types::connector_types::PaymentsAuthenticateData<T>,
     PaymentsResponseData
 );
 impl_source_verification_stub!(
     domain_types::connector_flow::PostAuthenticate,
     PaymentFlowData,
-    domain_types::connector_types::PaymentsPostAuthenticateData,
+    domain_types::connector_types::PaymentsPostAuthenticateData<T>,
     PaymentsResponseData
 );
 
