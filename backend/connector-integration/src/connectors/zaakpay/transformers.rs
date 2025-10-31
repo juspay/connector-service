@@ -630,7 +630,7 @@ impl<
 
         let order = response.orders.first().ok_or_else(|| {
             errors::ConnectorError::ResponseDeserializationFailed
-                .into_change_context("No order found in response")
+                .with_context("No order found in response")
         })?;
 
         let attempt_status = match order.response_code.as_str() {
