@@ -40,7 +40,6 @@ use serde::Serialize;
 use transformers::{
     self as zaakpay, ZaakPayPaymentsRequest, ZaakPayPaymentsResponse,
     ZaakPayPaymentsSyncRequest, ZaakPayPaymentsSyncResponse,
-    ZaakPayRefundSyncRequest, ZaakPayRefundSyncResponse,
 };
 
 use super::macros;
