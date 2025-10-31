@@ -127,7 +127,7 @@ pub struct ZaakPayRefundDetail {
 }
 
 // Response types
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum ZaakPayPaymentsResponse {
     Success(ZaakPayTransactResponse),
