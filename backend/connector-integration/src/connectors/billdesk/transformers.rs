@@ -167,7 +167,7 @@ fn get_billdesk_message<T>(
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         T,
     >,
-) -> Result<String, errors::ConnectorError>
+) -> Result<String, error_stack::Report<errors::ConnectorError>>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
 {
