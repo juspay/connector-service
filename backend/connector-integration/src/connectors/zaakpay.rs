@@ -1,4 +1,25 @@
-pub mod transformers;
+// Implement the two main traits that the macro handles
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> connector_types::PaymentAuthorizeV2<T> for ZaakPay<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> connector_types::PaymentSyncV2 for ZaakPay<T>
+{
+}pub mod transformers;
 pub mod constants;
 
 use std::fmt::Debug;
