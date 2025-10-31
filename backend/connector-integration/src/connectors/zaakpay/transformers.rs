@@ -174,7 +174,7 @@ pub struct ZaakPayNetBankingRespType {
     pub bank_name: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayPaymentsSyncResponse {
     pub merchant_identifier: String,
