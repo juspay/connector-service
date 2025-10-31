@@ -95,19 +95,6 @@ pub struct ZaakPayDefendDisputeRequest;
 #[derive(Debug, Clone)]
 pub struct ZaakPayDefendDisputeResponse;
 
-#[derive(Debug, Clone)]
-pub struct ZaakPay<T> {
-    connector: std::marker::PhantomData<T>,
-}
-
-impl<T> ZaakPay<T> {
-    pub fn new() -> Self {
-        Self {
-            connector: std::marker::PhantomData,
-        }
-    }
-}
-
 // Implement core traits manually to avoid complex ConnectorIntegrationV2 requirements
 impl<T> connector_types::ValidationTrait for ZaakPay<T> {}
 
