@@ -67,7 +67,7 @@ pub struct BillingAddressType {
     pub pincode: Secret<String>,
 }
 
-#[derive(Default, Debug, Serialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ShippingAddressType {
     pub address: Option<String>,
