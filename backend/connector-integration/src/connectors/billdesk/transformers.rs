@@ -433,18 +433,13 @@ impl<
         
         Ok(PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(response._TxnReferenceNo),
-            status,
-            amount_received,
-            connector_transaction_id: Some(response._TxnReferenceNo),
-            error_code: Some(response._ErrorStatus),
-            error_message: Some(response._ErrorDescription),
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
-            status_code: None,
+            status_code: 200u16,
         })
     }
 }
