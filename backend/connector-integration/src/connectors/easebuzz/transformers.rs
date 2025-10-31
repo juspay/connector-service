@@ -167,17 +167,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
-        let phone = item.router_data.request.phone_number.as_ref().map(|p| p.to_string());
+        let phone = item.router_data.request.payment_method_data.get_phone_number().ok().flatten();
         let email = item.router_data.request.email.clone();
 
         Ok(Self {
             txnid: item.router_data.resource_common_data.connector_request_reference_id.clone(),
-            amount,
+            amount: amount.to_string(),
             currency: item.router_data.request.currency.to_string(),
             email,
             phone,
-            firstname: item.router_data.request.first_name.clone(),
-            lastname: item.router_data.request.last_name.clone(),
+            firstname: item.router_data.request.customer_name.as_ref().and_then(|name| name.first_name.clone()),
+            lastname: item.router_data.request.customer_name.as_ref().and_then(|name| name.last_name.clone()),
             surl: return_url.clone(),
             furl: return_url,
             productinfo: format!("Payment for customer {}", customer_id.get_string_repr()),
