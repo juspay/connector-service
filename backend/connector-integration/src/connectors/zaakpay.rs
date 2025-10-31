@@ -191,18 +191,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> connector_types::PaymentCaptureV2 for ZaakPay<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::RefundExecuteV2 for ZaakPay<T>
+> connector_types::RefundV2 for ZaakPay<T>
 {
 }
 
@@ -224,7 +213,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> connector_types::MandateSetupV2<T> for ZaakPay<T>
+> connector_types::SetupMandateV2<T> for ZaakPay<T>
 {
 }
 
@@ -235,7 +224,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> connector_types::PaymentRepeatV2 for ZaakPay<T>
+> connector_types::RepeatPaymentV2 for ZaakPay<T>
 {
 }
 
@@ -246,29 +235,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> connector_types::DisputeAcceptV2 for ZaakPay<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::DisputeDefendV2 for ZaakPay<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::DisputeSubmitEvidenceV2 for ZaakPay<T>
+> connector_types::SubmitEvidenceV2 for ZaakPay<T>
 {
 }
 
