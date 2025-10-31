@@ -332,22 +332,21 @@ impl<
 
         let return_url = item.router_data.request.get_router_return_url()?;
 
-        let email = item.router_data.request.email.clone().unwrap_or_else(|| "".into());
+        let email = item.router_data.request.email.clone().unwrap_or_default();
 
-        let phone = item
-            .router_data
-            .request
-            .payment_method_data
-            .get_phone_number()
-            .map(|p| p.to_string())
-            .unwrap_or_else(|| "".to_string());
+        let phone = match &item.router_data.request.payment_method_data {
+            domain_types::payment_method_data::PaymentMethodData::Card(card) => {
+                card.card_holder_name.clone().unwrap_or_default()
+            }
+            _ => "".to_string(),
+        };
 
         let order_detail = ZaakPayOrderDetailTransType {
             order_id: order_id.clone(),
             amount: amount.get_amount_as_string(),
             currency: item.router_data.request.currency.to_string(),
             product_description: "Payment".to_string(),
-            email: email.clone().into_inner().unwrap_or_default(),
+            email: email.expose().unwrap_or_default(),
             phone,
         };
 
