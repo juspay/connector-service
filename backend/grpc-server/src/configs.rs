@@ -132,6 +132,11 @@ fn default_api_tags() -> std::collections::HashMap<common_utils::events::FlowNam
         std::env::var("CS__API_TAGS__TAGS__CREATE_ORDER")
             .unwrap_or_else(|_| "GW_CREATE_ORDER".to_string()),
     );
+    tags.insert(
+        common_utils::events::FlowName::Psync,
+        std::env::var("CS__API_TAGS__TAGS__PSYNC")
+            .unwrap_or_else(|_| "GW_TXN_SYNC".to_string()),
+    );
 
     tags
 }
