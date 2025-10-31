@@ -181,7 +181,7 @@ pub struct OrderDetailType {
     pub amount: Option<String>,
 }
 
-#[derive(Default, Debug, Serialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RefundDetail {
     pub merchant_ref_id: String,
