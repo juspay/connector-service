@@ -79,73 +79,7 @@ impl<
 > connector_types::PaymentSyncV2 for Billdesk<T>
 {
 }
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::IncomingWebhook for Billdesk<T>
-{
-    fn verify_webhook_source(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secrets: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
-        // TODO: Implement webhook verification based on Billdesk's signature validation
-        Ok(true)
-    }
 
-    fn get_event_type(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<
-        domain_types::connector_types::EventType,
-        error_stack::Report<domain_types::errors::ConnectorError>,
-    > {
-        Ok(domain_types::connector_types::EventType::PaymentIntentSuccess)
-    }
-
-    fn process_payment_webhook(
-        &self,
-        request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<
-        domain_types::connector_types::WebhookDetailsResponse,
-        error_stack::Report<domain_types::errors::ConnectorError>,
-    > {
-        let webhook: transformers::BilldeskPaymentsSyncResponse = request
-            .body
-            .parse_struct("BilldeskPaymentsSyncResponse")
-            .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)?;
-
-        Ok(domain_types::connector_types::WebhookDetailsResponse {
-            resource_id: Some(
-                domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                    webhook.txn_reference_no.clone(),
-                ),
-            ),
-            status: common_enums::AttemptStatus::Charged,
-            status_code: 200,
-            mandate_reference: None,
-            connector_response_reference_id: None,
-            error_code: None,
-            error_message: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
-            response_headers: None,
-            minor_amount_captured: None,
-            amount_captured: None,
-            error_reason: None,
-            network_txn_id: None,
-            transformation_status: common_enums::WebhookTransformationStatus::Complete,
-        })
-    }
-}
 
 impl<
     T: PaymentMethodDataTypes
