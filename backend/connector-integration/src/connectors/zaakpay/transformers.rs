@@ -442,7 +442,7 @@ impl<
 }
 
 impl<
-    F, T
+    F, T: domain_types::payment_method_data::PaymentMethodDataTypes
 > TryFrom<ResponseRouterData<ZaakPayPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
