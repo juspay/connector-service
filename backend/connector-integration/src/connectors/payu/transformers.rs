@@ -18,6 +18,115 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
 
+// Stub types for flows not implemented yet (required for compilation)
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuVoidRequest;
+
+#[derive(Debug, Clone)]
+pub struct PayuVoidResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuCaptureRequest;
+
+#[derive(Debug, Clone)]
+pub struct PayuCaptureResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuRefundRequest;
+
+#[derive(Debug, Clone)]
+pub struct PayuRefundResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuRSyncRequest;
+
+#[derive(Debug, Clone)]
+pub struct PayuRSyncResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuCreateOrderRequest;
+
+#[derive(Debug, Clone)]
+pub struct PayuCreateOrderResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuSessionTokenRequest;
+
+#[derive(Debug, Clone)]
+pub struct PayuSessionTokenResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuSetupMandateRequest;
+
+#[derive(Debug, Clone)]
+pub struct PayuSetupMandateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuRepeatPaymentRequest;
+
+#[derive(Debug, Clone)]
+pub struct PayuRepeatPaymentResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuAcceptDisputeRequest;
+
+#[derive(Debug, Clone)]
+pub struct PayuAcceptDisputeResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuSubmitEvidenceRequest;
+
+#[derive(Debug, Clone)]
+pub struct PayuSubmitEvidenceResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuDefendDisputeRequest;
+
+#[derive(Debug, Clone)]
+pub struct PayuDefendDisputeResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuCreateAccessTokenRequest;
+
+#[derive(Debug, Clone)]
+pub struct PayuCreateAccessTokenResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuCreateConnectorCustomerRequest;
+
+#[derive(Debug, Clone)]
+pub struct PayuCreateConnectorCustomerResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuPaymentMethodTokenRequest;
+
+#[derive(Debug, Clone)]
+pub struct PayuPaymentMethodTokenResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuPreAuthenticateRequest;
+
+#[derive(Debug, Clone)]
+pub struct PayuPreAuthenticateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuAuthenticateRequest;
+
+#[derive(Debug, Clone)]
+pub struct PayuAuthenticateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuPostAuthenticateRequest;
+
+#[derive(Debug, Clone)]
+pub struct PayuPostAuthenticateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuVoidPostCaptureRequest;
+
+#[derive(Debug, Clone)]
+pub struct PayuVoidPostCaptureResponse;
+
 pub mod constants;
 pub use constants::*;
 
