@@ -591,8 +591,7 @@ impl TryFrom<ResponseRouterData<ZaakPayPaymentsSyncResponse, RouterDataV2<PSync,
         } = item;
 
         let order = response.orders.first().ok_or_else(|| {
-            errors::ConnectorError::ResponseDeserializationFailed
-                .into()
+            error_stack::Report::new(errors::ConnectorError::ResponseDeserializationFailed)
         })?;
 
         let attempt_status = match order.response_code.as_str() {
