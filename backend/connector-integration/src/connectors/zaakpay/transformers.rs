@@ -1,10 +1,7 @@
 use std::collections::HashMap;
 
 use common_utils::{
-    errors::CustomResult,
-    ext_traits::ValueExt,
     request::Method,
-    types::StringMinorUnit,
     Email,
 };
 use domain_types::{
@@ -15,7 +12,6 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
@@ -274,57 +270,6 @@ pub struct ZaakPayRefundSyncResponse {
     pub partial_refund_amt: Option<String>,
 }
 
-// Stub types for unsupported flows
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayVoidRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayVoidResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayCaptureRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayCaptureResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayRefundRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayRefundResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayCreateOrderRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayCreateOrderResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPaySessionTokenRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPaySessionTokenResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPaySetupMandateRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPaySetupMandateResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayRepeatPaymentRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayRepeatPaymentResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayAcceptDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayAcceptDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayDefendDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayDefendDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPaySubmitEvidenceRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPaySubmitEvidenceResponse;
-
 // Authentication types
 #[derive(Default, Debug, Deserialize)]
 pub struct ZaakPayAuthType {
@@ -498,15 +443,8 @@ impl<
 
 impl<
     F,
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize
-        + Serialize,
 > TryFrom<ResponseRouterData<ZaakPayPaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<common_utils::types::Transformed>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -670,13 +608,6 @@ impl<
             Some("pending") => common_enums::AttemptStatus::Pending,
             _ => common_enums::AttemptStatus::AuthenticationPending,
         };
-
-        let amount_received = order
-            .order_detail
-            .as_ref()
-            .and_then(|od| od.amount.as_ref())
-            .and_then(|amt| amt.parse::<i64>().ok())
-            .map(common_utils::types::MinorUnit);
 
         Ok(Self {
             resource_common_data: PaymentFlowData {
