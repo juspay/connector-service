@@ -333,7 +333,7 @@ impl<
 
         let return_url = item.router_data.request.get_router_return_url()?;
 
-        let email_str = match &email {
+        let email_str = match &item.router_data.request.email {
             Some(e) => e.expose().to_string(),
             None => "".to_string(),
         };
