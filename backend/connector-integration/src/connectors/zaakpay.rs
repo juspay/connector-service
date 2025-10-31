@@ -11,7 +11,10 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, PSync, RSync,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        CreateOrder, CreateSessionToken, DefendDispute, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
+        SubmitEvidence, Void, VoidPC, PSync,
     },
     connector_types::{
         ConnectorWebhookSecrets,
