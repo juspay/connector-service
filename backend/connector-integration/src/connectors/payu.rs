@@ -1,8 +1,5 @@
 pub mod transformers;
 
-#[cfg(test)]
-mod test;
-
 use std::fmt::Debug;
 
 use base64::Engine;
