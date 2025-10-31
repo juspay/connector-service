@@ -241,7 +241,7 @@ pub struct ZaakPayCardType {
     pub last4: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayErrorResponse {
     pub response_code: String,
