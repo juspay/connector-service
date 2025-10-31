@@ -260,13 +260,13 @@ impl TryFrom<&ConnectorAuthType> for ZaakPayAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, api_secret } => Ok(Self {
+            ConnectorAuthType::SignatureKey { api_key, api_secret, .. } => Ok(Self {
                 merchant_identifier: api_key.clone(),
                 secret_key: api_secret.clone(),
             }),
-            ConnectorAuthType::Key { api_key } => Err(errors::ConnectorError::FailedToObtainAuthType
-                .attach_printable("ZaakPay requires both merchant identifier and secret key")),
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType),
+            ConnectorAuthType::HeaderKey { api_key } => Err(errors::ConnectorError::FailedToObtainAuthType
+                .into_change_context("ZaakPay requires both merchant identifier and secret key")),
+            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
     }
 }
