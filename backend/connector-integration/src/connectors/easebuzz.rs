@@ -16,7 +16,7 @@ use domain_types::{
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData, 
         ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, PaymentCancelPostCaptureData, PaymentCreateOrderData, PaymentCreateOrderResponse, 
+        DisputeResponseData, PaymentsCancelPostCaptureData, PaymentCreateOrderData, PaymentCreateOrderResponse, 
         PaymentFlowData, PaymentMethodTokenizationData, PaymentMethodTokenResponse, PaymentVoidData, 
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData, 
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, 
