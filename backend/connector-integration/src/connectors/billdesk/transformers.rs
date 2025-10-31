@@ -408,14 +408,7 @@ impl<
     }
 }
 
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData
+impl<T: PaymentMethodDataTypes> TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData
 {
     type Error = error_stack::Report<ConnectorError>;
     
