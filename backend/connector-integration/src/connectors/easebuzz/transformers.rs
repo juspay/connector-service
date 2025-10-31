@@ -276,8 +276,8 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
                 Err(ErrorResponse {
                     code: error_data.status.to_string(),
                     status_code: http_code,
-                    message: error_data.error_desc.clone(),
-                    reason: error_data.error_desc.clone(),
+                    message: error_data.error_desc.clone().unwrap_or_default(),
+                    reason: error_data.error_desc,
                     attempt_status: None,
                     connector_transaction_id: None,
                     network_advice_code: None,
