@@ -466,7 +466,7 @@ impl<
                 field_name: "connector_transaction_id",
             })?;
 
-        let command = constants::COMMAND;
+        let command = COMMAND_VERIFY_PAYMENT;
 
         // Build sync request
         let mut request = Self {
