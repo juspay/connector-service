@@ -868,7 +868,7 @@ impl<F> TryFrom<ResponseRouterData<TpslPaymentsSyncResponse, Self>>
                 redirection_data: None,
                 mandate_reference: response.mandate_reg_no.map(|mr| {
                     Box::new(domain_types::connector_types::MandateReference { 
-                        connector_mandate_id: mr,
+                        connector_mandate_id: Some(mr),
                         payment_method_id: None,
                     })
                 }),
