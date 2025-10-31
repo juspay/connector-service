@@ -877,7 +877,10 @@ impl<
                 resource_id: ResponseId::ConnectorTransactionId(response.clnt_txn_ref),
                 redirection_data: None,
                 mandate_reference: response.mandate_reg_no.map(|mr| {
-                    Box::new(domain_types::connector_types::MandateReference { mandate_id: mr })
+                    Box::new(domain_types::connector_types::MandateReference { 
+                        connector_mandate_id: mr,
+                        payment_method_id: None,
+                    })
                 }),
                 connector_metadata: None,
                 network_txn_id: response.tpsl_txn_id,
