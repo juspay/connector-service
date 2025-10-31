@@ -96,7 +96,7 @@ pub struct NetTransType {
     pub bank_name: String,
 }
 
-#[derive(Default, Debug, Serialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpiTransType {
     pub bankid: String,
