@@ -337,7 +337,7 @@ impl<
 
         let phone = match &item.router_data.request.payment_method_data {
             domain_types::payment_method_data::PaymentMethodData::Card(card) => {
-                card.card_holder_name.clone().unwrap_or_default()
+                card.card_holder_name.clone().unwrap_or_else(|| "".to_string())
             }
             _ => "".to_string(),
         };
