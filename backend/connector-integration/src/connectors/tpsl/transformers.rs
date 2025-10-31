@@ -940,7 +940,7 @@ impl<
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.clnt_txn_ref),
                 redirection_data: None,
-                mandate_reference: response.mandate_reg_no,
+                mandate_reference: response.mandate_reg_no.map(|mr| Box::new(domain_types::router_response_types::MandateReference { mandate_id: mr })),
                 connector_metadata: None,
                 network_txn_id: response.tpsl_txn_id,
                 connector_response_reference_id: response.tpsl_txn_id,
