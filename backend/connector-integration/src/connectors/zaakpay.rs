@@ -11,15 +11,13 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder, CreateSessionToken, DefendDispute, PaymentMethodToken, PostAuthenticate, PreAuthenticate, PSync, RSync,
-        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
+        Authorize, PSync, RSync,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData, ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, EventType, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsCancelPostCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        ConnectorWebhookSecrets, DisputeFlowData,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
+        RefundsResponseData, RepeatPaymentData,
         RequestDetails, ResponseId, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
@@ -31,7 +29,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -41,33 +39,9 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as zaakpay, 
-    ZaakPayPaymentsRequest, 
-    ZaakPayPaymentsResponse,
-    ZaakPayPaymentsSyncRequest,
-    ZaakPayPaymentsSyncResponse,
-    ZaakPayRefundSyncRequest,
-    ZaakPayRefundSyncResponse,
-    ZaakPayVoidRequest,
-    ZaakPayVoidResponse,
-    ZaakPayCaptureRequest,
-    ZaakPayCaptureResponse,
-    ZaakPayRefundRequest,
-    ZaakPayRefundResponse,
-    ZaakPayCreateOrderRequest,
-    ZaakPayCreateOrderResponse,
-    ZaakPaySessionTokenRequest,
-    ZaakPaySessionTokenResponse,
-    ZaakPaySetupMandateRequest,
-    ZaakPaySetupMandateResponse,
-    ZaakPayRepeatPaymentRequest,
-    ZaakPayRepeatPaymentResponse,
-    ZaakPayAcceptDisputeRequest,
-    ZaakPayAcceptDisputeResponse,
-    ZaakPayDefendDisputeRequest,
-    ZaakPayDefendDisputeResponse,
-    ZaakPaySubmitEvidenceRequest,
-    ZaakPaySubmitEvidenceResponse,
+    self as zaakpay, ZaakPayPaymentsRequest, ZaakPayPaymentsResponse,
+    ZaakPayPaymentsSyncRequest, ZaakPayPaymentsSyncResponse,
+    ZaakPayRefundSyncRequest, ZaakPayRefundSyncResponse,
 };
 
 use super::macros;
@@ -120,80 +94,6 @@ impl<
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for ZaakPay<T>
-{
-}
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentVoidV2 for ZaakPay<T>
-{
-}
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::RefundV2 for ZaakPay<T>
-{
-}
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentCapture for ZaakPay<T>
-{
-}
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::SetupMandateV2<T> for ZaakPay<T>
-{
-}
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::AcceptDispute for ZaakPay<T>
-{
-}
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::SubmitEvidenceV2 for ZaakPay<T>
-{
-}
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::DisputeDefend for ZaakPay<T>
-{
-}
 impl<
     T: PaymentMethodDataTypes
         + std::fmt::Debug
@@ -280,91 +180,6 @@ impl<
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
         })
     }
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentOrderCreate for ZaakPay<T>
-{
-}
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::ValidationTrait for ZaakPay<T>
-{
-}
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::RepeatPaymentV2 for ZaakPay<T>
-{
-}
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentTokenV2<T> for ZaakPay<T>
-{
-}
-
-// Authentication trait implementations
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentPreAuthenticateV2<T> for ZaakPay<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentAuthenticateV2<T> for ZaakPay<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentPostAuthenticateV2<T> for ZaakPay<T>
-{
-}
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentVoidPostCaptureV2 for ZaakPay<T>
-{
 }
 
 macros::create_all_prerequisites!(
@@ -515,43 +330,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for ZaakPay<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
 > ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for ZaakPay<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for ZaakPay<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
     for ZaakPay<T>
 {
 }
@@ -565,158 +344,6 @@ impl<
         + Serialize,
 > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
     for ZaakPay<T>
-{
-}
-
-// Authentication flow implementations
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
->
-    ConnectorIntegrationV2<
-        PreAuthenticate,
-        PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for ZaakPay<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
->
-    ConnectorIntegrationV2<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for ZaakPay<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
->
-    ConnectorIntegrationV2<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for ZaakPay<T>
-{
-}
-
-// Other flow implementations
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
->
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for ZaakPay<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for ZaakPay<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for ZaakPay<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for ZaakPay<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
->
-    ConnectorIntegrationV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for ZaakPay<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for ZaakPay<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
->
-    ConnectorIntegrationV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for ZaakPay<T>
 {
 }
 
@@ -777,69 +404,6 @@ impl_source_verification_stub!(
     PSync,
     PaymentFlowData,
     PaymentsSyncData,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    Capture,
-    PaymentFlowData,
-    PaymentsCaptureData,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
-impl_source_verification_stub!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
-impl_source_verification_stub!(RSync, RefundFlowData, RefundSyncData, RefundsResponseData);
-impl_source_verification_stub!(
-    SetupMandate,
-    PaymentFlowData,
-    SetupMandateRequestData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    RepeatPayment,
-    PaymentFlowData,
-    RepeatPaymentData,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    Accept,
-    DisputeFlowData,
-    AcceptDisputeData,
-    DisputeResponseData
-);
-impl_source_verification_stub!(
-    SubmitEvidence,
-    DisputeFlowData,
-    SubmitEvidenceData,
-    DisputeResponseData
-);
-impl_source_verification_stub!(
-    DefendDispute,
-    DisputeFlowData,
-    DisputeDefendData,
-    DisputeResponseData
-);
-impl_source_verification_stub!(
-    CreateOrder,
-    PaymentFlowData,
-    PaymentCreateOrderData,
-    PaymentCreateOrderResponse
-);
-impl_source_verification_stub!(
-    PreAuthenticate,
-    PaymentFlowData,
-    PaymentsPreAuthenticateData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    Authenticate,
-    PaymentFlowData,
-    PaymentsAuthenticateData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    PostAuthenticate,
-    PaymentFlowData,
-    PaymentsPostAuthenticateData<T>,
     PaymentsResponseData
 );
 
