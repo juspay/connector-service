@@ -825,6 +825,24 @@ impl_source_verification_stub!(
     domain_types::connector_types::SubmitEvidenceData,
     domain_types::connector_types::DisputeResponseData
 );
+impl_source_verification_stub!(
+    domain_types::connector_flow::VoidPC,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentsCancelPostCaptureData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    domain_types::connector_flow::RepeatPayment,
+    PaymentFlowData,
+    domain_types::connector_types::RepeatPaymentData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    RSync,
+    domain_types::connector_types::RefundFlowData,
+    domain_types::connector_types::RefundSyncData,
+    domain_types::connector_types::RefundsResponseData
+);
 
 fn get_tpsl_auth_header(
     auth_type: &transformers::TpslAuth,
