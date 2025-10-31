@@ -96,45 +96,45 @@ pub struct ZaakPayDefendDisputeRequest;
 pub struct ZaakPayDefendDisputeResponse;
 
 // Implement core traits manually to avoid complex ConnectorIntegrationV2 requirements
-impl<T: PaymentMethodDataTypes> connector_types::ValidationTrait for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::ValidationTrait for ZaakPay<T> {}
 
-impl<T: PaymentMethodDataTypes> connector_types::PaymentOrderCreate for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::PaymentOrderCreate for ZaakPay<T> {}
 
-impl<T: PaymentMethodDataTypes> connector_types::PaymentSessionToken for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::PaymentSessionToken for ZaakPay<T> {}
 
-impl<T: PaymentMethodDataTypes> connector_types::PaymentAccessToken for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::PaymentAccessToken for ZaakPay<T> {}
 
-impl<T: PaymentMethodDataTypes> connector_types::CreateConnectorCustomer for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::CreateConnectorCustomer for ZaakPay<T> {}
 
-impl<T: PaymentMethodDataTypes> connector_types::PaymentTokenV2<T> for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::PaymentTokenV2<T> for ZaakPay<T> {}
 
-impl<T: PaymentMethodDataTypes> connector_types::PaymentVoidV2 for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::PaymentVoidV2 for ZaakPay<T> {}
 
-impl<T: PaymentMethodDataTypes> connector_types::PaymentVoidPostCaptureV2 for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::PaymentVoidPostCaptureV2 for ZaakPay<T> {}
 
-impl<T: PaymentMethodDataTypes> connector_types::IncomingWebhook for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::IncomingWebhook for ZaakPay<T> {}
 
-impl<T: PaymentMethodDataTypes> connector_types::RefundV2 for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::RefundV2 for ZaakPay<T> {}
 
-impl<T: PaymentMethodDataTypes> connector_types::PaymentCapture for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::PaymentCapture for ZaakPay<T> {}
 
-impl<T: PaymentMethodDataTypes> connector_types::SetupMandateV2<T> for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::SetupMandateV2<T> for ZaakPay<T> {}
 
-impl<T: PaymentMethodDataTypes> connector_types::RepeatPaymentV2 for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::RepeatPaymentV2 for ZaakPay<T> {}
 
-impl<T: PaymentMethodDataTypes> connector_types::AcceptDispute for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::AcceptDispute for ZaakPay<T> {}
 
-impl<T: PaymentMethodDataTypes> connector_types::RefundSyncV2 for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::RefundSyncV2 for ZaakPay<T> {}
 
-impl<T: PaymentMethodDataTypes> connector_types::DisputeDefend for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::DisputeDefend for ZaakPay<T> {}
 
-impl<T: PaymentMethodDataTypes> connector_types::SubmitEvidenceV2 for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::SubmitEvidenceV2 for ZaakPay<T> {}
 
-impl<T: PaymentMethodDataTypes> connector_types::PaymentPreAuthenticateV2<T> for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::PaymentPreAuthenticateV2<T> for ZaakPay<T> {}
 
-impl<T: PaymentMethodDataTypes> connector_types::PaymentAuthenticateV2<T> for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::PaymentAuthenticateV2<T> for ZaakPay<T> {}
 
-impl<T: PaymentMethodDataTypes> connector_types::PaymentPostAuthenticateV2<T> for ZaakPay<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> connector_types::PaymentPostAuthenticateV2<T> for ZaakPay<T> {}
 
 
 
