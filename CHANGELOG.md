@@ -4,6 +4,42 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## [2025-11-01] - TPSL Connector Addition
+
+### Added
+- New TPSL connector implementation
+- Payment methods supported: UPI (Unified Payments Interface)
+- Transaction flows: Authorize, PSync (Payment Sync)
+- Full support for UPI Intent/Collect transactions
+- Comprehensive error handling and status mapping
+- Webhook processing capabilities
+
+### Files Created/Modified
+- `src/connectors/tpsl.rs` - Main connector implementation
+- `src/connectors/tpsl/transformers.rs` - Request/response transformers
+- `src/connectors/tpsl/constants.rs` - API constants and endpoints
+- `src/connectors.rs` - Added connector registration
+- `src/types.rs` - Added connector to ConnectorEnum and convert_connector function
+- `backend/domain_types/src/connector_types.rs` - Added Tpsl to ConnectorEnum
+- `backend/connector-integration/Cargo.toml` - Added chrono dependency
+
+### Technical Details
+- Migrated from Hyperswitch/Euler Haskell implementation
+- Uses UCS v2 macro framework for trait implementations
+- Implements proper error handling and status mapping
+- Full type safety with guard rails (Secret<String> for sensitive data, MinorUnit for amounts)
+- Supports both test and production environments
+- Dynamic extraction of all request values from router data (no hardcoded values)
+- Proper amount framework implementation using StringMinorUnit converter
+
+### API Endpoints
+- Production: https://www.tpsl-india.in
+- Test: https://www.tekprocess.co.in
+- Transaction endpoint: /PaymentGateway/services/TransactionDetailsNew
+- Auth capture endpoint: /PaymentGateway/merchant2.pg
+
+- - -
+
 ## 2025.10.31.0
 
 ### Features
