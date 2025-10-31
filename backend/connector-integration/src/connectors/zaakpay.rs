@@ -188,16 +188,6 @@ macros::macro_connector_implementation!(
             _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let header = vec![(
-        fn get_url(
-            &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!(
-                "{}/transact",
-                self.connector_base_url_payments(req)
-            ))
-        }
-    }
                 constants::headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
             )];
