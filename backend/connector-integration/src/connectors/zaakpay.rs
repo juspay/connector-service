@@ -95,6 +95,19 @@ pub struct ZaakPayDefendDisputeRequest;
 #[derive(Debug, Clone)]
 pub struct ZaakPayDefendDisputeResponse;
 
+#[derive(Debug, Clone)]
+pub struct ZaakPay<T> {
+    connector: std::marker::PhantomData<T>,
+}
+
+impl<T> ZaakPay<T> {
+    pub fn new() -> Self {
+        Self {
+            connector: std::marker::PhantomData,
+        }
+    }
+}
+
 // Only implement the traits we actually use
 impl<
     T: PaymentMethodDataTypes
