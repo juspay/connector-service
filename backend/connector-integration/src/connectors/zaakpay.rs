@@ -261,7 +261,7 @@ impl<
                 domain_types::connector_types::ResponseId::ConnectorTransactionId(
                     webhook.orders.first()
                         .and_then(|order| order.order_detail.as_ref())
-                        .and_then(|od| od.order_id.clone())
+                        .map(|od| od.order_id.clone())
                         .unwrap_or_default(),
                 ),
             ),
