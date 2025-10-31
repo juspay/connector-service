@@ -442,16 +442,11 @@ impl<
                         .resource_common_data
                         .connector_request_reference_id
                         .clone(),
-                    amount,
+                    amount: amount.to_string(),
                     currency: item.router_data.request.currency.to_string(),
-                    product_description: item
-                        .router_data
-                        .request
-                        .description
-                        .clone()
-                        .unwrap_or_else(|| "Payment".to_string()),
+                    product_description: "Payment".to_string(),
                     email: item.router_data.request.email.clone(),
-                    phone: item.router_data.request.phone_number.clone().map(|p| p.to_string()),
+                    phone: None, // Phone number not available in current structure
                 };
 
                 let billing_address = BillingAddressType {
