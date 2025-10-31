@@ -13,9 +13,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
-use masking::ExposeInterface;
-use error_stack::ResultExt;
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
@@ -173,7 +171,7 @@ where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
 {
     let customer_id = router_data.router_data.resource_common_data.get_customer_id()
-        .map_err(|e| e.change_context(ConnectorError::RequestEncodingFailed))?;
+        .change_context(ConnectorError::RequestEncodingFailed)?;
     let amount = router_data
         .connector
         .amount_converter
@@ -182,7 +180,7 @@ where
             router_data.router_data.request.currency,
         )
         .change_context(ConnectorError::RequestEncodingFailed)
-        .map_err(|e| e.change_context(ConnectorError::RequestEncodingFailed))?;
+        .change_context(ConnectorError::RequestEncodingFailed)?;
     
     let merchant_id = get_merchant_id(&router_data.router_data.connector_auth_type)?;
     
