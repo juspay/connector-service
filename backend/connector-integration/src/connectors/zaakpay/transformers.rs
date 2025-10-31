@@ -391,7 +391,7 @@ impl<
         };
 
         let payment_instrument = match item.router_data.request.payment_method_type {
-            Some(common_enums::PaymentMethodType::Upi) => {
+            Some(common_enums::PaymentMethodType::UpiCollect) => {
                 ZaakPayPaymentInstrumentTransType {
                     payment_mode: "upi".to_string(),
                     card: None,
@@ -401,15 +401,14 @@ impl<
                     }),
                 }
             }
-            Some(common_enums::PaymentMethodType::NetBanking) => {
+            Some(common_enums::PaymentMethodType::UpiIntent) => {
                 ZaakPayPaymentInstrumentTransType {
-                    payment_mode: "netbanking".to_string(),
+                    payment_mode: "upi".to_string(),
                     card: None,
-                    netbanking: Some(ZaakPayNetTransType {
+                    netbanking: None,
+                    upi: Some(ZaakPayUpiTransType {
                         bankid: "".to_string(), // Will be populated from payment method data
-                        bank_name: "".to_string(),
                     }),
-                    upi: None,
                 }
             }
             _ => {
