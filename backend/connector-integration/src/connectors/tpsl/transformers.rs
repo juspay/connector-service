@@ -786,7 +786,7 @@ impl<
                                 item.router_data.request.currency,
                             )
                             .change_context(ConnectorError::RequestEncodingFailed)?
-                            .get_amount_in_i64_units().to_string(),
+                            .to_string(),
                     ),
                     end_date_time: Some(chrono::Utc::now().to_rfc3339()),
                     identifier: Some(
