@@ -18,7 +18,7 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
         RefundsResponseData,
-        RequestDetails, ResponseId,
+        RequestDetails,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
