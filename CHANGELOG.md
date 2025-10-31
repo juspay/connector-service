@@ -4,6 +4,18 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.10.31.0
+
+### Features
+
+- **connector:**
+  - Added SetupMandate, RepeatPayment and CreateConnectorCustomer flows for stripe ([#230](https://github.com/juspay/connector-service/pull/230)) ([`3ded301`](https://github.com/juspay/connector-service/commit/3ded3017f7fe1a722b694fab294b729d54be9f46))
+  - Added RepeatPayment flow for cybersource ([#235](https://github.com/juspay/connector-service/pull/235)) ([`33633b1`](https://github.com/juspay/connector-service/commit/33633b15e588fd2724cf30456a5bba46056169e9))
+
+**Full Changelog:** [`2025.10.30.0...2025.10.31.0`](https://github.com/juspay/connector-service/compare/2025.10.30.0...2025.10.31.0)
+
+- - -
+
 ## 2025.10.30.0
 
 ### Bug Fixes
