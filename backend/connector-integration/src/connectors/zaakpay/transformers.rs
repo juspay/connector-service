@@ -136,7 +136,7 @@ pub enum ZaakPayPaymentsResponse {
     Error(ZaakPayErrorResponse),
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayTransactResponse {
     pub order_detail: ZaakPayOrderDetailTransType,
@@ -187,7 +187,7 @@ pub struct ZaakPayPaymentsSyncResponse {
     pub partial_refund_amt: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayOrderDetailsResponse {
     pub order_detail: Option<ZaakPayOrderDetailResType>,
