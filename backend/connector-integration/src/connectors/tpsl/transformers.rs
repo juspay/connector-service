@@ -868,7 +868,7 @@ impl<F> TryFrom<ResponseRouterData<TpslPaymentsSyncResponse, Self>>
                     })
                 }),
                 connector_metadata: None,
-                network_txn_id: response.tpsl_txn_id,
+                network_txn_id: response.tpsl_txn_id.clone(),
                 connector_response_reference_id: response.tpsl_txn_id.clone(),
                 incremental_authorization_allowed: None,
                 status_code: http_code,
