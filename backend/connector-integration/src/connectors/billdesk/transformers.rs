@@ -400,7 +400,7 @@ impl<
     }
 }
 
-impl<T: PaymentMethodDataTypes> TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData
+impl TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData
 {
     type Error = error_stack::Report<ConnectorError>;
     
