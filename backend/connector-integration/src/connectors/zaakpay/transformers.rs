@@ -336,8 +336,8 @@ impl<
         let email = item.router_data.request.email.clone().unwrap_or_default();
 
         let phone = match &item.router_data.request.payment_method_data {
-            domain_types::payment_method_data::PaymentMethodData::Card(card) => {
-                card.card_holder_name.clone().unwrap_or_else(|| "".to_string())
+            domain_types::payment_method_data::PaymentMethodData::Card(_card) => {
+                "".to_string()
             }
             _ => "".to_string(),
         };
