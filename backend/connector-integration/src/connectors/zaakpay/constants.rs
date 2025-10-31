@@ -1,5 +1,3 @@
-pub mod api;
-
 pub static DEFAULT_BASE_URL: &str = "https://api.zaakpay.com";
 
 pub mod api {
