@@ -217,13 +217,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
-        let phone = item.router_data.request.phone_number.as_ref().map(|p| p.to_string()).unwrap_or_default();
+        let phone = item.router_data.request.payment_method_data.get_phone_number().ok().flatten().unwrap_or_default();
         let email = item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default();
 
         Ok(Self {
             txnid: item.router_data.request.connector_transaction_id.get_connector_transaction_id()
                 .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?,
-            amount,
+            amount: amount.to_string(),
             email,
             phone,
             hash: Secret::new("".to_string()), // Will be calculated based on EaseBuzz requirements
