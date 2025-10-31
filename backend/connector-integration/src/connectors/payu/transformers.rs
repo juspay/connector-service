@@ -19,8 +19,7 @@ use serde::{Deserialize, Serialize};
 use crate::types::ResponseRouterData;
 
 // Import constants
-pub mod constants;
-pub use constants::*;
+use super::constants::*;
 
 // Stub types for flows not implemented yet (required for compilation)
 #[derive(Debug, Clone, Serialize)]
