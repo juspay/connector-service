@@ -259,8 +259,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    >
-    TryFrom<
+    > TryFrom<
         super::PayuRouterData<
             RouterDataV2<
                 Authorize,
@@ -451,8 +450,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    >
-    TryFrom<
+    > TryFrom<
         super::PayuRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             T,
@@ -768,8 +766,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    >
-    TryFrom<
+    > TryFrom<
         ResponseRouterData<
             PayuPaymentResponse,
             RouterDataV2<
