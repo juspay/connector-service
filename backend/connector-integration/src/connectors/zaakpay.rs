@@ -196,7 +196,7 @@ impl<
         let secret_auth = String::from_utf8(webhook_secret.secret.to_vec())
             .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
             .attach_printable("Could not convert secret to UTF-8")?;
-        let checksum_auth = String::from_utf8(signature.to_vec())
+        let checksum_auth = String::from_utf8(checksum.to_vec())
             .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
             .attach_printable("Could not convert checksum to UTF-8")?;
         Ok(checksum_auth == secret_auth)
