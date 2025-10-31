@@ -445,7 +445,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
+            if req.resource_common_data.connectors.easebuzz.test_mode.unwrap_or(false) {
                 constants::base_url::TEST
             } else {
                 constants::base_url::PRODUCTION
@@ -456,7 +456,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
+            if req.resource_common_data.connectors.easebuzz.test_mode.unwrap_or(false) {
                 constants::base_url::TEST
             } else {
                 constants::base_url::PRODUCTION
