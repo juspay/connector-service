@@ -441,7 +441,14 @@ impl<
             connector_transaction_id: Some(response._TxnReferenceNo),
             error_code: Some(response._ErrorStatus),
             error_message: Some(response._ErrorDescription),
-            ..Default::default()
+            resource_id: None,
+            redirection_data: None,
+            mandate_reference: None,
+            connector_metadata: None,
+            network_txn_id: None,
+            connector_response_reference_id: None,
+            incremental_authorization_allowed: None,
+            status_code: None,
         })
     }
 }
