@@ -20,7 +20,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::tpsl::TPSLRouterData, types::ResponseRouterData};
+use crate::{types::ResponseRouterData};
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -461,76 +461,15 @@ pub struct TpslErrorResponse {
     pub errors: Option<Vec<TpslErrors>>,
 }
 
-// Stub types for unsupported flows
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslVoidRequest;
-#[derive(Debug, Clone)]
-pub struct TpslVoidResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslCaptureRequest;
-#[derive(Debug, Clone)]
-pub struct TpslCaptureResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslRefundRequest;
-#[derive(Debug, Clone)]
-pub struct TpslRefundResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslRefundSyncRequest;
-#[derive(Debug, Clone)]
-pub struct TpslRefundSyncResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslCreateOrderRequest;
-#[derive(Debug, Clone)]
-pub struct TpslCreateOrderResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslSessionTokenRequest;
-#[derive(Debug, Clone)]
-pub struct TpslSessionTokenResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslSetupMandateRequest;
-#[derive(Debug, Clone)]
-pub struct TpslSetupMandateResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslRepeatPaymentRequest;
-#[derive(Debug, Clone)]
-pub struct TpslRepeatPaymentResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslAcceptDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct TpslAcceptDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslDefendDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct TpslDefendDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslSubmitEvidenceRequest;
-#[derive(Debug, Clone)]
-pub struct TpslSubmitEvidenceResponse;
-
 fn get_redirect_form_data(
-    payment_method_type: common_enums::PaymentMethodType,
-    response_data: TpslPaymentsResponseData,
+    _payment_method_type: common_enums::PaymentMethodType,
+    _response_data: TpslPaymentsResponseData,
 ) -> CustomResult<RedirectForm, errors::ConnectorError> {
-    match payment_method_type {
-        common_enums::PaymentMethodType::UpiCollect => Ok(RedirectForm::Form {
-            endpoint: "https://www.tpsl-india.in/PaymentGateway/merchant2.pg".to_string(),
-            method: Method::Post,
-            form_fields: Default::default(),
-        }),
-        _ => Err(errors::ConnectorError::NotImplemented(
-            utils::get_unimplemented_payment_method_error_message("TPSL"),
-        ))?,
-    }
+    Ok(RedirectForm::Form {
+        endpoint: "https://www.tpsl-india.in/PaymentGateway/merchant2.pg".to_string(),
+        method: Method::Post,
+        form_fields: Default::default(),
+    })
 }
 
 impl<
@@ -542,7 +481,7 @@ impl<
         + Serialize,
 >
     TryFrom<
-        TpslRouterData<
+        &crate::connectors::TPSLRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -555,7 +494,7 @@ impl<
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: TpslRouterData<
+        item: &crate::connectors::TPSLRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -580,165 +519,162 @@ impl<
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
-        match item.router_data.resource_common_data.payment_method {
-            common_enums::PaymentMethod::UpiCollect => Ok(Self {
-                merchant: TpslMerchantPayload {
-                    webhook_endpoint_url: return_url.clone(),
-                    response_type: "URL".to_string(),
-                    response_endpoint_url: return_url.clone(),
-                    description: "UPI Payment".to_string(),
-                    identifier: auth_type.merchant_id.peek().to_string(),
-                    webhook_type: "HTTP".to_string(),
-                },
-                cart: TpslCartPayload {
-                    item: vec![TpslItemPayload {
-                        description: "UPI Transaction".to_string(),
-                        provider_identifier: "UPI".to_string(),
-                        surcharge_or_discount_amount: "0".to_string(),
-                        amount: amount.clone(),
-                        com_amt: "0".to_string(),
-                        s_k_u: "UPI".to_string(),
-                        reference: item
-                            .router_data
-                            .resource_common_data
-                            .connector_request_reference_id
-                            .clone(),
-                        identifier: "UPI_ITEM".to_string(),
-                    }],
-                    reference: item
-                        .router_data
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone(),
-                    identifier: "UPI_CART".to_string(),
-                    description: "UPI Payment Cart".to_string(),
-                },
-                payment: TpslPaymentPayload {
-                    method: TpslMethodPayload {
-                        token: "UPI".to_string(),
-                        method_type: "UPI".to_string(),
-                        code: "UPI".to_string(),
-                    },
-                    instrument: TpslInstrumentPayload {
-                        expiry: TpslExpiryPayload {
-                            year: "2024".to_string(),
-                            month: "12".to_string(),
-                            date_time: chrono::Utc::now().to_rfc3339(),
-                        },
-                        provider: "UPI".to_string(),
-                        i_f_s_c: "".to_string(),
-                        holder: TpslHolderPayload {
-                            name: customer_id.get_string_repr(),
-                            address: TpslAddressPayload {
-                                country: "IN".to_string(),
-                                street: "".to_string(),
-                                state: "".to_string(),
-                                city: "".to_string(),
-                                zip_code: Secret::new("".to_string()),
-                                county: "".to_string(),
-                            },
-                        },
-                        b_i_c: "".to_string(),
-                        instrument_type: "UPI".to_string(),
-                        action: "PAY".to_string(),
-                        m_i_c_r: "".to_string(),
-                        verification_code: "".to_string(),
-                        i_b_a_n: "".to_string(),
-                        processor: "UPI".to_string(),
-                        issuance: TpslExpiryPayload {
-                            year: "2024".to_string(),
-                            month: "12".to_string(),
-                            date_time: chrono::Utc::now().to_rfc3339(),
-                        },
-                        alias: "UPI_ALIAS".to_string(),
-                        identifier: "UPI_INSTRUMENT".to_string(),
-                        token: "UPI_TOKEN".to_string(),
-                        authentication: TpslAuthenticationPayload {
-                            token: "UPI_AUTH".to_string(),
-                            auth_type: "UPI".to_string(),
-                            sub_type: "COLLECT".to_string(),
-                        },
-                        sub_type: "COLLECT".to_string(),
-                        issuer: "UPI".to_string(),
-                        acquirer: "UPI".to_string(),
-                    },
-                    instruction: TpslInstructionPayload {
-                        occurrence: "SINGLE".to_string(),
-                        amount: amount.clone(),
-                        frequency: "ONCE".to_string(),
-                        instruction_type: "PAYMENT".to_string(),
-                        description: "UPI Payment".to_string(),
-                        action: "DEBIT".to_string(),
-                        limit: amount.clone(),
-                        end_date_time: chrono::Utc::now().to_rfc3339(),
-                        debit_day: "1".to_string(),
-                        debit_flag: "Y".to_string(),
-                        identifier: "UPI_INSTRUCTION".to_string(),
-                        reference: item
-                            .router_data
-                            .resource_common_data
-                            .connector_request_reference_id
-                            .clone(),
-                        start_date_time: chrono::Utc::now().to_rfc3339(),
-                        validity: "VALID".to_string(),
-                    },
-                },
-                transaction: TpslTransactionPayload {
-                    device_identifier: item
-                        .router_data
-                        .request
-                        .get_ip_address_as_optional()
-                        .map(|ip| ip.expose())
-                        .unwrap_or_else(|| "127.0.0.1".to_string()),
-                    sms_sending: "N".to_string(),
-                    amount,
-                    forced3_d_s_call: "N".to_string(),
-                    transaction_type: "SALE".to_string(),
+        Ok(Self {
+            merchant: TpslMerchantPayload {
+                webhook_endpoint_url: return_url.clone(),
+                response_type: "URL".to_string(),
+                response_endpoint_url: return_url.clone(),
+                description: "UPI Payment".to_string(),
+                identifier: auth_type.merchant_id.peek().to_string(),
+                webhook_type: "HTTP".to_string(),
+            },
+            cart: TpslCartPayload {
+                item: vec![TpslItemPayload {
                     description: "UPI Transaction".to_string(),
-                    currency: item.router_data.request.currency.to_string(),
-                    is_registration: "N".to_string(),
-                    identifier: item
-                        .router_data
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone(),
-                    date_time: chrono::Utc::now().to_rfc3339(),
-                    token: "TXN_TOKEN".to_string(),
-                    security_token: auth_type.api_key.peek().to_string(),
-                    sub_type: "SALE".to_string(),
-                    request_type: "TXN".to_string(),
+                    provider_identifier: "UPI".to_string(),
+                    surcharge_or_discount_amount: "0".to_string(),
+                    amount: amount.clone(),
+                    com_amt: "0".to_string(),
+                    s_k_u: "UPI".to_string(),
                     reference: item
                         .router_data
                         .resource_common_data
                         .connector_request_reference_id
                         .clone(),
-                    merchant_initiated: "Y".to_string(),
-                    tenure_id: "".to_string(),
+                    identifier: "UPI_ITEM".to_string(),
+                }],
+                reference: item
+                    .router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+                identifier: "UPI_CART".to_string(),
+                description: "UPI Payment Cart".to_string(),
+            },
+            payment: TpslPaymentPayload {
+                method: TpslMethodPayload {
+                    token: "UPI".to_string(),
+                    method_type: "UPI".to_string(),
+                    code: "UPI".to_string(),
                 },
-                consumer: TpslConsumerPayload {
-                    mobile_number: item
-                        .router_data
-                        .request
-                        .browser_info
-                        .as_ref()
-                        .and_then(|info| info.mobile_number.clone())
-                        .unwrap_or_else(|| "9999999999".to_string()),
-                    email_i_d: item
-                        .router_data
-                        .request
-                        .email
-                        .clone()
-                        .map(|e| e.to_string())
-                        .unwrap_or_else(|| "test@example.com".to_string()),
-                    identifier: customer_id.get_string_repr(),
-                    account_no: "".to_string(),
-                    account_type: "SAVINGS".to_string(),
-                    account_holder_name: customer_id.get_string_repr(),
-                    aadhar_no: "".to_string(),
+                instrument: TpslInstrumentPayload {
+                    expiry: TpslExpiryPayload {
+                        year: "2024".to_string(),
+                        month: "12".to_string(),
+                        date_time: chrono::Utc::now().to_rfc3339(),
+                    },
+                    provider: "UPI".to_string(),
+                    i_f_s_c: "".to_string(),
+                    holder: TpslHolderPayload {
+                        name: customer_id.get_string_repr(),
+                        address: TpslAddressPayload {
+                            country: "IN".to_string(),
+                            street: "".to_string(),
+                            state: "".to_string(),
+                            city: "".to_string(),
+                            zip_code: Secret::new("".to_string()),
+                            county: "".to_string(),
+                        },
+                    },
+                    b_i_c: "".to_string(),
+                    instrument_type: "UPI".to_string(),
+                    action: "PAY".to_string(),
+                    m_i_c_r: "".to_string(),
+                    verification_code: "".to_string(),
+                    i_b_a_n: "".to_string(),
+                    processor: "UPI".to_string(),
+                    issuance: TpslExpiryPayload {
+                        year: "2024".to_string(),
+                        month: "12".to_string(),
+                        date_time: chrono::Utc::now().to_rfc3339(),
+                    },
+                    alias: "UPI_ALIAS".to_string(),
+                    identifier: "UPI_INSTRUMENT".to_string(),
+                    token: "UPI_TOKEN".to_string(),
+                    authentication: TpslAuthenticationPayload {
+                        token: "UPI_AUTH".to_string(),
+                        auth_type: "UPI".to_string(),
+                        sub_type: "COLLECT".to_string(),
+                    },
+                    sub_type: "COLLECT".to_string(),
+                    issuer: "UPI".to_string(),
+                    acquirer: "UPI".to_string(),
                 },
-            }),
-            _ => Err(errors::ConnectorError::NotImplemented("Payment methods".to_string()).into()),
-        }
+                instruction: TpslInstructionPayload {
+                    occurrence: "SINGLE".to_string(),
+                    amount: amount.clone(),
+                    frequency: "ONCE".to_string(),
+                    instruction_type: "PAYMENT".to_string(),
+                    description: "UPI Payment".to_string(),
+                    action: "DEBIT".to_string(),
+                    limit: amount.clone(),
+                    end_date_time: chrono::Utc::now().to_rfc3339(),
+                    debit_day: "1".to_string(),
+                    debit_flag: "Y".to_string(),
+                    identifier: "UPI_INSTRUCTION".to_string(),
+                    reference: item
+                        .router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                    start_date_time: chrono::Utc::now().to_rfc3339(),
+                    validity: "VALID".to_string(),
+                },
+            },
+            transaction: TpslTransactionPayload {
+                device_identifier: item
+                    .router_data
+                    .request
+                    .get_ip_address_as_optional()
+                    .map(|ip| ip.expose())
+                    .unwrap_or_else(|| "127.0.0.1".to_string()),
+                sms_sending: "N".to_string(),
+                amount,
+                forced3_d_s_call: "N".to_string(),
+                transaction_type: "SALE".to_string(),
+                description: "UPI Transaction".to_string(),
+                currency: item.router_data.request.currency.to_string(),
+                is_registration: "N".to_string(),
+                identifier: item
+                    .router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+                date_time: chrono::Utc::now().to_rfc3339(),
+                token: "TXN_TOKEN".to_string(),
+                security_token: auth_type.api_key.peek().to_string(),
+                sub_type: "SALE".to_string(),
+                request_type: "TXN".to_string(),
+                reference: item
+                    .router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+                merchant_initiated: "Y".to_string(),
+                tenure_id: "".to_string(),
+            },
+            consumer: TpslConsumerPayload {
+                mobile_number: item
+                    .router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|info| info.mobile_number.clone())
+                    .unwrap_or_else(|| "9999999999".to_string()),
+                email_i_d: item
+                    .router_data
+                    .request
+                    .email
+                    .clone()
+                    .map(|e| e.to_string())
+                    .unwrap_or_else(|| "test@example.com".to_string()),
+                identifier: customer_id.get_string_repr(),
+                account_no: "".to_string(),
+                account_type: "SAVINGS".to_string(),
+                account_holder_name: customer_id.get_string_repr(),
+                aadhar_no: "".to_string(),
+            },
+        })
     }
 }
 
@@ -825,7 +761,7 @@ impl<
         + Serialize,
 >
     TryFrom<
-        TpslRouterData<
+        &crate::connectors::TPSLRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             T,
         >,
@@ -833,7 +769,7 @@ impl<
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: TpslRouterData<
+        item: &crate::connectors::TPSLRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             T,
         >,
@@ -940,7 +876,9 @@ impl<
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.clnt_txn_ref),
                 redirection_data: None,
-                mandate_reference: response.mandate_reg_no.map(|mr| Box::new(domain_types::router_response_types::MandateReference { mandate_id: mr })),
+                mandate_reference: response.mandate_reg_no.map(|mr| {
+                    Box::new(domain_types::connector_types::MandateReference { mandate_id: mr })
+                }),
                 connector_metadata: None,
                 network_txn_id: response.tpsl_txn_id,
                 connector_response_reference_id: response.tpsl_txn_id,
