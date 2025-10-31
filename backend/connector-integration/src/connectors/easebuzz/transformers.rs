@@ -90,7 +90,7 @@ pub struct EaseBuzzPaymentsResponseData {
     pub bank_ref_num: Option<String>,
     pub bankcode: Option<String>,
     pub error: Option<String>,
-    pub error_Message: Option<String>,
+    pub error_message: Option<String>,
     pub vpa: Option<String>,
     pub status_code: Option<String>,
 }
