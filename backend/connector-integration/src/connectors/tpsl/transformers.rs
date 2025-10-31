@@ -846,7 +846,7 @@ impl<F> TryFrom<ResponseRouterData<TpslPaymentsSyncResponse, Self>>
             _ => common_enums::AttemptStatus::Pending,
         };
 
-        let amount_received = response.txn_amt.as_ref().and_then(|amt| {
+        let _amount_received = response.txn_amt.as_ref().and_then(|amt| {
             amt.parse::<f64>()
                 .ok()
                 .map(|amt_f64| (amt_f64 * 100.0) as i64)
