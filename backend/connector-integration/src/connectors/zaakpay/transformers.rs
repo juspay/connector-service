@@ -310,8 +310,8 @@ impl<
         item: ZaakPayRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = ZaakPayAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let merchant_identifier = auth.merchant_identifier.peek().to_string();
-        let secret_key = auth.secret_key.peek().to_string();
+        let merchant_identifier = auth.merchant_identifier.expose();
+        let secret_key = auth.secret_key.expose();
 
         let amount = item
             .connector
@@ -463,8 +463,8 @@ impl<
         item: ZaakPayRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = ZaakPayAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let merchant_identifier = auth.merchant_identifier.peek().to_string();
-        let secret_key = auth.secret_key.peek().to_string();
+        let merchant_identifier = auth.merchant_identifier.expose();
+        let secret_key = auth.secret_key.expose();
 
         let order_id = item
             .router_data
