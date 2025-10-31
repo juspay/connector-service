@@ -442,9 +442,9 @@ impl<
 }
 
 impl<
-    F,
+    F, T
 > TryFrom<ResponseRouterData<ZaakPayPaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<common_utils::types::Transformed>, PaymentsResponseData>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
