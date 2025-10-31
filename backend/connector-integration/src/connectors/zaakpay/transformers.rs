@@ -798,11 +798,7 @@ impl<
 
         let data = CheckDataRequest {
             merchant_identifier: auth_type.merchant_identifier.peek().clone(),
-            mode: if item.router_data.resource_common_data.test_mode.unwrap_or(false) {
-                "0".to_string()
-            } else {
-                "1".to_string()
-            },
+            mode: "1".to_string(), // Default to live mode for refunds
             order_detail,
             refund_detail: Some(refund_detail),
         };
