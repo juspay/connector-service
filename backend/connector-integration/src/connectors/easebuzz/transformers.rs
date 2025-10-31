@@ -1,7 +1,5 @@
-use std::collections::HashMap;
-
 use common_utils::{
-    errors::CustomResult, ext_traits::ValueExt, request::Method, types::StringMinorUnit,
+    errors::CustomResult, types::StringMinorUnit,
     Email,
 };
 use domain_types::{
@@ -167,8 +165,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
+        // Extract phone from payment method data if available
         let phone = item.router_data.request.payment_method_data.get_phone_number().ok().flatten();
         let email = item.router_data.request.email.clone();
+
+        // Extract name from customer_name
+        let (firstname, lastname) = if let Some(customer_name) = &item.router_data.request.customer_name {
+            (customer_name.first_name.clone(), customer_name.last_name.clone())
+        } else {
+            (None, None)
+        };
 
         Ok(Self {
             txnid: item.router_data.resource_common_data.connector_request_reference_id.clone(),
@@ -176,8 +182,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             currency: item.router_data.request.currency.to_string(),
             email,
             phone,
-            firstname: item.router_data.request.customer_name.as_ref().and_then(|name| name.first_name.clone()),
-            lastname: item.router_data.request.customer_name.as_ref().and_then(|name| name.last_name.clone()),
+            firstname,
+            lastname,
             surl: return_url.clone(),
             furl: return_url,
             productinfo: format!("Payment for customer {}", customer_id.get_string_repr()),
@@ -217,6 +223,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
+        // Extract phone from payment method data if available
         let phone = item.router_data.request.payment_method_data.get_phone_number().ok().flatten().unwrap_or_default();
         let email = item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default();
 
@@ -315,7 +322,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
 
         let (status, response) = match response.msg {
             EaseBuzzTxnSyncMessageType::Success(response_data) => {
-                let attempt_status = if response.status {
+                let attempt_status = if response_data.status {
                     common_enums::AttemptStatus::Charged
                 } else {
                     common_enums::AttemptStatus::Failure
@@ -363,70 +370,3 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
         })
     }
 }
-
-// Stub types for unsupported flows
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzVoidRequest;
-
-#[derive(Debug, Clone)]
-pub struct EaseBuzzVoidResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzCaptureRequest;
-
-#[derive(Debug, Clone)]
-pub struct EaseBuzzCaptureResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzRefundRequest;
-
-#[derive(Debug, Clone)]
-pub struct EaseBuzzRefundResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzRefundSyncRequest;
-
-#[derive(Debug, Clone)]
-pub struct EaseBuzzRefundSyncResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzCreateOrderRequest;
-
-#[derive(Debug, Clone)]
-pub struct EaseBuzzCreateOrderResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzSessionTokenRequest;
-
-#[derive(Debug, Clone)]
-pub struct EaseBuzzSessionTokenResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzSetupMandateRequest;
-
-#[derive(Debug, Clone)]
-pub struct EaseBuzzSetupMandateResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzRepeatPaymentRequest;
-
-#[derive(Debug, Clone)]
-pub struct EaseBuzzRepeatPaymentResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzAcceptDisputeRequest;
-
-#[derive(Debug, Clone)]
-pub struct EaseBuzzAcceptDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzSubmitEvidenceRequest;
-
-#[derive(Debug, Clone)]
-pub struct EaseBuzzSubmitEvidenceResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzDefendDisputeRequest;
-
-#[derive(Debug, Clone)]
-pub struct EaseBuzzDefendDisputeResponse;
