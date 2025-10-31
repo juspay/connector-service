@@ -91,31 +91,6 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> connector_types::PaymentSessionToken for TPSL<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for TPSL<T>
-{
-}
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::CreateConnectorCustomer for TPSL<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
 > connector_types::PaymentVoidV2 for TPSL<T>
 {
 }
