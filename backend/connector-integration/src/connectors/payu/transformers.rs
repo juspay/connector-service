@@ -755,10 +755,10 @@ fn determine_upi_flow<
                         // For UPI Collect: pg = UPI, bankcode = UPI, VPA required
                         // The key is that VPA must be populated for sourceObject == "UPI_COLLECT"
                         Ok((
-                            Some(UPI_PG.to_string()),
-                            Some(UPI_COLLECT_BANKCODE.to_string()),
+                            Some(crate::connectors::payu::constants::UPI_PG.to_string()),
+                            Some(crate::connectors::payu::constants::UPI_COLLECT_BANKCODE.to_string()),
                             Some(vpa.peek().to_string()),
-                            UPI_S2S_FLOW.to_string(), // UPI Collect typically uses S2S flow "2"
+                            crate::connectors::payu::constants::UPI_S2S_FLOW.to_string(), // UPI Collect typically uses S2S flow "2"
                         ))
                     } else {
                         // Missing VPA for UPI Collect - this should be an error
