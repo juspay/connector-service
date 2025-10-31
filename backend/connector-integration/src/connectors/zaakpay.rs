@@ -805,6 +805,102 @@ impl_source_verification_stub!(
     RefundSyncData,
     RefundsResponseData
 );
+impl_source_verification_stub!(
+    CreateOrder,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentCreateOrderData,
+    domain_types::connector_types::PaymentCreateOrderResponse
+);
+impl_source_verification_stub!(
+    CreateSessionToken,
+    PaymentFlowData,
+    domain_types::connector_types::SessionTokenRequestData,
+    domain_types::connector_types::SessionTokenResponseData
+);
+impl_source_verification_stub!(
+    CreateAccessToken,
+    PaymentFlowData,
+    domain_types::connector_types::AccessTokenRequestData,
+    domain_types::connector_types::AccessTokenResponseData
+);
+impl_source_verification_stub!(
+    PaymentMethodToken,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentMethodTokenizationData<T>,
+    domain_types::connector_types::PaymentMethodTokenResponse
+);
+impl_source_verification_stub!(
+    Void,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentVoidData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    VoidPC,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentsCancelPostCaptureData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    Refund,
+    RefundFlowData,
+    domain_types::connector_types::RefundsData,
+    RefundsResponseData
+);
+impl_source_verification_stub!(
+    Capture,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentsCaptureData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    SetupMandate,
+    PaymentFlowData,
+    domain_types::connector_types::SetupMandateRequestData<T>,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    RepeatPayment,
+    PaymentFlowData,
+    domain_types::connector_types::RepeatPaymentData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    Accept,
+    domain_types::connector_types::DisputeFlowData,
+    domain_types::connector_types::AcceptDisputeData,
+    domain_types::connector_types::DisputeResponseData
+);
+impl_source_verification_stub!(
+    DefendDispute,
+    domain_types::connector_types::DisputeFlowData,
+    domain_types::connector_types::DisputeDefendData,
+    domain_types::connector_types::DisputeResponseData
+);
+impl_source_verification_stub!(
+    SubmitEvidence,
+    domain_types::connector_types::DisputeFlowData,
+    domain_types::connector_types::SubmitEvidenceData,
+    domain_types::connector_types::DisputeResponseData
+);
+impl_source_verification_stub!(
+    PreAuthenticate,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentsPreAuthenticateData<T>,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    Authenticate,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentsAuthenticateData<T>,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    PostAuthenticate,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentsPostAuthenticateData<T>,
+    PaymentsResponseData
+);
 
 fn get_auth_header_zaakpay(
     auth_type: &transformers::ZaakPayAuth,
