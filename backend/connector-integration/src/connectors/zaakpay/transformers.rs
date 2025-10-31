@@ -365,7 +365,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let _customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let return_url = item.router_data.request.get_router_return_url()?;
         let auth_type = ZaakPayAuth::try_from(&item.router_data.connector_auth_type)?;
         
