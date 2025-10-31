@@ -172,7 +172,6 @@ where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
 {
     let customer_id = router_data.router_data.resource_common_data.get_customer_id()
-        .map_err(|e| e.change_context(ConnectorError::RequestEncodingFailed))
         .change_context(ConnectorError::RequestEncodingFailed)?;
     let amount = router_data
         .connector
