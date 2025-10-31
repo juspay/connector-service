@@ -1,5 +1,4 @@
 use common_utils::{
-    errors::CustomResult, types::StringMinorUnit,
     Email,
 };
 use domain_types::{
