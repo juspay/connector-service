@@ -414,7 +414,7 @@ macros::macro_connector_implementation!(
                 self.common_get_content_type().to_string().into(),
             )];
 
-            let auth_type = transformers::TpslAuth::try_from(&req.connector_auth_type)?;
+            let auth_type = transformers::TpslAuth::try_from((&req.connector_auth_type, &req.request.currency))?;
 
             let mut auth_header = get_tpsl_auth_header(&auth_type)?;
 
