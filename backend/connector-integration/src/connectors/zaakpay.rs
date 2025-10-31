@@ -603,6 +603,12 @@ impl_source_verification_stub!(
     PaymentsSyncData,
     PaymentsResponseData
 );
+impl_source_verification_stub!(
+    RSync,
+    RefundFlowData,
+    RefundSyncData,
+    RefundsResponseData
+);
 
 fn get_auth_header_zaakpay(
     auth_type: &transformers::ZaakPayAuth,
