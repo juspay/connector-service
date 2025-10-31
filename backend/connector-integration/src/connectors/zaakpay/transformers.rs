@@ -450,45 +450,11 @@ impl<
                 };
 
                 let billing_address = BillingAddressType {
-                    address: item
-                        .router_data
-                        .request
-                        .billing_address
-                        .as_ref()
-                        .map(|addr| addr.address.to_string())
-                        .unwrap_or_else(|| "N/A".to_string()),
-                    city: item
-                        .router_data
-                        .request
-                        .billing_address
-                        .as_ref()
-                        .and_then(|addr| addr.city.clone())
-                        .unwrap_or_else(|| "N/A".to_string()),
-                    state: item
-                        .router_data
-                        .request
-                        .billing_address
-                        .as_ref()
-                        .and_then(|addr| addr.state.clone())
-                        .unwrap_or_else(|| "N/A".to_string()),
-                    country: item
-                        .router_data
-                        .request
-                        .billing_address
-                        .as_ref()
-                        .and_then(|addr| addr.country.clone())
-                        .map(|c| c.to_string())
-                        .unwrap_or_else(|| "IN".to_string()),
-                    pincode: Secret::new(
-                        item
-                            .router_data
-                            .request
-                            .billing_address
-                            .as_ref()
-                            .and_then(|addr| addr.zip.clone())
-                            .map(|z| z.to_string())
-                            .unwrap_or_else(|| "000000".to_string()),
-                    ),
+                    address: "N/A".to_string(), // Default address
+                    city: "N/A".to_string(),
+                    state: "N/A".to_string(),
+                    country: "IN".to_string(),
+                    pincode: Secret::new("000000".to_string()),
                 };
 
                 let payment_instrument = PaymentInstrumentTransType {
