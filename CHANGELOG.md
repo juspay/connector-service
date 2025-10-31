@@ -4,6 +4,32 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## [2025-01-XX] - ZaakPay Connector Addition
+
+### Added
+- New ZaakPay connector implementation
+- Payment methods supported: UPI, NetBanking
+- Transaction flows: Authorize, PSync
+
+### Files Created/Modified
+- `src/connectors/zaakpay.rs` - Main connector implementation
+- `src/connectors/zaakpay/transformers.rs` - Request/response transformers
+- `src/connectors/zaakpay/constants.rs` - API constants and endpoints
+- `src/connectors.rs` - Added connector registration
+- `src/types.rs` - Added connector to ConnectorEnum
+- `backend/domain_types/src/connector_types.rs` - Added Zaakpay to ConnectorEnum
+- `backend/domain_types/src/types.rs` - Added zaakpay to Connectors struct
+
+### Technical Details
+- Migrated from Hyperswitch/Euler Haskell implementation
+- Uses UCS v2 macro framework for trait implementations
+- Implements proper error handling and status mapping
+- Full type safety with guard rails
+- Checksum-based authentication using SHA256
+- Supports test and live modes
+
+- - -
+
 ## 2025.10.31.0
 
 ### Features
