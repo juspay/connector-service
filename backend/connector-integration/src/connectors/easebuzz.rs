@@ -8,8 +8,8 @@ use common_utils::{
     errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, PSync},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
+    connector_flow::{Authorize, PSync, Void, Capture, Refund, RSync},
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData},
     errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
