@@ -581,7 +581,7 @@ impl<
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         match item.router_data.resource_common_data.payment_method {
-            common_enums::PaymentMethod::Upi => Ok(Self {
+            common_enums::PaymentMethod::UpiCollect => Ok(Self {
                 merchant: TpslMerchantPayload {
                     webhook_endpoint_url: return_url.clone(),
                     response_type: "URL".to_string(),
