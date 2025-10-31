@@ -129,6 +129,94 @@ impl<
 {
 }
 
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> connector_types::PaymentOrderCreate for ZaakPay<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> connector_types::PaymentSessionToken for ZaakPay<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> connector_types::PaymentAccessToken for ZaakPay<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> connector_types::CreateConnectorCustomer for ZaakPay<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> connector_types::PaymentTokenV2<T> for ZaakPay<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> connector_types::PaymentVoidV2 for ZaakPay<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> connector_types::PaymentVoidPostCaptureV2 for ZaakPay<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> connector_types::IncomingWebhook for ZaakPay<T>
+{
+}
+
 
 
 macros::create_all_prerequisites!(
