@@ -62,6 +62,7 @@ mod tests {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
                             dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -72,6 +73,7 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
@@ -241,6 +243,7 @@ mod tests {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
                             dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -251,6 +254,7 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),

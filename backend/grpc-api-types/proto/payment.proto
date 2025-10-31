@@ -54,6 +54,7 @@ enum PaymentStatus {
   VOID_INITIATED = 12;
   VOIDED = 11;
   VOID_FAILED = 15;
+  VOIDED_POST_CAPTURE = 57;
 
   // Other payment flows
   COD_INITIATED = 10; // Cash on Delivery initiated
@@ -455,16 +456,17 @@ enum Connector {
   WISE = 82;
   WORLDLINE = 83;
   WORLDPAY = 84;
-  SIGNIFYD = 85;
-  PLAID = 86;
-  RISKIFIED = 87;
-  XENDIT = 88;
-  ZEN = 89;
-  ZSL = 90;
-  PHONEPE = 91;
-  CASHFREE = 92;
-  PAYTM = 93;
-  BLUECODE = 94;
+  WORLDPAYVANTIV = 85;
+  SIGNIFYD = 86;
+  PLAID = 87;
+  RISKIFIED = 88;
+  XENDIT = 89;
+  ZEN = 90;
+  ZSL = 91;
+  PHONEPE = 92;
+  CASHFREE = 93;
+  PAYTM = 94;
+  BLUECODE = 95;
 }
 
 // Payment method types.
@@ -916,6 +918,15 @@ message OnlineMandate {
   string user_agent = 2;
 }
 
+// Setup mandate details for payment authorization
+message SetupMandateDetails {
+  // A way to update the mandate's payment method details
+  optional string update_mandate_id = 1;
+  
+  // Details of customer acceptance
+  optional CustomerAcceptance customer_acceptance = 2;
+}
+
 // Information about the customer's browser.
 message BrowserInformation {
   // Display Information
@@ -1179,7 +1190,6 @@ message PaymentServiceAuthorizeRequest {
   optional string complete_authorize_url = 19; // URL to complete authorization
   
   // Session and Token Information
-  optional string access_token = 20; // Access token for secure communication
   optional string session_token = 21; // Session token, if applicable
   
   // Order Details
@@ -1196,11 +1206,21 @@ message PaymentServiceAuthorizeRequest {
   optional CustomerAcceptance customer_acceptance = 28; // Details of customer acceptance
   optional BrowserInformation browser_info = 29; // Information about the customer's browser
   optional PaymentExperience payment_experience = 30; // Preferred payment experience
+  optional string description = 35; // An arbitrary string attached to the payment. Often useful for displaying to users or for your internal record-keeping
 
   optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
 
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 33; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  
+  // Mandate Setup Details
+  optional SetupMandateDetails setup_mandate_details = 34; // Setup mandate details for the authorization
+
+  optional string statement_descriptor_name = 36; // Complete description that appears on customers’ statements
+  optional string statement_descriptor_suffix = 37; // Provides information about a card payment that customers see on their statements
+
+  // State Information
+  optional ConnectorState state = 38; // State data for access token storage and other connector-specific state
 }
 
 // Response message for a payment authorization.
@@ -1252,9 +1272,6 @@ message PaymentServiceGetRequest {
   // Reference
   optional Identifier request_ref_id = 2; // Renamed from connector_request_reference_id
 
-  // Session and Token Information
-  optional string access_token = 3; // Access token for secure communication
-
   // Capture Settings
   optional CaptureMethod capture_method = 8; // Method for capturing the payment
 
@@ -1264,6 +1281,9 @@ message PaymentServiceGetRequest {
   // Amount Information
   int64 amount = 5; // The amount for the payment in minor currency units
   Currency currency = 6; // The currency for the payment, in ISO 4217 three-letter code
+
+  // State Information
+  optional ConnectorState state = 3; // State data for access token storage and other connector-specific state
 }
 
 // Response message for a payment status synchronization.
@@ -1330,12 +1350,15 @@ message PaymentServiceVoidRequest {
   // Browser Information
   optional BrowserInformation browser_info = 5; // Information about the customer's browser
 
-  // Session and Token Information
-  optional string access_token = 6; // Access token for secure communication
-
   // Amount Information
   optional int64 amount = 7; // Amount to void
   optional Currency currency = 8; // Currency of the void amount
+
+  // Metadata
+  map<string, string> connector_metadata = 9; // Additional metadata for the connector
+
+  // State Information
+  optional ConnectorState state = 10; // State data for access token storage and other connector-specific state
 }
 
 // Response message for a payment void operation.
@@ -1358,6 +1381,42 @@ message PaymentServiceVoidResponse {
 
   // Raw Request
   optional SecretString raw_connector_request = 9; // Raw request to the connector for debugging
+
+  // Mandate Details
+  optional MandateReference mandate_reference = 10; // Reference to the mandate, if applicable
+
+  // Authorization Details
+  optional bool incremental_authorization_allowed = 11; // Indicates if incremental authorization is allowed
+}
+
+// Request message for voiding a payment post-capture.
+message PaymentServiceVoidPostCaptureRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+  Identifier transaction_id = 2; // Transaction ID to void post-capture
+  
+  // Void Details
+  optional string cancellation_reason = 3; // Reason for cancelling/voiding the payment
+  optional bool all_keys_required = 4;
+
+  // Browser Information
+  optional BrowserInformation browser_info = 5; // Information about the customer's browser
+}
+
+// Response message for a payment void post-capture operation.
+message PaymentServiceVoidPostCaptureResponse {
+  // Identification
+  Identifier transaction_id = 1; // Identifier for the voided resource
+  
+  // Status Information
+  PaymentStatus status = 2; // Status of the payment attempt after void post-capture
+  optional string error_code = 3; // Error code if the void post-capture operation failed
+  optional string error_message = 4; // Error message if the void post-capture operation failed
+  uint32 status_code = 6; // HTTP status code from the connector
+  map<string, string> response_headers = 7; // Optional HTTP response headers from the connector
+  
+  // Reference
+  optional Identifier response_ref_id = 5; // Response reference ID for tracking
 }
 
 // Request message for capturing a payment.
@@ -1371,7 +1430,7 @@ message PaymentServiceCaptureRequest {
   Currency currency = 4; // Currency of the amount to capture
   
   // Metadata
-  map<string, string> metadata = 5; // Additional metadata for the connector
+  map<string, string> connector_metadata = 5; // Additional metadata for the connector
   
   // Multiple Capture Information
   optional MultipleCaptureRequestData multiple_capture_data = 6; // Data for multiple capture scenarios
@@ -1379,11 +1438,11 @@ message PaymentServiceCaptureRequest {
   // Browser Information
   optional BrowserInformation browser_info = 7; // Browser information, if relevant
 
-  // Session and Token Information
-  optional string access_token = 8; // Access token for secure communication
-
   // Capture Settings
   optional CaptureMethod capture_method = 9; // Method for capturing the payment
+
+  // State Information
+  optional ConnectorState state = 10; // State data for access token storage and other connector-specific state
 }
 
 // Response message for a payment capture operation.
@@ -1406,6 +1465,16 @@ message PaymentServiceCaptureResponse {
 
   // Raw Request
   optional SecretString raw_connector_request = 9; // Raw request to the connector for debugging
+
+  // Payment Details
+  optional int64 captured_amount = 10; // Amount that has been captured
+  optional int64 minor_captured_amount = 11; // Captured amount in minor currency units
+
+  // Mandate Details
+  MandateReference mandate_reference = 12; // Reference to the created mandate
+
+  // Authorization Details
+  optional bool incremental_authorization_allowed = 13; // Indicates if incremental authorization is allowed
 }
 
 // Request message for processing a refund.
@@ -1435,8 +1504,8 @@ message PaymentServiceRefundRequest {
   // Browser Information
   optional BrowserInformation browser_info = 15; // Browser information, if relevant
 
-  // Session and Token Information
-  optional string access_token = 16; // Access token for secure communication
+  // State Information
+  optional ConnectorState state = 17; // State data for access token storage and other connector-specific state
 }
 
 // Response message for a refund operation (unified for both Create and Get).
@@ -1492,8 +1561,8 @@ message PaymentServiceDisputeRequest {
   Identifier transaction_id = 2; // Transaction ID to raise the dispute for
   string dispute_id = 3; // Connector's unique identifier
 
-  // Session and Token Information
-  optional string access_token = 4; // Access token for secure communication
+  // State Information
+  optional ConnectorState state = 5; // State data for access token storage and other connector-specific state
 }
 
 // Response message for dispute operations (unified for both Create and Get).
@@ -1547,6 +1616,7 @@ message PaymentServiceRegisterRequest {
   optional SecretString email = 5; // Email address of the customer
   optional string customer_name = 6; // Name of the customer
   optional string connector_customer_id = 7; // Customer ID as recognized by the connector
+  optional string customer_id = 29; // Merchant's customer ID
   
   // Address Information
   PaymentAddress address = 8; // Billing address details for the mandate
@@ -1565,7 +1635,6 @@ message PaymentServiceRegisterRequest {
   optional string complete_authorize_url = 15; // URL to complete authorization
   
   // Session and Token Information
-  optional string access_token = 16; // Access token for secure communication
   optional string session_token = 17; // Session token, if applicable
   
   // Order Details
@@ -1586,7 +1655,10 @@ message PaymentServiceRegisterRequest {
   optional PaymentExperience payment_experience = 28; // Preferred payment experience
 
   // Account-Specific Configuration
-  map<string, string> merchant_account_metadata = 29; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  map<string, string> merchant_account_metadata = 30; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+
+  // State Information
+  optional ConnectorState state = 31; // State data for access token storage and other connector-specific state
 }
 
 // Response message for a mandate setup operation.
@@ -1608,6 +1680,7 @@ message PaymentServiceRegisterResponse {
   optional RedirectForm redirection_data = 6; // Data for redirecting the customer's browser
   optional string network_txn_id = 7; // Renamed from network_transaction_id
   optional Identifier response_ref_id = 8; // Renamed from connector_response_reference_id
+  optional ConnectorResponseData connector_response = 14; // Various data regarding the response from connector
   
   // Authorization Details
   optional bool incremental_authorization_allowed = 9; // Indicates if incremental authorization is allowed
@@ -1636,24 +1709,44 @@ message PaymentServiceRepeatEverythingRequest {
   optional string merchant_order_reference_id = 6; // Merchant's reference ID for the order
   map<string, string> metadata = 7; // Additional metadata for the connector
   optional string webhook_url = 8; // URL for webhook notifications
+  optional string return_url = 17; // URL to redirect after payment
+  optional string description = 18; // An arbitrary string attached to the payment. Often useful for displaying to users or for your internal record-keeping
+  
+  // Address Information
+  optional PaymentAddress address = 19; // Billing and shipping address details
 
   // Capture Settings
   optional CaptureMethod capture_method = 11; // Method for capturing the payment
 
   // Customer Information
   optional SecretString email = 12; // Email address of the customer
-
-  // Session and Token Information
-  optional string access_token = 20; // Access token for secure communication
+  optional string connector_customer_id = 21; // Customer ID as recognized by the connector
 
   // Browser Information
   optional BrowserInformation browser_info = 13; // Browser information, if relevant
 
-  optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
-  optional PaymentMethodType payment_method_type = 32; // Indicates the sub type of payment method. Eg: 'google_pay' & 'apple_pay'
+  optional bool test_mode = 14; // A boolean value to indicate if the connector is in Test mode
+  optional PaymentMethodType payment_method_type = 15; // Indicates the sub type of payment method. Eg: 'google_pay' & 'apple_pay'
 
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 33; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+
+  // Behavioral Flags and Preferences
+  optional bool off_session = 16; // Indicates if off-session process
+
+  // State Information
+  optional ConnectorState state = 22; // State data for access token storage and other connector-specific state
+
+  optional RecurringMandatePaymentData recurring_mandate_payment_data = 9; // Mandate payment details
+}
+
+// Container for recurring mandate payment data
+message RecurringMandatePaymentData {
+  // Shipping address.
+  optional int64 original_payment_authorized_amount = 1;
+  
+  // Customer Billing address.
+  optional Currency original_payment_authorized_currency = 2;
 }
 
 // Response message for repeat payment operation.
@@ -1668,6 +1761,9 @@ message PaymentServiceRepeatEverythingResponse {
   uint32 status_code = 8; // HTTP status code from the connector
   map<string, string> response_headers = 9; // Optional HTTP response headers from the connector
 
+    // Metadata
+  map<string, string> connector_metadata = 13; // Connector-specific metadata for the transaction
+
   // Transaction Details
   optional string network_txn_id = 5; // Transaction ID from the payment network
   optional Identifier response_ref_id = 6; // Reference ID from the connector response
@@ -1681,6 +1777,12 @@ message PaymentServiceRepeatEverythingResponse {
 
   // Raw Request
   optional SecretString raw_connector_request = 11; // Raw request to the connector for debugging
+
+  // Payment Details
+  optional int64 captured_amount = 15; // Amount that has been captured
+  optional int64 minor_captured_amount = 16; // Captured amount in minor currency units
+
+  optional ConnectorResponseData connector_response = 14; // Various data regarding the response from connector
 }
 
 // Request message for a mandate revoke operation.
@@ -1750,11 +1852,11 @@ message PaymentServicePreAuthenticateRequest {
   optional string return_url = 11; // URL to redirect after authentication
   optional string continue_redirection_url = 12; // URL to complete authorization
   
-  // Session and Token Information
-  optional string access_token = 13; // Access token for secure communication
-  
   // Contextual Information
   optional BrowserInformation browser_info = 14; // Information about the customer's browser
+
+  // State Information
+  optional ConnectorState state = 15; // State data for access token storage and other connector-specific state
 }
 
 // Response message for pre-authentication step
@@ -1814,11 +1916,11 @@ message PaymentServiceAuthenticateRequest {
   optional string return_url = 11; // URL to redirect after authentication
   optional string continue_redirection_url = 12; // URL to complete authorization
   
-  // Session and Token Information
-  optional string access_token = 13; // Access token for secure communication
-  
   // Contextual Information
   optional BrowserInformation browser_info = 14; // Information about the customer's browser
+
+  // State Information
+  optional ConnectorState state = 15; // State data for access token storage and other connector-specific state
 }
 
 // Response message for authentication step
@@ -1881,11 +1983,11 @@ message PaymentServicePostAuthenticateRequest {
   optional string return_url = 11; // URL to redirect after authentication
   optional string continue_redirection_url = 12; // URL to complete authorization
   
-  // Session and Token Information
-  optional string access_token = 13; // Access token for secure communication
-  
   // Contextual Information
   optional BrowserInformation browser_info = 14; // Information about the customer's browser
+
+  // State Information
+  optional ConnectorState state = 15; // State data for access token storage and other connector-specific state
 }
 
 // Response message for post-authentication step
@@ -1932,8 +2034,8 @@ message PaymentServiceTransformRequest {
   // Security
   optional WebhookSecrets webhook_secrets = 3; // Secrets for verifying authenticity
 
-  // Session and Token Information
-  optional string access_token = 4; // Access token for secure communication
+  // State Information
+  optional ConnectorState state = 5; // State data for access token storage and other connector-specific state
 }
 
 // Status of webhook transformation process
@@ -1978,11 +2080,11 @@ message RefundServiceGetRequest {
   // Browser Information
   optional BrowserInformation browser_info = 5; // Information about the customer's browser
 
-  // Session and Token Information
-  optional string access_token = 6; // Access token for secure communication
-
 // Metadata
   map<string, string> refund_metadata = 7; // Metadata specific to the refund sync  
+
+// State Information
+  optional ConnectorState state = 8; // State data for access token storage and other connector-specific state
 }
 
 // Legacy alias for backward compatibility - use RefundResponse instead

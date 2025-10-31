@@ -94,6 +94,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -102,6 +103,7 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -271,6 +273,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -279,6 +282,7 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -399,6 +403,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -407,6 +412,7 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -549,6 +555,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -557,6 +564,7 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -867,6 +875,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        ..Default::default()
                     },
                     ..Default::default()
                 },
@@ -875,6 +884,7 @@ mod tests {
                 raw_connector_request: None,
                 minor_amount_capturable: None,
                 connector_response: None,
+                recurring_mandate_payment_data: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1051,6 +1061,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        ..Default::default()
                     },
                     ..Default::default()
                 },
@@ -1059,6 +1070,7 @@ mod tests {
                 raw_connector_request: None,
                 minor_amount_capturable: None,
                 connector_response: None,
+                recurring_mandate_payment_data: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1237,6 +1249,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -1245,6 +1258,7 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1337,6 +1351,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -1345,6 +1360,7 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1442,6 +1458,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -1450,6 +1467,7 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "invalid_key".to_string().into(),
@@ -1591,6 +1609,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        ..Default::default()
                     },
                     ..Default::default()
                 },
@@ -1599,6 +1618,7 @@ mod tests {
                 raw_connector_request: None,
                 minor_amount_capturable: None,
                 connector_response: None,
+                recurring_mandate_payment_data: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1714,6 +1734,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        ..Default::default()
                     },
                     ..Default::default()
                 },
@@ -1722,6 +1743,7 @@ mod tests {
                 raw_connector_request: None,
                 minor_amount_capturable: None,
                 connector_response: None,
+                recurring_mandate_payment_data: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1826,6 +1848,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        ..Default::default()
                     },
                     ..Default::default()
                 },
@@ -1834,6 +1857,7 @@ mod tests {
                 raw_connector_request: None,
                 minor_amount_capturable: None,
                 connector_response: None,
+                recurring_mandate_payment_data: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),

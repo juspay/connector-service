@@ -14,14 +14,15 @@ use crate::{connectors::cybersource::CybersourceRouterData, types::ResponseRoute
 use cards;
 use domain_types::{
     connector_flow::{
-        Authenticate, Authorize, Capture, PostAuthenticate, PreAuthenticate, SetupMandate, Void,
+        Authenticate, Authorize, Capture, PostAuthenticate, PreAuthenticate, RepeatPayment,
+        SetupMandate, Void,
     },
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
-        SetupMandateRequestData,
+        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::{self, ConnectorError},
     payment_address::Address,
@@ -614,12 +615,18 @@ pub struct ApplePayPaymentInformation {
 pub struct MandatePaymentTokenizedCard {
     transaction_type: TransactionType,
 }
-
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MandateCard {
+    type_selection_indicator: Option<String>,
+}
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MandatePaymentInformation {
     payment_instrument: CybersoucrePaymentInstrument,
-    tokenized_card: MandatePaymentTokenizedCard,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tokenized_card: Option<MandatePaymentTokenizedCard>,
+    card: Option<MandateCard>,
 }
 
 #[derive(Debug, Serialize)]
@@ -829,6 +836,38 @@ impl<
                 PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
+            T,
+        >,
+    ) -> Self {
+        Self {
+            code: Some(
+                item.router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
+        }
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    From<
+        &CybersourceRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            T,
+        >,
+    > for ClientReferenceInformation
+{
+    fn from(
+        item: &CybersourceRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
             T,
         >,
     ) -> Self {
@@ -1238,7 +1277,7 @@ impl<
                 number: ccard.card_number,
                 expiration_month: ccard.card_exp_month,
                 expiration_year: ccard.card_exp_year,
-                security_code: None,
+                security_code: Some(ccard.card_cvc),
                 card_type: card_type.clone(),
                 type_selection_indicator: Some("1".to_owned()),
             },
@@ -2575,12 +2614,13 @@ impl<
     ) -> Result<Self, Self::Error> {
         let merchant_defined_information = value
             .router_data
-            .resource_common_data
-            .connector_meta_data
+            .request
+            .connector_metadata
             .clone()
-            .map(|secret_value: Secret<serde_json::Value>| {
-                convert_metadata_to_merchant_defined_info(secret_value.expose())
+            .map(|connector_metadata| {
+                convert_metadata_to_merchant_defined_info(connector_metadata.expose())
             });
+
         let currency = value.router_data.request.currency.unwrap();
         let total_amount = value
             .connector
@@ -2948,9 +2988,16 @@ impl<
         );
         let response =
             get_payment_response((&item.response, status, item.http_code)).map_err(|err| *err);
+        let connector_response = item
+            .response
+            .processor_information
+            .as_ref()
+            .map(AdditionalPaymentMethodConnectorResponse::from)
+            .map(domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data);
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
+                connector_response,
                 ..item.router_data.resource_common_data
             },
             response,
@@ -3887,9 +3934,17 @@ impl<
         let error_response =
             get_error_response_if_failure((&item.response, mandate_status, item.http_code));
 
+        let connector_response = item
+            .response
+            .processor_information
+            .as_ref()
+            .map(AdditionalPaymentMethodConnectorResponse::from)
+            .map(domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data);
+
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status: mandate_status,
+                connector_response,
                 ..item.router_data.resource_common_data
             },
             response: match error_response {
@@ -4049,7 +4104,7 @@ impl<
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_payment_amount.to_owned(),
+                item.router_data.request.minor_refund_amount.to_owned(),
                 item.router_data.request.currency,
             )
             .change_context(ConnectorError::AmountConversionFailed)?;
@@ -4415,5 +4470,335 @@ impl RemoveNewLine for Option<Secret<String>> {
 impl RemoveNewLine for Option<String> {
     fn remove_new_line(&self) -> Self {
         self.clone().map(|value| value.replace("\n", " "))
+    }
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CybersourceRepeatPaymentRequest {
+    processing_information: ProcessingInformation,
+    payment_information: RepeatPaymentInformation,
+    order_information: OrderInformationWithBill,
+    client_reference_information: ClientReferenceInformation,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    consumer_authentication_information: Option<CybersourceConsumerAuthInformation>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    merchant_defined_information: Option<Vec<MerchantDefinedInformation>>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum RepeatPaymentInformation {
+    MandatePayment(Box<MandatePaymentInformation>),
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        CybersourceRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            T,
+        >,
+    > for CybersourceRepeatPaymentRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: CybersourceRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let processing_information = ProcessingInformation::try_from((&item, None, None))?;
+
+        // Extract connector mandate ID from mandate_reference
+        let connector_mandate_id = match &item.router_data.request.mandate_reference {
+            MandateReferenceId::ConnectorMandateId(connector_mandate_data) => {
+                connector_mandate_data
+                    .get_connector_mandate_id()
+                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                        field_name: "connector_mandate_id",
+                    })?
+            }
+            MandateReferenceId::NetworkMandateId(_)
+            | MandateReferenceId::NetworkTokenWithNTI(_) => {
+                return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                    message: "Network mandate ID not supported for Cybersource repeat payments"
+                        .to_string(),
+                    connector: "cybersource",
+                }));
+            }
+        };
+
+        let payment_instrument = CybersoucrePaymentInstrument {
+            id: Secret::new(connector_mandate_id),
+        };
+        let mandate_card_information = match item.router_data.request.payment_method_type {
+            Some(common_enums::PaymentMethodType::Credit)
+            | Some(common_enums::PaymentMethodType::Debit) => Some(MandateCard {
+                type_selection_indicator: Some("1".to_owned()),
+            }),
+            _ => None,
+        };
+
+        let tokenized_card = match item.router_data.request.payment_method_type {
+            Some(common_enums::PaymentMethodType::GooglePay)
+            | Some(common_enums::PaymentMethodType::ApplePay)
+            | Some(common_enums::PaymentMethodType::SamsungPay) => {
+                Some(MandatePaymentTokenizedCard {
+                    transaction_type: TransactionType::StoredCredentials,
+                })
+            }
+            _ => None,
+        };
+        let bill_to = item
+            .router_data
+            .resource_common_data
+            .get_optional_billing_email()
+            .and_then(|email| {
+                build_bill_to(
+                    item.router_data.resource_common_data.get_optional_billing(),
+                    email,
+                )
+                .ok()
+            });
+        let order_information = OrderInformationWithBill::try_from((&item, bill_to))?;
+        let payment_information =
+            RepeatPaymentInformation::MandatePayment(Box::new(MandatePaymentInformation {
+                payment_instrument,
+                tokenized_card,
+                card: mandate_card_information,
+            }));
+        let client_reference_information = ClientReferenceInformation::from(&item);
+        let merchant_defined_information = item
+            .router_data
+            .request
+            .metadata
+            .as_ref()
+            .map(|metadata_map| {
+                serde_json::to_value(metadata_map)
+                    .change_context(errors::ConnectorError::RequestEncodingFailed)
+                    .map(convert_metadata_to_merchant_defined_info)
+            })
+            .transpose()?;
+        Ok(Self {
+            processing_information,
+            payment_information,
+            order_information,
+            client_reference_information,
+            merchant_defined_information,
+            consumer_authentication_information: None,
+        })
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<(
+        &CybersourceRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            T,
+        >,
+        Option<BillTo>,
+    )> for OrderInformationWithBill
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        (item, bill_to): (
+            &CybersourceRouterData<
+                RouterDataV2<
+                    RepeatPayment,
+                    PaymentFlowData,
+                    RepeatPaymentData,
+                    PaymentsResponseData,
+                >,
+                T,
+            >,
+            Option<BillTo>,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let total_amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.minor_amount.to_owned(),
+                item.router_data.request.currency,
+            )
+            .change_context(ConnectorError::AmountConversionFailed)?;
+        Ok(Self {
+            amount_details: Amount {
+                total_amount,
+                currency: item.router_data.request.currency,
+            },
+            bill_to,
+        })
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<(
+        &CybersourceRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            T,
+        >,
+        Option<PaymentSolution>,
+        Option<String>,
+    )> for ProcessingInformation
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        (item, solution, network): (
+            &CybersourceRouterData<
+                RouterDataV2<
+                    RepeatPayment,
+                    PaymentFlowData,
+                    RepeatPaymentData,
+                    PaymentsResponseData,
+                >,
+                T,
+            >,
+            Option<PaymentSolution>,
+            Option<String>,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let commerce_indicator = solution
+            .as_ref()
+            .map(|pm_solution| match pm_solution {
+                PaymentSolution::ApplePay | PaymentSolution::SamsungPay => network
+                    .as_ref()
+                    .map(|card_network| match card_network.to_lowercase().as_str() {
+                        "mastercard" => "spa",
+                        _ => "internet",
+                    })
+                    .unwrap_or("internet"),
+                PaymentSolution::GooglePay => "internet",
+            })
+            .unwrap_or("internet")
+            .to_string();
+
+        let connector_merchant_config = CybersourceConnectorMetadataObject::try_from(
+            &item.router_data.request.merchant_account_metadata,
+        )?;
+
+        // Extract connector mandate ID from mandate_reference
+        let connector_mandate_id = match &item.router_data.request.mandate_reference {
+            MandateReferenceId::ConnectorMandateId(connector_mandate_data) => {
+                connector_mandate_data
+                    .get_connector_mandate_id()
+                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                        field_name: "connector_mandate_id",
+                    })?
+            }
+            MandateReferenceId::NetworkMandateId(_)
+            | MandateReferenceId::NetworkTokenWithNTI(_) => {
+                return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                    message: "Network mandate ID not supported for Cybersource repeat payments"
+                        .to_string(),
+                    connector: "cybersource",
+                }));
+            }
+        };
+
+        let (action_list, action_token_types, authorization_options) = if !connector_mandate_id
+            .is_empty()
+        {
+            match item.router_data.request.mandate_reference.clone() {
+                MandateReferenceId::ConnectorMandateId(_) => {
+                    let original_amount = item
+                        .router_data
+                        .request
+                        .recurring_mandate_payment_data
+                        .as_ref()
+                        .and_then(|recurring_mandate_payment_data| {
+                            recurring_mandate_payment_data.original_payment_authorized_amount
+                        });
+
+                    let original_currency = item
+                        .router_data
+                        .request
+                        .recurring_mandate_payment_data
+                        .as_ref()
+                        .and_then(|recurring_mandate_payment_data| {
+                            recurring_mandate_payment_data.original_payment_authorized_currency
+                        });
+
+                    let original_authorized_amount = match original_amount.zip(original_currency) {
+                        Some((original_amount, original_currency)) => {
+                            Some(domain_types::utils::get_amount_as_string(
+                                &common_enums::CurrencyUnit::Base,
+                                original_amount,
+                                original_currency,
+                            )?)
+                        }
+                        None => None,
+                    };
+                    (
+                        None,
+                        None,
+                        Some(CybersourceAuthorizationOptions {
+                            initiator: None,
+                            merchant_initiated_transaction: Some(MerchantInitiatedTransaction {
+                                reason: None,
+                                original_authorized_amount,
+                                previous_transaction_id: None,
+                            }),
+                            ignore_avs_result: connector_merchant_config.disable_avs,
+                            ignore_cv_result: connector_merchant_config.disable_cvn,
+                        }),
+                    )
+                }
+                MandateReferenceId::NetworkMandateId(_)
+                | MandateReferenceId::NetworkTokenWithNTI(_) => {
+                    return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                        message: "Network mandate ID not supported for Cybersource repeat payments"
+                            .to_string(),
+                        connector: "cybersource",
+                    }));
+                }
+            }
+        } else {
+            (
+                None,
+                None,
+                Some(CybersourceAuthorizationOptions {
+                    initiator: None,
+                    merchant_initiated_transaction: None,
+                    ignore_avs_result: connector_merchant_config.disable_avs,
+                    ignore_cv_result: connector_merchant_config.disable_cvn,
+                }),
+            )
+        };
+
+        Ok(Self {
+            capture: Some(matches!(
+                item.router_data.request.capture_method,
+                Some(common_enums::CaptureMethod::Automatic) | None
+            )),
+            payment_solution: solution.map(String::from),
+            action_list,
+            action_token_types,
+            authorization_options,
+            capture_options: None,
+            commerce_indicator,
+        })
     }
 }

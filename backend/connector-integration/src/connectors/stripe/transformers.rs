@@ -9,11 +9,14 @@ use common_utils::{
     types::MinorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, Void},
+    connector_flow::{
+        Authorize, Capture, CreateConnectorCustomer, RepeatPayment, SetupMandate, Void,
+    },
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        ConnectorCustomerData, ConnectorCustomerResponse, MandateReference, MandateReferenceId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::{self, ConnectorError},
     mandates::AcceptanceType,
@@ -75,6 +78,12 @@ impl GetRequestIncrementalAuthorization for PaymentsCaptureData {
 }
 
 impl GetRequestIncrementalAuthorization for PaymentVoidData {
+    fn get_request_incremental_authorization(&self) -> Option<bool> {
+        None
+    }
+}
+
+impl GetRequestIncrementalAuthorization for RepeatPaymentData {
     fn get_request_incremental_authorization(&self) -> Option<bool> {
         None
     }
@@ -242,7 +251,7 @@ pub struct StripeMetadata {
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
-pub struct SetupIntentRequest<
+pub struct SetupMandateRequest<
     T: PaymentMethodDataTypes
         + std::fmt::Debug
         + std::marker::Sync
@@ -346,7 +355,7 @@ pub struct StripeTokenResponse {
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
-pub struct CustomerRequest {
+pub struct CreateConnectorCustomerRequest {
     pub description: Option<String>,
     pub email: Option<Email>,
     pub phone: Option<Secret<String>>,
@@ -355,7 +364,7 @@ pub struct CustomerRequest {
 }
 
 #[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
-pub struct StripeCustomerResponse {
+pub struct CreateConnectorCustomerResponse {
     pub id: String,
     pub description: Option<String>,
     pub email: Option<Email>,
@@ -2506,11 +2515,11 @@ impl StripePaymentMethodDetailsResponse {
 #[derive(Deserialize)]
 pub struct SetupIntentSyncResponse {
     #[serde(flatten)]
-    setup_intent_fields: SetupIntentResponse,
+    setup_intent_fields: SetupMandateResponse,
 }
 
 impl Deref for SetupIntentSyncResponse {
-    type Target = SetupIntentResponse;
+    type Target = SetupMandateResponse;
 
     fn deref(&self) -> &Self::Target {
         &self.setup_intent_fields
@@ -2526,8 +2535,8 @@ impl From<SetupIntentSyncResponse> for PaymentIntentSyncResponse {
     }
 }
 
-impl From<SetupIntentResponse> for PaymentIntentResponse {
-    fn from(value: SetupIntentResponse) -> Self {
+impl From<SetupMandateResponse> for PaymentIntentResponse {
+    fn from(value: SetupMandateResponse) -> Self {
         Self {
             id: value.id,
             object: value.object,
@@ -2547,7 +2556,7 @@ impl From<SetupIntentResponse> for PaymentIntentResponse {
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
-pub struct SetupIntentResponse {
+pub struct SetupMandateResponse {
     pub id: String,
     pub object: String,
     pub status: StripePaymentStatus, // Change to SetupStatus
@@ -2996,11 +3005,11 @@ fn extract_payment_method_connector_response_from_latest_attempt(
     .map(ConnectorResponseData::with_additional_payment_method_data)
 }
 
-impl<F, T> TryFrom<ResponseRouterData<SetupIntentResponse, Self>>
+impl<F, T> TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<SetupIntentResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<SetupMandateResponse, Self>) -> Result<Self, Self::Error> {
         let redirect_data = item.response.next_action.clone();
         let redirection_data = redirect_data
             .and_then(|redirection_data| redirection_data.get_url())
@@ -3920,7 +3929,7 @@ pub(super) fn transform_headers_for_connect_platform(
 #[serde(untagged)]
 pub enum PaymentSyncResponse {
     PaymentIntentSyncResponse(PaymentIntentSyncResponse),
-    SetupIntentResponse(SetupIntentResponse),
+    SetupMandateResponse(SetupMandateResponse),
 }
 
 impl<F> TryFrom<ResponseRouterData<PaymentSyncResponse, Self>>
@@ -3931,7 +3940,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentSyncResponse, Self>>
         let id = item.router_data.request.connector_transaction_id.clone();
         match id.get_connector_transaction_id() {
             Ok(x) if x.starts_with("set") => match item.response {
-                PaymentSyncResponse::SetupIntentResponse(setup_intent_response) => {
+                PaymentSyncResponse::SetupMandateResponse(setup_intent_response) => {
                     RouterDataV2::try_from(ResponseRouterData {
                         response: setup_intent_response,
                         router_data: item.router_data,
@@ -4318,5 +4327,654 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
             response,
             ..item.router_data
         })
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for SetupMandateRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: StripeRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        //Only cards supported for mandates
+        let pm_type = StripePaymentMethodType::Card;
+        let payment_data = StripePaymentMethodData::try_from((
+            &item,
+            item.router_data.resource_common_data.auth_type,
+            pm_type,
+        ))?;
+
+        let meta_data = Some(get_transaction_metadata(
+            item.router_data.request.metadata.clone().map(Into::into),
+            item.router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+        ));
+
+        let browser_info = item
+            .router_data
+            .request
+            .browser_info
+            .clone()
+            .map(StripeBrowserInformation::from);
+
+        Ok(Self {
+            confirm: true,
+            payment_data,
+            return_url: item.router_data.request.router_return_url.clone(),
+            off_session: item.router_data.request.off_session,
+            usage: item.router_data.request.setup_future_usage,
+            payment_method_options: None,
+            customer: item
+                .router_data
+                .resource_common_data
+                .connector_customer
+                .to_owned()
+                .map(Secret::new),
+            meta_data,
+            payment_method_types: Some(pm_type),
+            expand: Some(ExpandableObjects::LatestAttempt),
+            browser_info,
+        })
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<(
+        &StripeRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+        common_enums::AuthenticationType,
+        StripePaymentMethodType,
+    )> for StripePaymentMethodData<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        (item, auth_type, pm_type): (
+            &StripeRouterData<
+                RouterDataV2<
+                    SetupMandate,
+                    PaymentFlowData,
+                    SetupMandateRequestData<T>,
+                    PaymentsResponseData,
+                >,
+                T,
+            >,
+            common_enums::AuthenticationType,
+            StripePaymentMethodType,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let pm_data = &item.router_data.request.payment_method_data;
+        match pm_data {
+            PaymentMethodData::Card(ref ccard) => {
+                let payment_method_auth_type = match auth_type {
+                    common_enums::AuthenticationType::ThreeDs => Auth3ds::Any,
+                    common_enums::AuthenticationType::NoThreeDs => Auth3ds::Automatic,
+                };
+                Ok(Self::try_from((
+                    ccard,
+                    payment_method_auth_type,
+                    item.router_data.request.request_incremental_authorization,
+                    None,
+                    None,
+                ))?)
+            }
+            PaymentMethodData::PayLater(_) => Ok(Self::PayLater(StripePayLaterData {
+                payment_method_data_type: pm_type,
+            })),
+            PaymentMethodData::BankRedirect(ref bank_redirect_data) => {
+                Ok(Self::try_from(bank_redirect_data)?)
+            }
+            PaymentMethodData::Wallet(ref wallet_data) => Ok(Self::try_from((wallet_data, None))?),
+            PaymentMethodData::BankDebit(bank_debit_data) => {
+                let (_pm_type, bank_data) = get_bank_debit_data(bank_debit_data);
+
+                Ok(Self::BankDebit(StripeBankDebitData {
+                    bank_specific_data: bank_data,
+                }))
+            }
+            PaymentMethodData::BankTransfer(bank_transfer_data) => match bank_transfer_data.deref()
+            {
+                payment_method_data::BankTransferData::AchBankTransfer {} => {
+                    Ok(Self::BankTransfer(StripeBankTransferData::AchBankTransfer(
+                        Box::new(AchTransferData {
+                            payment_method_data_type: StripePaymentMethodType::CustomerBalance,
+                            bank_transfer_type: StripeCreditTransferTypes::AchCreditTransfer,
+                            payment_method_type: StripePaymentMethodType::CustomerBalance,
+                            balance_funding_type: BankTransferType::BankTransfers,
+                        }),
+                    )))
+                }
+                payment_method_data::BankTransferData::MultibancoBankTransfer {} => Ok(
+                    Self::BankTransfer(StripeBankTransferData::MultibancoBankTransfers(Box::new(
+                        MultibancoTransferData {
+                            payment_method_data_type: StripeCreditTransferTypes::Multibanco,
+                            payment_method_type: StripeCreditTransferTypes::Multibanco,
+                            email: item.router_data.resource_common_data.get_billing_email()?,
+                        },
+                    ))),
+                ),
+                payment_method_data::BankTransferData::SepaBankTransfer {} => {
+                    Ok(Self::BankTransfer(
+                        StripeBankTransferData::SepaBankTransfer(Box::new(SepaBankTransferData {
+                            payment_method_data_type: StripePaymentMethodType::CustomerBalance,
+                            bank_transfer_type: BankTransferType::EuBankTransfer,
+                            balance_funding_type: BankTransferType::BankTransfers,
+                            payment_method_type: StripePaymentMethodType::CustomerBalance,
+                            country: item
+                                .router_data
+                                .resource_common_data
+                                .get_billing_country()?,
+                        })),
+                    ))
+                }
+                payment_method_data::BankTransferData::BacsBankTransfer { .. } => {
+                    Ok(Self::BankTransfer(
+                        StripeBankTransferData::BacsBankTransfers(Box::new(BacsBankTransferData {
+                            payment_method_data_type: StripePaymentMethodType::CustomerBalance,
+                            bank_transfer_type: BankTransferType::GbBankTransfer,
+                            balance_funding_type: BankTransferType::BankTransfers,
+                            payment_method_type: StripePaymentMethodType::CustomerBalance,
+                        })),
+                    ))
+                }
+                payment_method_data::BankTransferData::Pix { .. }
+                | payment_method_data::BankTransferData::Pse {}
+                | payment_method_data::BankTransferData::PermataBankTransfer { .. }
+                | payment_method_data::BankTransferData::BcaBankTransfer { .. }
+                | payment_method_data::BankTransferData::BniVaBankTransfer { .. }
+                | payment_method_data::BankTransferData::BriVaBankTransfer { .. }
+                | payment_method_data::BankTransferData::CimbVaBankTransfer { .. }
+                | payment_method_data::BankTransferData::DanamonVaBankTransfer { .. }
+                | payment_method_data::BankTransferData::LocalBankTransfer { .. }
+                | payment_method_data::BankTransferData::InstantBankTransfer {}
+                | payment_method_data::BankTransferData::InstantBankTransferFinland {}
+                | payment_method_data::BankTransferData::InstantBankTransferPoland {}
+                | payment_method_data::BankTransferData::MandiriVaBankTransfer { .. } => {
+                    Err(ConnectorError::NotImplemented(
+                        get_unimplemented_payment_method_error_message("stripe"),
+                    )
+                    .into())
+                }
+            },
+            PaymentMethodData::MandatePayment
+            | PaymentMethodData::Crypto(_)
+            | PaymentMethodData::Reward
+            | PaymentMethodData::RealTimePayment(_)
+            | PaymentMethodData::MobilePayment(_)
+            | PaymentMethodData::GiftCard(_)
+            | PaymentMethodData::Upi(_)
+            | PaymentMethodData::CardRedirect(_)
+            | PaymentMethodData::Voucher(_)
+            | PaymentMethodData::OpenBanking(_)
+            | PaymentMethodData::CardToken(_)
+            | PaymentMethodData::NetworkToken(_)
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                Err(ConnectorError::NotImplemented(
+                    get_unimplemented_payment_method_error_message("stripe"),
+                ))?
+            }
+        }
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<
+                CreateConnectorCustomer,
+                PaymentFlowData,
+                ConnectorCustomerData,
+                ConnectorCustomerResponse,
+            >,
+            T,
+        >,
+    > for CreateConnectorCustomerRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: StripeRouterData<
+            RouterDataV2<
+                CreateConnectorCustomer,
+                PaymentFlowData,
+                ConnectorCustomerData,
+                ConnectorCustomerResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            description: item.router_data.request.description.to_owned(),
+            email: item
+                .router_data
+                .request
+                .email
+                .map(|email| email.peek().to_owned()),
+            phone: item.router_data.request.phone.to_owned(),
+            name: item.router_data.request.name.to_owned(),
+            source: item
+                .router_data
+                .request
+                .preprocessing_id
+                .to_owned()
+                .map(Secret::new),
+        })
+    }
+}
+
+impl<F, T> TryFrom<ResponseRouterData<CreateConnectorCustomerResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, T, ConnectorCustomerResponse>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<CreateConnectorCustomerResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            response: Ok(ConnectorCustomerResponse {
+                connector_customer_id: item.response.id,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+impl TryFrom<&RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>>
+    for StripeSplitPaymentRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: &RouterDataV2<
+            RepeatPayment,
+            PaymentFlowData,
+            RepeatPaymentData,
+            PaymentsResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        //extracting mandate metadata from CIT call if CIT call was a Split Payment
+        let from_metadata = match &item
+            .request
+            .mandate_reference {
+                MandateReferenceId::ConnectorMandateId(mandate_data) => {
+                    mandate_data.get_mandate_metadata()
+                }
+                _ => None,
+            }
+            .and_then(|secret_value| {
+                let json_value = secret_value.clone().expose();
+                match serde_json::from_value::<Self>(json_value.clone()) {
+                    Ok(val) => Some(val),
+                    Err(err) => {
+                        tracing::info!(
+                            "STRIPE: Picking merchant_account_id and merchant_config_currency from payments request: {:?}", err
+                        );
+                        None
+                    }
+                }
+            });
+
+        // If the Split Payment Request in MIT mismatches with the metadata from CIT, throw an error
+        if from_metadata.is_some() && item.request.split_payments.is_some() {
+            let mut mit_charge_type = None;
+            let mut mit_application_fees = None;
+            let mut mit_transfer_account_id = None;
+            if let Some(domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(
+                stripe_split_payment,
+            )) = item.request.split_payments.as_ref()
+            {
+                mit_charge_type = Some(stripe_split_payment.charge_type.clone());
+                mit_application_fees = stripe_split_payment.application_fees;
+                mit_transfer_account_id = Some(stripe_split_payment.transfer_account_id.clone());
+            }
+
+            if mit_charge_type != from_metadata.as_ref().and_then(|m| m.charge_type.clone())
+                || mit_application_fees != from_metadata.as_ref().and_then(|m| m.application_fees)
+                || mit_transfer_account_id
+                    != from_metadata
+                        .as_ref()
+                        .and_then(|m| m.transfer_account_id.clone())
+            {
+                let mismatched_fields = ["transfer_account_id", "application_fees", "charge_type"];
+
+                let field_str = mismatched_fields.join(", ");
+                Err(ConnectorError::MandatePaymentDataMismatch { fields: field_str })?
+            }
+        }
+
+        // If Mandate Metadata from CIT call has something, populate it
+        let (charge_type, mut transfer_account_id, application_fees) =
+            if let Some(ref metadata) = from_metadata {
+                (
+                    metadata.charge_type.clone(),
+                    metadata.transfer_account_id.clone(),
+                    metadata.application_fees,
+                )
+            } else {
+                (None, None, None)
+            };
+
+        // If Charge Type is Destination, transfer_account_id need not be appended in headers
+        if charge_type
+            == Some(common_enums::PaymentChargeType::Stripe(
+                common_enums::StripeChargeType::Destination,
+            ))
+        {
+            transfer_account_id = None;
+        }
+        Ok(Self {
+            charge_type,
+            transfer_account_id,
+            application_fees,
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<PaymentsAuthorizeResponse, Self>>
+    for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<PaymentsAuthorizeResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        RouterDataV2::try_from(ResponseRouterData {
+            response: item.response.0,
+            router_data: item.router_data,
+            http_code: item.http_code,
+        })
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            T,
+        >,
+    > for PaymentIntentRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        value: StripeRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let item = value.router_data;
+
+        let mandate_metadata = match &item.request.mandate_reference {
+            MandateReferenceId::ConnectorMandateId(mandate_data) => {
+                Some(mandate_data.get_mandate_metadata())
+            }
+            _ => None,
+        };
+
+        let (transfer_account_id, charge_type, application_fees) =
+            match mandate_metadata.as_ref().and_then(|s| s.as_ref()) {
+                Some(secret_value) => {
+                    let json_value = secret_value.clone().expose();
+
+                    let parsed: Result<StripeSplitPaymentRequest, _> =
+                        serde_json::from_value(json_value);
+
+                    match parsed {
+                        Ok(data) => (
+                            data.transfer_account_id,
+                            data.charge_type,
+                            data.application_fees,
+                        ),
+                        Err(_) => (None, None, None),
+                    }
+                }
+                None => (None, None, None),
+            };
+
+        let payment_method_token = match &item.request.split_payments {
+            Some(domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(_)) => {
+                match item.resource_common_data.payment_method_token.clone() {
+                    Some(domain_types::router_data::PaymentMethodToken::Token(secret)) => {
+                        Some(secret)
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
+        };
+
+        let amount =
+            StripeAmountConvertor::convert(item.request.minor_amount, item.request.currency)?;
+        let order_id = item
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        let shipping_address = match payment_method_token {
+            Some(_) => None,
+            None => Some(StripeShippingAddress {
+                city: item.resource_common_data.get_optional_shipping_city(),
+                country: item.resource_common_data.get_optional_shipping_country(),
+                line1: item.resource_common_data.get_optional_shipping_line1(),
+                line2: item.resource_common_data.get_optional_shipping_line2(),
+                zip: item.resource_common_data.get_optional_shipping_zip(),
+                state: item.resource_common_data.get_optional_shipping_state(),
+                name: item.resource_common_data.get_optional_shipping_full_name(),
+                phone: item
+                    .resource_common_data
+                    .get_optional_shipping_phone_number(),
+            }),
+        };
+
+        let (
+            mut payment_data,
+            payment_method,
+            billing_address,
+            payment_method_types,
+            setup_future_usage,
+        ) = if payment_method_token.is_some() {
+            (None, None, StripeBillingAddress::default(), None, None)
+        } else {
+            match &item.request.mandate_reference {
+                MandateReferenceId::ConnectorMandateId(connector_mandate_ids) => (
+                    None,
+                    connector_mandate_ids.get_connector_mandate_id(),
+                    StripeBillingAddress::default(),
+                    get_payment_method_type_for_saved_payment_method_payment(&item)?,
+                    None,
+                ),
+                MandateReferenceId::NetworkMandateId(_)
+                | MandateReferenceId::NetworkTokenWithNTI(_) => {
+                    Err(ConnectorError::NotSupported {
+                        message: "This Mandate type is not yet supported".to_string(),
+                        connector: "Stripe",
+                    })?
+                }
+            }
+        };
+
+        if payment_method_token.is_some() {
+            payment_data = None
+        };
+
+        let meta_data = get_transaction_metadata(item.request.metadata.clone(), order_id);
+
+        // We pass browser_info only when payment_data exists.
+        // Hence, we're pass Null during recurring payments as payment_method_data[type] is not passed
+        let browser_info = if payment_data.is_some() && payment_method_token.is_none() {
+            item.request
+                .browser_info
+                .clone()
+                .map(StripeBrowserInformation::from)
+        } else {
+            None
+        };
+
+        let charges = match &item.request.split_payments {
+            Some(domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(
+                stripe_split_payment,
+            )) => match &stripe_split_payment.charge_type {
+                common_enums::PaymentChargeType::Stripe(charge_type) => match charge_type {
+                    common_enums::StripeChargeType::Direct => Some(IntentCharges {
+                        application_fee_amount: stripe_split_payment.application_fees,
+                        destination_account_id: None,
+                    }),
+                    common_enums::StripeChargeType::Destination => Some(IntentCharges {
+                        application_fee_amount: stripe_split_payment.application_fees,
+                        destination_account_id: Some(
+                            stripe_split_payment.transfer_account_id.clone(),
+                        ),
+                    }),
+                },
+            },
+            None => None,
+        };
+
+        let charges_in = if charges.is_none() {
+            match charge_type {
+                Some(common_enums::PaymentChargeType::Stripe(
+                    common_enums::StripeChargeType::Direct,
+                )) => Some(IntentCharges {
+                    application_fee_amount: application_fees, // default to 0 if None
+                    destination_account_id: None,
+                }),
+                Some(common_enums::PaymentChargeType::Stripe(
+                    common_enums::StripeChargeType::Destination,
+                )) => Some(IntentCharges {
+                    application_fee_amount: application_fees,
+                    destination_account_id: transfer_account_id,
+                }),
+                _ => None,
+            }
+        } else {
+            charges
+        };
+
+        let pm = match (payment_method, payment_method_token.clone()) {
+            (Some(method), _) => Some(Secret::new(method)),
+            (None, Some(token)) => Some(token),
+            (None, None) => None,
+        };
+
+        Ok(Self {
+            amount,                                      //hopefully we don't loose some cents here
+            currency: item.request.currency.to_string(), //we need to copy the value and not transfer ownership
+            statement_descriptor_suffix: None,
+            statement_descriptor: None,
+            meta_data,
+            return_url: item
+                .request
+                .router_return_url
+                .clone()
+                .unwrap_or_else(|| "https://juspay.in/".to_string()),
+            confirm: true, // Stripe requires confirm to be true if return URL is present
+            description: item.resource_common_data.description.clone(),
+            shipping: shipping_address,
+            billing: billing_address,
+            capture_method: StripeCaptureMethod::from(item.request.capture_method),
+            payment_data,
+            payment_method_options: None,
+            payment_method: pm,
+            customer: item
+                .resource_common_data
+                .connector_customer
+                .clone()
+                .map(Secret::new),
+            setup_mandate_details: None,
+            off_session: item.request.off_session,
+            setup_future_usage,
+            payment_method_types,
+            expand: Some(ExpandableObjects::LatestCharge),
+            browser_info,
+            charges: charges_in,
+        })
+    }
+}
+
+fn get_payment_method_type_for_saved_payment_method_payment(
+    item: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+) -> Result<Option<StripePaymentMethodType>, error_stack::Report<ConnectorError>> {
+    if item.resource_common_data.payment_method == common_enums::PaymentMethod::Card {
+        Ok(Some(StripePaymentMethodType::Card)) //stripe takes ["Card"] as default
+    } else {
+        let stripe_payment_method_type = match item
+            .resource_common_data
+            .recurring_mandate_payment_data
+            .clone()
+        {
+            Some(recurring_payment_method_data) => {
+                match recurring_payment_method_data.payment_method_type {
+                    Some(payment_method_type) => {
+                        StripePaymentMethodType::try_from(payment_method_type)
+                    }
+                    None => Err(ConnectorError::MissingRequiredField {
+                        field_name: "payment_method_type",
+                    }
+                    .into()),
+                }
+            }
+            None => Err(ConnectorError::MissingRequiredField {
+                field_name: "recurring_mandate_payment_data",
+            }
+            .into()),
+        }?;
+        match stripe_payment_method_type {
+            //Stripe converts Ideal, Bancontact & Sofort Bank redirect methods to Sepa direct debit and attaches to the customer for future usage
+            StripePaymentMethodType::Ideal
+            | StripePaymentMethodType::Bancontact
+            | StripePaymentMethodType::Sofort => Ok(Some(StripePaymentMethodType::Sepa)),
+            _ => Ok(Some(stripe_payment_method_type)),
+        }
     }
 }

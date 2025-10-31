@@ -4,6 +4,85 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.10.31.0
+
+### Features
+
+- **connector:**
+  - Added SetupMandate, RepeatPayment and CreateConnectorCustomer flows for stripe ([#230](https://github.com/juspay/connector-service/pull/230)) ([`3ded301`](https://github.com/juspay/connector-service/commit/3ded3017f7fe1a722b694fab294b729d54be9f46))
+  - Added RepeatPayment flow for cybersource ([#235](https://github.com/juspay/connector-service/pull/235)) ([`33633b1`](https://github.com/juspay/connector-service/commit/33633b15e588fd2724cf30456a5bba46056169e9))
+
+**Full Changelog:** [`2025.10.30.0...2025.10.31.0`](https://github.com/juspay/connector-service/compare/2025.10.30.0...2025.10.31.0)
+
+- - -
+
+## 2025.10.30.0
+
+### Bug Fixes
+
+- **audit:** Ensure grpc audit events emit even for early request parsing failures ([#234](https://github.com/juspay/connector-service/pull/234)) ([`8fdfbbd`](https://github.com/juspay/connector-service/commit/8fdfbbd6fa638c46f7b96bde344af1f5df988add))
+
+**Full Changelog:** [`2025.10.29.0...2025.10.30.0`](https://github.com/juspay/connector-service/compare/2025.10.29.0...2025.10.30.0)
+
+- - -
+
+## 2025.10.29.0
+
+### Features
+
+- **connector:** [Worldpayvantiv] Connector Integration and VoidPostCapture flow implemented ([#194](https://github.com/juspay/connector-service/pull/194)) ([`ce74f4f`](https://github.com/juspay/connector-service/commit/ce74f4ff61d791b2f504e1d2a914170a33f971fd))
+
+### Bug Fixes
+
+- **cybersource:** Use security_code and state_code in authorize flow ([#231](https://github.com/juspay/connector-service/pull/231)) ([`1d0d1e2`](https://github.com/juspay/connector-service/commit/1d0d1e2b31f20e3127e9bf2c5b759a7c4dd91484))
+
+**Full Changelog:** [`2025.10.28.0...2025.10.29.0`](https://github.com/juspay/connector-service/compare/2025.10.28.0...2025.10.29.0)
+
+- - -
+
+## 2025.10.28.0
+
+### Features
+
+- **connector:** [Worldpay] Connector Integration ([#216](https://github.com/juspay/connector-service/pull/216)) ([`61945b2`](https://github.com/juspay/connector-service/commit/61945b24a70d6e50d8c607a519fa2634fac8a68d))
+
+### Bug Fixes
+
+- **Access_token_flow:** Added proto field to accept expires_in_seconds in request ([#232](https://github.com/juspay/connector-service/pull/232)) ([`a7ddd3c`](https://github.com/juspay/connector-service/commit/a7ddd3cb16f372c7d79358cc9e357c272f1a4ed4))
+
+**Full Changelog:** [`2025.10.27.0...2025.10.28.0`](https://github.com/juspay/connector-service/compare/2025.10.27.0...2025.10.28.0)
+
+- - -
+
+## 2025.10.27.0
+
+### Features
+
+- **connector:** Diff check fixes for Stripe, Cybersource & Novalnet ([#226](https://github.com/juspay/connector-service/pull/226)) ([`2f8b321`](https://github.com/juspay/connector-service/commit/2f8b321665485d4ccf12a4ab06f4b8f36ece5135))
+
+### Bug Fixes
+
+- Fix typo in README.md ([`8f12995`](https://github.com/juspay/connector-service/commit/8f12995f0fd63e43ce2b15c049bc42bc9029661d))
+
+**Full Changelog:** [`2025.10.23.0...2025.10.27.0`](https://github.com/juspay/connector-service/compare/2025.10.23.0...2025.10.27.0)
+
+- - -
+
+## 2025.10.23.0
+
+### Features
+
+- Adding_new_field_for_Merchant_account_metadata ([#228](https://github.com/juspay/connector-service/pull/228)) ([`46f7ddb`](https://github.com/juspay/connector-service/commit/46f7ddb6b533f887b4d9bcd218f3e16fd229d4ad))
+
+### Bug Fixes
+
+- **cybersource:** Use minor_refund_amount instead of minor_payment_amount in refund transformer ([#229](https://github.com/juspay/connector-service/pull/229)) ([`28d1e3e`](https://github.com/juspay/connector-service/commit/28d1e3e19c5bc7fae4cb431c531723e45b0970a0))
+- Resolve disparity in Authorizedotnet flows (Authorize, RepeatPayment, SetupMandate) ([#225](https://github.com/juspay/connector-service/pull/225)) ([`2649fd8`](https://github.com/juspay/connector-service/commit/2649fd8902cdd812c1e4f7debfe4080c45a9fa55))
+
+**Full Changelog:** [`2025.10.17.0...2025.10.23.0`](https://github.com/juspay/connector-service/compare/2025.10.17.0...2025.10.23.0)
+
+- - -
+
 ## 2025.10.17.0
 
 ### Features

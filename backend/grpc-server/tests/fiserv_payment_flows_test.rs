@@ -191,12 +191,12 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("fiserv_sync_{}", get_timestamp()))),
         }),
-        access_token: None,
         // all_keys_required: None,
         capture_method: None,
         handle_response: None,
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
+        state: None,
     }
 }
 
@@ -211,8 +211,8 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
     let connector_metadata_json =
         serde_json::to_string(&connector_metadata).expect("Failed to serialize connector metadata");
 
-    let mut metadata = HashMap::new();
-    metadata.insert("connector_metadata".to_string(), connector_metadata_json);
+    let mut connector_metadata = HashMap::new();
+    connector_metadata.insert("connector_metadata".to_string(), connector_metadata_json);
 
     PaymentServiceCaptureRequest {
         transaction_id: Some(Identifier {
@@ -221,11 +221,11 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         amount_to_capture: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
-        metadata,
+        connector_metadata,
         request_ref_id: None, // all_keys_required: None,
         browser_info: None,
-        access_token: None,
         capture_method: None,
+        state: None,
     }
 }
 
@@ -262,7 +262,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         merchant_account_id: None,
         capture_method: None,
         request_ref_id: None, // all_keys_required: None,
-        access_token: None,
+        state: None,
     }
 }
 
@@ -277,7 +277,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         request_ref_id: None, // all_keys_required: None,
         browser_info: None,
         refund_metadata: HashMap::new(),
-        access_token: None,
+        state: None,
     }
 }
 

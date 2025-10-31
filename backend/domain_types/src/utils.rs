@@ -170,7 +170,7 @@ pub fn base64_decode(
         .change_context(errors::ConnectorError::ResponseDeserializationFailed)
 }
 
-pub(crate) fn to_currency_base_unit(
+pub fn to_currency_base_unit(
     amount: i64,
     currency: common_enums::Currency,
 ) -> core::result::Result<String, error_stack::Report<errors::ConnectorError>> {
@@ -229,7 +229,9 @@ pub fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
         | common_enums::AttemptStatus::Authorizing
         | common_enums::AttemptStatus::CodInitiated
         | common_enums::AttemptStatus::Voided
+        | common_enums::AttemptStatus::VoidedPostCapture
         | common_enums::AttemptStatus::VoidInitiated
+        | common_enums::AttemptStatus::VoidPostCaptureInitiated
         | common_enums::AttemptStatus::CaptureInitiated
         | common_enums::AttemptStatus::AutoRefunded
         | common_enums::AttemptStatus::PartialCharged

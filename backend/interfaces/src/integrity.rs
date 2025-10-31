@@ -9,10 +9,10 @@ use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use domain_types::connector_types::{
     AcceptDisputeData, AccessTokenRequestData, ConnectorCustomerData, DisputeDefendData,
     MandateRevokeRequestData, PaymentCreateOrderData, PaymentMethodTokenizationData,
-    PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
-    PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsSyncData, RefundSyncData,
-    RefundsData, RepeatPaymentData, SessionTokenRequestData, SetupMandateRequestData,
-    SubmitEvidenceData,
+    PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
+    PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+    PaymentsPreAuthenticateData, PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData,
+    SessionTokenRequestData, SetupMandateRequestData, SubmitEvidenceData,
 };
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
@@ -21,9 +21,10 @@ use domain_types::{
         AuthoriseIntegrityObject, CaptureIntegrityObject, CreateConnectorCustomerIntegrityObject,
         CreateOrderIntegrityObject, DefendDisputeIntegrityObject, MandateRevokeIntegrityObject,
         PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
-        PostAuthenticateIntegrityObject, PreAuthenticateIntegrityObject, RefundIntegrityObject,
-        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SessionTokenIntegrityObject,
-        SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
+        PaymentVoidPostCaptureIntegrityObject, PostAuthenticateIntegrityObject,
+        PreAuthenticateIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
+        RepeatPaymentIntegrityObject, SessionTokenIntegrityObject, SetupMandateIntegrityObject,
+        SubmitEvidenceIntegrityObject,
     },
 };
 
@@ -149,6 +150,7 @@ impl_check_integrity!(PaymentCreateOrderData);
 impl_check_integrity!(SetupMandateRequestData<S>);
 impl_check_integrity!(PaymentsSyncData);
 impl_check_integrity!(PaymentVoidData);
+impl_check_integrity!(PaymentsCancelPostCaptureData);
 impl_check_integrity!(RefundsData);
 impl_check_integrity!(PaymentsCaptureData);
 impl_check_integrity!(AcceptDisputeData);
@@ -232,6 +234,18 @@ impl GetIntegrityObject<PaymentVoidIntegrityObject> for PaymentVoidData {
 
     fn get_request_integrity_object(&self) -> PaymentVoidIntegrityObject {
         PaymentVoidIntegrityObject {
+            connector_transaction_id: self.connector_transaction_id.clone(),
+        }
+    }
+}
+
+impl GetIntegrityObject<PaymentVoidPostCaptureIntegrityObject> for PaymentsCancelPostCaptureData {
+    fn get_response_integrity_object(&self) -> Option<PaymentVoidPostCaptureIntegrityObject> {
+        self.integrity_object.clone()
+    }
+
+    fn get_request_integrity_object(&self) -> PaymentVoidPostCaptureIntegrityObject {
+        PaymentVoidPostCaptureIntegrityObject {
             connector_transaction_id: self.connector_transaction_id.clone(),
         }
     }
@@ -585,6 +599,30 @@ impl FlowIntegrity for PaymentSynIntegrityObject {
 }
 
 impl FlowIntegrity for PaymentVoidIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.connector_transaction_id
+            != res_integrity_object.connector_transaction_id
+        {
+            mismatched_fields.push(format_mismatch(
+                "connector_transaction_id",
+                &req_integrity_object.connector_transaction_id,
+                &res_integrity_object.connector_transaction_id,
+            ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for PaymentVoidPostCaptureIntegrityObject {
     type IntegrityObject = Self;
 
     fn compare(

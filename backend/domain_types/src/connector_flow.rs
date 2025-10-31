@@ -56,6 +56,9 @@ pub struct Authenticate;
 pub struct PostAuthenticate;
 
 #[derive(Debug, Clone)]
+pub struct VoidPC;
+
+#[derive(Debug, Clone)]
 pub struct MandateRevoke;
 
 #[derive(strum::Display)]
@@ -66,6 +69,7 @@ pub enum FlowName {
     Rsync,
     Psync,
     Void,
+    VoidPc,
     SetupMandate,
     RepeatPayment,
     Capture,
