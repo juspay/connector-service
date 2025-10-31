@@ -86,7 +86,7 @@ pub struct PaymentInstrumentTransType {
     pub upi: Option<UpiTransType>,
 }
 
-#[derive(Default, Debug, Serialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct CardTransType;
 
 #[derive(Default, Debug, Serialize, Deserialize)]
