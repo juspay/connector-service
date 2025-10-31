@@ -259,8 +259,8 @@ impl<
                 // Construct UPI specific paydata
                 Some(format!(
                     "payment_method=UPI&vpa={}",
-                    item.router_data.request.payment_method_data.as_ref()
-                        .and_then(|pm| pm.get_upi_data())
+                    item.router_data.request.payment_method_data
+                        .get_upi_data()
                         .and_then(|upi| upi.vpa.as_ref())
                         .map(|vpa| vpa.peek())
                         .unwrap_or("")
