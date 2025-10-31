@@ -101,6 +101,7 @@ mod tests {
                     api_key: Secret::new(api_key),
                 },
                 request: PaymentsAuthorizeData {
+                    authentication_data: None,
                     access_token: None,
                     payment_method_data: PaymentMethodData::Wallet(WalletData::BluecodeRedirect {}),
                     amount: 1000,
@@ -247,6 +248,7 @@ mod tests {
                     api_key: Secret::new(api_key),
                 },
                 request: PaymentsAuthorizeData {
+                    authentication_data: None,
                     access_token: None,
                     payment_method_data: PaymentMethodData::Wallet(WalletData::BluecodeRedirect {}),
                     amount: 0,

@@ -80,6 +80,7 @@ mod tests {
                     key1: Secret::new(key1),
                 },
                 request: PaymentsAuthorizeData {
+                    authentication_data: None,
                     payment_method_data: PaymentMethodData::Card(
                         domain_types::payment_method_data::Card {
                             card_number: RawCardNumber(cards::CardNumber::from_str(
@@ -261,6 +262,7 @@ mod tests {
                     key1: Secret::new(key1),
                 },
                 request: PaymentsAuthorizeData {
+                    authentication_data: None,
                     payment_method_data: PaymentMethodData::Card(Default::default()),
                     amount: 0,
                     order_tax_amount: None,
