@@ -622,12 +622,7 @@ impl<
                 },
             },
             transaction: TpslTransactionPayload {
-                device_identifier: item
-                    .router_data
-                    .request
-                    .get_ip_address_as_optional()
-                    .map(|ip| ip.expose())
-                    .unwrap_or_else(|| "127.0.0.1".to_string()),
+                device_identifier: "127.0.0.1".to_string(),
                 sms_sending: "N".to_string(),
                 amount,
                 forced3_d_s_call: "N".to_string(),
