@@ -132,11 +132,11 @@ impl TryFrom<&ConnectorAuthType> for EaseBuzzAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key1 } => Ok(Self {
+            ConnectorAuthType::SignatureKey { api_key, key1, .. } => Ok(Self {
                 key: api_key.clone(),
                 salt: key1.clone(),
             }),
-            ConnectorAuthType::Key { api_key } => Ok(Self {
+            ConnectorAuthType::BodyKey { api_key, .. } => Ok(Self {
                 key: api_key.clone(),
                 salt: Secret::new("".to_string()),
             }),
