@@ -218,14 +218,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
+                item.router_data.request.amount,
                 item.router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
-        // Extract phone from payment method data if available
-        let phone = item.router_data.request.payment_method_data.get_phone_number().ok().flatten().unwrap_or_default();
-        let email = item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default();
+        // For sync, we don't have access to payment method data or email in the same way
+        let phone = "".to_string();
+        let email = "".to_string();
 
         Ok(Self {
             txnid: item.router_data.request.connector_transaction_id.get_connector_transaction_id()
