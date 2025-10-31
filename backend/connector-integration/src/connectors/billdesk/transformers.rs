@@ -168,12 +168,15 @@ impl From<BilldeskPaymentStatus> for common_enums::AttemptStatus {
     }
 }
 
-fn get_billdesk_message(
+fn get_billdesk_message<T>(
     router_data: &BilldeskRouterData<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         T,
     >,
-) -> Result<String, errors::ConnectorError> {
+) -> Result<String, errors::ConnectorError>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+{
     let customer_id = router_data.router_data.resource_common_data.get_customer_id()?;
     let amount = router_data
         .connector
