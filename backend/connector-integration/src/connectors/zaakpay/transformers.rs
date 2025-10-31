@@ -57,7 +57,7 @@ pub struct OrderDetailTransType {
     pub phone: Option<String>,
 }
 
-#[derive(Default, Debug, Serialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BillingAddressType {
     pub address: String,
