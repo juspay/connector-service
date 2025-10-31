@@ -344,9 +344,9 @@ impl TryFrom<&ConnectorAuthType> for ZaakPayAuth {
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, .. } => {
-                let auth: ZaakPayAuthType = api_key
-                    .to_owned()
-                    .parse_value("ZaakPayAuthType")
+                // For now, we'll use a simple approach - parse the API key as JSON
+                let auth_str = api_key.peek();
+                let auth: ZaakPayAuthType = serde_json::from_str(auth_str)
                     .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
                 Ok(Self {
                     merchant_identifier: auth.merchant_identifier,
