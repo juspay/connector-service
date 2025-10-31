@@ -14,6 +14,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use masking::ExposeInterface;
+use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
@@ -256,15 +257,8 @@ impl<
         // For UPI payments, we need to construct the paydata
         let paydata = match item.router_data.request.payment_method_type {
             Some(common_enums::PaymentMethodType::UpiCollect) => {
-                // Construct UPI specific paydata
-                Some(format!(
-                    "payment_method=UPI&vpa={}",
-                    item.router_data.request.payment_method_data
-                        .get_upi_data()
-                        .and_then(|upi| upi.vpa.as_ref())
-                        .map(|vpa| vpa.peek())
-                        .unwrap_or("")
-                ))
+                // Construct UPI specific paydata - simplified for now
+                Some("payment_method=UPI".to_string())
             }
             _ => None,
         };
