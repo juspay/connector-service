@@ -522,7 +522,7 @@ fn get_redirect_form_data(
     response_data: TpslPaymentsResponseData,
 ) -> CustomResult<RedirectForm, errors::ConnectorError> {
     match payment_method_type {
-        common_enums::PaymentMethodType::Upi => Ok(RedirectForm::Form {
+        common_enums::PaymentMethodType::UpiCollect => Ok(RedirectForm::Form {
             endpoint: "https://www.tpsl-india.in/PaymentGateway/merchant2.pg".to_string(),
             method: Method::Post,
             form_fields: Default::default(),
