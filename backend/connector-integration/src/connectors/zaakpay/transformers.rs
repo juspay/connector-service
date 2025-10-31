@@ -332,14 +332,13 @@ impl<
 
         let return_url = item.router_data.request.get_router_return_url()?;
 
-        let email = item.router_data.request.email.clone().unwrap_or_else(|| Email::from(""));
+        let email = item.router_data.request.email.clone().unwrap_or_else(|| "".into());
 
         let phone = item
             .router_data
             .request
             .payment_method_data
-            .as_ref()
-            .and_then(|pm| pm.get_phone_number())
+            .get_phone_number()
             .map(|p| p.to_string())
             .unwrap_or_else(|| "".to_string());
 
@@ -348,7 +347,7 @@ impl<
             amount: amount.get_amount_as_string(),
             currency: item.router_data.request.currency.to_string(),
             product_description: "Payment".to_string(),
-            email: email.to_string(),
+            email: email.clone().into_inner().unwrap_or_default(),
             phone,
         };
 
