@@ -793,9 +793,7 @@ impl<
                 .router_data
                 .request
                 .connector_refund_id
-                .get_connector_refund_id()
-                .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?
-                .to_string(),
+                .clone(),
         };
 
         let data = CheckDataRequest {
