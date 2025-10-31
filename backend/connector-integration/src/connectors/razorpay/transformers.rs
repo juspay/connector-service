@@ -1576,7 +1576,7 @@ impl<
                 .and_then(|info| info.get_user_agent().ok())
                 .unwrap_or_else(|| "Mozilla/5.0".to_string()),
             description: Some("".to_string()),
-            flow: Some("".to_string()), //"" for UPI_COLLECT, TODO: set value for UPI_INTENT
+            flow: None, //"" for UPI_COLLECT, TODO: set value for UPI_INTENT
             __notes_91_cust_id_93_: metadata_map.get("__notes_91_cust_id_93_").cloned(),
             __notes_91_cust_name_93_: metadata_map.get("__notes_91_cust_name_93_").cloned(),
             __upi_91_flow_93_: metadata_map.get("__upi_91_flow_93_").cloned(),
