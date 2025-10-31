@@ -420,7 +420,7 @@ macros::macro_connector_implementation!(
             if response.status == Some(0) {
                 Ok(ErrorResponse {
                     status_code: res.status_code,
-                    code: "PAYU_SYNC_ERROR".to_string(),
+                    code: SYNC_ERROR.to_string(),
                     message: response.msg.unwrap_or_default(),
                     reason: None,
                     attempt_status: Some(enums::AttemptStatus::Failure),
