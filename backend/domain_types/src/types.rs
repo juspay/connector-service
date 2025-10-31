@@ -1650,6 +1650,21 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
         // Extract specific headers for vault and other integrations
         let vault_headers = extract_headers_from_metadata(metadata);
 
+        let connector_meta_data = serde_json::to_value(&value.merchant_account_metadata)
+            .map(common_utils::pii::SecretSerdeValue::new)
+            .map_err(|_| {
+                error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
+                    crate::errors::ApiError {
+                        sub_code: "SERDE_JSON_ERROR".to_owned(),
+                        error_identifier: 500,
+                        error_message: "Failed to serialize merchant_account_metadata".to_owned(),
+                        error_object: None,
+                    },
+                ))
+            })?;
+        dbg!(&value.metadata);
+        dbg!(&connector_meta_data);
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -1683,7 +1698,8 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             connector_meta_data: {
                 value.metadata.get("connector_meta_data").map(|json_string| {
                     Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
-                }).transpose()? // Converts Option<Result<T, E>> to Result<Option<T>, E> and propagates E if it's an Err
+                }).transpose()?
+                .or(Some(connector_meta_data)) // Converts Option<Result<T, E>> to Result<Option<T>, E> and propagates E if it's an Err
             },
             amount_captured: None,
             minor_amount_captured: None,
