@@ -6256,23 +6256,26 @@ impl
             description: None,
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                 (!value.merchant_account_metadata.is_empty())
-                .then(|| {
-                    serde_json::to_value(&value.merchant_account_metadata)
-                        .map(common_utils::pii::SecretSerdeValue::new)
-                        .map_err(|_| {
-                            error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
-                                crate::errors::ApiError {
-                                    sub_code: "SERDE_JSON_ERROR".to_owned(),
-                                    error_identifier: 500,
-                                    error_message: "Failed to serialize merchant_account_metadata"
-                                        .to_owned(),
-                                    error_object: None,
-                                },
-                            ))
-                        })
-                })
-                .transpose()?
+                (!value.merchant_account_metadata.is_empty())
+                    .then(|| {
+                        serde_json::to_value(&value.merchant_account_metadata)
+                            .map(common_utils::pii::SecretSerdeValue::new)
+                            .map_err(|_| {
+                                error_stack::Report::new(
+                                    ApplicationErrorResponse::InternalServerError(
+                                        crate::errors::ApiError {
+                                            sub_code: "SERDE_JSON_ERROR".to_owned(),
+                                            error_identifier: 500,
+                                            error_message:
+                                                "Failed to serialize merchant_account_metadata"
+                                                    .to_owned(),
+                                            error_object: None,
+                                        },
+                                    ),
+                                )
+                            })
+                    })
+                    .transpose()?
             },
             amount_captured: None,
             minor_amount_captured: None,
@@ -6347,23 +6350,26 @@ impl
             description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                  (!value.merchant_account_metadata.is_empty())
-                .then(|| {
-                    serde_json::to_value(&value.merchant_account_metadata)
-                        .map(common_utils::pii::SecretSerdeValue::new)
-                        .map_err(|_| {
-                            error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
-                                crate::errors::ApiError {
-                                    sub_code: "SERDE_JSON_ERROR".to_owned(),
-                                    error_identifier: 500,
-                                    error_message: "Failed to serialize merchant_account_metadata"
-                                        .to_owned(),
-                                    error_object: None,
-                                },
-                            ))
-                        })
-                })
-                .transpose()?
+                (!value.merchant_account_metadata.is_empty())
+                    .then(|| {
+                        serde_json::to_value(&value.merchant_account_metadata)
+                            .map(common_utils::pii::SecretSerdeValue::new)
+                            .map_err(|_| {
+                                error_stack::Report::new(
+                                    ApplicationErrorResponse::InternalServerError(
+                                        crate::errors::ApiError {
+                                            sub_code: "SERDE_JSON_ERROR".to_owned(),
+                                            error_identifier: 500,
+                                            error_message:
+                                                "Failed to serialize merchant_account_metadata"
+                                                    .to_owned(),
+                                            error_object: None,
+                                        },
+                                    ),
+                                )
+                            })
+                    })
+                    .transpose()?
             },
             amount_captured: None,
             minor_amount_captured: None,
@@ -6438,23 +6444,26 @@ impl
             description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                 (!value.merchant_account_metadata.is_empty())
-                .then(|| {
-                    serde_json::to_value(&value.merchant_account_metadata)
-                        .map(common_utils::pii::SecretSerdeValue::new)
-                        .map_err(|_| {
-                            error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
-                                crate::errors::ApiError {
-                                    sub_code: "SERDE_JSON_ERROR".to_owned(),
-                                    error_identifier: 500,
-                                    error_message: "Failed to serialize merchant_account_metadata"
-                                        .to_owned(),
-                                    error_object: None,
-                                },
-                            ))
-                        })
-                })
-                .transpose()?
+                (!value.merchant_account_metadata.is_empty())
+                    .then(|| {
+                        serde_json::to_value(&value.merchant_account_metadata)
+                            .map(common_utils::pii::SecretSerdeValue::new)
+                            .map_err(|_| {
+                                error_stack::Report::new(
+                                    ApplicationErrorResponse::InternalServerError(
+                                        crate::errors::ApiError {
+                                            sub_code: "SERDE_JSON_ERROR".to_owned(),
+                                            error_identifier: 500,
+                                            error_message:
+                                                "Failed to serialize merchant_account_metadata"
+                                                    .to_owned(),
+                                            error_object: None,
+                                        },
+                                    ),
+                                )
+                            })
+                    })
+                    .transpose()?
             },
             amount_captured: None,
             minor_amount_captured: None,
