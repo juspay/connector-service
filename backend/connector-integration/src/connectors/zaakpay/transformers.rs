@@ -272,6 +272,7 @@ impl TryFrom<&ConnectorAuthType> for ZaakPayAuthType {
 }
 
 // Helper functions
+#[allow(dead_code)]
 fn get_merchant_identifier(
     connector_auth_type: &ConnectorAuthType,
 ) -> Result<Secret<String>, error_stack::Report<errors::ConnectorError>> {
