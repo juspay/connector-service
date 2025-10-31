@@ -432,6 +432,10 @@ pub struct ProcessingInformation {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum CybersourceParesStatus {
+    #[serde(rename = "C")]
+    CardChallenged,
+    #[serde(rename = "R")]
+    AuthenticationRejected,
     #[serde(rename = "Y")]
     AuthenticationSuccessful,
     #[serde(rename = "A")]
@@ -456,6 +460,12 @@ impl From<CybersourceParesStatus> for common_enums::TransactionStatus {
             }
             CybersourceParesStatus::AuthenticationNotCompleted => {
                 common_enums::TransactionStatus::VerificationNotPerformed
+            }
+            CybersourceParesStatus::CardChallenged => {
+                common_enums::TransactionStatus::ChallengeRequired
+            }
+            CybersourceParesStatus::AuthenticationRejected => {
+                common_enums::TransactionStatus::Rejected
             }
         }
     }
