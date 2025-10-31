@@ -351,42 +351,11 @@ impl<
         };
 
         let billing_address = ZaakPayBillingAddressType {
-            address: item
-                .router_data
-                .request
-                .payment_method_data
-                .get_billing_address()
-                .map(|addr| addr.address.to_string())
-                .unwrap_or_else(|_| "".to_string()),
-            city: item
-                .router_data
-                .request
-                .payment_method_data
-                .get_billing_address()
-                .map(|addr| addr.city.to_string())
-                .unwrap_or_else(|_| "".to_string()),
-            state: item
-                .router_data
-                .request
-                .payment_method_data
-                .get_billing_address()
-                .map(|addr| addr.state.to_string())
-                .unwrap_or_else(|_| "".to_string()),
-            country: item
-                .router_data
-                .request
-                .payment_method_data
-                .get_billing_address()
-                .map(|addr| addr.country.to_string())
-                .unwrap_or_else(|_| "".to_string()),
-            pincode: Secret::new(
-                item.router_data
-                    .request
-                    .payment_method_data
-                    .get_billing_address()
-                    .map(|addr| addr.zip.to_string())
-                    .unwrap_or_else(|_| "".to_string()),
-            ),
+            address: "".to_string(),
+            city: "".to_string(),
+            state: "".to_string(),
+            country: "".to_string(),
+            pincode: Secret::new("".to_string()),
         };
 
         let payment_instrument = match item.router_data.request.payment_method_type {
