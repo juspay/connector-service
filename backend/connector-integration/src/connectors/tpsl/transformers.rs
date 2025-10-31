@@ -525,7 +525,7 @@ impl<
                 response_type: "URL".to_string(),
                 response_endpoint_url: return_url.clone(),
                 description: "UPI Payment".to_string(),
-                identifier: auth_type.merchant_id.peek().to_string(),
+                identifier: auth_type.merchant_id.peek_mut().to_string(),
                 webhook_type: "HTTP".to_string(),
             },
             cart: TpslCartPayload {
@@ -642,7 +642,7 @@ impl<
                     .clone(),
                 date_time: chrono::Utc::now().to_rfc3339(),
                 token: "TXN_TOKEN".to_string(),
-                security_token: auth_type.api_key.peek().to_string(),
+                security_token: auth_type.api_key.peek_mut().to_string(),
                 sub_type: "SALE".to_string(),
                 request_type: "TXN".to_string(),
                 reference: item
@@ -779,7 +779,7 @@ impl<
 
         Ok(Self {
             merchant: TpslMerchantDataType {
-                identifier: auth_type.merchant_id.peek().to_string(),
+                identifier: auth_type.merchant_id.peek_mut().to_string(),
             },
             payment: TpslPaymentDataType {
                 instruction: TpslInstructionDataType {
