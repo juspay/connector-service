@@ -46,7 +46,7 @@ pub struct TransactDataRequest {
     pub payment_instrument: PaymentInstrumentTransType,
 }
 
-#[derive(Default, Debug, Serialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderDetailTransType {
     pub order_id: String,
