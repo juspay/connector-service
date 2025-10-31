@@ -430,13 +430,13 @@ impl<
             .ok()
             .map(|amt| common_utils::types::MinorUnit::new(amt));
         
-        Ok(PaymentsResponseData {
+        Ok(PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(response._TxnReferenceNo),
             status,
             amount_received,
             connector_transaction_id: Some(response._TxnReferenceNo),
             error_code: Some(response._ErrorStatus),
             error_message: Some(response._ErrorDescription),
-            resource_id: None,
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
