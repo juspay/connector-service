@@ -651,7 +651,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<connector_flow::SetupMandate, PaymentFlowData, domain_types::connector_types::SetupMandateRequestData, PaymentsResponseData>
+> ConnectorIntegrationV2<SetupMandate, PaymentFlowData, domain_types::connector_types::SetupMandateRequestData, PaymentsResponseData>
     for ZaakPay<T>
 {
 }
