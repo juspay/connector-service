@@ -4,6 +4,38 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.11.01.0
+
+### Added
+
+- **connector:** 
+  - Added Payu connector implementation with UPI payment support
+  - Implemented Authorize and PSync flows for UPI Intent and UPI Collect transactions
+  - Added comprehensive error handling and status mapping
+  - Integrated with UCS v2 macro framework for proper trait implementations
+  - Support for PayU's SHA-512 hash-based authentication
+  - Base64 response preprocessing for UPI Collect flows
+
+### Files Created/Modified
+- `src/connectors/payu.rs` - Main connector implementation with UCS v2 macro framework
+- `src/connectors/payu/transformers.rs` - Request/response transformers and business logic
+- `src/connectors/payu/constants.rs` - API constants and endpoints
+- `src/connectors.rs` - Added connector registration (already existed)
+- `src/types.rs` - Added connector to ConnectorEnum (already existed)
+
+### Technical Details
+- Migrated from Hyperswitch/Euler Haskell implementation
+- Uses UCS v2 macro framework for all trait implementations
+- Implements proper amount handling using StringMajorUnit converter
+- Full type safety with guard rails for sensitive data
+- Supports UPI Intent and UPI Collect payment flows
+- Comprehensive status mapping from PayU responses to internal AttemptStatus
+- Error handling with proper HTTP status code preservation
+
+**Full Changelog:** [`2025.10.31.0...2025.11.01.0`](https://github.com/juspay/connector-service/compare/2025.10.31.0...2025.11.01.0)
+
+- - -
+
 ## 2025.10.31.0
 
 ### Features
