@@ -4,7 +4,7 @@ use serde_json::Value;
 
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    ext_traits::OptionExt,
+    ext_traits::{OptionExt, ValueExt},
     pii,
     types::{SemanticVersion, StringMajorUnit},
 };
@@ -3292,12 +3292,14 @@ impl<
             )?,
         };
 
-        let transaction_id = redirect_response
-            .params
+        let redirection_response: CybersourceRedirectionAuthResponse = redirect_response
+            .payload
             .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "params.transaction_id",
+                field_name: "request.redirect_response.payload",
             })?
-            .expose();
+            .expose()
+            .parse_value("CybersourceRedirectionAuthResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
         let order_information = OrderInformation { amount_details };
 
         Ok(Self {
@@ -3305,7 +3307,7 @@ impl<
             client_reference_information,
             consumer_authentication_information:
                 CybersourceConsumerAuthInformationValidateRequest {
-                    authentication_transaction_id: transaction_id,
+                    authentication_transaction_id: redirection_response.transaction_id,
                 },
             order_information,
         })
