@@ -329,7 +329,7 @@ fn get_redirect_form_data(
         }
         None => Err(errors::ConnectorError::MissingRequiredField {
             field_name: "rdata",
-        }),
+        }.into()),
     }
 }
 
