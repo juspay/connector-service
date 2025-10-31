@@ -19,6 +19,41 @@ impl<
         + Serialize,
 > connector_types::PaymentSyncV2 for ZaakPay<T>
 {
+}
+
+// Implement ConnectorServiceTrait manually
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> connector_types::ConnectorServiceTrait<T> for ZaakPay<T>
+where
+    Self: connector_types::PaymentAuthorizeV2<T>
+        + connector_types::PaymentSyncV2
+        + connector_types::ValidationTrait
+        + connector_types::PaymentOrderCreate
+        + connector_types::PaymentSessionToken
+        + connector_types::PaymentAccessToken
+        + connector_types::CreateConnectorCustomer
+        + connector_types::PaymentTokenV2<T>
+        + connector_types::PaymentVoidV2
+        + connector_types::PaymentVoidPostCaptureV2
+        + connector_types::IncomingWebhook
+        + connector_types::RefundV2
+        + connector_types::PaymentCapture
+        + connector_types::SetupMandateV2<T>
+        + connector_types::RepeatPaymentV2
+        + connector_types::AcceptDispute
+        + connector_types::RefundSyncV2
+        + connector_types::DisputeDefend
+        + connector_types::SubmitEvidenceV2
+        + connector_types::PaymentPreAuthenticateV2<T>
+        + connector_types::PaymentAuthenticateV2<T>
+        + connector_types::PaymentPostAuthenticateV2<T>,
+{
 }pub mod transformers;
 pub mod constants;
 
