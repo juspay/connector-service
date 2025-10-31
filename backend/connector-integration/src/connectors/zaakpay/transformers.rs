@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use common_utils::{
-    Email,
+    // Email removed as it's not used directly
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
 use domain_types::{
