@@ -131,9 +131,6 @@ pub struct PayuVoidPostCaptureRequest;
 #[derive(Debug, Clone)]
 pub struct PayuVoidPostCaptureResponse;
 
-pub mod constants;
-pub use constants::*;
-
 // PayU Status enum to handle both integer and string status values
 #[derive(Debug, Serialize, Clone)]
 pub enum PayuStatusValue {
