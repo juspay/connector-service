@@ -384,10 +384,9 @@ impl<
                 }
             }
             _ => {
-                return Err(errors::ConnectorError::NotImplemented(
+                return Err(error_stack::Report::new(errors::ConnectorError::NotImplemented(
                     "Payment method not supported".to_string(),
-                )
-                .into());
+                )));
             }
         };
 
