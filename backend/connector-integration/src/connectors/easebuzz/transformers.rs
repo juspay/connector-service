@@ -165,8 +165,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
-        // Extract phone from payment method data if available
-        let phone = item.router_data.request.payment_method_data.get_phone_number().ok().flatten();
+        // Extract phone from billing address
+        let phone = item.router_data.resource_common_data.get_optional_billing_phone_number();
         let email = item.router_data.request.email.clone();
 
         // Extract name from customer_name
