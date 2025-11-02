@@ -331,10 +331,7 @@ impl<
             common_enums::PaymentMethod::Upi => {
                 let paydata = Some(format!(
                     "UPI|{}|{}|{}",
-                    item.router_data.request.payment_method_data.as_ref()
-                        .and_then(|pm| pm.get_upi_data())
-                        .and_then(|upi| upi.vpa.clone())
-                        .unwrap_or_else(|| "".to_string()),
+                    "".to_string(), // Simplified for now
                     item.router_data.request.minor_amount,
                     item.router_data.request.currency
                 ));
