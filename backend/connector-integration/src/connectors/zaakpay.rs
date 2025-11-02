@@ -114,7 +114,7 @@ impl<
         + 'static
         + Serialize,
 > ConnectorIntegrationV2<
-    connector_flow::CreateOrder,
+    domain_types::connector_flow::CreateOrder,
     PaymentFlowData,
     PaymentCreateOrderData,
     PaymentCreateOrderResponse,
