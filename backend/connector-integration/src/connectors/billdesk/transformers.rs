@@ -502,8 +502,8 @@ impl<
                     .request
                     .payment_method_type
                     .ok_or(errors::ConnectorError::MissingPaymentMethodType)?;
-                // For NB initiate response, we need to handle differently
-                let redirection_data = Ok(RedirectForm::Form {
+                // For Card initiate response
+                let redirection_data = RedirectForm::Form {
                     endpoint: response_data.rdata.url.clone(),
                     method: Method::Post,
                     form_fields: response_data
@@ -512,7 +512,7 @@ impl<
                         .iter()
                         .map(|(k, v)| (k.clone(), v.clone()))
                         .collect(),
-                });
+                };
                 (
                     common_enums::AttemptStatus::AuthenticationPending,
                     Ok(PaymentsResponseData::TransactionResponse {
