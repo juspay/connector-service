@@ -554,7 +554,7 @@ impl<
             ),
             (
                 headers::ACCEPT.to_string(),
-                "application/json".to_string().into(),
+                "".to_string().into(),
             ),
         ];
         let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
