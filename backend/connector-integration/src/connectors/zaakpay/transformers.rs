@@ -561,9 +561,9 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
     }
 }
 
-impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<ResponseRouterData<ZaakPayPaymentsSyncResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
