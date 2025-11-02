@@ -308,6 +308,22 @@ impl<
 > connector_types::AcceptDispute for ZaakPay<T>
 {
 }
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<
+    connector_flow::Accept,
+    DisputeFlowData,
+    AcceptDisputeData,
+    DisputeResponseData,
+> for ZaakPay<T>
+{
+}
 impl<
     T: PaymentMethodDataTypes
         + std::fmt::Debug
@@ -318,6 +334,22 @@ impl<
 > connector_types::SubmitEvidenceV2 for ZaakPay<T>
 {
 }
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<
+    connector_flow::SubmitEvidence,
+    DisputeFlowData,
+    SubmitEvidenceData,
+    DisputeResponseData,
+> for ZaakPay<T>
+{
+}
 impl<
     T: PaymentMethodDataTypes
         + std::fmt::Debug
@@ -326,6 +358,22 @@ impl<
         + 'static
         + Serialize,
 > connector_types::DisputeDefend for ZaakPay<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<
+    connector_flow::DefendDispute,
+    DisputeFlowData,
+    DisputeDefendData,
+    DisputeResponseData,
+> for ZaakPay<T>
 {
 }
 impl<
