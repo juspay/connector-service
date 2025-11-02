@@ -344,44 +344,25 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
-        // Extract email and phone from request
+        // Extract email from request
         let email = item.router_data.request.email.clone()
-            .map(|e| e.to_string())
+            .map(|e| e.get_string_repr().to_string())
             .unwrap_or_else(|| format!("{}@example.com", customer_id.get_string_repr()));
         
-        let phone = item.router_data.request.phone.clone()
-            .map(|p| p.to_string())
-            .unwrap_or_else(|| "9999999999".to_string());
+        let phone = "9999999999".to_string(); // Default phone number
 
-        // Create billing address (using default values if not provided)
+        // Create billing address (using default values)
         let billing_address = ZaakPayBillingAddressType {
-            address: item.router_data.request.billing_address
-                .as_ref()
-                .and_then(|addr| addr.address.clone())
-                .unwrap_or_else(|| "Default Address".to_string()),
-            city: item.router_data.request.billing_address
-                .as_ref()
-                .and_then(|addr| addr.city.clone())
-                .unwrap_or_else(|| "Default City".to_string()),
-            state: item.router_data.request.billing_address
-                .as_ref()
-                .and_then(|addr| addr.state.clone())
-                .unwrap_or_else(|| "Default State".to_string()),
-            country: item.router_data.request.billing_address
-                .as_ref()
-                .and_then(|addr| addr.country.clone())
-                .map(|c| c.to_string())
-                .unwrap_or_else(|| "IN".to_string()),
-            pincode: item.router_data.request.billing_address
-                .as_ref()
-                .and_then(|addr| addr.zip.clone())
-                .map(|z| Secret::new(z.to_string()))
-                .unwrap_or_else(|| Secret::new("110001".to_string())),
+            address: "Default Address".to_string(),
+            city: "Default City".to_string(),
+            state: "Default State".to_string(),
+            country: "IN".to_string(),
+            pincode: Secret::new("110001".to_string()),
         };
 
         // Create payment instrument based on payment method type
         let payment_instrument = match item.router_data.request.payment_method_type {
-            Some(common_enums::PaymentMethodType::Upi) => {
+            Some(common_enums::PaymentMethodType::UpiCollect) => {
                 ZaakPayPaymentInstrumentTransType {
                     payment_mode: "UPI".to_string(),
                     card: None,
@@ -412,12 +393,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         // Create order detail
         let order_detail = ZaakPayOrderDetailTransType {
             order_id: item.router_data.resource_common_data.connector_request_reference_id.clone(),
-            amount: amount.get_amount_as_string(),
+            amount: amount.to_string(),
             currency: item.router_data.request.currency.to_string(),
-            product_description: item.router_data.request.description.clone()
-                .unwrap_or_else(|| "Payment".to_string()),
+            product_description: "Payment".to_string(),
             email: email.clone(),
             phone,
+            txnid: None,
         };
 
         // Create transact data request
