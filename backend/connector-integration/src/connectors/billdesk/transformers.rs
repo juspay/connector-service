@@ -256,7 +256,7 @@ fn construct_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std:
             router_data.router_data.request.minor_amount,
             router_data.router_data.request.currency,
         )
-        .change_context(ConnectorError::RequestEncodingFailed)?;
+        .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
     
     let transaction_id = router_data
         .router_data
