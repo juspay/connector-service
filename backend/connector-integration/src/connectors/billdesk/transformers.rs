@@ -261,7 +261,7 @@ fn construct_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std:
     let transaction_id = router_data
         .router_data
         .resource_common_data
-        .connector_request_reference_id;
+        .connector_request_reference_id.clone();
 
     // Construct the message based on Billdesk format
     // This is a simplified version - actual implementation would follow Billdesk's specific format
