@@ -234,7 +234,7 @@ impl<
         Ok(domain_types::connector_types::WebhookDetailsResponse {
             resource_id: Some(
                 domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                    webhook.txn_reference_no.clone(),
+                    webhook.response_data.txn_reference_no.clone(),
                 ),
             ),
             status: common_enums::AttemptStatus::Charged,
