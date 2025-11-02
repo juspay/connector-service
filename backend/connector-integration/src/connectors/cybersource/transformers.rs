@@ -472,6 +472,55 @@ impl From<CybersourceParesStatus> for common_enums::TransactionStatus {
     }
 }
 
+impl From<common_enums::TransactionStatus> for CybersourceParesStatus {
+    fn from(status: common_enums::TransactionStatus) -> Self {
+        match status {
+            common_enums::TransactionStatus::Success => Self::AuthenticationSuccessful,
+            common_enums::TransactionStatus::Failure => Self::AuthenticationFailed,
+            common_enums::TransactionStatus::VerificationNotPerformed => {
+                Self::AuthenticationNotCompleted
+            }
+            common_enums::TransactionStatus::NotVerified => Self::AuthenticationAttempted,
+            common_enums::TransactionStatus::Rejected => Self::AuthenticationRejected,
+            common_enums::TransactionStatus::ChallengeRequired => Self::CardChallenged,
+            common_enums::TransactionStatus::ChallengeRequiredDecoupledAuthentication => {
+                Self::CardChallenged
+            }
+            common_enums::TransactionStatus::InformationOnly => Self::AuthenticationNotCompleted,
+        }
+    }
+}
+
+impl From<CybersourceConsumerAuthInformationEnrollmentResponse>
+    for router_request_types::AuthenticationData
+{
+    fn from(value: CybersourceConsumerAuthInformationEnrollmentResponse) -> Self {
+        let trans_status = value
+            .validate_response
+            .pares_status
+            .map(common_enums::TransactionStatus::from);
+        let cavv = value
+            .validate_response
+            .ucaf_authentication_data
+            .or(value.validate_response.cavv);
+        let eci = value.validate_response.ucaf_collection_indicator;
+        let ds_trans_id = value
+            .validate_response
+            .directory_server_transaction_id
+            .map(|id| id.expose());
+        Self {
+            eci,
+            cavv,
+            threeds_server_transaction_id: value.validate_response.three_d_s_server_transaction_id,
+            message_version: value.validate_response.specification_version,
+            trans_status,
+            ds_trans_id,
+            acs_transaction_id: value.validate_response.acs_transaction_id,
+            transaction_id: value.validate_response.xid,
+        }
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CybersourceConsumerAuthInformation {
@@ -523,19 +572,21 @@ impl From<router_request_types::AuthenticationData> for CybersourceConsumerAuthI
             message_version,
             ds_trans_id,
             trans_status: _,
+            acs_transaction_id: _,
+            transaction_id,
         } = value;
 
         CybersourceConsumerAuthInformation {
             pares_status: None,
-            ucaf_collection_indicator: None,
-            ucaf_authentication_data: Some(cavv.clone()),
-            cavv: Some(cavv),
-            xid: None,
+            ucaf_collection_indicator: eci,
+            ucaf_authentication_data: cavv.clone(),
+            xid: transaction_id,
+            cavv,
             directory_server_transaction_id: ds_trans_id.map(Secret::new),
-            specification_version: message_version,
-            pa_specification_version: None,
+            specification_version: None,
+            pa_specification_version: message_version,
             veres_enrolled: None,
-            eci_raw: eci,
+            eci_raw: None,
             authentication_date: None,
             effective_authentication_type: None,
             challenge_code: None,
@@ -3408,10 +3459,12 @@ impl<
                     let redirection_data = match (
                         info_response
                             .consumer_authentication_information
-                            .access_token,
+                            .access_token
+                            .clone(),
                         info_response
                             .consumer_authentication_information
-                            .step_up_url,
+                            .step_up_url
+                            .clone(),
                     ) {
                         (Some(token), Some(step_up_url)) => {
                             Some(RedirectForm::CybersourceConsumerAuth {
@@ -3430,37 +3483,11 @@ impl<
                         response: Ok(PaymentsResponseData::AuthenticateResponse {
                             redirection_data: redirection_data.map(Box::new),
                             connector_response_reference_id,
-                            authentication_data: Some(router_request_types::AuthenticationData {
-                                trans_status: info_response
-                                    .consumer_authentication_information
-                                    .validate_response
-                                    .pares_status
-                                    .clone()
-                                    .map(common_enums::TransactionStatus::from),
-                                eci: info_response
-                                    .consumer_authentication_information
-                                    .validate_response
-                                    .indicator
-                                    .clone(),
-                                cavv: info_response
-                                    .consumer_authentication_information
-                                    .validate_response
-                                    .cavv
-                                    .clone()
-                                    .unwrap_or_default(),
-                                threeds_server_transaction_id: info_response
-                                    .consumer_authentication_information
-                                    .validate_response
-                                    .directory_server_transaction_id
-                                    .clone()
-                                    .map(|secret| secret.expose()),
-                                message_version: info_response
-                                    .consumer_authentication_information
-                                    .validate_response
-                                    .specification_version
-                                    .clone(),
-                                ds_trans_id: None,
-                            }),
+                            authentication_data: Some(
+                                router_request_types::AuthenticationData::from(
+                                    info_response.consumer_authentication_information,
+                                ),
+                            ),
                             status_code: item.http_code,
                         }),
                         ..item.router_data
@@ -3735,37 +3762,11 @@ impl<
                             ..item.router_data.resource_common_data
                         },
                         response: Ok(PaymentsResponseData::PostAuthenticateResponse {
-                            authentication_data: Some(router_request_types::AuthenticationData {
-                                trans_status: info_response
-                                    .consumer_authentication_information
-                                    .validate_response
-                                    .pares_status
-                                    .clone()
-                                    .map(common_enums::TransactionStatus::from),
-                                eci: info_response
-                                    .consumer_authentication_information
-                                    .validate_response
-                                    .indicator
-                                    .clone(), // eci_raw is not available in validate_response
-                                cavv: info_response
-                                    .consumer_authentication_information
-                                    .validate_response
-                                    .cavv
-                                    .clone()
-                                    .unwrap_or_else(|| Secret::new("".to_string())),
-                                threeds_server_transaction_id: info_response
-                                    .consumer_authentication_information
-                                    .validate_response
-                                    .directory_server_transaction_id
-                                    .clone()
-                                    .map(|secret| secret.expose()),
-                                message_version: info_response
-                                    .consumer_authentication_information
-                                    .validate_response
-                                    .specification_version
-                                    .clone(),
-                                ds_trans_id: None,
-                            }),
+                            authentication_data: Some(
+                                router_request_types::AuthenticationData::from(
+                                    info_response.consumer_authentication_information,
+                                ),
+                            ),
                             connector_response_reference_id,
                             status_code: item.http_code,
                         }),
@@ -3837,6 +3838,8 @@ pub struct CybersourceConsumerAuthValidateResponse {
     xid: Option<String>,
     specification_version: Option<SemanticVersion>,
     directory_server_transaction_id: Option<Secret<String>>,
+    acs_transaction_id: Option<String>,
+    three_d_s_server_transaction_id: Option<String>,
     indicator: Option<String>,
 }
 

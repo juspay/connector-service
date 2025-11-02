@@ -1966,7 +1966,7 @@ impl ForeignTryFrom<router_request_types::AuthenticationData>
             .map(|ts| grpc_api_types::payments::TransactionStatus::foreign_from(ts).into());
         Ok(Self {
             eci: value.eci,
-            cavv: value.cavv.expose().to_string(),
+            cavv: value.cavv.map(|cavv| cavv.expose()),
             threeds_server_transaction_id: value.threeds_server_transaction_id.map(|id| {
                 grpc_api_types::payments::Identifier {
                     id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
@@ -1975,6 +1975,8 @@ impl ForeignTryFrom<router_request_types::AuthenticationData>
             message_version: value.message_version.map(|v| v.to_string()),
             ds_transaction_id: value.ds_trans_id,
             trans_status,
+            acs_transaction_id: value.acs_transaction_id,
+            transaction_id: value.transaction_id,
         })
     }
 }

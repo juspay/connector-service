@@ -121,10 +121,12 @@ pub struct PaymentsCancelData {
 pub struct AuthenticationData {
     pub trans_status: Option<common_enums::TransactionStatus>,
     pub eci: Option<String>,
-    pub cavv: Secret<String>,
+    pub cavv: Option<Secret<String>>,
     pub threeds_server_transaction_id: Option<String>,
     pub message_version: Option<SemanticVersion>,
     pub ds_trans_id: Option<String>,
+    pub acs_transaction_id: Option<String>,
+    pub transaction_id: Option<String>,
 }
 
 impl TryFrom<payments::AuthenticationData> for AuthenticationData {
@@ -137,6 +139,8 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
             message_version,
             ds_transaction_id,
             trans_status,
+            acs_transaction_id,
+            transaction_id,
         } = value;
         let threeds_server_transaction_id =
             utils::extract_optional_connector_request_reference_id(&threeds_server_transaction_id);
@@ -171,10 +175,12 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
         Ok(Self {
             trans_status,
             eci,
-            cavv: Secret::new(cavv),
+            cavv: cavv.map(Secret::new),
             threeds_server_transaction_id,
             message_version,
             ds_trans_id: ds_transaction_id,
+            acs_transaction_id,
+            transaction_id,
         })
     }
 }
@@ -184,7 +190,7 @@ impl utils::ForeignFrom<AuthenticationData> for payments::AuthenticationData {
         use hyperswitch_masking::ExposeInterface;
         Self {
             eci: value.eci,
-            cavv: value.cavv.expose().to_string(),
+            cavv: value.cavv.map(|cavv| cavv.expose()),
             threeds_server_transaction_id: value.threeds_server_transaction_id.map(|id| {
                 payments::Identifier {
                     id_type: Some(payments::identifier::IdType::Id(id)),
@@ -192,32 +198,12 @@ impl utils::ForeignFrom<AuthenticationData> for payments::AuthenticationData {
             }),
             message_version: value.message_version.map(|v| v.to_string()),
             ds_transaction_id: value.ds_trans_id,
-            trans_status: value.trans_status.map(|ts| match ts {
-                common_enums::TransactionStatus::Success => {
-                    payments::TransactionStatus::Success as i32
-                }
-                common_enums::TransactionStatus::Failure => {
-                    payments::TransactionStatus::Failure as i32
-                }
-                common_enums::TransactionStatus::VerificationNotPerformed => {
-                    payments::TransactionStatus::VerificationNotPerformed as i32
-                }
-                common_enums::TransactionStatus::NotVerified => {
-                    payments::TransactionStatus::NotVerified as i32
-                }
-                common_enums::TransactionStatus::Rejected => {
-                    payments::TransactionStatus::Rejected as i32
-                }
-                common_enums::TransactionStatus::ChallengeRequired => {
-                    payments::TransactionStatus::ChallengeRequired as i32
-                }
-                common_enums::TransactionStatus::ChallengeRequiredDecoupledAuthentication => {
-                    payments::TransactionStatus::ChallengeRequiredDecoupledAuthentication as i32
-                }
-                common_enums::TransactionStatus::InformationOnly => {
-                    payments::TransactionStatus::InformationOnly as i32
-                }
-            }),
+            trans_status: value
+                .trans_status
+                .map(payments::TransactionStatus::foreign_from)
+                .map(i32::from),
+            acs_transaction_id: value.acs_transaction_id,
+            transaction_id: value.transaction_id,
         }
     }
 }
