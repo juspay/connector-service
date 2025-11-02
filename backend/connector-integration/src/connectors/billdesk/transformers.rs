@@ -414,7 +414,7 @@ fn get_redirect_form_data(
     response_data: &InitiateSuccessResp,
 ) -> CustomResult<RedirectForm, errors::ConnectorError> {
     match payment_method_type {
-        common_enums::PaymentMethodType::Upi => Ok(RedirectForm::Form {
+        common_enums::PaymentMethodType::UpiCollect => Ok(RedirectForm::Form {
             endpoint: response_data.url.clone(),
             method: Method::Post,
             form_fields: response_data
