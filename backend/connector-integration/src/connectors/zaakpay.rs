@@ -467,7 +467,7 @@ impl<
         + 'static
         + Serialize,
 > ConnectorIntegrationV2<
-    connector_flow::PaymentMethodToken,
+    domain_types::connector_flow::PaymentMethodToken,
     PaymentFlowData,
     PaymentMethodTokenizationData<T>,
     PaymentMethodTokenResponse,
@@ -495,7 +495,7 @@ impl<
         + 'static
         + Serialize,
 > ConnectorIntegrationV2<
-    connector_flow::PreAuthenticate,
+    domain_types::connector_flow::PreAuthenticate,
     PaymentFlowData,
     PaymentsPreAuthenticateData<T>,
     PaymentsResponseData,
@@ -522,7 +522,7 @@ impl<
         + 'static
         + Serialize,
 > ConnectorIntegrationV2<
-    connector_flow::Authenticate,
+    domain_types::connector_flow::Authenticate,
     PaymentFlowData,
     PaymentsAuthenticateData<T>,
     PaymentsResponseData,
@@ -549,7 +549,7 @@ impl<
         + 'static
         + Serialize,
 > ConnectorIntegrationV2<
-    connector_flow::PostAuthenticate,
+    domain_types::connector_flow::PostAuthenticate,
     PaymentFlowData,
     PaymentsPostAuthenticateData<T>,
     PaymentsResponseData,
@@ -575,7 +575,7 @@ impl<
         + 'static
         + Serialize,
 > ConnectorIntegrationV2<
-    connector_flow::VoidPC,
+    domain_types::connector_flow::VoidPC,
     PaymentFlowData,
     PaymentsCancelPostCaptureData,
     PaymentsResponseData,
