@@ -235,6 +235,17 @@ impl<
 > connector_types::RefundV2 for ZaakPay<T>
 {
 }
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<connector_flow::Refund, RefundFlowData, RefundsData, RefundsResponseData> for ZaakPay<T>
+{
+}
 impl<
     T: PaymentMethodDataTypes
         + std::fmt::Debug
@@ -245,6 +256,22 @@ impl<
 > connector_types::PaymentCapture for ZaakPay<T>
 {
 }
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<
+    connector_flow::Capture,
+    PaymentFlowData,
+    PaymentsCaptureData,
+    PaymentsResponseData,
+> for ZaakPay<T>
+{
+}
 impl<
     T: PaymentMethodDataTypes
         + std::fmt::Debug
@@ -253,6 +280,22 @@ impl<
         + 'static
         + Serialize,
 > connector_types::SetupMandateV2<T> for ZaakPay<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<
+    connector_flow::SetupMandate,
+    PaymentFlowData,
+    SetupMandateRequestData<T>,
+    PaymentsResponseData,
+> for ZaakPay<T>
 {
 }
 impl<
