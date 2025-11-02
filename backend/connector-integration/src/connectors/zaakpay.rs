@@ -180,7 +180,7 @@ impl<
         + 'static
         + Serialize,
 > ConnectorIntegrationV2<
-    connector_flow::CreateConnectorCustomer,
+    domain_types::connector_flow::CreateConnectorCustomer,
     PaymentFlowData,
     ConnectorCustomerData,
     ConnectorCustomerResponse,
@@ -205,7 +205,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<connector_flow::Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for ZaakPay<T>
+> ConnectorIntegrationV2<domain_types::connector_flow::Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for ZaakPay<T>
 {
 }
 impl<
@@ -226,7 +226,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<connector_flow::RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for ZaakPay<T>
+> ConnectorIntegrationV2<domain_types::connector_flow::RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for ZaakPay<T>
 {
 }
 impl<
@@ -247,7 +247,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<connector_flow::Refund, RefundFlowData, RefundsData, RefundsResponseData> for ZaakPay<T>
+> ConnectorIntegrationV2<domain_types::connector_flow::Refund, RefundFlowData, RefundsData, RefundsResponseData> for ZaakPay<T>
 {
 }
 impl<
@@ -269,7 +269,7 @@ impl<
         + 'static
         + Serialize,
 > ConnectorIntegrationV2<
-    connector_flow::Capture,
+    domain_types::connector_flow::Capture,
     PaymentFlowData,
     PaymentsCaptureData,
     PaymentsResponseData,
