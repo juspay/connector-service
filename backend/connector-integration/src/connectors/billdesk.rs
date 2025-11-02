@@ -385,7 +385,7 @@ macros::create_all_prerequisites!(
         (flow: RepeatPayment, request_body: BilldeskRepeatPaymentRequest, response_body: BilldeskRepeatPaymentResponse, router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>),
         (flow: Accept, request_body: BilldeskAcceptDisputeRequest, response_body: BilldeskAcceptDisputeResponse, router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>),
         (flow: DefendDispute, request_body: BilldeskDefendDisputeRequest, response_body: BilldeskDefendDisputeResponse, router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>),
-        (flow: SubmitEvidence, request_body: BilldeskSubmitEvidenceRequest, response_body: BilldeskSubmitEvidenceResponse, router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>),
+        (flow: SubmitEvidence, request_body: BilldeskSubmitEvidenceRequest, response_body: BilldeskSubmitEvidenceResponse, router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>)
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
