@@ -837,7 +837,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> SourceVerification<Refund, RefundFlowData, RefundsData, RefundsResponseData> for ZaakPay<T>
+> SourceVerification<domain_types::connector_flow::Refund, RefundFlowData, RefundsData, RefundsResponseData> for ZaakPay<T>
 {
     fn get_secrets(
         &self,
@@ -960,7 +960,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> SourceVerification<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData> for ZaakPay<T>
+> SourceVerification<domain_types::connector_flow::Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData> for ZaakPay<T>
 {
     fn get_secrets(
         &self,
@@ -1001,7 +1001,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> SourceVerification<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData> for ZaakPay<T>
+> SourceVerification<domain_types::connector_flow::PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData> for ZaakPay<T>
 {
     fn get_secrets(
         &self,
@@ -1042,7 +1042,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> SourceVerification<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData> for ZaakPay<T>
+> SourceVerification<domain_types::connector_flow::VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData> for ZaakPay<T>
 {
     fn get_secrets(
         &self,
