@@ -672,7 +672,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> SourceVerification<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for ZaakPay<T>
+> SourceVerification<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for ZaakPay<T>
 {
     fn get_secrets(
         &self,
@@ -691,7 +691,7 @@ impl<
     fn get_signature(
         &self,
         _payload: &[u8],
-        _router_data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        _router_data: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
         _secrets: &[u8],
     ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
         Ok(Vec::new())
@@ -699,7 +699,89 @@ impl<
     fn get_message(
         &self,
         payload: &[u8],
-        _router_data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        _router_data: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned())
+    }
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> SourceVerification<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for ZaakPay<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<
+        Box<dyn common_utils::crypto::VerifySignature + Send>,
+        errors::ConnectorError,
+    > {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm))
+    }
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+    fn get_message(
+        &self,
+        payload: &[u8],
+        _router_data: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned())
+    }
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> SourceVerification<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData> for ZaakPay<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<
+        Box<dyn common_utils::crypto::VerifySignature + Send>,
+        errors::ConnectorError,
+    > {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm))
+    }
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+    fn get_message(
+        &self,
+        payload: &[u8],
+        _router_data: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
         _secrets: &[u8],
     ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
         Ok(payload.to_owned())
