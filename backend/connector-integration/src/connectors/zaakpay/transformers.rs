@@ -372,7 +372,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                     }),
                 }
             },
-            Some(common_enums::PaymentMethodType::Netbanking) => {
+            Some(common_enums::PaymentMethodType::NetbankingRedirect) => {
                 ZaakPayPaymentInstrumentTransType {
                     payment_mode: "NB".to_string(),
                     card: None,
