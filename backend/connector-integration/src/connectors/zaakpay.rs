@@ -175,16 +175,16 @@ macros::create_all_prerequisites!(
 
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+            _req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.zaakpay.base_url
+            constants::ZAAKPAY_API_BASE_URL
         }
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+            _req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.zaakpay.base_url
+            constants::ZAAKPAY_API_BASE_URL
         }
     }
 );
