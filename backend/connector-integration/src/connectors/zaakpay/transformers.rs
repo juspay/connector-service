@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use common_utils::{
-    errors::CustomResult, request::Method, types::StringMinorUnit,
-    Email,
+    errors::CustomResult, request::Method,
 };
+use hyperswitch_masking::PeekInterface;
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
