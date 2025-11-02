@@ -243,7 +243,7 @@ impl From<BilldeskPaymentStatus> for common_enums::AttemptStatus {
     }
 }
 
-fn construct_billdesk_message(
+fn construct_billdesk_message<T: PaymentMethodDataTypes>(
     router_data: &BilldeskRouterData<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         T,
