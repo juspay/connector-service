@@ -656,7 +656,7 @@ fn generate_checksum(
         transact_data.merchant_identifier,
         transact_data.order_detail.order_id,
         transact_data.order_detail.amount,
-        secret_key.expose()
+        secret_key.clone().expose()
     );
     
     // Simple hash for demonstration - in production, use proper SHA256 with salt
@@ -677,7 +677,7 @@ fn generate_checksum_check(
         "{}{}{}",
         check_data.merchant_identifier,
         check_data.order_detail.order_id,
-        secret_key.expose()
+        secret_key.clone().expose()
     );
     
     // Simple hash for demonstration - in production, use proper SHA256 with salt
