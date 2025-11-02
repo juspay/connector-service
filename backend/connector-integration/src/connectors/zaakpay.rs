@@ -836,7 +836,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> SourceVerification<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> for ZaakPay<T>
+> SourceVerification<Refund, RefundFlowData, RefundsData, RefundsResponseData> for ZaakPay<T>
 {
     fn get_secrets(
         &self,
@@ -855,7 +855,7 @@ impl<
     fn get_signature(
         &self,
         _payload: &[u8],
-        _router_data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        _router_data: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         _secrets: &[u8],
     ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
         Ok(Vec::new())
@@ -863,7 +863,212 @@ impl<
     fn get_message(
         &self,
         payload: &[u8],
-        _router_data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        _router_data: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned())
+    }
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> SourceVerification<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse> for ZaakPay<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<
+        Box<dyn common_utils::crypto::VerifySignature + Send>,
+        errors::ConnectorError,
+    > {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm))
+    }
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+    fn get_message(
+        &self,
+        payload: &[u8],
+        _router_data: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned())
+    }
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> SourceVerification<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData> for ZaakPay<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<
+        Box<dyn common_utils::crypto::VerifySignature + Send>,
+        errors::ConnectorError,
+    > {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm))
+    }
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+    fn get_message(
+        &self,
+        payload: &[u8],
+        _router_data: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned())
+    }
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> SourceVerification<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData> for ZaakPay<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<
+        Box<dyn common_utils::crypto::VerifySignature + Send>,
+        errors::ConnectorError,
+    > {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm))
+    }
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+    fn get_message(
+        &self,
+        payload: &[u8],
+        _router_data: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned())
+    }
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> SourceVerification<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData> for ZaakPay<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<
+        Box<dyn common_utils::crypto::VerifySignature + Send>,
+        errors::ConnectorError,
+    > {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm))
+    }
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+    fn get_message(
+        &self,
+        payload: &[u8],
+        _router_data: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned())
+    }
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> SourceVerification<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData> for ZaakPay<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<
+        Box<dyn common_utils::crypto::VerifySignature + Send>,
+        errors::ConnectorError,
+    > {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm))
+    }
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new())
+    }
+    fn get_message(
+        &self,
+        payload: &[u8],
+        _router_data: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
         _secrets: &[u8],
     ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
         Ok(payload.to_owned())
