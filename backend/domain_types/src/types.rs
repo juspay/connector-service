@@ -1665,8 +1665,6 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
                     },
                 ))
             })?;
-        dbg!(&value.metadata);
-        dbg!(&connector_meta_data);
 
         Ok(Self {
             merchant_id: merchant_id_from_header,

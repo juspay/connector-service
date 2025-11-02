@@ -499,6 +499,7 @@ impl From<CybersourceConsumerAuthInformationEnrollmentResponse>
             .validate_response
             .pares_status
             .map(common_enums::TransactionStatus::from);
+        // CAVV is populated from UCAF data if available(for mastercard), else from CAVV field
         let cavv = value
             .validate_response
             .ucaf_authentication_data
