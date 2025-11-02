@@ -31,15 +31,13 @@ impl TryFrom<&ConnectorAuthType> for ZaakPayAuth {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key1 } => Ok(Self {
+            ConnectorAuthType::SignatureKey { api_key, key1, api_secret: _ } => Ok(Self {
                 merchant_identifier: api_key.clone(),
-                secret_key: key1
-                    .clone()
-                    .ok_or(errors::ConnectorError::FailedToObtainAuthType)?,
+                secret_key: key1.clone(),
             }),
-            ConnectorAuthType::Key { api_key } => Ok(Self {
+            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
                 merchant_identifier: api_key.clone(),
-                secret_key: Secret::new("".to_string()), // Default empty for cases where only merchant ID is provided
+                secret_key: key1.clone(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
