@@ -631,7 +631,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> for ZaakPay<T>
+> SourceVerification<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for ZaakPay<T>
 {
     fn get_secrets(
         &self,
@@ -650,7 +650,7 @@ impl<
     fn get_signature(
         &self,
         _payload: &[u8],
-        _router_data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        _router_data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         _secrets: &[u8],
     ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
         Ok(Vec::new())
@@ -658,7 +658,7 @@ impl<
     fn get_message(
         &self,
         payload: &[u8],
-        _router_data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        _router_data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         _secrets: &[u8],
     ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
         Ok(payload.to_owned())
