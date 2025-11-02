@@ -268,7 +268,7 @@ fn construct_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std:
     let message = format!(
         "MerchantID={}&CustomerID={}&TxnReferenceNo={}&TxnAmount={}&CurrencyType={}&ItemCode=DIRECT&Checksum={}",
         "MERCHANT_ID", // This should come from auth
-        customer_id,
+        customer_id.to_string(),
         transaction_id,
         amount,
         router_data.router_data.request.currency,
