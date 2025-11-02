@@ -140,7 +140,7 @@ impl<
         + 'static
         + Serialize,
 > ConnectorIntegrationV2<
-    connector_flow::CreateSessionToken,
+    domain_types::connector_flow::CreateSessionToken,
     PaymentFlowData,
     SessionTokenRequestData,
     SessionTokenResponseData,
