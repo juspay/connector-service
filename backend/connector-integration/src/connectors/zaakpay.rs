@@ -71,61 +71,7 @@ impl<
 }
 
 
-// Stub types for unsupported flows
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayVoidRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayVoidResponse;
 
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayCaptureRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayCaptureResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayRefundRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayRefundResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayRSyncRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayRSyncResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayCreateOrderRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayCreateOrderResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPaySessionTokenRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPaySessionTokenResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPaySetupMandateRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPaySetupMandateResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayRepeatPaymentRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayRepeatPaymentResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayAcceptDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayAcceptDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPaySubmitEvidenceRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPaySubmitEvidenceResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ZaakPayDefendDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct ZaakPayDefendDisputeResponse;
 
 // MANDATORY: Use create_all_prerequisites! macro - this is the foundation
 macros::create_all_prerequisites!(
