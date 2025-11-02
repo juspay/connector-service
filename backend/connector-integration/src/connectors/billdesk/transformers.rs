@@ -464,7 +464,7 @@ impl<
                     .ok_or(errors::ConnectorError::MissingPaymentMethodType)?;
                 // For NB initiate response, we need to handle differently
                 let redirection_data = Ok(RedirectForm::Form {
-                    endpoint: response_data.rdata.url.clone(),
+                    endpoint: response_data.rdata.url.clone().unwrap_or_default(),
                     method: Method::Post,
                     form_fields: response_data
                         .rdata
@@ -499,7 +499,7 @@ impl<
                     .ok_or(errors::ConnectorError::MissingPaymentMethodType)?;
                 // For NB initiate response, we need to handle differently
                 let redirection_data = Ok(RedirectForm::Form {
-                    endpoint: response_data.rdata.url.clone(),
+                    endpoint: response_data.rdata.url.clone().unwrap_or_default(),
                     method: Method::Post,
                     form_fields: response_data
                         .rdata
