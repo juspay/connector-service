@@ -596,55 +596,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, Self>>
-    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<BilldeskPaymentsSyncResponse, Self>,
-    ) -> Result<Self, Self::Error> {
-        let ResponseRouterData {
-            response,
-            router_data,
-            http_code,
-        } = item;
 
-        let status = match response.response_data.auth_status.as_str() {
-            "0300" | "0399" => common_enums::AttemptStatus::Charged,
-            "0396" => common_enums::AttemptStatus::AuthenticationPending,
-            "0398" => common_enums::AttemptStatus::Failure,
-            _ => common_enums::AttemptStatus::Failure,
-        };
-
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                ..router_data.resource_common_data
-            },
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    response.response_data.txn_reference_no.clone(),
-                ),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata: None,
-                network_txn_id: Some(response.response_data.bank_reference_no.clone()),
-                connector_response_reference_id: None,
-                incremental_authorization_allowed: None,
-                status_code: http_code,
-            }),
-            ..router_data
-        })
-    }
-}
 
 // Stub types for unsupported flows
 #[derive(Debug, Clone, Serialize)]
