@@ -306,8 +306,8 @@ impl<
         constants::ZAAKPAY_DEFAULT_CONTENT_TYPE
     }
 
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.zaakpay.base_url.as_ref()
+    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
+        constants::ZAAKPAY_API_BASE_URL
     }
 
     fn get_auth_header(
