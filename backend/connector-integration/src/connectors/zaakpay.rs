@@ -632,7 +632,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> for ZaakPay<T>
+> SourceVerification<domain_types::connector_flow::PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> for ZaakPay<T>
 {
     fn get_secrets(
         &self,
