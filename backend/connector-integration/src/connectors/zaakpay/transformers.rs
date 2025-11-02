@@ -560,11 +560,8 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::m
     }
 }
 
-impl<T> TryFrom<ResponseRouterData<ZaakPayPaymentsSyncResponse, Self>>
+impl TryFrom<ResponseRouterData<ZaakPayPaymentsSyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-where
-    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-    Self: From<ZaakPayRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>,
 {
     type Error = error_stack::Report<ConnectorError>;
 
