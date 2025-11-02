@@ -487,7 +487,7 @@ impl<
                                 .connector_request_reference_id
                                 .clone(),
                         ),
-                        redirection_data: Some(Box::new(redirection_data?)),
+                        redirection_data: Some(Box::new(redirection_data)),
                         mandate_reference: None,
                         connector_metadata: None,
                         network_txn_id: None,
@@ -522,7 +522,7 @@ impl<
                                 .connector_request_reference_id
                                 .clone(),
                         ),
-                        redirection_data: Some(Box::new(redirection_data?)),
+                        redirection_data: Some(Box::new(redirection_data)),
                         mandate_reference: None,
                         connector_metadata: None,
                         network_txn_id: None,
