@@ -67,7 +67,7 @@ pub struct ZaakPayTransactDataRequest {
     pub payment_instrument: ZaakPayPaymentInstrumentTransType,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayOrderDetailTransType {
     pub order_id: String,
@@ -76,6 +76,7 @@ pub struct ZaakPayOrderDetailTransType {
     pub product_description: String,
     pub email: String,
     pub phone: String,
+    pub txnid: Option<String>, // Add missing field
 }
 
 #[derive(Debug, Serialize)]
