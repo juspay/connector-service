@@ -463,16 +463,21 @@ impl<
                     .payment_method_type
                     .ok_or(errors::ConnectorError::MissingPaymentMethodType)?;
                 // For NB initiate response, we need to handle differently
-                let redirection_data = Ok(RedirectForm::Form {
-                    endpoint: response_data.rdata.url.clone(),
-                    method: Method::Post,
-                    form_fields: response_data
-                        .rdata
-                        .parameters
-                        .iter()
-                        .map(|(k, v)| (k.clone(), v.clone()))
-                        .collect(),
-                });
+                let redirection_data = match &response_data.rdata.url {
+                    Some(url) => Ok(RedirectForm::Form {
+                        endpoint: url.clone(),
+                        method: Method::Post,
+                        form_fields: response_data
+                            .rdata
+                            .parameters
+                            .iter()
+                            .map(|(k, v)| (k.clone(), v.clone()))
+                            .collect(),
+                    }),
+                    None => Err(errors::ConnectorError::MissingRequiredField {
+                        field_name: "redirect_url",
+                    }),
+                }?;
                 (
                     common_enums::AttemptStatus::AuthenticationPending,
                     Ok(PaymentsResponseData::TransactionResponse {
