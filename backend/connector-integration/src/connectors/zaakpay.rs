@@ -692,7 +692,7 @@ impl<
     fn get_signature(
         &self,
         _payload: &[u8],
-        _router_data: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        _router_data: &RouterDataV2<domain_types::connector_flow::Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
         _secrets: &[u8],
     ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
         Ok(Vec::new())
@@ -700,7 +700,7 @@ impl<
     fn get_message(
         &self,
         payload: &[u8],
-        _router_data: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        _router_data: &RouterDataV2<domain_types::connector_flow::Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
         _secrets: &[u8],
     ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
         Ok(payload.to_owned())
