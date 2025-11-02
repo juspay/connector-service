@@ -295,7 +295,7 @@ impl<
         + 'static
         + Serialize,
 > ConnectorIntegrationV2<
-    connector_flow::SetupMandate,
+    domain_types::connector_flow::SetupMandate,
     PaymentFlowData,
     SetupMandateRequestData<T>,
     PaymentsResponseData,
@@ -321,7 +321,7 @@ impl<
         + 'static
         + Serialize,
 > ConnectorIntegrationV2<
-    connector_flow::Accept,
+    domain_types::connector_flow::Accept,
     DisputeFlowData,
     AcceptDisputeData,
     DisputeResponseData,
@@ -347,7 +347,7 @@ impl<
         + 'static
         + Serialize,
 > ConnectorIntegrationV2<
-    connector_flow::SubmitEvidence,
+    domain_types::connector_flow::SubmitEvidence,
     DisputeFlowData,
     SubmitEvidenceData,
     DisputeResponseData,
@@ -373,7 +373,7 @@ impl<
         + 'static
         + Serialize,
 > ConnectorIntegrationV2<
-    connector_flow::DefendDispute,
+    domain_types::connector_flow::DefendDispute,
     DisputeFlowData,
     DisputeDefendData,
     DisputeResponseData,
@@ -441,7 +441,7 @@ impl<
         + 'static
         + Serialize,
 > ConnectorIntegrationV2<
-    connector_flow::RepeatPayment,
+    domain_types::connector_flow::RepeatPayment,
     PaymentFlowData,
     RepeatPaymentData,
     PaymentsResponseData,
