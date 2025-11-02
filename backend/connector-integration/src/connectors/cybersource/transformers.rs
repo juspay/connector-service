@@ -1134,16 +1134,9 @@ impl<
         let commerce_indicator_for_external_authentication = item
             .router_data
             .request
-            .metadata
+            .authentication_data
             .as_ref()
-            .and_then(|authn_data| {
-                authn_data
-                    .get("eci")
-                    .and_then(|eci| eci.as_str())
-                    .map(|eci| {
-                        get_commerce_indicator_for_external_authentication(network, eci.to_string())
-                    })
-            });
+            .and_then(|authentication_data| authentication_data.eci.clone());
 
         Ok(Self {
             capture: Some(matches!(
