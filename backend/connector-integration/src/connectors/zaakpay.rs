@@ -101,6 +101,22 @@ impl<
 > connector_types::PaymentOrderCreate for ZaakPay<T>
 {
 }
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<
+    connector_flow::CreateOrder,
+    PaymentFlowData,
+    PaymentCreateOrderData,
+    PaymentCreateOrderResponse,
+> for ZaakPay<T>
+{
+}
 impl<
     T: PaymentMethodDataTypes
         + std::fmt::Debug
@@ -111,8 +127,34 @@ impl<
 > connector_types::PaymentSessionToken for ZaakPay<T>
 {
 }
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<
+    connector_flow::CreateSessionToken,
+    PaymentFlowData,
+    SessionTokenRequestData,
+    SessionTokenResponseData,
+> for ZaakPay<T>
+{
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAccessToken for ZaakPay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+    connector_flow::CreateAccessToken,
+    PaymentFlowData,
+    AccessTokenRequestData,
+    AccessTokenResponseData,
+> for ZaakPay<T>
 {
 }
 impl<
