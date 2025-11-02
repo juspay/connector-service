@@ -878,7 +878,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> SourceVerification<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse> for ZaakPay<T>
+> SourceVerification<domain_types::connector_flow::PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse> for ZaakPay<T>
 {
     fn get_secrets(
         &self,
@@ -897,7 +897,7 @@ impl<
     fn get_signature(
         &self,
         _payload: &[u8],
-        _router_data: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        _router_data: &RouterDataV2<domain_types::connector_flow::PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         _secrets: &[u8],
     ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
         Ok(Vec::new())
@@ -905,7 +905,7 @@ impl<
     fn get_message(
         &self,
         payload: &[u8],
-        _router_data: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        _router_data: &RouterDataV2<domain_types::connector_flow::PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         _secrets: &[u8],
     ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
         Ok(payload.to_owned())
