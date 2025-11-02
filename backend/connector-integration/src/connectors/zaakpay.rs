@@ -428,6 +428,22 @@ impl<
 > connector_types::RepeatPaymentV2 for ZaakPay<T>
 {
 }
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<
+    connector_flow::RepeatPayment,
+    PaymentFlowData,
+    RepeatPaymentData,
+    PaymentsResponseData,
+> for ZaakPay<T>
+{
+}
 impl<
     T: PaymentMethodDataTypes
         + std::fmt::Debug
@@ -436,6 +452,22 @@ impl<
         + 'static
         + Serialize,
 > connector_types::PaymentTokenV2<T> for ZaakPay<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<
+    connector_flow::PaymentMethodToken,
+    PaymentFlowData,
+    PaymentMethodTokenizationData<T>,
+    PaymentMethodTokenResponse,
+> for ZaakPay<T>
 {
 }
 
