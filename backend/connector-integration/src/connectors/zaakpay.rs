@@ -1158,7 +1158,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut header = vec![
+            let header = vec![
                 (
                     headers::CONTENT_TYPE.to_string(),
                     self.common_get_content_type().to_string().into(),
@@ -1174,7 +1174,7 @@ macros::macro_connector_implementation!(
             ];
 
             // Add authentication headers if needed
-            let auth_type = zaakpay::ZaakPayAuth::try_from(&req.connector_auth_type)?;
+            let _auth_type = zaakpay::ZaakPayAuth::try_from(&req.connector_auth_type)?;
             // ZaakPay uses checksum in request body, not in headers
 
             Ok(header)
@@ -1206,7 +1206,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut header = vec![
+            let header = vec![
                 (
                     headers::CONTENT_TYPE.to_string(),
                     self.common_get_content_type().to_string().into(),
@@ -1222,7 +1222,7 @@ macros::macro_connector_implementation!(
             ];
 
             // Add authentication headers if needed
-            let auth_type = zaakpay::ZaakPayAuth::try_from(&req.connector_auth_type)?;
+            let _auth_type = zaakpay::ZaakPayAuth::try_from(&req.connector_auth_type)?;
             // ZaakPay uses checksum in request body, not in headers
 
             Ok(header)
