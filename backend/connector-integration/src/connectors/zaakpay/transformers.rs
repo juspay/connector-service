@@ -346,7 +346,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         // Extract email from request
         let email = item.router_data.request.email.clone()
-            .map(|e| e.get_string_repr().to_string())
+            .map(|e| e.to_string())
             .unwrap_or_else(|| format!("{}@example.com", customer_id.get_string_repr()));
         
         let phone = "9999999999".to_string(); // Default phone number
