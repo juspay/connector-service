@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use common_utils::{
     errors::CustomResult, request::Method,
 };
-use hyperswitch_masking::PeekInterface;
+use hyperswitch_masking::{PeekInterface, Secret, ExposeInterface};
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
@@ -14,7 +14,6 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Secret, ExposeInterface};
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::zaakpay::ZaakPayRouterData, types::ResponseRouterData};
