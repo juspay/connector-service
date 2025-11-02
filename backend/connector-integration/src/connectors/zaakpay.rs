@@ -591,7 +591,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData> for ZaakPay<T>
+> SourceVerification<domain_types::connector_flow::Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData> for ZaakPay<T>
 {
     fn get_secrets(
         &self,
@@ -673,7 +673,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> SourceVerification<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for ZaakPay<T>
+> SourceVerification<domain_types::connector_flow::Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for ZaakPay<T>
 {
     fn get_secrets(
         &self,
@@ -714,7 +714,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> SourceVerification<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for ZaakPay<T>
+> SourceVerification<domain_types::connector_flow::SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for ZaakPay<T>
 {
     fn get_secrets(
         &self,
@@ -755,7 +755,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> SourceVerification<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData> for ZaakPay<T>
+> SourceVerification<domain_types::connector_flow::RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData> for ZaakPay<T>
 {
     fn get_secrets(
         &self,
@@ -796,7 +796,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> SourceVerification<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData> for ZaakPay<T>
+> SourceVerification<domain_types::connector_flow::SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData> for ZaakPay<T>
 {
     fn get_secrets(
         &self,
