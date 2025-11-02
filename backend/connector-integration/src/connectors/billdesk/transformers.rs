@@ -248,7 +248,7 @@ fn construct_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std:
         .router_data
         .resource_common_data
         .get_customer_id()
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
     let amount = router_data
         .connector
         .amount_converter
