@@ -154,7 +154,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-    connector_flow::CreateAccessToken,
+    domain_types::connector_flow::CreateAccessToken,
     PaymentFlowData,
     AccessTokenRequestData,
     AccessTokenResponseData,
