@@ -563,6 +563,22 @@ impl<
 {
 }
 
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<
+    connector_flow::VoidPC,
+    PaymentFlowData,
+    PaymentsCancelPostCaptureData,
+    PaymentsResponseData,
+> for ZaakPay<T>
+{
+}
+
 // SourceVerification implementations for supported flows
 impl<
     T: PaymentMethodDataTypes
