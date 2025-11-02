@@ -490,6 +490,22 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
+> ConnectorIntegrationV2<
+    connector_flow::PreAuthenticate,
+    PaymentFlowData,
+    PaymentsPreAuthenticateData<T>,
+    PaymentsResponseData,
+> for ZaakPay<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
 > connector_types::PaymentAuthenticateV2<T> for ZaakPay<T>
 {
 }
@@ -501,7 +517,39 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
+> ConnectorIntegrationV2<
+    connector_flow::Authenticate,
+    PaymentFlowData,
+    PaymentsAuthenticateData<T>,
+    PaymentsResponseData,
+> for ZaakPay<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
 > connector_types::PaymentPostAuthenticateV2<T> for ZaakPay<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<
+    connector_flow::PostAuthenticate,
+    PaymentFlowData,
+    PaymentsPostAuthenticateData<T>,
+    PaymentsResponseData,
+> for ZaakPay<T>
 {
 }
 impl<
