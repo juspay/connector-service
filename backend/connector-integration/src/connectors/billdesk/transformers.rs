@@ -22,7 +22,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
+use crate::types::ResponseRouterData;
 
 pub type BilldeskRouterData<T, U> = crate::types::RouterData<T, U>;
 
