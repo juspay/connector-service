@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use common_utils::{
-    errors::CustomResult, request::Method,
+    errors::CustomResult, request::Method, pii::Email,
 };
 use hyperswitch_masking::{PeekInterface, Secret, ExposeInterface};
 use domain_types::{
