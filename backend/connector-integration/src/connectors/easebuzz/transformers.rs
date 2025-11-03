@@ -1,21 +1,18 @@
 use common_utils::{
     crypto,
     errors::CustomResult,
-    pii::SecretSerdeValue,
     types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
     connector_types::{PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundSyncData, RefundsResponseData},
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
-    router_request_types::ResponseId,
-    router_request_types::AccessToken,
+    connector_types::ResponseId,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
-use masking::Secret;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize)]
