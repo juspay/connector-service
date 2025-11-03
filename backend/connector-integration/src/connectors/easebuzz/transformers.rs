@@ -1,30 +1,22 @@
-use std::collections::HashMap;
-
-use common_enums::{Currency, PaymentMethodType};
 use common_utils::{
     crypto,
     errors::CustomResult,
     pii::SecretSerdeValue,
-    request::RequestContent,
-    types::{MinorUnit, StringMinorUnit},
+    types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
     connector_types::{PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundSyncData, RefundsResponseData},
     payment_method_data::PaymentMethodDataTypes,
+    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
-    types::{AmountConverterTrait, ConnectorAuthType},
+    router_request_types::ResponseId,
+    router_request_types::AccessToken,
 };
 use error_stack::ResultExt;
-use hyperswitch_domain_models::{
-    router_data_v2,
-    router_request_types::{ResponseId, AccessToken},
-};
-use hyperswitch_interfaces::errors;
+use hyperswitch_masking::Secret;
 use masking::Secret;
 use serde::{Deserialize, Serialize};
-
-use crate::utils;
 
 #[derive(Debug, Serialize)]
 pub struct EaseBuzzPaymentsRequest {
@@ -120,7 +112,7 @@ pub enum EaseBuzzRefundSyncResponse {
     Success(EaseBuzzRefundSyncSuccessResponse),
     #[serde(rename = "0")]
     Failure(EaseBuzzRefundSyncFailureResponse),
-    #[serde(other)]
+    #[serde(rename = "validation_error")]
     ValidationError(EaseBuzzRefundSyncValidationErrorResponse),
 }
 
@@ -205,14 +197,14 @@ impl EaseBuzzRefundSyncResponse {
     }
 }
 
-impl<T> TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+impl<T> TryFrom<&RouterDataV2<Authorize, domain_types::connector_types::PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
     for EaseBuzzPaymentsRequest
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
-    fn try_from(item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>) -> Result<Self, Self::Error> {
+    fn try_from(item: &RouterDataV2<Authorize, domain_types::connector_types::PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>) -> Result<Self, Self::Error> {
         let auth = get_auth_credentials(&item.connector_auth_type)?;
         let amount = item.amount.get_amount_as_string();
         let currency = item.router_data.request.currency.to_string();
@@ -248,8 +240,8 @@ where
             udf9: None,
             udf10: None,
             productinfo: Some("Payment".to_string()),
-            firstname: item.router_data.request.get_customer_name().map(|n| n.first_name.clone()),
-            lastname: item.router_data.request.get_customer_name().map(|n| n.last_name.clone()),
+            firstname: item.router_data.request.customer_name.clone(),
+            lastname: None,
             address1: None,
             address2: None,
             city: None,
@@ -261,14 +253,14 @@ where
     }
 }
 
-impl<T> TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+impl<T> TryFrom<&RouterDataV2<PSync, domain_types::connector_types::PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
     for EaseBuzzPaymentsSyncRequest
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
-    fn try_from(item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>) -> Result<Self, Self::Error> {
+    fn try_from(item: &RouterDataV2<PSync, domain_types::connector_types::PaymentFlowData, PaymentsSyncData, PaymentsResponseData>) -> Result<Self, Self::Error> {
         let auth = get_auth_credentials(&item.connector_auth_type)?;
         let amount = item.amount.get_amount_as_string();
         
@@ -289,14 +281,14 @@ where
     }
 }
 
-impl<T> TryFrom<&RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>>
+impl<T> TryFrom<&RouterDataV2<RSync, domain_types::connector_types::PaymentFlowData, RefundSyncData, RefundsResponseData>>
     for EaseBuzzRefundSyncRequest
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
-    fn try_from(item: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>) -> Result<Self, Self::Error> {
+    fn try_from(item: &RouterDataV2<RSync, domain_types::connector_types::PaymentFlowData, RefundSyncData, RefundsResponseData>) -> Result<Self, Self::Error> {
         let auth = get_auth_credentials(&item.connector_auth_type)?;
         
         let easebuzz_id = item.router_data.request.connector_transaction_id.get_connector_transaction_id()?;
@@ -320,7 +312,7 @@ pub struct EaseBuzzAuth {
     pub secret: Secret<String>,
 }
 
-pub fn get_auth_credentials(auth_type: &ConnectorAuthType) -> CustomResult<EaseBuzzAuth, errors::ConnectorError> {
+pub fn get_auth_credentials(auth_type: &ConnectorAuthType) -> CustomResult<EaseBuzzAuth, domain_types::errors::ConnectorError> {
     match auth_type {
         ConnectorAuthType::SignatureKey { api_key, api_secret } => Ok(EaseBuzzAuth {
             key: api_key.clone(),
@@ -330,7 +322,7 @@ pub fn get_auth_credentials(auth_type: &ConnectorAuthType) -> CustomResult<EaseB
             key: api_key.clone(),
             secret: key1.clone(),
         }),
-        _ => Err(errors::ConnectorError::AuthenticationFailed.into()),
+        _ => Err(domain_types::errors::ConnectorError::AuthenticationFailed.into()),
     }
 }
 
@@ -342,13 +334,13 @@ pub fn generate_hash(
     phone: &str,
     key: &str,
     salt: &str,
-) -> CustomResult<Secret<String>, errors::ConnectorError> {
+) -> CustomResult<Secret<String>, domain_types::errors::ConnectorError> {
     let hash_string = format!("{}|{}|{}|{}|{}|{}|{}", key, txnid, amount, currency, email, phone, salt);
     let hash = crypto::Sha512::hash_to_hex(hash_string.as_bytes());
     Ok(Secret::new(hash))
 }
 
-pub fn get_auth_header(auth_type: &ConnectorAuthType) -> CustomResult<Vec<(String, String)>, errors::ConnectorError> {
+pub fn get_auth_header(auth_type: &ConnectorAuthType) -> CustomResult<Vec<(String, String)>, domain_types::errors::ConnectorError> {
     let auth = get_auth_credentials(auth_type)?;
     Ok(vec![
         ("Authorization".to_string(), format!("Bearer {}", auth.key.expose())),
