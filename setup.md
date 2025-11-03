@@ -201,11 +201,13 @@ UCS supports the following operations across multiple payment processors:
 #### 1. Connection Refused
 
 **Error**: `connection refused` when connecting to UCS
+
 **Solution**: Ensure the gRPC server is running on the correct port (8000 by default)
 
 #### 2. gRPC Status 404
 
 **Error**: `grpc-status header missing, mapped from HTTP status code 404`
+
 **Solution**: 
 - Verify the server URL format: `http://localhost:8000` (not `https`)
 - Ensure you're connecting to the gRPC port (8000), not the metrics port (8080)
@@ -213,6 +215,7 @@ UCS supports the following operations across multiple payment processors:
 #### 3. Build Errors
 
 **Error**: Compilation or build failures
+
 **Solution**:
 ```bash
 # Clean and rebuild
@@ -226,6 +229,7 @@ cargo update
 #### 4. Missing Dependencies
 
 **Error**: `protoc not found` or linking errors
+
 **Solution**: Ensure all system dependencies are installed according to the Prerequisites section
 
 ### Logs and Debugging
@@ -285,7 +289,7 @@ The `examples/` directory contains sample implementations:
 
 ### PostgreSQL Dependency
 
-Currently, PostgreSQL development libraries are required for compilation due to transitive dependencies. Since UCS is a stateless service that doesn't use a database, this dependency will likely be removed in future versions.
+Currently, PostgreSQL development libraries are required for compilation due to transitive dependencies from the [hyperswitch_masking crate](https://github.com/juspay/hyperswitch). Since UCS is a stateless service that doesn't use a database, this dependency will likely be removed in future versions.
 
 ### Platform Differences
 
