@@ -59,7 +59,7 @@ where
         code: &str,
         message: &str,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        with_error_response_body!(res, code, message, self.get_connector_name())
+        with_error_response_body!(res, code, message)
     }
 }
 
