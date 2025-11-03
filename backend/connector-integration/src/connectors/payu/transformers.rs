@@ -645,7 +645,7 @@ fn generate_payu_hash(
     Ok(hex::encode(result))
 }
 
-// Response conversion with Framework Integration
+// Response conversion with Framework Integration - for the wrapped type (what the framework should create)
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<ResponseRouterData<PayuPaymentResponse, PayuRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>>
     for PayuRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>
