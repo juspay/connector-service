@@ -261,3 +261,85 @@ Currently, PostgreSQL development libraries are required for compilation due to 
 ### Platform Differences
 
 Requirements may vary by platform depending on available system libraries. The dependencies listed above represent the verified minimal requirements for successful compilation and execution.
+
+# UCS Connector Flow Matrix
+
+This table shows which flows are implemented for each connector in the Universal Connector Service (UCS).
+
+> **Note:** Connectors marked with �� are in the pipeline for November 2025.
+
+> **Note:** Dispute-related flows (Accept, DefendDispute, SubmitEvidence) are excluded from this matrix as they are not yet stable.
+
+
+## Flow Implementations by Connector
+
+| Connector | Authorize | PSync | Capture | Void | Refund | RSync | SetupMandate | RepeatPayment | CreateOrder | CreateSessionToken | CreateAccessToken | PaymentMethodToken | CreateConnectorCustomer | PreAuthenticate | Authenticate | PostAuthenticate |
+|-----------|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Aci | ✓ | ✓ | ✓ | ✓ | ✓ | | ✓ | ✓ | | | | | | | | |
+| Adyen | ✓ | ✓ | ✓ | ✓ | ✓ | | ✓ | | | | | | | | | |
+| Authorizedotnet | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | ✓ | | | |
+| Bluecode | ✓ | ✓ | | | | | | | | | | | | | | |
+| Braintree | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | ✓ | | | | |
+| Cashfree | ✓ | | | | | | | | ✓ | | | | | | | |
+| Cashtocode | ✓ | | | | | | | | | | | | | | | |
+| Chase 🚧 | | | | | | | | | | | | | | | | |
+| Checkout | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
+| Cryptopay | ✓ | ✓ | | | | | | | | | | | | | | |
+| Cybersource | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | ✓ | ✓ | ✓ |
+| Dlocal | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
+| Ebanx 🚧 | | | | | | | | | | | | | | | | |
+| Elavon | ✓ | ✓ | ✓ | | ✓ | ✓ | | | | | | | | | | |
+| Fiserv | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
+| Fiuu | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
+| Helcim | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
+| Mifinity | ✓ | ✓ | | | | | | | | | | | | | | |
+| Nexinets | ✓ | ✓ | ✓ | | ✓ | ✓ | | | | | | | | | | |
+| Noon | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | |
+| Novalnet | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | |
+| Paypal 🚧 | | | | | | | | | | | | | | | | |
+| Paytm | ✓ | ✓ | | | | | | | | ✓ | | | | | | |
+| Payu | ✓ | ✓ | | | | | | | | | | | | | | |
+| Phonepe | ✓ | ✓ | | | | | | | | | | | | | | |
+| Placetopay | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
+| Rapyd | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
+| Razorpay | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | ✓ | ✓ | ✓ | | ✓ | | | |
+| Razorpayv2 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | ✓ | | | | | | | |
+| Stripe | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | ✓ | | | |
+| Trustpay | | ✓ | | | | | | | | | ✓ | | | | | |
+| Volt | ✓ | ✓ | | | | | | | | | ✓ | | | | | |
+| Worldpay | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | ✓ | | | | | | ✓ | | ✓ |
+| Worldpayvantiv | ✓ | ✓ | | | | | | | | | | | | | | |
+| Xendit | ✓ | ✓ | ✓ | | ✓ | ✓ | | | | | | | | | | |
+
+## Summary Statistics
+
+- **Total Connectors**: 35 (32 implemented, 3 in pipeline)
+- **Total Unique Flows**: 16
+
+### Most Implemented Flows
+
+- **Authorize**: 31/32 connectors (96.9%)
+- **PSync**: 30/32 connectors (93.8%)
+- **Capture**: 21/32 connectors (65.6%)
+- **Refund**: 21/32 connectors (65.6%)
+- **RSync**: 19/32 connectors (59.4%)
+- **Void**: 18/32 connectors (56.2%)
+- **SetupMandate**: 7/32 connectors (21.9%)
+- **RepeatPayment**: 6/32 connectors (18.8%)
+- **CreateOrder**: 3/32 connectors (9.4%)
+- **CreateAccessToken**: 3/32 connectors (9.4%)
+
+## Pipeline Connectors (Nov'25)
+
+The following connectors are currently in development:
+
+- **Chase (Orbital and other flavours)** - Highest priority
+
+- **PayPal** - In development
+
+- **Ebanx** - Strategic expansion
+
+
+---
+
+*Last updated: Auto-generated from codebase*
