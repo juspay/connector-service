@@ -374,19 +374,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 // PayU Sync Request conversion from RouterData
-impl TryFrom<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+impl TryFrom<PayuRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
     for PayuSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: PayuRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
+        let router_data = item.router_data;
         // Extract authentication
-        let auth = PayuAuthType::try_from(&item.connector_auth_type)?;
+        let auth = PayuAuthType::try_from(&router_data.connector_auth_type)?;
 
         // Extract transaction ID from connector_transaction_id
-        let transaction_id = item
+        let transaction_id = router_data
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
