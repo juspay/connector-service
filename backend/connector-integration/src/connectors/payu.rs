@@ -774,7 +774,7 @@ macro_rules! impl_connector_integration_v2_stub {
 
             fn get_error_response_v2(
                 &self,
-                res: domain_types::router_response_types::Response,
+                _res: domain_types::router_response_types::Response,
                 _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
             ) -> CustomResult<domain_types::router_data::ErrorResponse, domain_types::errors::ConnectorError> {
                 Err(domain_types::errors::ConnectorError::NotImplemented(
