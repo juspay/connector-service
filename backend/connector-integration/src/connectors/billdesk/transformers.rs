@@ -252,7 +252,7 @@ impl<
         // Build message based on payment method type
         let msg = match item.router_data.request.payment_method_type {
             Some(common_enums::PaymentMethodType::UpiCollect) => {
-                build_upi_message(&item, &customer_id, &transaction_id, &amount)?
+                build_upi_message(&item, &customer_id, &transaction_id, amount.as_str())?
             }
             _ => return Err(errors::ConnectorError::NotImplemented(
                 "Payment method not supported".to_string(),
