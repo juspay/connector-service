@@ -910,6 +910,26 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
+// Response conversion for the unwrapped type (what the macro actually creates)
+// The framework expects RouterDataV2 to implement TryFrom, not PayuRouterData
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<PayuSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<PayuSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        // This is a workaround for the macro framework bug
+        // Since we don't have access to the connector, we can't create the proper wrapper
+        // This implementation should not be used if the macro is fixed
+        Err(ConnectorError::NotImplemented {
+            message: "This conversion should not be used directly - macro framework bug".to_string(),
+        }.into())
+    }
+}
+
 // Map PayU transaction status to internal AttemptStatus
 // Based on Haskell implementation analysis
 fn map_payu_sync_status(payu_status: &str, txn_detail: &PayuTransactionDetail) -> AttemptStatus {
