@@ -59,7 +59,13 @@ where
         code: &str,
         message: &str,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        with_error_response_body!(res, code, message)
+        Ok(ErrorResponse {
+            error_code: code.to_string(),
+            error_message: message.to_string(),
+            status_code: res.status_code,
+            reason: None,
+            retry: None,
+        })
     }
 }
 
