@@ -19,8 +19,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
 
-// Type alias for Billdesk router data - using the structure from macro output
-pub type BilldeskRouterData<R, T> = crate::connectors::macros::RouterDataType<billdesk::Billdesk<T>>;
+// Type alias for Billdesk router data - using a simple wrapper
+pub struct BilldeskRouterData<R, T> {
+    pub router_data: R,
+    pub connector: T,
+}
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
