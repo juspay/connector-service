@@ -1,0 +1,57 @@
+# UCS Connector Flow Matrix
+
+This table shows which flows are implemented for each connector in the Universal Connector Service (UCS).
+
+> **Note:** Connectors marked with 🚧 are in the pipeline for November 2025.
+
+## Flow Implementations by Connector
+
+| Connector | Authorize | PSync | Capture | Void | Refund | RSync | SetupMandate | RepeatPayment | CreateOrder | CreateSessionToken | CreateAccessToken | PaymentMethodToken | CreateConnectorCustomer | PreAuthenticate | Authenticate | PostAuthenticate |
+|-----------|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Aci | ✓ | ✓ | ✓ | ✓ | ✓ | | ✓ | ✓ | | | | | | | | |
+| Adyen | ✓ | ✓ | ✓ | ✓ | ✓ | | ✓ | | | | | | | | | |
+| Authorizedotnet | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | ✓ | | | |
+| Bluecode | ✓ | ✓ | | | | | | | | | | | | | | |
+| Braintree | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | ✓ | | | | |
+| Cashfree | ✓ | | | | | | | | ✓ | | | | | | | |
+| Cashtocode | ✓ | | | | | | | | | | | | | | | |
+| Chase 🚧 | | | | | | | | | | | | | | | | |
+| Checkout | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
+| Cryptopay | ✓ | ✓ | | | | | | | | | | | | | | |
+| Cybersource | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | ✓ | ✓ | ✓ |
+| Dlocal | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
+| Ebanx 🚧 | | | | | | | | | | | | | | | | |
+| Elavon | ✓ | ✓ | ✓ | | ✓ | ✓ | | | | | | | | | | |
+| Fiserv | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
+| Fiuu | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
+| Helcim | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
+| Mifinity | ✓ | ✓ | | | | | | | | | | | | | | |
+| Nexinets | ✓ | ✓ | ✓ | | ✓ | ✓ | | | | | | | | | | |
+| Noon | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | |
+| Novalnet | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | |
+| Paypal 🚧 | | | | | | | | | | | | | | | | |
+| Paytm | ✓ | ✓ | | | | | | | | ✓ | | | | | | |
+| Payu | ✓ | ✓ | | | | | | | | | | | | | | |
+| Phonepe | ✓ | ✓ | | | | | | | | | | | | | | |
+| Placetopay | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
+| Rapyd | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
+| Razorpay | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | ✓ | ✓ | ✓ | | ✓ | | | |
+| Razorpayv2 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | ✓ | | | | | | | |
+| Stripe | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | ✓ | | | |
+| Trustpay | | ✓ | | | | | | | | | ✓ | | | | | |
+| Volt | ✓ | ✓ | | | | | | | | | ✓ | | | | | |
+| Worldpay | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | ✓ | | | | | | ✓ | | ✓ |
+| Worldpayvantiv | ✓ | ✓ | | | | | | | | | | | | | | |
+| Xendit | ✓ | ✓ | ✓ | | ✓ | ✓ | | | | | | | | | | |
+
+## Pipeline Connectors (Nov'25)
+
+The following connectors are currently in development:
+
+- **Chase (Orbital and other flavours)** - Highest priority
+- **PayPal** - In development
+- **Ebanx** - Strategic expansion
+
+---
+
+*Last updated: Auto-generated from codebase*
