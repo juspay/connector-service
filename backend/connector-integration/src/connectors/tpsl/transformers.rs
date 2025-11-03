@@ -517,7 +517,7 @@ impl<
                         tenure_id: "".to_string(),
                     },
                     consumer: TpslConsumerIntentPayload {
-                        mobile_number: item.request.payment_method_data.phone.clone().unwrap_or_default().to_string(),
+                        mobile_number: "".to_string(), // Phone not available in current structure
                         email_i_d: item.request.email.as_ref().map(|e| e.expose().clone()).unwrap_or_default(),
                         identifier: item.resource_common_data.get_customer_id()?.get_string_repr().to_string(),
                         account_no: "".to_string(),
