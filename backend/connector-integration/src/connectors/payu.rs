@@ -772,20 +772,8 @@ macro_rules! impl_connector_integration_v2_stub {
     };
 }
 
-// Apply stub implementations to all flows
-impl_connector_integration_v2_stub!(
-    domain_types::connector_flow::Authorize,
-    domain_types::connector_types::PaymentFlowData,
-    domain_types::connector_types::PaymentsAuthorizeData<T>,
-    domain_types::connector_types::PaymentsResponseData
-);
-
-impl_connector_integration_v2_stub!(
-    domain_types::connector_flow::PSync,
-    domain_types::connector_types::PaymentFlowData,
-    domain_types::connector_types::PaymentsSyncData,
-    domain_types::connector_types::PaymentsResponseData
-);
+// Apply stub implementations to all flows except Authorize and PSync
+// (those are handled by the macro framework)
 
 impl_connector_integration_v2_stub!(
     domain_types::connector_flow::Void,
