@@ -850,65 +850,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::IncomingWebhook for Payu<T>
 {
-    fn incoming_webhook<'a>(
-        &'a self,
-        _req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::IncomingWebhook,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::IncomingWebhookRequestData,
-            domain_types::connector_types::PaymentsResponseData,
-        >,
-        _app: &interfaces::AppIdentity,
-    ) -> interfaces::BoxedFuture<
-        'a,
-        domain_types::errors::CustomResult<
-            domain_types::router_data_v2::RouterDataV2<
-                domain_types::connector_flow::IncomingWebhook,
-                domain_types::connector_types::PaymentFlowData,
-                domain_types::connector_types::IncomingWebhookRequestData,
-                domain_types::connector_types::PaymentsResponseData,
-            >,
-            domain_types::errors::ConnectorError,
-        >,
-    > {
-        Box::pin(async move {
-            Err(domain_types::errors::ConnectorError::NotImplemented {
-                message: "Incoming webhook flow not implemented for PayU".to_string(),
-            }
-            .into())
-        })
-    }
+    // This trait has default implementations for all methods
+    // No manual implementation needed
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::ValidationTrait for Payu<T>
 {
-    fn validate<'a>(
-        &'a self,
-        _req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::Validate,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::ValidateRequestData,
-            domain_types::connector_types::ValidateResponseData,
-        >,
-        _app: &interfaces::AppIdentity,
-    ) -> interfaces::BoxedFuture<
-        'a,
-        domain_types::errors::CustomResult<
-            domain_types::router_data_v2::RouterDataV2<
-                domain_types::connector_flow::Validate,
-                domain_types::connector_types::PaymentFlowData,
-                domain_types::connector_types::ValidateRequestData,
-                domain_types::connector_types::ValidateResponseData,
-            >,
-            domain_types::errors::ConnectorError,
-        >,
-    > {
-        Box::pin(async move {
-            Err(domain_types::errors::ConnectorError::NotImplemented {
-                message: "Validation flow not implemented for PayU".to_string(),
-            }
-            .into())
-        })
-    }
+    // This trait has default implementations for all methods
+    // No manual implementation needed
 }
