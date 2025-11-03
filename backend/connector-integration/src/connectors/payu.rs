@@ -414,6 +414,39 @@ macros::macro_connector_implementation!(
                 })
             }
         }
+
+        // Override the default response handling to fix the wrapper issue
+        fn handle_response_v2(
+            &self,
+            data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            event_builder: Option<&mut ConnectorEvent>,
+            res: Response,
+        ) -> CustomResult<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            ConnectorError,
+        > {
+            use crate::connectors::macros::BridgeRequestResponse;
+            let bridge = self.authorize;
+            let response_bytes = self
+                .preprocess_response_bytes(data, res.response)
+                .change_context(ConnectorError::ResponseDeserializationFailed)?;
+            let response_body = bridge.response(response_bytes)
+                .change_context(ConnectorError::ResponseDeserializationFailed)?;
+            event_builder.map(|i| i.set_response_body(&response_body));
+            
+            // Create the proper wrapper that the framework expects
+            let response_router_data = ResponseRouterData {
+                response: response_body,
+                router_data: PayuRouterData {
+                    connector: self.clone(),
+                    router_data: data.clone(),
+                },
+                http_code: res.status_code,
+            };
+            
+            let result = bridge.router_data(response_router_data)?;
+            Ok(result.router_data)
+        }
     }
 );
 
