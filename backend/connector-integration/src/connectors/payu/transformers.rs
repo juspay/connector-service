@@ -959,3 +959,112 @@ fn map_payu_sync_status(payu_status: &str, txn_detail: &PayuTransactionDetail) -
         }
     }
 }
+
+// Stub types for unimplemented flows - required by macro framework
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuVoidRequest;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuVoidResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuCaptureRequest;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuCaptureResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuRefundRequest;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuRefundResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuRSyncRequest;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuRSyncResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuCreateOrderRequest;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuCreateOrderResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuSessionTokenRequest;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuSessionTokenResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuSetupMandateRequest;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuSetupMandateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuRepeatPaymentRequest;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuRepeatPaymentResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuAcceptDisputeRequest;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuAcceptDisputeResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuSubmitEvidenceRequest;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuSubmitEvidenceResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuDefendDisputeRequest;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuDefendDisputeResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuPaymentMethodTokenRequest;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuPaymentMethodTokenResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuCreateAccessTokenRequest;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuCreateAccessTokenResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuCreateConnectorCustomerRequest;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuCreateConnectorCustomerResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuPreAuthenticateRequest;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuPreAuthenticateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuAuthenticateRequest;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuAuthenticateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuPostAuthenticateRequest;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuPostAuthenticateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuVoidPCRequest;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PayuVoidPCResponse;
