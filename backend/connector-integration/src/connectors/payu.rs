@@ -689,156 +689,234 @@ impl_source_verification_stub!(
     PaymentsResponseData
 );
 
-// Stub implementations for all required traits to satisfy ConnectorServiceTrait
-// These will return appropriate "not implemented" errors
+// Implement the essential ConnectorIntegrationV2 traits manually
+// Only Authorize and PSync are actually implemented for PayU
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::connector_integration_v2::ConnectorIntegrationV2<
+        domain_types::connector_flow::Authorize,
+        domain_types::connector_types::PaymentFlowData,
+        domain_types::connector_types::PaymentsAuthorizeData<T>,
+        domain_types::connector_types::PaymentsResponseData,
+    > for Payu<T>
+{
+    fn build_request(
+        &self,
+        req: &domain_types::router_data_v2::RouterDataV2<
+            domain_types::connector_flow::Authorize,
+            domain_types::connector_types::PaymentFlowData,
+            domain_types::connector_types::PaymentsAuthorizeData<T>,
+            domain_types::connector_types::PaymentsResponseData,
+        >,
+        connectors: &domain_types::types::Connectors,
+    ) -> CustomResult<
+        interfaces::api::Request,
+        domain_types::errors::ConnectorError,
+    > {
+        // Use the existing implementation from the macro-generated bridge
+        self.authorize.build_request(req, connectors)
+    }
+
+    fn handle_response(
+        &self,
+        req: &domain_types::router_data_v2::RouterDataV2<
+            domain_types::connector_flow::Authorize,
+            domain_types::connector_types::PaymentFlowData,
+            domain_types::connector_types::PaymentsAuthorizeData<T>,
+            domain_types::connector_types::PaymentsResponseData,
+        >,
+        res: interfaces::api::Response,
+    ) -> CustomResult<
+        domain_types::router_data_v2::RouterDataV2<
+            domain_types::connector_flow::Authorize,
+            domain_types::connector_types::PaymentFlowData,
+            domain_types::connector_types::PaymentsAuthorizeData<T>,
+            domain_types::connector_types::PaymentsResponseData,
+        >,
+        domain_types::errors::ConnectorError,
+    > {
+        // Use the existing implementation from the macro-generated bridge
+        self.authorize.handle_response(req, res)
+    }
+
+    fn get_error_response(
+        &self,
+        res: interfaces::api::Response,
+    ) -> CustomResult<
+        domain_types::router_response_types::ErrorResponse,
+        domain_types::errors::ConnectorError,
+    > {
+        // Use the existing implementation from the macro-generated bridge
+        self.authorize.get_error_response(res)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::connector_integration_v2::ConnectorIntegrationV2<
+        domain_types::connector_flow::PSync,
+        domain_types::connector_types::PaymentFlowData,
+        domain_types::connector_types::PaymentsSyncData,
+        domain_types::connector_types::PaymentsResponseData,
+    > for Payu<T>
+{
+    fn build_request(
+        &self,
+        req: &domain_types::router_data_v2::RouterDataV2<
+            domain_types::connector_flow::PSync,
+            domain_types::connector_types::PaymentFlowData,
+            domain_types::connector_types::PaymentsSyncData,
+            domain_types::connector_types::PaymentsResponseData,
+        >,
+        connectors: &domain_types::types::Connectors,
+    ) -> CustomResult<
+        interfaces::api::Request,
+        domain_types::errors::ConnectorError,
+    > {
+        // Use the existing implementation from the macro-generated bridge
+        self.psync.build_request(req, connectors)
+    }
+
+    fn handle_response(
+        &self,
+        req: &domain_types::router_data_v2::RouterDataV2<
+            domain_types::connector_flow::PSync,
+            domain_types::connector_types::PaymentFlowData,
+            domain_types::connector_types::PaymentsSyncData,
+            domain_types::connector_types::PaymentsResponseData,
+        >,
+        res: interfaces::api::Response,
+    ) -> CustomResult<
+        domain_types::router_data_v2::RouterDataV2<
+            domain_types::connector_flow::PSync,
+            domain_types::connector_types::PaymentFlowData,
+            domain_types::connector_types::PaymentsSyncData,
+            domain_types::connector_types::PaymentsResponseData,
+        >,
+        domain_types::errors::ConnectorError,
+    > {
+        // Use the existing implementation from the macro-generated bridge
+        self.psync.handle_response(req, res)
+    }
+
+    fn get_error_response(
+        &self,
+        res: interfaces::api::Response,
+    ) -> CustomResult<
+        domain_types::router_response_types::ErrorResponse,
+        domain_types::errors::ConnectorError,
+    > {
+        // Use the existing implementation from the macro-generated bridge
+        self.psync.get_error_response(res)
+    }
+}
+
+// Stub implementations for all other traits - these just need to exist to satisfy bounds
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentAuthorizeV2<T> for Payu<T>
 {
-    // This is implemented by the macro
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentSyncV2 for Payu<T>
 {
-    // This is implemented by the macro
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentCapture for Payu<T>
 {
-    // This trait requires ConnectorIntegrationV2 to be implemented
-    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentVoidV2 for Payu<T>
 {
-    // This trait requires ConnectorIntegrationV2 to be implemented
-    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::RefundV2 for Payu<T>
 {
-    // This trait requires ConnectorIntegrationV2 to be implemented
-    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::RefundSyncV2 for Payu<T>
 {
-    // This trait requires ConnectorIntegrationV2 to be implemented
-    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentOrderCreate for Payu<T>
 {
-    // This trait requires ConnectorIntegrationV2 to be implemented
-    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentSessionToken for Payu<T>
 {
-    // This trait requires ConnectorIntegrationV2 to be implemented
-    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::SetupMandateV2<T> for Payu<T>
 {
-    // This trait requires ConnectorIntegrationV2 to be implemented
-    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::RepeatPaymentV2 for Payu<T>
 {
-    // This trait requires ConnectorIntegrationV2 to be implemented
-    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::AcceptDispute for Payu<T>
 {
-    // This trait requires ConnectorIntegrationV2 to be implemented
-    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::SubmitEvidenceV2 for Payu<T>
 {
-    // This trait requires ConnectorIntegrationV2 to be implemented
-    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::DisputeDefend for Payu<T>
 {
-    // This trait requires ConnectorIntegrationV2 to be implemented
-    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentTokenV2<T> for Payu<T>
 {
-    // This trait requires ConnectorIntegrationV2 to be implemented
-    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentAccessToken for Payu<T>
 {
-    // This trait requires ConnectorIntegrationV2 to be implemented
-    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::CreateConnectorCustomer for Payu<T>
 {
-    // This trait requires ConnectorIntegrationV2 to be implemented
-    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentPreAuthenticateV2<T> for Payu<T>
 {
-    // This trait requires ConnectorIntegrationV2 to be implemented
-    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentAuthenticateV2<T> for Payu<T>
 {
-    // This trait requires ConnectorIntegrationV2 to be implemented
-    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentPostAuthenticateV2<T> for Payu<T>
 {
-    // This trait requires ConnectorIntegrationV2 to be implemented
-    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentVoidPostCaptureV2 for Payu<T>
 {
-    // This trait requires ConnectorIntegrationV2 to be implemented
-    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::IncomingWebhook for Payu<T>
 {
-    // This trait has default implementations for all methods
-    // No manual implementation needed
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::ValidationTrait for Payu<T>
 {
-    // This trait has default implementations for all methods
-    // No manual implementation needed
 }
