@@ -93,7 +93,7 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuth {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key1 } => Ok(Self {
+            ConnectorAuthType::SignatureKey { api_key, key1, .. } => Ok(Self {
                 api_key: api_key.clone(),
                 merchant_id: key1.clone(),
                 checksum_key: Secret::new("".to_string()), // TODO: Implement proper checksum key handling
