@@ -616,7 +616,7 @@ impl<
 }
 
 impl<
-    T: PaymentMethodDataTypes
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize
 > TryFrom<TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
     for TpslPaymentsSyncRequest
 {
