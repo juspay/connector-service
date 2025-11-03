@@ -961,7 +961,7 @@ fn map_payu_sync_status(payu_status: &str, txn_detail: &PayuTransactionDetail) -
 }
 
 // Stub types for unimplemented flows - required by macro framework
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PayuVoidRequest;
 
 #[derive(Debug, Clone, Serialize)]
