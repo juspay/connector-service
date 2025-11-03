@@ -60,11 +60,13 @@ where
         Ok(ErrorResponse {
             code: "401".to_string(),
             message: "Unauthorized".to_string(),
-            status_code: Some(res.status_code),
+            status_code: res.status_code,
             attempt_status: None,
             connector_transaction_id: None,
             network_decline_code: None,
             network_advice_code: None,
+            network_error_message: None,
+            reason: None,
         })
     }
 }
