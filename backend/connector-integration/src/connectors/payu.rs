@@ -752,133 +752,29 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentOrderCreate for Payu<T>
 {
-    fn create_order<'a>(
-        &'a self,
-        _req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::CreateOrder,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentCreateOrderData,
-            domain_types::connector_types::PaymentCreateOrderResponse,
-        >,
-        _app: &interfaces::AppIdentity,
-    ) -> interfaces::BoxedFuture<
-        'a,
-        domain_types::errors::CustomResult<
-            domain_types::router_data_v2::RouterDataV2<
-                domain_types::connector_flow::CreateOrder,
-                domain_types::connector_types::PaymentFlowData,
-                domain_types::connector_types::PaymentCreateOrderData,
-                domain_types::connector_types::PaymentCreateOrderResponse,
-            >,
-            domain_types::errors::ConnectorError,
-        >,
-    > {
-        Box::pin(async move {
-            Err(domain_types::errors::ConnectorError::NotImplemented {
-                message: "Create order flow not implemented for PayU".to_string(),
-            }
-            .into())
-        })
-    }
+    // This trait requires ConnectorIntegrationV2 to be implemented
+    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentSessionToken for Payu<T>
 {
-    fn create_session_token<'a>(
-        &'a self,
-        _req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::CreateSessionToken,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::SessionTokenRequestData,
-            domain_types::connector_types::SessionTokenResponseData,
-        >,
-        _app: &interfaces::AppIdentity,
-    ) -> interfaces::BoxedFuture<
-        'a,
-        domain_types::errors::CustomResult<
-            domain_types::router_data_v2::RouterDataV2<
-                domain_types::connector_flow::CreateSessionToken,
-                domain_types::connector_types::PaymentFlowData,
-                domain_types::connector_types::SessionTokenRequestData,
-                domain_types::connector_types::SessionTokenResponseData,
-            >,
-            domain_types::errors::ConnectorError,
-        >,
-    > {
-        Box::pin(async move {
-            Err(domain_types::errors::ConnectorError::NotImplemented {
-                message: "Create session token flow not implemented for PayU".to_string(),
-            }
-            .into())
-        })
-    }
+    // This trait requires ConnectorIntegrationV2 to be implemented
+    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::SetupMandateV2<T> for Payu<T>
 {
-    fn setup_mandate<'a>(
-        &'a self,
-        _req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::SetupMandate,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::SetupMandateRequestData<T>,
-            domain_types::connector_types::PaymentsResponseData,
-        >,
-        _app: &interfaces::AppIdentity,
-    ) -> interfaces::BoxedFuture<
-        'a,
-        domain_types::errors::CustomResult<
-            domain_types::router_data_v2::RouterDataV2<
-                domain_types::connector_flow::SetupMandate,
-                domain_types::connector_types::PaymentFlowData,
-                domain_types::connector_types::SetupMandateRequestData<T>,
-                domain_types::connector_types::PaymentsResponseData,
-            >,
-            domain_types::errors::ConnectorError,
-        >,
-    > {
-        Box::pin(async move {
-            Err(domain_types::errors::ConnectorError::NotImplemented {
-                message: "Setup mandate flow not implemented for PayU".to_string(),
-            }
-            .into())
-        })
-    }
+    // This trait requires ConnectorIntegrationV2 to be implemented
+    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::RepeatPaymentV2 for Payu<T>
 {
-    fn repeat_payment<'a>(
-        &'a self,
-        _req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::RepeatPayment,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::RepeatPaymentData,
-            domain_types::connector_types::PaymentsResponseData,
-        >,
-        _app: &interfaces::AppIdentity,
-    ) -> interfaces::BoxedFuture<
-        'a,
-        domain_types::errors::CustomResult<
-            domain_types::router_data_v2::RouterDataV2<
-                domain_types::connector_flow::RepeatPayment,
-                domain_types::connector_types::PaymentFlowData,
-                domain_types::connector_types::RepeatPaymentData,
-                domain_types::connector_types::PaymentsResponseData,
-            >,
-            domain_types::errors::ConnectorError,
-        >,
-    > {
-        Box::pin(async move {
-            Err(domain_types::errors::ConnectorError::NotImplemented {
-                message: "Repeat payment flow not implemented for PayU".to_string(),
-            }
-            .into())
-        })
-    }
+    // This trait requires ConnectorIntegrationV2 to be implemented
+    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
