@@ -754,7 +754,7 @@ macro_rules! impl_connector_integration_v2_stub {
 
             fn build_request_v2(
                 &self,
-                req: &domain_types::router_data_v2::RouterDataV2<$flow, $common_data, $req, $resp>,
+                _req: &domain_types::router_data_v2::RouterDataV2<$flow, $common_data, $req, $resp>,
             ) -> CustomResult<Option<Request>, domain_types::errors::ConnectorError> {
                 Err(domain_types::errors::ConnectorError::NotImplemented(
                     format!("build_request_v2 not implemented for flow {}", std::any::type_name::<$flow>()),
