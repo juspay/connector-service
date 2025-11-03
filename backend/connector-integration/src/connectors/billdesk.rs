@@ -343,13 +343,7 @@ macros::create_all_prerequisites!(
             request_body: BilldeskPaymentsRequest,
             response_body: BilldeskPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: PSync,
-            request_body: BilldeskPaymentsSyncRequest,
-            response_body: BilldeskPaymentsSyncResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ),
+        )
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
@@ -371,13 +365,6 @@ macros::create_all_prerequisites!(
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.billdesk.base_url
-        }
-
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
-            &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
             &req.resource_common_data.connectors.billdesk.base_url
         }
