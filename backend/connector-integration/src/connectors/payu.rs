@@ -44,6 +44,16 @@ pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::genera
 use transformers::{
     is_upi_collect_flow, PayuAuthType, PayuPaymentRequest, PayuPaymentResponse, PayuSyncRequest,
     PayuSyncResponse,
+    // Stub types for unimplemented flows
+    PayuVoidRequest, PayuVoidResponse, PayuCaptureRequest, PayuCaptureResponse,
+    PayuRefundRequest, PayuRefundResponse, PayuRSyncRequest, PayuRSyncResponse,
+    PayuCreateOrderRequest, PayuCreateOrderResponse, PayuSessionTokenRequest, PayuSessionTokenResponse,
+    PayuSetupMandateRequest, PayuSetupMandateResponse, PayuRepeatPaymentRequest, PayuRepeatPaymentResponse,
+    PayuAcceptDisputeRequest, PayuAcceptDisputeResponse, PayuSubmitEvidenceRequest, PayuSubmitEvidenceResponse,
+    PayuDefendDisputeRequest, PayuDefendDisputeResponse, PayuPaymentMethodTokenRequest, PayuPaymentMethodTokenResponse,
+    PayuCreateAccessTokenRequest, PayuCreateAccessTokenResponse, PayuCreateConnectorCustomerRequest, PayuCreateConnectorCustomerResponse,
+    PayuPreAuthenticateRequest, PayuPreAuthenticateResponse, PayuAuthenticateRequest, PayuAuthenticateResponse,
+    PayuPostAuthenticateRequest, PayuPostAuthenticateResponse, PayuVoidPCRequest, PayuVoidPCResponse,
 };
 
 use super::macros;
