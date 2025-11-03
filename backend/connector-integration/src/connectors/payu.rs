@@ -689,6 +689,18 @@ impl_source_verification_stub!(
     PaymentsCancelPostCaptureData,
     PaymentsResponseData
 );
+impl_source_verification_stub!(
+    IncomingWebhook,
+    PaymentFlowData,
+    IncomingWebhookRequestData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    Validate,
+    PaymentFlowData,
+    ValidateRequestData,
+    ValidateResponseData
+);
 
 // Provide stub implementations for all required ConnectorIntegrationV2 traits
 // These return "not implemented" errors but satisfy the trait bounds
