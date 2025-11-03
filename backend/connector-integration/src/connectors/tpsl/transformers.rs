@@ -691,16 +691,17 @@ impl<
                     _ => common_enums::AttemptStatus::Pending,
                 };
                 
+                let merchant_txn_id = response_data.merchant_transaction_identifier.clone();
+                let network_txn_id = response_data.payment_method.payment_transaction.identifier.clone();
+                
                 (
                     attempt_status,
                     Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
-                            response_data.merchant_transaction_identifier,
-                        ),
+                        resource_id: ResponseId::ConnectorTransactionId(merchant_txn_id),
                         redirection_data: None,
                         mandate_reference: None,
-                        connector_metadata: Some(serde_json::to_value(response_data).unwrap_or_default()),
-                        network_txn_id: response_data.payment_method.payment_transaction.identifier,
+                        connector_metadata: Some(serde_json::to_value(&response_data).unwrap_or_default()),
+                        network_txn_id,
                         connector_response_reference_id: Some(response_data.merchant_transaction_identifier),
                         incremental_authorization_allowed: None,
                         status_code: http_code,
