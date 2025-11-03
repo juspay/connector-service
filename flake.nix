@@ -73,26 +73,6 @@
             export RUST_LOG=debug
           '';
         };
-
-        # Optional: Define packages that can be built from this flake
-        packages.default = pkgs.rustPlatform.buildRustPackage {
-          pname = "connector-service";
-          version = "0.1.0";
-          
-          src = ./.;
-          
-          # You'll need to update this hash after the first build attempt
-          cargoHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-          
-          # System dependencies needed for building
-          nativeBuildInputs = with pkgs; [
-            pkg-config
-          ];
-          
-          buildInputs = with pkgs; [
-            openssl
-          ];
-        };
       }
     );
 }
