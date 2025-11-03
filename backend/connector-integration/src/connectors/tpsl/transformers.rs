@@ -518,7 +518,7 @@ impl<
                     },
                     consumer: TpslConsumerIntentPayload {
                         mobile_number: "".to_string(), // Phone not available in current structure
-                        email_i_d: item.router_data.request.email.as_ref().map(|e| e.expose().clone()).unwrap_or_default(),
+                        email_i_d: item.router_data.request.email.as_ref().map(|e| e.expose().to_string()).unwrap_or_default(),
                         identifier: item.router_data.resource_common_data.get_customer_id()?.get_string_repr().to_string(),
                         account_no: "".to_string(),
                         account_type: "".to_string(),
