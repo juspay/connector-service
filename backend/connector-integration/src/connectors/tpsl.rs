@@ -32,21 +32,6 @@ use transformers::{self as tpsl, TpslPaymentsRequest, TpslPaymentsResponse, Tpsl
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
-#[derive(Clone)]
-pub struct TPSL<T> {
-    pub amount_converter: &'static (dyn common_utils::types::AmountConvertor<Output = common_utils::types::MinorUnit> + Sync),
-    pub _phantom: std::marker::PhantomData<T>,
-}
-
-impl<T> TPSL<T> {
-    pub const fn new() -> &'static Self {
-        &Self {
-            amount_converter: &common_utils::types::MinorUnitForConnector,
-            _phantom: std::marker::PhantomData,
-        }
-    }
-}
-
 // Implement basic traits that don't require ConnectorIntegrationV2
 impl<
     T: PaymentMethodDataTypes
