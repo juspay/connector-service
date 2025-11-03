@@ -3,25 +3,6 @@ pub mod constants;
 
 use std::fmt::Debug;
 
-#[derive(Debug, Clone)]
-pub struct TPSL<T: PaymentMethodDataTypes> {
-    phantom: std::marker::PhantomData<T>,
-}
-
-impl<T: PaymentMethodDataTypes> Default for TPSL<T> {
-    fn default() -> Self {
-        Self {
-            phantom: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<T: PaymentMethodDataTypes> TPSL<T> {
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
-
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit};
 use domain_types::{
