@@ -778,6 +778,25 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
+// Response conversion for the unwrapped type (what the macro actually creates)
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<PayuPaymentResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
+    for PayuRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<PayuPaymentResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        // This is a workaround for the macro framework bug
+        // We need to create a dummy connector since we don't have access to it
+        // This implementation should not be used if the macro is fixed
+        Err(ConnectorError::NotImplemented {
+            message: "This conversion should not be used directly".to_string(),
+        }.into())
+    }
+}
+
 // PayU Sync Response conversion to RouterData
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<ResponseRouterData<PayuSyncResponse, PayuRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>>
