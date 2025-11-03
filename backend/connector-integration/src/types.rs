@@ -10,8 +10,6 @@ use crate::connectors::{
     Worldpayvantiv, Xendit,
 };
 
-static EASEBUZZ_INSTANCE: EaseBuzz<()> = EaseBuzz::new();
-
 #[derive(Clone)]
 pub struct ConnectorData<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static> {
     pub connector: BoxedConnector<T>,
