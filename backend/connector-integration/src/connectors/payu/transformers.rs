@@ -680,13 +680,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 network_decline_code: None,
             };
 
-            return Ok(Self {
-                response: Err(error_response),
-                resource_common_data: PaymentFlowData {
-                    status: AttemptStatus::Failure,
-                    ..router_data.resource_common_data
+            return Ok(PayuRouterData {
+                connector: item.router_data.connector,
+                router_data: Self {
+                    response: Err(error_response),
+                    resource_common_data: PaymentFlowData {
+                        status: AttemptStatus::Failure,
+                        ..router_data.resource_common_data
+                    },
+                    ..router_data
                 },
-                ..router_data
             });
         }
 
