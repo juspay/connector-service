@@ -4,7 +4,7 @@ use serde_json::Value;
 
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    ext_traits::OptionExt,
+    ext_traits::{OptionExt, ValueExt},
     pii,
     types::{SemanticVersion, StringMajorUnit},
 };
@@ -36,6 +36,7 @@ use domain_types::{
         PazeDecryptedData,
     },
     router_data_v2::RouterDataV2,
+    router_request_types,
     router_response_types::RedirectForm,
     utils::CardIssuer,
 };
@@ -430,8 +431,12 @@ pub struct ProcessingInformation {
     payment_solution: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum CybersourceParesStatus {
+    #[serde(rename = "C")]
+    CardChallenged,
+    #[serde(rename = "R")]
+    AuthenticationRejected,
     #[serde(rename = "Y")]
     AuthenticationSuccessful,
     #[serde(rename = "A")]
@@ -440,6 +445,112 @@ pub enum CybersourceParesStatus {
     AuthenticationFailed,
     #[serde(rename = "U")]
     AuthenticationNotCompleted,
+}
+
+impl From<CybersourceParesStatus> for common_enums::TransactionStatus {
+    fn from(status: CybersourceParesStatus) -> Self {
+        match status {
+            CybersourceParesStatus::AuthenticationSuccessful => {
+                common_enums::TransactionStatus::Success
+            }
+            CybersourceParesStatus::AuthenticationAttempted => {
+                common_enums::TransactionStatus::NotVerified
+            }
+            CybersourceParesStatus::AuthenticationFailed => {
+                common_enums::TransactionStatus::Failure
+            }
+            CybersourceParesStatus::AuthenticationNotCompleted => {
+                common_enums::TransactionStatus::VerificationNotPerformed
+            }
+            CybersourceParesStatus::CardChallenged => {
+                common_enums::TransactionStatus::ChallengeRequired
+            }
+            CybersourceParesStatus::AuthenticationRejected => {
+                common_enums::TransactionStatus::Rejected
+            }
+        }
+    }
+}
+
+impl From<common_enums::TransactionStatus> for CybersourceParesStatus {
+    fn from(status: common_enums::TransactionStatus) -> Self {
+        match status {
+            common_enums::TransactionStatus::Success => Self::AuthenticationSuccessful,
+            common_enums::TransactionStatus::Failure => Self::AuthenticationFailed,
+            common_enums::TransactionStatus::VerificationNotPerformed => {
+                Self::AuthenticationNotCompleted
+            }
+            common_enums::TransactionStatus::NotVerified => Self::AuthenticationAttempted,
+            common_enums::TransactionStatus::Rejected => Self::AuthenticationRejected,
+            common_enums::TransactionStatus::ChallengeRequired => Self::CardChallenged,
+            common_enums::TransactionStatus::ChallengeRequiredDecoupledAuthentication => {
+                Self::CardChallenged
+            }
+            common_enums::TransactionStatus::InformationOnly => Self::AuthenticationNotCompleted,
+        }
+    }
+}
+
+fn get_authentication_data_for_check_enrollment_response(
+    response: CybersourceConsumerAuthInformationEnrollmentResponse,
+) -> router_request_types::AuthenticationData {
+    let trans_status = response
+        .validate_response
+        .pares_status
+        .map(common_enums::TransactionStatus::from);
+    // CAVV is populated from UCAF data if available(for mastercard), else from CAVV field
+    let cavv = response
+        .validate_response
+        .ucaf_authentication_data
+        .or(response.validate_response.cavv);
+    let eci = response.validate_response.ecommerce_indicator;
+    let ucaf_collection_indicator = response.validate_response.ucaf_collection_indicator.clone();
+    let ds_trans_id = response
+        .validate_response
+        .directory_server_transaction_id
+        .map(|id| id.expose());
+    router_request_types::AuthenticationData {
+        ucaf_collection_indicator,
+        eci,
+        cavv,
+        threeds_server_transaction_id: response.validate_response.three_d_s_server_transaction_id,
+        message_version: response.validate_response.specification_version,
+        trans_status,
+        ds_trans_id,
+        acs_transaction_id: response.validate_response.acs_transaction_id,
+        transaction_id: response.validate_response.xid,
+    }
+}
+
+fn get_authentication_data_for_validation_response(
+    response: CybersourceConsumerAuthInformationEnrollmentResponse,
+) -> router_request_types::AuthenticationData {
+    let trans_status = response
+        .validate_response
+        .pares_status
+        .map(common_enums::TransactionStatus::from);
+    // CAVV is populated from UCAF data if available(for mastercard), else from CAVV field
+    let cavv = response
+        .validate_response
+        .ucaf_authentication_data
+        .or(response.validate_response.cavv);
+    let eci = response.validate_response.indicator;
+    let ucaf_collection_indicator = response.validate_response.ucaf_collection_indicator.clone();
+    let ds_trans_id = response
+        .validate_response
+        .directory_server_transaction_id
+        .map(|id| id.expose());
+    router_request_types::AuthenticationData {
+        ucaf_collection_indicator,
+        eci,
+        cavv,
+        threeds_server_transaction_id: response.validate_response.three_d_s_server_transaction_id,
+        message_version: response.validate_response.specification_version,
+        trans_status,
+        ds_trans_id,
+        acs_transaction_id: response.validate_response.acs_transaction_id,
+        transaction_id: response.validate_response.xid,
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -482,6 +593,43 @@ pub struct CybersourceConsumerAuthInformation {
     acs_transaction_id: Option<String>,
     /// This is the algorithm for generating a cardholder authentication verification value (CAVV) or universal cardholder authentication field (UCAF) data.
     cavv_algorithm: Option<String>,
+}
+
+impl From<router_request_types::AuthenticationData> for CybersourceConsumerAuthInformation {
+    fn from(value: router_request_types::AuthenticationData) -> Self {
+        let router_request_types::AuthenticationData {
+            eci: _,
+            cavv,
+            threeds_server_transaction_id: _,
+            message_version,
+            ds_trans_id,
+            trans_status: _,
+            acs_transaction_id: _,
+            transaction_id,
+            ucaf_collection_indicator,
+        } = value;
+
+        CybersourceConsumerAuthInformation {
+            pares_status: None,
+            ucaf_collection_indicator,
+            ucaf_authentication_data: cavv.clone(),
+            xid: transaction_id,
+            cavv,
+            directory_server_transaction_id: ds_trans_id.map(Secret::new),
+            specification_version: None,
+            pa_specification_version: message_version,
+            veres_enrolled: None,
+            eci_raw: None,
+            authentication_date: None,
+            effective_authentication_type: None,
+            challenge_code: None,
+            signed_pares_status_reason: None,
+            challenge_cancel_code: None,
+            network_score: None,
+            acs_transaction_id: None,
+            cavv_algorithm: None,
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -1019,16 +1167,9 @@ impl<
         let commerce_indicator_for_external_authentication = item
             .router_data
             .request
-            .metadata
+            .authentication_data
             .as_ref()
-            .and_then(|authn_data| {
-                authn_data
-                    .get("eci")
-                    .and_then(|eci| eci.as_str())
-                    .map(|eci| {
-                        get_commerce_indicator_for_external_authentication(network, eci.to_string())
-                    })
-            });
+            .and_then(|authentication_data| authentication_data.eci.clone());
 
         Ok(Self {
             capture: Some(matches!(
@@ -1044,56 +1185,6 @@ impl<
                 .unwrap_or(commerce_indicator),
         })
     }
-}
-
-fn get_commerce_indicator_for_external_authentication(
-    card_network: Option<String>,
-    eci: String,
-) -> String {
-    let card_network_lower_case = card_network
-        .as_ref()
-        .map(|card_network| card_network.to_lowercase());
-    match eci.as_str() {
-        "00" | "01" | "02" => {
-            if matches!(
-                card_network_lower_case.as_deref(),
-                Some("mastercard") | Some("maestro")
-            ) {
-                "spa"
-            } else {
-                "internet"
-            }
-        }
-        "05" => match card_network_lower_case.as_deref() {
-            Some("amex") => "aesk",
-            Some("discover") => "dipb",
-            Some("mastercard") => "spa",
-            Some("visa") => "vbv",
-            Some("diners") => "pb",
-            Some("upi") => "up3ds",
-            _ => "internet",
-        },
-        "06" => match card_network_lower_case.as_deref() {
-            Some("amex") => "aesk_attempted",
-            Some("discover") => "dipb_attempted",
-            Some("mastercard") => "spa",
-            Some("visa") => "vbv_attempted",
-            Some("diners") => "pb_attempted",
-            Some("upi") => "up3ds_attempted",
-            _ => "internet",
-        },
-        "07" => match card_network_lower_case.as_deref() {
-            Some("amex") => "internet",
-            Some("discover") => "internet",
-            Some("diners") => "internet",
-            Some("mastercard") => "spa",
-            Some("visa") => "vbv_failure",
-            Some("upi") => "up3ds_failure",
-            _ => "internet",
-        },
-        _ => "vbv_failure",
-    }
-    .to_string()
 }
 
 impl<
@@ -1296,12 +1387,18 @@ impl<
             .clone()
             .map(convert_metadata_to_merchant_defined_info);
 
+        let consumer_authentication_information = item
+            .router_data
+            .request
+            .authentication_data
+            .clone()
+            .map(From::from);
         Ok(Self {
             processing_information,
             payment_information,
             order_information,
             client_reference_information,
-            consumer_authentication_information: None,
+            consumer_authentication_information,
             merchant_defined_information,
         })
     }
@@ -3028,7 +3125,6 @@ impl<
                     ..item.router_data.resource_common_data
                 },
                 response: Ok(PaymentsResponseData::PreAuthenticateResponse {
-                    resource_id: ResponseId::NoResponseId,
                     redirection_data: Some(Box::new(RedirectForm::CybersourceAuthSetup {
                         access_token: info_response
                             .consumer_authentication_information
@@ -3040,7 +3136,6 @@ impl<
                             .consumer_authentication_information
                             .reference_id,
                     })),
-                    connector_metadata: None,
                     connector_response_reference_id: Some(
                         info_response
                             .client_reference_information
@@ -3263,12 +3358,14 @@ impl<
             )?,
         };
 
-        let transaction_id = redirect_response
-            .params
+        let redirection_response: CybersourceRedirectionAuthResponse = redirect_response
+            .payload
             .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "params.transaction_id",
+                field_name: "request.redirect_response.payload",
             })?
-            .expose();
+            .expose()
+            .parse_value("CybersourceRedirectionAuthResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
         let order_information = OrderInformation { amount_details };
 
         Ok(Self {
@@ -3276,7 +3373,7 @@ impl<
             client_reference_information,
             consumer_authentication_information:
                 CybersourceConsumerAuthInformationValidateRequest {
-                    authentication_transaction_id: transaction_id,
+                    authentication_transaction_id: redirection_response.transaction_id,
                 },
             order_information,
         })
@@ -3338,10 +3435,12 @@ impl<
                     let redirection_data = match (
                         info_response
                             .consumer_authentication_information
-                            .access_token,
+                            .access_token
+                            .clone(),
                         info_response
                             .consumer_authentication_information
-                            .step_up_url,
+                            .step_up_url
+                            .clone(),
                     ) {
                         (Some(token), Some(step_up_url)) => {
                             Some(RedirectForm::CybersourceConsumerAuth {
@@ -3351,18 +3450,6 @@ impl<
                         }
                         _ => None,
                     };
-                    let three_ds_data = serde_json::to_value(
-                        info_response
-                            .consumer_authentication_information
-                            .validate_response,
-                    )
-                    .change_context(errors::ConnectorError::ResponseHandlingFailed)?;
-
-                    let resource_id = info_response
-                        .consumer_authentication_information
-                        .authentication_transaction_id
-                        .map(ResponseId::ConnectorTransactionId)
-                        .unwrap_or(ResponseId::NoResponseId);
 
                     Ok(Self {
                         resource_common_data: PaymentFlowData {
@@ -3370,12 +3457,13 @@ impl<
                             ..item.router_data.resource_common_data
                         },
                         response: Ok(PaymentsResponseData::AuthenticateResponse {
-                            resource_id,
                             redirection_data: redirection_data.map(Box::new),
-                            connector_metadata: Some(serde_json::json!({
-                                "three_ds_data": three_ds_data
-                            })),
                             connector_response_reference_id,
+                            authentication_data: Some(
+                                get_authentication_data_for_check_enrollment_response(
+                                    info_response.consumer_authentication_information,
+                                ),
+                            ),
                             status_code: item.http_code,
                         }),
                         ..item.router_data
@@ -3644,45 +3732,17 @@ impl<
                             .unwrap_or(info_response.id.clone()),
                     );
 
-                    let redirection_data = match (
-                        info_response
-                            .consumer_authentication_information
-                            .access_token,
-                        info_response
-                            .consumer_authentication_information
-                            .step_up_url,
-                    ) {
-                        (Some(token), Some(step_up_url)) => {
-                            Some(RedirectForm::CybersourceConsumerAuth {
-                                access_token: token.expose(),
-                                step_up_url,
-                            })
-                        }
-                        _ => None,
-                    };
-                    let three_ds_data = serde_json::to_value(
-                        info_response
-                            .consumer_authentication_information
-                            .validate_response,
-                    )
-                    .change_context(errors::ConnectorError::ResponseHandlingFailed)?;
-                    let resource_id = info_response
-                        .consumer_authentication_information
-                        .authentication_transaction_id
-                        .map(ResponseId::ConnectorTransactionId)
-                        .unwrap_or(ResponseId::NoResponseId);
-
                     Ok(Self {
                         resource_common_data: PaymentFlowData {
                             status,
                             ..item.router_data.resource_common_data
                         },
                         response: Ok(PaymentsResponseData::PostAuthenticateResponse {
-                            resource_id,
-                            redirection_data: redirection_data.map(Box::new),
-                            connector_metadata: Some(serde_json::json!({
-                                "three_ds_data": three_ds_data
-                            })),
+                            authentication_data: Some(
+                                get_authentication_data_for_validation_response(
+                                    info_response.consumer_authentication_information,
+                                ),
+                            ),
                             connector_response_reference_id,
                             status_code: item.http_code,
                         }),
@@ -3744,13 +3804,20 @@ pub enum CybersourceAuthEnrollmentStatus {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CybersourceConsumerAuthValidateResponse {
+    /// This field is supported only on Asia, Middle East, and Africa Gateway
+    /// Also needed for Credit Mutuel-CIC in France and Mastercard Identity Check transactions
+    /// This field is only applicable for Mastercard and Visa Transactions
+    pares_status: Option<CybersourceParesStatus>,
     ucaf_collection_indicator: Option<String>,
     cavv: Option<Secret<String>>,
     ucaf_authentication_data: Option<Secret<String>>,
     xid: Option<String>,
     specification_version: Option<SemanticVersion>,
     directory_server_transaction_id: Option<Secret<String>>,
+    acs_transaction_id: Option<String>,
+    three_d_s_server_transaction_id: Option<String>,
     indicator: Option<String>,
+    ecommerce_indicator: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
