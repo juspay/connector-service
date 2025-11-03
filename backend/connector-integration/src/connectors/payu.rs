@@ -731,34 +731,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentVoidV2 for Payu<T>
 {
-    fn void_payment<'a>(
-        &'a self,
-        _req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::Void,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentVoidData,
-            domain_types::connector_types::PaymentsResponseData,
-        >,
-        _app: &interfaces::AppIdentity,
-    ) -> interfaces::BoxedFuture<
-        'a,
-        domain_types::errors::CustomResult<
-            domain_types::router_data_v2::RouterDataV2<
-                domain_types::connector_flow::Void,
-                domain_types::connector_types::PaymentFlowData,
-                domain_types::connector_types::PaymentVoidData,
-                domain_types::connector_types::PaymentsResponseData,
-            >,
-            domain_types::errors::ConnectorError,
-        >,
-    > {
-        Box::pin(async move {
-            Err(domain_types::errors::ConnectorError::NotImplemented {
-                message: "Void flow not implemented for PayU".to_string(),
-            }
-            .into())
-        })
-    }
+    // This trait requires ConnectorIntegrationV2 to be implemented
+    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
