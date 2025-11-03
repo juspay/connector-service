@@ -107,7 +107,7 @@ where
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
-        let endpoint = if req.request.payment_method_type == PaymentMethodType::Upi {
+        let endpoint = if req.request.payment_method_type == PaymentMethodType::Card {
             constants::EaseBuzzEndpoints::EasebuzSeamlessTransaction
         } else {
             constants::EaseBuzzEndpoints::EaseBuzInitiatePayment
