@@ -264,7 +264,7 @@ where
     fn get_error_response_v2(
         &self,
         res: Response,
-        _event_builder: Option<&&mut interfaces::events::connector_api_logs::ConnectorEvent>,
+        _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, None)
     }
