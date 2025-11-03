@@ -81,17 +81,7 @@ cargo run
 
 The server will start on `http://localhost:8000` by default.
 
-### 4. Verify Setup
-
-Check if the server is running:
-
-```bash
-curl -i http://localhost:8080/health
-```
-
-You should see a health check response indicating the server is running.
-
-### Test with grpcurl
+### 4. Install grpcurl (for testing)
 
 #### macOS Installation
 
@@ -101,9 +91,46 @@ brew install grpcurl
 
 #### Ubuntu Installation
 
+Install grpcurl:
+
 ```bash
-sudo apt-get install grpcurl
+# Detect architecture and download appropriate version
+ARCH=$(uname -m)
+case $ARCH in
+  x86_64) GRPC_ARCH="linux_x86_64" ;;
+  aarch64) GRPC_ARCH="linux_arm64" ;;
+  *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
+esac
+
+# Download and install grpcurl
+curl -L "https://github.com/fullstorydev/grpcurl/releases/download/v1.9.3/grpcurl_1.9.3_${GRPC_ARCH}.tar.gz" -o grpcurl.tar.gz
+tar -xzf grpcurl.tar.gz
+sudo mv grpcurl /usr/local/bin/
+rm grpcurl.tar.gz
+
+# Verify installation
+grpcurl --version
 ```
+
+### 5. Verify Setup
+
+Check if the server is running:
+
+#### gRPC Health Check  
+```bash
+grpcurl -plaintext localhost:8000 grpc.health.v1.Health/Check
+```
+
+**Expected response:**
+```json
+{
+  "status": "SERVING"
+}
+```
+
+This confirms the gRPC server is running and ready to accept requests.
+
+### Payment Testing
 
 Test a payment authorization (using dummy credentials):
 
