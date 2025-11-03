@@ -69,9 +69,6 @@ impl TryFrom<&ConnectorAuthType> for PayuAuthType {
     }
 }
 
-// Note: Integrity Framework implementation will be handled by the framework itself
-// since we can't implement foreign traits for foreign types (orphan rules)
-
 // Request structure based on Payu UPI analysis
 #[derive(Debug, Serialize)]
 pub struct PayuPaymentRequest {
@@ -220,161 +217,6 @@ pub struct PayuUpiApp {
     pub package: String, // Android package name
 }
 
-// Error response structure matching actual PayU format
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PayuErrorResponse {
-    pub result: Option<serde_json::Value>, // null for errors
-    pub status: Option<String>,            // "failed" for errors
-    pub error: Option<String>,             // Error code like "EX158", "EX311"
-    pub message: Option<String>,           // Error description
-
-    // Legacy fields for backward compatibility
-    pub error_code: Option<String>,
-    pub error_message: Option<String>,
-    pub error_description: Option<String>,
-    pub transaction_id: Option<String>,
-}
-
-// Request conversion with Framework Integration
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        super::PayuRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for PayuPaymentRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        item: super::PayuRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        // Extract router data
-        let router_data = &item.router_data;
-
-        // Use AmountConvertor framework for proper amount handling
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(
-                router_data.request.minor_amount,
-                router_data.request.currency,
-            )
-            .change_context(ConnectorError::AmountConversionFailed)?;
-
-        // Extract authentication
-        let auth = PayuAuthType::try_from(&router_data.connector_auth_type)?;
-
-        // Determine payment flow based on payment method
-        let (pg, bankcode, vpa, s2s_flow) = determine_upi_flow(&router_data.request)?;
-
-        // Generate UDF fields based on Haskell implementation
-        let udf_fields = generate_udf_fields(
-            &router_data.resource_common_data.payment_id,
-            router_data
-                .resource_common_data
-                .merchant_id
-                .get_string_repr(),
-            router_data,
-        );
-
-        // Build base request
-        let mut request = Self {
-            key: auth.api_key.peek().to_string(),
-            txnid: router_data
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
-            amount,
-            currency: router_data.request.currency,
-            productinfo: constants::PRODUCT_INFO.to_string(), // Default product info
-
-            // Customer info - extract from billing address if available
-            firstname: router_data.resource_common_data.get_billing_first_name()?,
-            lastname: router_data
-                .resource_common_data
-                .get_optional_billing_last_name(),
-            email: router_data.resource_common_data.get_billing_email()?,
-            phone: router_data
-                .resource_common_data
-                .get_billing_phone_number()?,
-
-            // URLs - use router return URL if available
-            surl: router_data.request.get_router_return_url()?,
-            furl: router_data.request.get_router_return_url()?,
-
-            // Payment method specific
-            pg,
-            bankcode,
-            vpa,
-
-            // UPI specific - corrected based on PayU docs
-            txn_s2s_flow: s2s_flow,
-            s2s_client_ip: router_data
-                .request
-                .get_ip_address_as_optional()
-                .ok_or_else(|| {
-                    report!(ConnectorError::MissingRequiredField {
-                        field_name: "IP address"
-                    })
-                })?,
-            s2s_device_info: constants::DEVICE_INFO.to_string(),
-            api_version: Some(constants::API_VERSION.to_string()), // As per PayU analysis
-
-            // Will be calculated after struct creation
-            hash: String::new(),
-
-            // User defined fields based on Haskell implementation logic
-            udf1: udf_fields.first().and_then(|f| f.clone()), // Transaction ID or metadata value
-            udf2: udf_fields.get(1).and_then(|f| f.clone()),  // Merchant ID or metadata value
-            udf3: udf_fields.get(2).and_then(|f| f.clone()),  // From metadata or order reference
-            udf4: udf_fields.get(3).and_then(|f| f.clone()),  // From metadata or order reference
-            udf5: udf_fields.get(4).and_then(|f| f.clone()),  // From metadata or order reference
-            udf6: udf_fields.get(5).and_then(|f| f.clone()),  // From order reference (udf6)
-            udf7: udf_fields.get(6).and_then(|f| f.clone()),  // From order reference (udf7)
-            udf8: udf_fields.get(7).and_then(|f| f.clone()),  // From order reference (udf8)
-            udf9: udf_fields.get(8).and_then(|f| f.clone()),  // From order reference (udf9)
-            udf10: udf_fields.get(9).and_then(|f| f.clone()), // Always empty string
-
-            // Optional PayU fields for UPI
-            offer_key: None,
-            si: None, // Not implementing mandate flows initially
-            si_details: None,
-            beneficiarydetail: None, // Not implementing TPV initially
-            user_token: None,
-            offer_auto_apply: None,
-            additional_charges: None,
-            additional_gst_charges: None,
-            upi_app_name: determine_upi_app_name(&router_data.request)?,
-        };
-
-        // Generate hash signature
-        request.hash = generate_payu_hash(&request, &auth.api_secret)?;
-
-        Ok(request)
-    }
-}
-
 // PayU Sync/Verify Payment Request structure
 #[derive(Debug, Serialize)]
 pub struct PayuSyncRequest {
@@ -427,37 +269,124 @@ pub struct PayuTransactionDetail {
     pub issuing_bank: Option<String>, // Card issuing bank
 }
 
-// PayU Sync Request conversion from RouterData
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        super::PayuRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for PayuSyncRequest
+// Request conversion with Framework Integration
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+    for PayuPaymentRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: super::PayuRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        item: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let router_data = &item.router_data;
+        // Use AmountConvertor framework for proper amount handling
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.request.minor_amount,
+                item.request.currency,
+            )
+            .change_context(ConnectorError::AmountConversionFailed)?;
 
         // Extract authentication
-        let auth = PayuAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = PayuAuthType::try_from(&item.connector_auth_type)?;
+
+        // Determine payment flow based on payment method
+        let (pg, bankcode, vpa, s2s_flow) = determine_upi_flow(&item.request)?;
+
+        // Generate UDF fields based on Haskell implementation
+        let udf_fields = generate_udf_fields(
+            &item.resource_common_data.payment_id,
+            item.resource_common_data.merchant_id.get_string_repr(),
+            &item,
+        );
+
+        // Build base request
+        let mut request = Self {
+            key: auth.api_key.peek().to_string(),
+            txnid: item.resource_common_data.connector_request_reference_id.clone(),
+            amount,
+            currency: item.request.currency,
+            productinfo: constants::PRODUCT_INFO.to_string(), // Default product info
+
+            // Customer info - extract from billing address if available
+            firstname: item.resource_common_data.get_billing_first_name()?,
+            lastname: item.resource_common_data.get_optional_billing_last_name(),
+            email: item.resource_common_data.get_billing_email()?,
+            phone: item.resource_common_data.get_billing_phone_number()?,
+
+            // URLs - use router return URL if available
+            surl: item.request.get_router_return_url()?,
+            furl: item.request.get_router_return_url()?,
+
+            // Payment method specific
+            pg,
+            bankcode,
+            vpa,
+
+            // UPI specific - corrected based on PayU docs
+            txn_s2s_flow: s2s_flow,
+            s2s_client_ip: item
+                .request
+                .get_ip_address_as_optional()
+                .ok_or_else(|| {
+                    report!(ConnectorError::MissingRequiredField {
+                        field_name: "IP address"
+                    })
+                })?,
+            s2s_device_info: constants::DEVICE_INFO.to_string(),
+            api_version: Some(constants::API_VERSION.to_string()), // As per PayU analysis
+
+            // Will be calculated after struct creation
+            hash: String::new(),
+
+            // User defined fields based on Haskell implementation logic
+            udf1: udf_fields.first().and_then(|f| f.clone()), // Transaction ID or metadata value
+            udf2: udf_fields.get(1).and_then(|f| f.clone()),  // Merchant ID or metadata value
+            udf3: udf_fields.get(2).and_then(|f| f.clone()),  // From metadata or order reference
+            udf4: udf_fields.get(3).and_then(|f| f.clone()),  // From metadata or order reference
+            udf5: udf_fields.get(4).and_then(|f| f.clone()),  // From metadata or order reference
+            udf6: udf_fields.get(5).and_then(|f| f.clone()),  // From order reference (udf6)
+            udf7: udf_fields.get(6).and_then(|f| f.clone()),  // From order reference (udf7)
+            udf8: udf_fields.get(7).and_then(|f| f.clone()),  // From order reference (udf8)
+            udf9: udf_fields.get(8).and_then(|f| f.clone()),  // From order reference (udf9)
+            udf10: udf_fields.get(9).and_then(|f| f.clone()), // Always empty string
+
+            // Optional PayU fields for UPI
+            offer_key: None,
+            si: None, // Not implementing mandate flows initially
+            si_details: None,
+            beneficiarydetail: None, // Not implementing TPV initially
+            user_token: None,
+            offer_auto_apply: None,
+            additional_charges: None,
+            additional_gst_charges: None,
+            upi_app_name: determine_upi_app_name(&item.request)?,
+        };
+
+        // Generate hash signature
+        request.hash = generate_payu_hash(&request, &auth.api_secret)?;
+
+        Ok(request)
+    }
+}
+
+// PayU Sync Request conversion from RouterData
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+    for PayuSyncRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    ) -> Result<Self, Self::Error> {
+        // Extract authentication
+        let auth = PayuAuthType::try_from(&item.connector_auth_type)?;
 
         // Extract transaction ID from connector_transaction_id
-        let transaction_id = router_data
+        let transaction_id = item
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
@@ -522,22 +451,10 @@ fn generate_payu_verify_hash(
 
 // UDF field generation based on Haskell implementation
 // Implements the logic from getUdf1-getUdf5 functions and orderReference fields
-fn generate_udf_fields<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
->(
+fn generate_udf_fields<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
     payment_id: &str,
     merchant_id: &str,
-    router_data: &RouterDataV2<
-        Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData<T>,
-        PaymentsResponseData,
-    >,
+    router_data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
 ) -> [Option<String>; 10] {
     // Based on Haskell implementation:
     // udf1-udf5 come from PayuMetaData (if available) or default values
@@ -580,14 +497,7 @@ fn generate_udf_fields<
 }
 
 // UPI app name determination based on Haskell getUpiAppName implementation
-fn determine_upi_app_name<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
->(
+fn determine_upi_app_name<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
     request: &PaymentsAuthorizeData<T>,
 ) -> Result<Option<String>, ConnectorError> {
     // From Haskell getUpiAppName implementation:
@@ -621,14 +531,7 @@ fn determine_upi_app_name<
 
 // PayU flow determination based on Haskell getTxnS2SType implementation
 #[allow(clippy::type_complexity)]
-fn determine_upi_flow<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
->(
+fn determine_upi_flow<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
     request: &PaymentsAuthorizeData<T>,
 ) -> Result<(Option<String>, Option<String>, Option<String>, String), ConnectorError> {
     // Based on Haskell implementation:
@@ -676,14 +579,7 @@ fn determine_upi_flow<
     }
 }
 
-pub fn is_upi_collect_flow<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
->(
+pub fn is_upi_collect_flow<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
     request: &PaymentsAuthorizeData<T>,
 ) -> bool {
     // Check if the payment method is UPI Collect
@@ -745,38 +641,14 @@ fn generate_payu_hash(
 }
 
 // Response conversion with Framework Integration
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        ResponseRouterData<
-            PayuPaymentResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<PayuPaymentResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            PayuPaymentResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<PayuPaymentResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
 
@@ -895,21 +767,13 @@ impl<
 }
 
 // PayU Sync Response conversion to RouterData
-impl
-    TryFrom<
-        ResponseRouterData<
-            PayuSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<PayuSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            PayuSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<PayuSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
         let error_message = response
