@@ -22,7 +22,7 @@ use crate::types::ResponseRouterData;
 // Type alias for Billdesk router data - using a simple wrapper
 pub struct BilldeskRouterData<R, T> {
     pub router_data: R,
-    pub connector: T,
+    pub connector: crate::connectors::billdesk::Billdesk<T>,
 }
 
 #[derive(Default, Debug, Serialize)]
