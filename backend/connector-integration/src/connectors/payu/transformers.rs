@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
 
-pub mod constants;
+use super::constants;
 
 // PayU Status enum to handle both integer and string status values
 #[derive(Debug, Serialize, Clone)]
