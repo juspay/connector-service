@@ -848,7 +848,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
                         Ok(PayuRouterData {
                             connector: item.router_data.connector,
-                            router_data: Self {
+                            router_data: RouterDataV2 {
                                 response: Err(error_response),
                                 resource_common_data: PaymentFlowData {
                                     status: AttemptStatus::Failure,
