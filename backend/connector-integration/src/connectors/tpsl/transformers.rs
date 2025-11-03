@@ -468,7 +468,7 @@ impl<
         let transaction_id = item.resource_common_data.connector_request_reference_id.clone();
         
         // For UPI payments, create UPI transaction request
-        match item.router_data.request.payment_method_type {
+        match item.request.payment_method_type {
             Some(common_enums::PaymentMethodType::UpiCollect) => {
                 let upi_request = TpslUPITxnRequest {
                     merchant: TpslMerchantPayload {
