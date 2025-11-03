@@ -743,8 +743,7 @@ macro_rules! impl_connector_integration_v2_stub {
             fn build_request_v2(
                 &self,
                 req: &domain_types::router_data_v2::RouterDataV2<$flow, $common_data, $req, $resp>,
-                _connectors: &domain_types::types::Connectors,
-            ) -> CustomResult<Request, domain_types::errors::ConnectorError> {
+            ) -> CustomResult<Option<Request>, domain_types::errors::ConnectorError> {
                 Err(domain_types::errors::ConnectorError::NotImplemented(
                     format!("build_request_v2 not implemented for flow {}", std::any::type_name::<$flow>()),
                 ))
@@ -753,6 +752,7 @@ macro_rules! impl_connector_integration_v2_stub {
             fn handle_response_v2(
                 &self,
                 req: &domain_types::router_data_v2::RouterDataV2<$flow, $common_data, $req, $resp>,
+                _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
                 res: domain_types::router_response_types::Response,
             ) -> CustomResult<domain_types::router_data_v2::RouterDataV2<$flow, $common_data, $req, $resp>, domain_types::errors::ConnectorError> {
                 Err(domain_types::errors::ConnectorError::NotImplemented(
@@ -762,7 +762,8 @@ macro_rules! impl_connector_integration_v2_stub {
 
             fn get_error_response_v2(
                 &self,
-                _res: domain_types::router_response_types::Response,
+                res: domain_types::router_response_types::Response,
+                _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
             ) -> CustomResult<domain_types::router_data::ErrorResponse, domain_types::errors::ConnectorError> {
                 Err(domain_types::errors::ConnectorError::NotImplemented(
                     "get_error_response_v2 not implemented".to_string(),
