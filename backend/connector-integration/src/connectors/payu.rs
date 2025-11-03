@@ -727,7 +727,7 @@ macro_rules! impl_connector_integration_v2_stub {
             fn get_request_body(
                 &self,
                 _req: &domain_types::router_data_v2::RouterDataV2<$flow, $common_data, $req, $resp>,
-            ) -> CustomResult<Option<interfaces::api::RequestContent>, domain_types::errors::ConnectorError> {
+            ) -> CustomResult<Option<RequestContent>, domain_types::errors::ConnectorError> {
                 Err(domain_types::errors::ConnectorError::NotImplemented(
                     format!("get_request_body not implemented for flow {}", std::any::type_name::<$flow>()),
                 ))
