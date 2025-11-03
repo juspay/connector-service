@@ -8,33 +8,34 @@ use common_enums::{AttemptStatus, PaymentMethodType};
 use common_utils::{
     errors::CustomResult,
     ext_traits::BytesExt,
-    request::RequestContent,
-    types::{StringMinorUnit},
+    types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
     connector_types::{
-        ConnectorSpecifications, ConnectorWebhookSecrets, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsResponseData, PaymentsSyncData, RefundSyncData, RefundsResponseData,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundSyncData, RefundsResponseData,
     },
+    errors,
     payment_method_data::PaymentMethodDataTypes,
+    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
-    types::{AmountConverterTrait, MinorUnit},
+    router_response_types::Response,
+    types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_domain_models::{
-    router_data_v2::{self},
-    router_request_types::ResponseId,
+use hyperswitch_masking::Secret;
+use interfaces::{
+    api::ConnectorCommon,
+    connector_integration_v2::ConnectorIntegrationV2,
+    connector_types,
+    events::connector_api_logs::ConnectorEvent,
 };
-use hyperswitch_interfaces::errors;
+use masking::SecretSerdeValue;
+use serde::Serialize;
 
 use self::transformers as easebuzz;
-use crate::{
-    configs::settings,
-    services::{self, ConnectorCommon, ConnectorCommonExt},
-    types::{self, api::ConnectorCommonExtTrait},
-    utils,
-};
+use super::macros;
+use crate::{types::ResponseRouterData, with_error_response_body};
 
 #[derive(Debug, Clone)]
 pub struct EaseBuzz<T> {
@@ -55,21 +56,21 @@ where
         constants::get_base_url()
     }
 
-    fn get_auth_header(&self, _auth_type: &types::ConnectorAuthType) -> CustomResult<Vec<(String, String)>, errors::ConnectorError> {
+    fn get_auth_header(&self, _auth_type: &ConnectorAuthType) -> CustomResult<Vec<(String, String)>, errors::ConnectorError> {
         Ok(vec![])
     }
 
     fn build_error_response(
         &self,
-        res: utils::Response,
+        res: Response,
         code: &str,
         message: &str,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        utils::build_error_response(res, code, message, self.get_id())
+        with_error_response_body(res, code, message, self.get_id())
     }
 }
 
-impl<T> services::ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T> ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
     for EaseBuzz<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
@@ -77,7 +78,7 @@ where
     fn get_headers(
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        _connectors: &settings::Connectors,
+        _connectors: &Connectors,
     ) -> CustomResult<Vec<(String, String)>, errors::ConnectorError> {
         let auth = easebuzz::get_auth_header(&req.connector_auth_type)?;
         Ok(auth)
@@ -90,7 +91,7 @@ where
     fn get_url(
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        connectors: &settings::Connectors,
+        connectors: &Connectors,
     ) -> CustomResult<String, errors::ConnectorError> {
         let endpoint = if req.request.payment_method_type == PaymentMethodType::Upi {
             constants::EaseBuzzEndpoints::EasebuzSeamlessTransaction
@@ -105,31 +106,22 @@ where
     fn get_request_body(
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        _connectors: &settings::Connectors,
-    ) -> CustomResult<RequestContent, errors::ConnectorError> {
+        _connectors: &Connectors,
+    ) -> CustomResult<interfaces::services::Request, errors::ConnectorError> {
         let easebuzz_req = easebuzz::EaseBuzzPaymentsRequest::try_from(req)?;
-        Ok(RequestContent::FormUrlEncoded(easebuzz_req))
-    }
-
-    fn build_request(
-        &self,
-        req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        connectors: &settings::Connectors,
-    ) -> CustomResult<services::Request, errors::ConnectorError> {
-        Ok(utils::build_request(
-            req,
-            self.get_url(req, connectors)?,
-            self.get_headers(req, connectors)?,
-            self.get_request_body(req, connectors)?,
-            self.get_content_type(),
-        ))
+        Ok(interfaces::services::RequestBuilder::new()
+            .method(interfaces::services::Method::Post)
+            .url(&self.get_url(req, &Connectors::default())?)
+            .headers(self.get_headers(req, &Connectors::default())?)
+            .body(interfaces::services::RequestBody::Form(easebuzz_req))
+            .build())
     }
 
     fn handle_response(
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        res: utils::Response,
-        _connectors: &settings::Connectors,
+        res: Response,
+        _connectors: &Connectors,
     ) -> CustomResult<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, errors::ConnectorError> {
         let response: easebuzz::EaseBuzzPaymentsResponse = res
             .response
@@ -139,21 +131,15 @@ where
         let status = self.get_status(response.status, response.error_desc.as_deref());
         
         Ok(RouterDataV2 {
-            response: Ok(PaymentsResponseData {
-                status,
-                response_id: ResponseId::ConnectorTransactionId(response._data.clone()),
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: domain_types::router_data::ResponseId::ConnectorTransactionId(response.data),
                 redirection_data: None,
-                mandate_reference: None,
                 connector_metadata: None,
+                mandate_reference: None,
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
-                charge_id: None,
-                amount_captured: None,
-                fraud_check: None,
-                error_message: response.error_desc,
-                access_token: None,
-                surf_payment_response: None,
+                status_code: res.status_code,
             }),
             ..req.clone()
         })
@@ -161,14 +147,14 @@ where
 
     fn get_error_response(
         &self,
-        res: utils::Response,
-        _connectors: &settings::Connectors,
+        res: Response,
+        _connectors: &Connectors,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, "401", "Unauthorized")
     }
 }
 
-impl<T> services::ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl<T> ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
     for EaseBuzz<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
@@ -176,7 +162,7 @@ where
     fn get_headers(
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        _connectors: &settings::Connectors,
+        _connectors: &Connectors,
     ) -> CustomResult<Vec<(String, String)>, errors::ConnectorError> {
         let auth = easebuzz::get_auth_header(&req.connector_auth_type)?;
         Ok(auth)
@@ -189,7 +175,7 @@ where
     fn get_url(
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        connectors: &settings::Connectors,
+        connectors: &Connectors,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = self.get_base_url();
         let endpoint_url = constants::get_endpoint(
@@ -202,31 +188,22 @@ where
     fn get_request_body(
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        _connectors: &settings::Connectors,
-    ) -> CustomResult<RequestContent, errors::ConnectorError> {
+        _connectors: &Connectors,
+    ) -> CustomResult<interfaces::services::Request, errors::ConnectorError> {
         let easebuzz_req = easebuzz::EaseBuzzPaymentsSyncRequest::try_from(req)?;
-        Ok(RequestContent::FormUrlEncoded(easebuzz_req))
-    }
-
-    fn build_request(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        connectors: &settings::Connectors,
-    ) -> CustomResult<services::Request, errors::ConnectorError> {
-        Ok(utils::build_request(
-            req,
-            self.get_url(req, connectors)?,
-            self.get_headers(req, connectors)?,
-            self.get_request_body(req, connectors)?,
-            self.get_content_type(),
-        ))
+        Ok(interfaces::services::RequestBuilder::new()
+            .method(interfaces::services::Method::Post)
+            .url(&self.get_url(req, &Connectors::default())?)
+            .headers(self.get_headers(req, &Connectors::default())?)
+            .body(interfaces::services::RequestBody::Form(easebuzz_req))
+            .build())
     }
 
     fn handle_response(
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        res: utils::Response,
-        _connectors: &settings::Connectors,
+        res: Response,
+        _connectors: &Connectors,
     ) -> CustomResult<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, errors::ConnectorError> {
         let response: easebuzz::EaseBuzzPaymentsSyncResponse = res
             .response
@@ -240,23 +217,15 @@ where
         };
         
         Ok(RouterDataV2 {
-            response: Ok(PaymentsResponseData {
-                status,
-                response_id: ResponseId::ConnectorTransactionId(
-                    req.request.connector_transaction_id.get_connector_transaction_id()?,
-                ),
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: req.request.connector_transaction_id.clone(),
                 redirection_data: None,
-                mandate_reference: None,
                 connector_metadata: None,
+                mandate_reference: None,
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
-                charge_id: None,
-                amount_captured: None,
-                fraud_check: None,
-                error_message: None,
-                access_token: None,
-                surf_payment_response: None,
+                status_code: res.status_code,
             }),
             ..req.clone()
         })
@@ -264,14 +233,14 @@ where
 
     fn get_error_response(
         &self,
-        res: utils::Response,
-        _connectors: &settings::Connectors,
+        res: Response,
+        _connectors: &Connectors,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, "401", "Unauthorized")
     }
 }
 
-impl<T> services::ConnectorIntegrationV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>
+impl<T> ConnectorIntegrationV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>
     for EaseBuzz<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
@@ -279,7 +248,7 @@ where
     fn get_headers(
         &self,
         req: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
-        _connectors: &settings::Connectors,
+        _connectors: &Connectors,
     ) -> CustomResult<Vec<(String, String)>, errors::ConnectorError> {
         let auth = easebuzz::get_auth_header(&req.connector_auth_type)?;
         Ok(auth)
@@ -292,7 +261,7 @@ where
     fn get_url(
         &self,
         req: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
-        connectors: &settings::Connectors,
+        connectors: &Connectors,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = self.get_base_url();
         let endpoint_url = constants::get_endpoint(
@@ -305,31 +274,22 @@ where
     fn get_request_body(
         &self,
         req: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
-        _connectors: &settings::Connectors,
-    ) -> CustomResult<RequestContent, errors::ConnectorError> {
+        _connectors: &Connectors,
+    ) -> CustomResult<interfaces::services::Request, errors::ConnectorError> {
         let easebuzz_req = easebuzz::EaseBuzzRefundSyncRequest::try_from(req)?;
-        Ok(RequestContent::FormUrlEncoded(easebuzz_req))
-    }
-
-    fn build_request(
-        &self,
-        req: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
-        connectors: &settings::Connectors,
-    ) -> CustomResult<services::Request, errors::ConnectorError> {
-        Ok(utils::build_request(
-            req,
-            self.get_url(req, connectors)?,
-            self.get_headers(req, connectors)?,
-            self.get_request_body(req, connectors)?,
-            self.get_content_type(),
-        ))
+        Ok(interfaces::services::RequestBuilder::new()
+            .method(interfaces::services::Method::Post)
+            .url(&self.get_url(req, &Connectors::default())?)
+            .headers(self.get_headers(req, &Connectors::default())?)
+            .body(interfaces::services::RequestBody::Form(easebuzz_req))
+            .build())
     }
 
     fn handle_response(
         &self,
         req: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
-        res: utils::Response,
-        _connectors: &settings::Connectors,
+        res: Response,
+        _connectors: &Connectors,
     ) -> CustomResult<RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>, errors::ConnectorError> {
         let response: easebuzz::EaseBuzzRefundSyncResponseWrapper = res
             .response
@@ -338,25 +298,21 @@ where
         
         let (status, refund_status) = match response.response {
             easebuzz::EaseBuzzRefundSyncResponse::Success(resp) => {
-                (AttemptStatus::Succeeded, Some(resp.refund_status))
+                (common_enums::RefundStatus::Success, Some(resp.refunds.as_ref().and_then(|r| r.first().map(|ref_| ref_.refund_status.clone())).unwrap_or_default()))
             }
             easebuzz::EaseBuzzRefundSyncResponse::Failure(_) => {
-                (AttemptStatus::Failure, None)
+                (common_enums::RefundStatus::Failure, None)
             }
             easebuzz::EaseBuzzRefundSyncResponse::ValidationError(_) => {
-                (AttemptStatus::Failure, None)
+                (common_enums::RefundStatus::Failure, None)
             }
         };
         
         Ok(RouterDataV2 {
             response: Ok(RefundsResponseData {
-                refund_id: response.response.get_refund_id(),
-                status,
-                amount_captured: None,
-                connector_refund_id: response.response.get_connector_refund_id(),
-                refund_status,
-                error_message: None,
-                connector_metadata: None,
+                connector_refund_id: response.response.get_connector_refund_id().unwrap_or_default(),
+                refund_status: status,
+                status_code: res.status_code,
             }),
             ..req.clone()
         })
@@ -364,33 +320,33 @@ where
 
     fn get_error_response(
         &self,
-        res: utils::Response,
-        _connectors: &settings::Connectors,
+        res: Response,
+        _connectors: &Connectors,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, "401", "Unauthorized")
     }
 }
 
-impl<T> services::ConnectorRedirectResponse for EaseBuzz<T>
+impl<T> connector_types::ConnectorRedirectResponse for EaseBuzz<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
 {
     fn get_flow_type(
         &self,
-        _req: &utils::RouterData<utils::AccessToken, types::PaymentsAuthorizeData, types::PaymentsResponseData>,
+        _req: &domain_types::router_data::RouterData<domain_types::router_request_types::AccessToken, domain_types::connector_types::PaymentsAuthorizeData, domain_types::connector_types::PaymentsResponseData>,
     ) -> String {
         "redirect".to_string()
     }
 }
 
-impl<T> services::ConnectorSpecifications for EaseBuzz<T>
+impl<T> connector_types::ConnectorSpecifications for EaseBuzz<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
 {
-    fn get_connector_about(&self) -> Option<types::ConnectorAbout> {
-        Some(types::ConnectorAbout {
+    fn get_connector_about(&self) -> Option<connector_types::ConnectorAbout> {
+        Some(connector_types::ConnectorAbout {
             connector_name: self.get_id().to_string(),
-            connector_type: types::ConnectorType::PaymentGateway,
+            connector_type: connector_types::ConnectorType::PaymentGateway,
             description: Some("EaseBuzz payment gateway connector".to_string()),
             supported_payment_methods: vec![PaymentMethodType::Upi],
             supported_currencies: constants::SUPPORTED_CURRENCIES.to_vec(),
@@ -411,42 +367,42 @@ where
     }
 }
 
-impl<T> services::ConnectorWebhook for EaseBuzz<T>
+impl<T> connector_types::ConnectorWebhook for EaseBuzz<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
 {
     fn get_webhook_event_type(
         &self,
-        _request: &utils::RouterData<utils::AccessToken, types::PaymentsAuthorizeData, types::PaymentsResponseData>,
-    ) -> CustomResult<types::WebhookEvent, errors::ConnectorError> {
-        Ok(types::WebhookEvent::PaymentIntentSuccess)
+        _request: &domain_types::router_data::RouterData<domain_types::router_request_types::AccessToken, domain_types::connector_types::PaymentsAuthorizeData, domain_types::connector_types::PaymentsResponseData>,
+    ) -> CustomResult<domain_types::connector_types::EventType, errors::ConnectorError> {
+        Ok(domain_types::connector_types::EventType::PaymentIntentSuccess)
     }
 
     fn get_webhook_object_reference_id(
         &self,
-        request: &utils::RouterData<utils::AccessToken, types::PaymentsAuthorizeData, types::PaymentsResponseData>,
+        request: &domain_types::router_data::RouterData<domain_types::router_request_types::AccessToken, domain_types::connector_types::PaymentsAuthorizeData, domain_types::connector_types::PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         Ok(request.request.connector_transaction_id.get_string_repr().to_string())
     }
 
     fn get_webhook_api_version(
         &self,
-        _request: &utils::RouterData<utils::AccessToken, types::PaymentsAuthorizeData, types::PaymentsResponseData>,
+        _request: &domain_types::router_data::RouterData<domain_types::router_request_types::AccessToken, domain_types::connector_types::PaymentsAuthorizeData, domain_types::connector_types::PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         Ok("1.0".to_string())
     }
 
     fn get_webhook_source(
         &self,
-        _request: &utils::RouterData<utils::AccessToken, types::PaymentsAuthorizeData, types::PaymentsResponseData>,
+        _request: &domain_types::router_data::RouterData<domain_types::router_request_types::AccessToken, domain_types::connector_types::PaymentsAuthorizeData, domain_types::connector_types::PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         Ok("easebuzz".to_string())
     }
 
     fn verify_webhook_signature(
         &self,
-        _request: &utils::RouterData<utils::AccessToken, types::PaymentsAuthorizeData, types::PaymentsResponseData>,
-        _webhook_secrets: &api_models::webhooks::ConnectorWebhookSecrets,
+        _request: &domain_types::router_data::RouterData<domain_types::router_request_types::AccessToken, domain_types::connector_types::PaymentsAuthorizeData, domain_types::connector_types::PaymentsResponseData>,
+        _webhook_secrets: &domain_types::connector_types::ConnectorWebhookSecrets,
     ) -> CustomResult<bool, errors::ConnectorError> {
         Ok(true)
     }
@@ -483,5 +439,16 @@ where
 {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+// Mock trait for compilation
+pub trait AmountConverterTrait<Output> {
+    fn convert(&self, amount: i64, currency: common_enums::Currency) -> CustomResult<Output, errors::ConnectorError>;
+}
+
+impl AmountConverterTrait<String> for StringMinorUnit {
+    fn convert(&self, amount: i64, _currency: common_enums::Currency) -> CustomResult<String, errors::ConnectorError> {
+        Ok(amount.to_string())
     }
 }
