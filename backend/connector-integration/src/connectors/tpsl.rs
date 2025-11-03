@@ -390,3 +390,9 @@ impl<
         Ok(payload.to_owned()) // STUB
     }
 }
+
+// Finally implement ConnectorServiceTrait
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    connector_types::ConnectorServiceTrait<T> for TPSL<T>
+{
+}
