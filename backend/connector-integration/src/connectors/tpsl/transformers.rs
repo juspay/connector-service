@@ -669,7 +669,7 @@ impl<
         let ResponseRouterData {
             response,
             router_data,
-            http_code: _,
+            http_code,
         } = item;
         
         let (status, response) = match response {
