@@ -725,6 +725,33 @@ impl<
     }
 }
 
+impl TryFrom<ResponseRouterData<TpslUPISyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    
+    fn try_from(
+        item: ResponseRouterData<TpslUPISyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+        
+        let response_data = PaymentsResponseData::try_from(response)?;
+        
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: common_enums::AttemptStatus::Charged, // This should be determined from response
+                ..router_data.resource_common_data
+            },
+            response: Ok(response_data),
+            ..router_data
+        })
+    }
+}
+
 impl TryFrom<TpslUPISyncResponse> for PaymentsResponseData
 {
     type Error = error_stack::Report<ConnectorError>;
