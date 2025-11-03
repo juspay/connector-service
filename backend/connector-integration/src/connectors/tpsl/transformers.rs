@@ -461,11 +461,11 @@ impl<
     fn try_from(
         item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let auth = TpslAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let return_url = item.router_data.request.get_router_return_url()?;
-        let amount = item.amount.get_amount_as_string();
-        let currency = item.router_data.request.currency.to_string();
-        let transaction_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
+        let auth = TpslAuthType::try_from(&item.connector_auth_type)?;
+        let return_url = item.request.get_router_return_url()?;
+        let amount = item.request.minor_amount.to_string();
+        let currency = item.request.currency.to_string();
+        let transaction_id = item.resource_common_data.connector_request_reference_id.clone();
         
         // For UPI payments, create UPI transaction request
         match item.router_data.request.payment_method_type {
