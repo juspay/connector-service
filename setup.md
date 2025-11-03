@@ -132,23 +132,23 @@ This confirms the gRPC server is running and ready to accept requests.
 
 ### Payment Testing
 
-Test a payment authorization (using dummy credentials):
+Test a payment authorization with automatic capture:
 
 ```bash
 grpcurl -plaintext \
   -H "x-connector: braintree" \
   -H "x-auth: signature-key" \
-  -H "x-api-key: test_api_key_replace_with_real" \
-  -H "x-key1: test_key1_replace_with_real" \
-  -H "x-merchant-id: merchant_test_123" \
-  -H "x-api-secret: test_secret_replace_with_real" \
+  -H "x-api-key: your_public_key" \
+  -H "x-key1: your_private_key" \
+  -H "x-merchant-id: your_merchant_id" \
+  -H "x-api-secret: your_api_secret" \
   -H "x-reference-id: test_ref_123" \
   -d '{
     "request_ref_id": {
-      "id": "ref_test_12345"
+      "id": "ref_000987654321"
     },
-    "amount": 1000,
-    "minor_amount": 1000,
+    "amount": 6540,
+    "minor_amount": 6540,
     "currency": "USD",
     "capture_method": "AUTOMATIC",
     "auth_type": "NO_THREE_DS",
@@ -164,22 +164,43 @@ grpcurl -plaintext \
       }
     },
     "address": {},
-    "connector_customer_id": "test_customer_123",
-    "return_url": "https://example.com",
-    "webhook_url": "https://example.com", 
+    "connector_customer_id": "customer123",
+    "return_url": "https://google.com",
+    "webhook_url": "https://google.com",
     "order_category": "pay",
     "enrolled_for_3ds": false,
     "request_incremental_authorization": false,
     "metadata": {
-      "description": "Test payment from setup guide"
+      "udf1": "value1",
+      "new_customer": "true",
+      "login_date": "2019-09-10T10:11:12Z",
+      "description": "Test payment from setup guide",
+      "merchant_account_id": "your_merchant_account"
     }
   }' \
   localhost:8000 ucs.v2.PaymentService/Authorize
 ```
 
+**Expected Success Response:**
+```json
+{
+  "transactionId": {
+    "id": "dHJhbnNhY3Rpb25fOGs4ZXRjMzU"
+  },
+  "status": "CHARGED",
+  "statusCode": 200,
+  "rawConnectorResponse": {
+    "value": "{\"data\":{\"chargeCreditCard\":{\"transaction\":{\"id\":\"dHJhbnNhY3Rpb25fOGs4ZXRjMzU\",\"legacyId\":\"8k8etc35\",\"amount\":{\"value\":\"65.40\",\"currencyCode\":\"USD\"},\"status\":\"SUBMITTED_FOR_SETTLEMENT\"}}}}"
+  },
+  "state": {
+    "connectorCustomerId": "customer123"
+  }
+}
+```
+
 **⚠️ Security Notes:**
-- Replace all `test_*` values with your actual processor credentials
-- Use test/sandbox credentials only
+- Replace all placeholder values (`your_*`) with your actual Braintree credentials
+- Use test/sandbox credentials only - never use production credentials for testing
 - The card number `4242424242424242` is a test card number
 
 ### Supported Operations
