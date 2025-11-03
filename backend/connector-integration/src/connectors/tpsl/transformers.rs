@@ -738,7 +738,7 @@ impl TryFrom<ResponseRouterData<TpslUPISyncResponse, RouterDataV2<PSync, Payment
         let ResponseRouterData {
             response,
             router_data,
-            http_code,
+            http_code: _,
         } = item;
         
         let response_data = PaymentsResponseData::try_from(response)?;
