@@ -716,7 +716,7 @@ macro_rules! impl_connector_integration_v2_stub {
             ) -> CustomResult<Vec<(String, Maskable<String>)>, domain_types::errors::ConnectorError> {
                 Err(domain_types::errors::ConnectorError::NotImplemented(
                     format!("get_headers not implemented for flow {}", std::any::type_name::<$flow>()),
-                ))
+                ).into())
             }
 
             fn get_content_type(&self) -> &'static str {
