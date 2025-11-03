@@ -2572,3 +2572,19 @@ pub struct RecurringMandatePaymentData {
     pub original_payment_authorized_currency: Option<common_enums::Currency>,
     pub mandate_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
+
+// Missing types for Payu connector
+#[derive(Debug, Clone, Serialize)]
+pub struct IncomingWebhookRequestData {
+    // Add fields as needed
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ValidateRequestData {
+    // Add fields as needed
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ValidateResponseData {
+    // Add fields as needed
+}
