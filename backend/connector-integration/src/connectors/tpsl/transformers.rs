@@ -460,13 +460,13 @@ impl<
         item: TPSLRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = TpslAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let return_url = item.request.get_router_return_url()?;
-        let amount = item.request.minor_amount.to_string();
-        let currency = item.request.currency.to_string();
-        let transaction_id = item.resource_common_data.connector_request_reference_id.clone();
+        let return_url = item.router_data.request.get_router_return_url()?;
+        let amount = item.router_data.request.minor_amount.to_string();
+        let currency = item.router_data.request.currency.to_string();
+        let transaction_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
         
         // For UPI payments, create UPI transaction request
-        match item.request.payment_method_type {
+        match item.router_data.request.payment_method_type {
             Some(common_enums::PaymentMethodType::UpiCollect) => {
                 let upi_request = TpslUPITxnRequest {
                     merchant: TpslMerchantPayload {
@@ -518,8 +518,8 @@ impl<
                     },
                     consumer: TpslConsumerIntentPayload {
                         mobile_number: "".to_string(), // Phone not available in current structure
-                        email_i_d: item.request.email.as_ref().map(|e| e.expose().to_string()).unwrap_or_default(),
-                        identifier: item.resource_common_data.get_customer_id()?.get_string_repr().to_string(),
+                        email_i_d: item.router_data.request.email.as_ref().map(|e| e.expose().to_string()).unwrap_or_default(),
+                        identifier: item.router_data.resource_common_data.get_customer_id()?.get_string_repr().to_string(),
                         account_no: "".to_string(),
                         account_type: "".to_string(),
                         account_holder_name: "".to_string(),
