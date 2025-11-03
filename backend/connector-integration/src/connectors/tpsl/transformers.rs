@@ -467,7 +467,7 @@ impl<
         
         // For UPI payments, create UPI transaction request
         match item.router_data.request.payment_method_type {
-            Some(common_enums::PaymentMethodType::Upi) => {
+            Some(common_enums::PaymentMethodType::UpiCollect) => {
                 let upi_request = TpslUPITxnRequest {
                     merchant: TpslMerchantPayload {
                         webhook_endpoint_url: return_url.clone(),
