@@ -711,8 +711,8 @@ macro_rules! impl_connector_integration_v2_stub {
                 "application/json"
             }
 
-            fn get_http_method(&self) -> http::Method {
-                http::Method::POST
+            fn get_http_method(&self) -> Method {
+                Method::Post
             }
 
             fn get_url(
