@@ -67,18 +67,6 @@ impl<
 {
 }
 
-// Implement basic traits that don't require ConnectorIntegrationV2
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::ValidationTrait for TPSL<T>
-{
-}
-
 impl<
     T: PaymentMethodDataTypes
         + std::fmt::Debug
