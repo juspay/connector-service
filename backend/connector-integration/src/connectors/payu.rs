@@ -4,7 +4,7 @@ pub mod constants;
 use std::fmt::Debug;
 
 use base64::Engine;
-use http::Method;
+use common_utils::request::Method;
 use common_enums::{enums, CurrencyUnit};
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMajorUnit};
 use domain_types::{
