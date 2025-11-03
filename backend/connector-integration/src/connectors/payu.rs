@@ -763,9 +763,9 @@ macro_rules! impl_connector_integration_v2_stub {
 
             fn handle_response_v2(
                 &self,
-                req: &domain_types::router_data_v2::RouterDataV2<$flow, $common_data, $req, $resp>,
+                _req: &domain_types::router_data_v2::RouterDataV2<$flow, $common_data, $req, $resp>,
                 _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
-                res: domain_types::router_response_types::Response,
+                _res: domain_types::router_response_types::Response,
             ) -> CustomResult<domain_types::router_data_v2::RouterDataV2<$flow, $common_data, $req, $resp>, domain_types::errors::ConnectorError> {
                 Err(domain_types::errors::ConnectorError::NotImplemented(
                     format!("handle_response_v2 not implemented for flow {}", std::any::type_name::<$flow>()),
