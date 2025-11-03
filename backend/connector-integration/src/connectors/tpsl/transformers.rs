@@ -637,14 +637,14 @@ impl TryFrom<TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncDat
                 device_identifier: "WEB".to_string(),
                 txn_type: Some("SALE".to_string()),
                 sub_type: Some("SALE".to_string()),
-                amount: item.request.amount.to_string(),
-                currency: item.request.currency.to_string(),
+                amount: item.router_data.request.amount.to_string(),
+                currency: item.router_data.request.currency.to_string(),
                 date_time: "2025-01-01 00:00:00".to_string(),
                 request_type: "STATUS".to_string(),
                 token: auth.secret_key.expose().clone(),
             },
             consumer: TpslConsumerDataType {
-                identifier: item.resource_common_data.get_customer_id()?.get_string_repr().to_string(),
+                identifier: item.router_data.resource_common_data.get_customer_id()?.get_string_repr().to_string(),
             },
         })
     }
