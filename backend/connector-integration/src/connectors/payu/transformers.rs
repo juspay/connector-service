@@ -918,7 +918,7 @@ impl TryFrom<ResponseRouterData<PayuSyncResponse, RouterDataV2<PSync, PaymentFlo
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<PayuSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
+        _item: ResponseRouterData<PayuSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         // This is a workaround for the macro framework bug
         // Since we don't have access to the connector, we can't create the proper wrapper
