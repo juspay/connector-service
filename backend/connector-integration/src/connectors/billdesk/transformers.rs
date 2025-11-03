@@ -227,7 +227,8 @@ impl<
         let transaction_id = item
             .router_data
             .resource_common_data
-            .connector_request_reference_id;
+            .connector_request_reference_id
+            .clone();
         
         let amount = item
             .connector
