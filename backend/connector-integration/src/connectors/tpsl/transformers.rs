@@ -451,15 +451,15 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+    > TryFrom<TPSLRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
     for TpslPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        item: TPSLRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
-        let auth = TpslAuthType::try_from(&item.connector_auth_type)?;
+        let auth = TpslAuthType::try_from(&item.router_data.connector_auth_type)?;
         let return_url = item.request.get_router_return_url()?;
         let amount = item.request.minor_amount.to_string();
         let currency = item.request.currency.to_string();
