@@ -822,133 +822,29 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentPreAuthenticateV2<T> for Payu<T>
 {
-    fn pre_authenticate<'a>(
-        &'a self,
-        _req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::PreAuthenticate,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentsPreAuthenticateData<T>,
-            domain_types::connector_types::PaymentsResponseData,
-        >,
-        _app: &interfaces::AppIdentity,
-    ) -> interfaces::BoxedFuture<
-        'a,
-        domain_types::errors::CustomResult<
-            domain_types::router_data_v2::RouterDataV2<
-                domain_types::connector_flow::PreAuthenticate,
-                domain_types::connector_types::PaymentFlowData,
-                domain_types::connector_types::PaymentsPreAuthenticateData<T>,
-                domain_types::connector_types::PaymentsResponseData,
-            >,
-            domain_types::errors::ConnectorError,
-        >,
-    > {
-        Box::pin(async move {
-            Err(domain_types::errors::ConnectorError::NotImplemented {
-                message: "Pre-authenticate flow not implemented for PayU".to_string(),
-            }
-            .into())
-        })
-    }
+    // This trait requires ConnectorIntegrationV2 to be implemented
+    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentAuthenticateV2<T> for Payu<T>
 {
-    fn authenticate<'a>(
-        &'a self,
-        _req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::Authenticate,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentsAuthenticateData<T>,
-            domain_types::connector_types::PaymentsResponseData,
-        >,
-        _app: &interfaces::AppIdentity,
-    ) -> interfaces::BoxedFuture<
-        'a,
-        domain_types::errors::CustomResult<
-            domain_types::router_data_v2::RouterDataV2<
-                domain_types::connector_flow::Authenticate,
-                domain_types::connector_types::PaymentFlowData,
-                domain_types::connector_types::PaymentsAuthenticateData<T>,
-                domain_types::connector_types::PaymentsResponseData,
-            >,
-            domain_types::errors::ConnectorError,
-        >,
-    > {
-        Box::pin(async move {
-            Err(domain_types::errors::ConnectorError::NotImplemented {
-                message: "Authenticate flow not implemented for PayU".to_string(),
-            }
-            .into())
-        })
-    }
+    // This trait requires ConnectorIntegrationV2 to be implemented
+    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentPostAuthenticateV2<T> for Payu<T>
 {
-    fn post_authenticate<'a>(
-        &'a self,
-        _req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::PostAuthenticate,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentsPostAuthenticateData<T>,
-            domain_types::connector_types::PaymentsResponseData,
-        >,
-        _app: &interfaces::AppIdentity,
-    ) -> interfaces::BoxedFuture<
-        'a,
-        domain_types::errors::CustomResult<
-            domain_types::router_data_v2::RouterDataV2<
-                domain_types::connector_flow::PostAuthenticate,
-                domain_types::connector_types::PaymentFlowData,
-                domain_types::connector_types::PaymentsPostAuthenticateData<T>,
-                domain_types::connector_types::PaymentsResponseData,
-            >,
-            domain_types::errors::ConnectorError,
-        >,
-    > {
-        Box::pin(async move {
-            Err(domain_types::errors::ConnectorError::NotImplemented {
-                message: "Post-authenticate flow not implemented for PayU".to_string(),
-            }
-            .into())
-        })
-    }
+    // This trait requires ConnectorIntegrationV2 to be implemented
+    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentVoidPostCaptureV2 for Payu<T>
 {
-    fn void_post_capture<'a>(
-        &'a self,
-        _req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::VoidPC,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentsCancelPostCaptureData,
-            domain_types::connector_types::PaymentsResponseData,
-        >,
-        _app: &interfaces::AppIdentity,
-    ) -> interfaces::BoxedFuture<
-        'a,
-        domain_types::errors::CustomResult<
-            domain_types::router_data_v2::RouterDataV2<
-                domain_types::connector_flow::VoidPC,
-                domain_types::connector_types::PaymentFlowData,
-                domain_types::connector_types::PaymentsCancelPostCaptureData,
-                domain_types::connector_types::PaymentsResponseData,
-            >,
-            domain_types::errors::ConnectorError,
-        >,
-    > {
-        Box::pin(async move {
-            Err(domain_types::errors::ConnectorError::NotImplemented {
-                message: "Void post capture flow not implemented for PayU".to_string(),
-            }
-            .into())
-        })
-    }
+    // This trait requires ConnectorIntegrationV2 to be implemented
+    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
