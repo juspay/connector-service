@@ -689,126 +689,242 @@ impl_source_verification_stub!(
     PaymentsResponseData
 );
 
-// Implement the essential ConnectorIntegrationV2 traits manually
-// Only Authorize and PSync are actually implemented for PayU
+// Provide stub implementations for all required ConnectorIntegrationV2 traits
+// These return "not implemented" errors but satisfy the trait bounds
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    interfaces::connector_integration_v2::ConnectorIntegrationV2<
-        domain_types::connector_flow::Authorize,
-        domain_types::connector_types::PaymentFlowData,
-        domain_types::connector_types::PaymentsAuthorizeData<T>,
-        domain_types::connector_types::PaymentsResponseData,
-    > for Payu<T>
-{
-    fn build_request(
-        &self,
-        req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::Authorize,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentsAuthorizeData<T>,
-            domain_types::connector_types::PaymentsResponseData,
-        >,
-        connectors: &domain_types::types::Connectors,
-    ) -> CustomResult<
-        interfaces::api::Request,
-        domain_types::errors::ConnectorError,
-    > {
-        // Use the existing implementation from the macro-generated bridge
-        self.authorize.build_request(req, connectors)
-    }
+macro_rules! impl_connector_integration_v2_stub {
+    ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
+        impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+            interfaces::connector_integration_v2::ConnectorIntegrationV2<$flow, $common_data, $req, $resp> for Payu<T>
+        {
+            fn get_headers(
+                &self,
+                _req: &domain_types::router_data_v2::RouterDataV2<$flow, $common_data, $req, $resp>,
+            ) -> CustomResult<Vec<(String, Maskable<String>)>, domain_types::errors::ConnectorError> {
+                Err(domain_types::errors::ConnectorError::NotImplemented(
+                    format!("get_headers not implemented for flow {}", std::any::type_name::<$flow>()),
+                ))
+            }
 
-    fn handle_response(
-        &self,
-        req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::Authorize,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentsAuthorizeData<T>,
-            domain_types::connector_types::PaymentsResponseData,
-        >,
-        res: interfaces::api::Response,
-    ) -> CustomResult<
-        domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::Authorize,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentsAuthorizeData<T>,
-            domain_types::connector_types::PaymentsResponseData,
-        >,
-        domain_types::errors::ConnectorError,
-    > {
-        // Use the existing implementation from the macro-generated bridge
-        self.authorize.handle_response(req, res)
-    }
+            fn get_content_type(&self) -> &'static str {
+                "application/json"
+            }
 
-    fn get_error_response(
-        &self,
-        res: interfaces::api::Response,
-    ) -> CustomResult<
-        domain_types::router_response_types::ErrorResponse,
-        domain_types::errors::ConnectorError,
-    > {
-        // Use the existing implementation from the macro-generated bridge
-        self.authorize.get_error_response(res)
-    }
+            fn get_http_method(&self) -> http::Method {
+                http::Method::POST
+            }
+
+            fn get_url(
+                &self,
+                _req: &domain_types::router_data_v2::RouterDataV2<$flow, $common_data, $req, $resp>,
+            ) -> CustomResult<String, domain_types::errors::ConnectorError> {
+                Err(domain_types::errors::ConnectorError::NotImplemented(
+                    format!("get_url not implemented for flow {}", std::any::type_name::<$flow>()),
+                ))
+            }
+
+            fn get_request_body(
+                &self,
+                _req: &domain_types::router_data_v2::RouterDataV2<$flow, $common_data, $req, $resp>,
+            ) -> CustomResult<Option<interfaces::api::RequestContent>, domain_types::errors::ConnectorError> {
+                Err(domain_types::errors::ConnectorError::NotImplemented(
+                    format!("get_request_body not implemented for flow {}", std::any::type_name::<$flow>()),
+                ))
+            }
+
+            fn get_request_form_data(
+                &self,
+                _req: &domain_types::router_data_v2::RouterDataV2<$flow, $common_data, $req, $resp>,
+            ) -> CustomResult<Option<reqwest::multipart::Form>, domain_types::errors::ConnectorError> {
+                Ok(None)
+            }
+
+            fn build_request(
+                &self,
+                req: &domain_types::router_data_v2::RouterDataV2<$flow, $common_data, $req, $resp>,
+                _connectors: &domain_types::types::Connectors,
+            ) -> CustomResult<interfaces::api::Request, domain_types::errors::ConnectorError> {
+                Err(domain_types::errors::ConnectorError::NotImplemented(
+                    format!("build_request not implemented for flow {}", std::any::type_name::<$flow>()),
+                ))
+            }
+
+            fn handle_response(
+                &self,
+                req: &domain_types::router_data_v2::RouterDataV2<$flow, $common_data, $req, $resp>,
+                res: interfaces::api::Response,
+            ) -> CustomResult<domain_types::router_data_v2::RouterDataV2<$flow, $common_data, $req, $resp>, domain_types::errors::ConnectorError> {
+                Err(domain_types::errors::ConnectorError::NotImplemented(
+                    format!("handle_response not implemented for flow {}", std::any::type_name::<$flow>()),
+                ))
+            }
+
+            fn get_error_response(
+                &self,
+                _res: interfaces::api::Response,
+            ) -> CustomResult<domain_types::router_response_types::ErrorResponse, domain_types::errors::ConnectorError> {
+                Err(domain_types::errors::ConnectorError::NotImplemented(
+                    "get_error_response not implemented".to_string(),
+                ))
+            }
+        }
+    };
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    interfaces::connector_integration_v2::ConnectorIntegrationV2<
-        domain_types::connector_flow::PSync,
-        domain_types::connector_types::PaymentFlowData,
-        domain_types::connector_types::PaymentsSyncData,
-        domain_types::connector_types::PaymentsResponseData,
-    > for Payu<T>
-{
-    fn build_request(
-        &self,
-        req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::PSync,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentsSyncData,
-            domain_types::connector_types::PaymentsResponseData,
-        >,
-        connectors: &domain_types::types::Connectors,
-    ) -> CustomResult<
-        interfaces::api::Request,
-        domain_types::errors::ConnectorError,
-    > {
-        // Use the existing implementation from the macro-generated bridge
-        self.psync.build_request(req, connectors)
-    }
+// Apply stub implementations to all flows
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::Authorize,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::PaymentsAuthorizeData<T>,
+    domain_types::connector_types::PaymentsResponseData
+);
 
-    fn handle_response(
-        &self,
-        req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::PSync,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentsSyncData,
-            domain_types::connector_types::PaymentsResponseData,
-        >,
-        res: interfaces::api::Response,
-    ) -> CustomResult<
-        domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::PSync,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentsSyncData,
-            domain_types::connector_types::PaymentsResponseData,
-        >,
-        domain_types::errors::ConnectorError,
-    > {
-        // Use the existing implementation from the macro-generated bridge
-        self.psync.handle_response(req, res)
-    }
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::PSync,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::PaymentsSyncData,
+    domain_types::connector_types::PaymentsResponseData
+);
 
-    fn get_error_response(
-        &self,
-        res: interfaces::api::Response,
-    ) -> CustomResult<
-        domain_types::router_response_types::ErrorResponse,
-        domain_types::errors::ConnectorError,
-    > {
-        // Use the existing implementation from the macro-generated bridge
-        self.psync.get_error_response(res)
-    }
-}
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::Void,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::PaymentVoidData,
+    domain_types::connector_types::PaymentsResponseData
+);
+
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::Capture,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::PaymentsCaptureData,
+    domain_types::connector_types::PaymentsResponseData
+);
+
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::Refund,
+    domain_types::connector_types::RefundFlowData,
+    domain_types::connector_types::RefundsData,
+    domain_types::connector_types::RefundsResponseData
+);
+
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::RSync,
+    domain_types::connector_types::RefundFlowData,
+    domain_types::connector_types::RefundSyncData,
+    domain_types::connector_types::RefundsResponseData
+);
+
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::CreateOrder,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::PaymentCreateOrderData,
+    domain_types::connector_types::PaymentCreateOrderResponse
+);
+
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::CreateSessionToken,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::SessionTokenRequestData,
+    domain_types::connector_types::SessionTokenResponseData
+);
+
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::SetupMandate,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::SetupMandateRequestData<T>,
+    domain_types::connector_types::PaymentsResponseData
+);
+
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::RepeatPayment,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::RepeatPaymentData,
+    domain_types::connector_types::PaymentsResponseData
+);
+
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::Accept,
+    domain_types::connector_types::DisputeFlowData,
+    domain_types::connector_types::AcceptDisputeData,
+    domain_types::connector_types::DisputeResponseData
+);
+
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::SubmitEvidence,
+    domain_types::connector_types::DisputeFlowData,
+    domain_types::connector_types::SubmitEvidenceData,
+    domain_types::connector_types::DisputeResponseData
+);
+
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::DefendDispute,
+    domain_types::connector_types::DisputeFlowData,
+    domain_types::connector_types::DisputeDefendData,
+    domain_types::connector_types::DisputeResponseData
+);
+
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::PaymentMethodToken,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::PaymentMethodTokenizationData<T>,
+    domain_types::connector_types::PaymentMethodTokenResponse
+);
+
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::CreateAccessToken,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::AccessTokenRequestData,
+    domain_types::connector_types::AccessTokenResponseData
+);
+
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::CreateConnectorCustomer,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::ConnectorCustomerData,
+    domain_types::connector_types::ConnectorCustomerResponse
+);
+
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::PreAuthenticate,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::PaymentsPreAuthenticateData<T>,
+    domain_types::connector_types::PaymentsResponseData
+);
+
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::Authenticate,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::PaymentsAuthenticateData<T>,
+    domain_types::connector_types::PaymentsResponseData
+);
+
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::PostAuthenticate,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::PaymentsPostAuthenticateData<T>,
+    domain_types::connector_types::PaymentsResponseData
+);
+
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::VoidPC,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::PaymentsCancelPostCaptureData,
+    domain_types::connector_types::PaymentsResponseData
+);
+
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::IncomingWebhook,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::IncomingWebhookRequestData,
+    domain_types::connector_types::PaymentsResponseData
+);
+
+impl_connector_integration_v2_stub!(
+    domain_types::connector_flow::Validate,
+    domain_types::connector_types::PaymentFlowData,
+    domain_types::connector_types::ValidateRequestData,
+    domain_types::connector_types::ValidateResponseData
+);
 
 // Stub implementations for all other traits - these just need to exist to satisfy bounds
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
