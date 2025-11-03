@@ -792,9 +792,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         // This is a workaround for the macro framework bug
         // Since we don't have access to the connector, we can't create the proper wrapper
         // This implementation should not be used if the macro is fixed
-        Err(ConnectorError::NotImplemented {
-            message: "This conversion should not be used directly - macro framework bug".to_string(),
-        }.into())
+        Err(ConnectorError::NotImplemented(
+            "This conversion should not be used directly - macro framework bug".to_string(),
+        ).into())
     }
 }
 
@@ -923,9 +923,9 @@ impl TryFrom<ResponseRouterData<PayuSyncResponse, RouterDataV2<PSync, PaymentFlo
         // This is a workaround for the macro framework bug
         // Since we don't have access to the connector, we can't create the proper wrapper
         // This implementation should not be used if the macro is fixed
-        Err(ConnectorError::NotImplemented {
-            message: "This conversion should not be used directly - macro framework bug".to_string(),
-        }.into())
+        Err(ConnectorError::NotImplemented(
+            "This conversion should not be used directly - macro framework bug".to_string(),
+        ).into())
     }
 }
 
