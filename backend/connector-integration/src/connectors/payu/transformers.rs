@@ -291,35 +291,35 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .change_context(ConnectorError::AmountConversionFailed)?;
 
         // Extract authentication
-        let auth = PayuAuthType::try_from(&item.connector_auth_type)?;
+        let auth = PayuAuthType::try_from(&router_data.connector_auth_type)?;
 
         // Determine payment flow based on payment method
-        let (pg, bankcode, vpa, s2s_flow) = determine_upi_flow(&item.request)?;
+        let (pg, bankcode, vpa, s2s_flow) = determine_upi_flow(&router_data.request)?;
 
         // Generate UDF fields based on Haskell implementation
         let udf_fields = generate_udf_fields(
-            &item.resource_common_data.payment_id,
-            item.resource_common_data.merchant_id.get_string_repr(),
-            &item,
+            &router_data.resource_common_data.payment_id,
+            router_data.resource_common_data.merchant_id.get_string_repr(),
+            &router_data,
         );
 
         // Build base request
         let mut request = Self {
             key: auth.api_key.peek().to_string(),
-            txnid: item.resource_common_data.connector_request_reference_id.clone(),
+            txnid: router_data.resource_common_data.connector_request_reference_id.clone(),
             amount,
-            currency: item.request.currency,
+            currency: router_data.request.currency,
             productinfo: constants::PRODUCT_INFO.to_string(), // Default product info
 
             // Customer info - extract from billing address if available
-            firstname: item.resource_common_data.get_billing_first_name()?,
-            lastname: item.resource_common_data.get_optional_billing_last_name(),
-            email: item.resource_common_data.get_billing_email()?,
-            phone: item.resource_common_data.get_billing_phone_number()?,
+            firstname: router_data.resource_common_data.get_billing_first_name()?,
+            lastname: router_data.resource_common_data.get_optional_billing_last_name(),
+            email: router_data.resource_common_data.get_billing_email()?,
+            phone: router_data.resource_common_data.get_billing_phone_number()?,
 
             // URLs - use router return URL if available
-            surl: item.request.get_router_return_url()?,
-            furl: item.request.get_router_return_url()?,
+            surl: router_data.request.get_router_return_url()?,
+            furl: router_data.request.get_router_return_url()?,
 
             // Payment method specific
             pg,
@@ -328,7 +328,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
             // UPI specific - corrected based on PayU docs
             txn_s2s_flow: s2s_flow,
-            s2s_client_ip: item
+            s2s_client_ip: router_data
                 .request
                 .get_ip_address_as_optional()
                 .ok_or_else(|| {
@@ -363,7 +363,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             offer_auto_apply: None,
             additional_charges: None,
             additional_gst_charges: None,
-            upi_app_name: determine_upi_app_name(&item.request)?,
+            upi_app_name: determine_upi_app_name(&router_data.request)?,
         };
 
         // Generate hash signature
