@@ -44,6 +44,18 @@ impl<
 {
 }
 
+// Implement ConnectorServiceTrait for TPSL (minimal implementation)
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> connector_types::ConnectorServiceTrait<T> for TPSL<T>
+{
+}
+
 impl<
     T: PaymentMethodDataTypes
         + std::fmt::Debug
