@@ -657,15 +657,14 @@ impl<
             + std::marker::Sync
             + std::marker::Send
             + 'static
-            + Serialize
             + Serialize,
-    > TryFrom<ResponseRouterData<TpslPaymentsResponse, Self>>
+    > TryFrom<ResponseRouterData<TpslPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: ResponseRouterData<TpslPaymentsResponse, Self>,
+        item: ResponseRouterData<TpslPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
