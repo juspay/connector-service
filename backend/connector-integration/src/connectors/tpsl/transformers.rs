@@ -519,9 +519,9 @@ impl<
                         tenure_id: "".to_string(),
                     },
                     consumer: TpslConsumerIntentPayload {
-                        mobile_number: item.router_data.request.phone.clone().unwrap_or_default().to_string(),
-                        email_i_d: item.router_data.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
-                        identifier: item.router_data.resource_common_data.get_customer_id()?.get_string_repr(),
+                        mobile_number: item.request.phone.clone().unwrap_or_default().to_string(),
+                        email_i_d: item.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
+                        identifier: item.resource_common_data.get_customer_id()?.get_string_repr(),
                         account_no: "".to_string(),
                         account_type: "".to_string(),
                         account_holder_name: "".to_string(),
