@@ -391,6 +391,12 @@ macros::macro_connector_implementation!(
     }
 );
 
+// Implement ConnectorServiceTrait
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::connector_types::ConnectorServiceTrait<T> for Payu<T>
+{
+}
+
 // Implement ConnectorCommon trait
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     ConnectorCommon for Payu<T>
