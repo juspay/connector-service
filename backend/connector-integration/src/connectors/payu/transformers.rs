@@ -764,13 +764,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             status_code: item.http_code,
         };
 
-        Ok(Self {
-            response: Ok(payment_response_data),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
+        Ok(PayuRouterData {
+            connector: item.router_data.connector,
+            router_data: Self {
+                response: Ok(payment_response_data),
+                resource_common_data: PaymentFlowData {
+                    status,
+                    ..router_data.resource_common_data
+                },
+                ..router_data
             },
-            ..item.router_data
         })
     }
 }
