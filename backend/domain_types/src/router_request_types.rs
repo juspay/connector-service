@@ -122,6 +122,8 @@ pub struct AuthenticationData {
     pub trans_status: Option<common_enums::TransactionStatus>,
     pub eci: Option<String>,
     pub cavv: Option<Secret<String>>,
+    // This is mastercard specific field
+    pub ucaf_collection_indicator: Option<String>,
     pub threeds_server_transaction_id: Option<String>,
     pub message_version: Option<SemanticVersion>,
     pub ds_trans_id: Option<String>,
@@ -141,6 +143,7 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
             trans_status,
             acs_transaction_id,
             transaction_id,
+            ucaf_collection_indicator,
         } = value;
         let threeds_server_transaction_id =
             utils::extract_optional_connector_request_reference_id(&threeds_server_transaction_id);
@@ -173,6 +176,7 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
             }))?
             .map(common_enums::TransactionStatus::foreign_from);
         Ok(Self {
+            ucaf_collection_indicator,
             trans_status,
             eci,
             cavv: cavv.map(Secret::new),
@@ -189,6 +193,7 @@ impl utils::ForeignFrom<AuthenticationData> for payments::AuthenticationData {
     fn foreign_from(value: AuthenticationData) -> Self {
         use hyperswitch_masking::ExposeInterface;
         Self {
+            ucaf_collection_indicator: value.ucaf_collection_indicator,
             eci: value.eci,
             cavv: value.cavv.map(|cavv| cavv.expose()),
             threeds_server_transaction_id: value.threeds_server_transaction_id.map(|id| {

@@ -491,34 +491,65 @@ impl From<common_enums::TransactionStatus> for CybersourceParesStatus {
     }
 }
 
-impl From<CybersourceConsumerAuthInformationEnrollmentResponse>
-    for router_request_types::AuthenticationData
-{
-    fn from(value: CybersourceConsumerAuthInformationEnrollmentResponse) -> Self {
-        let trans_status = value
-            .validate_response
-            .pares_status
-            .map(common_enums::TransactionStatus::from);
-        // CAVV is populated from UCAF data if available(for mastercard), else from CAVV field
-        let cavv = value
-            .validate_response
-            .ucaf_authentication_data
-            .or(value.validate_response.cavv);
-        let eci = value.validate_response.ucaf_collection_indicator;
-        let ds_trans_id = value
-            .validate_response
-            .directory_server_transaction_id
-            .map(|id| id.expose());
-        Self {
-            eci,
-            cavv,
-            threeds_server_transaction_id: value.validate_response.three_d_s_server_transaction_id,
-            message_version: value.validate_response.specification_version,
-            trans_status,
-            ds_trans_id,
-            acs_transaction_id: value.validate_response.acs_transaction_id,
-            transaction_id: value.validate_response.xid,
-        }
+fn get_authentication_data_for_check_enrollment_response(
+    response: CybersourceConsumerAuthInformationEnrollmentResponse,
+) -> router_request_types::AuthenticationData {
+    let trans_status = response
+        .validate_response
+        .pares_status
+        .map(common_enums::TransactionStatus::from);
+    // CAVV is populated from UCAF data if available(for mastercard), else from CAVV field
+    let cavv = response
+        .validate_response
+        .ucaf_authentication_data
+        .or(response.validate_response.cavv);
+    let eci = response.validate_response.ecommerce_indicator;
+    let ucaf_collection_indicator = response.validate_response.ucaf_collection_indicator.clone();
+    let ds_trans_id = response
+        .validate_response
+        .directory_server_transaction_id
+        .map(|id| id.expose());
+    router_request_types::AuthenticationData {
+        ucaf_collection_indicator,
+        eci,
+        cavv,
+        threeds_server_transaction_id: response.validate_response.three_d_s_server_transaction_id,
+        message_version: response.validate_response.specification_version,
+        trans_status,
+        ds_trans_id,
+        acs_transaction_id: response.validate_response.acs_transaction_id,
+        transaction_id: response.validate_response.xid,
+    }
+}
+
+fn get_authentication_data_for_validation_response(
+    response: CybersourceConsumerAuthInformationEnrollmentResponse,
+) -> router_request_types::AuthenticationData {
+    let trans_status = response
+        .validate_response
+        .pares_status
+        .map(common_enums::TransactionStatus::from);
+    // CAVV is populated from UCAF data if available(for mastercard), else from CAVV field
+    let cavv = response
+        .validate_response
+        .ucaf_authentication_data
+        .or(response.validate_response.cavv);
+    let eci = response.validate_response.indicator;
+    let ucaf_collection_indicator = response.validate_response.ucaf_collection_indicator.clone();
+    let ds_trans_id = response
+        .validate_response
+        .directory_server_transaction_id
+        .map(|id| id.expose());
+    router_request_types::AuthenticationData {
+        ucaf_collection_indicator,
+        eci,
+        cavv,
+        threeds_server_transaction_id: response.validate_response.three_d_s_server_transaction_id,
+        message_version: response.validate_response.specification_version,
+        trans_status,
+        ds_trans_id,
+        acs_transaction_id: response.validate_response.acs_transaction_id,
+        transaction_id: response.validate_response.xid,
     }
 }
 
@@ -567,7 +598,7 @@ pub struct CybersourceConsumerAuthInformation {
 impl From<router_request_types::AuthenticationData> for CybersourceConsumerAuthInformation {
     fn from(value: router_request_types::AuthenticationData) -> Self {
         let router_request_types::AuthenticationData {
-            eci,
+            eci: _,
             cavv,
             threeds_server_transaction_id: _,
             message_version,
@@ -575,11 +606,12 @@ impl From<router_request_types::AuthenticationData> for CybersourceConsumerAuthI
             trans_status: _,
             acs_transaction_id: _,
             transaction_id,
+            ucaf_collection_indicator,
         } = value;
 
         CybersourceConsumerAuthInformation {
             pares_status: None,
-            ucaf_collection_indicator: eci,
+            ucaf_collection_indicator,
             ucaf_authentication_data: cavv.clone(),
             xid: transaction_id,
             cavv,
@@ -3428,7 +3460,7 @@ impl<
                             redirection_data: redirection_data.map(Box::new),
                             connector_response_reference_id,
                             authentication_data: Some(
-                                router_request_types::AuthenticationData::from(
+                                get_authentication_data_for_check_enrollment_response(
                                     info_response.consumer_authentication_information,
                                 ),
                             ),
@@ -3707,7 +3739,7 @@ impl<
                         },
                         response: Ok(PaymentsResponseData::PostAuthenticateResponse {
                             authentication_data: Some(
-                                router_request_types::AuthenticationData::from(
+                                get_authentication_data_for_validation_response(
                                     info_response.consumer_authentication_information,
                                 ),
                             ),
@@ -3785,6 +3817,7 @@ pub struct CybersourceConsumerAuthValidateResponse {
     acs_transaction_id: Option<String>,
     three_d_s_server_transaction_id: Option<String>,
     indicator: Option<String>,
+    ecommerce_indicator: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

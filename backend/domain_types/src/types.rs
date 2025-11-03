@@ -1963,6 +1963,7 @@ impl ForeignTryFrom<router_request_types::AuthenticationData>
             .trans_status
             .map(|ts| grpc_api_types::payments::TransactionStatus::foreign_from(ts).into());
         Ok(Self {
+            ucaf_collection_indicator: value.ucaf_collection_indicator,
             eci: value.eci,
             cavv: value.cavv.map(|cavv| cavv.expose()),
             threeds_server_transaction_id: value.threeds_server_transaction_id.map(|id| {
