@@ -628,7 +628,7 @@ impl<
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: TpslRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
+        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = TpslAuthType::try_from(&item.router_data.connector_auth_type)?;
         let transaction_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
