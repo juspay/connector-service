@@ -615,7 +615,9 @@ impl<
     }
 }
 
-impl TryFrom<TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+impl<
+    T: PaymentMethodDataTypes
+> TryFrom<TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
     for TpslPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
