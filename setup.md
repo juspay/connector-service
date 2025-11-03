@@ -93,13 +93,15 @@ You should see a health check response indicating the server is running.
 
 ### Test with grpcurl
 
-Install grpcurl for testing:
+#### macOS Installation
 
 ```bash
-# macOS
 brew install grpcurl
+```
 
-# Ubuntu
+#### Ubuntu Installation
+
+```bash
 sudo apt-get install grpcurl
 ```
 
