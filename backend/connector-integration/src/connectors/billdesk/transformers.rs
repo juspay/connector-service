@@ -223,7 +223,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let customer_id = item.router_data.resource_common_data.get_customer_id()?.to_string();
         let transaction_id = item
             .router_data
             .resource_common_data
