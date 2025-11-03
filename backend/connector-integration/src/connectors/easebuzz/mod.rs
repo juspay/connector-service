@@ -112,7 +112,8 @@ where
         } else {
             constants::EaseBuzzEndpoints::EaseBuzInitiatePayment
         };
-        let base_url = self.base_url(&Connectors::default());
+        let connectors = Connectors::default();
+        let base_url = self.base_url(&connectors);
         let endpoint_url = constants::get_endpoint(endpoint, req.resource_common_data.test_mode.unwrap_or(false));
         Ok(format!("{}{}", base_url, endpoint_url))
     }
@@ -174,7 +175,8 @@ where
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
-        let base_url = self.base_url(&Connectors::default());
+        let connectors = Connectors::default();
+        let base_url = self.base_url(&connectors);
         let endpoint_url = constants::get_endpoint(
             constants::EaseBuzzEndpoints::EasebuzTxnSync,
             req.resource_common_data.test_mode.unwrap_or(false),
@@ -239,7 +241,8 @@ where
         &self,
         req: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
-        let base_url = self.base_url(&Connectors::default());
+        let connectors = Connectors::default();
+        let base_url = self.base_url(&connectors);
         let endpoint_url = constants::get_endpoint(
             constants::EaseBuzzEndpoints::EaseBuzRefundSync,
             req.resource_common_data.test_mode.unwrap_or(false),
