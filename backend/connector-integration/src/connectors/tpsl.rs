@@ -32,41 +32,6 @@ use transformers::{self as tpsl, TpslPaymentsRequest, TpslPaymentsResponse, Tpsl
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
-// Only implement the traits that are actually used by the macros
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentAuthorizeV2<T> for TPSL<T>
-{
-}
-
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentSyncV2 for TPSL<T>
-{
-}
-
-// Only implement the traits that are actually used by the macros
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> connector_types::PaymentSyncV2 for TPSL<T>
-{
-}
-
 // Implement basic traits that don't require ConnectorIntegrationV2
 impl<
     T: PaymentMethodDataTypes
