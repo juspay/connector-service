@@ -253,7 +253,7 @@ impl<
 
         // Build message based on payment method type
         let msg = match item.router_data.request.payment_method_type {
-            Some(common_enums::PaymentMethodType::Upi) => {
+            Some(common_enums::PaymentMethodType::UpiCollect) => {
                 build_upi_message(&item, &customer_id, &transaction_id, &amount)?
             }
             _ => return Err(errors::ConnectorError::NotImplemented(
