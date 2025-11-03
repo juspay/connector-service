@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
 
-#[derive(Default, Debug, Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslPaymentsRequest {
     pub merchant: TpslMerchantPayload,
