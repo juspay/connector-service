@@ -7,9 +7,7 @@ use std::marker::PhantomData;
 use common_enums::{AttemptStatus, PaymentMethodType};
 use common_utils::{
     errors::CustomResult,
-    ext_traits::BytesExt,
     request::RequestContent,
-    types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
@@ -18,21 +16,17 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
 };
-use error_stack::ResultExt;
-use hyperswitch_masking::{Maskable, Secret};
+use hyperswitch_masking::Maskable;
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
-    verification::{ConnectorSourceVerificationSecrets, SourceVerification},
+    verification::SourceVerification,
 };
-use serde::Serialize;
-
-use self::transformers as easebuzz;
 
 #[derive(Debug, Clone)]
 pub struct EaseBuzz<T> {
@@ -114,10 +108,6 @@ where
         let base_url = self.base_url(&connectors);
         let endpoint_url = constants::get_endpoint(endpoint, req.resource_common_data.test_mode.unwrap_or(false));
         Ok(format!("{}{}", base_url, endpoint_url))
-        let connectors = Connectors::default();
-        let base_url = self.base_url(&connectors);
-        let endpoint_url = constants::get_endpoint(endpoint, req.resource_common_data.test_mode.unwrap_or(false));
-        Ok(format!("{}{}", base_url, endpoint_url))
     }
 
     fn get_request_body(
@@ -177,12 +167,10 @@ where
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
+        let endpoint = constants::EaseBuzzEndpoints::EasebuzTxnSync;
         let connectors = Connectors::default();
         let base_url = self.base_url(&connectors);
-        let endpoint_url = constants::get_endpoint(
-            constants::EaseBuzzEndpoints::EasebuzTxnSync,
-            req.resource_common_data.test_mode.unwrap_or(false),
-        );
+        let endpoint_url = constants::get_endpoint(endpoint, req.resource_common_data.test_mode.unwrap_or(false));
         Ok(format!("{}{}", base_url, endpoint_url))
     }
 
@@ -243,12 +231,10 @@ where
         &self,
         req: &RouterDataV2<RSync, PaymentFlowData, RefundSyncData, RefundsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
+        let endpoint = constants::EaseBuzzEndpoints::EaseBuzRefundSync;
         let connectors = Connectors::default();
         let base_url = self.base_url(&connectors);
-        let endpoint_url = constants::get_endpoint(
-            constants::EaseBuzzEndpoints::EaseBuzRefundSync,
-            req.resource_common_data.test_mode.unwrap_or(false),
-        );
+        let endpoint_url = constants::get_endpoint(endpoint, req.resource_common_data.test_mode.unwrap_or(false));
         Ok(format!("{}{}", base_url, endpoint_url))
     }
 
@@ -305,9 +291,142 @@ where
     }
 }
 
-impl<T> interfaces::connector_types::ConnectorServiceTrait<T> for EaseBuzz<T>
+// Implement all the required traits for ConnectorServiceTrait
+impl<T> interfaces::connector_types::ValidationTrait for EaseBuzz<T>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
 {
 }
 
+impl<T> interfaces::connector_types::PaymentAuthorizeV2<T> for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::PaymentSyncV2 for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::RefundSyncV2 for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+// Add all the other required trait implementations as empty
+impl<T> interfaces::connector_types::PaymentSessionToken for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::PaymentAccessToken for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::PaymentOrderCreate for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::PaymentCapture for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::PaymentVoidV2 for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::PaymentVoidPostCaptureV2 for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::RefundV2 for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::SetupMandateV2<T> for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::PaymentTokenV2<T> for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::RepeatPaymentV2 for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::PaymentPreAuthenticateV2<T> for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::PaymentAuthenticateV2<T> for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::PaymentPostAuthenticateV2<T> for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::AcceptDispute for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::DisputeDefend for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::SubmitEvidenceV2 for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::CreateConnectorCustomer for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::IncomingWebhook for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
+
+impl<T> interfaces::connector_types::ConnectorServiceTrait<T> for EaseBuzz<T>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+{
+}
