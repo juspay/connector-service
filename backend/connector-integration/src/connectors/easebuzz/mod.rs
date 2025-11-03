@@ -190,8 +190,8 @@ where
     fn handle_response_v2(
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        res: Response,
         _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
+        res: Response,
     ) -> CustomResult<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, errors::ConnectorError> {
         Ok(RouterDataV2 {
             response: Ok(PaymentsResponseData::TransactionResponse {
