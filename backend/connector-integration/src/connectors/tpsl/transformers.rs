@@ -726,14 +726,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<TpslUPISyncResponse> for PaymentsResponseData
+impl TryFrom<TpslUPISyncResponse> for PaymentsResponseData
 {
     type Error = error_stack::Report<ConnectorError>;
     
