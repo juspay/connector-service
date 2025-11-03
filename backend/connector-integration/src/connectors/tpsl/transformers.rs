@@ -669,7 +669,7 @@ impl<
         let ResponseRouterData {
             response,
             router_data,
-            http_code,
+            http_code: _,
         } = item;
         
         let (status, response) = match response {
@@ -757,7 +757,7 @@ impl TryFrom<TpslUPISyncResponse> for PaymentsResponseData
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(response: TpslUPISyncResponse) -> Result<Self, Self::Error> {
-        let attempt_status = match response.transaction_state.as_str() {
+        let _attempt_status = match response.transaction_state.as_str() {
             "SUCCESS" | "SUCCESSFUL" => common_enums::AttemptStatus::Charged,
             "PENDING" | "INITIATED" => common_enums::AttemptStatus::AuthenticationPending,
             "FAILED" => common_enums::AttemptStatus::Failure,
@@ -765,10 +765,10 @@ impl TryFrom<TpslUPISyncResponse> for PaymentsResponseData
         };
 
         Ok(PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(response.merchant_transaction_identifier),
+            resource_id: ResponseId::ConnectorTransactionId(response.merchant_transaction_identifier.clone()),
             redirection_data: None,
             mandate_reference: None,
-            connector_metadata: Some(serde_json::to_value(response).unwrap_or_default()),
+            connector_metadata: Some(serde_json::to_value(&response).unwrap_or_default()),
             network_txn_id: response.payment_method.payment_transaction.identifier,
             connector_response_reference_id: Some(response.merchant_transaction_identifier),
             incremental_authorization_allowed: None,
