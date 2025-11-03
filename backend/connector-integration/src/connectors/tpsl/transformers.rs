@@ -396,7 +396,7 @@ pub struct TpslPaymentMethodErrorPayload {
     pub desc: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslErrorResponse {
     pub error_code: String,
