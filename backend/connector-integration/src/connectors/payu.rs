@@ -738,67 +738,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::RefundV2 for Payu<T>
 {
-    fn refund_payment<'a>(
-        &'a self,
-        _req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::Refund,
-            domain_types::connector_types::RefundFlowData,
-            domain_types::connector_types::RefundsData,
-            domain_types::connector_types::RefundsResponseData,
-        >,
-        _app: &interfaces::AppIdentity,
-    ) -> interfaces::BoxedFuture<
-        'a,
-        domain_types::errors::CustomResult<
-            domain_types::router_data_v2::RouterDataV2<
-                domain_types::connector_flow::Refund,
-                domain_types::connector_types::RefundFlowData,
-                domain_types::connector_types::RefundsData,
-                domain_types::connector_types::RefundsResponseData,
-            >,
-            domain_types::errors::ConnectorError,
-        >,
-    > {
-        Box::pin(async move {
-            Err(domain_types::errors::ConnectorError::NotImplemented {
-                message: "Refund flow not implemented for PayU".to_string(),
-            }
-            .into())
-        })
-    }
+    // This trait requires ConnectorIntegrationV2 to be implemented
+    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::RefundSyncV2 for Payu<T>
 {
-    fn refund_sync<'a>(
-        &'a self,
-        _req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::RSync,
-            domain_types::connector_types::RefundFlowData,
-            domain_types::connector_types::RefundSyncData,
-            domain_types::connector_types::RefundsResponseData,
-        >,
-        _app: &interfaces::AppIdentity,
-    ) -> interfaces::BoxedFuture<
-        'a,
-        domain_types::errors::CustomResult<
-            domain_types::router_data_v2::RouterDataV2<
-                domain_types::connector_flow::RSync,
-                domain_types::connector_types::RefundFlowData,
-                domain_types::connector_types::RefundSyncData,
-                domain_types::connector_types::RefundsResponseData,
-            >,
-            domain_types::errors::ConnectorError,
-        >,
-    > {
-        Box::pin(async move {
-            Err(domain_types::errors::ConnectorError::NotImplemented {
-                message: "Refund sync flow not implemented for PayU".to_string(),
-            }
-            .into())
-        })
-    }
+    // This trait requires ConnectorIntegrationV2 to be implemented
+    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
