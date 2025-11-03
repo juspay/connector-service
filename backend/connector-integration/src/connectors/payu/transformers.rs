@@ -787,7 +787,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<PayuPaymentResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
+        _item: ResponseRouterData<PayuPaymentResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         // This is a workaround for the macro framework bug
         // Since we don't have access to the connector, we can't create the proper wrapper
