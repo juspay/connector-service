@@ -223,7 +223,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?.0.clone();
+        let customer_id = item.router_data.resource_common_data.get_customer_id()?.get_string_repr().to_string();
         let transaction_id = item
             .router_data
             .resource_common_data
