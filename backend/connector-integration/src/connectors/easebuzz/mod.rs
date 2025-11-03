@@ -110,10 +110,10 @@ where
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         let endpoint = constants::EaseBuzzEndpoints::EaseBuzInitiatePayment;
-            constants::EaseBuzzEndpoints::EasebuzSeamlessTransaction
-        } else {
-            constants::EaseBuzzEndpoints::EaseBuzInitiatePayment
-        };
+        let connectors = Connectors::default();
+        let base_url = self.base_url(&connectors);
+        let endpoint_url = constants::get_endpoint(endpoint, req.resource_common_data.test_mode.unwrap_or(false));
+        Ok(format!("{}{}", base_url, endpoint_url))
         let connectors = Connectors::default();
         let base_url = self.base_url(&connectors);
         let endpoint_url = constants::get_endpoint(endpoint, req.resource_common_data.test_mode.unwrap_or(false));
