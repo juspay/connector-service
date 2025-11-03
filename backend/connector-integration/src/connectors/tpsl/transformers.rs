@@ -632,8 +632,8 @@ impl<
     fn try_from(
         item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let auth = TpslAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let transaction_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
+        let auth = TpslAuthType::try_from(&item.connector_auth_type)?;
+        let transaction_id = item.resource_common_data.connector_request_reference_id.clone();
         
         Ok(Self {
             merchant: TpslMerchantDataType {
