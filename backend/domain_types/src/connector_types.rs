@@ -44,6 +44,7 @@ use url::Url;
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
     Adyen,
+    Forte,
     Razorpay,
     RazorpayV2,
     Fiserv,
@@ -85,6 +86,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         match connector {
             grpc_api_types::payments::Connector::Adyen => Ok(Self::Adyen),
+            grpc_api_types::payments::Connector::Forte => Ok(Self::Forte),
             grpc_api_types::payments::Connector::Razorpay => Ok(Self::Razorpay),
             grpc_api_types::payments::Connector::Fiserv => Ok(Self::Fiserv),
             grpc_api_types::payments::Connector::Elavon => Ok(Self::Elavon),

@@ -29,6 +29,7 @@ bypass_proxy_urls = []
 mitm_proxy_enabled = false
 
 [connectors]
+forte.base_url = "https://sandbox.forte.net/api/v3"
 adyen.base_url = "https://checkout-test.adyen.com/"
 adyen.dispute_base_url = "https://ca-test.adyen.com/"
 razorpay.base_url = "https://api.razorpay.com/"
