@@ -547,16 +547,10 @@ impl<
             PaymentsResponseData,
         >,
     {
-        let mut header = vec![
-            (
-                headers::CONTENT_TYPE.to_string(),
-                "application/json".to_string().into(),
-            ),
-            (
-                headers::ACCEPT.to_string(),
-                "".to_string().into(),
-            ),
-        ];
+        let mut header = vec![(
+            headers::CONTENT_TYPE.to_string(),
+            "application/json".to_string().into(),
+        )];
         let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
         header.append(&mut api_key);
         Ok(header)
