@@ -1,6 +1,4 @@
-use common_utils::{
-    ext_traits::ValueExt, types::StringMinorUnit,
-};
+use common_utils::types::StringMinorUnit;
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
@@ -9,7 +7,7 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
-use error_stack::ResultExt;
+
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
