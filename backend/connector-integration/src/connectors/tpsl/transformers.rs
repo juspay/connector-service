@@ -1,4 +1,4 @@
-use common_utils::types::StringMinorUnit;
+
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
