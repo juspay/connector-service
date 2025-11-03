@@ -298,9 +298,3 @@ where
     }
 }
 
-// Implement the required trait for the connector factory
-impl<T> interfaces::ConnectorServiceTrait<T> for EaseBuzz<T>
-where
-    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
-{
-}
