@@ -861,16 +861,13 @@ impl TryFrom<ResponseRouterData<PayuSyncResponse, PayuRouterData<RouterDataV2<PS
                     network_decline_code: None,
                 };
 
-                Ok(PayuRouterData {
-                    connector: item.router_data.connector,
-                    router_data: Self {
-                        response: Err(error_response),
-                        resource_common_data: PaymentFlowData {
-                            status: AttemptStatus::Failure,
-                            ..router_data.resource_common_data
-                        },
-                        ..router_data
+                Ok(Self {
+                    response: Err(error_response),
+                    resource_common_data: PaymentFlowData {
+                        status: AttemptStatus::Failure,
+                        ..router_data.resource_common_data
                     },
+                    ..router_data
                 })
             }
         }
