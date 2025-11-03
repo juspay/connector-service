@@ -582,18 +582,7 @@ pub struct TpslSubmitEvidenceRequest;
 #[derive(Debug, Clone)]
 pub struct TpslSubmitEvidenceResponse;
 
-// Stub implementations for unsupported flows
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for TPSL<T>
-{
-}
+// Stub implementations for unsupported flows will be added by macros
 
 impl<
         T: PaymentMethodDataTypes
