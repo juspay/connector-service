@@ -780,100 +780,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::AcceptDispute for Payu<T>
 {
-    fn accept_dispute<'a>(
-        &'a self,
-        _req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::Accept,
-            domain_types::connector_types::DisputeFlowData,
-            domain_types::connector_types::AcceptDisputeData,
-            domain_types::connector_types::DisputeResponseData,
-        >,
-        _app: &interfaces::AppIdentity,
-    ) -> interfaces::BoxedFuture<
-        'a,
-        domain_types::errors::CustomResult<
-            domain_types::router_data_v2::RouterDataV2<
-                domain_types::connector_flow::Accept,
-                domain_types::connector_types::DisputeFlowData,
-                domain_types::connector_types::AcceptDisputeData,
-                domain_types::connector_types::DisputeResponseData,
-            >,
-            domain_types::errors::ConnectorError,
-        >,
-    > {
-        Box::pin(async move {
-            Err(domain_types::errors::ConnectorError::NotImplemented {
-                message: "Accept dispute flow not implemented for PayU".to_string(),
-            }
-            .into())
-        })
-    }
+    // This trait requires ConnectorIntegrationV2 to be implemented
+    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    interfaces::connector_types::SubmitEvidence for Payu<T>
+    interfaces::connector_types::SubmitEvidenceV2 for Payu<T>
 {
-    fn submit_evidence<'a>(
-        &'a self,
-        _req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::SubmitEvidence,
-            domain_types::connector_types::DisputeFlowData,
-            domain_types::connector_types::SubmitEvidenceData,
-            domain_types::connector_types::DisputeResponseData,
-        >,
-        _app: &interfaces::AppIdentity,
-    ) -> interfaces::BoxedFuture<
-        'a,
-        domain_types::errors::CustomResult<
-            domain_types::router_data_v2::RouterDataV2<
-                domain_types::connector_flow::SubmitEvidence,
-                domain_types::connector_types::DisputeFlowData,
-                domain_types::connector_types::SubmitEvidenceData,
-                domain_types::connector_types::DisputeResponseData,
-            >,
-            domain_types::errors::ConnectorError,
-        >,
-    > {
-        Box::pin(async move {
-            Err(domain_types::errors::ConnectorError::NotImplemented {
-                message: "Submit evidence flow not implemented for PayU".to_string(),
-            }
-            .into())
-        })
-    }
+    // This trait requires ConnectorIntegrationV2 to be implemented
+    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::DisputeDefend for Payu<T>
 {
-    fn defend_dispute<'a>(
-        &'a self,
-        _req: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::DefendDispute,
-            domain_types::connector_types::DisputeFlowData,
-            domain_types::connector_types::DisputeDefendData,
-            domain_types::connector_types::DisputeResponseData,
-        >,
-        _app: &interfaces::AppIdentity,
-    ) -> interfaces::BoxedFuture<
-        'a,
-        domain_types::errors::CustomResult<
-            domain_types::router_data_v2::RouterDataV2<
-                domain_types::connector_flow::DefendDispute,
-                domain_types::connector_types::DisputeFlowData,
-                domain_types::connector_types::DisputeDefendData,
-                domain_types::connector_types::DisputeResponseData,
-            >,
-            domain_types::errors::ConnectorError,
-        >,
-    > {
-        Box::pin(async move {
-            Err(domain_types::errors::ConnectorError::NotImplemented {
-                message: "Defend dispute flow not implemented for PayU".to_string(),
-            }
-            .into())
-        })
-    }
+    // This trait requires ConnectorIntegrationV2 to be implemented
+    // The macro framework should handle this
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
