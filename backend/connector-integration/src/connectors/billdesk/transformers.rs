@@ -327,7 +327,7 @@ impl<
                 }),
             ),
             BilldeskPaymentsResponse::BilldeskData(response_data) => {
-                let payment_method_type = router_data
+                let _payment_method_type = router_data
                     .request
                     .payment_method_type
                     .ok_or(errors::ConnectorError::MissingPaymentMethodType)?;
