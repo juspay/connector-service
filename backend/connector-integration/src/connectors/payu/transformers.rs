@@ -271,21 +271,22 @@ pub struct PayuTransactionDetail {
 
 // Request conversion with Framework Integration
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    TryFrom<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+    TryFrom<PayuRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
     for PayuPaymentRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        item: PayuRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
+        let router_data = item.router_data;
         // Use AmountConvertor framework for proper amount handling
         let amount = item
             .connector
             .amount_converter
             .convert(
-                item.request.minor_amount,
-                item.request.currency,
+                router_data.request.minor_amount,
+                router_data.request.currency,
             )
             .change_context(ConnectorError::AmountConversionFailed)?;
 
