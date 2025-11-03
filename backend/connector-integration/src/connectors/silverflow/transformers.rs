@@ -450,8 +450,26 @@ pub struct SilverflowCaptureRequest {
     pub reference: Option<String>,
 }
 
-// Reuse SilverflowPaymentsResponse for capture response since POST /charges/{chargeKey}/clear returns the same structure
-pub type SilverflowCaptureResponse = SilverflowPaymentsResponse;
+// Capture response structure based on Silverflow clear API
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SilverflowCaptureResponse {
+    #[serde(rename = "type")]
+    pub action_type: String, // Should be "clearing"
+    pub key: String, // Action key (act-...)
+    #[serde(rename = "chargeKey")]
+    pub charge_key: String,
+    pub status: String, // "completed", "pending", etc.
+    pub reference: Option<String>,
+    pub amount: SilverflowAmountResponse,
+    #[serde(rename = "closeCharge")]
+    pub close_charge: Option<bool>,
+    #[serde(rename = "clearAfter")]
+    pub clear_after: Option<String>,
+    pub created: Option<String>,
+    #[serde(rename = "lastModified")]
+    pub last_modified: Option<String>,
+    pub version: Option<i32>,
+}
 
 // Capture Request Transformation
 impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>
@@ -498,37 +516,22 @@ impl
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Map status based on Silverflow's clearing status for capture flow
-        let status = match item.response.status.clearing.as_str() {
-            "cleared" | "settled" => AttemptStatus::Charged,
+        // Map status based on Silverflow's action status for capture flow
+        let status = match item.response.status.as_str() {
+            "completed" => AttemptStatus::Charged,
             "pending" => AttemptStatus::Pending,
             "failed" | "declined" => AttemptStatus::Failure,
             _ => AttemptStatus::Pending,
         };
 
-        // Extract network transaction ID from authorization ISO fields
-        let network_txn_id = item
-            .response
-            .authorization_iso_fields
-            .as_ref()
-            .and_then(|iso| iso.network_specific_fields.as_ref())
-            .and_then(|nsf| nsf.transaction_identifier.clone());
-
-        // Extract authorization code for connector response reference
-        let connector_response_reference_id = item
-            .response
-            .authorization_iso_fields
-            .as_ref()
-            .map(|iso| iso.authorization_code.clone());
-
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.key),
+                resource_id: ResponseId::ConnectorTransactionId(item.response.charge_key),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
-                network_txn_id,
-                connector_response_reference_id,
+                network_txn_id: None,
+                connector_response_reference_id: Some(item.response.key),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
