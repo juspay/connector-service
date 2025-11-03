@@ -22,13 +22,7 @@ use crate::types::ResponseRouterData;
 // Type alias for Billdesk router data - using a simple wrapper
 pub struct BilldeskRouterData<R, T> {
     pub router_data: R,
-    pub connector: BilldeskConnector<T>,
-}
-
-// Forward declaration to avoid circular dependency
-pub struct BilldeskConnector<T> {
-    pub amount_converter: &'static dyn common_utils::types::AmountConvertor<Output = common_utils::types::StringMinorUnit> + Sync,
-    pub _phantom: std::marker::PhantomData<T>,
+    pub connector: T,
 }
 
 #[derive(Default, Debug, Serialize)]
