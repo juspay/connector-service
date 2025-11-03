@@ -58,11 +58,13 @@ where
         _event_builder: Option<&mut interfaces::events::connector_api_logs::ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         Ok(ErrorResponse {
-            error_code: "401".to_string(),
-            error_message: "Unauthorized".to_string(),
-            status_code: res.status_code,
-            reason: None,
-            retry: None,
+            code: "401".to_string(),
+            message: "Unauthorized".to_string(),
+            status_code: Some(res.status_code),
+            attempt_status: None,
+            connector_transaction_id: None,
+            network_decline_code: None,
+            network_advice_code: None,
         })
     }
 }
