@@ -58,6 +58,12 @@ pub struct PostAuthenticate;
 #[derive(Debug, Clone)]
 pub struct VoidPC;
 
+#[derive(Debug, Clone)]
+pub struct IncomingWebhook;
+
+#[derive(Debug, Clone)]
+pub struct Validate;
+
 #[derive(strum::Display)]
 #[strum(serialize_all = "snake_case")]
 pub enum FlowName {
