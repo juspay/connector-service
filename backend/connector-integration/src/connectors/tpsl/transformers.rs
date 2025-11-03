@@ -512,7 +512,7 @@ impl<
                         security_token: auth.secret_key.expose().clone(),
                         sub_type: "SALE".to_string(),
                         request_type: "TXN".to_string(),
-                        reference: transaction_id,
+                        reference: transaction_id.clone(),
                         merchant_initiated: "N".to_string(),
                         tenure_id: "".to_string(),
                     },
