@@ -451,7 +451,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > TryFrom<TpslRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
+    > TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
     for TpslPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
