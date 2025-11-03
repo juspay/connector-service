@@ -327,7 +327,7 @@ pub struct TpslTransactionUPITxnType {
 }
 
 // Response types
-#[derive(Debug, Deserialize, Clone, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum TpslPaymentsResponse {
     TpslUPISuccessTxnResponse(TpslUPITxnResponse),
