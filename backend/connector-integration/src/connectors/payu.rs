@@ -733,7 +733,7 @@ macro_rules! impl_connector_integration_v2_stub {
             ) -> CustomResult<String, domain_types::errors::ConnectorError> {
                 Err(domain_types::errors::ConnectorError::NotImplemented(
                     format!("get_url not implemented for flow {}", std::any::type_name::<$flow>()),
-                ))
+                ).into())
             }
 
             fn get_request_body(
@@ -742,7 +742,7 @@ macro_rules! impl_connector_integration_v2_stub {
             ) -> CustomResult<Option<RequestContent>, domain_types::errors::ConnectorError> {
                 Err(domain_types::errors::ConnectorError::NotImplemented(
                     format!("get_request_body not implemented for flow {}", std::any::type_name::<$flow>()),
-                ))
+                ).into())
             }
 
             fn get_request_form_data(
@@ -758,7 +758,7 @@ macro_rules! impl_connector_integration_v2_stub {
             ) -> CustomResult<Option<Request>, domain_types::errors::ConnectorError> {
                 Err(domain_types::errors::ConnectorError::NotImplemented(
                     format!("build_request_v2 not implemented for flow {}", std::any::type_name::<$flow>()),
-                ))
+                ).into())
             }
 
             fn handle_response_v2(
@@ -769,7 +769,7 @@ macro_rules! impl_connector_integration_v2_stub {
             ) -> CustomResult<domain_types::router_data_v2::RouterDataV2<$flow, $common_data, $req, $resp>, domain_types::errors::ConnectorError> {
                 Err(domain_types::errors::ConnectorError::NotImplemented(
                     format!("handle_response_v2 not implemented for flow {}", std::any::type_name::<$flow>()),
-                ))
+                ).into())
             }
 
             fn get_error_response_v2(
@@ -779,7 +779,7 @@ macro_rules! impl_connector_integration_v2_stub {
             ) -> CustomResult<domain_types::router_data::ErrorResponse, domain_types::errors::ConnectorError> {
                 Err(domain_types::errors::ConnectorError::NotImplemented(
                     "get_error_response_v2 not implemented".to_string(),
-                ))
+                ).into())
             }
         }
     };
