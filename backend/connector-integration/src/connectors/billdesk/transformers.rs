@@ -271,7 +271,7 @@ impl<
 
 fn build_upi_message<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
     item: &BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
-    customer_id: &str,
+    customer_id: &String,
     transaction_id: &str,
     amount: &str,
 ) -> CustomResult<String, errors::ConnectorError> {
