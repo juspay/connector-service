@@ -517,9 +517,9 @@ impl<
                         tenure_id: "".to_string(),
                     },
                     consumer: TpslConsumerIntentPayload {
-                        mobile_number: item.request.phone.clone().unwrap_or_default().to_string(),
-                        email_i_d: item.request.email.as_ref().map(|e| e.to_string()).unwrap_or_default(),
-                        identifier: item.resource_common_data.get_customer_id()?.get_string_repr(),
+                        mobile_number: item.request.payment_method_data.phone.clone().unwrap_or_default().to_string(),
+                        email_i_d: item.request.email.as_ref().map(|e| e.expose().clone()).unwrap_or_default(),
+                        identifier: item.resource_common_data.get_customer_id()?.get_string_repr().to_string(),
                         account_no: "".to_string(),
                         account_type: "".to_string(),
                         account_holder_name: "".to_string(),
@@ -637,14 +637,14 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
                 device_identifier: "WEB".to_string(),
                 txn_type: Some("SALE".to_string()),
                 sub_type: Some("SALE".to_string()),
-                amount: item.request.minor_amount.to_string(),
+                amount: item.request.amount.to_string(),
                 currency: item.request.currency.to_string(),
                 date_time: "2025-01-01 00:00:00".to_string(),
                 request_type: "STATUS".to_string(),
                 token: auth.secret_key.expose().clone(),
             },
             consumer: TpslConsumerDataType {
-                identifier: item.router_data.resource_common_data.get_customer_id()?.get_string_repr(),
+                identifier: item.resource_common_data.get_customer_id()?.get_string_repr().to_string(),
             },
         })
     }
