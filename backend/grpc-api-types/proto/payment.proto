@@ -487,6 +487,7 @@ enum Connector {
   BLUECODE = 95;
   PAYLOAD = 96;
   AUTHIPAY = 97;
+  SILVERFLOW = 98;
 }
 
 // Payment method types.
