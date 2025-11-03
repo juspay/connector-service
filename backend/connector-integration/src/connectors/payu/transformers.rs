@@ -698,21 +698,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .reference_id
             .or_else(|| response.txn_id.clone())
             .or_else(|| response.token.clone())
-            .unwrap_or_else(|| item.router_data.resource_common_data.payment_id.clone());
+            .unwrap_or_else(|| router_data.resource_common_data.payment_id.clone());
 
         // Convert amount back using AmountConvertor framework if available
         let response_amount = if let Some(_amount_str) = response.amount {
             // For now, we'll use the request amount since convert_back has complex requirements
             // This will be improved in the full implementation
-            item.router_data.request.minor_amount
+            router_data.request.minor_amount
         } else {
-            item.router_data.request.minor_amount // Use request amount if response doesn't have it
+            router_data.request.minor_amount // Use request amount if response doesn't have it
         };
 
         // Create integrity object for response validation
         let _integrity_object = Some(AuthoriseIntegrityObject {
             amount: response_amount,
-            currency: item.router_data.request.currency,
+            currency: router_data.request.currency,
         });
 
         // This is a success response - determine type based on response format
