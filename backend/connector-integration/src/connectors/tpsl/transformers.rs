@@ -1,8 +1,5 @@
-use std::collections::HashMap;
-
 use common_utils::{
-    errors::CustomResult, ext_traits::ValueExt, request::Method, types::StringMinorUnit,
-    Email,
+    ext_traits::ValueExt, types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
@@ -11,14 +8,12 @@ use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
-    router_response_types::RedirectForm,
-    utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::tpsl::TpslRouterData, types::ResponseRouterData};
+use crate::types::ResponseRouterData;
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
