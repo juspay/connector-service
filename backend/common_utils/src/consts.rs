@@ -157,21 +157,15 @@ impl Env {
     /// that cannot be deserialized into one of the valid environment variants.
     #[allow(clippy::panic)]
     pub fn current_env() -> Self {
-        let default_env = if cfg!(debug_assertions) {
-            Self::Development
-        } else {
-            Self::Production
-        };
         let env_key = format!("{ENV_PREFIX}__COMMON__ENVIRONMENT");
-        let res = std::env::var(&env_key).map_or_else(
-            |_| default_env,
+        std::env::var(&env_key).map_or_else(
+            |_| Self::Development,
             |v| {
                 Self::deserialize(v.into_deserializer()).unwrap_or_else(|err: serde_json::Error| {
                     panic!("Invalid value found in environment variable {env_key}: {err}")
                 })
             },
-        );
-        res
+        )
     }
 
     pub const fn config_path(self) -> &'static str {

@@ -1,4 +1,4 @@
-# UCS (Universal Connector Service) Setup Guide
+# UCS (Unified Connector Service) Setup Guide
 
 This guide helps you set up and run UCS locally for testing payment integrations with various payment processors.
 
@@ -214,6 +214,66 @@ UCS supports the following operations across multiple payment processors:
 5. **Payment Status** - Retrieve payment status
 6. **Setup Mandates** - For recurring payments
 7. **Repeat Payments** - Process subsequent payments
+
+## Container Deployment
+
+### Docker / OrbStack Setup
+
+#### Building the Image
+
+```bash
+docker build -f Dockerfile -t ucs:latest .
+```
+
+#### Running the Container
+
+```bash
+# Run with port mapping (gRPC on 8000, metrics on 8080)
+docker run --rm -p 8000:8000 -p 8080:8080 ucs:latest
+```
+
+#### Configuration Options
+
+**Default**: Uses `development.toml` configuration (Kafka/events disabled, test URLs)
+
+**Custom Environment**: Override with environment variable:
+
+```bash
+# Use sandbox configuration (config/sandbox.toml)
+docker run --rm -p 8000:8000 -p 8080:8080 \
+  -e CS__COMMON__ENVIRONMENT=sandbox \
+  ucs:latest
+
+# Use production configuration (config/production.toml)
+docker run --rm -p 8000:8000 -p 8080:8080 \
+  -e CS__COMMON__ENVIRONMENT=production \
+  ucs:latest
+```
+
+#### Testing Docker Container
+
+```bash
+# Health check
+grpcurl -plaintext localhost:8000 grpc.health.v1.Health/Check
+
+
+### Podman Setup
+
+**Memory Requirements:** 12GB minimum for successful build.
+
+```bash
+# Configure memory (one-time setup)
+podman machine set --memory 12288
+
+# Use same commands as Docker
+podman build -f Dockerfile -t ucs:latest .
+podman run --rm -p 8000:8000 -p 8080:8080 ucs:latest
+```
+
+**Configuration Files Available:**
+- `development.toml` (default) - Local testing
+- `sandbox.toml` - Test URLs
+- `production.toml` - Production URLs
 
 ## Troubleshooting
 
