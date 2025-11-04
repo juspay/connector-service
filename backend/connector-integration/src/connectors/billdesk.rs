@@ -112,6 +112,22 @@ pub struct BilldeskDefendDisputeResponse;
 #[derive(Default, Debug, Clone)]
 pub struct BilldeskSubmitEvidenceResponse;
 
+// Additional stub response types
+#[derive(Default, Debug, Clone)]
+pub struct BilldeskCreateAccessTokenResponse;
+#[derive(Default, Debug, Clone)]
+pub struct BilldeskCreateConnectorCustomerResponse;
+#[derive(Default, Debug, Clone)]
+pub struct BilldeskPaymentMethodTokenResponse;
+#[derive(Default, Debug, Clone)]
+pub struct BilldeskVoidPCResponse;
+#[derive(Default, Debug, Clone)]
+pub struct BilldeskPreAuthenticateResponse;
+#[derive(Default, Debug, Clone)]
+pub struct BilldeskAuthenticateResponse;
+#[derive(Default, Debug, Clone)]
+pub struct BilldeskPostAuthenticateResponse;
+
 macros::create_all_prerequisites!(
     connector_name: Billdesk,
     generic_type: T,
