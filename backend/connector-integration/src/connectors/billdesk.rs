@@ -35,15 +35,6 @@ use serde::Serialize;
 use transformers::{
     self as billdesk, BilldeskPaymentsRequest, BilldeskPaymentsResponse, 
     BilldeskPaymentsSyncRequest, BilldeskPaymentsSyncResponse,
-    BilldeskCaptureRequest, BilldeskCaptureResponse, BilldeskVoidRequest, BilldeskVoidResponse,
-    BilldeskRefundRequest, BilldeskRefundResponse, BilldeskRSyncRequest, BilldeskRSyncResponse,
-    BilldeskSetupMandateRequest, BilldeskSetupMandateResponse, BilldeskAccessTokenRequest, BilldeskAccessTokenResponse,
-    BilldeskSessionTokenRequest, BilldeskSessionTokenResponse, BilldeskCustomerRequest, BilldeskCustomerResponse,
-    BilldeskTokenRequest, BilldeskTokenResponse, BilldeskOrderRequest, BilldeskOrderResponse,
-    BilldeskRepeatPaymentRequest, BilldeskRepeatPaymentResponse, BilldeskAcceptDisputeRequest, BilldeskAcceptDisputeResponse,
-    BilldeskDefendDisputeRequest, BilldeskDefendDisputeResponse, BilldeskSubmitEvidenceRequest, BilldeskSubmitEvidenceResponse,
-    BilldeskPreAuthenticateRequest, BilldeskPreAuthenticateResponse, BilldeskAuthenticateRequest, BilldeskAuthenticateResponse,
-    BilldeskPostAuthenticateRequest, BilldeskPostAuthenticateResponse, BilldeskVoidPCRequest, BilldeskVoidPCResponse,
 };
 
 use super::macros;
