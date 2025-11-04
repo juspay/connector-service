@@ -223,7 +223,6 @@ fn create_billdesk_message<T: PaymentMethodDataTypes>(
 fn get_merchant_id(connector_auth_type: &ConnectorAuthType) -> Result<String, errors::ConnectorError> {
     match connector_auth_type {
         ConnectorAuthType::SignatureKey { api_key, .. } => Ok(api_key.peek().to_string()),
-        ConnectorAuthType::Key { api_key, .. } => Ok(api_key.peek().to_string()),
         _ => Err(errors::ConnectorError::FailedToObtainAuthType),
     }
 }
