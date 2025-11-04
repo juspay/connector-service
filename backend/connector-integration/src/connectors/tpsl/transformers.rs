@@ -564,7 +564,7 @@ impl<
             PaymentMethodData::Upi(UpiData::UpiCollect(_)) => "".to_string(),
             _ => "".to_string(),
         },
-                    vpa: vpa.unwrap_or_default(),
+                    vpa: vpa.map(|v| v.peek()).unwrap_or_default(),
                     aadhar_no: "".to_string(),
                 };
 
