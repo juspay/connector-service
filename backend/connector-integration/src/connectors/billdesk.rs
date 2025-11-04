@@ -428,20 +428,20 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: Accept,
-            request_body: BilldeskDisputeRequest,
-            response_body: BilldeskDisputeResponse,
+            request_body: BilldeskAcceptDisputeRequest,
+            response_body: BilldeskAcceptDisputeResponse,
             router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
         ),
         (
             flow: DefendDispute,
-            request_body: BilldeskDisputeRequest,
-            response_body: BilldeskDisputeResponse,
+            request_body: BilldeskDefendDisputeRequest,
+            response_body: BilldeskDefendDisputeResponse,
             router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
         ),
         (
             flow: SubmitEvidence,
-            request_body: BilldeskDisputeRequest,
-            response_body: BilldeskDisputeResponse,
+            request_body: BilldeskSubmitEvidenceRequest,
+            response_body: BilldeskSubmitEvidenceResponse,
             router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
         ),
         (
