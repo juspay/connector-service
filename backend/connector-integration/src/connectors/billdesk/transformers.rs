@@ -11,6 +11,7 @@ use domain_types::{
     router_response_types::RedirectForm,
     utils,
 };
+use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface};
 use serde::{Deserialize, Serialize};
 
@@ -118,46 +119,6 @@ impl From<BilldeskPaymentStatus> for common_enums::AttemptStatus {
     }
 }
 
-fn create_billdesk_message<T: PaymentMethodDataTypes>(
-    router_data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    connector: &crate::connectors::billdesk::Billdesk<T>,
-) -> Result<String, error_stack::Report<errors::ConnectorError>> {
-    let customer_id = router_data.resource_common_data.get_customer_id()?;
-    let amount = connector
-        .amount_converter
-        .convert(
-            router_data.request.minor_amount,
-            router_data.request.currency,
-        )
-        .change_context(ConnectorError::RequestEncodingFailed)?;
-    
-    let transaction_id = router_data
-        .resource_common_data
-        .connector_request_reference_id.clone();
-    
-    let currency = router_data.request.currency.to_string();
-    
-    // Create the message in the format expected by Billdesk
-    // This is based on the Haskell implementation patterns
-    let message = format!(
-        "MerchantID={}&CustomerID={}&TxnReferenceNo={}&TxnAmount={}&Currency={}&ItemCode=DIRECT&TxnType=UPI&AdditionalInfo1={}&AdditionalInfo2={}&AdditionalInfo3={}&AdditionalInfo4={}&AdditionalInfo5={}&AdditionalInfo6={}&AdditionalInfo7={}",
-        get_merchant_id(&router_data.connector_auth_type)?,
-        customer_id.get_string_repr(),
-        transaction_id,
-        amount,
-        currency,
-        "", // AdditionalInfo1
-        "", // AdditionalInfo2
-        "", // AdditionalInfo3
-        "", // AdditionalInfo4
-        "", // AdditionalInfo5
-        "", // AdditionalInfo6
-        "", // AdditionalInfo7
-    );
-    
-    Ok(message)
-}
-
 fn get_merchant_id(connector_auth_type: &ConnectorAuthType) -> Result<String, errors::ConnectorError> {
     match connector_auth_type {
         ConnectorAuthType::SignatureKey { api_key, .. } => Ok(api_key.peek().to_string()),
@@ -165,7 +126,7 @@ fn get_merchant_id(connector_auth_type: &ConnectorAuthType) -> Result<String, er
     }
 }
 
-impl<T: PaymentMethodDataTypes>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     TryFrom<
         crate::connectors::billdesk::BilldeskRouterData<
             RouterDataV2<
@@ -196,7 +157,39 @@ impl<T: PaymentMethodDataTypes>
         
         match payment_method_type {
             common_enums::PaymentMethodType::UpiCollect => {
-                let msg = create_billdesk_message(&item.router_data, &item.connector)?;
+                let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+                let amount = item
+                    .connector
+                    .amount_converter
+                    .convert(
+                        item.router_data.request.minor_amount,
+                        item.router_data.request.currency,
+                    )
+                    .change_context(ConnectorError::RequestEncodingFailed)?;
+                
+                let transaction_id = item
+                    .router_data
+                    .resource_common_data
+                    .connector_request_reference_id.clone();
+                
+                let currency = item.router_data.request.currency.to_string();
+                
+                // Create the message in the format expected by Billdesk
+                let msg = format!(
+                    "MerchantID={}&CustomerID={}&TxnReferenceNo={}&TxnAmount={}&Currency={}&ItemCode=DIRECT&TxnType=UPI&AdditionalInfo1={}&AdditionalInfo2={}&AdditionalInfo3={}&AdditionalInfo4={}&AdditionalInfo5={}&AdditionalInfo6={}&AdditionalInfo7={}",
+                    get_merchant_id(&item.router_data.connector_auth_type)?,
+                    customer_id.get_string_repr(),
+                    transaction_id,
+                    amount,
+                    currency,
+                    "", // AdditionalInfo1
+                    "", // AdditionalInfo2
+                    "", // AdditionalInfo3
+                    "", // AdditionalInfo4
+                    "", // AdditionalInfo5
+                    "", // AdditionalInfo6
+                    "", // AdditionalInfo7
+                );
                 
                 let ip_address = item.router_data.request.get_ip_address_as_optional()
                     .map(|ip| ip.expose())
@@ -221,14 +214,15 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-impl TryFrom<
-        crate::connectors::billdesk::BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, impl PaymentMethodDataTypes>,
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    TryFrom<
+        crate::connectors::billdesk::BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     > for BilldeskPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: crate::connectors::billdesk::BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, impl PaymentMethodDataTypes>,
+        item: crate::connectors::billdesk::BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let merchant_id = get_merchant_id(&item.router_data.connector_auth_type)?;
         let transaction_id = item.router_data.request.connector_transaction_id
@@ -246,13 +240,13 @@ impl TryFrom<
     }
 }
 
-impl<F, T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BilldeskPaymentsResponse, F>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<ResponseRouterData<BilldeskPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: ResponseRouterData<BilldeskPaymentsResponse, F>,
+        item: ResponseRouterData<BilldeskPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
