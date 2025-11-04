@@ -196,7 +196,7 @@ macros::create_all_prerequisites!(
         fn get_transaction_id(
             request: &domain_types::connector_types::PaymentsAuthorizeData<T>,
         ) -> CustomResult<String, ConnectorError> {
-            request.related_transaction_id.map(|id| Ok(id.to_string())).unwrap_or(Err(ConnectorError::MissingRequiredField { field_name: "related_transaction_id" }.into()))
+            request.related_transaction_id.clone().map(|id| Ok(id.to_string())).unwrap_or(Err(ConnectorError::MissingRequiredField { field_name: "related_transaction_id" }.into()))
         }
 
         // Helper function to get return URL
