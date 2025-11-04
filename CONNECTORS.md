@@ -2,8 +2,6 @@
 
 This table shows which flows are implemented for each connector in the Unified Connector Service (UCS).
 
-> **Note:** Connectors marked with 🚧 are in the pipeline for November 2025.
-
 ## Flow Implementations by Connector
 
 | Connector | Authorize | PSync | Capture | Void | Refund | RSync | SetupMandate | RepeatPayment | CreateOrder | CreateSessionToken | CreateAccessToken | PaymentMethodToken | CreateConnectorCustomer | PreAuthenticate | Authenticate | PostAuthenticate |
@@ -15,12 +13,10 @@ This table shows which flows are implemented for each connector in the Unified C
 | Braintree | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | ✓ | | | | |
 | Cashfree | ✓ | | | | | | | | ✓ | | | | | | | |
 | Cashtocode | ✓ | | | | | | | | | | | | | | | |
-| Chase 🚧 | | | | | | | | | | | | | | | | |
 | Checkout | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
 | Cryptopay | ✓ | ✓ | | | | | | | | | | | | | | |
 | Cybersource | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | ✓ | ✓ | ✓ |
 | Dlocal | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
-| Ebanx 🚧 | | | | | | | | | | | | | | | | |
 | Elavon | ✓ | ✓ | ✓ | | ✓ | ✓ | | | | | | | | | | |
 | Fiserv | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
 | Fiuu | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
@@ -29,7 +25,6 @@ This table shows which flows are implemented for each connector in the Unified C
 | Nexinets | ✓ | ✓ | ✓ | | ✓ | ✓ | | | | | | | | | | |
 | Noon | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | |
 | Novalnet | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | |
-| Paypal 🚧 | | | | | | | | | | | | | | | | |
 | Paytm | ✓ | ✓ | | | | | | | | ✓ | | | | | | |
 | Payu | ✓ | ✓ | | | | | | | | | | | | | | |
 | Phonepe | ✓ | ✓ | | | | | | | | | | | | | | |
@@ -66,20 +61,6 @@ To include/enhance the following PSPs in UCS (with deeper flows):
 ### December 2025
 To move all Pay-in connectors from Hyperswitch to UCS
 
-## Supported Integration Endpoints
-
-| PSP | Supported Integration Endpoints |
-|-----|--------------------------------|
-| **Braintree** | • Global endpoint* - https://payments.braintree-api.com/graphql |
-| **Adyen** | • Global endpoint* - https://{{merchant_endpoint_prefix}}-checkout-live.adyenpayments.com/checkout/ |
-| **Worldpay** | • Vantiv* - https://transact.vantivcnp.com/vap/communicator/online<br>• Access* - https://access.worldpay.com/<br>• WPG - https://secure.worldpay.com/jsp/merchant/xml/paymentService.jsp |
-| **Chase** | • JP Morgan Online Payments - https://api-ms.payments.jpmorgan.com/api/v2<br>• Chase orbital - *to be integrated*<br>• Chase payment tech - *to be integrated* |
-| **Checkout** | • Global endpoint* - https://api.checkout.com/ |
-| **Fiserv** | • Commerce hub - https://cert.api.fiservapps.com/<br>• Emea - https://prod.emea.api.fiservapps.com |
-| **Paypal** | • Global endpoint* - https://api-m.paypal.com/ |
-| **Ebanx** | • Global endpoint - *to be integrated* |
-| **Dlocal** | • Global endpoint - https://api.dlocal.com/ |
-| **Razorpay** | • Global endpoint - https://api.razorpay.com/ |
 
 ---
 
