@@ -123,7 +123,11 @@ pub struct BilldeskOrderRequest;
 #[derive(Default, Debug, Serialize)]
 pub struct BilldeskRepeatPaymentRequest;
 #[derive(Default, Debug, Serialize)]
-pub struct BilldeskDisputeRequest;
+pub struct BilldeskAcceptDisputeRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskDefendDisputeRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskSubmitEvidenceRequest;
 #[derive(Default, Debug, Serialize)]
 pub struct BilldeskAuthenticateRequest;
 #[derive(Default, Debug, Serialize)]
@@ -152,7 +156,11 @@ pub struct BilldeskOrderResponse;
 #[derive(Default, Debug, Deserialize, Serialize)]
 pub struct BilldeskRepeatPaymentResponse;
 #[derive(Default, Debug, Deserialize, Serialize)]
-pub struct BilldeskDisputeResponse;
+pub struct BilldeskAcceptDisputeResponse;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskDefendDisputeResponse;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskSubmitEvidenceResponse;
 #[derive(Default, Debug, Deserialize, Serialize)]
 pub struct BilldeskAuthenticateResponse;
 #[derive(Default, Debug, Deserialize, Serialize)]
