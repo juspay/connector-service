@@ -438,7 +438,7 @@ impl TryFrom<&ConnectorAuthType> for TpslAuthType {
 }
 
 // Status Mapping
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum TpslTransactionStatus {
     Success,
