@@ -46,6 +46,25 @@ use transformers::{
     EaseBuzzPaymentsResponse, 
     EaseBuzzPaymentsSyncRequest, 
     EaseBuzzPaymentsSyncResponse,
+    // Additional dummy types for unsupported flows
+    EaseBuzzPaymentOrderCreateRequest, EaseBuzzPaymentOrderCreateResponse,
+    EaseBuzzSessionTokenRequest, EaseBuzzSessionTokenResponse,
+    EaseBuzzAccessTokenRequest, EaseBuzzAccessTokenResponse,
+    EaseBuzzCreateConnectorCustomerRequest, EaseBuzzCreateConnectorCustomerResponse,
+    EaseBuzzPaymentMethodTokenRequest, EaseBuzzPaymentMethodTokenResponse,
+    EaseBuzzPaymentVoidRequest, EaseBuzzPaymentVoidResponse,
+    EaseBuzzPaymentVoidPostCaptureRequest, EaseBuzzPaymentVoidPostCaptureResponse,
+    EaseBuzzRefundRequest, EaseBuzzRefundResponse,
+    EaseBuzzRefundSyncRequest, EaseBuzzRefundSyncResponse,
+    EaseBuzzPaymentCaptureRequest, EaseBuzzPaymentCaptureResponse,
+    EaseBuzzSetupMandateRequest, EaseBuzzSetupMandateResponse,
+    EaseBuzzRepeatPaymentRequest, EaseBuzzRepeatPaymentResponse,
+    EaseBuzzAcceptDisputeRequest, EaseBuzzAcceptDisputeResponse,
+    EaseBuzzDefendDisputeRequest, EaseBuzzDefendDisputeResponse,
+    EaseBuzzSubmitEvidenceRequest, EaseBuzzSubmitEvidenceResponse,
+    EaseBuzzPreAuthenticateRequest, EaseBuzzPreAuthenticateResponse,
+    EaseBuzzAuthenticateRequest, EaseBuzzAuthenticateResponse,
+    EaseBuzzPostAuthenticateRequest, EaseBuzzPostAuthenticateResponse,
 };
 
 use super::macros;
