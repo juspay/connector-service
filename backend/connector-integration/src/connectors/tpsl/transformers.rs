@@ -628,7 +628,7 @@ impl<
                             instruction_type: "SALE".to_string(),
                             description: item.router_data.resource_common_data.description.clone().unwrap_or_default(),
                             action: "SALE".to_string(),
-                            limit: amount.get_amount_as_string(),
+                            limit: amount.to_string(),
                             end_date_time: "".to_string(),
                             debit_day: "".to_string(),
                             debit_flag: "".to_string(),
