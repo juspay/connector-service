@@ -3,10 +3,11 @@
 #![allow(clippy::panic)]
 
 use grpc_server::{app, configs};
+use hyperswitch_masking::{ExposeInterface, Secret};
 mod common;
+mod utils;
 
 use std::{
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -24,7 +25,6 @@ use grpc_api_types::{
         RefundStatus,
     },
 };
-use hyperswitch_masking::Secret;
 use tonic::{transport::Channel, Request};
 use uuid::Uuid;
 
@@ -46,9 +46,6 @@ const CONNECTOR_NAME: &str = "stripe";
 const AUTH_TYPE: &str = "header-key";
 const MERCHANT_ID: &str = "merchant_1234";
 
-// Environment variable names for API credentials (can be set or overridden with provided values)
-const STRIPE_API_KEY_ENV: &str = "TEST_STRIPE_API_KEY";
-
 // Test card data
 const TEST_AMOUNT: i64 = 1000;
 const TEST_CARD_NUMBER: &str = "4111111111111111"; // Valid test card for Stripe
@@ -59,9 +56,14 @@ const TEST_CARD_HOLDER: &str = "Test User";
 const TEST_EMAIL: &str = "customer@example.com";
 
 fn add_stripe_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables - throw error if not set
-    let api_key =
-        env::var(STRIPE_API_KEY_ENV).expect("TEST_STRIPE_API_KEY environment variable is required");
+    // Get API credentials using the common credential loading utility
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load Stripe credentials");
+
+    let api_key = match auth {
+        domain_types::router_data::ConnectorAuthType::HeaderKey { api_key } => api_key.expose(),
+        _ => panic!("Expected HeaderKey auth type for Stripe"),
+    };
 
     request.metadata_mut().append(
         "x-connector",

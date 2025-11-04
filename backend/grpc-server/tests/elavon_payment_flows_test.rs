@@ -4,10 +4,10 @@
 
 use grpc_server::{app, configs};
 mod common;
+mod utils;
 
 use std::{
     collections::HashMap,
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -24,16 +24,11 @@ use grpc_api_types::{
         PaymentStatus, RefundServiceGetRequest, RefundStatus,
     },
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use tonic::{transport::Channel, Request};
 
 // Constants for Elavon connector
 const CONNECTOR_NAME: &str = "elavon";
-
-// Environment variable names for API credentials
-const ELAVON_API_KEY_ENV: &str = "TEST_ELAVON_API_KEY";
-const ELAVON_API_USER_ENV: &str = "TEST_ELAVON_API_USER";
-const ELAVON_API_SECRET_ENV: &str = "TEST_ELAVON_API_SECRET";
 const TEST_AMOUNT: i64 = 1000;
 const TEST_CARD_NUMBER: &str = "4124939999999990";
 const TEST_CARD_EXP_MONTH: &str = "12";
@@ -55,13 +50,17 @@ fn get_timestamp() -> u64 {
 
 // Helper function to add Elavon metadata headers to a request
 fn add_elavon_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables - requires them to be set
-    let api_key =
-        env::var(ELAVON_API_KEY_ENV).expect("TEST_ELAVON_API_KEY environment variable is required");
-    let api_user = env::var(ELAVON_API_USER_ENV)
-        .expect("TEST_ELAVON_API_USER environment variable is required");
-    let api_secret = env::var(ELAVON_API_SECRET_ENV)
-        .expect("TEST_ELAVON_API_SECRET environment variable is required");
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load elavon credentials");
+
+    let (api_key, api_user, api_secret) = match auth {
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
+            api_key,
+            key1,
+            api_secret,
+        } => (api_key.expose(), key1.expose(), api_secret.expose()),
+        _ => panic!("Expected SignatureKey auth type for elavon"),
+    };
 
     request.metadata_mut().append(
         "x-connector",

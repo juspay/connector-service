@@ -1,7 +1,9 @@
 #![allow(clippy::expect_used, clippy::indexing_slicing)]
 
 use grpc_server::{app, configs};
+use hyperswitch_masking::ExposeInterface;
 mod common;
+mod utils;
 use std::fmt::Write;
 
 use common_utils::crypto::{HmacSha512, SignMessage};
@@ -149,16 +151,18 @@ async fn process_webhook_request(
 
     let mut headers = std::collections::HashMap::new();
 
+    // Get webhook_secret from metadata
+    let metadata = utils::credential_utils::load_connector_metadata("authorizedotnet")
+        .expect("Failed to load authorizedotnet metadata");
+    let webhook_secret = metadata
+        .get("webhook_secret")
+        .expect("webhook_secret not found in authorizedotnet metadata")
+        .clone();
+
     if include_signature {
-        let webhook_secret = std::env::var("AUTHORIZEDOTNET_WEBHOOK_SECRET")
-            .unwrap_or_else(|_| "test_webhook_secret".to_string());
         let signature = generate_webhook_signature(&request_body_bytes, &webhook_secret);
         headers.insert("X-ANET-Signature".to_string(), signature);
     }
-
-    // Add webhook secrets to the request
-    let webhook_secret = std::env::var("AUTHORIZEDOTNET_WEBHOOK_SECRET")
-        .unwrap_or_else(|_| "test_webhook_secret".to_string());
 
     let webhook_secrets = Some(grpc_api_types::payments::WebhookSecrets {
         secret: webhook_secret.clone(),
@@ -183,9 +187,15 @@ async fn process_webhook_request(
     });
 
     // Use the same metadata pattern as the payment flows test
-    let api_key =
-        std::env::var("AUTHORIZENET_API_KEY").unwrap_or_else(|_| "test_api_key".to_string());
-    let key1 = std::env::var("AUTHORIZENET_KEY1").unwrap_or_else(|_| "test_key1".to_string());
+    let auth = utils::credential_utils::load_connector_auth("authorizedotnet")
+        .expect("Failed to load authorizedotnet credentials");
+
+    let (api_key, key1) = match auth {
+        domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
+            (api_key.expose(), key1.expose())
+        }
+        _ => panic!("Expected BodyKey auth type for authorizedotnet"),
+    };
 
     request.metadata_mut().append(
         "x-connector",
@@ -735,10 +745,23 @@ async fn test_webhook_malformed_body() {
             state: None,
         });
 
-        let api_key =
-            std::env::var("AUTHORIZEDOTNET_API_KEY").unwrap_or_else(|_| "test_api_key".to_string());
-        let transaction_key = std::env::var("AUTHORIZEDOTNET_TRANSACTION_KEY")
-            .unwrap_or_else(|_| "test_transaction_key".to_string());
+        let auth = utils::credential_utils::load_connector_auth("authorizedotnet")
+            .expect("Failed to load authorizedotnet credentials");
+
+        let api_key = match auth {
+            domain_types::router_data::ConnectorAuthType::BodyKey { api_key, .. } => {
+                api_key.expose()
+            }
+            _ => panic!("Expected BodyKey auth type for authorizedotnet"),
+        };
+
+        // Get transaction_key from metadata
+        let metadata = utils::credential_utils::load_connector_metadata("authorizedotnet")
+            .expect("Failed to load authorizedotnet metadata");
+        let transaction_key = metadata
+            .get("transaction_key")
+            .expect("transaction_key not found in authorizedotnet metadata")
+            .clone();
 
         request.metadata_mut().append(
             "x-connector",
@@ -965,8 +988,13 @@ async fn test_webhook_source_verification_invalid_signature() {
             "sha512=invalidhexsignature".to_string(),
         );
 
-        let webhook_secret = std::env::var("AUTHORIZEDOTNET_WEBHOOK_SECRET")
-            .unwrap_or_else(|_| "test_webhook_secret".to_string());
+        // Get webhook_secret from metadata
+        let metadata = utils::credential_utils::load_connector_metadata("authorizedotnet")
+            .expect("Failed to load authorizedotnet metadata");
+        let webhook_secret = metadata
+            .get("webhook_secret")
+            .expect("webhook_secret not found in authorizedotnet metadata")
+            .clone();
 
         let webhook_secrets = Some(grpc_api_types::payments::WebhookSecrets {
             secret: webhook_secret.clone(),
@@ -990,9 +1018,15 @@ async fn test_webhook_source_verification_invalid_signature() {
             state: None,
         });
 
-        let api_key =
-            std::env::var("AUTHORIZENET_API_KEY").unwrap_or_else(|_| "test_api_key".to_string());
-        let key1 = std::env::var("AUTHORIZENET_KEY1").unwrap_or_else(|_| "test_key1".to_string());
+        let auth = utils::credential_utils::load_connector_auth("authorizedotnet")
+            .expect("Failed to load authorizedotnet credentials");
+
+        let (api_key, key1) = match auth {
+            domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
+                (api_key.expose(), key1.expose())
+            }
+            _ => panic!("Expected BodyKey auth type for authorizedotnet"),
+        };
 
         request.metadata_mut().append(
             "x-connector",
@@ -1062,8 +1096,13 @@ async fn test_webhook_source_verification_missing_signature() {
         // Don't add any signature header
         let headers = std::collections::HashMap::new();
 
-        let webhook_secret = std::env::var("AUTHORIZEDOTNET_WEBHOOK_SECRET")
-            .unwrap_or_else(|_| "test_webhook_secret".to_string());
+        // Get webhook_secret from metadata
+        let metadata = utils::credential_utils::load_connector_metadata("authorizedotnet")
+            .expect("Failed to load authorizedotnet metadata");
+        let webhook_secret = metadata
+            .get("webhook_secret")
+            .expect("webhook_secret not found in authorizedotnet metadata")
+            .clone();
 
         let webhook_secrets = Some(grpc_api_types::payments::WebhookSecrets {
             secret: webhook_secret.clone(),
@@ -1087,9 +1126,15 @@ async fn test_webhook_source_verification_missing_signature() {
             state: None,
         });
 
-        let api_key =
-            std::env::var("AUTHORIZENET_API_KEY").unwrap_or_else(|_| "test_api_key".to_string());
-        let key1 = std::env::var("AUTHORIZENET_KEY1").unwrap_or_else(|_| "test_key1".to_string());
+        let auth = utils::credential_utils::load_connector_auth("authorizedotnet")
+            .expect("Failed to load authorizedotnet credentials");
+
+        let (api_key, key1) = match auth {
+            domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
+                (api_key.expose(), key1.expose())
+            }
+            _ => panic!("Expected BodyKey auth type for authorizedotnet"),
+        };
 
         request.metadata_mut().append(
             "x-connector",
@@ -1182,9 +1227,15 @@ async fn test_webhook_source_verification_no_secret_provided() {
             state: None,
         });
 
-        let api_key =
-            std::env::var("AUTHORIZENET_API_KEY").unwrap_or_else(|_| "test_api_key".to_string());
-        let key1 = std::env::var("AUTHORIZENET_KEY1").unwrap_or_else(|_| "test_key1".to_string());
+        let auth = utils::credential_utils::load_connector_auth("authorizedotnet")
+            .expect("Failed to load authorizedotnet credentials");
+
+        let (api_key, key1) = match auth {
+            domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
+                (api_key.expose(), key1.expose())
+            }
+            _ => panic!("Expected BodyKey auth type for authorizedotnet"),
+        };
 
         request.metadata_mut().append(
             "x-connector",
