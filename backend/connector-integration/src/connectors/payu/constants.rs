@@ -1,4 +1,4 @@
-use common_utils::pii::Secret;
+use hyperswitch_masking::Secret;
 
 // Payu API endpoints
 pub const TEST_BASE_URL: &str = "https://test.payu.in";
