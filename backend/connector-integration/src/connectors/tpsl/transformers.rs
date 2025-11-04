@@ -486,8 +486,8 @@ impl<
 
         // Extract VPA for UPI payments
         let vpa = match &item.router_data.request.payment_method_data {
-            PaymentMethodData::Upi(UpiData::UpiIntent(upi_data)) => upi_data.vpa.clone(),
-            PaymentMethodData::Upi(UpiData::UpiCollect(upi_data)) => upi_data.vpa.clone(),
+            PaymentMethodData::Upi(UpiData::UpiIntent(upi_data)) => Some(upi_data.vpa_id.clone()),
+            PaymentMethodData::Upi(UpiData::UpiCollect(upi_data)) => Some(upi_data.vpa_id.clone()),
             _ => None,
         };
 
