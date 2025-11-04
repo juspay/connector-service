@@ -102,7 +102,7 @@ pub struct ZaakPayUpiTransType {
     pub bankid: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayPaymentsResponse {
     pub order_detail: ZaakPayOrderDetailTransType,
