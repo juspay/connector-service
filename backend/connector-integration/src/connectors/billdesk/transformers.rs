@@ -129,7 +129,11 @@ pub struct BilldeskDefendDisputeRequest;
 #[derive(Default, Debug, Serialize)]
 pub struct BilldeskSubmitEvidenceRequest;
 #[derive(Default, Debug, Serialize)]
+pub struct BilldeskPreAuthenticateRequest;
+#[derive(Default, Debug, Serialize)]
 pub struct BilldeskAuthenticateRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskPostAuthenticateRequest;
 #[derive(Default, Debug, Serialize)]
 pub struct BilldeskVoidPCRequest;
 
