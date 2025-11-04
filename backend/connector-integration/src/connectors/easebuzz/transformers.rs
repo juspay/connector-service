@@ -283,6 +283,15 @@ pub struct EaseBuzzErrorResponse {
     pub data: String,
 }
 
+// Dummy types for unsupported flows
+#[derive(Default, Debug, Serialize)]
+pub struct EaseBuzzDummyRequest;
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct EaseBuzzDummyResponse {
+    pub status: String,
+}
+
 
 
 impl<
