@@ -637,7 +637,7 @@ impl<
                             .request
                             .email
                             .clone()
-                            .map(|e| e.expose().peek())
+                            .map(|e| e.expose().peek().to_string())
                             .unwrap_or_default(),
                         identifier: customer_id.get_string_repr().to_string(),
                         account_no: "".to_string(),
