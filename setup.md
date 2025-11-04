@@ -270,27 +270,36 @@ UCS includes comprehensive integration tests for payment processors with central
 
 ### Test Credential Configuration
 
-Tests load credentials from `.github/test/creds.json` which includes both authentication details and connector-specific metadata.
+UCS tests require actual payment processor credentials to run successfully. These credentials are loaded from `.github/test/creds.json`.
 
-```json
-{
-  "authorizedotnet": {
-    "connector_account_details": {
-      "auth_type": "BodyKey",
-      "api_key": "test_authorizedotnet_api_key",
-      "key1": "test_authorizedotnet_key1"
-    },
-    "metadata": {
-      "webhook_secret": "test_webhook_secret",
-      "transaction_key": "test_transaction_key"
-    }
-  }
-}
-```
+#### Setting Up Your Credentials
 
-#### Adding Your Test Credentials
+1. **Copy the template file**:
+   ```bash
+   cp .github/test/template_creds.json .github/test/creds.json
+   ```
 
-Follow the template structure and add your test credentials to the file.
+2. **Replace placeholder values with real credentials**:
+   
+   Edit `.github/test/creds.json` and replace the `test_*` placeholder values with your actual sandbox/test credentials from each payment processor.
+
+   **Example for Authorize.Net**:
+   ```json
+   {
+     "authorizedotnet": { //connector name
+       "connector_account_details": {
+         "auth_type": "BodyKey", // or HeaderKey, SignatureKey, etc.
+         "api_key": "your_actual_api_login_id",
+         "key1": "your_actual_transaction_key"
+       },
+      "metadata": {
+        "additional_field": "value_if_needed"
+      }
+     }
+   }
+   ```
+
+
 
 #### Supported Authentication Types
 
@@ -306,7 +315,7 @@ Follow the template structure and add your test credentials to the file.
 #### Running Tests
 
 ```bash
-cargo test --test authorizedotnet_webhook_test
+cargo test --test authorizedotnet_payment_flows_test
 ```
 
 ## Development Commands (Optional)
