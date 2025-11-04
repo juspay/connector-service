@@ -676,14 +676,10 @@ impl<
 
 impl<
     F,
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
 > TryFrom<ResponseRouterData<EaseBuzzPaymentsSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+where
+    Self: From<RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
