@@ -987,7 +987,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentVoidV2<T> for Payu<T>
+    connector_types::PaymentVoidV2 for Payu<T>
 {
 }
 
@@ -997,7 +997,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::RefundV2<T> for Payu<T>
+    connector_types::RefundV2 for Payu<T>
 {
 }
 
