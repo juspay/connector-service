@@ -420,7 +420,7 @@ impl TryFrom<&ConnectorAuthType> for TpslAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key1, api_secret } => {
+            ConnectorAuthType::SignatureKey { api_key, key1: _, api_secret: _ } => {
                 let auth_data_str = api_key.expose();
                 let auth_data: TpslAuthType = serde_json::from_str(&auth_data_str)
                     .change_context(errors::ConnectorError::InvalidDataFormat {
