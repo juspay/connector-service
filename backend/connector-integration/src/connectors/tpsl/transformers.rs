@@ -560,7 +560,7 @@ impl<
                         .clone()
                         .map(|e| e.expose().peek())
                         .unwrap_or_default(),
-                    identifier: customer_id.to_string(),
+                    identifier: customer_id.get_string_repr().to_string(),
                     account_no: "".to_string(),
                     account_type: "".to_string(),
                     account_holder_name: match &item.router_data.request.payment_method_data {
@@ -642,7 +642,7 @@ impl<
                             .clone()
                             .map(|e| e.expose().peek())
                             .unwrap_or_default(),
-                        identifier: customer_id.to_string(),
+                        identifier: customer_id.get_string_repr().to_string(),
                         account_no: "".to_string(),
                         account_type: "".to_string(),
                         account_holder_name: match &item.router_data.request.payment_method_data {
