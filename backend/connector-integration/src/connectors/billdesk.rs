@@ -161,7 +161,7 @@ macros::create_all_prerequisites!(
             flow: Refund,
             request_body: BilldeskRefundRequest,
             response_body: BilldeskRefundResponse,
-            router_data: RouterDataV2<Refund, PaymentFlowData, RefundFlowData, RefundsResponseData>,
+            router_data: RouterDataV2<Refund, domain_types::connector_types::RefundFlowData, RefundFlowData, RefundsResponseData>,
         ),
         (
             flow: RSync,
