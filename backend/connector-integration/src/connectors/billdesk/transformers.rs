@@ -297,9 +297,8 @@ impl<
             + Serialize,
     >
     TryFrom<
-        BilldeskRouterData<
+        crate::ConnectorRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
         >,
     > for BilldeskPaymentsSyncRequest
 {
