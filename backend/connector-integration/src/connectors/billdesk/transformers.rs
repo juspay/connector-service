@@ -262,7 +262,7 @@ impl<
             .ok_or(errors::ConnectorError::MissingPaymentMethodType)?;
         
         match payment_method_type {
-            common_enums::PaymentMethodType::Upi | common_enums::PaymentMethodType::UpiCollect => {
+            common_enums::PaymentMethodType::UpiCollect => {
                 let msg = create_billdesk_message(&item)?;
                 
                 let ip_address = item.router_data.request.get_ip_address_as_optional()
