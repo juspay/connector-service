@@ -184,28 +184,28 @@ macros::create_all_prerequisites!(
         }
 
         // Helper function to get customer ID
-        fn get_customer_id<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+        fn get_customer_id(
             resource_common_data: &domain_types::connector_types::PaymentFlowData,
         ) -> CustomResult<String, ConnectorError> {
-            resource_common_data.get_customer_id().map(|id| id.get_string_repr())
+            resource_common_data.get_customer_id().map(|id| id.get_string_repr().to_string())
         }
 
         // Helper function to get transaction ID
-        fn get_transaction_id<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+        fn get_transaction_id(
             request: &domain_types::connector_types::PaymentsAuthorizeData<T>,
         ) -> CustomResult<String, ConnectorError> {
-            request.connector_transaction_id.get_connector_transaction_id().map(|id| id.get_string_repr())
+            request.connector_transaction_id.get_connector_transaction_id().map(|id| id.get_string_repr().to_string())
         }
 
         // Helper function to get return URL
-        fn get_return_url<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+        fn get_return_url(
             request: &domain_types::connector_types::PaymentsAuthorizeData<T>,
         ) -> CustomResult<String, ConnectorError> {
             request.get_router_return_url()
         }
 
         // Helper function to get IP address
-        fn get_ip_address<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+        fn get_ip_address(
             request: &domain_types::connector_types::PaymentsAuthorizeData<T>,
         ) -> CustomResult<String, ConnectorError> {
             request.get_ip_address_as_optional()
@@ -242,10 +242,10 @@ macros::create_all_prerequisites!(
         }
 
         // Helper function to get merchant ID
-        fn get_merchant_id<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+        fn get_merchant_id(
             resource_common_data: &domain_types::connector_types::PaymentFlowData,
         ) -> String {
-            resource_common_data.merchant_id.get_string_repr()
+            resource_common_data.merchant_id.get_string_repr().to_string()
         }
 
         // Helper function to get payment ID
