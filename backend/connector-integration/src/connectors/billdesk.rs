@@ -635,6 +635,13 @@ impl_source_verification_stub!(RepeatPayment, PaymentFlowData, RepeatPaymentData
 impl_source_verification_stub!(Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData);
 impl_source_verification_stub!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
 impl_source_verification_stub!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
+impl_source_verification_stub!(CreateAccessToken, PaymentFlowData, domain_types::connector_types::AccessTokenRequestData, domain_types::connector_types::AccessTokenResponseData);
+impl_source_verification_stub!(CreateConnectorCustomer, PaymentFlowData, domain_types::connector_types::ConnectorCustomerData, domain_types::connector_types::ConnectorCustomerResponse);
+impl_source_verification_stub!(PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentMethodTokenizationData<T>, domain_types::connector_types::PaymentMethodTokenResponse);
+impl_source_verification_stub!(VoidPC, PaymentFlowData, domain_types::connector_types::PaymentsCancelPostCaptureData, PaymentsResponseData);
+impl_source_verification_stub!(PreAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPreAuthenticateData<T>, PaymentsResponseData);
+impl_source_verification_stub!(Authenticate, PaymentFlowData, domain_types::connector_types::PaymentsAuthenticateData<T>, PaymentsResponseData);
+impl_source_verification_stub!(PostAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPostAuthenticateData<T>, PaymentsResponseData);
 
 fn get_billdesk_auth_header(
     connector_auth_type: &ConnectorAuthType,
