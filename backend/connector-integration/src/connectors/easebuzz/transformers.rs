@@ -628,24 +628,15 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
-
         Ok(Self {
             txnid: item
                 .router_data
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            amount,
-            email: item.router_data.request.email.clone(),
-            phone: item.router_data.request.get_phone_number().map(|p| p.to_string()),
+            amount: item.amount.get_amount_as_string(),
+            email: None, // TODO: Extract from router_data when available
+            phone: None, // TODO: Extract from router_data when available
             key: "easebuzz_key".to_string(), // Extract from auth
             hash: Secret::new("generated_hash".to_string()), // In production, generate proper hash
         })
