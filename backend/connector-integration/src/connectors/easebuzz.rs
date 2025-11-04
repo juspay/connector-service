@@ -331,3 +331,15 @@ impl_source_verification_stub!(
     PaymentsResponseData
 );
 
+// Implement ConnectorServiceTrait with stub implementations for unsupported flows
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> connector_types::ConnectorServiceTrait<T> for EaseBuzz<T>
+{
+}
+
