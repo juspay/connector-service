@@ -42,7 +42,8 @@ use transformers::{
     BilldeskTokenRequest, BilldeskTokenResponse, BilldeskOrderRequest, BilldeskOrderResponse,
     BilldeskRepeatPaymentRequest, BilldeskRepeatPaymentResponse, BilldeskAcceptDisputeRequest, BilldeskAcceptDisputeResponse,
     BilldeskDefendDisputeRequest, BilldeskDefendDisputeResponse, BilldeskSubmitEvidenceRequest, BilldeskSubmitEvidenceResponse,
-    BilldeskAuthenticateRequest, BilldeskAuthenticateResponse, BilldeskVoidPCRequest, BilldeskVoidPCResponse,
+    BilldeskPreAuthenticateRequest, BilldeskPreAuthenticateResponse, BilldeskAuthenticateRequest, BilldeskAuthenticateResponse,
+    BilldeskPostAuthenticateRequest, BilldeskPostAuthenticateResponse, BilldeskVoidPCRequest, BilldeskVoidPCResponse,
 };
 
 use super::macros;
