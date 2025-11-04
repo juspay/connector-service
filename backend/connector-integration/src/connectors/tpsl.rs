@@ -577,7 +577,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}{}", base_url, super::constants::TPSL_UPI_TOKEN_GENERATION_URL))
+            Ok(format!("{}{}", base_url, constants::TPSL_UPI_TOKEN_GENERATION_URL))
         }
     }
 );
