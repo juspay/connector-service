@@ -52,27 +52,22 @@ The following connectors are currently in development:
 - **PayPal** - In development
 - **Ebanx** - Strategic expansion
 
-## PSP Integration Status
+## Supported Integration Endpoints
 
-Current status of payment service provider endpoint integrations:
+*Flow enhancements will be done based on Stripe's base feature requirements*
 
-| PSP | Status | Global Endpoint | Regional Coverage |
-|-----|--------|----------------|-------------------|
-| **Braintree** | ✅ **Complete** | `https://payments.braintree-api.com/graphql` | Global |
-| **Adyen** | ✅ **Complete** | `https://{{merchant_endpoint_prefix}}-checkout-live.adyenpayments.com/checkout/` | Global with merchant prefix |
-| **Worldpay** | 🔄 **Multi-endpoint** | Vantiv™, Access™, WPG™ variants | Regional variants |
-| **Chase** | 🚧 **Planned** | JP Morgan Online Payments API | North America focus |
-| **Checkout** | ✅ **Complete** | `https://api.checkout.com/` | Global |
-| **Fiserv** | 🔄 **Multi-region** | Commerce Hub, EMEA endpoints | Regional |
-| **PayPal** | 🚧 **Planned** | Global endpoint integration | Global |
-| **Ebanx** | 🚧 **Planned** | LATAM-focused integration | Latin America |
-| **Dlocal** | ✅ **Complete** | `https://api.dlocal.com/` | Global |
-| **Razorpay** | ✅ **Complete** | `https://api.razorpay.com/` | India primary |
-
-**Legend:**
-- ✅ **Complete** - Fully integrated with standardized endpoints
-- 🔄 **Multi-endpoint** - Active integration with multiple endpoint variants
-- 🚧 **Planned** - Scheduled for future integration
+| PSP | Supported Integration Endpoints |
+|-----|--------------------------------|
+| **Braintree** | • Global endpoint* - https://payments.braintree-api.com/graphql |
+| **Adyen** | • Global endpoint* - https://{{merchant_endpoint_prefix}}-checkout-live.adyenpayments.com/checkout/ |
+| **Worldpay** | • Vantiv* - https://transact.vantivcnp.com/vap/communicator/online<br>• Access* - https://access.worldpay.com/<br>• WPG - https://secure.worldpay.com/jsp/merchant/xml/paymentService.jsp |
+| **Chase** | • JP Morgan Online Payments - https://api-ms.payments.jpmorgan.com/api/v2<br>• Chase orbital - *to be integrated*<br>• Chase payment tech - *to be integrated* |
+| **Checkout** | • Global endpoint* - https://api.checkout.com/ |
+| **Fiserv** | • Commerce hub - https://cert.api.fiservapps.com/<br>• Emea - https://prod.emea.api.fiservapps.com |
+| **Paypal** | • Global endpoint* - https://api-m.paypal.com/ |
+| **Ebanx** | • Global endpoint - *to be integrated* |
+| **Dlocal** | • Global endpoint - https://api.dlocal.com/ |
+| **Razorpay** | • Global endpoint - https://api.razorpay.com/ |
 
 ---
 
