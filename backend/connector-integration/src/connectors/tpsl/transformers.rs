@@ -490,6 +490,7 @@ impl<
             PaymentMethodData::Upi(UpiData::UpiCollect(upi_data)) => upi_data.vpa_id.clone(),
             _ => None,
         };
+        let vpa_clone = vpa.clone();
 
         match item.router_data.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => {
