@@ -440,7 +440,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}{}", base_url, super::constants::TPSL_UPI_TRANSACTION_URL))
+            Ok(format!("{}{}", base_url, constants::TPSL_UPI_TRANSACTION_URL))
         }
     }
 );
