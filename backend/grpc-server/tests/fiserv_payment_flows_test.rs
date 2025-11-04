@@ -4,10 +4,10 @@
 
 use grpc_server::{app, configs};
 mod common;
+mod utils;
 
 use std::{
     collections::HashMap,
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -25,17 +25,11 @@ use grpc_api_types::{
         PaymentStatus, RefundServiceGetRequest, RefundStatus,
     },
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use tonic::{transport::Channel, Request};
 
 // Constants for Fiserv connector
 const CONNECTOR_NAME: &str = "fiserv";
-
-// Environment variable names for API credentials (can be set or overridden with provided values)
-const FISERV_API_KEY_ENV: &str = "TEST_FISERV_API_KEY";
-const FISERV_KEY1_ENV: &str = "TEST_FISERV_KEY1";
-const FISERV_API_SECRET_ENV: &str = "TEST_FISERV_API_SECRET";
-const FISERV_TERMINAL_ID_ENV: &str = "TEST_FISERV_TERMINAL_ID";
 
 // Test card data
 const TEST_AMOUNT: i64 = 1000;
@@ -56,15 +50,25 @@ fn get_timestamp() -> u64 {
 
 // Helper function to add Fiserv metadata headers to a request
 fn add_fiserv_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables - throw error if not set
-    let api_key =
-        env::var(FISERV_API_KEY_ENV).expect("TEST_FISERV_API_KEY environment variable is required");
-    let key1 =
-        env::var(FISERV_KEY1_ENV).expect("TEST_FISERV_KEY1 environment variable is required");
-    let api_secret = env::var(FISERV_API_SECRET_ENV)
-        .expect("TEST_FISERV_API_SECRET environment variable is required");
-    let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
-        .expect("TEST_FISERV_TERMINAL_ID environment variable is required");
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load fiserv credentials");
+
+    let (api_key, key1, api_secret) = match auth {
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
+            api_key,
+            key1,
+            api_secret,
+        } => (api_key.expose(), key1.expose(), api_secret.expose()),
+        _ => panic!("Expected SignatureKey auth type for fiserv"),
+    };
+
+    // Get the terminal_id from metadata
+    let metadata = utils::credential_utils::load_connector_metadata(CONNECTOR_NAME)
+        .expect("Failed to load fiserv metadata");
+    let terminal_id = metadata
+        .get("terminal_id")
+        .expect("terminal_id not found in fiserv metadata")
+        .clone();
 
     request.metadata_mut().append(
         "x-connector",
@@ -131,8 +135,12 @@ fn create_payment_authorize_request(
     capture_method: CaptureMethod,
 ) -> PaymentServiceAuthorizeRequest {
     // Get terminal_id for metadata
-    let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
-        .expect("TEST_FISERV_TERMINAL_ID environment variable is required");
+    let metadata = utils::credential_utils::load_connector_metadata(CONNECTOR_NAME)
+        .expect("Failed to load fiserv metadata");
+    let terminal_id = metadata
+        .get("terminal_id")
+        .expect("terminal_id not found in fiserv metadata")
+        .clone();
 
     // Create connector metadata as a proper JSON object
     let mut connector_metadata = HashMap::new();
@@ -202,8 +210,12 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
 
 // Helper function to create a payment capture request
 fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCaptureRequest {
-    let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
-        .expect("TEST_FISERV_TERMINAL_ID environment variable is required");
+    let metadata = utils::credential_utils::load_connector_metadata(CONNECTOR_NAME)
+        .expect("Failed to load fiserv metadata");
+    let terminal_id = metadata
+        .get("terminal_id")
+        .expect("terminal_id not found in fiserv metadata")
+        .clone();
 
     // Create connector metadata as a proper JSON object
     let mut connector_metadata = HashMap::new();
@@ -231,8 +243,12 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
 
 // Helper function to create a refund request
 fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
-    let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
-        .expect("TEST_FISERV_TERMINAL_ID environment variable is required");
+    let metadata = utils::credential_utils::load_connector_metadata(CONNECTOR_NAME)
+        .expect("Failed to load fiserv metadata");
+    let terminal_id = metadata
+        .get("terminal_id")
+        .expect("terminal_id not found in fiserv metadata")
+        .clone();
 
     // Create connector metadata as a proper JSON object
     let mut connector_metadata = HashMap::new();

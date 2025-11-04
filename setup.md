@@ -264,6 +264,51 @@ level = "DEBUG"
 log_format = "default"
 ```
 
+## Running Payment Flow Tests
+
+UCS includes comprehensive integration tests for payment processors with centralized credential management.
+
+### Test Credential Configuration
+
+Tests load credentials from `.github/test/creds.json` which includes both authentication details and connector-specific metadata.
+
+```json
+{
+  "authorizedotnet": {
+    "connector_account_details": {
+      "auth_type": "BodyKey",
+      "api_key": "test_authorizedotnet_api_key",
+      "key1": "test_authorizedotnet_key1"
+    },
+    "metadata": {
+      "webhook_secret": "test_webhook_secret",
+      "transaction_key": "test_transaction_key"
+    }
+  }
+}
+```
+
+#### Adding Your Test Credentials
+
+Follow the template structure and add your test credentials to the file.
+
+#### Supported Authentication Types
+
+- **TemporaryAuth**: Temporary authentication
+- **HeaderKey**: Simple API key in headers
+- **BodyKey**: API key + transaction key in body
+- **SignatureKey**: API key + secret + additional key
+- **MultiAuthKey**: Multiple authentication keys (api_key, key1, api_secret, key2)
+- **CurrencyAuthKey**: Complex currency-based authentication
+- **CertificateAuth**: Certificate and private key authentication
+- **NoKey**: No authentication required
+
+#### Running Tests
+
+```bash
+cargo test --test authorizedotnet_webhook_test
+```
+
 ## Development Commands (Optional)
 
 UCS includes a Makefile with convenient development commands:

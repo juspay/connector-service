@@ -3,11 +3,12 @@
 #![allow(clippy::panic)]
 
 use grpc_server::{app, configs};
+use hyperswitch_masking::{ExposeInterface, Secret};
 mod common;
+mod utils;
 
 use std::{
     collections::HashMap,
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -26,15 +27,10 @@ use grpc_api_types::{
         PaymentServiceVoidRequest, PaymentStatus, RefundStatus,
     },
 };
-use hyperswitch_masking::Secret;
 use tonic::{transport::Channel, Request};
 
 // Constants for aci connector
 const CONNECTOR_NAME: &str = "aci";
-
-// Environment variable names for API credentials
-const TEST_ACI_API_KEY_ENV: &str = "TEST_ACI_API_KEY";
-const TEST_ACI_KEY1_ENV: &str = "TEST_ACI_KEY1";
 
 const TEST_AMOUNT: i64 = 1000;
 const TEST_CARD_NUMBER: &str = "4111111111111111";
@@ -54,11 +50,16 @@ fn get_timestamp() -> u64 {
 
 // Helper function to add aci metadata headers to a request
 fn add_aci_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables
-    let api_key = env::var(TEST_ACI_API_KEY_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable TEST_ACI_API_KEY_ENV must be set"));
-    let key1 = env::var(TEST_ACI_KEY1_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable TEST_ACI_KEY1_ENV must be set"));
+    // Get API credentials using the common credential loading utility
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load ACI credentials");
+
+    let (api_key, key1) = match auth {
+        domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
+            (api_key.expose(), key1.expose())
+        }
+        _ => panic!("Expected BodyKey auth type for ACI"),
+    };
 
     request.metadata_mut().append(
         "x-connector",

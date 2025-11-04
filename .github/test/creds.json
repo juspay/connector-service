@@ -1,0 +1,45 @@
+{
+  "bluecode": {
+    "connector_account_details": {
+      "auth_type": "HeaderKey",
+      "api_key": "test_bluecode_api_key"
+    },
+    "metadata": {
+      "shop_name": "test_shop_name"
+    }
+  },
+  "authorizedotnet": {
+    "connector_account_details": {
+      "auth_type": "BodyKey",
+      "api_key": "test_authorizedotnet_api_key",
+      "key1": "test_authorizedotnet_key1"
+    },
+    "metadata": {
+      "webhook_secret": "test_webhook_secret",
+      "transaction_key": "test_transaction_key"
+    }
+  },
+  "fiserv": {
+    "connector_account_details": {
+      "auth_type": "SignatureKey",
+      "api_key": "test_fiserv_api_key",
+      "key1": "test_fiserv_key1", 
+      "api_secret": "test_fiserv_api_secret"
+    },
+    "metadata": {
+      "terminal_id": "test_terminal_id"
+    }
+  },
+  "cashtocode": {
+    "connector_account_details": {
+      "auth_type": "CurrencyAuthKey",
+      "auth_key_map": {
+        "USD": {
+          "password_evoucher": "test_usd_password_evoucher",
+          "username_evoucher": "test_usd_username_evoucher",
+          "merchant_id_evoucher": "test_usd_merchant_id_evoucher"
+        }
+      }
+    }
+  }
+}
