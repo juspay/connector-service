@@ -412,7 +412,7 @@ impl<
                 country: None,
                 zipcode: None,
                 pg: Some("UPI".to_string()),
-                customer_unique_id: Some(customer_id.to_string()),
+                customer_unique_id: Some(customer_id.get_string_repr().to_string()),
                 split_payments: None,
                 sub_merchant_id: None,
                 merchant_name: None,
