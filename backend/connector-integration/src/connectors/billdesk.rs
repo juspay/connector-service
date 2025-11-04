@@ -370,9 +370,6 @@ macros::macro_connector_implementation!(
 );
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::ConnectorServiceTrait<T> for Billdesk<T> {}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     ConnectorCommon for Billdesk<T>
 {
     fn id(&self) -> &'static str {
