@@ -19,6 +19,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{connectors::easebuzz::EaseBuzzRouterData, types::ResponseRouterData};
 
+// Import the EaseBuzz type for use in trait implementations
+use super::EaseBuzz;
+
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EaseBuzzPaymentsRequest {
