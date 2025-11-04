@@ -234,40 +234,35 @@ pub struct PayuErrorResponse {
 
 // Request conversion with Framework Integration
 impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>
+>
     TryFrom<
-        super::PayuRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
+        RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
         >,
     > for PayuPaymentRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: super::PayuRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
+        item: RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
         // Extract router data
-        let router_data = &item.router_data;
+        let router_data = &item;
 
         // Use AmountConvertor framework for proper amount handling
         let amount = item
@@ -426,23 +421,22 @@ pub struct PayuTransactionDetail {
 
 // PayU Sync Request conversion from RouterData
 impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        super::PayuRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
-    > for PayuSyncRequest
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>
+    TryFrom<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+    for PayuSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: super::PayuRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
+        item: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let router_data = &item.router_data;
+        let router_data = &item;
 
         // Extract authentication
         let auth = PayuAuthType::try_from(&router_data.connector_auth_type)?;
@@ -623,7 +617,7 @@ fn determine_upi_flow<
     request: &PaymentsAuthorizeData<T>,
 ) -> Result<(Option<String>, Option<String>, Option<String>, String), ConnectorError> {
     // Based on Haskell implementation:
-    // getTxnS2SType :: Bool -> Bool -> Bool -> Bool -> Bool -> Maybe Text
+    // getTxnS2SType :: Bool -> Bool -> Bool -> Bool -> Bool -> Bool -> Maybe Text
     // getTxnS2SType isTxnS2SFlow4Enabled s2sEnabled isDirectOTPTxn isEmandateRegister isDirectAuthorization
 
     match &request.payment_method_data {
@@ -737,13 +731,13 @@ fn generate_payu_hash(
 
 // Response conversion with Framework Integration
 impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>
     TryFrom<
         ResponseRouterData<
             PayuPaymentResponse,
@@ -761,7 +755,7 @@ impl<
     fn try_from(
         item: ResponseRouterData<
             PayuPaymentResponse,
-            RouterDataV2<
+            RouterData<
                 Authorize,
                 PaymentFlowData,
                 PaymentsAuthorizeData<T>,
@@ -855,6 +849,7 @@ impl<
                         }
                     })
                     .unwrap_or((AttemptStatus::Failure, "".to_owned()));
+
                 (status, transaction_id, None)
             }
             _ => {
@@ -906,7 +901,7 @@ impl
         let error_message = response
             .msg
             .unwrap_or_else(|| "PayU PSync error".to_string());
-        // Check PayU status field - 0 means error, 1 means success response structure
+        // Check PayU status field - 0 means error, non-zero means success response structure
         match (response.status, response.transaction_details) {
             (Some(1), Some(transaction_details)) => {
                 // PayU returned success status, check transaction_details
