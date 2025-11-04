@@ -330,3 +330,26 @@ impl_source_verification_stub!(
     PaymentsSyncData,
     PaymentsResponseData
 );
+
+// Add the required trait implementations for the flows we defined
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> connector_types::PaymentAuthorizeV2<T> for EaseBuzz<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> connector_types::PaymentSyncV2 for EaseBuzz<T>
+{
+}
