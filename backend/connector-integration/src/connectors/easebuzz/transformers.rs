@@ -581,7 +581,10 @@ impl<
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            amount: item.amount.get_amount_as_string(),
+            amount: item.connector.amount_converter.convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            ).change_context(ConnectorError::RequestEncodingFailed)?,
             email: None, // TODO: Extract from router_data when available
             phone: None, // TODO: Extract from router_data when available
             key: "easebuzz_key".to_string(), // Extract from auth
