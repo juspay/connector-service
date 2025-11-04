@@ -27,6 +27,8 @@ jobs:
 
       - name: Spell check
         uses: crate-ci/typos@master
+        with:
+          config: ./.typos.yml
 
   check:
     name: Compilation Check

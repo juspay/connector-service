@@ -1,8 +1,7 @@
 [default]
 check-filename = true
-extend-ignore-re = [
-    # Ignore git commit hashes (40 character hex strings)
-    "[0-9a-f]{7,40}",
+extend-ignore-words-re = [
+    "[0-9a-f]{7,40}", # ignore git commit hashes
 ]
 
 [default.extend-identifiers]
