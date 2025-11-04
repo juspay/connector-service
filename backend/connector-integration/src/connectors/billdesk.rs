@@ -447,8 +447,8 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PreAuthenticate,
-            request_body: BilldeskAuthenticateRequest,
-            response_body: BilldeskAuthenticateResponse,
+            request_body: BilldeskPreAuthenticateRequest,
+            response_body: BilldeskPreAuthenticateResponse,
             router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
         ),
         (
@@ -459,8 +459,8 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PostAuthenticate,
-            request_body: BilldeskAuthenticateRequest,
-            response_body: BilldeskAuthenticateResponse,
+            request_body: BilldeskPostAuthenticateRequest,
+            response_body: BilldeskPostAuthenticateResponse,
             router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
         ),
         (
