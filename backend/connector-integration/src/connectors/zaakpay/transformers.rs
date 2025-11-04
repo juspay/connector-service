@@ -249,7 +249,7 @@ pub struct ZaakPayWebhookResponse {
 }
 
 // Error response type
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayErrorResponse {
     pub response_code: String,
