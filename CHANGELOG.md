@@ -9,15 +9,26 @@
 - Webhook processing support
 - Complete type safety with guard rails
 - Error handling and status mapping
+- UCS v2 macro framework compliance
+- Proper amount framework implementation using StringMinorUnit
+- Dynamic request body value extraction from router data
 
 ### Files Created/Modified
-- `src/connectors/billdesk.rs` - Main connector implementation
-- `src/connectors/billdesk/transformers.rs` - Request/response transformers
-- `src/connectors/billdesk/constants.rs` - API constants and endpoints
-- `src/connectors.rs` - Added connector registration
-- `src/types.rs` - Added connector to ConnectorEnum and type mapping
+- `backend/connector-integration/src/connectors/billdesk.rs` - Main connector implementation
+- `backend/connector-integration/src/connectors/billdesk/transformers.rs` - Request/response transformers
+- `backend/connector-integration/src/connectors/billdesk/constants.rs` - API constants and endpoints
+- `backend/connector-integration/src/connectors.rs` - Added connector registration
+- `backend/connector-integration/src/types.rs` - Added connector to ConnectorEnum and type mapping
 - `backend/domain_types/src/connector_types.rs` - Added Billdesk to ConnectorEnum
-- `backend/domain_types/src/types.rs` - Added Billdesk connector parameters
+
+### Technical Details
+- Migrated from Hyperswitch/Euler Haskell implementation
+- Uses UCS v2 macro framework for trait implementations
+- Implements proper error handling and status mapping
+- Full type safety with guard rails (Secret<String>, MinorUnit, Email, etc.)
+- Supports UPI payment initiation and status synchronization
+- Authentication using Bearer token pattern
+- Comprehensive stub implementations for all required flows
 - `backend/grpc-api-types/proto/payment.proto` - Added Billdesk to gRPC enum
 
 ### Technical Details
