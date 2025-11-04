@@ -657,14 +657,11 @@ impl<
                         identifier: customer_id.to_string(),
                         account_no: "".to_string(),
                         account_type: "".to_string(),
-                        account_holder_name: item
-                            .router_data
-                            .request
-                            .payment_method_data
-                            .as_ref()
-                            .and_then(|pm| pm.get_upi_data())
-                            .and_then(|upi| upi.customer_name.clone())
-                            .unwrap_or_default(),
+                        account_holder_name: match &item.router_data.request.payment_method_data {
+                PaymentMethodData::Upi(UpiData::UpiIntent(upi_data)) => upi_data.customer_name.clone().unwrap_or_default(),
+                PaymentMethodData::Upi(UpiData::UpiCollect(upi_data)) => upi_data.customer_name.clone().unwrap_or_default(),
+                _ => "".to_string(),
+            },
                         aadhar_no: "".to_string(),
                     },
                     merchant_input_flags: Some(flags),
