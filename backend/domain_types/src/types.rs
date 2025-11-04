@@ -117,6 +117,7 @@ pub struct Connectors {
     pub cybersource: ConnectorParams,
     pub worldpay: ConnectorParams,
     pub worldpayvantiv: ConnectorParams,
+    pub zaakpay: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
