@@ -274,8 +274,8 @@ impl TryFrom<&ConnectorAuthType> for ZaakPayAuth {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key } => {
-                let auth_data: ZaakPayAuthType = key
+            ConnectorAuthType::SignatureKey { api_key, key1, api_secret } => {
+                let auth_data: ZaakPayAuthType = key1
                     .to_owned()
                     .parse_value("ZaakPayAuthType")
                     .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
