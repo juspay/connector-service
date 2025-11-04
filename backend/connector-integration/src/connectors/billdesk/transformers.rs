@@ -118,8 +118,8 @@ impl From<BilldeskPaymentStatus> for common_enums::AttemptStatus {
     }
 }
 
-fn create_billdesk_message(
-    router_data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<impl PaymentMethodDataTypes>, PaymentsResponseData>,
+fn create_billdesk_message<T: PaymentMethodDataTypes>(
+    router_data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
 ) -> Result<String, error_stack::Report<errors::ConnectorError>> {
     let customer_id = router_data.resource_common_data.get_customer_id()?;
     let amount = router_data
@@ -160,11 +160,12 @@ fn get_merchant_id(connector_auth_type: &ConnectorAuthType) -> Result<String, er
     }
 }
 
-impl TryFrom<
+impl<T: PaymentMethodDataTypes>
+    TryFrom<
         &RouterDataV2<
             Authorize,
             PaymentFlowData,
-            PaymentsAuthorizeData<impl PaymentMethodDataTypes>,
+            PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         >,
     > for BilldeskPaymentsRequest
@@ -175,7 +176,7 @@ impl TryFrom<
         item: &RouterDataV2<
             Authorize,
             PaymentFlowData,
-            PaymentsAuthorizeData<impl PaymentMethodDataTypes>,
+            PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
@@ -234,8 +235,8 @@ impl TryFrom<
     }
 }
 
-impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsResponse, F>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<impl PaymentMethodDataTypes>, PaymentsResponseData>
+impl<F, T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BilldeskPaymentsResponse, F>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     
