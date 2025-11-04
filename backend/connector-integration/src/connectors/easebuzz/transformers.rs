@@ -388,9 +388,9 @@ impl<
                     .clone(),
                 amount,
                 currency: item.router_data.request.currency.to_string(),
-                name: item.router_data.request.get_customer_name(),
+                name: None, // TODO: Extract from router_data when available
                 email: item.router_data.request.email.clone(),
-                phone: item.router_data.request.get_phone_number().map(|p| p.to_string()),
+                phone: None, // TODO: Extract from router_data when available
                 productinfo: "UPI Payment".to_string(),
                 surl: return_url.clone(),
                 furl: return_url,
