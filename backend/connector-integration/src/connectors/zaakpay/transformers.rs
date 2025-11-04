@@ -275,14 +275,13 @@ impl TryFrom<&ConnectorAuthType> for ZaakPayAuth {
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, key1, api_secret } => {
-                let auth_data: ZaakPayAuthType = key1
-                    .to_owned()
-                    .parse_value("ZaakPayAuthType")
-                    .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+                // For now, use a simple approach - extract merchant ID from api_key
+                let merchant_identifier = Secret::new(api_key.peek().to_string());
+                let secret_key = key1.clone();
                 
                 Ok(Self {
-                    merchant_identifier: auth_data.merchant_identifier,
-                    secret_key: auth_data.secret_key,
+                    merchant_identifier,
+                    secret_key,
                 })
             }
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
