@@ -360,7 +360,7 @@ macros::create_all_prerequisites!(
             request_body: TpslPaymentsSyncRequest,
             response_body: TpslPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ),
+        )
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
