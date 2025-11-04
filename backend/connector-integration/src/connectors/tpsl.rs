@@ -38,7 +38,6 @@ use serde::Serialize;
 use transformers::{self as tpsl, TpslPaymentsRequest, TpslPaymentsResponse, TpslPaymentsSyncRequest, TpslPaymentsSyncResponse};
 
 use super::macros;
-use crate::connectors::tpsl::constants;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub(crate) mod headers {
