@@ -683,12 +683,7 @@ impl<
             },
             payment: TpslPaymentUPISyncType { instruction: None },
             transaction: TpslTransactionUPITxnType {
-                device_identifier: item
-                    .router_data
-                    .request
-                    .get_ip_address_as_optional()
-                    .map(|ip| ip.expose())
-                    .unwrap_or_else(|| "127.0.0.1".to_string()),
+                device_identifier: "127.0.0.1".to_string(),
                 transaction_type: Some("SALE".to_string()),
                 sub_type: Some("INTENT".to_string()),
                 amount: amount.to_string(),
