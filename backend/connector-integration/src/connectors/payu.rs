@@ -173,7 +173,7 @@ macros::create_all_prerequisites!(
             request_body: PayuVoidPCRequest,
             response_body: PayuVoidPCResponse,
             router_data: RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
-        ),
+        )
     ],
     amount_converters: [
         amount_converter: StringMajorUnit
