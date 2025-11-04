@@ -489,13 +489,11 @@ impl<
         let auth_type = TpslAuthType::try_from(&item.router_data.connector_auth_type)?;
 
         // Extract VPA for UPI payments
-        let vpa = item
-            .router_data
-            .request
-            .payment_method_data
-            .as_ref()
-            .and_then(|pm| pm.get_upi_data())
-            .and_then(|upi| upi.vpa.clone());
+        let vpa = match &item.router_data.request.payment_method_data {
+            PaymentMethodData::Upi(UpiData::UpiIntent(upi_data)) => upi_data.vpa.clone(),
+            PaymentMethodData::Upi(UpiData::UpiCollect(upi_data)) => upi_data.vpa.clone(),
+            _ => None,
+        };
 
         match item.router_data.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => {
