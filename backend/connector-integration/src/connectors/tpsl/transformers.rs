@@ -676,14 +676,6 @@ impl<
         item: TPSLRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth_type = TpslAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
 
         Ok(Self {
             merchant: TpslMerchantDataType {
