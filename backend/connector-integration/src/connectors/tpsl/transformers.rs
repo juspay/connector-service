@@ -548,7 +548,7 @@ impl<
                     tenure_id: "".to_string(),
                 };
 
-                let consumer_payload = TpslConsumerIntentPayload {
+                let _consumer_payload = TpslConsumerIntentPayload {
                     mobile_number: "".to_string(), // Phone not available in PaymentsAuthorizeData
                     email_i_d: item
                         .router_data
