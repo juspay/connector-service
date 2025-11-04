@@ -219,7 +219,7 @@ pub struct ZaakPayOrderDetailResType {
     pub product4_description: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayPaymentinstrumentType {
     pub payment_mode: Option<String>,
