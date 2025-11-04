@@ -228,7 +228,7 @@ macros::create_all_prerequisites!(
             flow: PaymentMethodToken,
             request_body: BilldeskPaymentMethodTokenRequest,
             response_body: BilldeskPaymentMethodTokenResponse,
-            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentMethodTokenizationData, domain_types::connector_types::PaymentMethodTokenResponse>,
+            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentMethodTokenizationData<T>, domain_types::connector_types::PaymentMethodTokenResponse>,
         ),
         (
             flow: VoidPC,
