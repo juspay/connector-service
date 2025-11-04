@@ -690,7 +690,10 @@ impl<
                 currency: "INR".to_string(),
                 date_time: "2024-01-01 00:00:00".to_string(),
                 request_type: "STATUS".to_string(),
-                token: item.router_data.request.connector_transaction_id.to_string(),
+                token: match item.router_data.request.connector_transaction_id {
+                    ResponseId::ConnectorTransactionId(id) => id,
+                    _ => "default_id".to_string(),
+                },
             },
             consumer: TpslConsumerDataType {
                 identifier: item.router_data.resource_common_data.get_customer_id()?.to_string(),
