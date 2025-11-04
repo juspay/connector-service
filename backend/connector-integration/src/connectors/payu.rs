@@ -263,7 +263,7 @@ macros::create_all_prerequisites!(
         }
 
         // Helper function to get test mode
-        fn get_test_mode<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+        fn get_test_mode(
             resource_common_data: &domain_types::connector_types::PaymentFlowData,
         ) -> bool {
             resource_common_data.test_mode.unwrap_or(false)
