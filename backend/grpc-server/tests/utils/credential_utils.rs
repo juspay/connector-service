@@ -11,8 +11,11 @@ use domain_types::router_data::ConnectorAuthType;
 use hyperswitch_masking::Secret;
 use std::{collections::HashMap, fs};
 
-// Path to the credentials file
-const CREDS_FILE_PATH: &str = "../../.github/test/creds.json";
+// Path to the credentials file - use environment variable if set (for CI), otherwise use relative path (for local)
+fn get_creds_file_path() -> String {
+    std::env::var("CONNECTOR_AUTH_FILE_PATH")
+        .unwrap_or_else(|_| "../../.github/test/creds.json".to_string())
+}
 
 /// Generic credential structure that can deserialize any connector's credentials
 #[derive(serde::Deserialize, Debug, Clone)]
@@ -93,7 +96,8 @@ pub fn load_connector_auth(connector_name: &str) -> Result<ConnectorAuthType, Cr
 pub fn load_connector_metadata(
     connector_name: &str,
 ) -> Result<HashMap<String, String>, CredentialError> {
-    let creds_content = fs::read_to_string(CREDS_FILE_PATH)?;
+    let creds_file_path = get_creds_file_path();
+    let creds_content = fs::read_to_string(&creds_file_path)?;
     let all_credentials: AllCredentials = serde_json::from_str(&creds_content)?;
 
     let connector_creds = all_credentials
@@ -105,7 +109,8 @@ pub fn load_connector_metadata(
 
 /// Load credentials from JSON file
 fn load_from_json(connector_name: &str) -> Result<ConnectorAuthType, CredentialError> {
-    let creds_content = fs::read_to_string(CREDS_FILE_PATH)?;
+    let creds_file_path = get_creds_file_path();
+    let creds_content = fs::read_to_string(&creds_file_path)?;
     let all_credentials: AllCredentials = serde_json::from_str(&creds_content)?;
 
     let connector_creds = all_credentials
