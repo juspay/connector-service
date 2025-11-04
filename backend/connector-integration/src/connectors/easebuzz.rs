@@ -22,6 +22,7 @@ use domain_types::{
         RefundsData, RefundsResponseData, RefundSyncData, PaymentsCaptureData, SetupMandateRequestData,
         RepeatPaymentData, AcceptDisputeData, DisputeDefendData, SubmitEvidenceData, DisputeResponseData,
         PaymentsPreAuthenticateData, PaymentsAuthenticateData, PaymentsPostAuthenticateData,
+        RefundFlowData, DisputeFlowData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
