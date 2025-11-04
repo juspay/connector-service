@@ -688,7 +688,7 @@ impl<
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<EaseBuzzPaymentsSyncResponse, EaseBuzzRouterData<RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>,
+        item: ResponseRouterData<EaseBuzzPaymentsSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
