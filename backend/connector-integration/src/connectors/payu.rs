@@ -209,9 +209,9 @@ macros::create_all_prerequisites!(
         fn get_ip_address(
             request: &domain_types::connector_types::PaymentsAuthorizeData<T>,
         ) -> CustomResult<String, ConnectorError> {
-            request.get_ip_address_as_optional()
+            Ok(request.get_ip_address_as_optional()
                 .map(|ip| ip.expose())
-                .ok_or_else(|| "127.0.0.1".to_string())
+                .unwrap_or_else(|| "127.0.0.1".to_string()))
         }
 
         // Helper function to get email
