@@ -18,23 +18,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
 
-pub mod constants {
-    // Payu API versions
-    pub const API_VERSION: &str = "2.0";
-
-    // Payu device info
-    pub const DEVICE_INFO: &str = "web";
-
-    // Payu UPI specific constants
-    pub const PRODUCT_INFO: &str = "Payment"; // Default product info
-    pub const UPI_PG: &str = "UPI"; // UPI payment gateway
-    pub const UPI_COLLECT_BANKCODE: &str = "UPI"; // UPI Collect bank code
-    pub const UPI_INTENT_BANKCODE: &str = "INTENT"; // UPI Intent bank code
-    pub const UPI_S2S_FLOW: &str = "2"; // S2S flow type for UPI
-
-    // Payu PSync specific constants
-    pub const COMMAND: &str = "verify_payment";
-}
+pub use constants::*;
 
 // PayU Status enum to handle both integer and string status values
 #[derive(Debug, Serialize, Clone)]
@@ -84,9 +68,6 @@ impl TryFrom<&ConnectorAuthType> for PayuAuthType {
         }
     }
 }
-
-// Note: Integrity Framework implementation will be handled by the framework itself
-// since we can't implement foreign traits for foreign types (orphan rules)
 
 // Request structure based on Payu UPI analysis
 #[derive(Debug, Serialize)]
@@ -323,7 +304,7 @@ impl<
                 .clone(),
             amount,
             currency: router_data.request.currency,
-            productinfo: constants::PRODUCT_INFO.to_string(), // Default product info
+            productinfo: PRODUCT_INFO.to_string(), // Default product info
 
             // Customer info - extract from billing address if available
             firstname: router_data.resource_common_data.get_billing_first_name()?,
@@ -354,8 +335,8 @@ impl<
                         field_name: "IP address"
                     })
                 })?,
-            s2s_device_info: constants::DEVICE_INFO.to_string(),
-            api_version: Some(constants::API_VERSION.to_string()), // As per PayU analysis
+            s2s_device_info: DEVICE_INFO.to_string(),
+            api_version: Some(API_VERSION.to_string()), // As per PayU analysis
 
             // Will be calculated after struct creation
             hash: String::new(),
@@ -453,19 +434,13 @@ impl<
             + Serialize,
     >
     TryFrom<
-        super::PayuRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        super::PayuRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     > for PayuSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: super::PayuRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        item: super::PayuRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
@@ -481,7 +456,7 @@ impl<
                 field_name: "connector_transaction_id",
             })?;
 
-        let command = constants::COMMAND;
+        let command = COMMAND;
 
         // Build sync request
         let mut request = Self {
@@ -660,10 +635,10 @@ fn determine_upi_flow<
                         // For UPI Collect: pg = UPI, bankcode = UPI, VPA required
                         // The key is that VPA must be populated for sourceObject == "UPI_COLLECT"
                         Ok((
-                            Some(constants::UPI_PG.to_string()),
-                            Some(constants::UPI_COLLECT_BANKCODE.to_string()),
+                            Some(UPI_PG.to_string()),
+                            Some(UPI_COLLECT_BANKCODE.to_string()),
                             Some(vpa.peek().to_string()),
-                            constants::UPI_S2S_FLOW.to_string(), // UPI Collect typically uses S2S flow "2"
+                            UPI_S2S_FLOW.to_string(), // UPI Collect typically uses S2S flow "2"
                         ))
                     } else {
                         // Missing VPA for UPI Collect - this should be an error
@@ -676,10 +651,10 @@ fn determine_upi_flow<
                     // UPI Intent flow - uses S2S flow "2" for intent-based transactions
                     // pg=UPI, bankcode=INTENT for intent flows
                     Ok((
-                        Some(constants::UPI_PG.to_string()),
-                        Some(constants::UPI_INTENT_BANKCODE.to_string()),
+                        Some(UPI_PG.to_string()),
+                        Some(UPI_INTENT_BANKCODE.to_string()),
                         None,
-                        constants::UPI_S2S_FLOW.to_string(),
+                        UPI_S2S_FLOW.to_string(),
                     ))
                 }
             }
