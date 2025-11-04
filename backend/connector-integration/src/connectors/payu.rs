@@ -9,6 +9,7 @@ use common_enums::{
 use common_utils::{
     errors::CustomResult, ext_traits::ByteSliceExt, types::StringMajorUnit,
 };
+use masking::ExposeInterface;
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
