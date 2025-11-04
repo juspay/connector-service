@@ -788,20 +788,52 @@ impl<
     }
 }
 
-// PSync response conversion - simplified for now
-impl TryFrom<TpslPaymentsSyncResponse> for PaymentsResponseData {
+// PSync response conversion
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> TryFrom<ResponseRouterData<TpslPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(_response: TpslPaymentsSyncResponse) -> Result<Self, Self::Error> {
-        Ok(Self::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId("test_id".to_string()),
-            redirection_data: None,
-            mandate_reference: None,
-            connector_metadata: None,
-            network_txn_id: Some("test_txn_id".to_string()),
-            connector_response_reference_id: Some("test_ref_id".to_string()),
-            incremental_authorization_allowed: None,
-            status_code: 200,
+    fn try_from(
+        item: ResponseRouterData<TpslPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        let status = match response.transaction_state.as_str() {
+            "SUCCESS" => common_enums::AttemptStatus::Charged,
+            "FAILURE" => common_enums::AttemptStatus::Failure,
+            _ => common_enums::AttemptStatus::Pending,
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    response.merchant_transaction_identifier,
+                ),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: response.payment_method.payment_transaction.identifier,
+                connector_response_reference_id: Some(response.merchant_transaction_identifier),
+                incremental_authorization_allowed: None,
+                status_code: http_code,
+            }),
+            ..router_data
         })
     }
 }
