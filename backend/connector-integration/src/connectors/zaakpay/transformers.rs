@@ -123,7 +123,7 @@ pub struct ZaakPayPaymentInstrumentResType {
     pub netbanking: Option<ZaakPayNetBankingRespType>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayCardResType {
     pub card_token: Option<String>,
