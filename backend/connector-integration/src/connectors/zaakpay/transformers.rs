@@ -183,7 +183,7 @@ pub struct ZaakPayPaymentsSyncResponse {
     pub partial_refund_amt: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayOrderDetailsResponse {
     pub order_detail: Option<ZaakPayOrderDetailResType>,
