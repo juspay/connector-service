@@ -214,7 +214,7 @@ fn create_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std::ma
     let transaction_id = router_data
         .router_data
         .resource_common_data
-        .connector_request_reference_id;
+        .connector_request_reference_id.clone();
     
     let currency = router_data.router_data.request.currency.to_string();
     
