@@ -120,7 +120,7 @@ impl From<BilldeskPaymentStatus> for common_enums::AttemptStatus {
 }
 
 fn create_billdesk_message<T: PaymentMethodDataTypes>(
-    router_data: &crate::ConnectorRouterData<
+    router_data: &BilldeskRouterData<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     >,
 ) -> Result<String, errors::ConnectorError> {
@@ -178,7 +178,7 @@ impl<
             + Serialize,
     >
     TryFrom<
-        crate::ConnectorRouterData<
+        BilldeskRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -191,7 +191,7 @@ impl<
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: crate::ConnectorRouterData<
+        item: BilldeskRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -239,7 +239,7 @@ impl<
             + Serialize,
     >
     TryFrom<
-        crate::ConnectorRouterData<
+        BilldeskRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         >,
     > for BilldeskPaymentsSyncRequest
@@ -247,7 +247,7 @@ impl<
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: crate::ConnectorRouterData<
+        item: BilldeskRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
