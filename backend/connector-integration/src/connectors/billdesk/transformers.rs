@@ -148,7 +148,7 @@ fn create_billdesk_message<T: PaymentMethodDataTypes>(
     let message = format!(
         "MerchantID={}&CustomerID={}&TxnReferenceNo={}&TxnAmount={}&Currency={}&ItemCode=DIRECT&TxnType=UPI&AdditionalInfo1={}&AdditionalInfo2={}&AdditionalInfo3={}&AdditionalInfo4={}&AdditionalInfo5={}&AdditionalInfo6={}&AdditionalInfo7={}",
         get_merchant_id(&router_data.router_data.connector_auth_type)?,
-        customer_id,
+        customer_id.get_string_repr(),
         transaction_id,
         amount,
         currency,
