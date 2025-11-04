@@ -61,7 +61,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Cybersource => Box::new(Cybersource::new()),
             ConnectorEnum::Worldpay => Box::new(Worldpay::new()),
             ConnectorEnum::Worldpayvantiv => Box::new(Worldpayvantiv::new()),
-            // ConnectorEnum::Billdesk => Box::new(Billdesk::new()), // Temporarily commented out
+            ConnectorEnum::Billdesk => todo!("Billdesk connector not yet fully implemented"),
         }
     }
 }
