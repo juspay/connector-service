@@ -982,7 +982,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentSyncV2<T> for Payu<T>
+    connector_types::PaymentSyncV2 for Payu<T>
 {
 }
 
@@ -997,12 +997,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::RefundExecute<T> for Payu<T>
+    connector_types::RefundV2<T> for Payu<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::RefundSyncV2<T> for Payu<T>
+    connector_types::RefundSyncV2 for Payu<T>
 {
 }
 
@@ -1022,7 +1022,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::PaymentMethodTokenization for Payu<T>
+    connector_types::PaymentTokenV2<T> for Payu<T>
 {
 }
 
