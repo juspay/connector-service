@@ -451,7 +451,7 @@ TryFrom<
 
         // Create payment instrument based on payment method type
         let payment_instrument = match item.router_data.request.payment_method_type {
-            Some(common_enums::PaymentMethodType::Upi) => {
+            Some(common_enums::PaymentMethodType::UpiCollect) => {
                 ZaakPayPaymentInstrumentTransType {
                     payment_mode: "upi".to_string(),
                     card: None,
@@ -461,7 +461,7 @@ TryFrom<
                     }),
                 }
             },
-            Some(common_enums::PaymentMethodType::NetBanking) => {
+            Some(common_enums::PaymentMethodType::Paypal) => {
                 ZaakPayPaymentInstrumentTransType {
                     payment_mode: "netbanking".to_string(),
                     card: None,
@@ -473,9 +473,14 @@ TryFrom<
                 }
             },
             _ => {
-                return Err(errors::ConnectorError::NotImplemented(
-                    "Payment method not supported".to_string()
-                ).into());
+                ZaakPayPaymentInstrumentTransType {
+                    payment_mode: "upi".to_string(),
+                    card: None,
+                    netbanking: None,
+                    upi: Some(ZaakPayUpiTransType {
+                        bankid: "default".to_string(),
+                    }),
+                }
             }
         };
 
