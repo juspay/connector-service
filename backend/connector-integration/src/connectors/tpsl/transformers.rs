@@ -802,7 +802,7 @@ impl TryFrom<ResponseRouterData<TpslPaymentsSyncResponse, RouterDataV2<PSync, Pa
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(
-                    response.merchant_transaction_identifier,
+                    response.merchant_transaction_identifier.clone(),
                 ),
                 redirection_data: None,
                 mandate_reference: None,
