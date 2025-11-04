@@ -1,6 +1,7 @@
 use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
+use crate::utils::extract_connector_request_reference_id;
 use common_enums::{CaptureMethod, CardNetwork, CountryAlpha2, PaymentMethod, PaymentMethodType};
 use common_utils::{
     consts::{self, NO_ERROR_CODE, X_EXTERNAL_VAULT_METADATA},
@@ -22,19 +23,6 @@ use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::Serialize;
 use tracing::info;
 use utoipa::ToSchema;
-// Helper function for extracting connector request reference ID
-fn extract_connector_request_reference_id(
-    identifier: &Option<grpc_api_types::payments::Identifier>,
-) -> String {
-    identifier
-        .as_ref()
-        .and_then(|id| id.id_type.as_ref())
-        .and_then(|id_type| match id_type {
-            grpc_api_types::payments::identifier::IdType::Id(id) => Some(id.clone()),
-            _ => None,
-        })
-        .unwrap_or_default()
-}
 
 /// Extract vault-related headers from gRPC metadata
 fn extract_headers_from_metadata(
@@ -1171,6 +1159,11 @@ impl<
             .transpose()?;
 
         let customer_acceptance = value.customer_acceptance.clone();
+        let authentication_data = value
+            .authentication_data
+            .clone()
+            .map(router_request_types::AuthenticationData::try_from)
+            .transpose()?;
 
         let access_token = value
             .state
@@ -1182,6 +1175,7 @@ impl<
                 expires_in: token.expires_in_seconds,
             });
         Ok(Self {
+            authentication_data,
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
                 value.capture_method(),
             )?),
@@ -1660,6 +1654,19 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
         // Extract specific headers for vault and other integrations
         let vault_headers = extract_headers_from_metadata(metadata);
 
+        let connector_meta_data = serde_json::to_value(&value.merchant_account_metadata)
+            .map(common_utils::pii::SecretSerdeValue::new)
+            .map_err(|_| {
+                error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
+                    crate::errors::ApiError {
+                        sub_code: "SERDE_JSON_ERROR".to_owned(),
+                        error_identifier: 500,
+                        error_message: "Failed to serialize merchant_account_metadata".to_owned(),
+                        error_object: None,
+                    },
+                ))
+            })?;
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -1693,7 +1700,8 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             connector_meta_data: {
                 value.metadata.get("connector_meta_data").map(|json_string| {
                     Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
-                }).transpose()? // Converts Option<Result<T, E>> to Result<Option<T>, E> and propagates E if it's an Err
+                }).transpose()?
+                .or(Some(connector_meta_data)) // Converts Option<Result<T, E>> to Result<Option<T>, E> and propagates E if it's an Err
             },
             amount_captured: None,
             minor_amount_captured: None,
@@ -1941,6 +1949,65 @@ impl ForeignTryFrom<ResponseId> for grpc_api_types::payments::Identifier {
                 id_type: Some(grpc_api_types::payments::identifier::IdType::NoResponseIdMarker(())),
             },
         })
+    }
+}
+
+impl ForeignTryFrom<router_request_types::AuthenticationData>
+    for grpc_api_types::payments::AuthenticationData
+{
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        value: router_request_types::AuthenticationData,
+    ) -> error_stack::Result<Self, Self::Error> {
+        use hyperswitch_masking::ExposeInterface;
+        let trans_status = value
+            .trans_status
+            .map(|ts| grpc_api_types::payments::TransactionStatus::foreign_from(ts).into());
+        Ok(Self {
+            ucaf_collection_indicator: value.ucaf_collection_indicator,
+            eci: value.eci,
+            cavv: value.cavv.map(|cavv| cavv.expose()),
+            threeds_server_transaction_id: value.threeds_server_transaction_id.map(|id| {
+                grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                }
+            }),
+            message_version: value.message_version.map(|v| v.to_string()),
+            ds_transaction_id: value.ds_trans_id,
+            trans_status,
+            acs_transaction_id: value.acs_transaction_id,
+            transaction_id: value.transaction_id,
+        })
+    }
+}
+
+impl ForeignFrom<common_enums::TransactionStatus> for grpc_api_types::payments::TransactionStatus {
+    fn foreign_from(from: common_enums::TransactionStatus) -> Self {
+        match from {
+            common_enums::TransactionStatus::Success => grpc_api_types::payments::TransactionStatus::Success,
+            common_enums::TransactionStatus::Failure => grpc_api_types::payments::TransactionStatus::Failure,
+            common_enums::TransactionStatus::VerificationNotPerformed => grpc_api_types::payments::TransactionStatus::VerificationNotPerformed,
+            common_enums::TransactionStatus::NotVerified => grpc_api_types::payments::TransactionStatus::NotVerified,
+            common_enums::TransactionStatus::Rejected => grpc_api_types::payments::TransactionStatus::Rejected,
+            common_enums::TransactionStatus::ChallengeRequired => grpc_api_types::payments::TransactionStatus::ChallengeRequired,
+            common_enums::TransactionStatus::ChallengeRequiredDecoupledAuthentication => grpc_api_types::payments::TransactionStatus::ChallengeRequiredDecoupledAuthentication,
+            common_enums::TransactionStatus::InformationOnly => grpc_api_types::payments::TransactionStatus::InformationOnly,
+        }
+    }
+}
+
+impl ForeignFrom<grpc_api_types::payments::TransactionStatus> for common_enums::TransactionStatus {
+    fn foreign_from(value: grpc_api_types::payments::TransactionStatus) -> Self {
+        match value {
+            grpc_api_types::payments::TransactionStatus::Success => common_enums::TransactionStatus::Success,
+            grpc_api_types::payments::TransactionStatus::Failure => common_enums::TransactionStatus::Failure,
+            grpc_api_types::payments::TransactionStatus::VerificationNotPerformed => common_enums::TransactionStatus::VerificationNotPerformed,
+            grpc_api_types::payments::TransactionStatus::NotVerified => common_enums::TransactionStatus::NotVerified,
+            grpc_api_types::payments::TransactionStatus::Rejected => common_enums::TransactionStatus::Rejected,
+            grpc_api_types::payments::TransactionStatus::ChallengeRequired => common_enums::TransactionStatus::ChallengeRequired,
+            grpc_api_types::payments::TransactionStatus::ChallengeRequiredDecoupledAuthentication => common_enums::TransactionStatus::ChallengeRequiredDecoupledAuthentication,
+            grpc_api_types::payments::TransactionStatus::InformationOnly => common_enums::TransactionStatus::InformationOnly,
+        }
     }
 }
 
@@ -6101,14 +6168,20 @@ impl<
         // Clone payment_method to avoid ownership issues
         let payment_method_clone = value.payment_method.clone();
 
-        // Create redirect response from authentication data if present
         let redirect_response =
             value
-                .authentication_data
-                .map(|auth_data| ContinueRedirectionResponse {
-                    params: auth_data.ds_transaction_id.clone().map(Secret::new),
-                    payload: None,
+                .redirection_response
+                .map(|redirection_response| ContinueRedirectionResponse {
+                    params: redirection_response.params.map(Secret::new),
+                    payload: Some(Secret::new(serde_json::Value::Object(
+                        redirection_response
+                            .payload
+                            .into_iter()
+                            .map(|(k, v)| (k, serde_json::Value::String(v)))
+                            .collect(),
+                    ))),
                 });
+
         Ok(Self {
             payment_method_data: value
                 .payment_method
@@ -6201,31 +6274,19 @@ impl<
         // Clone payment_method to avoid ownership issues
         let payment_method_clone = value.payment_method.clone();
 
-        // Create redirect response from metadata or authentication data
-        // Priority: metadata first, then authentication_data for backward compatibility
-        let redirect_response = if !value.metadata.is_empty() {
-            // Use metadata for connector-specific data (e.g., collectionReference for Worldpay)
-            let params_string = serde_urlencoded::to_string(&value.metadata).change_context(
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_METADATA".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Failed to serialize metadata".to_owned(),
-                    error_object: None,
-                }),
-            )?;
-            Some(ContinueRedirectionResponse {
-                params: Some(Secret::new(params_string)),
-                payload: None,
-            })
-        } else {
-            // Fallback to authentication_data for backward compatibility
+        let redirect_response =
             value
-                .authentication_data
-                .map(|auth_data| ContinueRedirectionResponse {
-                    params: auth_data.ds_transaction_id.clone().map(Secret::new),
-                    payload: None,
-                })
-        };
+                .redirection_response
+                .map(|redirection_response| ContinueRedirectionResponse {
+                    params: redirection_response.params.map(Secret::new),
+                    payload: Some(Secret::new(serde_json::Value::Object(
+                        redirection_response
+                            .payload
+                            .into_iter()
+                            .map(|(k, v)| (k, serde_json::Value::String(v)))
+                            .collect(),
+                    ))),
+                });
         Ok(Self {
             payment_method_data: value
                 .payment_method
@@ -6329,24 +6390,23 @@ impl
             description: None,
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                value
-                    .metadata
-                    .get("connector_meta_data")
-                    .map(|json_string| {
-                        serde_json::from_str::<serde_json::Value>(json_string)
-                            .map(Secret::new)
-                            .map_err(|e| {
-                                error_stack::Report::new(ApplicationErrorResponse::BadRequest(
-                                    ApiError {
-                                        sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: format!(
-                                            "Failed to parse connector_meta_data: {}",
-                                            e
-                                        ),
-                                        error_object: None,
-                                    },
-                                ))
+                (!value.merchant_account_metadata.is_empty())
+                    .then(|| {
+                        serde_json::to_value(&value.merchant_account_metadata)
+                            .map(common_utils::pii::SecretSerdeValue::new)
+                            .map_err(|_| {
+                                error_stack::Report::new(
+                                    ApplicationErrorResponse::InternalServerError(
+                                        crate::errors::ApiError {
+                                            sub_code: "SERDE_JSON_ERROR".to_owned(),
+                                            error_identifier: 500,
+                                            error_message:
+                                                "Failed to serialize merchant_account_metadata"
+                                                    .to_owned(),
+                                            error_object: None,
+                                        },
+                                    ),
+                                )
                             })
                     })
                     .transpose()?
@@ -6425,24 +6485,23 @@ impl
             description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                value
-                    .metadata
-                    .get("connector_meta_data")
-                    .map(|json_string| {
-                        serde_json::from_str::<serde_json::Value>(json_string)
-                            .map(Secret::new)
-                            .map_err(|e| {
-                                error_stack::Report::new(ApplicationErrorResponse::BadRequest(
-                                    ApiError {
-                                        sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: format!(
-                                            "Failed to parse connector_meta_data: {}",
-                                            e
-                                        ),
-                                        error_object: None,
-                                    },
-                                ))
+                (!value.merchant_account_metadata.is_empty())
+                    .then(|| {
+                        serde_json::to_value(&value.merchant_account_metadata)
+                            .map(common_utils::pii::SecretSerdeValue::new)
+                            .map_err(|_| {
+                                error_stack::Report::new(
+                                    ApplicationErrorResponse::InternalServerError(
+                                        crate::errors::ApiError {
+                                            sub_code: "SERDE_JSON_ERROR".to_owned(),
+                                            error_identifier: 500,
+                                            error_message:
+                                                "Failed to serialize merchant_account_metadata"
+                                                    .to_owned(),
+                                            error_object: None,
+                                        },
+                                    ),
+                                )
                             })
                     })
                     .transpose()?
@@ -6521,24 +6580,23 @@ impl
             description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                value
-                    .metadata
-                    .get("connector_meta_data")
-                    .map(|json_string| {
-                        serde_json::from_str::<serde_json::Value>(json_string)
-                            .map(Secret::new)
-                            .map_err(|e| {
-                                error_stack::Report::new(ApplicationErrorResponse::BadRequest(
-                                    ApiError {
-                                        sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: format!(
-                                            "Failed to parse connector_meta_data: {}",
-                                            e
-                                        ),
-                                        error_object: None,
-                                    },
-                                ))
+                (!value.merchant_account_metadata.is_empty())
+                    .then(|| {
+                        serde_json::to_value(&value.merchant_account_metadata)
+                            .map(common_utils::pii::SecretSerdeValue::new)
+                            .map_err(|_| {
+                                error_stack::Report::new(
+                                    ApplicationErrorResponse::InternalServerError(
+                                        crate::errors::ApiError {
+                                            sub_code: "SERDE_JSON_ERROR".to_owned(),
+                                            error_identifier: 500,
+                                            error_message:
+                                                "Failed to serialize merchant_account_metadata"
+                                                    .to_owned(),
+                                            error_object: None,
+                                        },
+                                    ),
+                                )
                             })
                     })
                     .transpose()?

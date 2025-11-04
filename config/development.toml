@@ -7,7 +7,7 @@ level = "TRACE"
 log_format = "default"
 
 [log.kafka]
-enabled = true
+enabled = false
 level = "info"
 filtering_directive = "info"
 brokers = ["localhost:9092"]
@@ -68,7 +68,7 @@ paypal.base_url = "https://api-m.sandbox.paypal.com/"
 
 # Generic Events Configuration
 [events]
-enabled = true
+enabled = false
 brokers = ["localhost:9092"]
 topic = "audit-trail-events"
 partition_key_field = "request_id"

@@ -1,5 +1,6 @@
 use grpc_server::{self, app, configs, logger};
 
+#[allow(clippy::unwrap_in_result)]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(debug_assertions)]

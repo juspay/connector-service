@@ -23,7 +23,7 @@ use crate::{
     payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{self, ConnectorResponseData, PaymentMethodToken},
     router_request_types::{
-        AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
+        self, AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
         CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
         PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
         PaymentVoidPostCaptureIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
@@ -881,7 +881,7 @@ impl PaymentsCancelPostCaptureData {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone)]
 pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub payment_method_data: payment_method_data::PaymentMethodData<T>,
     /// total amount (original_amount + surcharge_amount + tax_on_surcharge_amount)
@@ -920,6 +920,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub customer_id: Option<common_utils::id_type::CustomerId>,
     pub request_incremental_authorization: bool,
     pub metadata: Option<serde_json::Value>,
+    pub authentication_data: Option<router_request_types::AuthenticationData>,
     pub split_payments: Option<SplitPaymentsRequest>,
     // New amount for amount frame work
     pub minor_amount: MinorUnit,
@@ -1182,23 +1183,21 @@ pub enum PaymentsResponseData {
         status_code: u16,
     },
     PreAuthenticateResponse {
-        resource_id: ResponseId,
+        /// For Device Data Collection
         redirection_data: Option<Box<RedirectForm>>,
-        connector_metadata: Option<serde_json::Value>,
         connector_response_reference_id: Option<String>,
         status_code: u16,
     },
     AuthenticateResponse {
-        resource_id: ResponseId,
+        /// For friction flow
         redirection_data: Option<Box<RedirectForm>>,
-        connector_metadata: Option<serde_json::Value>,
+        /// For frictionles flow
+        authentication_data: Option<router_request_types::AuthenticationData>,
         connector_response_reference_id: Option<String>,
         status_code: u16,
     },
     PostAuthenticateResponse {
-        resource_id: ResponseId,
-        redirection_data: Option<Box<RedirectForm>>,
-        connector_metadata: Option<serde_json::Value>,
+        authentication_data: Option<router_request_types::AuthenticationData>,
         connector_response_reference_id: Option<String>,
         status_code: u16,
     },
