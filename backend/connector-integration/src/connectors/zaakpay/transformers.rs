@@ -197,7 +197,7 @@ pub struct ZaakPayOrderDetailsResponse {
     pub refund_details: Option<Vec<ZaakPayRefundDetails>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayRefundDetails {
     pub amount: String,
