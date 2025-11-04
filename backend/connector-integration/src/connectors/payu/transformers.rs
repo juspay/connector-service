@@ -433,15 +433,15 @@ impl<
         + 'static
         + Serialize,
 >
-    TryFrom<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+    TryFrom<PayuRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
     for PayuSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: PayuRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
-        let router_data = &item;
+        let router_data = &item.router_data;
 
         // Extract authentication
         let auth = PayuAuthType::try_from(&router_data.connector_auth_type)?;
