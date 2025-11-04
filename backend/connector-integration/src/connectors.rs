@@ -124,3 +124,6 @@ pub use self::hipay::Hipay;
 
 pub mod trustpayments;
 pub use self::trustpayments::Trustpayments;
+
+pub mod globalpay;
+pub use self::globalpay::Globalpay;
