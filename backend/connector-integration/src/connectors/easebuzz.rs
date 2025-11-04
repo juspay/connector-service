@@ -340,6 +340,187 @@ impl_source_verification_stub!(
     PaymentsResponseData
 );
 
+// Add SourceVerification implementations for all additional flows
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Void,
+        PaymentFlowData,
+        PaymentVoidData,
+        PaymentsResponseData,
+    > for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Refund,
+        RefundFlowData,
+        RefundsData,
+        RefundsResponseData,
+    > for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        RSync,
+        RefundFlowData,
+        RefundSyncData,
+        RefundsResponseData,
+    > for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Capture,
+        PaymentFlowData,
+        PaymentsCaptureData,
+        PaymentsResponseData,
+    > for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    > for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Accept,
+        DisputeFlowData,
+        AcceptDisputeData,
+        DisputeResponseData,
+    > for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        DefendDispute,
+        DisputeFlowData,
+        DisputeDefendData,
+        DisputeResponseData,
+    > for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        SubmitEvidence,
+        DisputeFlowData,
+        SubmitEvidenceData,
+        DisputeResponseData,
+    > for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for EaseBuzz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for EaseBuzz<T>
+{
+}
+
 // Implement ConnectorServiceTrait - the macro generates ConnectorIntegrationV2 for Authorize and PSync
 // We need to implement the trait itself which requires many sub-traits
 impl<
