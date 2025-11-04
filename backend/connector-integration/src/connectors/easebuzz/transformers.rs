@@ -279,61 +279,7 @@ pub struct EaseBuzzErrorResponse {
     pub data: String,
 }
 
-// Stub types for unsupported flows
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzVoidRequest;
-#[derive(Debug, Clone)]
-pub struct EaseBuzzVoidResponse;
 
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzCaptureRequest;
-#[derive(Debug, Clone)]
-pub struct EaseBuzzCaptureResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzRefundRequest;
-#[derive(Debug, Clone)]
-pub struct EaseBuzzRefundResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzRefundSyncRequest;
-#[derive(Debug, Clone)]
-pub struct EaseBuzzRefundSyncResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzCreateOrderRequest;
-#[derive(Debug, Clone)]
-pub struct EaseBuzzCreateOrderResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzSessionTokenRequest;
-#[derive(Debug, Clone)]
-pub struct EaseBuzzSessionTokenResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzSetupMandateRequest;
-#[derive(Debug, Clone)]
-pub struct EaseBuzzSetupMandateResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzRepeatPaymentRequest;
-#[derive(Debug, Clone)]
-pub struct EaseBuzzRepeatPaymentResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzAcceptDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct EaseBuzzAcceptDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzSubmitEvidenceRequest;
-#[derive(Debug, Clone)]
-pub struct EaseBuzzSubmitEvidenceResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct EaseBuzzDefendDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct EaseBuzzDefendDisputeResponse;
 
 impl<
     T: PaymentMethodDataTypes
