@@ -99,6 +99,65 @@ pub struct BilldeskErrorResponse {
     pub error_description: Option<String>,
 }
 
+// Stub types for flows that aren't fully implemented yet
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskCaptureRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskVoidRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskRefundRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskRSyncRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskSetupMandateRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskAccessTokenRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskSessionTokenRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskCustomerRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskTokenRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskOrderRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskRepeatPaymentRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskDisputeRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskAuthenticateRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskVoidPCRequest;
+
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskCaptureResponse;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskVoidResponse;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskRefundResponse;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskRSyncResponse;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskSetupMandateResponse;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskAccessTokenResponse;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskSessionTokenResponse;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskCustomerResponse;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskTokenResponse;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskOrderResponse;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskRepeatPaymentResponse;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskDisputeResponse;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskAuthenticateResponse;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskVoidPCResponse;
+
 #[derive(Default, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum BilldeskPaymentStatus {
