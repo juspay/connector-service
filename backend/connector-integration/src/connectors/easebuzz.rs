@@ -237,8 +237,8 @@ impl<
         "application/json"
     }
 
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.easebuzz.base_url.as_ref()
+    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
+        "https://pay.easebuzz.in" // Default base URL
     }
 
     fn get_auth_header(
