@@ -4,7 +4,7 @@ pub mod constants;
 
 
 use common_enums::{
-    enums, AttemptStatus, CurrencyUnit,
+    enums, CurrencyUnit,
 };
 use common_utils::{
     errors::CustomResult, ext_traits::ByteSliceExt, types::StringMajorUnit,
