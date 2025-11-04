@@ -634,13 +634,7 @@ impl<
                     },
                     transaction: transaction_payload,
                     consumer: TpslConsumerPayload {
-                        mobile_number: item
-                            .router_data
-                            .request
-                            .phone
-                            .clone()
-                            .map(|p| p.number.to_string())
-                            .unwrap_or_default(),
+                        mobile_number: "".to_string(), // Phone not available in PaymentsAuthorizeData
                         email_i_d: item
                             .router_data
                             .request
