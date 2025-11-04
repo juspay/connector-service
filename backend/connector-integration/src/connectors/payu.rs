@@ -256,7 +256,7 @@ macros::create_all_prerequisites!(
         }
 
         // Helper function to get connector request reference ID
-        fn get_connector_request_reference_id<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+        fn get_connector_request_reference_id(
             resource_common_data: &domain_types::connector_types::PaymentFlowData,
         ) -> String {
             resource_common_data.connector_request_reference_id.clone()
