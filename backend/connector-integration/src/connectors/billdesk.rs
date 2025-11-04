@@ -389,7 +389,7 @@ macros::create_all_prerequisites!(
             flow: SetupMandate,
             request_body: BilldeskSetupMandateRequest,
             response_body: BilldeskSetupMandateResponse,
-            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         ),
         (
             flow: CreateAccessToken,
@@ -413,7 +413,7 @@ macros::create_all_prerequisites!(
             flow: PaymentMethodToken,
             request_body: BilldeskTokenRequest,
             response_body: BilldeskTokenResponse,
-            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData, PaymentMethodTokenResponse>,
+            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         ),
         (
             flow: CreateOrder,
