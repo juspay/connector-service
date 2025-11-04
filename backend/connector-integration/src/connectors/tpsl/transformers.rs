@@ -514,7 +514,7 @@ impl<
                     description: Some(item.router_data.resource_common_data.description.clone().unwrap_or_default()),
                 };
 
-                let payment_payload = TpslPaymentIntentPayload {
+                let _payment_payload = TpslPaymentIntentPayload {
                     method: TpslMethodUPIPayload {
                         token: "UPI".to_string(),
                         method_type: "UPI".to_string(),
