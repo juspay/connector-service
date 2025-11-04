@@ -249,14 +249,13 @@ impl<
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: BilldeskRouterData<
+        item: crate::ConnectorRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
                 PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
-            T,
         >,
     ) -> Result<Self, Self::Error> {
         let payment_method_type = item.router_data.request.payment_method_type
