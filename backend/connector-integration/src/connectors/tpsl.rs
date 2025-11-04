@@ -950,3 +950,39 @@ impl_source_verification_stub!(
     SessionTokenResponseData
 );
 impl_source_verification_stub!(VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData);
+impl_source_verification_stub!(
+    CreateAccessToken,
+    PaymentFlowData,
+    domain_types::connector_types::AccessTokenRequestData,
+    domain_types::connector_types::AccessTokenResponseData
+);
+impl_source_verification_stub!(
+    CreateConnectorCustomer,
+    PaymentFlowData,
+    domain_types::connector_types::ConnectorCustomerData,
+    domain_types::connector_types::ConnectorCustomerResponse
+);
+impl_source_verification_stub!(
+    PaymentMethodToken,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentMethodTokenizationData<T>,
+    domain_types::connector_types::PaymentMethodTokenResponse
+);
+impl_source_verification_stub!(
+    PreAuthenticate,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentsPreAuthenticateData<T>,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    Authenticate,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentsAuthenticateData<T>,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    PostAuthenticate,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentsPostAuthenticateData<T>,
+    PaymentsResponseData
+);
