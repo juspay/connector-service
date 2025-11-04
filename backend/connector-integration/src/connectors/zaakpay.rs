@@ -409,7 +409,7 @@ macros::create_all_prerequisites!(
         (flow: RepeatPayment, request_body: ZaakPayRepeatPaymentRequest, response_body: ZaakPayRepeatPaymentResponse, router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>),
         (flow: Accept, request_body: ZaakPayAcceptDisputeRequest, response_body: ZaakPayAcceptDisputeResponse, router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>),
         (flow: DefendDispute, request_body: ZaakPayDefendDisputeRequest, response_body: ZaakPayDefendDisputeResponse, router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>),
-        (flow: SubmitEvidence, request_body: ZaakPaySubmitEvidenceRequest, response_body: ZaakPaySubmitEvidenceResponse, router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>)
+        (flow: SubmitEvidence, request_body: ZaakPaySubmitEvidenceRequest, response_body: ZaakPaySubmitEvidenceResponse, router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>),
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
