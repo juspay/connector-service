@@ -422,7 +422,7 @@ impl TryFrom<&ConnectorAuthType> for TpslAuthType {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, key1, api_secret } => {
                 let auth_data_str = api_key.expose();
-                let auth_data: TpslAuthType = serde_json::from_str(auth_data_str)
+                let auth_data: TpslAuthType = serde_json::from_str(&auth_data_str)
                     .change_context(errors::ConnectorError::InvalidDataFormat {
                         field_name: "api_key",
                     })?;
