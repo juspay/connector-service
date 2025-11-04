@@ -644,24 +644,22 @@ impl TryFrom<ResponseRouterData<ZaakPayPaymentsSyncResponse, Self>>
             _ => common_enums::AttemptStatus::Pending,
         };
 
+        let connector_request_reference_id = router_data.resource_common_data.connector_request_reference_id.clone();
+        let network_txn_id = response.orders.first()
+            .and_then(|order| order.order_detail.as_ref())
+            .and_then(|detail| detail.txnid.clone());
+
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
                 ..router_data.resource_common_data
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    router_data
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone(),
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(connector_request_reference_id),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
-                network_txn_id: response.orders.first()
-                    .and_then(|order| order.order_detail.as_ref())
-                    .and_then(|detail| detail.txnid.clone()),
+                network_txn_id,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 status_code: http_code,
