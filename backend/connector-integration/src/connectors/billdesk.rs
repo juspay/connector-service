@@ -43,6 +43,9 @@ use transformers::{self as billdesk, BilldeskPaymentsRequest, BilldeskPaymentsRe
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
+// Type alias for router data
+pub type BilldeskRouterData<R, T> = crate::ConnectorRouterData<R>;
+
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
