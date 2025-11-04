@@ -226,7 +226,7 @@ pub struct ZaakPayPaymentinstrumentType {
     pub card: Option<ZaakPayCardType>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayCardType {
     pub card_token: String,
