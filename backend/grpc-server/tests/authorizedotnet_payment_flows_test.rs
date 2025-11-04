@@ -446,7 +446,7 @@ fn create_void_request(transaction_id: &str) -> PaymentServiceVoidRequest {
         all_keys_required: None,
         browser_info: None,
         amount: None,
-        currency: None,
+        currency: Some(146),
         ..Default::default()
     }
 }
