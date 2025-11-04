@@ -834,7 +834,7 @@ impl<
             network_txn_id: response.payment_method.payment_transaction.identifier,
             connector_response_reference_id: Some(response.merchant_transaction_identifier),
             incremental_authorization_allowed: None,
-            status_code: response.status_code.parse().unwrap_or(200),
+            status_code: response.status_code.unwrap_or("200".to_string()).parse().unwrap_or(200),
         })
     }
 }
