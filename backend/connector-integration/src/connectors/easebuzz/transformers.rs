@@ -710,7 +710,7 @@ impl<
                 incremental_authorization_allowed: None,
                 status_code: http_code,
             }),
-            ..router_data.router_data
+            ..router_data
         })
     }
 }
