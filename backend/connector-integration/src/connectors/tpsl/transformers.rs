@@ -508,7 +508,7 @@ impl<
 
                 let cart_payload = TpslUPITokenCart {
                     item: vec![TpslUPIItem {
-                        amount: amount.get_amount_as_string(),
+                        amount: amount.to_string(),
                         com_amt: "0".to_string(),
                         s_k_u: item.router_data.resource_common_data.connector_request_reference_id.clone(),
                         reference: item.router_data.resource_common_data.connector_request_reference_id.clone(),
@@ -534,7 +534,7 @@ impl<
                         .map(|ip| ip.expose())
                         .unwrap_or_else(|| "127.0.0.1".to_string()),
                     sms_sending: "NO".to_string(),
-                    amount: amount.get_amount_as_string(),
+                    amount: amount.to_string(),
                     forced_3_d_s_call: "NO".to_string(),
                     transaction_type: "SALE".to_string(),
                     description: item.router_data.resource_common_data.description.clone().unwrap_or_default(),
@@ -623,7 +623,7 @@ impl<
                         },
                         instruction: TpslInstructionPayload {
                             occurrence: "ONCE".to_string(),
-                            amount: amount.get_amount_as_string(),
+                            amount: amount.to_string(),
                             frequency: "ONCE".to_string(),
                             instruction_type: "SALE".to_string(),
                             description: item.router_data.resource_common_data.description.clone().unwrap_or_default(),
@@ -714,7 +714,7 @@ impl<
                     .unwrap_or_else(|| "127.0.0.1".to_string()),
                 transaction_type: Some("SALE".to_string()),
                 sub_type: Some("INTENT".to_string()),
-                amount: amount.get_amount_as_string(),
+                amount: amount.to_string(),
                 currency: item.router_data.request.currency.to_string(),
                 date_time: "2024-01-01 00:00:00".to_string(),
                 request_type: "STATUS".to_string(),
