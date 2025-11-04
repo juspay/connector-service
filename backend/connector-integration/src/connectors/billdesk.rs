@@ -240,19 +240,19 @@ macros::create_all_prerequisites!(
             flow: PreAuthenticate,
             request_body: BilldeskPreAuthenticateRequest,
             response_body: BilldeskPreAuthenticateResponse,
-            router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPreAuthenticateData, PaymentsResponseData>,
+            router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
         ),
         (
             flow: Authenticate,
             request_body: BilldeskAuthenticateRequest,
             response_body: BilldeskAuthenticateResponse,
-            router_data: RouterDataV2<Authenticate, PaymentFlowData, domain_types::connector_types::PaymentsAuthenticateData, PaymentsResponseData>,
+            router_data: RouterDataV2<Authenticate, PaymentFlowData, domain_types::connector_types::PaymentsAuthenticateData<T>, PaymentsResponseData>,
         ),
         (
             flow: PostAuthenticate,
             request_body: BilldeskPostAuthenticateRequest,
             response_body: BilldeskPostAuthenticateResponse,
-            router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPostAuthenticateData, PaymentsResponseData>,
+            router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [
