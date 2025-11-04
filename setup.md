@@ -215,6 +215,94 @@ UCS supports the following operations across multiple payment processors:
 6. **Setup Mandates** - For recurring payments
 7. **Repeat Payments** - Process subsequent payments
 
+## Container Deployment
+
+### Docker / OrbStack Setup
+
+#### Building the Image
+
+```bash
+docker build -f Dockerfile -t ucs:latest .
+```
+
+#### Running the Container
+
+```bash
+# Run with port mapping (gRPC on 8000, metrics on 8080)
+docker run --rm -p 8000:8000 -p 8080:8080 ucs:latest
+```
+
+#### Configuration Options
+
+**Default**: Uses `development.toml` configuration (Kafka/events disabled, test URLs)
+
+**Custom Environment**: Override with environment variable:
+
+```bash
+# Use sandbox configuration (config/sandbox.toml)
+docker run --rm -p 8000:8000 -p 8080:8080 \
+  -e CS__COMMON__ENVIRONMENT=sandbox \
+  ucs:latest
+
+# Use production configuration (config/production.toml)
+docker run --rm -p 8000:8000 -p 8080:8080 \
+  -e CS__COMMON__ENVIRONMENT=production \
+  ucs:latest
+```
+
+#### Testing Docker Container
+
+```bash
+# Health check
+grpcurl -plaintext localhost:8000 grpc.health.v1.Health/Check
+
+
+#### Building with Podman
+
+**Memory Requirements:**
+- **Minimum**: 12GB for successful build
+- **Recommended**: 16GB for optimal performance
+
+```bash
+# Set machine memory (requires restart)
+podman machine stop
+podman machine set --memory 12288
+podman machine start
+
+# Build the image
+podman build -f Dockerfile -t ucs:latest .
+```
+
+#### Running with Podman
+
+```bash
+# Run container (same as Docker)
+podman run --rm -p 8000:8000 -p 8080:8080 ucs:latest
+
+# With custom environment
+podman run --rm -p 8000:8000 -p 8080:8080 \
+  -e CS__COMMON__ENVIRONMENT=sandbox \
+  ucs:latest
+```
+
+#### Podman Troubleshooting
+
+**Build Memory Issues:**
+```bash
+# Check current memory allocation
+podman machine list
+
+# Increase memory if build fails
+podman machine stop
+podman machine set --memory 16384  # 16GB
+podman machine start
+```
+
+**Configuration Files Available:**
+- `development.toml` (default) - Local testing
+- `sandbox.toml` - Test URLs
+- `production.toml` - Production URLs
+
 ## Troubleshooting
 
 ### Common Issues
