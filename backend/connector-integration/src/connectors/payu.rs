@@ -249,7 +249,7 @@ macros::create_all_prerequisites!(
         }
 
         // Helper function to get payment ID
-        fn get_payment_id<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+        fn get_payment_id(
             resource_common_data: &domain_types::connector_types::PaymentFlowData,
         ) -> String {
             resource_common_data.payment_id.clone()
