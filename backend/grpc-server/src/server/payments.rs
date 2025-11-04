@@ -1780,23 +1780,22 @@ impl PaymentOperationsInternal for Payments {
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
-                    let access_token_data = self
-                        .handle_access_token(
-                            connector_data.clone(),
-                            &payment_flow_data,
-                            connector_auth_details.clone(),
-                            &connector.to_string(),
-                            &service_name,
-                            event_params,
+                    let access_token_data = Box::pin(self.handle_access_token(
+                        connector_data.clone(),
+                        &payment_flow_data,
+                        connector_auth_details.clone(),
+                        &connector.to_string(),
+                        &service_name,
+                        event_params,
+                    ))
+                    .await
+                    .map_err(|err| {
+                        tracing::error!("Failed to obtain access token: {:?}", err);
+                        tonic::Status::internal(
+                            err.error_message
+                                .unwrap_or_else(|| "Failed to obtain access token".to_string()),
                         )
-                        .await
-                        .map_err(|err| {
-                            tracing::error!("Failed to obtain access token: {:?}", err);
-                            tonic::Status::internal(
-                                err.error_message
-                                    .unwrap_or_else(|| "Failed to obtain access token".to_string()),
-                            )
-                        })?;
+                    })?;
 
                     tracing::info!(
                         "Access token created successfully with expiry: {:?}",
@@ -1816,13 +1815,14 @@ impl PaymentOperationsInternal for Payments {
             PaymentVoidData::foreign_try_from(payload.clone()).into_grpc_status()?;
 
         // Construct router data
-        let router_data = RouterDataV2::<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> {
-            flow: std::marker::PhantomData,
-            resource_common_data: payment_flow_data,
-            connector_auth_type: connector_auth_details,
-            request: payment_void_data,
-            response: Err(ErrorResponse::default()),
-        };
+        let router_data =
+            RouterDataV2::<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> {
+                flow: std::marker::PhantomData,
+                resource_common_data: payment_flow_data,
+                connector_auth_type: connector_auth_details,
+                request: payment_void_data,
+                response: Err(ErrorResponse::default()),
+            };
 
         // Execute connector processing
         let event_params = EventProcessingParams {
@@ -1836,23 +1836,24 @@ impl PaymentOperationsInternal for Payments {
             shadow_mode: metadata_payload.shadow_mode,
         };
 
-        let response_result = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            router_data,
-            None,
-            event_params,
-            None,
-            common_enums::CallConnectorAction::Trigger,
+        let response_result = Box::pin(
+            external_services::service::execute_connector_processing_step(
+                &self.config.proxy,
+                connector_integration,
+                router_data,
+                None,
+                event_params,
+                None,
+                common_enums::CallConnectorAction::Trigger,
+            ),
         )
         .await
         .switch()
         .into_grpc_status()?;
 
         // Generate response
-        let final_response =
-            domain_types::types::generate_payment_void_response(response_result)
-                .into_grpc_status()?;
+        let final_response = domain_types::types::generate_payment_void_response(response_result)
+            .into_grpc_status()?;
 
         Ok(tonic::Response::new(final_response))
     }
@@ -1930,7 +1931,9 @@ impl PaymentOperationsInternal for Payments {
                 }
                 None => {
                     // OAuth tokens must be provided for refund flows
-                    tracing::error!("OAuth access token required but not provided in request state");
+                    tracing::error!(
+                        "OAuth access token required but not provided in request state"
+                    );
                     return Err(tonic::Status::internal(
                         "OAuth access token required but not provided for refund operation",
                     ));
@@ -1942,8 +1945,7 @@ impl PaymentOperationsInternal for Payments {
         }
 
         // Create connector request data
-        let refunds_data =
-            RefundsData::foreign_try_from(payload.clone()).into_grpc_status()?;
+        let refunds_data = RefundsData::foreign_try_from(payload.clone()).into_grpc_status()?;
 
         // Construct router data
         let router_data = RouterDataV2::<Refund, RefundFlowData, RefundsData, RefundsResponseData> {
@@ -1981,8 +1983,7 @@ impl PaymentOperationsInternal for Payments {
 
         // Generate response
         let final_response =
-            domain_types::types::generate_refund_response(response_result)
-                .into_grpc_status()?;
+            domain_types::types::generate_refund_response(response_result).into_grpc_status()?;
 
         Ok(tonic::Response::new(final_response))
     }
@@ -2070,23 +2071,22 @@ impl PaymentOperationsInternal for Payments {
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
-                    let access_token_data = self
-                        .handle_access_token(
-                            connector_data.clone(),
-                            &payment_flow_data,
-                            connector_auth_details.clone(),
-                            &connector.to_string(),
-                            &service_name,
-                            event_params,
+                    let access_token_data = Box::pin(self.handle_access_token(
+                        connector_data.clone(),
+                        &payment_flow_data,
+                        connector_auth_details.clone(),
+                        &connector.to_string(),
+                        &service_name,
+                        event_params,
+                    ))
+                    .await
+                    .map_err(|err| {
+                        tracing::error!("Failed to obtain access token: {:?}", err);
+                        tonic::Status::internal(
+                            err.error_message
+                                .unwrap_or_else(|| "Failed to obtain access token".to_string()),
                         )
-                        .await
-                        .map_err(|err| {
-                            tracing::error!("Failed to obtain access token: {:?}", err);
-                            tonic::Status::internal(
-                                err.error_message
-                                    .unwrap_or_else(|| "Failed to obtain access token".to_string()),
-                            )
-                        })?;
+                    })?;
 
                     tracing::info!(
                         "Access token created successfully with expiry: {:?}",
@@ -2106,13 +2106,14 @@ impl PaymentOperationsInternal for Payments {
             PaymentsCaptureData::foreign_try_from(payload.clone()).into_grpc_status()?;
 
         // Construct router data
-        let router_data = RouterDataV2::<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> {
-            flow: std::marker::PhantomData,
-            resource_common_data: payment_flow_data,
-            connector_auth_type: connector_auth_details,
-            request: payment_capture_data,
-            response: Err(ErrorResponse::default()),
-        };
+        let router_data =
+            RouterDataV2::<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> {
+                flow: std::marker::PhantomData,
+                resource_common_data: payment_flow_data,
+                connector_auth_type: connector_auth_details,
+                request: payment_capture_data,
+                response: Err(ErrorResponse::default()),
+            };
 
         // Execute connector processing
         let event_params = EventProcessingParams {
@@ -2126,14 +2127,16 @@ impl PaymentOperationsInternal for Payments {
             shadow_mode: metadata_payload.shadow_mode,
         };
 
-        let response_result = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            router_data,
-            None,
-            event_params,
-            None,
-            common_enums::CallConnectorAction::Trigger,
+        let response_result = Box::pin(
+            external_services::service::execute_connector_processing_step(
+                &self.config.proxy,
+                connector_integration,
+                router_data,
+                None,
+                event_params,
+                None,
+                common_enums::CallConnectorAction::Trigger,
+            ),
         )
         .await
         .switch()
@@ -2713,90 +2716,13 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        grpc_logging_wrapper(
+        Box::pin(grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
             FlowName::Void,
-            |mut request_data| {
-                let service_name = service_name.clone();
-                Box::pin(async move {
-                    let metadata_payload = &request_data.extracted_metadata;
-                    let connector = metadata_payload.connector;
-
-                    // Get connector data to check if access token is needed
-                    let connector_data: ConnectorData<DefaultPCIHolder> =
-                        ConnectorData::get_connector_by_name(&connector);
-
-                    // Check if connector supports access tokens
-                    let should_do_access_token = connector_data.connector.should_do_access_token();
-
-                    if should_do_access_token {
-                        // Extract access token from Hyperswitch request
-                        let cached_access_token = request_data
-                            .payload
-                            .state
-                            .as_ref()
-                            .and_then(|state| state.access_token.as_ref())
-                            .map(|access| (access.token.clone(), access.expires_in_seconds));
-
-                        // Create temporary payment flow data for access token creation
-                        let temp_payment_flow_data = PaymentFlowData::foreign_try_from((
-                            request_data.payload.clone(),
-                            self.config.connectors.clone(),
-                            &request_data.masked_metadata,
-                        ))
-                        .map_err(|e| {
-                            tonic::Status::internal(format!(
-                                "Failed to create payment flow data: {e}"
-                            ))
-                        })?;
-
-                        let event_params = EventParams {
-                            _connector_name: &connector.to_string(),
-                            _service_name: &service_name,
-                            request_id: &metadata_payload.request_id,
-                            lineage_ids: &metadata_payload.lineage_ids,
-                            reference_id: &metadata_payload.reference_id,
-                            shadow_mode: metadata_payload.shadow_mode,
-                        };
-
-                        let access_token_data = self
-                            .handle_access_token_flow(
-                                &connector_data,
-                                cached_access_token,
-                                &temp_payment_flow_data,
-                                &metadata_payload.connector_auth_type,
-                                &connector.to_string(),
-                                &service_name,
-                                event_params,
-                            )
-                            .await?;
-
-                        // Create access token info for the request
-                        let access_token_info = grpc_api_types::payments::AccessToken {
-                            token: access_token_data.access_token,
-                            expires_in_seconds: access_token_data.expires_in,
-                            token_type: access_token_data.token_type,
-                        };
-
-                        // Set the access token in the request payload
-                        if request_data.payload.state.is_none() {
-                            request_data.payload.state =
-                                Some(grpc_api_types::payments::ConnectorState {
-                                    access_token: Some(access_token_info),
-                                    connector_customer_id: None,
-                                });
-                        } else if let Some(ref mut state) = request_data.payload.state {
-                            state.access_token = Some(access_token_info);
-                        }
-                    }
-
-                    // Now call the existing internal_void_payment method
-                    self.internal_void_payment(request_data).await
-                })
-            },
-        )
+            |request_data| async move { Box::pin(self.internal_void_payment(request_data)).await },
+        ))
         .await
     }
 
@@ -3024,13 +2950,13 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        grpc_logging_wrapper(
+        Box::pin(grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
             FlowName::Refund,
             |request_data| async move { self.internal_refund(request_data).await },
-        )
+        ))
         .await
     }
 
@@ -3110,90 +3036,13 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-
-        grpc_logging_wrapper(
+        Box::pin(grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
             FlowName::Capture,
-            |mut request_data| {
-                let service_name = service_name.clone();
-                Box::pin(async move {
-                    let metadata_payload = &request_data.extracted_metadata;
-                    let connector = metadata_payload.connector;
-
-                    // Get connector data to check if access token is needed
-                    let connector_data: ConnectorData<DefaultPCIHolder> =
-                        ConnectorData::get_connector_by_name(&connector);
-
-                    // Check if connector supports access tokens
-                    let should_do_access_token = connector_data.connector.should_do_access_token();
-
-                    if should_do_access_token {
-                        // Extract access token from Hyperswitch request
-                        let cached_access_token = request_data
-                            .payload
-                            .state
-                            .as_ref()
-                            .and_then(|state| state.access_token.as_ref())
-                            .map(|access| (access.token.clone(), access.expires_in_seconds));
-
-                        // Create temporary payment flow data for access token creation
-                        let temp_payment_flow_data = PaymentFlowData::foreign_try_from((
-                            request_data.payload.clone(),
-                            self.config.connectors.clone(),
-                            &request_data.masked_metadata,
-                        ))
-                        .map_err(|e| {
-                            tonic::Status::internal(format!(
-                                "Failed to create payment flow data: {e}"
-                            ))
-                        })?;
-
-                        let event_params = EventParams {
-                            _connector_name: &connector.to_string(),
-                            _service_name: &service_name,
-                            request_id: &metadata_payload.request_id,
-                            lineage_ids: &metadata_payload.lineage_ids,
-                            reference_id: &metadata_payload.reference_id,
-                            shadow_mode: metadata_payload.shadow_mode,
-                        };
-
-                        let access_token_data = self
-                            .handle_access_token_flow(
-                                &connector_data,
-                                cached_access_token,
-                                &temp_payment_flow_data,
-                                &metadata_payload.connector_auth_type,
-                                &connector.to_string(),
-                                &service_name,
-                                event_params,
-                            )
-                            .await?;
-
-                        // Create access token info for the request
-                        let access_token_info = grpc_api_types::payments::AccessToken {
-                            token: access_token_data.access_token.clone(),
-                            expires_in_seconds: access_token_data.expires_in,
-                            token_type: access_token_data.token_type.clone(),
-                        };
-
-                        // Set the access token in the request payload
-                        if request_data.payload.state.is_none() {
-                            request_data.payload.state =
-                                Some(grpc_api_types::payments::ConnectorState {
-                                    access_token: Some(access_token_info),
-                                    connector_customer_id: None,
-                                });
-                        } else if let Some(ref mut state) = request_data.payload.state {
-                            state.access_token = Some(access_token_info);
-                        }
-                    }
-                    // Now call the existing internal_payment_capture method
-                    self.internal_payment_capture(request_data).await
-                })
-            },
-        )
+            |request_data| async move { Box::pin(self.internal_payment_capture(request_data)).await },
+        ))
         .await
     }
 

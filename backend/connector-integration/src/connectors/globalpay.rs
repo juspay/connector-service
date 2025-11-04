@@ -277,7 +277,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .parse_struct("GlobalpayPaymentsResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        event_builder.map(|i| i.set_response_body(&response));
+        if let Some(i) = event_builder {
+            i.set_response_body(&response)
+        }
 
         RouterDataV2::try_from(ResponseRouterData {
             response,
@@ -367,7 +369,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .parse_struct("GlobalpayPaymentsResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        event_builder.map(|i| i.set_response_body(&response));
+        if let Some(i) = event_builder {
+            i.set_response_body(&response)
+        }
 
         <RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>::try_from(
             ResponseRouterData {
@@ -429,7 +433,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> CustomResult<String, errors::ConnectorError> {
         let transaction_id = &req.request.connector_transaction_id;
         let base_url = &req.resource_common_data.connectors.globalpay.base_url;
-        Ok(format!("{}/transactions/{}/reversal", base_url, transaction_id))
+        Ok(format!(
+            "{}/transactions/{}/reversal",
+            base_url, transaction_id
+        ))
     }
 
     fn get_request_body(
@@ -472,7 +479,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .parse_struct("GlobalpayPaymentsResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        event_builder.map(|i| i.set_response_body(&response));
+        if let Some(i) = event_builder {
+            i.set_response_body(&response)
+        }
 
         RouterDataV2::try_from(ResponseRouterData {
             response,
@@ -545,7 +554,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .get_connector_transaction_id()
             .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
         let base_url = &req.resource_common_data.connectors.globalpay.base_url;
-        Ok(format!("{}/transactions/{}/capture", base_url, transaction_id))
+        Ok(format!(
+            "{}/transactions/{}/capture",
+            base_url, transaction_id
+        ))
     }
 
     fn get_request_body(
@@ -588,7 +600,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .parse_struct("GlobalpayPaymentsResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        event_builder.map(|i| i.set_response_body(&response));
+        if let Some(i) = event_builder {
+            i.set_response_body(&response)
+        }
 
         RouterDataV2::try_from(ResponseRouterData {
             response,
@@ -647,7 +661,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> CustomResult<String, errors::ConnectorError> {
         let transaction_id = req.request.connector_transaction_id.clone();
         let base_url = &req.resource_common_data.connectors.globalpay.base_url;
-        Ok(format!("{}/transactions/{}/refund", base_url, transaction_id))
+        Ok(format!(
+            "{}/transactions/{}/refund",
+            base_url, transaction_id
+        ))
     }
 
     fn get_request_body(
@@ -690,7 +707,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .parse_struct("GlobalpayRefundResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        event_builder.map(|i| i.set_response_body(&response));
+        if let Some(i) = event_builder {
+            i.set_response_body(&response)
+        }
 
         RouterDataV2::try_from(ResponseRouterData {
             response,
@@ -776,7 +795,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .parse_struct("GlobalpayRefundResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        event_builder.map(|i| i.set_response_body(&response));
+        if let Some(i) = event_builder {
+            i.set_response_body(&response)
+        }
 
         <RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>::try_from(
             ResponseRouterData {
@@ -976,7 +997,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .parse_struct("GlobalpayAccessTokenResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        event_builder.map(|i| i.set_response_body(&response));
+        if let Some(i) = event_builder {
+            i.set_response_body(&response)
+        }
 
         RouterDataV2::try_from(ResponseRouterData {
             response,
@@ -1278,13 +1301,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         // Try to parse as structured error first
-        let error_response = match res.response.parse_struct::<globalpay::GlobalpayErrorResponse>("GlobalpayErrorResponse") {
+        let error_response = match res
+            .response
+            .parse_struct::<globalpay::GlobalpayErrorResponse>("GlobalpayErrorResponse")
+        {
             Ok(response) => {
-                event_builder.map(|i| i.set_error_response_body(&response));
+                if let Some(i) = event_builder {
+                    i.set_error_response_body(&response)
+                }
                 ErrorResponse {
                     status_code: res.status_code,
                     code: response.code.unwrap_or_else(|| "UNKNOWN_ERROR".to_string()),
-                    message: response.message.unwrap_or_else(|| "Unknown error from GlobalPay".to_string()),
+                    message: response
+                        .message
+                        .unwrap_or_else(|| "Unknown error from GlobalPay".to_string()),
                     reason: None,
                     attempt_status: None,
                     connector_transaction_id: None,
@@ -1292,7 +1322,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     network_advice_code: None,
                     network_error_message: None,
                 }
-            },
+            }
             Err(_) => {
                 // If structured parsing fails, use the raw response as the error message
                 let raw_response = String::from_utf8(res.response.to_vec())

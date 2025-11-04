@@ -116,7 +116,9 @@ impl RefundOperationsInternal for Refunds {
                 }
                 None => {
                     // OAuth tokens must be provided for refund flows
-                    tracing::error!("OAuth access token required but not provided in request state");
+                    tracing::error!(
+                        "OAuth access token required but not provided in request state"
+                    );
                     return Err(tonic::Status::internal(
                         "OAuth access token required but not provided for refund operation",
                     ));
@@ -132,13 +134,14 @@ impl RefundOperationsInternal for Refunds {
             RefundSyncData::foreign_try_from(payload.clone()).into_grpc_status()?;
 
         // Construct router data
-        let router_data = RouterDataV2::<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> {
-            flow: std::marker::PhantomData,
-            resource_common_data: refund_flow_data,
-            connector_auth_type: connector_auth_details,
-            request: refund_sync_data,
-            response: Err(ErrorResponse::default()),
-        };
+        let router_data =
+            RouterDataV2::<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> {
+                flow: std::marker::PhantomData,
+                resource_common_data: refund_flow_data,
+                connector_auth_type: connector_auth_details,
+                request: refund_sync_data,
+                response: Err(ErrorResponse::default()),
+            };
 
         // Execute connector processing
         let event_params = EventProcessingParams {
@@ -166,9 +169,8 @@ impl RefundOperationsInternal for Refunds {
         .into_grpc_status()?;
 
         // Generate response
-        let final_response =
-            domain_types::types::generate_refund_sync_response(response_result)
-                .into_grpc_status()?;
+        let final_response = domain_types::types::generate_refund_sync_response(response_result)
+            .into_grpc_status()?;
 
         Ok(tonic::Response::new(final_response))
     }
@@ -206,13 +208,13 @@ impl RefundService for Refunds {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "RefundService".to_string());
-        utils::grpc_logging_wrapper(
+        Box::pin(utils::grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
             common_utils::events::FlowName::Rsync,
             |request_data| async move { self.internal_get(request_data).await },
-        )
+        ))
         .await
     }
 
