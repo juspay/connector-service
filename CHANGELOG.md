@@ -4,6 +4,52 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## [2025-11-04] - Payu Connector Migration
+
+### Added
+- Complete Payu connector implementation migrated from Haskell euler-api-txns to UCS v2 (Rust)
+- Payment methods supported: UPI Collect, UPI Intent, UPI QR
+- Transaction flows: Authorize (UPI payment initiation), PSync (payment status synchronization)
+- Full authentication support using API Key + Merchant Salt pattern
+- SHA-512 hash signature generation for request verification
+- Comprehensive error handling and status mapping
+- Support for UPI-specific features like VPA validation, intent URI generation
+- Proper amount framework implementation using StringMajorUnit converter
+- Type-safe implementation with guard rails (Secret<String>, Email, Currency types)
+
+### Files Created/Modified
+- `src/connectors/payu.rs` - Main connector implementation using UCS v2 macro framework
+- `src/connectors/payu/transformers.rs` - Request/response transformers with UPI flow logic
+- `src/connectors/payu/constants.rs` - API constants, endpoints, and configuration
+- `src/connectors.rs` - Payu connector already registered
+- `src/types.rs` - Payu already registered in ConnectorEnum
+
+### Technical Details
+- **Mandatory UCS v2 Macro Framework**: Uses `create_all_prerequisites!` and `macro_connector_implementation!` macros - NO manual trait implementations
+- **Authentication**: BodyKey pattern with API key and merchant salt for SHA-512 signature generation
+- **UPI Flow Support**: 
+  - UPI Collect: VPA-based payments with pending status handling
+  - UPI Intent: App-based payments with intent URI generation
+  - UPI QR: QR code-based payments
+- **Hash Generation**: SHA-512 format: `key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5|udf6|udf7|udf8|udf9|udf10|salt`
+- **Status Mapping**: Comprehensive mapping from PayU statuses to internal AttemptStatus enum
+- **Error Handling**: Proper error response parsing with PayU-specific error codes
+- **Dynamic Value Extraction**: All request values extracted from router data (NO hardcoded values)
+- **Source Verification**: Stub implementations for Phase 10 development
+
+### API Endpoints
+- **Payment Initiation**: `/_payment` (test: `https://test.payu.in/_payment`)
+- **Payment Verification**: `/merchant/postservice.php?form=2` (test: `https://test.payu.in/merchant/postservice.php?form=2`)
+
+### Business Logic Preservation
+- All UPI transaction flows from Haskell implementation preserved
+- Hash generation logic exactly matches Haskell `makePayuTxnHash` implementation
+- UDF field generation follows Haskell `getUdf1-getUdf5` patterns
+- Status mapping maintains compatibility with existing business rules
+- Error handling preserves all PayU-specific error codes and messages
+
+- - -
+
 ## 2025.11.04.1
 
 ### Refactors
