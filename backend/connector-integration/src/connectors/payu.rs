@@ -1,4 +1,5 @@
 pub mod transformers;
+pub mod constants;
 
 use std::fmt::Debug;
 
@@ -14,14 +15,14 @@ use domain_types::{
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
         PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        RefundsResponseData, RepeatPaymentData, RequestDetails, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
@@ -396,7 +397,7 @@ macros::macro_connector_implementation!(
             // Based on Haskell implementation: uses /merchant/postservice.php?form=2 for verification
             // Test: https://test.payu.in/merchant/postservice.php?form=2
             let base_url = self.base_url(&req.resource_common_data.connectors);
-            Ok(format!("{base_url}/merchant/postservice.php?form=2"))
+            Ok(format!("{}/{}", base_url, constants::VERIFY_PAYMENT_PATH))
         }
 
         fn get_content_type(&self) -> &'static str {
@@ -475,7 +476,7 @@ macros::macro_connector_implementation!(
             // Test: https://test.payu.in/_payment
             // Prod: https://secure.payu.in/_payment
             let base_url = self.base_url(&req.resource_common_data.connectors);
-            Ok(format!("{base_url}/_payment"))
+            Ok(format!("{}/{}", base_url, constants::PAYMENT_PATH))
         }
         fn get_content_type(&self) -> &'static str {
             "application/x-www-form-urlencoded"
@@ -800,7 +801,8 @@ impl<
             + 'static
             + Serialize
             + Serialize,
-    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    >
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
     for Payu<T>
 {
 }
@@ -825,7 +827,8 @@ impl<
             + 'static
             + Serialize
             + Serialize,
-    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    >
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Payu<T>
 {
 }
