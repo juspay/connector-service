@@ -235,7 +235,7 @@ macros::create_all_prerequisites!(
         }
 
         // Helper function to get optional last name
-        fn get_optional_last_name<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+        fn get_optional_last_name(
             resource_common_data: &domain_types::connector_types::PaymentFlowData,
         ) -> Option<hyperswitch_masking::Secret<String>> {
             resource_common_data.get_optional_billing_last_name()
