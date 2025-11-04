@@ -98,7 +98,7 @@ pub struct BilldeskErrorResponse {
     pub error_description: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Default, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum BilldeskPaymentStatus {
     Success,
