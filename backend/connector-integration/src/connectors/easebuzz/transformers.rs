@@ -600,9 +600,8 @@ impl<
         + std::marker::Sync
         + std::marker::Send
         + 'static
-        + Serialize
         + Serialize,
-> TryFrom<ResponseRouterData<EaseBuzzPaymentsResponse, Self>>
+> TryFrom<ResponseRouterData<EaseBuzzPaymentsResponse, EaseBuzz<T>>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
