@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use common_utils::request::Method;
 use domain_types::{
     connector_flow::{Authorize, PSync},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData},
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -11,7 +11,6 @@ use domain_types::{
     router_response_types::RedirectForm,
     utils,
 };
-use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface};
 use serde::{Deserialize, Serialize};
 
@@ -119,8 +118,8 @@ impl From<BilldeskPaymentStatus> for common_enums::AttemptStatus {
     }
 }
 
-fn create_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>(
-    router_data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+fn create_billdesk_message(
+    router_data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<impl PaymentMethodDataTypes>, PaymentsResponseData>,
 ) -> Result<String, error_stack::Report<errors::ConnectorError>> {
     let customer_id = router_data.resource_common_data.get_customer_id()?;
     let amount = router_data
@@ -161,19 +160,11 @@ fn get_merchant_id(connector_auth_type: &ConnectorAuthType) -> Result<String, er
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
+impl TryFrom<
         &RouterDataV2<
             Authorize,
             PaymentFlowData,
-            PaymentsAuthorizeData<T>,
+            PaymentsAuthorizeData<impl PaymentMethodDataTypes>,
             PaymentsResponseData,
         >,
     > for BilldeskPaymentsRequest
@@ -184,7 +175,7 @@ impl<
         item: &RouterDataV2<
             Authorize,
             PaymentFlowData,
-            PaymentsAuthorizeData<T>,
+            PaymentsAuthorizeData<impl PaymentMethodDataTypes>,
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
@@ -218,15 +209,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
+impl TryFrom<
         &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     > for BilldeskPaymentsSyncRequest
 {
@@ -251,17 +234,8 @@ impl<
     }
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize
-            + Serialize,
-    > TryFrom<ResponseRouterData<BilldeskPaymentsResponse, F>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsResponse, F>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<impl PaymentMethodDataTypes>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     
@@ -305,7 +279,7 @@ impl<
                         (
                             common_enums::AttemptStatus::AuthenticationPending,
                             Ok(PaymentsResponseData::TransactionResponse {
-                                resource_id: ResponseId::ConnectorTransactionId(
+                                resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
                                     router_data
                                         .resource_common_data
                                         .connector_request_reference_id
@@ -378,7 +352,7 @@ impl TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData {
         };
 
         Ok(Self::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(response._txn_reference_no),
+            resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(response._txn_reference_no),
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
