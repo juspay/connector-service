@@ -45,7 +45,15 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use transformers::{self as zaakpay, ZaakPayPaymentsRequest, ZaakPayPaymentsResponse, ZaakPayPaymentsSyncRequest, ZaakPayPaymentsSyncResponse};
+use transformers::{
+    self as zaakpay, ZaakPayPaymentsRequest, ZaakPayPaymentsResponse, ZaakPayPaymentsSyncRequest, ZaakPayPaymentsSyncResponse,
+    ZaakPayVoidRequest, ZaakPayVoidResponse, ZaakPayCaptureRequest, ZaakPayCaptureResponse,
+    ZaakPayRefundRequest, ZaakPayRefundResponse, ZaakPayRefundSyncRequest, ZaakPayRefundSyncResponse,
+    ZaakPayCreateOrderRequest, ZaakPayCreateOrderResponse, ZaakPaySessionTokenRequest, ZaakPaySessionTokenResponse,
+    ZaakPaySetupMandateRequest, ZaakPaySetupMandateResponse, ZaakPayRepeatPaymentRequest, ZaakPayRepeatPaymentResponse,
+    ZaakPayAcceptDisputeRequest, ZaakPayAcceptDisputeResponse, ZaakPayDefendDisputeRequest, ZaakPayDefendDisputeResponse,
+    ZaakPaySubmitEvidenceRequest, ZaakPaySubmitEvidenceResponse
+};
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
