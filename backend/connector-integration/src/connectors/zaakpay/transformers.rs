@@ -205,7 +205,7 @@ pub struct ZaakPayRefundDetails {
     pub merchant_ref_id: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayOrderDetailResType {
     pub order_id: String,
