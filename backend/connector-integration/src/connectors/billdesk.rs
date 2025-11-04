@@ -40,7 +40,8 @@ use transformers::{
     BilldeskSetupMandateRequest, BilldeskSetupMandateResponse, BilldeskAccessTokenRequest, BilldeskAccessTokenResponse,
     BilldeskSessionTokenRequest, BilldeskSessionTokenResponse, BilldeskCustomerRequest, BilldeskCustomerResponse,
     BilldeskTokenRequest, BilldeskTokenResponse, BilldeskOrderRequest, BilldeskOrderResponse,
-    BilldeskRepeatPaymentRequest, BilldeskRepeatPaymentResponse, BilldeskDisputeRequest, BilldeskDisputeResponse,
+    BilldeskRepeatPaymentRequest, BilldeskRepeatPaymentResponse, BilldeskAcceptDisputeRequest, BilldeskAcceptDisputeResponse,
+    BilldeskDefendDisputeRequest, BilldeskDefendDisputeResponse, BilldeskSubmitEvidenceRequest, BilldeskSubmitEvidenceResponse,
     BilldeskAuthenticateRequest, BilldeskAuthenticateResponse, BilldeskVoidPCRequest, BilldeskVoidPCResponse,
 };
 
