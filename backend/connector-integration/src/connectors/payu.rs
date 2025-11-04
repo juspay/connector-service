@@ -270,7 +270,7 @@ macros::create_all_prerequisites!(
         }
 
         // Helper function to get base URL
-        fn get_base_url<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+        fn get_base_url(
             connectors: &Connectors,
         ) -> &str {
             &connectors.payu.base_url
