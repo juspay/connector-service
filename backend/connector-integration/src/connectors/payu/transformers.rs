@@ -241,7 +241,6 @@ impl<
         + 'static
         + Serialize,
 >
->
     TryFrom<
         RouterDataV2<
             Authorize,
