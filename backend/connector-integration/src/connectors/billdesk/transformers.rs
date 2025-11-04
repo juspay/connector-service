@@ -125,7 +125,7 @@ fn create_billdesk_message<T: PaymentMethodDataTypes>(
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         T,
     >,
-) -> Result<String, errors::ConnectorError> {
+) -> Result<String, error_stack::Report<errors::ConnectorError>> {
     let customer_id = router_data.router_data.resource_common_data.get_customer_id()?;
     let amount = router_data
         .connector
