@@ -501,7 +501,7 @@ impl<
                     webhook_endpoint_url: return_url.clone(),
                     response_type: "URL".to_string(),
                     response_endpoint_url: return_url.clone(),
-                    description: item.router_data.request.description.clone().unwrap_or_default(),
+                    description: item.router_data.resource_common_data.description.clone().unwrap_or_default(),
                     identifier: auth_type.merchant_code.peek().to_string(),
                     webhook_type: "HTTP_POST".to_string(),
                 };
@@ -537,7 +537,7 @@ impl<
                     amount: amount.get_amount_as_string(),
                     forced_3_d_s_call: "NO".to_string(),
                     transaction_type: "SALE".to_string(),
-                    description: item.router_data.request.description.clone().unwrap_or_default(),
+                    description: item.router_data.resource_common_data.description.clone().unwrap_or_default(),
                     currency: item.router_data.request.currency.to_string(),
                     is_registration: "NO".to_string(),
                     identifier: item.router_data.resource_common_data.connector_request_reference_id.clone(),
@@ -592,7 +592,7 @@ impl<
                         item: vec![],
                         reference: item.router_data.resource_common_data.connector_request_reference_id.clone(),
                         identifier: item.router_data.resource_common_data.connector_request_reference_id.clone(),
-                        description: item.router_data.request.description.clone().unwrap_or_default(),
+                        description: item.router_data.resource_common_data.description.clone().unwrap_or_default(),
                     },
                     payment: TpslPaymentPayload {
                         method: TpslMethodPayload {
@@ -626,7 +626,7 @@ impl<
                             amount: amount.get_amount_as_string(),
                             frequency: "ONCE".to_string(),
                             instruction_type: "SALE".to_string(),
-                            description: item.router_data.request.description.clone().unwrap_or_default(),
+                            description: item.router_data.resource_common_data.description.clone().unwrap_or_default(),
                             action: "SALE".to_string(),
                             limit: amount.get_amount_as_string(),
                             end_date_time: "".to_string(),
