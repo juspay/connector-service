@@ -24,9 +24,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::{connectors::easebuzz::EaseBuzzRouterData, types::ResponseRouterData};
 
-// Type alias for router data
-pub type EaseBuzzRouterData<R, T> = crate::ConnectorRouterData<R, T>;
-
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EaseBuzzPaymentsRequest {
