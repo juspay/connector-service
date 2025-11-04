@@ -1,9 +1,5 @@
-use std::collections::HashMap;
-
 use common_utils::{
     errors::CustomResult,
-    ext_traits::ValueExt,
-    id_type,
     request::Method,
     types::StringMinorUnit,
     Email,
@@ -13,10 +9,8 @@ use domain_types::{
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
