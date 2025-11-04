@@ -115,7 +115,7 @@ pub struct ZaakPayPaymentsResponse {
     pub bank_post_data: Option<HashMap<String, serde_json::Value>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayPaymentInstrumentResType {
     pub payment_mode: String,
