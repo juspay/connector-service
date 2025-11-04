@@ -485,6 +485,7 @@ enum Connector {
   CASHFREE = 93;
   PAYTM = 94;
   BLUECODE = 95;
+  TPSL = 96;
 }
 
 // Payment method types.
