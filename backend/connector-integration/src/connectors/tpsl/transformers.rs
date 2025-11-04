@@ -604,7 +604,7 @@ impl<
                             processor: "UPI".to_string(),
                             issuance: None,
                             alias: None,
-                            identifier: vpa.unwrap_or_default(),
+                            identifier: vpa.map(|v| v.peek().to_string()).unwrap_or_default(),
                             token: None,
                             authentication: None,
                             sub_type: Some("INTENT".to_string()),
