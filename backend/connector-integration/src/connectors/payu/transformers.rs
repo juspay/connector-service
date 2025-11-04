@@ -754,7 +754,7 @@ impl<
     fn try_from(
         item: ResponseRouterData<
             PayuPaymentResponse,
-            RouterData<
+            RouterDataV2<
                 Authorize,
                 PaymentFlowData,
                 PaymentsAuthorizeData<T>,
