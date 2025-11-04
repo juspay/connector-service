@@ -381,24 +381,16 @@ macros::create_all_prerequisites!(
 
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+            _req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
-                req.resource_common_data.connectors.tpsl.test_base_url.as_ref()
-            } else {
-                req.resource_common_data.connectors.tpsl.base_url.as_ref()
-            }
+            "https://www.tpsl-india.in"
         }
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+            _req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
-                req.resource_common_data.connectors.tpsl.test_base_url.as_ref()
-            } else {
-                req.resource_common_data.connectors.tpsl.base_url.as_ref()
-            }
+            "https://www.tpsl-india.in"
         }
     }
 );
