@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use common_utils::{
-    request::Method,
-};
+use common_utils::request::Method;
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
@@ -14,7 +12,7 @@ use domain_types::{
     utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::PeekInterface;
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
@@ -100,63 +98,7 @@ pub struct BilldeskErrorResponse {
     pub error_description: Option<String>,
 }
 
-// Stub types for unsupported flows
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskVoidRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskVoidResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskCaptureRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskCaptureResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskRefundRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskRefundResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskRefundSyncRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskRefundSyncResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskCreateOrderRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskCreateOrderResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskSessionTokenRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskSessionTokenResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskSetupMandateRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskSetupMandateResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskRepeatPaymentRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskRepeatPaymentResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskAcceptDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskAcceptDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskSubmitEvidenceRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskSubmitEvidenceResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct BilldeskDefendDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct BilldeskDefendDisputeResponse;
-
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum BilldeskPaymentStatus {
     Success,
@@ -457,18 +399,6 @@ impl<
             "0396" => common_enums::AttemptStatus::AuthenticationPending,
             "0398" => common_enums::AttemptStatus::Failure,
             _ => common_enums::AttemptStatus::Failure,
-        };
-
-        let error_code = if status == common_enums::AttemptStatus::Failure {
-            Some(response._error_status.clone())
-        } else {
-            None
-        };
-
-        let error_message = if status == common_enums::AttemptStatus::Failure {
-            Some(response._error_description.clone())
-        } else {
-            None
         };
 
         Ok(Self::TransactionResponse {
