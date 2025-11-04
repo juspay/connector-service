@@ -16,7 +16,6 @@ use hyperswitch_masking::{ExposeInterface, PeekInterface};
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
-use super::BilldeskRouterData;
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -99,81 +98,6 @@ pub struct BilldeskErrorResponse {
     pub error_description: Option<String>,
 }
 
-// Stub types for flows that aren't fully implemented yet
-#[derive(Default, Debug, Serialize)]
-pub struct BilldeskCaptureRequest;
-#[derive(Default, Debug, Serialize)]
-pub struct BilldeskVoidRequest;
-#[derive(Default, Debug, Serialize)]
-pub struct BilldeskRefundRequest;
-#[derive(Default, Debug, Serialize)]
-pub struct BilldeskRSyncRequest;
-#[derive(Default, Debug, Serialize)]
-pub struct BilldeskSetupMandateRequest;
-#[derive(Default, Debug, Serialize)]
-pub struct BilldeskAccessTokenRequest;
-#[derive(Default, Debug, Serialize)]
-pub struct BilldeskSessionTokenRequest;
-#[derive(Default, Debug, Serialize)]
-pub struct BilldeskCustomerRequest;
-#[derive(Default, Debug, Serialize)]
-pub struct BilldeskTokenRequest;
-#[derive(Default, Debug, Serialize)]
-pub struct BilldeskOrderRequest;
-#[derive(Default, Debug, Serialize)]
-pub struct BilldeskRepeatPaymentRequest;
-#[derive(Default, Debug, Serialize)]
-pub struct BilldeskAcceptDisputeRequest;
-#[derive(Default, Debug, Serialize)]
-pub struct BilldeskDefendDisputeRequest;
-#[derive(Default, Debug, Serialize)]
-pub struct BilldeskSubmitEvidenceRequest;
-#[derive(Default, Debug, Serialize)]
-pub struct BilldeskPreAuthenticateRequest;
-#[derive(Default, Debug, Serialize)]
-pub struct BilldeskAuthenticateRequest;
-#[derive(Default, Debug, Serialize)]
-pub struct BilldeskPostAuthenticateRequest;
-#[derive(Default, Debug, Serialize)]
-pub struct BilldeskVoidPCRequest;
-
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct BilldeskCaptureResponse;
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct BilldeskVoidResponse;
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct BilldeskRefundResponse;
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct BilldeskRSyncResponse;
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct BilldeskSetupMandateResponse;
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct BilldeskAccessTokenResponse;
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct BilldeskSessionTokenResponse;
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct BilldeskCustomerResponse;
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct BilldeskTokenResponse;
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct BilldeskOrderResponse;
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct BilldeskRepeatPaymentResponse;
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct BilldeskAcceptDisputeResponse;
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct BilldeskDefendDisputeResponse;
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct BilldeskSubmitEvidenceResponse;
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct BilldeskPreAuthenticateResponse;
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct BilldeskAuthenticateResponse;
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct BilldeskPostAuthenticateResponse;
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct BilldeskVoidPCResponse;
-
 #[derive(Default, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum BilldeskPaymentStatus {
@@ -196,33 +120,24 @@ impl From<BilldeskPaymentStatus> for common_enums::AttemptStatus {
 }
 
 fn create_billdesk_message<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>(
-    router_data: &BilldeskRouterData<
-        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        T,
-    >,
+    router_data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
 ) -> Result<String, error_stack::Report<errors::ConnectorError>> {
-    let customer_id = router_data.router_data.resource_common_data.get_customer_id()?;
+    let customer_id = router_data.resource_common_data.get_customer_id()?;
     let amount = router_data
-        .connector
-        .amount_converter
-        .convert(
-            router_data.router_data.request.minor_amount,
-            router_data.router_data.request.currency,
-        )
-        .change_context(ConnectorError::RequestEncodingFailed)?;
+        .request
+        .minor_amount;
     
     let transaction_id = router_data
-        .router_data
         .resource_common_data
         .connector_request_reference_id.clone();
     
-    let currency = router_data.router_data.request.currency.to_string();
+    let currency = router_data.request.currency.to_string();
     
     // Create the message in the format expected by Billdesk
     // This is based on the Haskell implementation patterns
     let message = format!(
         "MerchantID={}&CustomerID={}&TxnReferenceNo={}&TxnAmount={}&Currency={}&ItemCode=DIRECT&TxnType=UPI&AdditionalInfo1={}&AdditionalInfo2={}&AdditionalInfo3={}&AdditionalInfo4={}&AdditionalInfo5={}&AdditionalInfo6={}&AdditionalInfo7={}",
-        get_merchant_id(&router_data.router_data.connector_auth_type)?,
+        get_merchant_id(&router_data.connector_auth_type)?,
         customer_id.get_string_repr(),
         transaction_id,
         amount,
@@ -255,42 +170,36 @@ impl<
             + Serialize,
     >
     TryFrom<
-        BilldeskRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
+        &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
         >,
     > for BilldeskPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: BilldeskRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
+        item: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let payment_method_type = item.router_data.request.payment_method_type
+        let payment_method_type = item.request.payment_method_type
             .ok_or(errors::ConnectorError::MissingPaymentMethodType)?;
         
         match payment_method_type {
             common_enums::PaymentMethodType::UpiCollect => {
-                let msg = create_billdesk_message(&item)?;
+                let msg = create_billdesk_message(item)?;
                 
-                let ip_address = item.router_data.request.get_ip_address_as_optional()
+                let ip_address = item.request.get_ip_address_as_optional()
                     .map(|ip| ip.expose())
                     .unwrap_or_else(|| "127.0.0.1".to_string());
                 
-                let user_agent = item.router_data.request.browser_info
+                let user_agent = item.request.browser_info
                     .as_ref()
                     .and_then(|info| info.user_agent.clone())
                     .unwrap_or_else(|| "Mozilla/5.0".to_string());
@@ -318,29 +227,22 @@ impl<
             + Serialize,
     >
     TryFrom<
-        BilldeskRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     > for BilldeskPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: BilldeskRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let merchant_id = get_merchant_id(&item.router_data.connector_auth_type)?;
-        let transaction_id = item.router_data.request.connector_transaction_id
+        let merchant_id = get_merchant_id(&item.connector_auth_type)?;
+        let transaction_id = item.request.connector_transaction_id
             .get_connector_transaction_id()
             .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
         
         let message = format!(
             "MerchantID={}&TxnReferenceNo={}",
-            merchant_id,
-            transaction_id
+            merchant_id, transaction_id
         );
         
         Ok(Self {
@@ -358,13 +260,13 @@ impl<
             + 'static
             + Serialize
             + Serialize,
-    > TryFrom<ResponseRouterData<BilldeskPaymentsResponse, Self>>
+    > TryFrom<ResponseRouterData<BilldeskPaymentsResponse, F>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: ResponseRouterData<BilldeskPaymentsResponse, Self>,
+        item: ResponseRouterData<BilldeskPaymentsResponse, F>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
