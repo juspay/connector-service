@@ -347,6 +347,108 @@ ConnectorIntegrationV2<
 {
 }
 
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>
+ConnectorIntegrationV2<
+    domain_types::connector_flow::CreateAccessToken,
+    PaymentFlowData,
+    domain_types::connector_types::AccessTokenRequestData,
+    domain_types::connector_types::AccessTokenResponseData,
+> for TPSL<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>
+ConnectorIntegrationV2<
+    domain_types::connector_flow::CreateConnectorCustomer,
+    PaymentFlowData,
+    domain_types::connector_types::ConnectorCustomerData,
+    domain_types::connector_types::ConnectorCustomerResponse,
+> for TPSL<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>
+ConnectorIntegrationV2<
+    domain_types::connector_flow::PaymentMethodToken,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentMethodTokenizationData<T>,
+    domain_types::connector_types::PaymentMethodTokenResponse,
+> for TPSL<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>
+ConnectorIntegrationV2<
+    domain_types::connector_flow::PreAuthenticate,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentsPreAuthenticateData<T>,
+    PaymentsResponseData,
+> for TPSL<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>
+ConnectorIntegrationV2<
+    domain_types::connector_flow::Authenticate,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentsAuthenticateData<T>,
+    PaymentsResponseData,
+> for TPSL<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>
+ConnectorIntegrationV2<
+    domain_types::connector_flow::PostAuthenticate,
+    PaymentFlowData,
+    domain_types::connector_types::PaymentsPostAuthenticateData<T>,
+    PaymentsResponseData,
+> for TPSL<T>
+{
+}
+
 macros::create_all_prerequisites!(
     connector_name: TPSL,
     generic_type: T,
