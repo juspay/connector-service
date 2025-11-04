@@ -21,7 +21,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::zaakpay::ZaakPayRouterData, types::ResponseRouterData};
+use crate::types::ResponseRouterData;
 
 // Request/Response types based on Haskell implementation
 
@@ -380,62 +380,38 @@ impl From<ZaakPayPaymentStatus> for common_enums::AttemptStatus {
 }
 
 // Request transformation implementations
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
->
-TryFrom<
-    ZaakPayRouterData<
-        RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-        T,
-    >,
-> for ZaakPayPaymentsRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+    for ZaakPayPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: ZaakPayRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
+        item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
-        let return_url = item.router_data.request.get_router_return_url()?;
+        let customer_id = item.resource_common_data.get_customer_id()?;
+        let return_url = item.request.get_router_return_url()?;
         
         // Extract authentication data
-        let auth = ZaakPayAuth::try_from(&item.router_data.connector_auth_type)?;
+        let auth = ZaakPayAuth::try_from(&item.connector_auth_type)?;
         
         // Get amount using proper converter
         let amount = item
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
+                item.request.minor_amount,
+                item.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         // Create order details
         let order_detail = ZaakPayOrderDetailTransType {
-            order_id: item.router_data.resource_common_data.connector_request_reference_id.clone(),
+            order_id: item.resource_common_data.connector_request_reference_id.clone(),
             amount: amount.to_string(),
-            currency: item.router_data.request.currency.to_string(),
+            currency: item.request.currency.to_string(),
             product_description: "Payment".to_string(),
-            email: item.router_data.request.email.clone().map(|e| e.peek().to_string()).unwrap_or_default(),
+            email: item.request.email.clone().map(|e| e.peek().to_string()).unwrap_or_default(),
             phone: "0000000000".to_string(), // Default phone number
         };
 
@@ -449,7 +425,7 @@ TryFrom<
         };
 
         // Create payment instrument based on payment method type
-        let payment_instrument = match item.router_data.request.payment_method_type {
+        let payment_instrument = match item.request.payment_method_type {
             Some(common_enums::PaymentMethodType::UpiCollect) => {
                 ZaakPayPaymentInstrumentTransType {
                     payment_mode: "upi".to_string(),
@@ -488,7 +464,7 @@ TryFrom<
             merchant_identifier: auth.merchant_identifier.peek().to_string(),
             encryption_key_id: None,
             show_mobile: None,
-            mode: if item.router_data.resource_common_data.test_mode.unwrap_or(false) {
+            mode: if item.resource_common_data.test_mode.unwrap_or(false) {
                 "0".to_string() // Test mode
             } else {
                 "1".to_string() // Live mode
@@ -551,22 +527,14 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
 }
 
 // Response transformation implementations
-impl<
-    F,
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize
-        + Serialize,
-> TryFrom<ResponseRouterData<ZaakPayPaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
+TryFrom<ResponseRouterData<ZaakPayPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: ResponseRouterData<ZaakPayPaymentsResponse, Self>,
+        item: ResponseRouterData<ZaakPayPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
@@ -617,13 +585,13 @@ impl<
 }
 
 // PSync response transformation
-impl TryFrom<ResponseRouterData<ZaakPayPaymentsSyncResponse, Self>>
+impl TryFrom<ResponseRouterData<ZaakPayPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: ResponseRouterData<ZaakPayPaymentsSyncResponse, Self>,
+        item: ResponseRouterData<ZaakPayPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
