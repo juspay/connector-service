@@ -291,6 +291,44 @@ pub struct EaseBuzzDummyResponse {
     pub status: String,
 }
 
+// Additional dummy types for various flows
+pub type EaseBuzzPaymentOrderCreateRequest = EaseBuzzDummyRequest;
+pub type EaseBuzzPaymentOrderCreateResponse = EaseBuzzDummyResponse;
+pub type EaseBuzzSessionTokenRequest = EaseBuzzDummyRequest;
+pub type EaseBuzzSessionTokenResponse = EaseBuzzDummyResponse;
+pub type EaseBuzzAccessTokenRequest = EaseBuzzDummyRequest;
+pub type EaseBuzzAccessTokenResponse = EaseBuzzDummyResponse;
+pub type EaseBuzzCreateConnectorCustomerRequest = EaseBuzzDummyRequest;
+pub type EaseBuzzCreateConnectorCustomerResponse = EaseBuzzDummyResponse;
+pub type EaseBuzzPaymentMethodTokenRequest = EaseBuzzDummyRequest;
+pub type EaseBuzzPaymentMethodTokenResponse = EaseBuzzDummyResponse;
+pub type EaseBuzzPaymentVoidRequest = EaseBuzzDummyRequest;
+pub type EaseBuzzPaymentVoidResponse = EaseBuzzDummyResponse;
+pub type EaseBuzzPaymentVoidPostCaptureRequest = EaseBuzzDummyRequest;
+pub type EaseBuzzPaymentVoidPostCaptureResponse = EaseBuzzDummyResponse;
+pub type EaseBuzzRefundRequest = EaseBuzzDummyRequest;
+pub type EaseBuzzRefundResponse = EaseBuzzDummyResponse;
+pub type EaseBuzzRefundSyncRequest = EaseBuzzDummyRequest;
+pub type EaseBuzzRefundSyncResponse = EaseBuzzDummyResponse;
+pub type EaseBuzzPaymentCaptureRequest = EaseBuzzDummyRequest;
+pub type EaseBuzzPaymentCaptureResponse = EaseBuzzDummyResponse;
+pub type EaseBuzzSetupMandateRequest = EaseBuzzDummyRequest;
+pub type EaseBuzzSetupMandateResponse = EaseBuzzDummyResponse;
+pub type EaseBuzzRepeatPaymentRequest = EaseBuzzDummyRequest;
+pub type EaseBuzzRepeatPaymentResponse = EaseBuzzDummyResponse;
+pub type EaseBuzzAcceptDisputeRequest = EaseBuzzDummyRequest;
+pub type EaseBuzzAcceptDisputeResponse = EaseBuzzDummyResponse;
+pub type EaseBuzzDefendDisputeRequest = EaseBuzzDummyRequest;
+pub type EaseBuzzDefendDisputeResponse = EaseBuzzDummyResponse;
+pub type EaseBuzzSubmitEvidenceRequest = EaseBuzzDummyRequest;
+pub type EaseBuzzSubmitEvidenceResponse = EaseBuzzDummyResponse;
+pub type EaseBuzzPreAuthenticateRequest = EaseBuzzDummyRequest;
+pub type EaseBuzzPreAuthenticateResponse = EaseBuzzDummyResponse;
+pub type EaseBuzzAuthenticateRequest = EaseBuzzDummyRequest;
+pub type EaseBuzzAuthenticateResponse = EaseBuzzDummyResponse;
+pub type EaseBuzzPostAuthenticateRequest = EaseBuzzDummyRequest;
+pub type EaseBuzzPostAuthenticateResponse = EaseBuzzDummyResponse;
+
 
 
 impl<
