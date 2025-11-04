@@ -13,8 +13,9 @@ use std::{collections::HashMap, fs};
 
 // Path to the credentials file - use environment variable if set (for CI), otherwise use relative path (for local)
 fn get_creds_file_path() -> String {
-    std::env::var("CONNECTOR_AUTH_FILE_PATH")
-        .unwrap_or_else(|_| "../../.github/test/creds.json".to_string())
+    std::env::var("CONNECTOR_AUTH_FILE_PATH").unwrap_or_else(|_| {
+        "/home/runner/work/connector-service/connector-service/.github/test/creds.json".to_string()
+    })
 }
 
 /// Generic credential structure that can deserialize any connector's credentials
