@@ -176,7 +176,7 @@ macros::create_all_prerequisites!(
         ),
     ],
     amount_converters: [
-        amount_converter: StringMajorUnit,  // PayU expects amount in major units as string
+        amount_converter: StringMajorUnit  // PayU expects amount in major units as string
     ],
     member_functions: {
         // Helper function to extract authentication credentials
