@@ -123,6 +123,7 @@ impl From<BilldeskPaymentStatus> for common_enums::AttemptStatus {
 fn create_billdesk_message<T: PaymentMethodDataTypes>(
     router_data: &BilldeskRouterData<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        T,
     >,
 ) -> Result<String, errors::ConnectorError> {
     let customer_id = router_data.router_data.resource_common_data.get_customer_id()?;
@@ -186,6 +187,7 @@ impl<
                 PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
+            T,
         >,
     > for BilldeskPaymentsRequest
 {
@@ -199,6 +201,7 @@ impl<
                 PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let payment_method_type = item.router_data.request.payment_method_type
@@ -242,6 +245,7 @@ impl<
     TryFrom<
         BilldeskRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     > for BilldeskPaymentsSyncRequest
 {
@@ -250,6 +254,7 @@ impl<
     fn try_from(
         item: BilldeskRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let merchant_id = get_merchant_id(&item.router_data.connector_auth_type)?;
