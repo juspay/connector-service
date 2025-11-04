@@ -395,23 +395,7 @@ macros::macro_connector_implementation!(
             "application/x-www-form-urlencoded"
         }
 
-        fn preprocess_response_bytes<F, FCD, Res>(
-            &self,
-            req: &RouterDataV2<F, FCD, PaymentsAuthorizeData<T>, Res>,
-            bytes: bytes::Bytes,
-        ) -> CustomResult<bytes::Bytes, ConnectorError> {
-            // For UPI collect flows, we need to return base64 decoded response
-            if transformers::is_upi_collect_flow(&req.request) {
-                let decoded_value = base64::Engine::decode(&bytes);
-                match decoded_value {
-                    Ok(decoded_bytes) => Ok(decoded_bytes.into()),
-                    Err(_) => Ok(bytes.clone())
-                }
-            } else {
-                // For other flows, we can use the response itself
-                Ok(bytes)
-            }
-        }
+        
 
         fn get_error_response_v2(
             &self,
