@@ -214,7 +214,7 @@ macros::create_all_prerequisites!(
         }
 
         // Helper function to get email
-        fn get_email<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+        fn get_email(
             resource_common_data: &domain_types::connector_types::PaymentFlowData,
         ) -> CustomResult<common_utils::pii::Email, ConnectorError> {
             resource_common_data.get_billing_email()
