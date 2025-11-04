@@ -432,7 +432,7 @@ TryFrom<
         // Create order details
         let order_detail = ZaakPayOrderDetailTransType {
             order_id: item.router_data.resource_common_data.connector_request_reference_id.clone(),
-            amount: amount,
+            amount: amount.to_string(),
             currency: item.router_data.request.currency.to_string(),
             product_description: "Payment".to_string(),
             email: item.router_data.request.email.clone().map(|e| e.peek().to_string()).unwrap_or_default(),
