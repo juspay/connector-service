@@ -75,6 +75,7 @@ pub enum ConnectorEnum {
     Cybersource,
     Worldpay,
     Worldpayvantiv,
+    Paypal,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -114,6 +115,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Stripe => Ok(Self::Stripe),
             grpc_api_types::payments::Connector::Cybersource => Ok(Self::Cybersource),
             grpc_api_types::payments::Connector::Worldpay => Ok(Self::Worldpayvantiv),
+            grpc_api_types::payments::Connector::Paypal => Ok(Self::Paypal),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -1366,6 +1368,7 @@ pub struct RefundFlowData {
     pub raw_connector_response: Option<Secret<String>>,
     pub connector_response_headers: Option<http::HeaderMap>,
     pub raw_connector_request: Option<Secret<String>>,
+    pub access_token: Option<AccessTokenResponseData>,
 }
 
 impl RawConnectorRequestResponse for RefundFlowData {
@@ -1900,6 +1903,21 @@ impl RefundsData {
     pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
         self.get_ip_address_as_optional()
             .ok_or_else(missing_field_err("browser_info.ip_address"))
+    }
+
+    pub fn get_connector_meta(&self) -> Result<SecretSerdeValue, Error> {
+        self.refund_connector_metadata
+            .clone()
+            .ok_or_else(missing_field_err("connector_meta_data"))
+    }
+
+    pub fn to_connector_meta<T>(&self) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        self.get_connector_meta()?
+            .parse_value(std::any::type_name::<T>())
+            .change_context(ConnectorError::NoConnectorMetaData)
     }
 }
 
