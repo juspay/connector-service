@@ -640,6 +640,12 @@ impl_source_verification_stub!(PreAuthenticate, PaymentFlowData, domain_types::c
 impl_source_verification_stub!(Authenticate, PaymentFlowData, domain_types::connector_types::PaymentsAuthenticateData<T>, PaymentsResponseData);
 impl_source_verification_stub!(PostAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPostAuthenticateData<T>, PaymentsResponseData);
 
+// Add missing trait implementations
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentAuthorizeV2<T> for Billdesk<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    connector_types::PaymentSyncV2 for Billdesk<T> {}
+
 // Add ConnectorServiceTrait implementation after all other traits
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Billdesk<T> {}
