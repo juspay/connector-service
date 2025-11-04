@@ -510,7 +510,7 @@ impl<
                         reference: item.router_data.resource_common_data.connector_request_reference_id.clone(),
                         identifier: item.router_data.resource_common_data.connector_request_reference_id.clone(),
                     }],
-                    description: Some(item.router_data.request.description.clone().unwrap_or_default()),
+                    description: Some(item.router_data.resource_common_data.description.clone().unwrap_or_default()),
                 };
 
                 let payment_payload = TpslPaymentIntentPayload {
