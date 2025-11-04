@@ -503,7 +503,7 @@ impl<
                     webhook_type: "HTTP_POST".to_string(),
                 };
 
-                let cart_payload = TpslUPITokenCart {
+                let _cart_payload = TpslUPITokenCart {
                     item: vec![TpslUPIItem {
                         amount: amount.to_string(),
                         com_amt: "0".to_string(),
