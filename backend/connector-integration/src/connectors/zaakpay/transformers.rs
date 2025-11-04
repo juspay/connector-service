@@ -433,11 +433,11 @@ TryFrom<
         // Create order details
         let order_detail = ZaakPayOrderDetailTransType {
             order_id: item.router_data.resource_common_data.connector_request_reference_id.clone(),
-            amount: amount.get_amount_as_string(),
+            amount: amount,
             currency: item.router_data.request.currency.to_string(),
-            product_description: item.router_data.request.description.clone().unwrap_or_else(|| "Payment".to_string()),
-            email: item.router_data.request.email.clone().map(|e| e.to_string()).unwrap_or_default(),
-            phone: item.router_data.request.phone.clone().map(|p| p.to_string()).unwrap_or_default(),
+            product_description: "Payment".to_string(),
+            email: item.router_data.request.email.clone().map(|e| e.peek().to_string()).unwrap_or_default(),
+            phone: "0000000000".to_string(), // Default phone number
         };
 
         // Create billing address (using default values for now)
