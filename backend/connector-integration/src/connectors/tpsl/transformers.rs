@@ -18,7 +18,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::tpsl::TpslRouterData, types::ResponseRouterData};
+use crate::{connectors::tpsl::TPSLRouterData, types::ResponseRouterData};
 
 // TPSL Payment Request Types
 #[derive(Debug, Serialize)]
