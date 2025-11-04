@@ -1,4 +1,4 @@
-# UCS (Universal Connector Service) Setup Guide
+# UCS (Unified Connector Service) Setup Guide
 
 This guide helps you set up and run UCS locally for testing payment integrations with various payment processors.
 
