@@ -275,6 +275,15 @@ macros::create_all_prerequisites!(
         ) -> &str {
             &connectors.payu.base_url
         }
+
+        // Default implementation for preprocess_response_bytes
+        fn preprocess_response_bytes<F, FCD, Req, Res>(
+            &self,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
+            bytes: bytes::Bytes,
+        ) -> CustomResult<bytes::Bytes, ConnectorError> {
+            Ok(bytes)
+        }
     }
 );
 
