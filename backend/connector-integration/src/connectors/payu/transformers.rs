@@ -256,15 +256,18 @@ impl<
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
+        item: PayuRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         // Extract router data
-        let router_data = &item;
+        let router_data = &item.router_data;
 
         // Use AmountConvertor framework for proper amount handling
         let amount = item
