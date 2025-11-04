@@ -43,7 +43,7 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
-    pub(crate) const ACCEPT: &str = "Accept";
+    pub(crate) const _ACCEPT: &str = "Accept";
 }
 
 // Trait implementations with generic type parameters
