@@ -257,45 +257,17 @@ docker run --rm -p 8000:8000 -p 8080:8080 \
 grpcurl -plaintext localhost:8000 grpc.health.v1.Health/Check
 
 
-#### Building with Podman
+### Podman Setup
 
-**Memory Requirements:**
-- **Minimum**: 12GB for successful build
-- **Recommended**: 16GB for optimal performance
+**Memory Requirements:** 12GB minimum for successful build.
 
 ```bash
-# Set machine memory (requires restart)
-podman machine stop
+# Configure memory (one-time setup)
 podman machine set --memory 12288
-podman machine start
 
-# Build the image
+# Use same commands as Docker
 podman build -f Dockerfile -t ucs:latest .
-```
-
-#### Running with Podman
-
-```bash
-# Run container (same as Docker)
 podman run --rm -p 8000:8000 -p 8080:8080 ucs:latest
-
-# With custom environment
-podman run --rm -p 8000:8000 -p 8080:8080 \
-  -e CS__COMMON__ENVIRONMENT=sandbox \
-  ucs:latest
-```
-
-#### Podman Troubleshooting
-
-**Build Memory Issues:**
-```bash
-# Check current memory allocation
-podman machine list
-
-# Increase memory if build fails
-podman machine stop
-podman machine set --memory 16384  # 16GB
-podman machine start
 ```
 
 **Configuration Files Available:**
