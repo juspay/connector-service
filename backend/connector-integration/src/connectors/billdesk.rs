@@ -10,10 +10,10 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder, CreateSessionToken, DefendDispute, PaymentMethodToken, PostAuthenticate, PreAuthenticate, PSync, Refund, RepeatPayment, RSync, SetupMandate, SubmitEvidence, Void, VoidPC,
+        Authorize, PSync,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData, ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData, DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        ConnectorWebhookSecrets, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RequestDetails,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
