@@ -1,11 +1,7 @@
 use std::collections::HashMap;
 
 use common_utils::{
-    errors::CustomResult,
-    ext_traits::ValueExt,
     request::Method,
-    types::StringMinorUnit,
-    Email,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
@@ -18,13 +14,10 @@ use domain_types::{
     utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
-
-// Type alias for router data
-pub type BilldeskRouterData<R, T> = crate::ConnectorRouterData<R>;
+use crate::types::ResponseRouterData;
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
