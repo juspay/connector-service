@@ -135,7 +135,7 @@ pub struct ZaakPayCardResType {
     pub payment_method: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayNetBankingRespType {
     pub bankid: String,
