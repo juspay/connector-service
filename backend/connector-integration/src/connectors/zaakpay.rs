@@ -228,7 +228,7 @@ impl<
         let payload = String::from_utf8_lossy(&request.body);
         let expected_checksum = zaakpay::generate_checksum(&payload, &secret);
 
-        Ok(received_checksum == expected_checksum)
+        Ok(received_checksum.as_str() == expected_checksum)
     }
 
     fn get_event_type(
