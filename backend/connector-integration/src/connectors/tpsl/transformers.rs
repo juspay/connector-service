@@ -425,6 +425,7 @@ impl TryFrom<&ConnectorAuthType> for TpslAuthType {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, key1, api_secret } => {
                 let auth_data: TpslAuthType = api_key
+                    .peek()
                     .parse_value("TpslAuthType")
                     .change_context(errors::ConnectorError::InvalidDataFormat {
                         field_name: "api_key",
