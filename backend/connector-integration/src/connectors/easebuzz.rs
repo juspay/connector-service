@@ -285,10 +285,6 @@ fn get_easebuzz_auth_header(
             let key = api_key.peek();
             Ok(format!("key {}: {}", key, "easebuzz").into_masked())
         }
-        ConnectorAuthType::Key { api_key, .. } => {
-            let key = api_key.peek();
-            Ok(format!("key {}: {}", key, "easebuzz").into_masked())
-        }
         _ => Err(errors::ConnectorError::FailedToObtainAuthType)?,
     }
 }
