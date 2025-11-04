@@ -221,7 +221,7 @@ macros::create_all_prerequisites!(
         }
 
         // Helper function to get phone number
-        fn get_phone<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+        fn get_phone(
             resource_common_data: &domain_types::connector_types::PaymentFlowData,
         ) -> CustomResult<hyperswitch_masking::Secret<String>, ConnectorError> {
             resource_common_data.get_billing_phone_number()
