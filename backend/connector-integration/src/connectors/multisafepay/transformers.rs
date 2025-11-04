@@ -1,5 +1,6 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
+use common_utils::types::MinorUnit;
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
     connector_types::{
@@ -14,41 +15,119 @@ use domain_types::{
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-// ===== HELPER FUNCTIONS FOR STATUS MAPPING =====
+// ===== HELPER FUNCTIONS =====
 
-/// Maps MultiSafepay payment statuses to UCS AttemptStatus
-///
-/// MultiSafepay Status Reference:
-/// - "completed": Payment successfully completed
-/// - "initialized": Payment initiated but not yet completed
-/// - "reserved": Payment authorized but not captured
-/// - "declined": Payment declined by bank/processor
-/// - "cancelled": Payment cancelled by merchant or customer
-/// - "void": Payment voided
-/// - "expired": Payment session expired
-/// - "refunded"/"partial_refunded": Payment has been refunded
-/// - "shipped": Payment completed and order shipped
-/// - "chargeback": Payment subject to chargeback
-fn map_payment_status_to_attempt_status(status: &str) -> AttemptStatus {
-    match status {
-        "completed" => AttemptStatus::Charged,
-        "initialized" | "uncleared" => AttemptStatus::Pending,
-        "declined" | "cancelled" | "void" | "expired" => AttemptStatus::Failure,
-        "refunded" | "partial_refunded" => AttemptStatus::Charged,
-        "reserved" => AttemptStatus::Authorized,
-        "shipped" => AttemptStatus::Charged,
-        "chargeback" => AttemptStatus::Charged,
-        _ => AttemptStatus::Pending,
+/// Determines the order type based on payment method
+/// Most payments use redirect flow, but this can be customized per payment method
+fn get_order_type_from_payment_method<T: PaymentMethodDataTypes>(
+    _payment_method_data: &domain_types::payment_method_data::PaymentMethodData<T>,
+) -> &'static str {
+    // For now, MultiSafepay primarily uses redirect flow
+    // This can be extended to return "direct" for specific payment methods if needed
+    "redirect"
+}
+
+/// Maps payment method data to MultiSafepay gateway identifier
+fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
+    payment_method_data: &domain_types::payment_method_data::PaymentMethodData<T>,
+) -> Option<String> {
+    use domain_types::payment_method_data::PaymentMethodData;
+
+    match payment_method_data {
+        PaymentMethodData::Card(card_data) => {
+            // Map card network to gateway identifier
+            card_data.card_network.as_ref().map(|network| {
+                match network {
+                    common_enums::CardNetwork::Visa => "VISA",
+                    common_enums::CardNetwork::Mastercard => "MASTERCARD",
+                    common_enums::CardNetwork::AmericanExpress => "AMEX",
+                    common_enums::CardNetwork::Maestro => "MAESTRO",
+                    common_enums::CardNetwork::DinersClub => "DINER",
+                    common_enums::CardNetwork::Discover => "DISCOVER",
+                    _ => "CREDITCARD", // Default for unrecognized card networks
+                }
+                .to_string()
+            })
+        }
+        PaymentMethodData::BankRedirect(_) => Some("IDEAL".to_string()), // Example for iDEAL
+        PaymentMethodData::Wallet(_) => Some("PAYPAL".to_string()),     // Example for PayPal
+        // Add more payment methods as needed
+        _ => None,
     }
 }
 
-/// Maps MultiSafepay refund statuses to UCS RefundStatus
-fn map_refund_status(status: &str) -> RefundStatus {
-    match status {
-        "completed" | "refunded" => RefundStatus::Success,
-        "initialized" | "uncleared" => RefundStatus::Pending,
-        "declined" | "cancelled" | "void" | "expired" => RefundStatus::Failure,
-        _ => RefundStatus::Pending,
+// ===== STATUS ENUMS =====
+
+/// MultiSafepay payment status enum
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum MultisafepayPaymentStatus {
+    Completed,
+    #[default]
+    Initialized,
+    Uncleared,
+    Declined,
+    Cancelled,
+    Void,
+    Expired,
+    Refunded,
+    #[serde(rename = "partial_refunded")]
+    PartialRefunded,
+    Reserved,
+    Shipped,
+    Chargeback,
+}
+
+impl From<MultisafepayPaymentStatus> for AttemptStatus {
+    fn from(status: MultisafepayPaymentStatus) -> Self {
+        match status {
+            MultisafepayPaymentStatus::Completed => Self::Charged,
+            MultisafepayPaymentStatus::Initialized | MultisafepayPaymentStatus::Uncleared => {
+                Self::Pending
+            }
+            MultisafepayPaymentStatus::Declined
+            | MultisafepayPaymentStatus::Cancelled
+            | MultisafepayPaymentStatus::Void
+            | MultisafepayPaymentStatus::Expired => Self::Failure,
+            MultisafepayPaymentStatus::Refunded | MultisafepayPaymentStatus::PartialRefunded => {
+                Self::Charged
+            }
+            MultisafepayPaymentStatus::Reserved => Self::Authorized,
+            MultisafepayPaymentStatus::Shipped => Self::Charged,
+            MultisafepayPaymentStatus::Chargeback => Self::Charged,
+        }
+    }
+}
+
+/// MultiSafepay refund status enum
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum MultisafepayRefundStatus {
+    Completed,
+    Refunded,
+    #[default]
+    Initialized,
+    Uncleared,
+    Declined,
+    Cancelled,
+    Void,
+    Expired,
+}
+
+impl From<MultisafepayRefundStatus> for RefundStatus {
+    fn from(status: MultisafepayRefundStatus) -> Self {
+        match status {
+            MultisafepayRefundStatus::Completed | MultisafepayRefundStatus::Refunded => {
+                Self::Success
+            }
+            MultisafepayRefundStatus::Initialized | MultisafepayRefundStatus::Uncleared => {
+                Self::Pending
+            }
+            MultisafepayRefundStatus::Declined
+            | MultisafepayRefundStatus::Cancelled
+            | MultisafepayRefundStatus::Void
+            | MultisafepayRefundStatus::Expired => Self::Failure,
+        }
     }
 }
 
@@ -91,7 +170,7 @@ pub struct MultisafepayPaymentsRequest {
     pub order_id: String,
     pub gateway: Option<String>,
     pub currency: String,
-    pub amount: i64,
+    pub amount: MinorUnit,
     pub description: String,
 }
 
@@ -110,15 +189,18 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
+        let order_type = get_order_type_from_payment_method(&item.request.payment_method_data);
+        let gateway = get_gateway_from_payment_method(&item.request.payment_method_data);
+
         Ok(Self {
-            order_type: "redirect".to_string(),
+            order_type: order_type.to_string(),
             order_id: item
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            gateway: None,
+            gateway,
             currency: item.request.currency.to_string(),
-            amount: item.request.minor_amount.get_amount_as_i64(),
+            amount: item.request.minor_amount,
             description: item
                 .request
                 .statement_descriptor
@@ -142,8 +224,8 @@ pub struct MultisafepayResponseData {
     #[serde(deserialize_with = "deserialize_transaction_id", default)]
     pub transaction_id: Option<String>,
     #[serde(default)]
-    pub status: String,
-    pub amount: Option<i64>,
+    pub status: MultisafepayPaymentStatus,
+    pub amount: Option<MinorUnit>,
     pub currency: Option<String>,
     // Additional fields that may appear in GET response - using flatten to ignore unknown fields
     #[serde(flatten)]
@@ -192,7 +274,7 @@ impl<T: PaymentMethodDataTypes>
     ) -> Result<Self, Self::Error> {
         let response_data = &item.response.data;
 
-        let status = map_payment_status_to_attempt_status(&response_data.status);
+        let status = response_data.status.clone().into();
 
         let redirection_data = response_data.payment_url.as_ref().map(|url| {
             Box::new(domain_types::router_response_types::RedirectForm::Uri { uri: url.clone() })
@@ -242,7 +324,7 @@ impl
     ) -> Result<Self, Self::Error> {
         let response_data = &item.response.data;
 
-        let status = map_payment_status_to_attempt_status(&response_data.status);
+        let status = response_data.status.clone().into();
 
         let transaction_id = response_data
             .transaction_id
@@ -278,7 +360,7 @@ impl
 #[derive(Debug, Serialize)]
 pub struct MultisafepayRefundRequest {
     pub currency: String,
-    pub amount: i64,
+    pub amount: MinorUnit,
 }
 
 impl<F> TryFrom<&RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>>
@@ -291,7 +373,7 @@ impl<F> TryFrom<&RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseDat
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             currency: item.request.currency.to_string(),
-            amount: item.request.minor_refund_amount.get_amount_as_i64(),
+            amount: item.request.minor_refund_amount,
         })
     }
 }
@@ -307,7 +389,7 @@ pub struct MultisafepayRefundData {
     #[serde(deserialize_with = "deserialize_transaction_id", default)]
     pub transaction_id: Option<String>,
     #[serde(default)]
-    pub status: String,
+    pub status: MultisafepayRefundStatus,
     #[serde(deserialize_with = "deserialize_transaction_id", default)]
     pub refund_id: Option<String>,
 }
@@ -330,7 +412,7 @@ impl<F>
     ) -> Result<Self, Self::Error> {
         let response_data = &item.response.data;
 
-        let refund_status = map_refund_status(&response_data.status);
+        let refund_status = response_data.status.clone().into();
 
         let connector_refund_id = response_data
             .refund_id
@@ -349,11 +431,12 @@ impl<F>
     }
 }
 
-// Refund Sync Response - Reuses MultisafepayRefundResponse structure
+// Refund Sync Response - Uses MultisafepayPaymentsResponse (order response)
+// MultiSafepay's refund sync endpoint returns the full order details, not a refund-specific response
 impl
     TryFrom<
         ResponseRouterData<
-            MultisafepayRefundResponse,
+            MultisafepayPaymentsResponse,
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         >,
     > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
@@ -362,19 +445,32 @@ impl
 
     fn try_from(
         item: ResponseRouterData<
-            MultisafepayRefundResponse,
+            MultisafepayPaymentsResponse,
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
         let response_data = &item.response.data;
 
-        let refund_status = map_refund_status(&response_data.status);
+        // Map payment status to refund status
+        let refund_status = match response_data.status {
+            MultisafepayPaymentStatus::Refunded | MultisafepayPaymentStatus::PartialRefunded => {
+                RefundStatus::Success
+            }
+            MultisafepayPaymentStatus::Initialized | MultisafepayPaymentStatus::Uncleared => {
+                RefundStatus::Pending
+            }
+            MultisafepayPaymentStatus::Declined
+            | MultisafepayPaymentStatus::Cancelled
+            | MultisafepayPaymentStatus::Void
+            | MultisafepayPaymentStatus::Expired => RefundStatus::Failure,
+            // For other payment statuses, treat as pending since refund may still be processing
+            _ => RefundStatus::Pending,
+        };
 
         let connector_refund_id = response_data
-            .refund_id
+            .transaction_id
             .clone()
-            .or_else(|| response_data.transaction_id.clone())
-            .unwrap_or_else(|| "unknown".to_string());
+            .unwrap_or_else(|| response_data.order_id.clone());
 
         Ok(Self {
             response: Ok(RefundsResponseData {

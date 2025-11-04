@@ -202,15 +202,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let mut header = vec![(
             headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
+            self.common_get_content_type().to_string().into(),
         )];
         let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
         header.append(&mut auth_header);
         Ok(header)
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
     }
 
     fn get_url(
@@ -292,15 +288,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let mut header = vec![(
             headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
+            self.common_get_content_type().to_string().into(),
         )];
         let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
         header.append(&mut auth_header);
         Ok(header)
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
     }
 
     fn get_http_method(&self) -> common_utils::request::Method {
@@ -394,15 +386,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let mut header = vec![(
             headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
+            self.common_get_content_type().to_string().into(),
         )];
         let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
         header.append(&mut auth_header);
         Ok(header)
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
     }
 
     fn get_url(
@@ -470,15 +458,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let mut header = vec![(
             headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
+            self.common_get_content_type().to_string().into(),
         )];
         let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
         header.append(&mut auth_header);
         Ok(header)
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
     }
 
     fn get_http_method(&self) -> common_utils::request::Method {
@@ -510,9 +494,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         errors::ConnectorError,
     > {
-        let response: multisafepay::MultisafepayRefundResponse = res
+        // Refund sync gets the order details, not a refund-specific response
+        let response: multisafepay::MultisafepayPaymentsResponse = res
             .response
-            .parse_struct("MultisafepayRefundResponse")
+            .parse_struct("MultisafepayPaymentsResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         if let Some(i) = event_builder {
@@ -883,8 +868,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         "application/json"
     }
 
-    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
-        "https://testapi.multisafepay.com/v1/json"
+    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
+        connectors.multisafepay.base_url.as_ref()
     }
 
     fn get_auth_header(
