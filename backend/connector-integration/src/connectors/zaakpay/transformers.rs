@@ -595,18 +595,15 @@ impl<
             None
         };
 
+        let connector_request_reference_id = router_data.resource_common_data.connector_request_reference_id.clone();
+
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
                 ..router_data.resource_common_data
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    router_data
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone(),
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(connector_request_reference_id),
                 redirection_data,
                 mandate_reference: None,
                 connector_metadata: None,
