@@ -49,6 +49,8 @@ use transformers::{
     EaseBuzzPaymentsResponse, 
     EaseBuzzPaymentsSyncRequest, 
     EaseBuzzPaymentsSyncResponse,
+    EaseBuzzDummyRequest,
+    EaseBuzzDummyResponse,
 };
 
 use super::macros;
