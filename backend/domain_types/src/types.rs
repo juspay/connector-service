@@ -120,6 +120,7 @@ pub struct Connectors {
     pub payload: ConnectorParams,
     pub fiservemea: ConnectorParams,
     pub datatrans: ConnectorParams,
+    pub globalpay: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -3102,6 +3103,7 @@ impl
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
             ),
+            access_token: None,
             raw_connector_response: None,
             raw_connector_request: None,
             connector_response_headers: None,
@@ -3133,6 +3135,7 @@ impl
             status: common_enums::RefundStatus::Pending,
             refund_id: None,
             connectors,
+            access_token: None,
             raw_connector_response: None,
             raw_connector_request: None,
             connector_response_headers: None,
@@ -3161,6 +3164,7 @@ impl
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
             ),
+            access_token: None,
             raw_connector_response: None,
             raw_connector_request: None,
             connector_response_headers: None,
@@ -3192,6 +3196,7 @@ impl
             status: common_enums::RefundStatus::Pending,
             refund_id: Some(value.refund_id),
             connectors,
+            access_token: None,
             raw_connector_response: None,
             raw_connector_request: None,
             connector_response_headers: None,
