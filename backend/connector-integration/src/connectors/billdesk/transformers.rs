@@ -12,7 +12,7 @@ use domain_types::{
     utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::PeekInterface;
+use hyperswitch_masking::{ExposeInterface, PeekInterface};
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
