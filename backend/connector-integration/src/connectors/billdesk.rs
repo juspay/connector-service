@@ -178,6 +178,49 @@ macros::create_all_prerequisites!(
             request_body: BilldeskSubmitEvidenceRequest,
             response_body: BilldeskSubmitEvidenceResponse,
             router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        ),
+        // Additional flows required for ConnectorServiceTrait
+        (
+            flow: CreateAccessToken,
+            request_body: BilldeskSessionTokenRequest,
+            response_body: BilldeskSessionTokenResponse,
+            router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, domain_types::connector_types::AccessTokenRequestData, domain_types::connector_types::AccessTokenResponseData>,
+        ),
+        (
+            flow: CreateConnectorCustomer,
+            request_body: BilldeskSessionTokenRequest,
+            response_body: BilldeskSessionTokenResponse,
+            router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, domain_types::connector_types::ConnectorCustomerData, domain_types::connector_types::ConnectorCustomerResponse>,
+        ),
+        (
+            flow: PaymentMethodToken,
+            request_body: BilldeskSessionTokenRequest,
+            response_body: BilldeskSessionTokenResponse,
+            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentMethodTokenizationData, domain_types::connector_types::PaymentMethodTokenResponse>,
+        ),
+        (
+            flow: VoidPC,
+            request_body: BilldeskVoidRequest,
+            response_body: BilldeskVoidResponse,
+            router_data: RouterDataV2<VoidPC, PaymentFlowData, domain_types::connector_types::PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        ),
+        (
+            flow: PreAuthenticate,
+            request_body: BilldeskSessionTokenRequest,
+            response_body: BilldeskSessionTokenResponse,
+            router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPreAuthenticateData, PaymentsResponseData>,
+        ),
+        (
+            flow: Authenticate,
+            request_body: BilldeskSessionTokenRequest,
+            response_body: BilldeskSessionTokenResponse,
+            router_data: RouterDataV2<Authenticate, PaymentFlowData, domain_types::connector_types::PaymentsAuthenticateData, PaymentsResponseData>,
+        ),
+        (
+            flow: PostAuthenticate,
+            request_body: BilldeskSessionTokenRequest,
+            response_body: BilldeskSessionTokenResponse,
+            router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPostAuthenticateData, PaymentsResponseData>,
         )
     ],
     amount_converters: [
