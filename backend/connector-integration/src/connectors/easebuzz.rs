@@ -276,3 +276,63 @@ fn get_easebuzz_auth_header(
         _ => Err(errors::ConnectorError::FailedToObtainAuthType)?,
     }
 }
+
+// SourceVerification implementations
+macro_rules! impl_source_verification_stub {
+    ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
+        impl<
+                T: PaymentMethodDataTypes
+                    + std::fmt::Debug
+                    + std::marker::Sync
+                    + std::marker::Send
+                    + 'static
+                    + Serialize,
+            > SourceVerification<$flow, $common_data, $req, $resp> for EaseBuzz<T>
+        {
+            fn get_secrets(
+                &self,
+                _secrets: ConnectorSourceVerificationSecrets,
+            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+                Ok(Vec::new()) // STUB
+            }
+            fn get_algorithm(
+                &self,
+            ) -> CustomResult<
+                Box<dyn common_utils::crypto::VerifySignature + Send>,
+                errors::ConnectorError,
+            > {
+                Ok(Box::new(common_utils::crypto::NoAlgorithm)) // STUB
+            }
+            fn get_signature(
+                &self,
+                _payload: &[u8],
+                _router_data: &RouterDataV2<$flow, $common_data, $req, $resp>,
+                _secrets: &[u8],
+            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+                Ok(Vec::new()) // STUB
+            }
+            fn get_message(
+                &self,
+                payload: &[u8],
+                _router_data: &RouterDataV2<$flow, $common_data, $req, $resp>,
+                _secrets: &[u8],
+            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+                Ok(payload.to_owned()) // STUB
+            }
+        }
+    };
+}
+
+// Apply to required flows
+impl_source_verification_stub!(
+    Authorize,
+    PaymentFlowData,
+    PaymentsAuthorizeData<T>,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    PSync,
+    PaymentFlowData,
+    PaymentsSyncData,
+    PaymentsResponseData
+);
