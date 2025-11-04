@@ -166,7 +166,11 @@ pub struct BilldeskDefendDisputeResponse;
 #[derive(Default, Debug, Deserialize, Serialize)]
 pub struct BilldeskSubmitEvidenceResponse;
 #[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskPreAuthenticateResponse;
+#[derive(Default, Debug, Deserialize, Serialize)]
 pub struct BilldeskAuthenticateResponse;
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct BilldeskPostAuthenticateResponse;
 #[derive(Default, Debug, Deserialize, Serialize)]
 pub struct BilldeskVoidPCResponse;
 
