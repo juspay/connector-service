@@ -836,7 +836,7 @@ impl<
 }
 
 fn get_redirect_form_data(
-    response_data: &TpslUPITxnResponse,
+    _response_data: &TpslUPITxnResponse,
 ) -> CustomResult<RedirectForm, errors::ConnectorError> {
     // For UPI Intent, we typically redirect to the payment URL or return the response
     // This would depend on the specific TPSL UPI flow
