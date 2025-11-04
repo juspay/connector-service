@@ -73,6 +73,22 @@ pub struct BilldeskDefendDisputeRequest;
 #[derive(Default, Debug, Serialize)]
 pub struct BilldeskSubmitEvidenceRequest;
 
+// Additional stub types for other flows
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskCreateAccessTokenRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskCreateConnectorCustomerRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskPaymentMethodTokenRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskVoidPCRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskPreAuthenticateRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskAuthenticateRequest;
+#[derive(Default, Debug, Serialize)]
+pub struct BilldeskPostAuthenticateRequest;
+
 #[derive(Default, Debug, Clone)]
 pub struct BilldeskVoidResponse;
 #[derive(Default, Debug, Clone)]
