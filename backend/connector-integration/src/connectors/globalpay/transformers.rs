@@ -43,7 +43,11 @@ impl TryFrom<&ConnectorAuthType> for GlobalpayAuthType {
 pub struct GlobalpayErrorResponse {
     #[serde(alias = "error_code", alias = "code", alias = "detailed_error_code")]
     pub code: Option<String>,
-    #[serde(alias = "error_message", alias = "message", alias = "detailed_error_description")]
+    #[serde(
+        alias = "error_message",
+        alias = "message",
+        alias = "detailed_error_description"
+    )]
     pub message: Option<String>,
     #[serde(flatten)]
     pub extra: Option<serde_json::Value>,
@@ -92,13 +96,25 @@ impl TryFrom<&ConnectorAuthType> for GlobalpayAccessTokenRequest {
     }
 }
 
-impl TryFrom<&RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>>
-    for GlobalpayAccessTokenRequest
+impl
+    TryFrom<
+        &RouterDataV2<
+            CreateAccessToken,
+            PaymentFlowData,
+            AccessTokenRequestData,
+            AccessTokenResponseData,
+        >,
+    > for GlobalpayAccessTokenRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        item: &RouterDataV2<
+            CreateAccessToken,
+            PaymentFlowData,
+            AccessTokenRequestData,
+            AccessTokenResponseData,
+        >,
     ) -> Result<Self, Self::Error> {
         Self::try_from(&item.connector_auth_type)
     }
@@ -266,7 +282,11 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
             .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
 
         Ok(Self {
-            amount: item.request.minor_amount_to_capture.get_amount_as_i64().to_string(),
+            amount: item
+                .request
+                .minor_amount_to_capture
+                .get_amount_as_i64()
+                .to_string(),
             currency: item.request.currency.to_string(),
         })
     }
@@ -488,7 +508,11 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
         item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            amount: item.request.minor_refund_amount.get_amount_as_i64().to_string(),
+            amount: item
+                .request
+                .minor_refund_amount
+                .get_amount_as_i64()
+                .to_string(),
             currency: item.request.currency.to_string(),
         })
     }
