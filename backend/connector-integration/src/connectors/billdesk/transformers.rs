@@ -305,9 +305,8 @@ impl<
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: BilldeskRouterData<
+        item: crate::ConnectorRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
         >,
     ) -> Result<Self, Self::Error> {
         let merchant_id = get_merchant_id(&item.router_data.connector_auth_type)?;
