@@ -559,11 +559,11 @@ impl_not_implemented_flow!(DefendDispute, DisputeFlowData, DisputeDefendData, Di
 impl_not_implemented_flow!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
 impl_not_implemented_flow!(CreateAccessToken, PaymentFlowData, domain_types::connector_types::AccessTokenRequestData, domain_types::connector_types::AccessTokenResponseData);
 impl_not_implemented_flow!(CreateConnectorCustomer, PaymentFlowData, domain_types::connector_types::ConnectorCustomerData, domain_types::connector_types::ConnectorCustomerResponse);
-impl_not_implemented_flow!(PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentMethodTokenizationData, domain_types::connector_types::PaymentMethodTokenResponse);
+impl_not_implemented_flow!(PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentMethodTokenizationData<T>, domain_types::connector_types::PaymentMethodTokenResponse);
 impl_not_implemented_flow!(VoidPC, PaymentFlowData, domain_types::connector_types::PaymentsCancelPostCaptureData, PaymentsResponseData);
-impl_not_implemented_flow!(PreAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPreAuthenticateData, PaymentsResponseData);
-impl_not_implemented_flow!(Authenticate, PaymentFlowData, domain_types::connector_types::PaymentsAuthenticateData, PaymentsResponseData);
-impl_not_implemented_flow!(PostAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPostAuthenticateData, PaymentsResponseData);
+impl_not_implemented_flow!(PreAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPreAuthenticateData<T>, PaymentsResponseData);
+impl_not_implemented_flow!(Authenticate, PaymentFlowData, domain_types::connector_types::PaymentsAuthenticateData<T>, PaymentsResponseData);
+impl_not_implemented_flow!(PostAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPostAuthenticateData<T>, PaymentsResponseData);
 
 // SourceVerification implementations for flows
 macro_rules! impl_source_verification_stub {
