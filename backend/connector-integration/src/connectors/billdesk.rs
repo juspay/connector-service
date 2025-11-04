@@ -525,7 +525,7 @@ macros::macro_connector_implementation!(
                 .ok_or(errors::ConnectorError::MissingPaymentMethodType)?;
             
             match payment_method_type {
-                common_enums::PaymentMethodType::Upi => {
+                common_enums::PaymentMethodType::UpiCollect => {
                     Ok(format!("{}?reqid=BDRDF011", base_url))
                 }
                 common_enums::PaymentMethodType::UpiCollect => {
