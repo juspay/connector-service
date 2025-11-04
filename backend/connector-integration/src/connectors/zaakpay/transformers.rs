@@ -172,7 +172,7 @@ pub struct ZaakPayRefundDetail {
     pub merchant_ref_id: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZaakPayPaymentsSyncResponse {
     pub merchant_identifier: String,
