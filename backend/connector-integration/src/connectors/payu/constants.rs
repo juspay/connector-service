@@ -1,5 +1,3 @@
-use hyperswitch_masking::Secret;
-
 // Payu API endpoints
 pub const TEST_BASE_URL: &str = "https://test.payu.in";
 pub const PROD_BASE_URL: &str = "https://secure.payu.in";
