@@ -626,7 +626,7 @@ impl_source_verification_stub!(
 );
 impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
 impl_source_verification_stub!(Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData);
-impl_source_verification_stub!(Refund, PaymentFlowData, RefundFlowData, RefundsResponseData);
+impl_source_verification_stub!(Refund, domain_types::connector_types::RefundFlowData, RefundFlowData, RefundsResponseData);
 impl_source_verification_stub!(RSync, domain_types::connector_types::RefundFlowData, RefundSyncData, RefundsResponseData);
 impl_source_verification_stub!(CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse);
 impl_source_verification_stub!(CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData);
