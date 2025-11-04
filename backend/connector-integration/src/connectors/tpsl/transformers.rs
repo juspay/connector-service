@@ -1,5 +1,5 @@
 use common_utils::{
-    errors::CustomResult, ext_traits::ValueExt, request::Method, types::StringMinorUnit,
+    errors::CustomResult, ext_traits::ValueExt, request::Method,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
