@@ -68,8 +68,8 @@ use crate::{
     payment_address::{Address, AddressDetails, PaymentAddress, PhoneDetails},
     payment_method_data,
     payment_method_data::{
-        DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-        VaultTokenHolder,
+        CardRedirectData, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes,
+        RawCardNumber, VaultTokenHolder,
     },
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ConnectorResponseData,
@@ -117,6 +117,7 @@ pub struct Connectors {
     pub cybersource: ConnectorParams,
     pub worldpay: ConnectorParams,
     pub worldpayvantiv: ConnectorParams,
+    pub multisafepay: ConnectorParams,
     pub payload: ConnectorParams,
 }
 
@@ -259,12 +260,7 @@ impl<
                                                     let card = payment_method_data::Card::<T>::foreign_try_from(card)?;
                             Ok(PaymentMethodData::Card(card))},
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::CardRedirect(_card_redirect)) => {
-                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                                error_identifier: 400,
-                                error_message: "Card redirect payments are not yet supported".to_owned(),
-                                error_object: None,
-                            })))
+                            Ok(PaymentMethodData::CardRedirect(CardRedirectData::CardRedirect {}))
                         },
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(card)) => {
                             let x = payment_method_data::Card::<T>::foreign_try_from(card)?;
@@ -653,13 +649,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::Debit(_)) => {
                             Ok(Some(PaymentMethodType::Debit))
                         },
-                        Some(grpc_api_types::payments::card_payment_method_type::CardType::CardRedirect(_)) =>
-                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                                error_identifier: 400,
-                                error_message: "Card redirect payments are not yet supported".to_owned(),
-                                error_object: None,
-                            }))),
+                        Some(grpc_api_types::payments::card_payment_method_type::CardType::CardRedirect(_)) => {
+                            Ok(Some(PaymentMethodType::CardRedirect))
+                        },
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(_)) => {
                             Ok(Some(PaymentMethodType::Credit))
                         },
