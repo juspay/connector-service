@@ -177,10 +177,9 @@ impl From<BilldeskPaymentStatus> for common_enums::AttemptStatus {
     }
 }
 
-fn create_billdesk_message(
-    router_data: &BilldeskRouterData<
+fn create_billdesk_message<T: PaymentMethodDataTypes>(
+    router_data: &crate::ConnectorRouterData<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        T,
     >,
 ) -> Result<String, errors::ConnectorError> {
     let customer_id = router_data.router_data.resource_common_data.get_customer_id()?;
