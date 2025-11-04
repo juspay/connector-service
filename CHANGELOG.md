@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.11.04.1
+
+### Refactors
+
+- **connector:** [RAZORPAY] update Razorpay connector diffs ([#237](https://github.com/juspay/connector-service/pull/237)) ([`4ddb48d`](https://github.com/juspay/connector-service/commit/4ddb48dfc8d0f1b806bf106b10d9840df5133ad3))
+
+**Full Changelog:** [`2025.11.04.0...2025.11.04.1`](https://github.com/juspay/connector-service/compare/2025.11.04.0...2025.11.04.1)
+
+- - -
+
 ## 2025.11.04.0
 
 ### Bug Fixes
