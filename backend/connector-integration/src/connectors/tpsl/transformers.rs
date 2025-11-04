@@ -809,14 +809,7 @@ impl<
 }
 
 // PSync response conversion - simplified for now
-impl<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> TryFrom<TpslPaymentsSyncResponse> for PaymentsResponseData {
+impl TryFrom<TpslPaymentsSyncResponse> for PaymentsResponseData {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(_response: TpslPaymentsSyncResponse) -> Result<Self, Self::Error> {
