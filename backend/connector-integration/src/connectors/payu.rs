@@ -194,7 +194,7 @@ macros::create_all_prerequisites!(
         fn get_transaction_id(
             request: &domain_types::connector_types::PaymentsAuthorizeData<T>,
         ) -> CustomResult<String, ConnectorError> {
-            request.connector_transaction_id.get_connector_transaction_id().map(|id| id.get_string_repr().to_string())
+            request.related_transaction_id.get_connector_transaction_id().map(|id| id.get_string_repr().to_string())
         }
 
         // Helper function to get return URL
