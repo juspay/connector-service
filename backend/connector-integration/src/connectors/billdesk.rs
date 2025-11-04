@@ -549,7 +549,7 @@ macro_rules! impl_not_implemented_flow {
 impl_not_implemented_flow!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
 impl_not_implemented_flow!(Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData);
 impl_not_implemented_flow!(Refund, PaymentFlowData, RefundFlowData, RefundsResponseData);
-impl_not_implemented_flow!(RSync, PaymentFlowData, RefundSyncData, RefundsResponseData);
+impl_not_implemented_flow!(RSync, domain_types::connector_types::RefundFlowData, RefundSyncData, RefundsResponseData);
 impl_not_implemented_flow!(CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse);
 impl_not_implemented_flow!(CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData);
 impl_not_implemented_flow!(SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData);
