@@ -30,6 +30,7 @@ mitm_proxy_enabled = false
 
 [connectors]
 fiservemea.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
+datatrans.base_url = "https://api.sandbox.datatrans.com"
 adyen.base_url = "https://checkout-test.adyen.com/"
 adyen.dispute_base_url = "https://ca-test.adyen.com/"
 razorpay.base_url = "https://api.razorpay.com/"
