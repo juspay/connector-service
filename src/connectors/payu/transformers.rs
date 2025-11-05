@@ -315,7 +315,9 @@ where
             .connector_request_reference_id
             .clone();
 
-        let amount = common_utils::types::StringMajorUnit::from(item.request.amount);
+        let amount = common_utils::types::MinorUnit(item.request.amount)
+            .to_major_unit_as_string(item.request.currency)
+            .map_err(|_| ConnectorError::RequestEncodingFailed)?;
         let currency = item.request.currency;
 
         // Extract customer information
