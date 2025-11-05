@@ -839,8 +839,8 @@ impl<
                     .request
                     .browser_info
                     .as_ref()
-                    .and_then(|info| info.email.clone())
-                    .map(|ip| ip.expose())
+                    .and_then(|info| info.ip_address)
+                    .map(|ip| ip.to_string())
                     .unwrap_or_else(|| "127.0.0.1".to_string()),
                 transaction_type: "SALE".to_string(),
                 currency: item.router_data.request.currency.to_string(),
