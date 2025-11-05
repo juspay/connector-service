@@ -394,10 +394,13 @@ where
             key: auth.api_key.peek().clone(),
             txnid: transaction_id,
             amount: {
-                let amount_minor = common_utils::types::MinorUnit(item.request.amount);
-                let amount_f64 = amount_minor.to_major_unit_as_f64(item.request.currency)
-                    .map_err(|_| ConnectorError::RequestEncodingFailed)?;
-                common_utils::types::StringMajorUnit::new(format!("{:.2}", amount_f64.0))
+                // Convert amount to string format (assuming 2 decimal places for most currencies)
+                let amount_str = if item.request.currency.is_zero_decimal_currency() {
+                    item.request.amount.to_string()
+                } else {
+                    format!("{}.{:02}", item.request.amount / 100, item.request.amount % 100)
+                };
+                common_utils::types::StringMajorUnit(amount_str)
             },
             currency,
             productinfo: constants::PRODUCT_INFO.to_string(),
