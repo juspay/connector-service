@@ -792,6 +792,7 @@ impl_source_verification_stub!(
     PaymentsResponseData
 );
 impl_source_verification_stub!(Void, PaymentFlowData, domain_types::connector_types::PaymentVoidData, PaymentsResponseData);
+impl_source_verification_stub!(VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData);
 impl_source_verification_stub!(Refund, domain_types::connector_types::RefundFlowData, domain_types::connector_types::RefundsData, domain_types::connector_types::RefundsResponseData);
 impl_source_verification_stub!(RSync, domain_types::connector_types::RefundFlowData, domain_types::connector_types::RefundSyncData, domain_types::connector_types::RefundsResponseData);
 impl_source_verification_stub!(PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData);
