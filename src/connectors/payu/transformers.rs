@@ -385,7 +385,7 @@ where
             &amount,
             constants::PRODUCT_INFO,
             customer_name,
-            &email.to_string(),
+            &email.peek().to_string(),
             &auth.api_secret.peek(),
             &udf_fields,
         )?;
