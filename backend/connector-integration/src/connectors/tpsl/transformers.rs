@@ -3,7 +3,7 @@ use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use std::collections::HashMap;
     use common_utils::{
     errors::CustomResult,
-    request::Method,
+    ext_traits::ValueExt,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
