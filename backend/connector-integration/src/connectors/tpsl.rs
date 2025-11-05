@@ -587,7 +587,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, domain_types::connector_types::PaymentsRepeatData, PaymentsResponseData>
+> ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
     for TPSL<T>
 {
 }
@@ -599,7 +599,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentsTokenData, PaymentsResponseData>
+> ConnectorIntegrationV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData, PaymentMethodTokenResponse>
     for TPSL<T>
 {
 }
@@ -611,7 +611,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<SetupMandate, PaymentFlowData, domain_types::connector_types::SetupMandateData, PaymentsResponseData>
+> ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>
     for TPSL<T>
 {
 }
@@ -623,7 +623,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, domain_types::connector_types::CreateSessionTokenData, domain_types::connector_types::CreateSessionTokenResponse>
+> ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
     for TPSL<T>
 {
 }
@@ -635,7 +635,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<CreateAccessToken, PaymentFlowData, domain_types::connector_types::CreateAccessTokenData, domain_types::connector_types::CreateAccessTokenResponse>
+> ConnectorIntegrationV2<CreateAccessToken, PaymentFlowData, CreateAccessTokenData, CreateAccessTokenData>
     for TPSL<T>
 {
 }
@@ -647,7 +647,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<CreateConnectorCustomer, PaymentFlowData, domain_types::connector_types::CreateConnectorCustomerData, domain_types::connector_types::CreateConnectorCustomerResponse>
+> ConnectorIntegrationV2<CreateConnectorCustomer, PaymentFlowData, CreateConnectorCustomerData, ConnectorCustomerResponse>
     for TPSL<T>
 {
 }
