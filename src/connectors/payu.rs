@@ -368,86 +368,86 @@ impl<
 */
 
 // Implement PSync flow using macro framework
-// // // macros::macro_connector_implementation!(
-    connector_default_implementations: [],
-    connector: Payu,
-    curl_request: FormUrlEncoded(PayuSyncRequest),
-    curl_response: PayuSyncResponse,
-    flow_name: PSync,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsSyncData,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-            Ok(vec![
-                ("Content-Type".to_string(), "application/x-www-form-urlencoded".into()),
-                ("Accept".to_string(), "application/json".into()),
-            ])
-        }
-
-        fn get_url(
-            &self,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorError> {
-            // Based on Haskell implementation: uses /merchant/postservice.php?form=2 for verification
-            // Test: https://test.payu.in/merchant/postservice.php?form=2
-            let base_url = self.base_url(&req.resource_common_data.connectors);
-            Ok(format!("{base_url}/merchant/postservice.php?form=2"))
-        }
-
-        fn get_content_type(&self) -> &'static str {
-            "application/x-www-form-urlencoded"
-        }
-
-        fn get_error_response_v2(
-            &self,
-            res: Response,
-            _event_builder: Option<&mut ConnectorEvent>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
-            // PayU sync may return error responses in different formats
-            let response: PayuSyncResponse = res
-                .response
-                .parse_struct("PayU Sync ErrorResponse")
-                .change_context(ConnectorError::ResponseDeserializationFailed)?;
-
-            // Check if PayU returned error status (0 = error)
-            if response.status == Some(0) {
-                Ok(ErrorResponse {
-                    status_code: res.status_code,
-                    code: "PAYU_SYNC_ERROR".to_string(),
-                    message: response.msg.unwrap_or_default(),
-                    reason: None,
-                    attempt_status: Some(enums::AttemptStatus::Failure),
-                    connector_transaction_id: None,
-                    network_error_message: None,
-                    network_advice_code: None,
-                    network_decline_code: None,
-                })
-            } else {
-                // Generic error response
-                Ok(ErrorResponse {
-                    status_code: res.status_code,
-                    code: "SYNC_UNKNOWN_ERROR".to_string(),
-                    message: "Unknown PayU sync error".to_string(),
-                    reason: None,
-                    attempt_status: Some(enums::AttemptStatus::Failure),
-                    connector_transaction_id: None,
-                    network_error_message: None,
-                    network_advice_code: None,
-                    network_decline_code: None,
-                })
-            }
-        }
-    }
-// );
-
-// Implement authorize flow using macro framework
+// // // // macros::macro_connector_implementation!(
+//     connector_default_implementations: [],
+//     connector: Payu,
+//     curl_request: FormUrlEncoded(PayuSyncRequest),
+//     curl_response: PayuSyncResponse,
+//     flow_name: PSync,
+//     resource_common_data: PaymentFlowData,
+//     flow_request: PaymentsSyncData,
+//     flow_response: PaymentsResponseData,
+//     http_method: Post,
+//     generic_type: T,
+//     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+//     other_functions: {
+//         fn get_headers(
+//             &self,
+//             _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+//         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+//             Ok(vec![
+//                 ("Content-Type".to_string(), "application/x-www-form-urlencoded".into()),
+//                 ("Accept".to_string(), "application/json".into()),
+//             ])
+//         }
+// 
+//         fn get_url(
+//             &self,
+//             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+//         ) -> CustomResult<String, ConnectorError> {
+//             // Based on Haskell implementation: uses /merchant/postservice.php?form=2 for verification
+//             // Test: https://test.payu.in/merchant/postservice.php?form=2
+//             let base_url = self.base_url(&req.resource_common_data.connectors);
+//             Ok(format!("{base_url}/merchant/postservice.php?form=2"))
+//         }
+// 
+//         fn get_content_type(&self) -> &'static str {
+//             "application/x-www-form-urlencoded"
+//         }
+// 
+//         fn get_error_response_v2(
+//             &self,
+//             res: Response,
+//             _event_builder: Option<&mut ConnectorEvent>,
+//         ) -> CustomResult<ErrorResponse, ConnectorError> {
+//             // PayU sync may return error responses in different formats
+//             let response: PayuSyncResponse = res
+//                 .response
+//                 .parse_struct("PayU Sync ErrorResponse")
+//                 .change_context(ConnectorError::ResponseDeserializationFailed)?;
+// 
+//             // Check if PayU returned error status (0 = error)
+//             if response.status == Some(0) {
+//                 Ok(ErrorResponse {
+//                     status_code: res.status_code,
+//                     code: "PAYU_SYNC_ERROR".to_string(),
+//                     message: response.msg.unwrap_or_default(),
+//                     reason: None,
+//                     attempt_status: Some(enums::AttemptStatus::Failure),
+//                     connector_transaction_id: None,
+//                     network_error_message: None,
+//                     network_advice_code: None,
+//                     network_decline_code: None,
+//                 })
+//             } else {
+//                 // Generic error response
+//                 Ok(ErrorResponse {
+//                     status_code: res.status_code,
+//                     code: "SYNC_UNKNOWN_ERROR".to_string(),
+//                     message: "Unknown PayU sync error".to_string(),
+//                     reason: None,
+//                     attempt_status: Some(enums::AttemptStatus::Failure),
+//                     connector_transaction_id: None,
+//                     network_error_message: None,
+//                     network_advice_code: None,
+//                     network_decline_code: None,
+//                 })
+//             }
+//         }
+//     }
+// // );
+// 
+// // Implement authorize flow using macro framework
 /*macros::macro_connector_implementation!(
     connector_default_implementations: [],
     connector: Payu,
