@@ -174,6 +174,40 @@ pub struct MultisafepayPaymentsRequest {
     pub description: String,
 }
 
+// Implementation for macro-generated wrapper type
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    TryFrom<
+        crate::connectors::multisafepay::MultisafepayRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+    > for MultisafepayPaymentsRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        wrapper: crate::connectors::multisafepay::MultisafepayRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+    ) -> Result<Self, Self::Error> {
+        let item = &wrapper.router_data;
+        let order_type = get_order_type_from_payment_method(&item.request.payment_method_data);
+        let gateway = get_gateway_from_payment_method(&item.request.payment_method_data);
+
+        Ok(Self {
+            order_type: order_type.to_string(),
+            order_id: item
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            gateway,
+            currency: item.request.currency.to_string(),
+            amount: item.request.minor_amount,
+            description: item
+                .request
+                .statement_descriptor
+                .clone()
+                .unwrap_or_else(|| "Payment".to_string()),
+        })
+    }
+}
+
+// Keep the original implementation for backwards compatibility
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
@@ -215,6 +249,10 @@ pub struct MultisafepayPaymentsResponse {
     pub success: bool,
     pub data: MultisafepayResponseData,
 }
+
+// Type aliases for different flows to avoid duplicate templating structs in macros
+pub type MultisafepayPaymentsSyncResponse = MultisafepayPaymentsResponse;
+pub type MultisafepayRefundSyncResponse = MultisafepayPaymentsResponse;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MultisafepayResponseData {
@@ -363,6 +401,26 @@ pub struct MultisafepayRefundRequest {
     pub amount: MinorUnit,
 }
 
+// Implementation for macro-generated wrapper type
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    TryFrom<
+        crate::connectors::multisafepay::MultisafepayRouterData<RouterDataV2<domain_types::connector_flow::Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    > for MultisafepayRefundRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        wrapper: crate::connectors::multisafepay::MultisafepayRouterData<RouterDataV2<domain_types::connector_flow::Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    ) -> Result<Self, Self::Error> {
+        let item = &wrapper.router_data;
+        Ok(Self {
+            currency: item.request.currency.to_string(),
+            amount: item.request.minor_refund_amount,
+        })
+    }
+}
+
+// Keep the original implementation for backwards compatibility
 impl<F> TryFrom<&RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>>
     for MultisafepayRefundRequest
 {
