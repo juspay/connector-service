@@ -357,7 +357,7 @@ where
                     }
                     UpiData::UpiCollect(collect_data) => {
                         // UPI Collect flow
-                        (Some(constants::UPI_COLLECT_BANKCODE.to_string()), collect_data.vpa_id.as_ref().map(|v| v.expose().clone()), None)
+                        (Some(constants::UPI_COLLECT_BANKCODE.to_string()), collect_data.vpa_id.as_ref().map(|v| v.expose().to_string()), None)
                     }
                     UpiData::UpiQr(_) => {
                         (None, None, None)
