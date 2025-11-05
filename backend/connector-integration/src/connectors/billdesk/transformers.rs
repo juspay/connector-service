@@ -162,9 +162,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 let upi_vpa = if let Some(payment_method_data) = &item.router_data.request.payment_method_data {
                     match payment_method_data {
                         domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
-                            // For now, we'll not extract VPA from payment method data
-                            // The VPA can be passed in additional_info or other fields
-                            None
+                            match upi_data {
+                                domain_types::payment_method_data::UpiData::UpiCollect(collect_data) => {
+                                    collect_data.vpa_id.as_ref().map(|vpa| vpa.peek().to_string())
+                                }
+                                _ => None,
+                            }
                         }
                         _ => None,
                     }
