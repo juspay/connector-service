@@ -515,7 +515,7 @@ impl TryFrom<PayuSyncResponse> for ResponseRouterData {
             _ => AttemptStatus::Pending,
         };
 
-        let error_message = response.msg;
+        let _error_message = response.msg;
 
         Ok(ResponseRouterData {
             headers: None,
