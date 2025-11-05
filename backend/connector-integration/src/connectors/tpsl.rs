@@ -81,6 +81,17 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
+> connector_types::PaymentSyncV2 for TPSL<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
 > connector_types::IncomingWebhook for TPSL<T>
 {
     fn verify_webhook_source(
