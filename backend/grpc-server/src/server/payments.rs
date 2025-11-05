@@ -265,17 +265,16 @@ impl Payments {
                 shadow_mode: metadata_payload.shadow_mode,
             };
 
-            let payment_session_data = Box::pin(self
-                .handle_session_token(
-                    connector_data.clone(),
-                    &payment_flow_data,
-                    connector_auth_details.clone(),
-                    &payload,
-                    &connector.to_string(),
-                    service_name,
-                    event_params,
-                ))
-                .await?;
+            let payment_session_data = Box::pin(self.handle_session_token(
+                connector_data.clone(),
+                &payment_flow_data,
+                connector_auth_details.clone(),
+                &payload,
+                &connector.to_string(),
+                service_name,
+                event_params,
+            ))
+            .await?;
             tracing::info!(
                 "Session Token created successfully with session_id: {}",
                 payment_session_data.session_token
@@ -319,16 +318,15 @@ impl Payments {
                         shadow_mode: metadata_payload.shadow_mode,
                     };
 
-                    let access_token_data = Box::pin(self
-                        .handle_access_token(
-                            connector_data.clone(),
-                            &payment_flow_data,
-                            connector_auth_details.clone(),
-                            &connector.to_string(),
-                            service_name,
-                            event_params,
-                        ))
-                        .await?;
+                    let access_token_data = Box::pin(self.handle_access_token(
+                        connector_data.clone(),
+                        &payment_flow_data,
+                        connector_auth_details.clone(),
+                        &connector.to_string(),
+                        service_name,
+                        event_params,
+                    ))
+                    .await?;
 
                     tracing::info!(
                         "Access token created successfully with expiry: {:?}",
@@ -618,15 +616,17 @@ impl Payments {
         };
 
         // Execute connector processing
-        let response = Box::pin(external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            order_router_data,
-            None,
-            external_event_params,
-            None,
-            common_enums::CallConnectorAction::Trigger,
-        ))
+        let response = Box::pin(
+            external_services::service::execute_connector_processing_step(
+                &self.config.proxy,
+                connector_integration,
+                order_router_data,
+                None,
+                external_event_params,
+                None,
+                common_enums::CallConnectorAction::Trigger,
+            ),
+        )
         .await
         .map_err(
             |e: error_stack::Report<domain_types::errors::ConnectorError>| {
@@ -721,15 +721,17 @@ impl Payments {
         };
 
         // Execute connector processing
-        let response = Box::pin(external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            order_router_data,
-            None,
-            external_event_params,
-            None,
-            common_enums::CallConnectorAction::Trigger,
-        ))
+        let response = Box::pin(
+            external_services::service::execute_connector_processing_step(
+                &self.config.proxy,
+                connector_integration,
+                order_router_data,
+                None,
+                external_event_params,
+                None,
+                common_enums::CallConnectorAction::Trigger,
+            ),
+        )
         .await
         .switch()
         .map_err(|e| e.into_grpc_status())?;
@@ -1666,22 +1668,21 @@ impl PaymentService for Payments {
                                     shadow_mode: metadata_payload.shadow_mode,
                                 };
 
-                                let access_token_data = Box::pin(self
-                                    .handle_access_token(
-                                        connector_data.clone(),
-                                        &payment_flow_data,
-                                        metadata_payload.connector_auth_type.clone(),
-                                        &metadata_payload.connector.to_string(),
-                                        &service_name,
-                                        event_params,
-                                    ))
-                                    .await
-                                    .map_err(|e| {
-                                        let message = e.error_message.unwrap_or_else(|| {
-                                            "Access token creation failed".to_string()
-                                        });
-                                        tonic::Status::internal(message)
-                                    })?;
+                                let access_token_data = Box::pin(self.handle_access_token(
+                                    connector_data.clone(),
+                                    &payment_flow_data,
+                                    metadata_payload.connector_auth_type.clone(),
+                                    &metadata_payload.connector.to_string(),
+                                    &service_name,
+                                    event_params,
+                                ))
+                                .await
+                                .map_err(|e| {
+                                    let message = e.error_message.unwrap_or_else(|| {
+                                        "Access token creation failed".to_string()
+                                    });
+                                    tonic::Status::internal(message)
+                                })?;
 
                                 tracing::info!(
                                     "Access token created successfully with expiry: {:?}",
