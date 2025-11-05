@@ -843,7 +843,9 @@ impl<
                 device_identifier: item
                     .router_data
                     .request
-                    .get_ip_address_as_optional()
+                    .browser_info
+                    .as_ref()
+                    .and_then(|info| info.email.clone())
                     .map(|ip| ip.expose())
                     .unwrap_or_else(|| "127.0.0.1".to_string()),
                 transaction_type: "SALE".to_string(),
