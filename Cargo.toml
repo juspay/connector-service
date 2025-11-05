@@ -14,8 +14,7 @@ common_enums = { path = "./backend/common_enums" }
 common_utils = { path = "./backend/common_utils" }
 domain_types = { path = "./backend/domain_types" }
 error-stack = "0.4"
-hyperswitch_masking = { path = "./backend/hyperswitch_masking" }
-masking = { path = "./backend/masking" }
+interfaces = { path = "./backend/interfaces" }
 
 # Crypto dependencies
 sha2 = "0.10"
