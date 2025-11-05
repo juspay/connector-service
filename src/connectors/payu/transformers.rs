@@ -533,7 +533,19 @@ impl<T> TryFrom<PayuSyncResponse> for ResponseRouterData {
         let error_message = response.msg;
 
         Ok(ResponseRouterData {
-            response: Ok(PaymentsResponseData::Charged), // Simplified for now
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId("sync_id".to_string()),
+                redirection_data: None,
+                connector_metadata: None,
+                mandate_reference: None,
+                network_txn_id: None,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                status_code: 200,
+            }),
+            headers: None,
+            status_code: 200,
+            response: bytes::Bytes::from("success"),
         })
     }
 }
