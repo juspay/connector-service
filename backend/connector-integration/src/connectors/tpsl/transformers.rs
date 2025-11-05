@@ -696,7 +696,7 @@ impl<
                         .request
                         .browser_info
                         .as_ref()
-                        .and_then(|info| info.mobile_number.clone())
+                        .and_then(|info| info.email.clone())
                         .unwrap_or_else(|| "9999999999".to_string()),
                     email_i_d: item
                         .router_data
