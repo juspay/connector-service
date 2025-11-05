@@ -383,7 +383,7 @@ where
         let hash = generate_payu_hash(
             &auth.api_key.peek(),
             &transaction_id,
-            &amount,
+            &amount.to_string(),
             constants::PRODUCT_INFO,
             customer_name,
             &email.peek().to_string(),
