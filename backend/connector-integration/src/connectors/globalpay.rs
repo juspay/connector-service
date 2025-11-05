@@ -4,8 +4,7 @@ use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
 use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent,
-    types::StringMinorUnit,
+    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent, types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -41,8 +40,8 @@ use serde::Serialize;
 use transformers as globalpay;
 use transformers::{
     GlobalpayAuthorizeResponse, GlobalpayCaptureRequest, GlobalpayCaptureResponse,
-    GlobalpayPSyncResponse, GlobalpayPaymentsRequest, GlobalpayRSyncResponse, GlobalpayRefundRequest,
-    GlobalpayRefundResponse, GlobalpayVoidRequest, GlobalpayVoidResponse,
+    GlobalpayPSyncResponse, GlobalpayPaymentsRequest, GlobalpayRSyncResponse,
+    GlobalpayRefundRequest, GlobalpayRefundResponse, GlobalpayVoidRequest, GlobalpayVoidResponse,
 };
 
 use crate::connectors::macros;
