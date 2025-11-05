@@ -499,7 +499,7 @@ impl<T> TryFrom<PayuPaymentResponse> for ResponseRouterData {
     }
 }
 
-impl<T> TryFrom<PayuSyncResponse> for ResponseRouterData<T, PaymentsResponseData> {
+impl<T> TryFrom<PayuSyncResponse> for ResponseRouterData {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: PayuSyncResponse) -> Result<Self, Self::Error> {
