@@ -17,7 +17,6 @@ use interfaces::{
     verification::SourceVerification,
 };
 use domain_types::{
-    connector_types::*,
     errors::ConnectorError,
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
