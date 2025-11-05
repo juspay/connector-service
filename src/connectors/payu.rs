@@ -69,6 +69,13 @@ where
     }
 }
 
+// Implement SourceVerification for Payu
+impl<T, Flow, ResourceCommonData, Req, Resp> SourceVerification<Flow, ResourceCommonData, Req, Resp> for Payu<T>
+where
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
+{
+}
+
 // Implement ConnectorIntegrationV2 for Payu
 impl<T, Flow, ResourceCommonData, Req, Resp> ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp> for Payu<T>
 where
@@ -89,7 +96,7 @@ where
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
     ) -> CustomResult<String, ConnectorError> {
-        Ok(format!("{}/_payment", self.base_url.clone().expose()))
+        Ok(format!("{}/_payment", self.base_url(&_req.connector)))
     }
 }
 
