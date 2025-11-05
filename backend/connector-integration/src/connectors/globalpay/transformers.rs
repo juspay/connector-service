@@ -1,5 +1,9 @@
-use crate::types::ResponseRouterData;
+use crate::{
+    connectors::globalpay::{GlobalpayAmountConvertor, GlobalpayRouterData},
+    types::ResponseRouterData,
+};
 use common_enums::{AttemptStatus, RefundStatus};
+use common_utils::types::StringMinorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateAccessToken, PSync, RSync, Refund, Void},
     connector_types::{
@@ -16,6 +20,51 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
+
+// ===== TYPE ALIASES FOR MACRO =====
+// These type aliases are needed because the create_all_prerequisites! macro
+// creates unique "Templating" structs for each response type, but GlobalPay
+// reuses the same response types across multiple flows. To avoid duplication errors,
+// we create flow-specific aliases that reference the same underlying types.
+
+/// Response type for Authorize flow - reuses GlobalpayPaymentsResponse
+pub type GlobalpayAuthorizeResponse = GlobalpayPaymentsResponse;
+/// Response type for PSync flow - reuses GlobalpayPaymentsResponse
+pub type GlobalpayPSyncResponse = GlobalpayPaymentsResponse;
+/// Response type for Void flow - reuses GlobalpayPaymentsResponse
+pub type GlobalpayVoidResponse = GlobalpayPaymentsResponse;
+/// Response type for Capture flow - reuses GlobalpayPaymentsResponse
+pub type GlobalpayCaptureResponse = GlobalpayPaymentsResponse;
+/// Response type for RSync flow - reuses GlobalpayRefundResponse
+pub type GlobalpayRSyncResponse = GlobalpayRefundResponse;
+
+// ===== CONSTANTS =====
+
+mod constants {
+    /// OAuth grant type for access token requests
+    pub(super) const GRANT_TYPE: &str = "client_credentials";
+
+    /// Entry mode for e-commerce transactions
+    pub(super) const ENTRY_MODE_ECOM: &str = "ECOM";
+
+    /// CVV indicator when CVV is present
+    pub(super) const CVV_INDICATOR_PRESENT: &str = "PRESENT";
+
+    /// Capture mode for manual/delayed capture
+    pub(super) const CAPTURE_MODE_LATER: &str = "LATER";
+
+    /// Default country code when billing country is not provided
+    pub(super) const DEFAULT_COUNTRY: &str = "US";
+
+    /// Account name for transaction processing
+    pub(super) const ACCOUNT_NAME: &str = "transaction_processing";
+
+    /// Transaction type for sale transactions
+    pub(super) const TRANSACTION_TYPE_SALE: &str = "SALE";
+
+    /// Channel for card-not-present transactions
+    pub(super) const CHANNEL_CNP: &str = "CNP";
+}
 
 #[derive(Debug, Clone)]
 pub struct GlobalpayAuthType {
@@ -53,6 +102,69 @@ pub struct GlobalpayErrorResponse {
     pub extra: Option<serde_json::Value>,
 }
 
+// ===== STATUS ENUMS =====
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum GlobalpayPaymentStatus {
+    Captured,
+    Preauthorized,
+    Declined,
+    Failed,
+    Rejected,
+    Pending,
+    Initiated,
+    #[serde(rename = "FOR_REVIEW")]
+    ForReview,
+    Funded,
+    Reversed,
+}
+
+impl From<GlobalpayPaymentStatus> for AttemptStatus {
+    fn from(status: GlobalpayPaymentStatus) -> Self {
+        match status {
+            GlobalpayPaymentStatus::Captured => Self::Charged,
+            GlobalpayPaymentStatus::Preauthorized => Self::Authorized,
+            GlobalpayPaymentStatus::Declined => Self::Failure,
+            GlobalpayPaymentStatus::Failed => Self::Failure,
+            GlobalpayPaymentStatus::Rejected => Self::Failure,
+            GlobalpayPaymentStatus::Pending => Self::Pending,
+            GlobalpayPaymentStatus::Initiated => Self::Pending,
+            GlobalpayPaymentStatus::ForReview => Self::Pending,
+            GlobalpayPaymentStatus::Funded => Self::Charged,
+            GlobalpayPaymentStatus::Reversed => Self::Voided,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum GlobalpayRefundStatus {
+    Captured,
+    Funded,
+    Pending,
+    Initiated,
+    #[serde(rename = "FOR_REVIEW")]
+    ForReview,
+    Declined,
+    Failed,
+    Rejected,
+}
+
+impl From<GlobalpayRefundStatus> for RefundStatus {
+    fn from(status: GlobalpayRefundStatus) -> Self {
+        match status {
+            GlobalpayRefundStatus::Captured | GlobalpayRefundStatus::Funded => Self::Success,
+            GlobalpayRefundStatus::Pending
+            | GlobalpayRefundStatus::Initiated
+            | GlobalpayRefundStatus::ForReview => Self::Pending,
+            GlobalpayRefundStatus::Declined
+            | GlobalpayRefundStatus::Failed
+            | GlobalpayRefundStatus::Rejected => Self::Failure,
+        }
+    }
+}
+
 // ===== OAUTH / ACCESS TOKEN FLOW STRUCTURES =====
 
 #[derive(Debug, Serialize)]
@@ -86,7 +198,7 @@ impl TryFrom<&ConnectorAuthType> for GlobalpayAccessTokenRequest {
                 app_id: api_key.peek().clone(),
                 nonce,
                 secret: secret_hex,
-                grant_type: "client_credentials".to_string(),
+                grant_type: constants::GRANT_TYPE.to_string(),
             })
         } else {
             Err(error_stack::report!(
@@ -163,7 +275,7 @@ pub struct GlobalpayPaymentsRequest<T: PaymentMethodDataTypes> {
     #[serde(rename = "type")]
     pub transaction_type: String,
     pub channel: String,
-    pub amount: String,
+    pub amount: StringMinorUnit,
     pub currency: String,
     pub reference: String,
     pub country: String,
@@ -191,31 +303,33 @@ pub struct GlobalpayCard<T: PaymentMethodDataTypes> {
     pub cvv_indicator: Option<String>,
 }
 
-impl<T: PaymentMethodDataTypes>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        GlobalpayRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
+        >,
     > for GlobalpayPaymentsRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
+        wrapper: GlobalpayRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
+        let item = &wrapper.router_data;
         let payment_method = match &item.request.payment_method_data {
             PaymentMethodData::Card(card_data) => GlobalpayPaymentMethod {
                 name: item.request.customer_name.clone().map(Secret::new),
-                entry_mode: "ECOM".to_string(),
+                entry_mode: constants::ENTRY_MODE_ECOM.to_string(),
                 card: Some(GlobalpayCard {
                     number: card_data.card_number.clone(),
                     expiry_month: card_data.card_exp_month.clone(),
                     expiry_year: card_data.card_exp_year.clone(),
                     cvv: card_data.card_cvc.clone(),
-                    cvv_indicator: Some("PRESENT".to_string()),
+                    cvv_indicator: Some(constants::CVV_INDICATOR_PRESENT.to_string()),
                 }),
             },
             _ => {
@@ -229,7 +343,9 @@ impl<T: PaymentMethodDataTypes>
 
         // Determine capture_mode based on capture_method
         let capture_mode = match item.request.capture_method {
-            Some(common_enums::CaptureMethod::Manual) => Some("LATER".to_string()),
+            Some(common_enums::CaptureMethod::Manual) => {
+                Some(constants::CAPTURE_MODE_LATER.to_string())
+            }
             _ => None, // AUTO is default, no need to send
         };
 
@@ -241,13 +357,17 @@ impl<T: PaymentMethodDataTypes>
             .and_then(|billing| billing.address.as_ref())
             .and_then(|addr| addr.country.as_ref())
             .map(|c| c.to_string())
-            .unwrap_or_else(|| "US".to_string());
+            .unwrap_or_else(|| constants::DEFAULT_COUNTRY.to_string());
 
         Ok(Self {
-            account_name: "transaction_processing".to_string(),
-            transaction_type: "SALE".to_string(),
-            channel: "CNP".to_string(),
-            amount: item.request.minor_amount.get_amount_as_i64().to_string(),
+            account_name: constants::ACCOUNT_NAME.to_string(),
+            transaction_type: constants::TRANSACTION_TYPE_SALE.to_string(),
+            channel: constants::CHANNEL_CNP.to_string(),
+            amount: GlobalpayAmountConvertor::convert(
+                item.request.minor_amount,
+                item.request.currency,
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?,
             currency: item.request.currency.to_string(),
             reference: item
                 .resource_common_data
@@ -263,18 +383,27 @@ impl<T: PaymentMethodDataTypes>
 // Capture Request Structure
 #[derive(Debug, Serialize)]
 pub struct GlobalpayCaptureRequest {
-    pub amount: String,
+    pub amount: StringMinorUnit,
     pub currency: String,
 }
 
-impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>
-    for GlobalpayCaptureRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<
+        GlobalpayRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for GlobalpayCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        wrapper: GlobalpayRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
+        let item = &wrapper.router_data;
         // Validate that we have a connector transaction ID
         let _transaction_id = item
             .request
@@ -282,11 +411,11 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
             .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
 
         Ok(Self {
-            amount: item
-                .request
-                .minor_amount_to_capture
-                .get_amount_as_i64()
-                .to_string(),
+            amount: GlobalpayAmountConvertor::convert(
+                item.request.minor_amount_to_capture,
+                item.request.currency,
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?,
             currency: item.request.currency.to_string(),
         })
     }
@@ -295,9 +424,9 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GlobalpayPaymentsResponse {
     pub id: String,
-    pub status: String,
+    pub status: GlobalpayPaymentStatus,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub amount: Option<String>,
+    pub amount: Option<StringMinorUnit>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -346,22 +475,7 @@ impl<T: PaymentMethodDataTypes>
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        // Map GlobalPay statuses to UCS AttemptStatus
-        // Based on tech spec: CAPTURED, PREAUTHORIZED, DECLINED, FUNDED, FAILED, REJECTED,
-        // FOR_REVIEW, INITIATED, PENDING, REVERSED
-        let status = match item.response.status.as_str() {
-            "CAPTURED" => AttemptStatus::Charged,
-            "PREAUTHORIZED" => AttemptStatus::Authorized,
-            "DECLINED" => AttemptStatus::Failure,
-            "FAILED" => AttemptStatus::Failure,
-            "REJECTED" => AttemptStatus::Failure,
-            "PENDING" => AttemptStatus::Pending,
-            "INITIATED" => AttemptStatus::Pending,
-            "FOR_REVIEW" => AttemptStatus::Pending,
-            "FUNDED" => AttemptStatus::Charged,
-            "REVERSED" => AttemptStatus::Voided,
-            _ => AttemptStatus::Pending,
-        };
+        let status = AttemptStatus::from(item.response.status.clone());
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -400,21 +514,7 @@ impl
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Map GlobalPay statuses to UCS AttemptStatus
-        // Same status mapping as Authorize flow
-        let status = match item.response.status.as_str() {
-            "CAPTURED" => AttemptStatus::Charged,
-            "PREAUTHORIZED" => AttemptStatus::Authorized,
-            "DECLINED" => AttemptStatus::Failure,
-            "FAILED" => AttemptStatus::Failure,
-            "REJECTED" => AttemptStatus::Failure,
-            "PENDING" => AttemptStatus::Pending,
-            "INITIATED" => AttemptStatus::Pending,
-            "FOR_REVIEW" => AttemptStatus::Pending,
-            "FUNDED" => AttemptStatus::Charged,
-            "REVERSED" => AttemptStatus::Voided,
-            _ => AttemptStatus::Pending,
-        };
+        let status = AttemptStatus::from(item.response.status.clone());
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -453,21 +553,7 @@ impl
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Map GlobalPay statuses to UCS AttemptStatus
-        // Same status mapping as Authorize and PSync flows
-        let status = match item.response.status.as_str() {
-            "CAPTURED" => AttemptStatus::Charged,
-            "PREAUTHORIZED" => AttemptStatus::Authorized,
-            "DECLINED" => AttemptStatus::Failure,
-            "FAILED" => AttemptStatus::Failure,
-            "REJECTED" => AttemptStatus::Failure,
-            "PENDING" => AttemptStatus::Pending,
-            "INITIATED" => AttemptStatus::Pending,
-            "FOR_REVIEW" => AttemptStatus::Pending,
-            "FUNDED" => AttemptStatus::Charged,
-            "REVERSED" => AttemptStatus::Voided,
-            _ => AttemptStatus::Pending,
-        };
+        let status = AttemptStatus::from(item.response.status.clone());
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -495,24 +581,33 @@ impl
 // Following Pattern 2 from pattern_refund.md - Amount-Required Refunds
 #[derive(Debug, Clone, Serialize)]
 pub struct GlobalpayRefundRequest {
-    pub amount: String,
+    pub amount: StringMinorUnit,
     pub currency: String,
 }
 
-impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
-    for GlobalpayRefundRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<
+        GlobalpayRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for GlobalpayRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        wrapper: GlobalpayRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
+        let item = &wrapper.router_data;
         Ok(Self {
-            amount: item
-                .request
-                .minor_refund_amount
-                .get_amount_as_i64()
-                .to_string(),
+            amount: GlobalpayAmountConvertor::convert(
+                item.request.minor_refund_amount,
+                item.request.currency,
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?,
             currency: item.request.currency.to_string(),
         })
     }
@@ -523,9 +618,9 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct GlobalpayRefundResponse {
     pub id: String,
-    pub status: String,
+    pub status: GlobalpayRefundStatus,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub amount: Option<String>,
+    pub amount: Option<StringMinorUnit>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
 }
@@ -546,15 +641,7 @@ impl
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Map GlobalPay refund statuses to UCS RefundStatus
-        // Based on tech spec section 4: Refund a Sale
-        // Refund statuses should be similar to transaction statuses
-        let refund_status = match item.response.status.as_str() {
-            "CAPTURED" | "FUNDED" => RefundStatus::Success,
-            "PENDING" | "INITIATED" | "FOR_REVIEW" => RefundStatus::Pending,
-            "DECLINED" | "FAILED" | "REJECTED" => RefundStatus::Failure,
-            _ => RefundStatus::Pending, // Default to pending for unknown statuses
-        };
+        let refund_status = RefundStatus::from(item.response.status.clone());
 
         Ok(Self {
             response: Ok(RefundsResponseData {
@@ -584,13 +671,7 @@ impl
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Same status mapping as Refund flow
-        let refund_status = match item.response.status.as_str() {
-            "CAPTURED" | "FUNDED" => RefundStatus::Success,
-            "PENDING" | "INITIATED" | "FOR_REVIEW" => RefundStatus::Pending,
-            "DECLINED" | "FAILED" | "REJECTED" => RefundStatus::Failure,
-            _ => RefundStatus::Pending,
-        };
+        let refund_status = RefundStatus::from(item.response.status.clone());
 
         Ok(Self {
             response: Ok(RefundsResponseData {
@@ -610,14 +691,23 @@ impl
 #[derive(Debug, Clone, Serialize)]
 pub struct GlobalpayVoidRequest {}
 
-impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>
-    for GlobalpayVoidRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<
+        GlobalpayRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for GlobalpayVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        wrapper: GlobalpayRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
+        let item = &wrapper.router_data;
         // Validate that we have a connector transaction ID (required for URL construction)
         if item.request.connector_transaction_id.is_empty() {
             return Err(error_stack::report!(
@@ -649,11 +739,15 @@ impl
         >,
     ) -> Result<Self, Self::Error> {
         // Map GlobalPay void statuses to UCS AttemptStatus
-        // Based on tech spec: REVERSED status indicates successful void
-        let status = match item.response.status.as_str() {
-            "REVERSED" => AttemptStatus::Voided,
-            "PENDING" | "INITIATED" => AttemptStatus::Pending,
-            "DECLINED" | "FAILED" | "REJECTED" => AttemptStatus::VoidFailed,
+        // For void, we need special handling since REVERSED is success but other failures map differently
+        let status = match item.response.status.clone() {
+            GlobalpayPaymentStatus::Reversed => AttemptStatus::Voided,
+            GlobalpayPaymentStatus::Pending | GlobalpayPaymentStatus::Initiated => {
+                AttemptStatus::Pending
+            }
+            GlobalpayPaymentStatus::Declined
+            | GlobalpayPaymentStatus::Failed
+            | GlobalpayPaymentStatus::Rejected => AttemptStatus::VoidFailed,
             _ => AttemptStatus::VoidFailed, // Conservative default for unknown statuses
         };
 
