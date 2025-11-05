@@ -211,7 +211,7 @@ impl<
                 let msg = build_billdesk_message(
                     "dummy_merchant_id",
                     &transaction_id,
-                    &amount,
+                    &amount.to_string(),
                     &item.router_data.request.currency.to_string(),
                     &customer_id.get_string_repr(),
                     &return_url,
