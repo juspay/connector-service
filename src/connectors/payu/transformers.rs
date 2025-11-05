@@ -499,19 +499,9 @@ impl TryFrom<PayuPaymentResponse> for ResponseRouterData {
         let error_message = response.error.or(response.message).or(response.msg);
 
         Ok(ResponseRouterData {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(transaction_id),
-                redirection_data: None,
-                connector_metadata: None,
-                mandate_reference: None,
-                network_txn_id: response.txn_id,
-                connector_response_reference_id: response.reference_id,
-                incremental_authorization_allowed: None,
-                status_code: 200,
-            }),
             headers: None,
             status_code: 200,
-            response: bytes::Bytes::from("success"),
+            response: Bytes::from("success"),
         })
     }
 }
