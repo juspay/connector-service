@@ -632,6 +632,74 @@ impl<
 {
 }
 
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::CreateAccessToken,
+        PaymentFlowData,
+        domain_types::connector_types::AccessTokenRequestData,
+        domain_types::connector_types::AccessTokenResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::CreateConnectorCustomer,
+        PaymentFlowData,
+        domain_types::connector_types::ConnectorCustomerData,
+        domain_types::connector_types::ConnectorCustomerResponse,
+    > for Billdesk<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::PaymentMethodToken,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentMethodTokenizationData<T>,
+        domain_types::connector_types::PaymentMethodTokenResponse,
+    > for Billdesk<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::VoidPC,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Billdesk<T>
+{
+}
+
 // SourceVerification implementations for all flows
 macro_rules! impl_source_verification_stub {
     ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
