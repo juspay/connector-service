@@ -464,7 +464,7 @@ impl<T> TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, Payments
 
 // Response transformers
 
-impl<T> TryFrom<PayuPaymentResponse> for ResponseRouterData<T, PaymentsResponseData> {
+impl<T> TryFrom<PayuPaymentResponse> for ResponseRouterData {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: PayuPaymentResponse) -> Result<Self, Self::Error> {
