@@ -700,6 +700,57 @@ impl<
 {
 }
 
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::PreAuthenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::Authenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Billdesk<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::PostAuthenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Billdesk<T>
+{
+}
+
 // SourceVerification implementations for all flows
 macro_rules! impl_source_verification_stub {
     ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
