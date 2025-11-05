@@ -655,7 +655,18 @@ fn get_billdesk_auth_header(
 ) -> CustomResult<Maskable<String>, errors::ConnectorError> {
     match connector_auth_type {
         ConnectorAuthType::SignatureKey { api_key, .. } => {
+            // Billdesk uses custom authentication format based on the Haskell implementation
+            // The format is typically: "Bearer <api_key>" or custom header format
             let auth = format!("Bearer {}", api_key.peek());
+            Ok(auth.into_masked())
+        }
+        ConnectorAuthType::MultiAuthKey { auth_id, auth_key } => {
+            // Handle multi-auth scenario if needed
+            let auth = format!("Bearer {}: {}", auth_id.peek(), auth_key.peek());
+            Ok(auth.into_masked())
+        }
+        ConnectorAuthType::AuthKey(auth_key) => {
+            let auth = format!("Bearer {}", auth_key.peek());
             Ok(auth.into_masked())
         }
         _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
