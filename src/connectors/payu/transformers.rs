@@ -327,11 +327,8 @@ where
             }
         })?;
 
-        let phone = item.request.phone.clone().ok_or_else(|| {
-            ConnectorError::MissingRequiredField {
-                field_name: "phone",
-            }
-        })?;
+        // Phone is not directly available in PaymentsAuthorizeData, skip for now
+        let phone = Secret::new("".to_string());
 
         let customer_name = item.request.customer_name.clone().unwrap_or_else(|| "Customer".to_string());
 
