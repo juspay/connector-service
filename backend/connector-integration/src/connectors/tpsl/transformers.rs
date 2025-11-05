@@ -6,6 +6,7 @@ use common_utils::{
     ext_traits::ValueExt,
     request::Method,
 };
+use error_stack::ResultExt;
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData},
