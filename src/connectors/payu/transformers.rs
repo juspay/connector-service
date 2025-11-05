@@ -446,10 +446,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
         let transaction_id = item
             .resource_common_data
             .connector_request_reference_id
-            .get_connector_transaction_id()
-            .map_err(|_| ConnectorError::MissingRequiredField {
-                field_name: "connector_transaction_id",
-            })?;
+            .clone();
 
         // Generate hash for PSync
         let hash_string = format!("{}|{}|{}|{}", 
