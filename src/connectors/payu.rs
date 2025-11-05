@@ -4,6 +4,7 @@ use std::fmt::Debug;
 
 use hyperswitch_masking::ExposeInterface;
 use serde::Serialize;
+use interfaces::connector_types::*;
 use hyperswitch_masking::Secret;
 use interfaces::connector_types::*;
 
