@@ -2,7 +2,7 @@
 
 use std::fmt::Debug;
 
-use masking::ExposeInterface;
+use hyperswitch_masking::ExposeInterface;
 use serde::Serialize;
 use hyperswitch_masking::Secret;
 use interfaces::connector_types::*;
