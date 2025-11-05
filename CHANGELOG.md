@@ -1,5 +1,37 @@
 # Changelog
 
+## [2025-01-08] - Billdesk Connector Enhancement
+
+### Enhanced
+- Improved UPI payment flow with VPA extraction from payment method data
+- Enhanced status mapping based on Haskell implementation (0300, 0399, 0396, 0398, etc.)
+- Better error handling with comprehensive error status codes
+- Enhanced authentication support for multiple auth types (SignatureKey, MultiAuthKey, HeaderKey, etc.)
+- Improved connector metadata in responses with detailed Billdesk-specific fields
+- Enhanced constants with comprehensive Billdesk API mappings
+- Better webhook processing with proper status transformation
+
+### Technical Improvements
+- Fixed PaymentMethodData access patterns for UPI data extraction
+- Enhanced request message formatting with UPI VPA support
+- Improved response handling with detailed connector metadata
+- Better error reporting and status code mapping
+- Enhanced authentication header generation for multiple auth types
+- Comprehensive constant definitions for all Billdesk operations
+
+### Files Modified
+- `backend/connector-integration/src/connectors/billdesk/transformers.rs` - Enhanced UPI handling and status mapping
+- `backend/connector-integration/src/connectors/billdesk.rs` - Improved authentication handling
+- `backend/connector-integration/src/connectors/billdesk/constants.rs` - Comprehensive API constants
+
+### API Enhancements
+- Support for UPI Collect with VPA extraction
+- Enhanced status code mapping (0300/0399=Success, 0396=Pending, 0398=Failure)
+- Support for additional request IDs (BDRDF005, BDRDF006, BDRDF007, BDRDF008)
+- Comprehensive error status handling (000=Success, 001=Failure, 002=Pending)
+- Enhanced currency support (INR, USD, EUR, GBP)
+- Support for mandate operations and recurring payments
+
 ## [2025-01-08] - Billdesk Connector Addition
 
 ### Added
@@ -30,16 +62,6 @@
 - Authentication using Bearer token pattern
 - Comprehensive stub implementations for all required flows
 - `backend/grpc-api-types/proto/payment.proto` - Added Billdesk to gRPC enum
-
-### Technical Details
-- Migrated from Hyperswitch/Euler Haskell implementation
-- Uses UCS v2 macro framework for trait implementations
-- Implements proper error handling and status mapping
-- Full type safety with guard rails (Secret<String>, MinorUnit, etc.)
-- Supports test and production environments
-- UPI payment flow with redirect handling
-- Status synchronization with proper status code mapping
-- Webhook verification and processing
 
 ### API Endpoints
 - UAT: https://uat.billdesk.com/pgidsk/PGIDirectRequest
