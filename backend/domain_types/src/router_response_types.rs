@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use common_utils::Method;
+use crate::types::{PaymentMethodSpecificFeatures, PaymentMethodTypeMetadata};
 
 #[derive(Debug, Eq, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
 pub enum RedirectForm {
@@ -84,3 +85,19 @@ pub struct Response {
     /// status code
     pub status_code: u16,
 }
+
+/// Represents details of a payment method.
+#[derive(Debug, Clone)]
+pub struct PaymentMethodDetails {
+    /// Indicates whether mandates are supported by this payment method.
+    pub mandates: common_enums::FeatureStatus,
+    /// Indicates whether refund is supported by this payment method.
+    pub refunds: common_enums::FeatureStatus,
+    /// List of supported capture methods
+    pub supported_capture_methods: Vec<common_enums::CaptureMethod>,
+    /// Payment method specific features
+    pub specific_features: Option<PaymentMethodSpecificFeatures>,
+}
+
+/// list of payment methods, payment method types and metadata related to them
+pub type SupportedPaymentMethods = HashMap<common_enums::PaymentMethod, PaymentMethodTypeMetadata>;

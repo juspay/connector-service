@@ -118,6 +118,7 @@ enum Connector {
   ACI = 1;
   ADYEN = 2;
   AIRWALLEX = 3;
+  ARCHIPEL = 90;
   AUTHORIZEDOTNET = 4;
   BAMBORA = 5;
   BAMBORAAPAC = 6;

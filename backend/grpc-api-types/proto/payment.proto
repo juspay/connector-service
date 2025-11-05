@@ -456,6 +456,7 @@ enum Connector {
   CASHFREE = 92;
   PAYTM = 93;
   BLUECODE = 94;
+  ARCHIPEL = 95;
 }
 
 // Payment method types.

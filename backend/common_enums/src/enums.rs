@@ -1800,3 +1800,16 @@ pub enum DecoupledAuthenticationType {
     Challenge,
     Frictionless,
 }
+
+pub enum PaymentMethodStatus {
+    Active,
+    Inactive,
+    Processing,
+    AwaitingData,
+}
+
+#[derive(Debug, Clone)]
+pub enum FeatureStatus {
+    NotSupported,
+    Supported,
+}
