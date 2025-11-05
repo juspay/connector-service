@@ -338,9 +338,7 @@ async fn test_authorize_psync_void() {
             .expect("gRPC authorize call failed")
             .into_inner();
 
-        println!("Authorization Response: {:?}", auth_response);
         let transaction_id = extract_transaction_id(&auth_response);
-        println!("Transaction ID: {}, Amount: {}", transaction_id, amount);
 
         assert_eq!(
             auth_response.status,
@@ -359,7 +357,6 @@ async fn test_authorize_psync_void() {
             .expect("gRPC sync call failed")
             .into_inner();
 
-        println!("Sync Response: {:?}", sync_response);
         assert!(
             sync_response.transaction_id.is_some(),
             "Sync response should contain transaction ID"
@@ -376,7 +373,6 @@ async fn test_authorize_psync_void() {
             .expect("gRPC void call failed")
             .into_inner();
 
-        println!("Void Response: {:?}", void_response);
         assert_eq!(
             void_response.status,
             i32::from(PaymentStatus::Voided),
@@ -403,9 +399,7 @@ async fn test_authorize_capture_refund_rsync() {
             .expect("gRPC authorize call failed")
             .into_inner();
 
-        println!("Authorization Response: {:?}", auth_response);
         let transaction_id = extract_transaction_id(&auth_response);
-        println!("Transaction ID: {}, Amount: {}", transaction_id, amount);
 
         assert_eq!(
             auth_response.status,
@@ -424,7 +418,6 @@ async fn test_authorize_capture_refund_rsync() {
             .expect("gRPC capture call failed")
             .into_inner();
 
-        println!("Capture Response: {:?}", capture_response);
         assert_eq!(
             capture_response.status,
             i32::from(PaymentStatus::Charged),
@@ -442,9 +435,7 @@ async fn test_authorize_capture_refund_rsync() {
             .expect("gRPC refund call failed")
             .into_inner();
 
-        println!("Refund Response: {:?}", refund_response);
         let refund_id = refund_response.refund_id.clone();
-        println!("Refund ID: {}", refund_id);
 
         assert!(
             refund_response.status == i32::from(RefundStatus::RefundSuccess)
@@ -475,7 +466,6 @@ async fn test_authorize_capture_refund_rsync() {
             .expect("gRPC refund sync call failed")
             .into_inner();
 
-        println!("Refund Sync Response: {:?}", rsync_response);
         assert!(
             rsync_response.transaction_id.is_some(),
             "Refund sync response should contain transaction ID"
@@ -500,8 +490,6 @@ async fn test_setup_mandate() {
             .expect("gRPC register call failed")
             .into_inner();
 
-        println!("Setup Mandate Response: {:?}", response);
-
         // Verify we got a mandate reference
         assert!(
             response.mandate_reference.is_some(),
@@ -516,12 +504,10 @@ async fn test_setup_mandate() {
 
             if let Some(mandate_id) = &mandate_ref.mandate_id {
                 assert!(!mandate_id.is_empty(), "Mandate ID should not be empty");
-                println!("Mandate ID: {}", mandate_id);
             }
 
             if let Some(pm_id) = &mandate_ref.payment_method_id {
                 assert!(!pm_id.is_empty(), "Payment method ID should not be empty");
-                println!("Payment Method ID: {}", pm_id);
             }
         }
 
