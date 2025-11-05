@@ -5,11 +5,10 @@ use common_utils::{
     ext_traits::ValueExt,
     request::Method,
     types::StringMinorUnit,
-    Email,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData},
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -239,73 +238,6 @@ pub struct TpslTransactionDataType {
 pub struct TpslConsumerDataType {
     pub identifier: String,
 }
-
-// Stub types for unsupported flows
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslVoidRequest;
-
-#[derive(Debug, Clone)]
-pub struct TpslVoidResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslCaptureRequest;
-
-#[derive(Debug, Clone)]
-pub struct TpslCaptureResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslRefundRequest;
-
-#[derive(Debug, Clone)]
-pub struct TpslRefundResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslRefundSyncRequest;
-
-#[derive(Debug, Clone)]
-pub struct TpslRefundSyncResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslCreateOrderRequest;
-
-#[derive(Debug, Clone)]
-pub struct TpslCreateOrderResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslSessionTokenRequest;
-
-#[derive(Debug, Clone)]
-pub struct TpslSessionTokenResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslSetupMandateRequest;
-
-#[derive(Debug, Clone)]
-pub struct TpslSetupMandateResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslRepeatPaymentRequest;
-
-#[derive(Debug, Clone)]
-pub struct TpslRepeatPaymentResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslAcceptDisputeRequest;
-
-#[derive(Debug, Clone)]
-pub struct TpslAcceptDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslDefendDisputeRequest;
-
-#[derive(Debug, Clone)]
-pub struct TpslDefendDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TpslSubmitEvidenceRequest;
-
-#[derive(Debug, Clone)]
-pub struct TpslSubmitEvidenceResponse;
 
 #[derive(Default, Debug, Deserialize)]
 pub struct TpslAuthType {
@@ -556,7 +488,7 @@ pub struct TpslErrorResponse {
 
 fn get_redirect_form_data(
     payment_method_type: common_enums::PaymentMethodType,
-    response_data: TpslPaymentsResponseData,
+    _response_data: TpslPaymentsResponseData,
 ) -> CustomResult<RedirectForm, errors::ConnectorError> {
     match payment_method_type {
         common_enums::PaymentMethodType::Upi => {
@@ -583,7 +515,7 @@ impl<
         + Serialize,
 >
     TryFrom<
-        TpslRouterData<
+        TPSLRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -596,7 +528,7 @@ impl<
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: TpslRouterData<
+        item: TPSLRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -835,7 +767,7 @@ impl<
                 (
                     common_enums::AttemptStatus::AuthenticationPending,
                     Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
+                        resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
                             router_data
                                 .resource_common_data
                                 .connector_request_reference_id
@@ -873,7 +805,7 @@ impl<
         + Serialize,
 >
     TryFrom<
-        TpslRouterData<
+        TPSLRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             T,
         >,
@@ -881,7 +813,7 @@ impl<
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: TpslRouterData<
+        item: TPSLRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             T,
         >,
@@ -977,7 +909,7 @@ impl<
             .amount
             .as_ref()
             .and_then(|amt| amt.parse::<f64>().ok())
-            .and_then(|amt| amt.parse::<f64>().ok().map(|a| common_utils::types::MinorUnit::new((a * 100.0) as i64)));
+            .and_then(|a| common_utils::types::MinorUnit::new((a * 100.0) as i64));
 
         Ok(Self {
             resource_common_data: PaymentFlowData {
@@ -985,7 +917,7 @@ impl<
                 ..router_data.resource_common_data
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
+                resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
                     response.merchant_transaction_identifier,
                 ),
                 redirection_data: None,
