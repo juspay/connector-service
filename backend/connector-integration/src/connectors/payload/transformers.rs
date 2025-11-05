@@ -773,3 +773,53 @@ impl
         })
     }
 }
+
+// Webhook event transformation
+pub fn get_event_type_from_trigger(
+    trigger: responses::PayloadWebhooksTrigger,
+) -> domain_types::connector_types::EventType {
+    match trigger {
+        // Payment Success Events
+        responses::PayloadWebhooksTrigger::Processed => {
+            domain_types::connector_types::EventType::PaymentIntentSuccess
+        }
+        responses::PayloadWebhooksTrigger::Authorized => {
+            domain_types::connector_types::EventType::PaymentIntentAuthorizationSuccess
+        }
+        // Payment Processing Events
+        responses::PayloadWebhooksTrigger::Payment
+        | responses::PayloadWebhooksTrigger::AutomaticPayment => {
+            domain_types::connector_types::EventType::PaymentIntentProcessing
+        }
+        // Payment Failure Events
+        responses::PayloadWebhooksTrigger::Decline
+        | responses::PayloadWebhooksTrigger::Reject
+        | responses::PayloadWebhooksTrigger::BankAccountReject => {
+            domain_types::connector_types::EventType::PaymentIntentFailure
+        }
+        responses::PayloadWebhooksTrigger::Void | responses::PayloadWebhooksTrigger::Reversal => {
+            domain_types::connector_types::EventType::PaymentIntentCancelled
+        }
+        // Refund Events
+        responses::PayloadWebhooksTrigger::Refund => {
+            domain_types::connector_types::EventType::RefundSuccess
+        }
+        // Dispute Events
+        responses::PayloadWebhooksTrigger::Chargeback => {
+            domain_types::connector_types::EventType::DisputeOpened
+        }
+        responses::PayloadWebhooksTrigger::ChargebackReversal => {
+            domain_types::connector_types::EventType::DisputeWon
+        }
+        // Other payment-related events - treat as generic payment processing
+        responses::PayloadWebhooksTrigger::PaymentActivationStatus
+        | responses::PayloadWebhooksTrigger::Credit
+        | responses::PayloadWebhooksTrigger::Deposit
+        | responses::PayloadWebhooksTrigger::PaymentLinkStatus
+        | responses::PayloadWebhooksTrigger::ProcessingStatus
+        | responses::PayloadWebhooksTrigger::TransactionOperation
+        | responses::PayloadWebhooksTrigger::TransactionOperationClear => {
+            domain_types::connector_types::EventType::PaymentIntentProcessing
+        }
+    }
+}

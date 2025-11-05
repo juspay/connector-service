@@ -4,7 +4,7 @@ pub mod transformers;
 
 use base64::Engine;
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt};
+use common_utils::{crypto::VerifySignature, errors::CustomResult, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
@@ -100,10 +100,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::DisputeDefend for Payload<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::IncomingWebhook for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -925,4 +921,91 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         domain_types::connector_types::AccessTokenResponseData,
     > for Payload<T>
 {
+}
+
+// Webhook implementation
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::IncomingWebhook for Payload<T>
+{
+    fn get_webhook_source_verification_signature(
+        &self,
+        request: &domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: &domain_types::connector_types::ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<errors::ConnectorError>> {
+        let signature = request
+            .headers
+            .get(headers::X_PAYLOAD_SIGNATURE)
+            .map(|header_value| header_value.as_bytes().to_vec())
+            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+        Ok(signature)
+    }
+
+    fn get_webhook_source_verification_message(
+        &self,
+        request: &domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: &domain_types::connector_types::ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<errors::ConnectorError>> {
+        Ok(request.body.to_vec())
+    }
+
+    fn verify_webhook_source(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
+        let algorithm = common_utils::crypto::Sha256;
+
+        let connector_webhook_secrets = match connector_webhook_secret {
+            Some(secrets) => secrets,
+            None => {
+                return Ok(false);
+            }
+        };
+
+        let signature = self
+            .get_webhook_source_verification_signature(&request, &connector_webhook_secrets)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+        let message = self
+            .get_webhook_source_verification_message(&request, &connector_webhook_secrets)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+        algorithm
+            .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+    }
+
+    fn get_event_type(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<errors::ConnectorError>>
+    {
+        let webhook_body: transformers::PayloadWebhookEvent = request
+            .body
+            .parse_struct("PayloadWebhookEvent")
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        Ok(transformers::get_event_type_from_trigger(
+            webhook_body.trigger,
+        ))
+    }
+
+    fn get_webhook_resource_object(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+    ) -> Result<
+        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
+        error_stack::Report<errors::ConnectorError>,
+    > {
+        let webhook_body: transformers::PayloadWebhookEvent = request
+            .body
+            .parse_struct("PayloadWebhookEvent")
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        Ok(Box::new(webhook_body))
+    }
 }
