@@ -3,11 +3,10 @@ use crate::types::ResponseRouterData;
 use base64::Engine;
 use common_utils::{request::Method, types::StringMajorUnit, CustomResult};
 use domain_types::{
-    connector_flow::{Authorize, Capture, RSync, Refund},
+    connector_flow::{Authorize, Capture},
     connector_types::{
         AccessTokenResponseData, MandateReference, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, ResponseId,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
@@ -2218,47 +2217,6 @@ impl<F, T> TryFrom<ResponseRouterData<PaypalPaymentsCancelResponse, Self>>
     }
 }
 
-#[derive(Default, Debug, Serialize)]
-pub struct PaypalRefundRequest {
-    pub amount: OrderAmount,
-}
-
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<PaypalRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for PaypalRefundRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(
-        item: PaypalRouterData<
-            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let value = item
-            .connector
-            .amount_converter
-            .convert(
-                item.router_data.request.minor_refund_amount,
-                item.router_data.request.currency,
-            )
-            .change_context(errors::ConnectorError::AmountConversionFailed)?;
-        Ok(Self {
-            amount: OrderAmount {
-                currency_code: item.router_data.request.currency,
-                value,
-            },
-        })
-    }
-}
-
 #[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "UPPERCASE")]
@@ -2276,51 +2234,6 @@ impl From<RefundStatus> for common_enums::RefundStatus {
             RefundStatus::Failed | RefundStatus::Cancelled => Self::Failure,
             RefundStatus::Pending => Self::Pending,
         }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RefundResponse {
-    id: String,
-    status: RefundStatus,
-    amount: Option<OrderAmount>,
-}
-
-impl TryFrom<ResponseRouterData<RefundResponse, Self>>
-    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
-        Ok(Self {
-            response: Ok(RefundsResponseData {
-                connector_refund_id: item.response.id,
-                refund_status: common_enums::RefundStatus::from(item.response.status),
-                status_code: item.http_code,
-            }),
-            ..item.router_data
-        })
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct RefundSyncResponse {
-    id: String,
-    status: RefundStatus,
-}
-
-impl TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
-    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<RefundSyncResponse, Self>) -> Result<Self, Self::Error> {
-        Ok(Self {
-            response: Ok(RefundsResponseData {
-                connector_refund_id: item.response.id,
-                refund_status: common_enums::RefundStatus::from(item.response.status),
-                status_code: item.http_code,
-            }),
-            ..item.router_data
-        })
     }
 }
 

@@ -47,8 +47,7 @@ use crate::{
     connectors::paypal::transformers::{
         self as paypal, auth_headers, PaypalAuthResponse, PaypalAuthUpdateRequest,
         PaypalAuthUpdateResponse, PaypalCaptureResponse, PaypalPaymentsCancelResponse,
-        PaypalPaymentsCaptureRequest, PaypalPaymentsRequest, PaypalRefundRequest,
-        PaypalSyncResponse, RefundResponse, RefundSyncResponse,
+        PaypalPaymentsCaptureRequest, PaypalPaymentsRequest, PaypalSyncResponse,
     },
     types::ResponseRouterData,
     utils::{self, ConnectorErrorTypeMapping, ErrorCodeAndMessage},
@@ -194,17 +193,6 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
         (
-            flow: Refund,
-            request_body: PaypalRefundRequest,
-            response_body: RefundResponse,
-            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ),
-        (
-            flow: RSync,
-            response_body: RefundSyncResponse,
-            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ),
-        (
             flow: CreateAccessToken,
             request_body: PaypalAuthUpdateRequest,
             response_body: PaypalAuthUpdateResponse,
@@ -278,32 +266,9 @@ macros::create_all_prerequisites!(
                 &req.connector_auth_type,
             )
         }
-
-        pub fn build_refund_headers<F, Req, Res>(
-            &self,
-            req: &RouterDataV2<F, RefundFlowData, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-            let access_token = req.resource_common_data
-                .access_token
-                .clone()
-                .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
-            self.build_headers(
-                &access_token.access_token,
-                &req.resource_common_data.connector_request_reference_id,
-                &req.connector_auth_type,
-            )
-        }
-
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.paypal.base_url
-        }
-
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
-            &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
             &req.resource_common_data.connectors.paypal.base_url
         }
@@ -537,74 +502,16 @@ macros::macro_connector_implementation!(
     }
 );
 
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Paypal,
-    curl_request: Json(PaypalRefundRequest),
-    curl_response: RefundResponse,
-    flow_name: Refund,
-    resource_common_data: RefundFlowData,
-    flow_request: RefundsData,
-    flow_response: RefundsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_refund_headers(req)
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            let paypal_meta: paypal::PaypalMeta = req.request.to_connector_meta()?;
-            let capture_id = paypal_meta.capture_id.ok_or(
-                errors::ConnectorError::RequestEncodingFailedWithReason(
-                    "Missing Capture id".to_string(),
-                ),
-            )?;
-            Ok(format!(
-                "{}v2/payments/captures/{}/refund",
-                self.connector_base_url_refunds(req),
-                capture_id,
-            ))
-        }
-    }
-);
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Paypal<T>
+{
+}
 
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Paypal,
-    curl_response: RefundSyncResponse,
-    flow_name: RSync,
-    resource_common_data: RefundFlowData,
-    flow_request: RefundSyncData,
-    flow_response: RefundsResponseData,
-    http_method: Get,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_refund_headers(req)
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!(
-            "{}v2/payments/refunds/{}",
-            self.connector_base_url_refunds(req),
-            req.request.connector_refund_id,
-        ))
-        }
-    }
-);
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Paypal<T>
+{
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
