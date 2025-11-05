@@ -32,3 +32,6 @@ impl ConnectorEnum {
         }
     }
 }
+
+// Type alias for response router data
+pub type ResponseRouterData = domain_types::router_response_types::Response;
