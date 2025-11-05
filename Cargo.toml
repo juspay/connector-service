@@ -11,11 +11,12 @@ hex = "0.4"
 base64 = "0.21"
 
 # Hyperswitch/UCS dependencies
-common_enums = { path = "./backend/common_enums" }
-common_utils = { path = "./backend/common_utils" }
+common_enums = { path = "./backend/common_enums", package = "ucs_common_enums" }
+common_utils = { path = "./backend/common_utils", package = "ucs_common_utils" }
 domain_types = { path = "./backend/domain_types" }
 error-stack = "0.4"
 interfaces = { path = "./backend/interfaces" }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.09.24.0", package = "masking" }
 
 # Crypto dependencies
 sha2 = "0.10"
