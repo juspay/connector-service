@@ -1,22 +1,16 @@
 pub mod transformers;
-pub mod constants;
-
-use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit};
 use domain_types::{
-    connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
-        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
-    },
+    connector_flow::{Authorize, PSync, RSync},
     connector_types::{
-        AcceptDisputeData, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RequestDetails,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -26,7 +20,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::Maskable;
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -35,31 +29,16 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use transformers::{
-    self as billdesk, BilldeskPaymentsRequest, BilldeskPaymentsResponse, BilldeskPaymentsSyncRequest,
-    BilldeskPaymentsSyncResponse, BilldeskRefundSyncRequest, BilldeskRefundSyncResponse,
-};
+use transformers::{BilldeskPaymentsRequest, BilldeskPaymentsResponse};
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
-    pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
-// Trait implementations with generic type parameters
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::ConnectorServiceTrait<T> for Billdesk<T>
-{
-}
-
+// Only implement the traits we actually need
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -100,29 +79,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > connector_types::PaymentVoidV2 for Billdesk<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::RefundV2 for Billdesk<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentCapture for Billdesk<T>
+    > connector_types::ConnectorServiceTrait<T> for Billdesk<T>
 {
 }
 
@@ -141,7 +98,6 @@ impl<
         _connector_webhook_secrets: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
-        // Webhook verification not implemented for Billdesk
         Ok(false)
     }
 
@@ -170,28 +126,6 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentOrderCreate for Billdesk<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::ValidationTrait for Billdesk<T>
-{
-}
-
 macros::create_all_prerequisites!(
     connector_name: Billdesk,
     generic_type: T,
@@ -204,14 +138,14 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PSync,
-            request_body: BilldeskPaymentsSyncRequest,
-            response_body: BilldeskPaymentsSyncResponse,
+            request_body: transformers::BilldeskPaymentsSyncRequest,
+            response_body: transformers::BilldeskPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
             flow: RSync,
-            request_body: BilldeskRefundSyncRequest,
-            response_body: BilldeskRefundSyncResponse,
+            request_body: transformers::BilldeskRefundSyncRequest,
+            response_body: transformers::BilldeskRefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
@@ -263,15 +197,12 @@ macros::macro_connector_implementation!(
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut header = vec![(
+            Ok(vec![(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
-            )];
-
-            // Add any additional headers if needed
-            Ok(header)
+            )])
         }
         
         fn get_url(
@@ -314,7 +245,6 @@ impl<
         &self,
         _auth_type: &ConnectorAuthType,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        // Billdesk uses custom auth in the request body
         Ok(vec![])
     }
 
@@ -323,7 +253,7 @@ impl<
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: billdesk::BilldeskErrorResponse = res
+        let response: transformers::BilldeskErrorResponse = res
             .response
             .parse_struct("BilldeskErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
@@ -405,7 +335,6 @@ impl<
 {
 }
 
-// Authentication flow implementations
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -454,7 +383,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    > ConnectorIntegrationV2<Accept, DisputeFlowData, domain_types::connector_types::AcceptDisputeData, DisputeResponseData>
     for Billdesk<T>
 {
 }
@@ -483,7 +412,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    > ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, domain_types::connector_types::RepeatPaymentData, PaymentsResponseData>
     for Billdesk<T>
 {
 }
@@ -521,7 +450,7 @@ macro_rules! impl_source_verification_stub {
                 &self,
                 _secrets: ConnectorSourceVerificationSecrets,
             ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
-                Ok(Vec::new()) // STUB - will be implemented in Phase 10
+                Ok(Vec::new())
             }
             fn get_algorithm(
                 &self,
@@ -529,7 +458,7 @@ macro_rules! impl_source_verification_stub {
                 Box<dyn common_utils::crypto::VerifySignature + Send>,
                 errors::ConnectorError,
             > {
-                Ok(Box::new(common_utils::crypto::NoAlgorithm)) // STUB - will be implemented in Phase 10
+                Ok(Box::new(common_utils::crypto::NoAlgorithm))
             }
             fn get_signature(
                 &self,
@@ -537,7 +466,7 @@ macro_rules! impl_source_verification_stub {
                 _router_data: &RouterDataV2<$flow, $common_data, $req, $resp>,
                 _secrets: &[u8],
             ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
-                Ok(Vec::new()) // STUB - will be implemented in Phase 10
+                Ok(Vec::new())
             }
             fn get_message(
                 &self,
@@ -545,7 +474,7 @@ macro_rules! impl_source_verification_stub {
                 _router_data: &RouterDataV2<$flow, $common_data, $req, $resp>,
                 _secrets: &[u8],
             ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
-                Ok(payload.to_owned()) // STUB - will be implemented in Phase 10
+                Ok(payload.to_owned())
             }
         }
     };
@@ -582,13 +511,13 @@ impl_source_verification_stub!(
 impl_source_verification_stub!(
     RepeatPayment,
     PaymentFlowData,
-    RepeatPaymentData,
+    domain_types::connector_types::RepeatPaymentData,
     PaymentsResponseData
 );
 impl_source_verification_stub!(
     Accept,
     DisputeFlowData,
-    AcceptDisputeData,
+    domain_types::connector_types::AcceptDisputeData,
     DisputeResponseData
 );
 impl_source_verification_stub!(
