@@ -745,7 +745,7 @@ impl<
                         .resource_common_data
                         .connector_request_reference_id
                         .clone(),
-                    date_time: chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string(),
+                    date_time: "2024-01-01T00:00:00".to_string(), // Static timestamp for now
                     token: "TXN_TOKEN".to_string(),
                     security_token: "SECURITY_TOKEN".to_string(),
                     sub_type: "UPI".to_string(),
@@ -921,7 +921,7 @@ impl<
                     .resource_common_data
                     .connector_request_reference_id
                     .clone(),
-                date_time: chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string(),
+                date_time: "2024-01-01T00:00:00".to_string(), // Static timestamp for now
                 sub_type: "UPI".to_string(),
                 request_type: "STATUS".to_string(),
             },
