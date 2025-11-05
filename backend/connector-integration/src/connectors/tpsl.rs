@@ -635,7 +635,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<CreateAccessToken, PaymentFlowData, CreateAccessTokenData, CreateAccessTokenData>
+> ConnectorIntegrationV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>
     for TPSL<T>
 {
 }
@@ -647,7 +647,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<CreateConnectorCustomer, PaymentFlowData, CreateConnectorCustomerData, ConnectorCustomerResponse>
+> ConnectorIntegrationV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>
     for TPSL<T>
 {
 }
