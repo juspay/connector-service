@@ -703,7 +703,7 @@ impl<
                         .request
                         .email
                         .clone()
-                        .map(|e| e.to_string())
+                        .map(|e| e.peek().to_string())
                         .unwrap_or_else(|| "customer@example.com".to_string()),
                     identifier: customer_id.get_string_repr(),
                     account_no: "".to_string(),
