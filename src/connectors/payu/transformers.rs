@@ -470,13 +470,24 @@ impl<T> TryFrom<PayuPaymentResponse> for ResponseRouterData<T, PaymentsResponseD
 
     fn try_from(response: PayuPaymentResponse) -> Result<Self, Self::Error> {
         let status = match response.status {
-            Some(PayuStatusValue::IntStatus(1)) | Some(PayuStatusValue::StringStatus(ref s)) if s == "success" => {
+            Some(PayuStatusValue::IntStatus(1)) => {
                 AttemptStatus::Charged
             }
-            Some(PayuStatusValue::IntStatus(0)) | Some(PayuStatusValue::StringStatus(ref s)) if s == "pending" => {
+            Some(PayuStatusValue::StringStatus(ref s)) if s == "success" => {
+                AttemptStatus::Charged
+            }
+            Some(PayuStatusValue::IntStatus(0)) => {
                 AttemptStatus::Pending
             }
-            Some(PayuStatusValue::IntStatus(-1)) | Some(PayuStatusValue::StringStatus(ref s)) if s == "failure" => {
+            Some(PayuStatusValue::StringStatus(ref s)) if s == "pending" => {
+                AttemptStatus::Pending
+            }
+            Some(PayuStatusValue::IntStatus(-1)) => {
+                AttemptStatus::Failure
+            }
+            Some(PayuStatusValue::StringStatus(ref s)) if s == "failure" => {
+                AttemptStatus::Failure
+            }
                 AttemptStatus::Failure
             }
             _ => AttemptStatus::Pending,
