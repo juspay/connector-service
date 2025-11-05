@@ -663,56 +663,45 @@ macro_rules! impl_source_verification_stub {
 }
 
 // Apply stub implementations to all flows
-// impl_source_verification_stub!(
     PSync,
     PaymentFlowData,
     PaymentsSyncData,
-    PaymentsResponseData
 // );
-// impl_source_verification_stub!(
+// );
     Capture,
     PaymentFlowData,
     PaymentsCaptureData,
-    PaymentsResponseData
 // );
-// impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
-// impl_source_verification_stub!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
-// impl_source_verification_stub!(RSync, RefundFlowData, RefundSyncData, RefundsResponseData);
-// impl_source_verification_stub!(
+// );
     DefendDispute,
     DisputeFlowData,
     DisputeDefendData,
     DisputeResponseData
 // );
-// impl_source_verification_stub!(
     CreateOrder,
     PaymentFlowData,
     PaymentCreateOrderData,
     PaymentCreateOrderResponse
 // );
-// impl_source_verification_stub!(
     SetupMandate,
     PaymentFlowData,
     SetupMandateRequestData<T>,
-    PaymentsResponseData
 // );
-// impl_source_verification_stub!(
+// );
     Accept,
     DisputeFlowData,
     AcceptDisputeData,
     DisputeResponseData
 // );
-// impl_source_verification_stub!(
     SubmitEvidence,
     DisputeFlowData,
     SubmitEvidenceData,
     DisputeResponseData
 // );
-// impl_source_verification_stub!(
     RepeatPayment,
     PaymentFlowData,
     RepeatPaymentData,
-    PaymentsResponseData
+// );
 // );
 
 // Connector integration implementations for unsupported flows (stubs)
@@ -919,13 +908,11 @@ impl<
 }
 
 // Add source verification stub for CreateSessionToken
-// impl_source_verification_stub!(
     CreateSessionToken,
     PaymentFlowData,
     SessionTokenRequestData,
     SessionTokenResponseData
 // );
-// impl_source_verification_stub!(
     CreateAccessToken,
     PaymentFlowData,
     AccessTokenRequestData,
@@ -933,13 +920,11 @@ impl<
 // );
 
 // Add source verification stub for PaymentMethodToken
-// impl_source_verification_stub!(
     PaymentMethodToken,
     PaymentFlowData,
     PaymentMethodTokenizationData<T>,
     PaymentMethodTokenResponse
 // );
-// impl_source_verification_stub!(
     CreateConnectorCustomer,
     PaymentFlowData,
     ConnectorCustomerData,
@@ -999,27 +984,23 @@ impl<
 }
 
 // Authentication source verification stubs
-// impl_source_verification_stub!(
     PreAuthenticate,
     PaymentFlowData,
     PaymentsPreAuthenticateData<T>,
-    PaymentsResponseData
 // );
-// impl_source_verification_stub!(
+// );
     Authenticate,
     PaymentFlowData,
     PaymentsAuthenticateData<T>,
-    PaymentsResponseData
 // );
-// impl_source_verification_stub!(
+// );
     PostAuthenticate,
     PaymentFlowData,
     PaymentsPostAuthenticateData<T>,
-    PaymentsResponseData
 // );
-// impl_source_verification_stub!(
+// );
     VoidPC,
     PaymentFlowData,
     PaymentsCancelPostCaptureData,
-    PaymentsResponseData
+// );
 // );
