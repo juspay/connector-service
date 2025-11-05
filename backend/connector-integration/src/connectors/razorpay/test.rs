@@ -94,6 +94,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -102,12 +103,14 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
                     key1: "dummy_key1".to_string().into(),
                 },
                 request: PaymentsAuthorizeData {
+                    authentication_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: RawCardNumber(
                             CardNumber::from_str("5123456789012346").unwrap(),
@@ -183,6 +186,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
+                    merchant_account_metadata: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -270,6 +274,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -278,12 +283,14 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
                     key1: "dummy_key1".to_string().into(),
                 },
                 request: PaymentsAuthorizeData {
+                    authentication_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: RawCardNumber(CardNumber::from_str("").unwrap_or_default()),
                         card_exp_month: "".to_string().into(),
@@ -336,6 +343,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
+                    merchant_account_metadata: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_01".to_string(),
@@ -397,6 +405,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -405,12 +414,14 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
                     key1: "dummy_key1".to_string().into(),
                 },
                 request: PaymentsAuthorizeData {
+                    authentication_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: RawCardNumber(CardNumber::from_str("123").unwrap_or_default()),
                         card_exp_month: "99".to_string().into(),
@@ -463,6 +474,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
+                    merchant_account_metadata: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_02".to_string(),
@@ -546,6 +558,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -554,12 +567,14 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
                     key1: "dummy_key1".to_string().into(),
                 },
                 request: PaymentsAuthorizeData {
+                    authentication_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: RawCardNumber(
                             CardNumber::from_str("5123450000000008").unwrap(),
@@ -635,6 +650,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
+                    merchant_account_metadata: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -863,6 +879,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        ..Default::default()
                     },
                     ..Default::default()
                 },
@@ -871,12 +888,14 @@ mod tests {
                 raw_connector_request: None,
                 minor_amount_capturable: None,
                 connector_response: None,
+                recurring_mandate_payment_data: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
                 key1: "dummy_key1".to_string().into(),
             },
             request: PaymentsAuthorizeData {
+                authentication_data: None,
                 payment_method_data: PaymentMethodData::Card(Card {
                     card_number: RawCardNumber(CardNumber::from_str("5123450000000008").unwrap()),
                     card_exp_month: "12".to_string().into(),
@@ -948,6 +967,7 @@ mod tests {
                 request_extended_authorization: None,
                 setup_mandate_details: None,
                 enable_overcapture: None,
+                merchant_account_metadata: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1046,6 +1066,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        ..Default::default()
                     },
                     ..Default::default()
                 },
@@ -1054,12 +1075,14 @@ mod tests {
                 raw_connector_request: None,
                 minor_amount_capturable: None,
                 connector_response: None,
+                recurring_mandate_payment_data: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
                 key1: "dummy_key1".to_string().into(),
             },
             request: PaymentsAuthorizeData {
+                authentication_data: None,
                 payment_method_data: PaymentMethodData::Card(Card {
                     card_number: RawCardNumber(CardNumber::from_str("5123450000000008").unwrap()),
                     card_exp_month: "12".to_string().into(),
@@ -1131,6 +1154,7 @@ mod tests {
                 request_extended_authorization: None,
                 setup_mandate_details: None,
                 enable_overcapture: None,
+                merchant_account_metadata: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1231,6 +1255,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -1239,6 +1264,7 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1331,6 +1357,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -1339,6 +1366,7 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1436,6 +1464,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -1444,12 +1473,14 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "invalid_key".to_string().into(),
                     key1: "invalid_key1".to_string().into(),
                 },
                 request: PaymentsAuthorizeData {
+                    authentication_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: Default::default(),
                         card_exp_month: "".to_string().into(),
@@ -1502,6 +1533,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
+                    merchant_account_metadata: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_INVALID".to_string(),
@@ -1584,6 +1616,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        ..Default::default()
                     },
                     ..Default::default()
                 },
@@ -1592,6 +1625,7 @@ mod tests {
                 raw_connector_request: None,
                 minor_amount_capturable: None,
                 connector_response: None,
+                recurring_mandate_payment_data: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1707,6 +1741,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        ..Default::default()
                     },
                     ..Default::default()
                 },
@@ -1715,6 +1750,7 @@ mod tests {
                 raw_connector_request: None,
                 minor_amount_capturable: None,
                 connector_response: None,
+                recurring_mandate_payment_data: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1819,6 +1855,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        ..Default::default()
                     },
                     ..Default::default()
                 },
@@ -1827,6 +1864,7 @@ mod tests {
                 raw_connector_request: None,
                 minor_amount_capturable: None,
                 connector_response: None,
+                recurring_mandate_payment_data: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),

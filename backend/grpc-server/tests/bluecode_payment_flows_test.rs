@@ -243,7 +243,6 @@ fn create_payment_authorize_request(
 // Helper function to create a payment sync request
 fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
-        access_token: None,
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
@@ -255,6 +254,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         // all_keys_required: None,
         amount: TEST_AMOUNT,
         currency: 146, // Currency value from working grpcurl
+        state: None,
     }
 }
 

@@ -946,7 +946,7 @@ dependencies = [
  "nanoid",
  "nutype",
  "once_cell",
- "pem",
+ "pem 2.0.1",
  "phonenumber",
  "quick-xml 0.31.0",
  "rand 0.8.5",
@@ -1018,6 +1018,7 @@ dependencies = [
  "hex",
  "image",
  "interfaces",
+ "jsonwebtoken",
  "masking",
  "paste",
  "qrcode",
@@ -1039,6 +1040,7 @@ dependencies = [
  "ucs_common_enums",
  "ucs_common_utils",
  "url",
+ "urlencoding",
  "uuid",
 ]
 
@@ -1365,6 +1367,7 @@ dependencies = [
  "router_derive",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "strum",
  "thiserror 1.0.69",
  "time",
@@ -3390,6 +3393,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "jsonwebtoken"
+version = "9.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a87cc7a48537badeae96744432de36f4be2b4a34a05a5ef32e9dd8a1c169dde"
+dependencies = [
+ "base64 0.22.1",
+ "js-sys",
+ "pem 3.0.5",
+ "ring",
+ "serde",
+ "serde_json",
+ "simple_asn1",
+]
+
+[[package]]
 name = "kinded"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3745,6 +3763,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "num-bigint"
+version = "0.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a5e44f723f1133c9deac646763579fdb3ac745e418f2a7af9cd0c431da1f20b9"
+dependencies = [
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
 name = "num-bigint-dig"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4049,6 +4077,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b13fe415cdf3c8e44518e18a7c95a13431d9bdf6d15367d82b23c377fdd441a"
 dependencies = [
  "base64 0.21.7",
+ "serde",
+]
+
+[[package]]
+name = "pem"
+version = "3.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38af38e8470ac9dee3ce1bae1af9c1671fffc44ddfd8bd1d0a3445bf349a8ef3"
+dependencies = [
+ "base64 0.22.1",
  "serde",
 ]
 
@@ -5393,6 +5431,18 @@ name = "simdutf8"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
+
+[[package]]
+name = "simple_asn1"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "297f631f50729c8c99b84667867963997ec0b50f32b2a7dbcab828ef0541e8bb"
+dependencies = [
+ "num-bigint",
+ "num-traits",
+ "thiserror 2.0.16",
+ "time",
+]
 
 [[package]]
 name = "slab"

@@ -220,11 +220,11 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("aci_sync_{}", get_timestamp()))),
         }),
-        access_token: None,
         capture_method: Some(i32::from(CaptureMethod::Automatic)),
         handle_response: None,
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
+        state: None,
     }
 }
 
@@ -237,10 +237,11 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         amount_to_capture: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
-        metadata: HashMap::new(),
+        connector_metadata: HashMap::new(),
         request_ref_id: None,
         browser_info: None,
-        access_token: None,
+        capture_method: None,
+        state: None,
     }
 }
 
@@ -264,7 +265,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         merchant_account_id: None,
         capture_method: None,
         request_ref_id: None,
-        access_token: None,
+        state: None,
     }
 }
 
@@ -278,7 +279,9 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         request_ref_id: None,
         all_keys_required: None,
         browser_info: None,
-        access_token: None,
+        amount: None,
+        currency: None,
+        ..Default::default()
     }
 }
 
@@ -367,13 +370,15 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         minor_amount: TEST_AMOUNT,
         merchant_order_reference_id: Some(format!("repeat_order_{}", get_timestamp())),
         metadata,
-        access_token: None,
         webhook_url: Some("https://your-webhook-url.com/payments/webhook".to_string()),
         capture_method: None,
         email: None,
         browser_info: None,
         test_mode: None,
         payment_method_type: None,
+        merchant_account_metadata: HashMap::new(),
+        state: None,
+        ..Default::default()
     }
 }
 

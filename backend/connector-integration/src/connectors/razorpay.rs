@@ -14,16 +14,18 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
-        PreAuthenticate, RSync, Refund, SetupMandate, SubmitEvidence, Void,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, SetupMandate, SubmitEvidence, Void,
+        VoidPC,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
-        ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, EventType, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,
+        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
         RefundsData, RefundsResponseData, RequestDetails, ResponseId, SessionTokenRequestData,
@@ -60,6 +62,7 @@ use crate::{
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
+    pub(crate) const ACCEPT: &str = "Accept";
 }
 
 #[derive(Clone)]
@@ -123,6 +126,16 @@ impl<
             + 'static
             + Serialize,
     > connector_types::PaymentAccessToken for Razorpay<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::CreateConnectorCustomer for Razorpay<T>
 {
 }
 impl<
@@ -234,6 +247,33 @@ impl<
             + 'static
             + Serialize,
     > connector_types::RepeatPaymentV2 for Razorpay<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentVoidPostCaptureV2 for Razorpay<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Razorpay<T>
 {
 }
 impl<
@@ -400,10 +440,16 @@ impl<
             PaymentsResponseData,
         >,
     {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/x-www-form-urlencoded".to_string().into(),
-        )];
+        let mut header = vec![
+            (
+                headers::CONTENT_TYPE.to_string(),
+                "application/x-www-form-urlencoded".to_string().into(),
+            ),
+            (
+                headers::ACCEPT.to_string(),
+                "application/json".to_string().into(),
+            ),
+        ];
         let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
         header.append(&mut api_key);
         Ok(header)
@@ -684,10 +730,16 @@ impl<
             PaymentCreateOrderResponse,
         >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/x-www-form-urlencoded".to_string().into(),
-        )];
+        let mut header = vec![
+            (
+                headers::CONTENT_TYPE.to_string(),
+                "application/x-www-form-urlencoded".to_string().into(),
+            ),
+            (
+                headers::ACCEPT.to_string(),
+                "application/json".to_string().into(),
+            ),
+        ];
         let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
         header.append(&mut api_key);
         Ok(header)
@@ -911,6 +963,10 @@ impl<
             status_code: 200,
             response_headers: None,
             transformation_status: common_enums::WebhookTransformationStatus::Complete,
+            minor_amount_captured: None,
+            amount_captured: None,
+            error_reason: None,
+            network_txn_id: None,
         })
     }
 
@@ -1329,6 +1385,23 @@ impl<
             + Serialize,
     >
     interfaces::verification::SourceVerification<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Razorpay<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
         PSync,
         PaymentFlowData,
         PaymentsSyncData,
@@ -1558,6 +1631,23 @@ impl<
 {
 }
 
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Razorpay<T>
+{
+}
+
 impl connector_types::ConnectorValidation for Razorpay<DefaultPCIHolder> {
     fn validate_mandate_payment(
         &self,
@@ -1742,6 +1832,23 @@ impl<
         PaymentFlowData,
         AccessTokenRequestData,
         AccessTokenResponseData,
+    > for Razorpay<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
     > for Razorpay<T>
 {
 }

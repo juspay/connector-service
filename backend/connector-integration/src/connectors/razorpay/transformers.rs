@@ -1498,11 +1498,11 @@ impl<
                     })?
                     .peek()
                     .to_string();
-                ("collect", Some(vpa))
+                (None, Some(vpa))
             }
             PaymentMethodData::Upi(UpiData::UpiIntent(_))
-            | PaymentMethodData::Upi(UpiData::UpiQr(_)) => ("intent", None),
-            _ => ("collect", None), // Default fallback
+            | PaymentMethodData::Upi(UpiData::UpiQr(_)) => (Some("intent"), None),
+            _ => (None, None), // Default fallback
         };
 
         // Get order_id from the CreateOrder response (stored in reference_id)
@@ -1576,8 +1576,8 @@ impl<
                 .as_ref()
                 .and_then(|info| info.get_user_agent().ok())
                 .unwrap_or_else(|| "Mozilla/5.0".to_string()),
-            description: Some("Payment via Razorpay".to_string()),
-            flow: Some(flow_type.to_string()),
+            description: Some("".to_string()),
+            flow: flow_type.map(|s| s.to_string()),
             __notes_91_cust_id_93_: metadata_map.get("__notes_91_cust_id_93_").cloned(),
             __notes_91_cust_name_93_: metadata_map.get("__notes_91_cust_name_93_").cloned(),
             __upi_91_flow_93_: metadata_map.get("__upi_91_flow_93_").cloned(),

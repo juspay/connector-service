@@ -227,11 +227,11 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("dlocal_sync_{}", get_timestamp()))),
         }),
-        access_token: None,
         capture_method: None,
         handle_response: None,
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Myr),
+        state: None,
     }
 }
 
@@ -244,10 +244,11 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         amount_to_capture: TEST_AMOUNT,
         currency: i32::from(Currency::Myr),
         multiple_capture_data: None,
-        metadata: HashMap::new(),
+        connector_metadata: HashMap::new(),
         request_ref_id: None,
         browser_info: None,
-        access_token: None,
+        capture_method: None,
+        state: None,
     }
 }
 
@@ -271,7 +272,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         merchant_account_id: None,
         capture_method: None,
         request_ref_id: None,
-        access_token: None,
+        state: None,
     }
 }
 
@@ -286,7 +287,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         browser_info: None,
         request_ref_id: None,
         refund_metadata: HashMap::new(),
-        access_token: None,
+        state: None,
     }
 }
 
@@ -300,7 +301,9 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         request_ref_id: None,
         all_keys_required: None,
         browser_info: None,
-        access_token: None,
+        amount: None,
+        currency: None,
+        ..Default::default()
     }
 }
 

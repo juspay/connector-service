@@ -62,6 +62,7 @@ mod tests {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
                             dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -72,12 +73,14 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
                     key1: Secret::new(key1),
                 },
                 request: PaymentsAuthorizeData {
+                    authentication_data: None,
                     payment_method_data: PaymentMethodData::Card(
                         domain_types::payment_method_data::Card {
                             card_number: RawCardNumber(cards::CardNumber::from_str(
@@ -159,6 +162,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
+                    merchant_account_metadata: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -240,6 +244,7 @@ mod tests {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
                             dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -250,12 +255,14 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
                     key1: Secret::new(key1),
                 },
                 request: PaymentsAuthorizeData {
+                    authentication_data: None,
                     payment_method_data: PaymentMethodData::Card(Default::default()),
                     amount: 0,
                     order_tax_amount: None,
@@ -295,6 +302,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
+                    merchant_account_metadata: None,
                 },
                 response: Err(ErrorResponse::default()),
             };

@@ -85,6 +85,7 @@ mod tests {
                         bluecode: ConnectorParams {
                             base_url: "https://api.bluecode.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -94,11 +95,13 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::HeaderKey {
                     api_key: Secret::new(api_key),
                 },
                 request: PaymentsAuthorizeData {
+                    authentication_data: None,
                     access_token: None,
                     payment_method_data: PaymentMethodData::Wallet(WalletData::BluecodeRedirect {}),
                     amount: 1000,
@@ -146,6 +149,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
+                    merchant_account_metadata: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -228,6 +232,7 @@ mod tests {
                         bluecode: ConnectorParams {
                             base_url: "https://api.bluecode.com/".to_string(),
                             dispute_base_url: None,
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -237,11 +242,13 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::HeaderKey {
                     api_key: Secret::new(api_key),
                 },
                 request: PaymentsAuthorizeData {
+                    authentication_data: None,
                     access_token: None,
                     payment_method_data: PaymentMethodData::Wallet(WalletData::BluecodeRedirect {}),
                     amount: 0,
@@ -281,6 +288,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
+                    merchant_account_metadata: None,
                 },
                 response: Err(ErrorResponse::default()),
             };

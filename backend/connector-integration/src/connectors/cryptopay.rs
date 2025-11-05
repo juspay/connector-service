@@ -14,26 +14,29 @@ use hex::encode;
 
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
-        PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
+        SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, EventType, PaymentCreateOrderData, PaymentCreateOrderResponse,
         PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, WebhookDetailsResponse,
     },
     payment_method_data::PaymentMethodDataTypes,
     types::Connectors,
 };
 
 use common_utils::{
-    crypto::{self, GenerateDigest, SignMessage},
+    crypto::{self, GenerateDigest, SignMessage, VerifySignature},
     date_time,
     errors::CustomResult,
     ext_traits::ByteSliceExt,
@@ -50,7 +53,7 @@ use domain_types::errors;
 use domain_types::router_response_types::Response;
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
+    events::connector_api_logs::ConnectorEvent, verification::SourceVerification,
 };
 
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
@@ -179,7 +182,56 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
+    > connector_types::CreateConnectorCustomer for Cryptopay<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     > connector_types::PaymentSessionToken for Cryptopay<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentVoidPostCaptureV2 for Cryptopay<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Cryptopay<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    SourceVerification<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    for Cryptopay<T>
 {
 }
 
@@ -261,10 +313,6 @@ impl<
             + 'static
             + Serialize,
     > connector_types::DisputeDefend for Cryptopay<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::IncomingWebhook for Cryptopay<T>
 {
 }
 
@@ -470,6 +518,99 @@ macros::macro_connector_implementation!(
 );
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::IncomingWebhook for Cryptopay<T>
+{
+    fn get_webhook_source_verification_signature(
+        &self,
+        request: &RequestDetails,
+        _connector_webhook_secret: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::ConnectorError>> {
+        let base64_signature = request
+            .headers
+            .get("x-cryptopay-signature")
+            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Missing incoming webhook signature for Cryptopay")?;
+        hex::decode(base64_signature)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+    }
+
+    fn get_webhook_source_verification_message(
+        &self,
+        request: &RequestDetails,
+        _connector_webhook_secrets: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::ConnectorError>> {
+        let message = std::str::from_utf8(&request.body)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Webhook source verification message parsing failed for Cryptopay")?;
+        Ok(message.to_string().into_bytes())
+    }
+
+    fn verify_webhook_source(
+        &self,
+        request: RequestDetails,
+        connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
+        let algorithm = crypto::HmacSha256;
+
+        let connector_webhook_secrets = match connector_webhook_secret {
+            Some(secrets) => secrets,
+            None => Err(domain_types::errors::ConnectorError::WebhookSourceVerificationFailed)?,
+        };
+
+        let signature =
+            self.get_webhook_source_verification_signature(&request, &connector_webhook_secrets)?;
+
+        let message =
+            self.get_webhook_source_verification_message(&request, &connector_webhook_secrets)?;
+
+        algorithm
+            .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Webhook source verification failed for Cryptopay")
+    }
+
+    fn get_event_type(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<EventType, error_stack::Report<domain_types::errors::ConnectorError>> {
+        let notif: cryptopay::CryptopayWebhookDetails = request
+            .body
+            .parse_struct("CryptopayWebhookDetails")
+            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
+        match notif.data.status {
+            cryptopay::CryptopayPaymentStatus::Completed => Ok(EventType::PaymentIntentSuccess),
+            cryptopay::CryptopayPaymentStatus::Unresolved => Ok(EventType::PaymentActionRequired),
+            cryptopay::CryptopayPaymentStatus::Cancelled => Ok(EventType::PaymentIntentFailure),
+            _ => Ok(EventType::IncomingWebhookEventUnspecified),
+        }
+    }
+
+    fn process_payment_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<domain_types::errors::ConnectorError>>
+    {
+        let notif: cryptopay::CryptopayWebhookDetails = request
+            .body
+            .parse_struct("CryptopayWebhookDetails")
+            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
+        let response = WebhookDetailsResponse::try_from(notif)
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed);
+
+        response.map(|mut response| {
+            response.raw_connector_response =
+                Some(String::from_utf8_lossy(&request.body).to_string());
+            response
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
     for Cryptopay<T>
 {
@@ -582,6 +723,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
+    > for Cryptopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
     > for Cryptopay<T>
 {
 }
@@ -768,6 +919,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
+    > for Cryptopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
     > for Cryptopay<T>
 {
 }

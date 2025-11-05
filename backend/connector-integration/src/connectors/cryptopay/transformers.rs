@@ -2,6 +2,7 @@ use domain_types::{
     connector_flow::Authorize,
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
+        WebhookDetailsResponse,
     },
     payment_method_data::PaymentMethodDataTypes,
 };
@@ -239,8 +240,8 @@ impl<
             )?),
             None => None,
         };
-        match amount_captured_in_minor_units {
-            Some(minor_amount) => {
+        match (amount_captured_in_minor_units, status) {
+            (Some(minor_amount), common_enums::AttemptStatus::Charged) => {
                 let amount_captured = Some(minor_amount.get_amount_as_i64());
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
@@ -253,7 +254,7 @@ impl<
                     ..router_data
                 })
             }
-            None => Ok(Self {
+            _ => Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status,
                     ..router_data.resource_common_data
@@ -288,7 +289,7 @@ pub struct CryptopayPaymentResponseData {
     pub network: Option<String>,
     pub uri: Option<String>,
     pub price_amount: Option<StringMajorUnit>,
-    pub price_currency: Option<String>,
+    pub price_currency: Option<common_enums::Currency>,
     pub pay_amount: Option<StringMajorUnit>,
     pub pay_currency: Option<String>,
     pub fee: Option<String>,
@@ -377,8 +378,8 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
             )?),
             None => None,
         };
-        match amount_captured_in_minor_units {
-            Some(minor_amount) => {
+        match (amount_captured_in_minor_units, status) {
+            (Some(minor_amount), common_enums::AttemptStatus::Charged) => {
                 let amount_captured = Some(minor_amount.get_amount_as_i64());
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
@@ -391,7 +392,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                     ..router_data
                 })
             }
-            None => Ok(Self {
+            _ => Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status,
                     ..router_data.resource_common_data
@@ -399,6 +400,94 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                 response,
                 ..router_data
             }),
+        }
+    }
+}
+
+impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(notif: CryptopayWebhookDetails) -> Result<Self, Self::Error> {
+        let status = common_enums::AttemptStatus::from(notif.data.status.clone());
+        if is_payment_failure(status) {
+            Ok(Self {
+                error_code: Some(
+                    notif
+                        .data
+                        .name
+                        .clone()
+                        .unwrap_or(consts::NO_ERROR_CODE.to_string()),
+                ),
+                error_message: Some(
+                    notif
+                        .data
+                        .status_context
+                        .clone()
+                        .unwrap_or(consts::NO_ERROR_MESSAGE.to_string()),
+                ),
+                error_reason: notif.data.status_context.clone(),
+                status_code: 200,
+                status: common_enums::AttemptStatus::Unknown,
+                resource_id: Some(ResponseId::ConnectorTransactionId(notif.data.id.clone())),
+                connector_response_reference_id: None,
+                mandate_reference: None,
+                raw_connector_response: None,
+                response_headers: None,
+                transformation_status: common_enums::WebhookTransformationStatus::Complete,
+                minor_amount_captured: None,
+                amount_captured: None,
+                network_txn_id: None,
+            })
+        } else {
+            let amount_captured_in_minor_units =
+                match (notif.data.price_amount, notif.data.price_currency) {
+                    (Some(amount), Some(currency)) => {
+                        Some(CryptopayAmountConvertor::convert_back(amount, currency)?)
+                    }
+                    _ => None,
+                };
+            match (amount_captured_in_minor_units, status) {
+                (Some(minor_amount), common_enums::AttemptStatus::Charged) => {
+                    let amount_captured = Some(minor_amount.get_amount_as_i64());
+                    Ok(Self {
+                        amount_captured,
+                        minor_amount_captured: amount_captured_in_minor_units,
+                        status,
+                        resource_id: Some(ResponseId::ConnectorTransactionId(
+                            notif.data.id.clone(),
+                        )),
+                        error_reason: None,
+                        mandate_reference: None,
+                        status_code: 200,
+                        connector_response_reference_id: notif
+                            .data
+                            .custom_id
+                            .or(Some(notif.data.id)),
+                        error_code: None,
+                        error_message: None,
+                        raw_connector_response: None,
+                        response_headers: None,
+                        network_txn_id: None,
+                        transformation_status: common_enums::WebhookTransformationStatus::Complete,
+                    })
+                }
+                _ => Ok(Self {
+                    status,
+                    resource_id: Some(ResponseId::ConnectorTransactionId(notif.data.id.clone())),
+                    mandate_reference: None,
+                    status_code: 200,
+                    connector_response_reference_id: notif.data.custom_id.or(Some(notif.data.id)),
+                    error_code: None,
+                    error_message: None,
+                    raw_connector_response: None,
+                    response_headers: None,
+                    minor_amount_captured: None,
+                    amount_captured: None,
+                    error_reason: None,
+                    network_txn_id: None,
+                    transformation_status: common_enums::WebhookTransformationStatus::Complete,
+                }),
+            }
         }
     }
 }

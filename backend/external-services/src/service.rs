@@ -173,7 +173,7 @@ where
                 let raw_response_string = strip_bom_and_convert_to_string(&body.response);
                 updated_router_data
                     .resource_common_data
-                    .set_raw_connector_response(raw_response_string);
+                    .set_raw_connector_response(raw_response_string.map(Into::into));
             }
 
             let handle_response_result =
@@ -197,7 +197,9 @@ where
                 Some(request) => {
                     updated_router_data
                         .resource_common_data
-                        .set_raw_connector_request(Some(extract_raw_connector_request(request)));
+                        .set_raw_connector_request(Some(
+                            extract_raw_connector_request(request).into(),
+                        ));
                     updated_router_data
                 }
                 None => updated_router_data,
@@ -555,7 +557,9 @@ where
                                             strip_bom_and_convert_to_string(&body.response);
                                         updated_router_data
                                             .resource_common_data
-                                            .set_raw_connector_response(raw_response_string);
+                                            .set_raw_connector_response(
+                                                raw_response_string.map(Into::into),
+                                            );
 
                                         // Set response headers if available
                                         updated_router_data
@@ -592,7 +596,9 @@ where
                                             strip_bom_and_convert_to_string(&body.response);
                                         updated_router_data
                                             .resource_common_data
-                                            .set_raw_connector_response(raw_response_string);
+                                            .set_raw_connector_response(
+                                                raw_response_string.map(Into::into),
+                                            );
                                         updated_router_data
                                             .resource_common_data
                                             .set_connector_response_headers(body.headers.clone());
@@ -685,10 +691,21 @@ pub async fn call_connector_api(
                     Some(RequestContent::Json(payload)) => client.json(&payload),
                     Some(RequestContent::FormUrlEncoded(payload)) => client.form(&payload),
                     Some(RequestContent::Xml(payload)) => {
-                        // Use serde_json for XML conversion instead of quick_xml
+                        // For XML content, we need to extract the XML string properly
+                        // The payload implements a custom Serialize that generates XML content
                         let body = serde_json::to_string(&payload)
                             .change_context(ApiClientError::UrlEncodingFailed)?;
-                        client.body(body).header("Content-Type", "application/xml")
+
+                        // Properly deserialize the JSON string to extract clean XML
+                        let xml_body = if body.starts_with('"') && body.ends_with('"') {
+                            // This is a JSON-encoded string, deserialize it properly
+                            serde_json::from_str::<String>(&body)
+                                .change_context(ApiClientError::UrlEncodingFailed)?
+                        } else {
+                            // This is already the raw body content
+                            body
+                        };
+                        client.body(xml_body).header("Content-Type", "text/xml")
                     }
                     Some(RequestContent::FormData(form)) => client.multipart(form),
                     _ => client,
@@ -967,7 +984,6 @@ fn extract_raw_connector_request(connector_request: &Request) -> String {
         }
         None => serde_json::Value::Null,
     };
-
     // Extract unmasked headers
     let headers_content = connector_request
         .headers

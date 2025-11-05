@@ -141,7 +141,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         enrolled_for_3ds: false,
         request_incremental_authorization: false,
         capture_method: Some(i32::from(capture_method)),
-        connector_customer: Some("cus_TE8065JzRWlLQf".to_string()),
+        connector_customer_id: Some("cus_TE8065JzRWlLQf".to_string()),
         // payment_method_type: Some(i32::from(PaymentMethodType::Credit)),
         ..Default::default()
     }
@@ -156,11 +156,11 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id("stripe_sync"))),
         }),
-        access_token: None,
         capture_method: None,
         handle_response: None,
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
+        state: None,
     }
 }
 
@@ -190,7 +190,9 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         }),
         all_keys_required: None,
         browser_info: None,
-        access_token: None,
+        amount: None,
+        currency: None,
+        ..Default::default()
     }
 }
 

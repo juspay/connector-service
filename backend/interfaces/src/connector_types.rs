@@ -5,16 +5,17 @@ use common_utils::{CustomResult, SecretSerdeValue};
 use domain_types::{
     connector_flow,
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
-        ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, DisputeWebhookDetailsResponse, EventType, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
-        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,
+        DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
+        EventType, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
+        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
@@ -32,8 +33,10 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + PaymentOrderCreate
     + PaymentSessionToken
     + PaymentAccessToken
+    + CreateConnectorCustomer
     + PaymentTokenV2<T>
     + PaymentVoidV2
+    + PaymentVoidPostCaptureV2
     + IncomingWebhook
     + RefundV2
     + PaymentCapture
@@ -54,6 +57,16 @@ pub trait PaymentVoidV2:
 {
 }
 
+pub trait PaymentVoidPostCaptureV2:
+    ConnectorIntegrationV2<
+    connector_flow::VoidPC,
+    PaymentFlowData,
+    PaymentsCancelPostCaptureData,
+    PaymentsResponseData,
+>
+{
+}
+
 pub type BoxedConnector<T> = Box<&'static (dyn ConnectorServiceTrait<T> + Sync)>;
 
 pub trait ValidationTrait {
@@ -66,6 +79,10 @@ pub trait ValidationTrait {
     }
 
     fn should_do_access_token(&self) -> bool {
+        false
+    }
+
+    fn should_create_connector_customer(&self) -> bool {
         false
     }
 
@@ -100,6 +117,16 @@ pub trait PaymentAccessToken:
     PaymentFlowData,
     AccessTokenRequestData,
     AccessTokenResponseData,
+>
+{
+}
+
+pub trait CreateConnectorCustomer:
+    ConnectorIntegrationV2<
+    connector_flow::CreateConnectorCustomer,
+    PaymentFlowData,
+    ConnectorCustomerData,
+    ConnectorCustomerResponse,
 >
 {
 }

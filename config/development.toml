@@ -7,7 +7,7 @@ level = "TRACE"
 log_format = "default"
 
 [log.kafka]
-enabled = true
+enabled = false
 level = "info"
 filtering_directive = "info"
 brokers = ["localhost:9092"]
@@ -15,12 +15,12 @@ topic = "connector-service-logs"
 buffer_limit = 100000
 
 [server]
-host = "127.0.0.1"
+host = "0.0.0.0"
 port = 8000
 type = "grpc"
 
 [metrics]
-host = "127.0.0.1"
+host = "0.0.0.0"
 port = 8080
 
 [proxy]
@@ -60,10 +60,14 @@ aci.base_url = "https://eu-test.oppwa.com/"
 trustpay.base_url = "https://test-tpgw.trustpay.eu/"
 trustpay.base_url_bank_redirects = "https://aapi.trustpay.eu/"
 stripe.base_url = "https://api.stripe.com/"
+cybersource.base_url = "https://apitest.cybersource.com/"
+worldpay.base_url = "https://try.access.worldpay.com/"
+worldpayvantiv.base_url = "https://transact.vantivprelive.com/vap/communicator/online"
+worldpayvantiv.secondary_base_url = "https://onlinessr.vantivprelive.com"
 
 # Generic Events Configuration
 [events]
-enabled = true
+enabled = false
 brokers = ["localhost:9092"]
 topic = "audit-trail-events"
 partition_key_field = "request_id"

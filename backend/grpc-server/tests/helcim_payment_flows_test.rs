@@ -263,11 +263,11 @@ fn create_payment_sync_request(
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(request_ref_id.to_string())),
         }),
-        access_token: None,
         capture_method: None,
         handle_response: None,
         amount,
         currency: i32::from(Currency::Usd),
+        state: None,
     }
 }
 
@@ -301,9 +301,11 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("void_ref_{}", get_timestamp()))),
         }),
-        access_token: None,
         all_keys_required: None,
         browser_info: Some(create_test_browser_info()),
+        amount: None,
+        currency: None,
+        ..Default::default()
     }
 }
 

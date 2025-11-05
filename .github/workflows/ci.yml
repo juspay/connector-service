@@ -27,6 +27,8 @@ jobs:
 
       - name: Spell check
         uses: crate-ci/typos@master
+        with:
+          config: ./.typos.toml
 
   check:
     name: Compilation Check
