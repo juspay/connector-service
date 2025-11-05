@@ -210,7 +210,7 @@ impl<
             common_enums::PaymentMethod::Upi => {
                 let msg = build_billdesk_message(
                     "dummy_merchant_id",
-                    transaction_id,
+                    &transaction_id,
                     &amount,
                     &item.router_data.request.currency.to_string(),
                     &customer_id.get_string_repr(),
