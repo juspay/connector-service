@@ -495,7 +495,7 @@ impl TryFrom<PayuPaymentResponse> for ResponseRouterData {
             _ => AttemptStatus::Pending,
         };
 
-        let error_message = response.error.or(response.message).or(response.msg);
+        let _error_message = response.error.or(response.message).or(response.msg);
 
         Ok(ResponseRouterData {
             headers: None,
