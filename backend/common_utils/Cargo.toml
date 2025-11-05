@@ -54,5 +54,3 @@ optional = true
 version = "0.3.28"
 optional = true
 
-[lints]
-workspace=true
