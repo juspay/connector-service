@@ -4,7 +4,11 @@ use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::MinorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, PaymentVoidData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId},
+    connector_types::{
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
+    },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
@@ -141,10 +145,22 @@ pub struct DatatransPaymentsRequest<
     pub auto_settle: Option<bool>,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         super::DatatransRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for DatatransPaymentsRequest<T>
@@ -153,7 +169,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
     fn try_from(
         item: super::DatatransRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -214,7 +235,14 @@ pub struct DatatransPaymentsResponse {
     pub card: Option<DatatransCardResponse>,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         ResponseRouterData<
             DatatransPaymentsResponse,
@@ -245,8 +273,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         // Status mapping:
         // - If we get a 200 response with transactionId, the payment is authorized
         // - Based on autoSettle parameter, it's either Charged or Authorized
-        let is_auto_settle = item.router_data.request.capture_method
-            == Some(common_enums::CaptureMethod::Automatic);
+        let is_auto_settle =
+            item.router_data.request.capture_method == Some(common_enums::CaptureMethod::Automatic);
 
         let status = if is_auto_settle {
             AttemptStatus::Charged
@@ -282,7 +310,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 #[derive(Debug, Serialize)]
 pub struct DatatransSyncRequest;
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         super::DatatransRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -388,7 +423,8 @@ pub struct DatatransActionDetail {
     pub acquirer_authorization_code: Option<String>,
 }
 
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             DatatransSyncResponse,
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -409,19 +445,16 @@ impl TryFrom<
         let status = AttemptStatus::from(response.status.clone());
 
         // Extract acquirer authorization code from detail or history
-        let connector_response_reference_id = response
-            .detail
-            .as_ref()
-            .and_then(|d| {
-                d.authorize
-                    .as_ref()
-                    .and_then(|a| a.acquirer_authorization_code.clone())
-                    .or_else(|| {
-                        d.settle
-                            .as_ref()
-                            .and_then(|s| s.acquirer_authorization_code.clone())
-                    })
-            });
+        let connector_response_reference_id = response.detail.as_ref().and_then(|d| {
+            d.authorize
+                .as_ref()
+                .and_then(|a| a.acquirer_authorization_code.clone())
+                .or_else(|| {
+                    d.settle
+                        .as_ref()
+                        .and_then(|s| s.acquirer_authorization_code.clone())
+                })
+        });
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(response.transaction_id.clone()),
@@ -458,7 +491,14 @@ pub struct DatatransCaptureRequest {
     pub refno2: Option<String>,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         super::DatatransRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -501,7 +541,8 @@ pub struct DatatransCaptureResponse {
     pub acquirer_authorization_code: Option<String>,
 }
 
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             DatatransCaptureResponse,
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -518,17 +559,13 @@ impl TryFrom<
     ) -> Result<Self, Self::Error> {
         // Datatrans returns 200 with JSON body for successful capture
         // Use transaction_id from response if available, otherwise fall back to request
-        let transaction_id = item
-            .response
-            .transaction_id
-            .clone()
-            .unwrap_or_else(|| {
-                item.router_data
-                    .request
-                    .connector_transaction_id
-                    .get_connector_transaction_id()
-                    .unwrap_or_default()
-            });
+        let transaction_id = item.response.transaction_id.clone().unwrap_or_else(|| {
+            item.router_data
+                .request
+                .connector_transaction_id
+                .get_connector_transaction_id()
+                .unwrap_or_default()
+        });
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(transaction_id),
@@ -565,7 +602,14 @@ pub struct DatatransRefundRequest {
     pub refno2: Option<String>,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         super::DatatransRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -607,7 +651,8 @@ pub struct DatatransRefundResponse {
     pub acquirer_authorization_code: Option<String>,
 }
 
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             DatatransRefundResponse,
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -643,7 +688,14 @@ impl TryFrom<
 #[derive(Debug, Serialize)]
 pub struct DatatransRefundSyncRequest;
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         super::DatatransRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
@@ -704,7 +756,8 @@ pub struct DatatransRefundSyncResponse {
     pub refno2: Option<String>,
 }
 
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             DatatransRefundSyncResponse,
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
@@ -744,7 +797,14 @@ impl TryFrom<
 #[derive(Debug, Serialize)]
 pub struct DatatransVoidRequest;
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         super::DatatransRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -777,7 +837,8 @@ pub struct DatatransVoidResponse {
     pub acquirer_authorization_code: Option<String>,
 }
 
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             DatatransVoidResponse,
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,

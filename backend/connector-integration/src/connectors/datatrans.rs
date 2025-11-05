@@ -36,10 +36,10 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as datatrans, DatatransCaptureRequest, DatatransCaptureResponse,
-    DatatransPaymentsRequest, DatatransPaymentsResponse, DatatransRefundRequest,
-    DatatransRefundResponse, DatatransRefundSyncResponse, DatatransSyncResponse,
-    DatatransVoidRequest, DatatransVoidResponse,
+    self as datatrans, DatatransCaptureRequest, DatatransCaptureResponse, DatatransPaymentsRequest,
+    DatatransPaymentsResponse, DatatransRefundRequest, DatatransRefundResponse,
+    DatatransRefundSyncResponse, DatatransSyncResponse, DatatransVoidRequest,
+    DatatransVoidResponse,
 };
 
 use super::macros;
