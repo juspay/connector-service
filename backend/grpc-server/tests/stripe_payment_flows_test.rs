@@ -86,6 +86,18 @@ fn add_stripe_metadata<T>(request: &mut Request<T>) {
             .parse()
             .expect("Failed to parse x-request-id"),
     );
+
+    request.metadata_mut().append(
+        "x-tenant-id",
+        "default".parse().expect("Failed to parse x-tenant-id"),
+    );
+
+    request.metadata_mut().append(
+        "x-connector-request-reference-id",
+        format!("conn_ref_{}", get_timestamp())
+            .parse()
+            .expect("Failed to parse x-connector-request-reference-id"),
+    );
 }
 
 // Helper function to extract connector transaction ID from response

@@ -81,6 +81,32 @@ fn add_elavon_metadata<T>(request: &mut Request<T>) {
         "x-api-secret",
         api_secret.parse().expect("Failed to parse x-api-secret"),
     );
+
+    request.metadata_mut().append(
+        "x-merchant-id",
+        "test_merchant"
+            .parse()
+            .expect("Failed to parse x-merchant-id"),
+    );
+
+    request.metadata_mut().append(
+        "x-tenant-id",
+        "default".parse().expect("Failed to parse x-tenant-id"),
+    );
+
+    request.metadata_mut().append(
+        "x-request-id",
+        format!("test_request_{}", get_timestamp())
+            .parse()
+            .expect("Failed to parse x-request-id"),
+    );
+
+    request.metadata_mut().append(
+        "x-connector-request-reference-id",
+        format!("conn_ref_{}", get_timestamp())
+            .parse()
+            .expect("Failed to parse x-connector-request-reference-id"),
+    );
 }
 
 // Helper function to extract connector transaction ID from response
