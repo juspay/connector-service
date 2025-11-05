@@ -29,7 +29,10 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use transformers::{BilldeskPaymentsRequest, BilldeskPaymentsResponse};
+use transformers::{
+    BilldeskPaymentsRequest, BilldeskPaymentsResponse, BilldeskPaymentsSyncRequest,
+    BilldeskPaymentsSyncResponse, BilldeskRefundSyncRequest, BilldeskRefundSyncResponse,
+};
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
