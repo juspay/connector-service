@@ -711,7 +711,66 @@ pub async fn call_connector_api(
                     _ => client,
                 }
             }
-            _ => client.post(url),
+            Method::Put => {
+                let client = client.put(url);
+                match request.body {
+                    Some(RequestContent::Json(payload)) => client.json(&payload),
+                    Some(RequestContent::FormUrlEncoded(payload)) => client.form(&payload),
+                    Some(RequestContent::Xml(payload)) => {
+                        let body = serde_json::to_string(&payload)
+                            .change_context(ApiClientError::UrlEncodingFailed)?;
+                        let xml_body = if body.starts_with('"') && body.ends_with('"') {
+                            serde_json::from_str::<String>(&body)
+                                .change_context(ApiClientError::UrlEncodingFailed)?
+                        } else {
+                            body
+                        };
+                        client.body(xml_body).header("Content-Type", "text/xml")
+                    }
+                    Some(RequestContent::FormData(form)) => client.multipart(form),
+                    _ => client,
+                }
+            }
+            Method::Patch => {
+                let client = client.patch(url);
+                match request.body {
+                    Some(RequestContent::Json(payload)) => client.json(&payload),
+                    Some(RequestContent::FormUrlEncoded(payload)) => client.form(&payload),
+                    Some(RequestContent::Xml(payload)) => {
+                        let body = serde_json::to_string(&payload)
+                            .change_context(ApiClientError::UrlEncodingFailed)?;
+                        let xml_body = if body.starts_with('"') && body.ends_with('"') {
+                            serde_json::from_str::<String>(&body)
+                                .change_context(ApiClientError::UrlEncodingFailed)?
+                        } else {
+                            body
+                        };
+                        client.body(xml_body).header("Content-Type", "text/xml")
+                    }
+                    Some(RequestContent::FormData(form)) => client.multipart(form),
+                    _ => client,
+                }
+            }
+            Method::Delete => {
+                let client = client.delete(url);
+                match request.body {
+                    Some(RequestContent::Json(payload)) => client.json(&payload),
+                    Some(RequestContent::FormUrlEncoded(payload)) => client.form(&payload),
+                    Some(RequestContent::Xml(payload)) => {
+                        let body = serde_json::to_string(&payload)
+                            .change_context(ApiClientError::UrlEncodingFailed)?;
+                        let xml_body = if body.starts_with('"') && body.ends_with('"') {
+                            serde_json::from_str::<String>(&body)
+                                .change_context(ApiClientError::UrlEncodingFailed)?
+                        } else {
+                            body
+                        };
+                        client.body(xml_body).header("Content-Type", "text/xml")
+                    }
+                    Some(RequestContent::FormData(form)) => client.multipart(form),
+                    _ => client,
+                }
+            }
         }
         .add_headers(headers)
     };
