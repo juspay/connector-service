@@ -30,5 +30,3 @@ actix-web = "4.11.0"
 
 error-stack = "0.4.1"
 
-[lints]
-workspace = true
