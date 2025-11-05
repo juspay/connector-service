@@ -411,7 +411,8 @@ impl TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData {
                     "Billdesk transaction failed: {} - {}",
                     response._error_status,
                     response._error_description
-                )));
+                ))
+                .into());
         }
 
         Ok(response_data)
