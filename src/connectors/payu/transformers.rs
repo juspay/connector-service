@@ -332,12 +332,8 @@ where
 
         let customer_name = item.request.customer_name.clone().unwrap_or_else(|| "Customer".to_string());
 
-        // Get return URLs
-        let return_url = item.request.return_url.clone().ok_or_else(|| {
-            ConnectorError::MissingRequiredField {
-                field_name: "return_url",
-            }
-        })?;
+        // Get return URLs - use router_return_url instead
+        let return_url = item.request.router_return_url.clone().unwrap_or_else(|| "https://default.com".to_string());
 
         // Get client IP
         let client_ip = item.request.browser_info.clone()
