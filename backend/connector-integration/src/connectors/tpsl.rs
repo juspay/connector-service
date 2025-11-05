@@ -564,7 +564,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<SubmitEvidence, domain_types::connector_types::SubmitEvidenceData, DisputeResponseData, DisputeResponseData>
+> ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
     for TPSL<T>
 {
 }
@@ -576,7 +576,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<DefendDispute, domain_types::connector_types::DisputeDefendData, DisputeResponseData, DisputeResponseData>
+> ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for TPSL<T>
 {
 }
@@ -588,7 +588,19 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<Accept, domain_types::connector_types::AcceptDisputeData, DisputeResponseData, DisputeResponseData>
+> ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for TPSL<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
     for TPSL<T>
 {
 }
