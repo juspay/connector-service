@@ -381,7 +381,7 @@ where
         let hash = generate_payu_hash(
             &auth.api_key.peek(),
             &transaction_id,
-            &amount.to_string(),
+            &amount.0,
             constants::PRODUCT_INFO,
             &customer_name,
             &email.peek().to_string(),
