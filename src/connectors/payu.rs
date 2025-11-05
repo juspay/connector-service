@@ -445,7 +445,6 @@ macros::create_all_prerequisites!(
         }
     }
 // );
-*/
 
 // Implement authorize flow using macro framework
 /*macros::macro_connector_implementation!(
