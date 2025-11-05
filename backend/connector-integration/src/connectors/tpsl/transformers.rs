@@ -705,7 +705,7 @@ impl<
                         .clone()
                         .map(|e| e.peek().to_string())
                         .unwrap_or_else(|| "customer@example.com".to_string()),
-                    identifier: customer_id.get_string_repr(),
+                    identifier: customer_id.get_string_repr().to_string(),
                     account_no: "".to_string(),
                     account_type: "".to_string(),
                     account_holder_name: customer_id.get_string_repr().to_string(),
