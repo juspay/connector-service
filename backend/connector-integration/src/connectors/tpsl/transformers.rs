@@ -644,7 +644,7 @@ impl<
                         instruction_type: "PAYMENT".to_string(),
                         description: "UPI Payment Instruction".to_string(),
                         action: "DEBIT".to_string(),
-                        limit: amount.clone(),
+                        limit: amount.to_string(),
                         end_date_time: "2024-12-31T23:59:59".to_string(),
                         debit_day: "1".to_string(),
                         debit_flag: "N".to_string(),
