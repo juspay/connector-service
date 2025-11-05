@@ -161,7 +161,7 @@ macros::create_all_prerequisites!(
             flow: Refund,
             request_body: BilldeskRefundRequest,
             response_body: BilldeskRefundResponse,
-            router_data: RouterDataV2<Refund, domain_types::connector_types::RefundFlowData, RefundFlowData, RefundsResponseData>,
+            router_data: RouterDataV2<Refund, domain_types::connector_types::RefundFlowData, RefundsData, RefundsResponseData>,
         ),
         (
             flow: RSync,
@@ -545,7 +545,7 @@ macro_rules! impl_not_implemented_flow {
 // Apply to unimplemented flows
 impl_not_implemented_flow!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
 impl_not_implemented_flow!(Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData);
-impl_not_implemented_flow!(Refund, domain_types::connector_types::RefundFlowData, RefundFlowData, RefundsResponseData);
+impl_not_implemented_flow!(Refund, domain_types::connector_types::RefundFlowData, RefundsData, RefundsResponseData);
 impl_not_implemented_flow!(RSync, domain_types::connector_types::RefundFlowData, RefundSyncData, RefundsResponseData);
 impl_not_implemented_flow!(CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse);
 impl_not_implemented_flow!(CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData);
@@ -623,7 +623,7 @@ impl_source_verification_stub!(
 );
 impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
 impl_source_verification_stub!(Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData);
-impl_source_verification_stub!(Refund, domain_types::connector_types::RefundFlowData, RefundFlowData, RefundsResponseData);
+impl_source_verification_stub!(Refund, domain_types::connector_types::RefundFlowData, RefundsData, RefundsResponseData);
 impl_source_verification_stub!(RSync, domain_types::connector_types::RefundFlowData, RefundSyncData, RefundsResponseData);
 impl_source_verification_stub!(CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse);
 impl_source_verification_stub!(CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData);
