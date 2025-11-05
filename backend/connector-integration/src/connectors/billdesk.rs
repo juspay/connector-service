@@ -15,7 +15,7 @@ use domain_types::{
         AcceptDisputeData, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsResponseData,
+        PaymentsSyncData, RefundSyncData, RefundsResponseData,
         RepeatPaymentData, RequestDetails, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
