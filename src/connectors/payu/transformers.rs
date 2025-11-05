@@ -424,7 +424,7 @@ where
     }
 }
 
-impl<T> TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
     for PayuSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
