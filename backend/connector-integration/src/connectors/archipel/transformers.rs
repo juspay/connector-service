@@ -746,7 +746,6 @@ impl<
         let three_ds: Option<Archipel3DS> = None;
 
         let connector_metadata = ArchipelConfigData::try_from(&item.router_data.request.metadata)?;
-        print!("connector_metadata {:?}",connector_metadata);
 
         Ok(Self {
             order: payment_information.order,
