@@ -369,3 +369,47 @@ impl TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData {
         })
     }
 }
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
+    TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    
+    fn try_from(
+        item: ResponseRouterData<BilldeskPaymentsSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+        
+        let status = match response._auth_status.as_str() {
+            "0300" | "0399" => common_enums::AttemptStatus::Charged,
+            "0396" => common_enums::AttemptStatus::AuthenticationPending,
+            "0398" => common_enums::AttemptStatus::Failure,
+            _ => common_enums::AttemptStatus::Failure,
+        };
+
+        let payments_response = PaymentsResponseData::TransactionResponse {
+            resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(response._txn_reference_no),
+            redirection_data: None,
+            mandate_reference: None,
+            connector_metadata: None,
+            network_txn_id: response._bank_reference_no,
+            connector_response_reference_id: None,
+            incremental_authorization_allowed: None,
+            status_code: http_code,
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
+            response: Ok(payments_response),
+            ..router_data
+        })
+    }
+}
