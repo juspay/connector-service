@@ -374,22 +374,14 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
-                crate::connectors::billdesk::constants::endpoints::UAT_BASE_URL
-            } else {
-                crate::connectors::billdesk::constants::endpoints::PROD_BASE_URL
-            }
+            &req.resource_common_data.connectors.billdesk.base_url
         }
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            if req.resource_common_data.test_mode.unwrap_or(false) {
-                crate::connectors::billdesk::constants::endpoints::UAT_BASE_URL
-            } else {
-                crate::connectors::billdesk::constants::endpoints::PROD_BASE_URL
-            }
+            &req.resource_common_data.connectors.billdesk.base_url
         }
     }
 );
