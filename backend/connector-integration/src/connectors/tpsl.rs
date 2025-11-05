@@ -22,7 +22,7 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
-use std::fmt::Debug;
+
 use error_stack::ResultExt;
 use interfaces::{
     api::ConnectorCommon,
