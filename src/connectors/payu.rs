@@ -44,6 +44,55 @@ impl<T> Payu<T> {
     }
 }
 
+// Implement ConnectorCommon for Payu
+impl<T> ConnectorCommon for Payu<T>
+where
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
+{
+    fn id(&self) -> &'static str {
+        "payu"
+    }
+
+    fn get_currency_unit(&self) -> common_utils::types::CurrencyUnit {
+        common_utils::types::CurrencyUnit::Minor
+    }
+
+    fn base_url(&self) -> &'static str {
+        "https://test.payu.in"
+    }
+
+    fn get_auth_type(&self) -> domain_types::router_data::ConnectorAuthType {
+        domain_types::router_data::ConnectorAuthType::BodyKey {
+            api_key: "".into(),
+            key1: "".into(),
+        }
+    }
+}
+
+// Implement ConnectorIntegrationV2 for Payu
+impl<Flow, ResourceCommonData, Req, Resp> ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp> for Payu<T>
+where
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
+    Self: Send + Sync,
+{
+    fn get_headers(
+        &self,
+        _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
+    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, ConnectorError> {
+        Ok(vec![
+            ("Content-Type".to_string(), "application/json".into()),
+            ("Accept".to_string(), "application/json".into()),
+        ])
+    }
+
+    fn get_url(
+        &self,
+        _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
+    ) -> CustomResult<String, ConnectorError> {
+        Ok(format!("{}/_payment", self.base_url.clone().expose()))
+    }
+}
+
 // Trait implementations with generic type parameters
 impl<
     T: domain_types::payment_method_data::PaymentMethodDataTypes
