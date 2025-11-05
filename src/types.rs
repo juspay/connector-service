@@ -25,7 +25,6 @@ impl ConnectorEnum {
     pub fn get_supported_payment_methods(&self) -> Vec<PaymentMethodType> {
         match self {
             ConnectorEnum::Payu => vec![
-                PaymentMethodType::Upi,
                 PaymentMethodType::UpiCollect,
                 PaymentMethodType::UpiIntent,
             ],
