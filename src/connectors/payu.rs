@@ -521,6 +521,7 @@ macro_rules! impl_source_verification_stub {
     PaymentFlowData,
     PaymentsSyncData,
 // );
+*/
 // );
     Capture,
     PaymentFlowData,
