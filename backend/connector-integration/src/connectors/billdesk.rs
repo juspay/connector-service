@@ -341,14 +341,14 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PSync,
-            request_body: transformers::BilldeskPaymentsSyncRequest,
-            response_body: transformers::BilldeskPaymentsSyncResponse,
+            request_body: BilldeskPaymentsSyncRequest,
+            response_body: BilldeskPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
             flow: RSync,
-            request_body: transformers::BilldeskRefundSyncRequest,
-            response_body: transformers::BilldeskRefundSyncResponse,
+            request_body: BilldeskRefundSyncRequest,
+            response_body: BilldeskRefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
