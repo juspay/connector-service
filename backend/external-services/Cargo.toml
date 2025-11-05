@@ -43,5 +43,3 @@ injector = { git = "https://github.com/juspay/hyperswitch", tag = "2025.09.24.0"
 url = "2.5.0"
 chrono = "0.4.31"
 
-[lints]
-workspace=true

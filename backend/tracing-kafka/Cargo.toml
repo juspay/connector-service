@@ -24,5 +24,3 @@ path = "src/lib.rs"
 default = ["kafka-metrics"]
 kafka-metrics = ["dep:prometheus"]
 
-[lints]
-workspace = true
