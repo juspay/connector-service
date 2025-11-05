@@ -518,7 +518,7 @@ impl<
         
         Ok(Self {
             resource_common_data: domain_types::connector_types::RefundFlowData {
-                status,
+                status: common_enums::RefundStatus::Success,
                 ..router_data.resource_common_data
             },
             response,
