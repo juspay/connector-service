@@ -404,7 +404,7 @@ where
             bankcode,
             vpa,
             txn_s2s_flow: constants::UPI_S2S_FLOW.to_string(),
-            s2s_client_ip: client_ip,
+            s2s_client_ip: Secret::new(client_ip.expose()),
             s2s_device_info: constants::DEVICE_INFO.to_string(),
             api_version: Some(constants::API_VERSION.to_string()),
             hash,
