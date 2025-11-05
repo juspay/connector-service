@@ -473,7 +473,7 @@ impl TryFrom<PayuPaymentResponse> for ResponseRouterData {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: PayuPaymentResponse) -> Result<Self, Self::Error> {
-        let status = match response.status {
+        let _status = match response.status {
             Some(PayuStatusValue::IntStatus(1)) => {
                 AttemptStatus::Charged
             }
@@ -509,7 +509,7 @@ impl TryFrom<PayuSyncResponse> for ResponseRouterData {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: PayuSyncResponse) -> Result<Self, Self::Error> {
-        let status = match response.status {
+        let _status = match response.status {
             Some(1) => AttemptStatus::Charged,
             Some(0) => AttemptStatus::Failure,
             _ => AttemptStatus::Pending,
