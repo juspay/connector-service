@@ -341,7 +341,7 @@ where
         let client_ip_address = item.request.browser_info.clone()
             .and_then(|info| info.ip_address)
             .unwrap_or_else(|| IpAddress::from("127.0.0.1"));
-        let client_ip = Secret::new(client_ip_address);
+        let client_ip = Secret::new(client_ip_address.to_string());
 
         // Extract payment method data
         let (pg, bankcode, vpa, upi_app_name) = match &item.request.payment_method_data {
