@@ -1,5 +1,5 @@
 use common_enums::{self, AttemptStatus, Currency};
-use common_utils::{pii::IpAddress, Email};
+use common_utils::{pii::IpAddress, Email, crypto::GenerateDigest};
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{
@@ -14,6 +14,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+use bytes::Bytes;
 
 use crate::types::ResponseRouterData;
 
