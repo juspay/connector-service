@@ -297,7 +297,7 @@ impl<
 }
 
 // Set up connector using macros with all framework integrations
-macros::create_all_prerequisites!(
+/*macros::create_all_prerequisites!(
     connector_name: Payu,
     generic_type: T,
     api: [
