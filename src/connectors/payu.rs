@@ -2,9 +2,21 @@
 
 use std::fmt::Debug;
 
-use hyperswitch_masking::ExposeInterface;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::Serialize;
-use hyperswitch_masking::Secret;
+use interfaces::{
+    api::ConnectorCommon,
+    connector_integration_v2::ConnectorIntegrationV2,
+    connector_types::*,
+};
+use domain_types::{
+    connector_flow::*,
+    connector_types::*,
+    errors::ConnectorError,
+    payment_method_data::PaymentMethodDataTypes,
+    router_data_v2::RouterDataV2,
+};
+use common_utils::{request::Method, CustomResult};
 
 pub mod constants;
 pub mod transformers;
@@ -28,7 +40,7 @@ impl<T> Payu<T> {
     }
 
     pub fn base_url(&self, _connector: &domain_types::types::Connectors) -> String {
-        self.base_url.expose().clone()
+        self.base_url.clone().expose()
     }
 }
 
