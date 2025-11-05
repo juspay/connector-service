@@ -1,337 +1,520 @@
-use std::collections::HashMap;
-
-use common_enums::{AttemptStatus, Currency, PaymentMethodType};
-use common_utils::{
-    crypto,
-    errors::CustomResult,
-    ext_traits::ByteSliceExt,
-    pii::SecretSerdeValue,
-    request::RequestContent,
-    types::{MinorUnit, StringMinorUnit},
-};
+use common_enums::{self, AttemptStatus, Currency};
+use common_utils::{pii::IpAddress, Email};
 use domain_types::{
-    connector_types::{PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundSyncData, RefundsResponseData},
-    errors,
-    payment_method_data::UpiData,
-    router_data_v2::{ConnectorRouterData, RouterDataV2},
+    connector_flow::{Authorize, PSync},
+    connector_types::{
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
+    },
+    errors::ConnectorError,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
+    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
+    router_request_types::AuthoriseIntegrityObject,
+    router_response_types::RedirectForm,
 };
-use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
-use masking::{ExposeInterface, Mask};
+use error_stack::{report, ResultExt};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::services;
+use crate::types::ResponseRouterData;
 
-// Request/Response types for Payu UPI flows
+pub mod constants {
+    // Payu API versions
+    pub const API_VERSION: &str = "2.0";
 
-#[derive(Debug, Serialize)]
-pub struct PayuPaymentsRequest {
-    pub key: String,
-    pub command: String,
-    pub hash: Secret<String>,
-    pub var1: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub var2: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub var3: Option<String>,
+    // Payu device info
+    pub const DEVICE_INFO: &str = "web";
+
+    // Payu UPI specific constants
+    pub const PRODUCT_INFO: &str = "Payment"; // Default product info
+    pub const UPI_PG: &str = "UPI"; // UPI payment gateway
+    pub const UPI_COLLECT_BANKCODE: &str = "UPI"; // UPI Collect bank code
+    pub const UPI_INTENT_BANKCODE: &str = "INTENT"; // UPI Intent bank code
+    pub const UPI_S2S_FLOW: &str = "2"; // S2S flow type for UPI
+
+    // Payu PSync specific constants
+    pub const COMMAND: &str = "verify_payment";
 }
 
-#[derive(Debug, Deserialize)]
-pub struct PayuPaymentsResponse {
-    pub status: String,
-    pub msg: Option<String>,
-    pub result: Option<serde_json::Value>,
-    pub error: Option<String>,
-    pub message: Option<String>,
+// PayU Status enum to handle both integer and string status values
+#[derive(Debug, Serialize, Clone)]
+pub enum PayuStatusValue {
+    IntStatus(i32),       // 1 for UPI Intent success
+    StringStatus(String), // "success" for UPI Collect success
 }
 
-#[derive(Debug, Serialize)]
-pub struct PayuPaymentsSyncRequest {
-    pub key: String,
-    pub command: String,
-    pub hash: Secret<String>,
-    pub var1: String,
-}
+// Custom deserializer for PayU status field that can be either int or string
+fn deserialize_payu_status<'de, D>(deserializer: D) -> Result<Option<PayuStatusValue>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde_json::Value;
+    let value: Option<Value> = Option::deserialize(deserializer)?;
 
-#[derive(Debug, Deserialize)]
-pub struct PayuPaymentsSyncResponse {
-    pub status: String,
-    pub msg: Option<String>,
-    pub transaction_details: Option<HashMap<String, serde_json::Value>>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct PayuRefundSyncRequest {
-    pub key: String,
-    pub command: String,
-    pub hash: Secret<String>,
-    pub var1: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct PayuRefundSyncResponse {
-    pub status: String,
-    pub msg: Option<String>,
-    pub refund_details: Option<HashMap<String, serde_json::Value>>,
-}
-
-// Helper functions for authentication and hashing
-
-fn generate_hash(
-    key: &str,
-    command: &str,
-    var1: &str,
-    salt: &str,
-) -> Result<Secret<String>, errors::ConnectorError> {
-    let hash_string = format!("{}|{}|{}|{}", key, command, var1, salt);
-    let hash = crypto::Sha512::generate_hash(hash_string.as_bytes())
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-    Ok(Secret::new(hex::encode(hash)))
-}
-
-fn extract_auth_credentials(
-    auth_type: &domain_types::connector_types::ConnectorAuthType,
-) -> Result<(String, String), errors::ConnectorError> {
-    match auth_type {
-        domain_types::connector_types::ConnectorAuthType::SignatureKey {
-            api_key,
-            api_secret,
-        } => Ok((
-            api_key.expose().clone(),
-            api_secret.expose().clone(),
-        )),
-        domain_types::connector_types::ConnectorAuthType::BodyKey { api_key, .. } => {
-            Err(errors::ConnectorError::MissingConnectorAuthField {
-                field: "api_secret".to_string(),
+    match value {
+        Some(Value::Number(n)) => {
+            if let Some(i) = n.as_i64() {
+                Ok(Some(PayuStatusValue::IntStatus(i as i32)))
+            } else {
+                Ok(None)
             }
-            .into())
         }
-        _ => Err(errors::ConnectorError::MissingConnectorAuthField {
-            field: "api_key".to_string(),
-        }
-        .into()),
+        Some(Value::String(s)) => Ok(Some(PayuStatusValue::StringStatus(s))),
+        _ => Ok(None),
     }
+}
+
+// Authentication structure based on Payu analysis
+#[derive(Debug, Clone)]
+pub struct PayuAuthType {
+    pub api_key: Secret<String>,
+    pub api_secret: Secret<String>, // Merchant salt for signature
+}
+
+impl TryFrom<&ConnectorAuthType> for PayuAuthType {
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+        match auth_type {
+            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
+                api_key: api_key.to_owned(),
+                api_secret: key1.to_owned(), // key1 is merchant salt
+            }),
+            _ => Err(ConnectorError::FailedToObtainAuthType.into()),
+        }
+    }
+}
+
+// Note: Integrity Framework implementation will be handled by the framework itself
+// since we can't implement foreign traits for foreign types (orphan rules)
+
+// Request structure based on Payu UPI analysis
+#[derive(Debug, Serialize)]
+pub struct PayuPaymentRequest {
+    // Core payment fields
+    pub key: String,                                  // Merchant key
+    pub txnid: String,                                // Transaction ID
+    pub amount: common_utils::types::StringMajorUnit, // Amount in string major units
+    pub currency: Currency,                           // Currency code
+    pub productinfo: String,                          // Product description
+    // Customer information
+    pub firstname: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lastname: Option<Secret<String>>,
+    pub email: Email,
+    pub phone: Secret<String>,
+
+    // URLs
+    pub surl: String, // Success URL
+    pub furl: String, // Failure URL
+
+    // Payment method specific
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pg: Option<String>, // Payment gateway code (UPI)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bankcode: Option<String>, // Bank code (TEZ, INTENT, TEZOMNI)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vpa: Option<String>, // UPI VPA (for collect)
+
+    // UPI specific fields
+    pub txn_s2s_flow: String, // S2S flow type ("2" for UPI)
+    pub s2s_client_ip: Secret<String, IpAddress>, // Client IP
+    pub s2s_device_info: String, // Device info
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub api_version: Option<String>, // API version ("2.0")
+
+    // Security
+    pub hash: String, // SHA-512 signature
+
+    // User defined fields (10 fields as per PayU spec)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub udf1: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub udf2: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub udf3: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub udf4: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub udf5: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub udf6: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub udf7: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub udf8: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub udf9: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub udf10: Option<String>,
+
+    // Optional PayU fields for UPI
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offer_key: Option<String>, // Offer identifier
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub si: Option<i32>, // Standing instruction flag
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub si_details: Option<String>, // SI details JSON
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub beneficiarydetail: Option<String>, // TPV beneficiary details
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_token: Option<String>, // User token for repeat transactions
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offer_auto_apply: Option<i32>, // Auto apply offer flag (0 or 1)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub additional_charges: Option<String>, // Surcharge/fee amount
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub additional_gst_charges: Option<String>, // GST charges
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub upi_app_name: Option<String>, // UPI app name for intent flows
+}
+
+// Response structure based on actual PayU API response
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PayuPaymentResponse {
+    // Success response fields - PayU can return status as either int or string
+    #[serde(deserialize_with = "deserialize_payu_status")]
+    pub status: Option<PayuStatusValue>, // Status can be 1 (int) or "success" (string)
+    pub token: Option<String>, // PayU token
+    #[serde(alias = "referenceId")]
+    pub reference_id: Option<String>, // PayU reference ID
+    #[serde(alias = "returnUrl")]
+    pub return_url: Option<String>, // Return URL
+    #[serde(alias = "merchantName")]
+    pub merchant_name: Option<String>, // Merchant display name
+    #[serde(alias = "merchantVpa")]
+    pub merchant_vpa: Option<String>, // Merchant UPI VPA
+    pub amount: Option<String>, // Transaction amount
+    #[serde(alias = "txnId")]
+    pub txn_id: Option<String>, // Transaction ID
+    #[serde(alias = "intentURIData")]
+    pub intent_uri_data: Option<String>, // UPI intent URI data
+
+    // UPI-specific fields
+    pub apps: Option<Vec<PayuUpiApp>>, // Available UPI apps
+    #[serde(alias = "upiPushDisabled")]
+    pub upi_push_disabled: Option<String>, // UPI push disabled flag
+    #[serde(alias = "pushServiceUrl")]
+    pub push_service_url: Option<String>, // Push service URL
+    #[serde(alias = "pushServiceUrlV2")]
+    pub push_service_url_v2: Option<String>, // Push service URL V2
+    #[serde(alias = "upiServicePollInterval")]
+    pub upi_service_poll_interval: Option<String>, // Poll interval
+    #[serde(alias = "sdkUpiPushExpiry")]
+    pub sdk_upi_push_expiry: Option<String>, // Push expiry
+    #[serde(alias = "sdkUpiVerificationInterval")]
+    pub sdk_upi_verification_interval: Option<String>, // Verification interval
+    #[serde(alias = "vpaRegex")]
+    pub vpa_regex: Option<String>, // VPA validation regex
+    #[serde(alias = "cardSupported")]
+    pub card_supported: Option<bool>, // Card support flag
+    #[serde(alias = "allowedCardNetworks")]
+    pub allowed_card_networks: Option<String>, // Allowed card networks
+
+    // Error response fields
+    pub error: Option<String>, // Error code
+    pub message: Option<String>, // Error message
+    pub msg: Option<String>, // Alternative message field
+}
+
+// UPI App structure for PayU response
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PayuUpiApp {
+    #[serde(alias = "name")]
+    pub app_name: Option<String>,
+    #[serde(alias = "package")]
+    pub package_name: Option<String>,
+}
+
+// PSync Request structure
+#[derive(Debug, Serialize)]
+pub struct PayuSyncRequest {
+    pub key: String,        // Merchant key
+    pub command: String,    // "verify_payment"
+    pub var1: String,       // Transaction ID
+    pub hash: String,       // SHA-512 signature
+}
+
+// PSync Response structure
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PayuSyncResponse {
+    pub status: Option<i32>, // Status code (1 = success, 0 = error)
+    pub msg: Option<String>, // Message
+    pub transaction_details: Option<serde_json::Value>, // Transaction details
+}
+
+// Helper function to check if this is a UPI collect flow
+pub fn is_upi_collect_flow<T>(payment_data: &PaymentsAuthorizeData<T>) -> bool {
+    match &payment_data.payment_method_data {
+        PaymentMethodData::Upi(upi_data) => {
+            upi_data.upi_intent_data.is_none() && upi_data.vpa.is_some()
+        }
+        _ => false,
+    }
+}
+
+// Helper function to generate PayU hash
+fn generate_payu_hash(
+    key: &str,
+    txnid: &str,
+    amount: &str,
+    productinfo: &str,
+    firstname: &str,
+    email: &str,
+    salt: &str,
+    udf_fields: &[Option<&str>; 10],
+) -> Result<String, ConnectorError> {
+    // Build hash string according to PayU specification
+    // Format: key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5|udf6|udf7|udf8|udf9|udf10|salt
+    let mut hash_parts = vec![
+        key,
+        txnid,
+        amount,
+        productinfo,
+        firstname,
+        email,
+    ];
+
+    // Add UDF fields
+    for udf in udf_fields {
+        hash_parts.push(udf.unwrap_or(""));
+    }
+
+    hash_parts.push(salt);
+
+    let hash_string = hash_parts.join("|");
+    
+    // Generate SHA-512 hash
+    let hash = common_utils::crypto::Sha512::generate_hash(hash_string.as_bytes())
+        .change_context(ConnectorError::RequestEncodingFailed)?;
+    
+    Ok(hex::encode(hash))
 }
 
 // Transformer implementations
 
-impl<T> TryFrom<&RouterDataV2<Authorize, domain_types::connector_types::PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
-    for PayuPaymentsRequest
+impl<T> TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+    for PayuPaymentRequest
 where
-    T: serde::Serialize,
+    T: PaymentMethodDataTypes,
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<Authorize, domain_types::connector_types::PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let (key, salt) = extract_auth_credentials(&item.connector_auth_type)?;
+        let auth = PayuAuthType::try_from(&item.connector_auth_type)?;
         
         let transaction_id = item
             .resource_common_data
             .connector_request_reference_id
             .get_connector_transaction_id()
-            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
+            .map_err(|_| ConnectorError::MissingRequiredField {
+                field_name: "connector_transaction_id".to_string(),
+            })?;
 
         let amount = item.amount.get_amount_as_string();
-        let currency = item.router_data.request.currency.to_string();
+        let currency = item.router_data.request.currency;
 
-        // Build UPI specific data
-        let upi_data = match &item.router_data.request.payment_method_data {
-            domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => upi_data,
+        // Extract customer information
+        let email = item.router_data.request.email.clone().ok_or_else(|| {
+            ConnectorError::MissingRequiredField {
+                field_name: "email".to_string(),
+            }
+        })?;
+
+        let phone = item.router_data.request.phone.clone().ok_or_else(|| {
+            ConnectorError::MissingRequiredField {
+                field_name: "phone".to_string(),
+            }
+        })?;
+
+        let customer_name = item.router_data.request.get_customer_name().unwrap_or("Customer");
+
+        // Get return URLs
+        let return_url = item.router_data.request.get_router_return_url().map_err(|_| {
+            ConnectorError::MissingRequiredField {
+                field_name: "return_url".to_string(),
+            }
+        })?;
+
+        // Get client IP
+        let client_ip = item.router_data.request.get_ip_address_as_optional()
+            .unwrap_or_else(|| Secret::new(IpAddress::from_str("127.0.0.1").unwrap()));
+
+        // Extract payment method data
+        let (pg, bankcode, vpa, upi_app_name) = match &item.router_data.request.payment_method_data {
+            PaymentMethodData::Upi(upi_data) => {
+                let pg = Some(constants::UPI_PG.to_string());
+                
+                let (bankcode, vpa, upi_app_name) = if let Some(intent_data) = &upi_data.upi_intent_data {
+                    // UPI Intent flow
+                    (Some(constants::UPI_INTENT_BANKCODE.to_string()), None, Some(intent_data.provider_name.clone()))
+                } else if upi_data.vpa.is_some() {
+                    // UPI Collect flow
+                    (Some(constants::UPI_COLLECT_BANKCODE.to_string()), upi_data.vpa.as_ref().map(|v| v.expose().clone()), None)
+                } else {
+                    (None, None, None)
+                };
+                
+                (pg, bankcode, vpa, upi_app_name)
+            }
             _ => {
-                return Err(errors::ConnectorError::MissingRequiredField {
+                return Err(ConnectorError::MissingRequiredField {
                     field_name: "upi_payment_method_data".to_string(),
                 }
                 .into())
             }
         };
 
-        let var1 = build_upi_transaction_data(
-            transaction_id,
+        // Prepare UDF fields (all empty for now)
+        let udf_fields = [None; 10];
+
+        // Generate hash
+        let hash = generate_payu_hash(
+            &auth.api_key.peek(),
+            &transaction_id,
             &amount,
-            &currency,
-            upi_data,
-            &item.router_data.request,
+            constants::PRODUCT_INFO,
+            customer_name,
+            &email.to_string(),
+            &auth.api_secret.peek(),
+            &udf_fields,
         )?;
 
-        let hash = generate_hash(&key, "upi_collect", &var1, &salt)?;
-
         Ok(Self {
-            key,
-            command: "upi_collect".to_string(),
+            key: auth.api_key.peek().clone(),
+            txnid: transaction_id,
+            amount: item.amount.clone(),
+            currency,
+            productinfo: constants::PRODUCT_INFO.to_string(),
+            firstname: Secret::new(customer_name.to_string()),
+            lastname: None,
+            email,
+            phone,
+            surl: return_url.clone(),
+            furl: return_url,
+            pg,
+            bankcode,
+            vpa,
+            txn_s2s_flow: constants::UPI_S2S_FLOW.to_string(),
+            s2s_client_ip: client_ip,
+            s2s_device_info: constants::DEVICE_INFO.to_string(),
+            api_version: Some(constants::API_VERSION.to_string()),
             hash,
-            var1,
-            var2: None,
-            var3: None,
+            udf1: None,
+            udf2: None,
+            udf3: None,
+            udf4: None,
+            udf5: None,
+            udf6: None,
+            udf7: None,
+            udf8: None,
+            udf9: None,
+            udf10: None,
+            offer_key: None,
+            si: None,
+            si_details: None,
+            beneficiarydetail: None,
+            user_token: None,
+            offer_auto_apply: None,
+            additional_charges: None,
+            additional_gst_charges: None,
+            upi_app_name,
         })
     }
 }
 
-fn build_upi_transaction_data<T>(
-    transaction_id: String,
-    amount: &str,
-    currency: &str,
-    upi_data: &UpiData,
-    request_data: &PaymentsAuthorizeData<T>,
-) -> Result<String, errors::ConnectorError>
-where
-    T: serde::Serialize,
+impl<T> TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+    for PayuSyncRequest
 {
-    let mut transaction_data = HashMap::new();
-    
-    transaction_data.insert("txnid".to_string(), transaction_id);
-    transaction_data.insert("amount".to_string(), amount.to_string());
-    transaction_data.insert("currency".to_string(), currency.to_string());
-    
-    // Add UPI specific fields
-    if let Some(vpa) = &upi_data.vpa {
-        transaction_data.insert("vpa".to_string(), vpa.expose().clone());
-    }
-    
-    if let Some(payee_name) = &upi_data.payee_name {
-        transaction_data.insert("payee_name".to_string(), payee_name.expose().clone());
-    }
-
-    // Add customer information
-    if let Some(email) = &request_data.email {
-        transaction_data.insert("email".to_string(), email.to_string());
-    }
-
-    if let Some(phone) = &request_data.phone {
-        transaction_data.insert("phone".to_string(), phone.to_string());
-    }
-
-    // Add return URLs
-    if let Some(return_url) = request_data.get_router_return_url() {
-        transaction_data.insert("surl".to_string(), return_url.clone());
-        transaction_data.insert("furl".to_string(), return_url);
-    }
-
-    // Add product info
-    transaction_data.insert("productinfo".to_string(), "UPI Payment".to_string());
-
-    serde_json::to_string(&transaction_data)
-        .change_context(errors::ConnectorError::RequestEncodingFailed)
-}
-
-impl<T> TryFrom<&RouterDataV2<PSync, domain_types::connector_types::PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
-    for PayuPaymentsSyncRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<PSync, domain_types::connector_types::PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let (key, salt) = extract_auth_credentials(&item.connector_auth_type)?;
+        let auth = PayuAuthType::try_from(&item.connector_auth_type)?;
         
         let transaction_id = item
             .resource_common_data
             .connector_request_reference_id
             .get_connector_transaction_id()
-            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
+            .map_err(|_| ConnectorError::MissingRequiredField {
+                field_name: "connector_transaction_id".to_string(),
+            })?;
 
-        let hash = generate_hash(&key, "verify_payment", &transaction_id, &salt)?;
-
-        Ok(Self {
-            key,
-            command: "verify_payment".to_string(),
-            hash,
-            var1: transaction_id,
-        })
-    }
-}
-
-impl<T> TryFrom<&RouterDataV2<RSync, domain_types::connector_types::PaymentFlowData, RefundSyncData, RefundsResponseData>>
-    for PayuRefundSyncRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: &RouterDataV2<RSync, domain_types::connector_types::PaymentFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        let (key, salt) = extract_auth_credentials(&item.connector_auth_type)?;
+        // Generate hash for PSync
+        let hash_string = format!("{}|{}|{}|{}", 
+            auth.api_key.peek(), 
+            constants::COMMAND, 
+            transaction_id, 
+            auth.api_secret.peek()
+        );
         
-        let refund_id = item
-            .resource_common_data
-            .connector_request_reference_id
-            .get_connector_transaction_id()
-            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
-
-        let hash = generate_hash(&key, "get_all_refunds_from_txn_ids", &refund_id, &salt)?;
-
+        let hash = common_utils::crypto::Sha512::generate_hash(hash_string.as_bytes())
+            .change_context(ConnectorError::RequestEncodingFailed)?;
+        
         Ok(Self {
-            key,
-            command: "get_all_refunds_from_txn_ids".to_string(),
-            hash,
-            var1: refund_id,
+            key: auth.api_key.peek().clone(),
+            command: constants::COMMAND.to_string(),
+            var1: transaction_id,
+            hash: hex::encode(hash),
         })
     }
 }
 
 // Response transformers
 
-impl TryFrom<PayuPaymentsResponse> for PaymentsResponseData {
-    type Error = error_stack::Report<errors::ConnectorError>;
+impl<T> TryFrom<PayuPaymentResponse> for ResponseRouterData<T, PaymentsResponseData> {
+    type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(response: PayuPaymentsResponse) -> Result<Self, Self::Error> {
-        let status = match response.status.as_str() {
-            "success" | "1" => AttemptStatus::Charged,
-            "pending" | "0" => AttemptStatus::Pending,
-            "failure" | "-1" => AttemptStatus::Failure,
+    fn try_from(response: PayuPaymentResponse) -> Result<Self, Self::Error> {
+        let status = match response.status {
+            Some(PayuStatusValue::IntStatus(1)) | Some(PayuStatusValue::StringStatus(ref s)) if s == "success" => {
+                AttemptStatus::Charged
+            }
+            Some(PayuStatusValue::IntStatus(0)) | Some(PayuStatusValue::StringStatus(ref s)) if s == "pending" => {
+                AttemptStatus::Pending
+            }
+            Some(PayuStatusValue::IntStatus(-1)) | Some(PayuStatusValue::StringStatus(ref s)) if s == "failure" => {
+                AttemptStatus::Failure
+            }
             _ => AttemptStatus::Pending,
         };
 
-        let error_message = response.error.or(response.msg).or(response.message);
+        let error_message = response.error.or(response.message).or(response.msg);
 
-        Ok(Self {
-            status,
-            error_message,
-            // Add other fields as needed
+        Ok(ResponseRouterData {
+            response: Ok(PaymentsResponseData {
+                status,
+                error_message,
+                // Add other fields as needed from the response
+                ..Default::default()
+            }),
             ..Default::default()
         })
     }
 }
 
-impl TryFrom<PayuPaymentsSyncResponse> for PaymentsResponseData {
-    type Error = error_stack::Report<errors::ConnectorError>;
+impl<T> TryFrom<PayuSyncResponse> for ResponseRouterData<T, PaymentsResponseData> {
+    type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(response: PayuPaymentsSyncResponse) -> Result<Self, Self::Error> {
-        let status = match response.status.as_str() {
-            "success" | "1" => AttemptStatus::Charged,
-            "pending" | "0" => AttemptStatus::Pending,
-            "failure" | "-1" => AttemptStatus::Failure,
+    fn try_from(response: PayuSyncResponse) -> Result<Self, Self::Error> {
+        let status = match response.status {
+            Some(1) => AttemptStatus::Charged,
+            Some(0) => AttemptStatus::Failure,
             _ => AttemptStatus::Pending,
         };
 
         let error_message = response.msg;
 
-        Ok(Self {
-            status,
-            error_message,
-            // Add other fields as needed
-            ..Default::default()
-        })
-    }
-}
-
-impl TryFrom<PayuRefundSyncResponse> for RefundsResponseData {
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(response: PayuRefundSyncResponse) -> Result<Self, Self::Error> {
-        let status = match response.status.as_str() {
-            "success" | "1" => AttemptStatus::Charged,
-            "pending" | "0" => AttemptStatus::Pending,
-            "failure" | "-1" => AttemptStatus::Failure,
-            _ => AttemptStatus::Pending,
-        };
-
-        let error_message = response.msg;
-
-        Ok(Self {
-            status,
-            error_message,
-            // Add other fields as needed
+        Ok(ResponseRouterData {
+            response: Ok(PaymentsResponseData {
+                status,
+                error_message,
+                // Add other fields as needed from the response
+                ..Default::default()
+            }),
             ..Default::default()
         })
     }
