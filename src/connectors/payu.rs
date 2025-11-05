@@ -70,7 +70,7 @@ where
 }
 
 // Implement ConnectorIntegrationV2 for Payu
-impl<Flow, ResourceCommonData, Req, Resp> ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp> for Payu<T>
+impl<T, Flow, ResourceCommonData, Req, Resp> ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp> for Payu<T>
 where
     T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
     Self: Send + Sync,
