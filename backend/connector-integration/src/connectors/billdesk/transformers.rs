@@ -158,22 +158,53 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 
                 let currency = item.router_data.request.currency.to_string();
                 
-                // Create the message in the format expected by Billdesk
-                let msg = format!(
-                    "MerchantID={}&CustomerID={}&TxnReferenceNo={}&TxnAmount={}&Currency={}&ItemCode=DIRECT&TxnType=UPI&AdditionalInfo1={}&AdditionalInfo2={}&AdditionalInfo3={}&AdditionalInfo4={}&AdditionalInfo5={}&AdditionalInfo6={}&AdditionalInfo7={}",
-                    get_merchant_id(&item.router_data.connector_auth_type)?,
-                    customer_id.get_string_repr(),
-                    transaction_id,
-                    amount,
-                    currency,
-                    "", // AdditionalInfo1
-                    "", // AdditionalInfo2
-                    "", // AdditionalInfo3
-                    "", // AdditionalInfo4
-                    "", // AdditionalInfo5
-                    "", // AdditionalInfo6
-                    "", // AdditionalInfo7
-                );
+                // Extract UPI specific details from payment method data
+                let upi_vpa = if let Some(payment_method_data) = &item.router_data.request.payment_method_data {
+                    match payment_method_data {
+                        domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
+                            upi_data.vpa.as_ref().map(|vpa| vpa.get_string_repr().to_string())
+                        }
+                        _ => None,
+                    }
+                } else {
+                    None
+                };
+                
+                // Create the message in the format expected by Billdesk based on Haskell implementation
+                // Based on BilldeskInitiateUPIRequest from the Haskell source
+                let msg = if let Some(vpa) = upi_vpa {
+                    format!(
+                        "MerchantID={}&CustomerID={}&TxnReferenceNo={}&TxnAmount={}&Currency={}&ItemCode=DIRECT&TxnType=UPI&AdditionalInfo1={}&AdditionalInfo2={}&AdditionalInfo3={}&AdditionalInfo4={}&AdditionalInfo5={}&AdditionalInfo6={}&AdditionalInfo7={}",
+                        get_merchant_id(&item.router_data.connector_auth_type)?,
+                        customer_id.get_string_repr(),
+                        transaction_id,
+                        amount,
+                        currency,
+                        vpa, // AdditionalInfo1 - UPI VPA
+                        "", // AdditionalInfo2
+                        "", // AdditionalInfo3
+                        "", // AdditionalInfo4
+                        "", // AdditionalInfo5
+                        "", // AdditionalInfo6
+                        "", // AdditionalInfo7
+                    )
+                } else {
+                    format!(
+                        "MerchantID={}&CustomerID={}&TxnReferenceNo={}&TxnAmount={}&Currency={}&ItemCode=DIRECT&TxnType=UPI&AdditionalInfo1={}&AdditionalInfo2={}&AdditionalInfo3={}&AdditionalInfo4={}&AdditionalInfo5={}&AdditionalInfo6={}&AdditionalInfo7={}",
+                        get_merchant_id(&item.router_data.connector_auth_type)?,
+                        customer_id.get_string_repr(),
+                        transaction_id,
+                        amount,
+                        currency,
+                        "", // AdditionalInfo1
+                        "", // AdditionalInfo2
+                        "", // AdditionalInfo3
+                        "", // AdditionalInfo4
+                        "", // AdditionalInfo5
+                        "", // AdditionalInfo6
+                        "", // AdditionalInfo7
+                    )
+                };
                 
                 let ip_address = item.router_data.request.get_ip_address_as_optional()
                     .map(|ip| ip.expose())
