@@ -1,7 +1,7 @@
 pub mod transformers;
 pub mod constants;
 
-use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 
 use common_enums::CurrencyUnit;
 use common_utils::{
