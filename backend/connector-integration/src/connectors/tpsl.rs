@@ -798,9 +798,9 @@ impl_source_verification_stub!(RSync, domain_types::connector_types::RefundFlowD
 impl_source_verification_stub!(PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData);
 impl_source_verification_stub!(Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData);
 impl_source_verification_stub!(PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData);
-impl_source_verification_stub!(SubmitEvidence, domain_types::connector_types::SubmitEvidenceData, DisputeResponseData, DisputeResponseData);
-impl_source_verification_stub!(DefendDispute, domain_types::connector_types::DisputeDefendData, DisputeResponseData, DisputeResponseData);
-impl_source_verification_stub!(Accept, domain_types::connector_types::AcceptDisputeData, DisputeResponseData, DisputeResponseData);
+impl_source_verification_stub!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
+impl_source_verification_stub!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
+impl_source_verification_stub!(Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData);
 impl_source_verification_stub!(RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData);
 impl_source_verification_stub!(PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse);
 impl_source_verification_stub!(SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData);
