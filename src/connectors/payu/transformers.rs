@@ -314,12 +314,9 @@ where
         let transaction_id = item
             .resource_common_data
             .connector_request_reference_id
-            .get_connector_transaction_id()
-            .map_err(|_| ConnectorError::MissingRequiredField {
-                field_name: "connector_transaction_id",
-            })?;
+            .clone();
 
-        let amount = item.request.amount.get_amount_as_string();
+        let amount = common_utils::types::StringMajorUnit::from(item.request.amount);
         let currency = item.request.currency;
 
         // Extract customer information
@@ -335,18 +332,19 @@ where
             }
         })?;
 
-        let customer_name = item.request.get_customer_name().unwrap_or("Customer");
+        let customer_name = item.request.customer_name.clone().unwrap_or_else(|| "Customer".to_string());
 
         // Get return URLs
-        let return_url = item.request.get_router_return_url().map_err(|_| {
+        let return_url = item.request.return_url.clone().ok_or_else(|| {
             ConnectorError::MissingRequiredField {
                 field_name: "return_url",
             }
         })?;
 
         // Get client IP
-        let client_ip = item.request.get_ip_address_as_optional()
-            .unwrap_or_else(|| Secret::new(IpAddress::from_str("127.0.0.1").unwrap()));
+        let client_ip = item.request.browser_info.clone()
+            .and_then(|info| info.ip_address)
+            .unwrap_or_else(|| Secret::new(IpAddress::from("127.0.0.1")));
 
         // Extract payment method data
         let (pg, bankcode, vpa, upi_app_name) = match &item.request.payment_method_data {
