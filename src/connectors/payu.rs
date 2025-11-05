@@ -52,7 +52,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> PaymentAuthorizeV2<T> for Payu<T>
+> interfaces::connector_types::PaymentAuthorizeV2<T> for Payu<T>
 {
 }
 
@@ -63,7 +63,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> PaymentSyncV2 for Payu<T>
+> interfaces::connector_types::PaymentSyncV2 for Payu<T>
 {
 }
 
@@ -74,12 +74,12 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> PaymentSessionToken for Payu<T>
+> interfaces::connector_types::PaymentSessionToken for Payu<T>
 {
 }
 
 impl<T: domain_types::payment_method_data::PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    PaymentAccessToken for Payu<T>
+    interfaces::connector_types::PaymentAccessToken for Payu<T>
 {
 }
 
@@ -90,7 +90,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> CreateConnectorCustomer for Payu<T>
+> interfaces::connector_types::CreateConnectorCustomer for Payu<T>
 {
 }
 
@@ -101,7 +101,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> PaymentVoidV2 for Payu<T>
+> interfaces::connector_types::PaymentVoidV2 for Payu<T>
 {
 }
 
@@ -112,7 +112,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> RefundSyncV2 for Payu<T>
+> interfaces::connector_types::RefundSyncV2 for Payu<T>
 {
 }
 
@@ -123,7 +123,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> RefundV2 for Payu<T>
+> interfaces::connector_types::RefundV2 for Payu<T>
 {
 }
 
@@ -134,7 +134,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> PaymentCapture for Payu<T>
+> interfaces::connector_types::PaymentCapture for Payu<T>
 {
 }
 
@@ -145,7 +145,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> SetupMandateV2<T> for Payu<T>
+> interfaces::connector_types::SetupMandateV2<T> for Payu<T>
 {
 }
 
@@ -156,7 +156,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> AcceptDispute for Payu<T>
+> interfaces::connector_types::AcceptDispute for Payu<T>
 {
 }
 
@@ -167,7 +167,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> SubmitEvidenceV2 for Payu<T>
+> interfaces::connector_types::SubmitEvidenceV2 for Payu<T>
 {
 }
 
@@ -178,7 +178,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> DisputeDefend for Payu<T>
+> interfaces::connector_types::DisputeDefend for Payu<T>
 {
 }
 
@@ -189,7 +189,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> IncomingWebhook for Payu<T>
+> interfaces::connector_types::IncomingWebhook for Payu<T>
 {
 }
 
@@ -200,7 +200,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> PaymentOrderCreate for Payu<T>
+> interfaces::connector_types::PaymentOrderCreate for Payu<T>
 {
 }
 
@@ -211,7 +211,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ValidationTrait for Payu<T>
+> interfaces::connector_types::ValidationTrait for Payu<T>
 {
 }
 
@@ -222,7 +222,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> RepeatPaymentV2 for Payu<T>
+> interfaces::connector_types::RepeatPaymentV2 for Payu<T>
 {
 }
 
@@ -233,7 +233,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> PaymentTokenV2<T> for Payu<T>
+> interfaces::connector_types::PaymentTokenV2<T> for Payu<T>
 {
 }
 
@@ -245,7 +245,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> PaymentPreAuthenticateV2<T> for Payu<T>
+> interfaces::connector_types::PaymentPreAuthenticateV2<T> for Payu<T>
 {
 }
 
@@ -256,7 +256,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> PaymentAuthenticateV2<T> for Payu<T>
+> interfaces::connector_types::PaymentAuthenticateV2<T> for Payu<T>
 {
 }
 
@@ -267,7 +267,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> PaymentPostAuthenticateV2<T> for Payu<T>
+> interfaces::connector_types::PaymentPostAuthenticateV2<T> for Payu<T>
 {
 }
 
@@ -278,6 +278,6 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> PaymentVoidPostCaptureV2 for Payu<T>
+> interfaces::connector_types::PaymentVoidPostCaptureV2 for Payu<T>
 {
 }
