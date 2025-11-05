@@ -456,7 +456,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
             auth.api_secret.peek()
         );
         
-        let hash = common_utils::crypto::Sha512::generate_hash(hash_string.as_bytes())
+        let hash = common_utils::crypto::Sha512::generate_digest(hash_string.as_bytes())
             .change_context(ConnectorError::RequestEncodingFailed)?;
         
         Ok(Self {
