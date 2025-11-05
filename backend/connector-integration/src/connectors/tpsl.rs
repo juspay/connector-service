@@ -10,7 +10,7 @@ use common_utils::{
     types::StringMinorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, PSync, Void, Capture, Refund, RSync, PreAuthenticate, Authenticate, PostAuthenticate, SubmitEvidence, DefendDispute, Accept, RepeatPayment, PaymentMethodToken, SetupMandate, CreateSessionToken, CreateAccessToken, CreateConnectorCustomer, VoidPC},
+    connector_flow::{Authorize, PSync, Void, Capture, Refund, RSync, PreAuthenticate, Authenticate, PostAuthenticate, SubmitEvidence, DefendDispute, Accept, RepeatPayment, PaymentMethodToken, SetupMandate, CreateSessionToken, CreateAccessToken, CreateConnectorCustomer, VoidPC, CreateOrder},
     connector_types::{
         ConnectorWebhookSecrets, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
         PaymentsSyncData, RequestDetails, DisputeResponseData, RepeatPaymentData, PaymentMethodTokenizationData, 
@@ -18,6 +18,7 @@ use domain_types::{
         ConnectorCustomerData, ConnectorCustomerResponse, SessionTokenResponseData, PaymentMethodTokenResponse,
         PaymentsPreAuthenticateData, PaymentsAuthenticateData, PaymentsPostAuthenticateData,
         SubmitEvidenceData, DisputeDefendData, AcceptDisputeData, DisputeFlowData, PaymentsCancelPostCaptureData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
