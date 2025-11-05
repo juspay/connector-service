@@ -381,7 +381,7 @@ where
             &transaction_id,
             &amount.to_string(),
             constants::PRODUCT_INFO,
-            customer_name,
+            &customer_name,
             &email.peek().to_string(),
             &auth.api_secret.peek(),
             &udf_fields,
