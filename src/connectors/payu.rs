@@ -64,7 +64,7 @@ where
         CurrencyUnit::Minor
     }
 
-    fn base_url(&self, _connector: &domain_types::types::Connectors) -> &str {
+    fn base_url<'a>(&self, _connector: &'a domain_types::types::Connectors) -> &'a str {
         "https://test.payu.in"
     }
 }
