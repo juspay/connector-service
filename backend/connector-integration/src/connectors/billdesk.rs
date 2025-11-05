@@ -471,8 +471,8 @@ impl<
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.error.to_string(),
-            message: response.error_description.clone(),
-            reason: Some(response.error_description),
+            message: response.error_description.clone().unwrap_or_default(),
+            reason: response.error_description,
             attempt_status: None,
             connector_transaction_id: None,
             network_advice_code: None,
