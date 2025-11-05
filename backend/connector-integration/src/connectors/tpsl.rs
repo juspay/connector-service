@@ -506,6 +506,150 @@ impl<
 {
 }
 
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<PreAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPreAuthenticateData, PaymentsResponseData>
+    for TPSL<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<Authenticate, PaymentFlowData, domain_types::connector_types::PaymentsAuthenticateData, PaymentsResponseData>
+    for TPSL<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<PostAuthenticate, PaymentFlowData, domain_types::connector_types::PaymentsPostAuthenticateData, PaymentsResponseData>
+    for TPSL<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<SubmitEvidence, domain_types::connector_types::DisputeSubmitEvidenceData, domain_types::connector_types::DisputeSubmitEvidenceResponse, domain_types::connector_types::DisputeSubmitEvidenceResponse>
+    for TPSL<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<DefendDispute, domain_types::connector_types::DisputeDefendData, domain_types::connector_types::DisputeDefendResponse, domain_types::connector_types::DisputeDefendResponse>
+    for TPSL<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<AcceptDispute, domain_types::connector_types::DisputeAcceptData, domain_types::connector_types::DisputeAcceptResponse, domain_types::connector_types::DisputeAcceptResponse>
+    for TPSL<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, domain_types::connector_types::PaymentsRepeatData, PaymentsResponseData>
+    for TPSL<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<PaymentMethodToken, PaymentFlowData, domain_types::connector_types::PaymentsTokenData, PaymentsResponseData>
+    for TPSL<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<SetupMandate, PaymentFlowData, domain_types::connector_types::SetupMandateData, PaymentsResponseData>
+    for TPSL<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, domain_types::connector_types::CreateSessionTokenData, domain_types::connector_types::CreateSessionTokenResponse>
+    for TPSL<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<CreateAccessToken, PaymentFlowData, domain_types::connector_types::CreateAccessTokenData, domain_types::connector_types::CreateAccessTokenResponse>
+    for TPSL<T>
+{
+}
+
+impl<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<CreateConnectorCustomer, PaymentFlowData, domain_types::connector_types::CreateConnectorCustomerData, domain_types::connector_types::CreateConnectorCustomerResponse>
+    for TPSL<T>
+{
+}
+
 // Stub implementations for unsupported flows
 impl<
     T: PaymentMethodDataTypes
