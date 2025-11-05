@@ -336,9 +336,10 @@ where
         let return_url = item.request.router_return_url.clone().unwrap_or_else(|| "https://default.com".to_string());
 
         // Get client IP
-        let client_ip = item.request.browser_info.clone()
+        let client_ip_address = item.request.browser_info.clone()
             .and_then(|info| info.ip_address)
-            .unwrap_or_else(|| Secret::new(IpAddress::from("127.0.0.1")));
+            .unwrap_or_else(|| IpAddress::from_str("127.0.0.1").map_err(|_| ConnectorError::RequestEncodingFailed).unwrap());
+        let client_ip = Secret::new(client_ip_address);
 
         // Extract payment method data
         let (pg, bankcode, vpa, upi_app_name) = match &item.request.payment_method_data {
