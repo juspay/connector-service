@@ -140,13 +140,13 @@ fn get_merchant_id(connector_auth_type: &ConnectorAuthType) -> Result<String, er
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    TryFrom<&BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
+    TryFrom<BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
     for BilldeskPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: &BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        item: BilldeskRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let payment_method_type = item.router_data.request.payment_method_type
             .ok_or(errors::ConnectorError::MissingPaymentMethodType)?;
@@ -211,13 +211,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    TryFrom<&BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+    TryFrom<BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
     for BilldeskPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
     fn try_from(
-        item: &BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
+        item: BilldeskRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let merchant_id = get_merchant_id(&item.router_data.connector_auth_type)?;
         let transaction_id = item.router_data.request.connector_transaction_id
