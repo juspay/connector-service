@@ -1,6 +1,6 @@
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 
-use common_utils::{
+use std::collections::HashMap;
     errors::CustomResult,
     ext_traits::ValueExt,
     request::Method,
