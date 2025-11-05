@@ -977,7 +977,7 @@ impl<
             .amount
             .as_ref()
             .and_then(|amt| amt.parse::<f64>().ok())
-            .map(|amt| common_utils::types::MinorUnit::from_major_unit_as_i64(amt));
+            .and_then(|amt| amt.parse::<f64>().ok().map(|a| common_utils::types::MinorUnit::new((a * 100.0) as i64)));
 
         Ok(Self {
             resource_common_data: PaymentFlowData {
