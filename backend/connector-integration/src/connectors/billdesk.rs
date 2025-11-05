@@ -216,7 +216,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            let endpoint = crate::connectors::billdesk::constants::endpoints::PROD_AUTHORIZE_ENDPOINT;
+            let endpoint = "/pgidsk/PGIDirectRequest?reqid=BDRDF011";
             Ok(format!("{}{}", base_url, endpoint))
         }
     }
