@@ -525,6 +525,7 @@ macros::create_all_prerequisites!(
         }
     }
 // );
+*/
 
 // Implement ConnectorCommon trait
 impl<
