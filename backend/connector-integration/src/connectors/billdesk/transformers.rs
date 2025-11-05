@@ -159,20 +159,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 let currency = item.router_data.request.currency.to_string();
                 
                 // Extract UPI specific details from payment method data
-                let upi_vpa = if let Some(payment_method_data) = &item.router_data.request.payment_method_data {
-                    match payment_method_data {
-                        domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
-                            match upi_data {
-                                domain_types::payment_method_data::UpiData::UpiCollect(collect_data) => {
-                                    collect_data.vpa_id.as_ref().map(|vpa| vpa.peek().to_string())
-                                }
-                                _ => None,
+                let upi_vpa = match &item.router_data.request.payment_method_data {
+                    domain_types::payment_method_data::PaymentMethodData::Upi(upi_data) => {
+                        match upi_data {
+                            domain_types::payment_method_data::UpiData::UpiCollect(collect_data) => {
+                                collect_data.vpa_id.as_ref().map(|vpa| vpa.peek().to_string())
                             }
+                            _ => None,
                         }
-                        _ => None,
                     }
-                } else {
-                    None
+                    _ => None,
                 };
                 
                 // Create the message in the format expected by Billdesk based on Haskell implementation
