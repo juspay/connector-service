@@ -660,14 +660,30 @@ fn get_billdesk_auth_header(
             let auth = format!("Bearer {}", api_key.peek());
             Ok(auth.into_masked())
         }
-        ConnectorAuthType::MultiAuthKey { auth_id, auth_key } => {
+        ConnectorAuthType::MultiAuthKey { api_key, .. } => {
             // Handle multi-auth scenario if needed
-            let auth = format!("Bearer {}: {}", auth_id.peek(), auth_key.peek());
+            let auth = format!("Bearer {}", api_key.peek());
             Ok(auth.into_masked())
         }
-        ConnectorAuthType::AuthKey(auth_key) => {
-            let auth = format!("Bearer {}", auth_key.peek());
+        ConnectorAuthType::HeaderKey { api_key } => {
+            let auth = format!("Bearer {}", api_key.peek());
             Ok(auth.into_masked())
+        }
+        ConnectorAuthType::BodyKey { api_key, .. } => {
+            let auth = format!("Bearer {}", api_key.peek());
+            Ok(auth.into_masked())
+        }
+        ConnectorAuthType::CurrencyAuthKey { auth_key_map } => {
+            // For currency-based auth, use INR as default or first available
+            if let Some(auth_value) = auth_key_map.get(&common_enums::Currency::INR) {
+                let auth = format!("Bearer {}", auth_value.peek());
+                Ok(auth.into_masked())
+            } else if let Some((_, auth_value)) = auth_key_map.iter().next() {
+                let auth = format!("Bearer {}", auth_value.peek());
+                Ok(auth.into_masked())
+            } else {
+                Err(errors::ConnectorError::FailedToObtainAuthType.into())
+            }
         }
         _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
     }
