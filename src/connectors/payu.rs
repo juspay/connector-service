@@ -516,48 +516,62 @@ macro_rules! impl_source_verification_stub {
     };
 }
 
-// Apply stub implementations to all flows
+// Apply stub implementations to all flows using the macro
+impl_source_verification_stub!(
     PSync,
     PaymentFlowData,
     PaymentsSyncData,
-// );
-*/
-// );
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
     Capture,
     PaymentFlowData,
     PaymentsCaptureData,
-// );
-// );
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
     DefendDispute,
     DisputeFlowData,
     DisputeDefendData,
     DisputeResponseData
-// );
+);
+
+impl_source_verification_stub!(
     CreateOrder,
     PaymentFlowData,
     PaymentCreateOrderData,
     PaymentCreateOrderResponse
-// );
+);
+
+impl_source_verification_stub!(
     SetupMandate,
     PaymentFlowData,
     SetupMandateRequestData<T>,
-// );
-// );
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
     Accept,
     DisputeFlowData,
     AcceptDisputeData,
     DisputeResponseData
-// );
+);
+
+impl_source_verification_stub!(
     SubmitEvidence,
     DisputeFlowData,
     SubmitEvidenceData,
     DisputeResponseData
-// );
+);
+
+impl_source_verification_stub!(
     RepeatPayment,
     PaymentFlowData,
     RepeatPaymentData,
-// );
-// );
+    PaymentsResponseData
+);
 
 // Connector integration implementations for unsupported flows (stubs)
 impl<
