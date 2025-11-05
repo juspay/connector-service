@@ -503,29 +503,13 @@ impl<
             BilldeskRefundSyncResponse::BilldeskData(_response_data) => {
                 // Parse the refund response
                 (
-                    common_enums::AttemptStatus::Charged,
+                    common_enums::RefundStatus::Success,
                     Ok(RefundsResponseData {
-                        refund_id: Some(
-                            router_data
-                                .resource_common_data
-                                .connector_request_reference_id
-                                .clone(),
-                        ),
-                        connector_transaction_id: Some(
-                            router_data
-                                .resource_common_data
-                                .connector_request_reference_id,
-                        ),
+                        connector_refund_id: router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
                         refund_status: common_enums::RefundStatus::Success,
-                        connector_response_reference_id: None,
-                        amount_received: None,
-                        amount_captured: None,
-                        error_code: None,
-                        error_message: None,
-                        error_reason: None,
-                        network_advice_code: None,
-                        network_decline_code: None,
-                        network_error_message: None,
                         status_code: http_code,
                     }),
                 )
