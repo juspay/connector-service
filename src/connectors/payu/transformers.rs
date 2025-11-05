@@ -246,7 +246,13 @@ pub struct PayuSyncResponse {
 pub fn is_upi_collect_flow<T: domain_types::payment_method_data::PaymentMethodDataTypes>(payment_data: &PaymentsAuthorizeData<T>) -> bool {
     match &payment_data.payment_method_data {
         PaymentMethodData::Upi(upi_data) => {
-            upi_data.upi_intent_data.is_none() && upi_data.vpa.is_some()
+            match upi_data {
+                UpiData::UpiCollect(collect_data) => {
+                    collect_data.vpa_id.is_some()
+                }
+                UpiData::UpiIntent(_) => false,
+                UpiData::UpiQr(_) => false,
+            }
         }
         _ => false,
     }
