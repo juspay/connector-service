@@ -367,7 +367,7 @@ macros::create_all_prerequisites!(
 // );
 
 // Implement PSync flow using macro framework
-/*macros::macro_connector_implementation!(
+// macros::macro_connector_implementation!(
     connector_default_implementations: [],
     connector: Payu,
     curl_request: FormUrlEncoded(PayuSyncRequest),
