@@ -1,6 +1,6 @@
 use common_enums::{self, AttemptStatus, Currency};
 use common_utils::{pii::IpAddress, Email, crypto::GenerateDigest};
-use std::str::FromStr;
+
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{
