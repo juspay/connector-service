@@ -491,7 +491,7 @@ fn get_redirect_form_data(
     _response_data: TpslPaymentsResponseData,
 ) -> CustomResult<RedirectForm, errors::ConnectorError> {
     match payment_method_type {
-        common_enums::PaymentMethodType::Upi => {
+        common_enums::PaymentMethodType::UpiCollect | common_enums::PaymentMethodType::UpiIntent => {
             // For UPI, we might need to redirect to a payment URL or return a form
             // This would depend on the actual TPSL UPI flow
             Ok(RedirectForm::Form {
