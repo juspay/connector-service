@@ -95,7 +95,7 @@ where
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
     ) -> CustomResult<String, ConnectorError> {
-        Ok(format!("{}/_payment", self.base_url(&_req.resource_common_data.connectors)))
+        Ok("https://test.payu.in/_payment".to_string())
     }
 }
 
