@@ -9,7 +9,7 @@ use interfaces::{
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{
         AcceptDispute, CreateConnectorCustomer, IncomingWebhook, PaymentAccessToken, 
-        PaymentAuthorizeV2, PaymentCapture, PaymentPostAuthenticateV2, PaymentPreAuthenticateV2, 
+        PaymentAuthorizeV2, PaymentAuthenticateV2, PaymentCapture, PaymentPostAuthenticateV2, PaymentPreAuthenticateV2, 
         PaymentSessionToken, PaymentSyncV2, PaymentTokenV2, PaymentVoidPostCaptureV2, 
         PaymentVoidV2, RefundSyncV2, RefundV2, RepeatPaymentV2, SetupMandateV2, 
         SubmitEvidenceV2, ValidationTrait, ConnectorServiceTrait, DisputeDefend, PaymentOrderCreate
