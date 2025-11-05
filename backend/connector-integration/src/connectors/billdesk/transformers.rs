@@ -407,12 +407,11 @@ impl TryFrom<BilldeskPaymentsSyncResponse> for PaymentsResponseData {
         // If the status is failure, return an error response
         if matches!(status, common_enums::AttemptStatus::Failure) {
             return Err(errors::ConnectorError::RequestEncodingFailed
-                .attach_printable_lazy(|| format!(
+                .attach_printable(format!(
                     "Billdesk transaction failed: {} - {}",
                     response._error_status,
                     response._error_description
-                ))
-                .into());
+                )));
         }
 
         Ok(response_data)
