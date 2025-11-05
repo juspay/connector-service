@@ -1,9 +1,10 @@
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
-
 use std::collections::HashMap;
-    use common_utils::{
+
+use common_utils::{
     errors::CustomResult,
     ext_traits::ValueExt,
+    request::Method,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
