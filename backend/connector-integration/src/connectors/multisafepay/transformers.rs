@@ -50,7 +50,7 @@ fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
             })
         }
         PaymentMethodData::BankRedirect(_) => Some("IDEAL".to_string()), // Example for iDEAL
-        PaymentMethodData::Wallet(_) => Some("PAYPAL".to_string()),     // Example for PayPal
+        PaymentMethodData::Wallet(_) => Some("PAYPAL".to_string()),      // Example for PayPal
         // Add more payment methods as needed
         _ => None,
     }
@@ -175,15 +175,38 @@ pub struct MultisafepayPaymentsRequest {
 }
 
 // Implementation for macro-generated wrapper type
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
     TryFrom<
-        crate::connectors::multisafepay::MultisafepayRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        crate::connectors::multisafepay::MultisafepayRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for MultisafepayPaymentsRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        wrapper: crate::connectors::multisafepay::MultisafepayRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        wrapper: crate::connectors::multisafepay::MultisafepayRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let item = &wrapper.router_data;
         let order_type = get_order_type_from_payment_method(&item.request.payment_method_data);
@@ -402,15 +425,38 @@ pub struct MultisafepayRefundRequest {
 }
 
 // Implementation for macro-generated wrapper type
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
     TryFrom<
-        crate::connectors::multisafepay::MultisafepayRouterData<RouterDataV2<domain_types::connector_flow::Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        crate::connectors::multisafepay::MultisafepayRouterData<
+            RouterDataV2<
+                domain_types::connector_flow::Refund,
+                RefundFlowData,
+                RefundsData,
+                RefundsResponseData,
+            >,
+            T,
+        >,
     > for MultisafepayRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        wrapper: crate::connectors::multisafepay::MultisafepayRouterData<RouterDataV2<domain_types::connector_flow::Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        wrapper: crate::connectors::multisafepay::MultisafepayRouterData<
+            RouterDataV2<
+                domain_types::connector_flow::Refund,
+                RefundFlowData,
+                RefundsData,
+                RefundsResponseData,
+            >,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let item = &wrapper.router_data;
         Ok(Self {
