@@ -316,13 +316,12 @@ where
             .connector_request_reference_id
             .clone();
 
-        // Convert amount to string format (assuming 2 decimal places for most currencies)
-        let amount_str = if item.request.currency.is_zero_decimal_currency() {
-            item.request.amount.to_string()
-        } else {
-            format!("{}.{:02}", item.request.amount / 100, item.request.amount % 100)
-        };
-        let amount = common_utils::types::StringMajorUnit(amount_str);
+        // Use AmountConvertor to convert amount properly
+        let converter = common_utils::types::StringMajorUnitForConnector;
+        let amount = converter.convert(
+            common_utils::types::MinorUnit(item.request.amount),
+            item.request.currency
+        ).map_err(|_| ConnectorError::RequestEncodingFailed)?;
         let currency = item.request.currency;
 
         // Extract customer information
