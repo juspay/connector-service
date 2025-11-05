@@ -16,7 +16,7 @@ use domain_types::{
         PaymentsSyncData, RequestDetails, DisputeResponseData, RepeatPaymentData, PaymentMethodTokenizationData, 
         SetupMandateRequestData, SessionTokenRequestData, AccessTokenRequestData, AccessTokenResponseData,
         ConnectorCustomerData, ConnectorCustomerResponse, SessionTokenResponseData, PaymentMethodTokenResponse,
-        PaymentsPreAuthenticateData, PaymentsAuthenticateData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsAuthenticateData, PaymentsPostAuthenticateData, AcceptDisputeData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
