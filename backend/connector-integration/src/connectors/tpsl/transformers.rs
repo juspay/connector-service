@@ -570,7 +570,7 @@ impl<
                         description: "UPI Payment".to_string(),
                         provider_identifier: "UPI".to_string(),
                         surcharge_or_discount_amount: "0".to_string(),
-                        amount: amount.clone(),
+                        amount: amount.to_string(),
                         com_amt: "0".to_string(),
                         s_k_u: "UPI_ITEM".to_string(),
                         reference: item
@@ -639,7 +639,7 @@ impl<
                     },
                     instruction: TpslInstructionPayload {
                         occurrence: "ONCE".to_string(),
-                        amount: amount.clone(),
+                        amount: amount.to_string(),
                         frequency: "ONCE".to_string(),
                         instruction_type: "PAYMENT".to_string(),
                         description: "UPI Payment Instruction".to_string(),
@@ -666,7 +666,7 @@ impl<
                         .map(|ip| ip.expose())
                         .unwrap_or_else(|| "127.0.0.1".to_string()),
                     sms_sending: "Y".to_string(),
-                    amount: amount.clone(),
+                    amount: amount.to_string(),
                     forced3_d_s_call: "N".to_string(),
                     transaction_type: "SALE".to_string(),
                     description: "UPI Transaction".to_string(),
