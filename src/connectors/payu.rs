@@ -8,15 +8,16 @@ use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::*,
+    verification::SourceVerification,
 };
 use domain_types::{
-    connector_flow::*,
     connector_types::*,
     errors::ConnectorError,
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
 };
-use common_utils::{request::Method, CustomResult};
+use common_utils::CustomResult;
+use common_enums::CurrencyUnit;
 
 pub mod constants;
 pub mod transformers;
@@ -53,19 +54,12 @@ where
         "payu"
     }
 
-    fn get_currency_unit(&self) -> common_utils::types::CurrencyUnit {
-        common_utils::types::CurrencyUnit::Minor
+    fn get_currency_unit(&self) -> CurrencyUnit {
+        CurrencyUnit::Minor
     }
 
-    fn base_url(&self) -> &'static str {
-        "https://test.payu.in"
-    }
-
-    fn get_auth_type(&self) -> domain_types::router_data::ConnectorAuthType {
-        domain_types::router_data::ConnectorAuthType::BodyKey {
-            api_key: "".into(),
-            key1: "".into(),
-        }
+    fn base_url(&self, _connector: &domain_types::types::Connectors) -> String {
+        "https://test.payu.in".to_string()
     }
 }
 
