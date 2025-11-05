@@ -23,7 +23,7 @@ use domain_types::{
     types::Connectors,
 };
 use std::fmt::Debug;
-use hyperswitch_masking::{Mask, Maskable};
+use error_stack::ResultExt;
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
