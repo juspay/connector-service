@@ -856,7 +856,7 @@ impl<
                     .router_data
                     .resource_common_data
                     .get_customer_id()?
-                    .get_string_repr(),
+                    .get_string_repr().to_string(),
             },
         })
     }
