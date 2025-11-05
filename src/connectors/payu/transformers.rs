@@ -315,40 +315,40 @@ where
             .connector_request_reference_id
             .get_connector_transaction_id()
             .map_err(|_| ConnectorError::MissingRequiredField {
-                field_name: "connector_transaction_id".to_string(),
+                field_name: "connector_transaction_id",
             })?;
 
-        let amount = item.amount.get_amount_as_string();
-        let currency = item.router_data.request.currency;
+        let amount = item.request.amount.get_amount_as_string();
+        let currency = item.request.currency;
 
         // Extract customer information
-        let email = item.router_data.request.email.clone().ok_or_else(|| {
+        let email = item.request.email.clone().ok_or_else(|| {
             ConnectorError::MissingRequiredField {
-                field_name: "email".to_string(),
+                field_name: "email",
             }
         })?;
 
-        let phone = item.router_data.request.phone.clone().ok_or_else(|| {
+        let phone = item.request.phone.clone().ok_or_else(|| {
             ConnectorError::MissingRequiredField {
-                field_name: "phone".to_string(),
+                field_name: "phone",
             }
         })?;
 
-        let customer_name = item.router_data.request.get_customer_name().unwrap_or("Customer");
+        let customer_name = item.request.get_customer_name().unwrap_or("Customer");
 
         // Get return URLs
-        let return_url = item.router_data.request.get_router_return_url().map_err(|_| {
+        let return_url = item.request.get_router_return_url().map_err(|_| {
             ConnectorError::MissingRequiredField {
-                field_name: "return_url".to_string(),
+                field_name: "return_url",
             }
         })?;
 
         // Get client IP
-        let client_ip = item.router_data.request.get_ip_address_as_optional()
+        let client_ip = item.request.get_ip_address_as_optional()
             .unwrap_or_else(|| Secret::new(IpAddress::from_str("127.0.0.1").unwrap()));
 
         // Extract payment method data
-        let (pg, bankcode, vpa, upi_app_name) = match &item.router_data.request.payment_method_data {
+        let (pg, bankcode, vpa, upi_app_name) = match &item.request.payment_method_data {
             PaymentMethodData::Upi(upi_data) => {
                 let pg = Some(constants::UPI_PG.to_string());
                 
