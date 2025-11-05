@@ -890,7 +890,7 @@ impl<
             _ => common_enums::AttemptStatus::AuthenticationPending,
         };
 
-        let amount_received = response
+        let _amount_received = response
             .payment_method
             .payment_transaction
             .amount
