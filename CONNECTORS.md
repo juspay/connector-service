@@ -1,8 +1,6 @@
 # UCS Connector Flow Matrix
 
-This table shows which flows are implemented for each connector in the Universal Connector Service (UCS).
-
-> **Note:** Connectors marked with 🚧 are in the pipeline for November 2025.
+This table shows which flows are implemented for each connector in the Unified Connector Service (UCS).
 
 ## Flow Implementations by Connector
 
@@ -15,12 +13,10 @@ This table shows which flows are implemented for each connector in the Universal
 | Braintree | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | ✓ | | | | |
 | Cashfree | ✓ | | | | | | | | ✓ | | | | | | | |
 | Cashtocode | ✓ | | | | | | | | | | | | | | | |
-| Chase 🚧 | | | | | | | | | | | | | | | | |
 | Checkout | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
 | Cryptopay | ✓ | ✓ | | | | | | | | | | | | | | |
 | Cybersource | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | ✓ | ✓ | ✓ |
 | Dlocal | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
-| Ebanx 🚧 | | | | | | | | | | | | | | | | |
 | Elavon | ✓ | ✓ | ✓ | | ✓ | ✓ | | | | | | | | | | |
 | Fiserv | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
 | Fiuu | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | |
@@ -29,7 +25,6 @@ This table shows which flows are implemented for each connector in the Universal
 | Nexinets | ✓ | ✓ | ✓ | | ✓ | ✓ | | | | | | | | | | |
 | Noon | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | |
 | Novalnet | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | |
-| Paypal 🚧 | | | | | | | | | | | | | | | | |
 | Paytm | ✓ | ✓ | | | | | | | | ✓ | | | | | | |
 | Payu | ✓ | ✓ | | | | | | | | | | | | | | |
 | Phonepe | ✓ | ✓ | | | | | | | | | | | | | | |
@@ -44,13 +39,28 @@ This table shows which flows are implemented for each connector in the Universal
 | Worldpayvantiv | ✓ | ✓ | | | | | | | | | | | | | | |
 | Xendit | ✓ | ✓ | ✓ | | ✓ | ✓ | | | | | | | | | | |
 
-## Pipeline Connectors (Nov'25)
+## Roadmap
 
-The following connectors are currently in development:
+### November 2025
+To include/enhance the following PSPs in UCS (with deeper flows):
 
-- **Chase (Orbital and other flavours)** - Highest priority
-- **PayPal** - In development
-- **Ebanx** - Strategic expansion
+- **Braintree**
+- **Adyen** 
+- **Worldpay Vantiv**
+- **Worldpay Access**
+- **Worldpay WPG**
+- **JP Morgan Online Payments**
+- **Checkout**
+- **Fiserv Commerce Hub**
+- **Fiserv EMEA**
+- **PayPal**
+- **Ebanx**
+- **Dlocal**
+- **Razorpay**
+
+### December 2025
+To move all Pay-in connectors from Hyperswitch to UCS
+
 
 ---
 

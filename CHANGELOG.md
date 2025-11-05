@@ -4,6 +4,20 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.11.05.0
+
+### Documentation
+
+- **setup.md:** Toml always prod.toml issue fix for docker ([#242](https://github.com/juspay/connector-service/pull/242)) ([`6e1d41a`](https://github.com/juspay/connector-service/commit/6e1d41ae90f04e820f6fc372c1add2138337d42b))
+
+### Build System / Dependencies
+
+- Skip git commit hashes from typo check ([#243](https://github.com/juspay/connector-service/pull/243)) ([`88b7f9e`](https://github.com/juspay/connector-service/commit/88b7f9ecf72a304b4a5128183cb679c1be1eb914))
+
+**Full Changelog:** [`2025.11.04.1...2025.11.05.0`](https://github.com/juspay/connector-service/compare/2025.11.04.1...2025.11.05.0)
+
+- - -
+
 ## 2025.11.04.1
 
 ### Refactors
