@@ -1,5 +1,4 @@
-use masking::{ExposeInterface, PeekInterface};
-use std::collections::HashMap;
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 
 use common_utils::{
     errors::CustomResult,
