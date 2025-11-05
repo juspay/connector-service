@@ -449,7 +449,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
             .connector_request_reference_id
             .get_connector_transaction_id()
             .map_err(|_| ConnectorError::MissingRequiredField {
-                field_name: "connector_transaction_id".to_string(),
+                field_name: "connector_transaction_id",
             })?;
 
         // Generate hash for PSync
