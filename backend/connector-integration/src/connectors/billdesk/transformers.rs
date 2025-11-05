@@ -14,19 +14,6 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface};
 use serde::{Deserialize, Serialize};
-use crate::connectors::macros::FlowTypes;
-
-pub struct BilldeskRouterData<RD: FlowTypes, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> {
-    pub connector: crate::connectors::billdesk::Billdesk<T>,
-    pub router_data: RD,
-}
-
-impl<RD: FlowTypes, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> FlowTypes for BilldeskRouterData<RD, T> {
-    type Flow = RD::Flow;
-    type FlowCommonData = RD::FlowCommonData;
-    type Request = RD::Request;
-    type Response = RD::Response;
-}
 
 use crate::types::ResponseRouterData;
 
