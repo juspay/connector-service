@@ -460,7 +460,7 @@ impl<F> TryFrom<ResponseRouterData<BilldeskRefundSyncResponse, Self>>
         
         let (status, response) = match response {
             BilldeskRefundSyncResponse::BilldeskError(error_data) => (
-                common_enums::AttemptStatus::Failure,
+                common_enums::RefundStatus::Failure,
                 Err(ErrorResponse {
                     code: error_data.error.to_string(),
                     status_code: item.http_code,
