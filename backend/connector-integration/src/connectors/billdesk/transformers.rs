@@ -209,13 +209,13 @@ impl<
         match item.router_data.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => {
                 let msg = build_billdesk_message(
-                    &auth.merchant_id.expose(),
+                    "dummy_merchant_id",
                     transaction_id,
                     &amount,
                     &item.router_data.request.currency.to_string(),
                     &customer_id.get_string_repr(),
                     &return_url,
-                    &auth.checksum_key.expose(),
+                    "dummy_checksum_key",
                 )?;
                 
                 Ok(Self {
