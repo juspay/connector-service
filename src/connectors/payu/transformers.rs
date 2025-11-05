@@ -3,18 +3,17 @@ use common_utils::{pii::IpAddress, Email};
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
-    router_request_types::AuthoriseIntegrityObject,
-    router_response_types::RedirectForm,
 };
-use error_stack::{report, ResultExt};
+use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 use crate::types::ResponseRouterData;
 
