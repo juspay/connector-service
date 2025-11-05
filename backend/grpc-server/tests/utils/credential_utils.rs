@@ -98,27 +98,231 @@ pub fn load_connector_metadata(
     connector_name: &str,
 ) -> Result<HashMap<String, String>, CredentialError> {
     let creds_file_path = get_creds_file_path();
-    let creds_content = fs::read_to_string(&creds_file_path)?;
-    let all_credentials: AllCredentials = serde_json::from_str(&creds_content)?;
+    let creds_content = fs::read_to_string(&creds_file_path).map_err(|e| {
+        eprintln!("Failed to read credentials file at: {}", creds_file_path);
+        eprintln!("Error: {}", e);
+        CredentialError::FileReadError(e)
+    })?;
+
+    // First, let's try to parse as raw JSON to provide better error context
+    let json_value: serde_json::Value = serde_json::from_str(&creds_content).map_err(|e| {
+        eprintln!("Failed to parse credentials JSON file for metadata loading");
+        eprintln!("JSON parsing error: {}", e);
+        eprintln!("File path: {}", creds_file_path);
+        CredentialError::ParseError(e)
+    })?;
+
+    // Try to load using the enhanced individual parsing approach
+    let all_credentials = match load_credentials_individually(&json_value) {
+        Ok(creds) => creds,
+        Err(e) => {
+            eprintln!("Failed to load credentials using individual parsing approach for metadata");
+            eprintln!("Falling back to standard parsing...");
+            
+            // Try standard parsing as fallback
+            serde_json::from_value(json_value).map_err(|e| {
+                eprintln!("Standard parsing also failed for metadata: {}", e);
+                CredentialError::ParseError(e)
+            })?
+        }
+    };
 
     let connector_creds = all_credentials
         .get(connector_name)
-        .ok_or_else(|| CredentialError::ConnectorNotFound(connector_name.to_string()))?;
+        .ok_or_else(|| {
+            eprintln!("Connector '{}' not found in credentials file for metadata", connector_name);
+            eprintln!("Available connectors: {:?}", all_credentials.keys().collect::<Vec<_>>());
+            CredentialError::ConnectorNotFound(connector_name.to_string())
+        })?;
 
     Ok(connector_creds.metadata.clone().unwrap_or_default())
 }
 
-/// Load credentials from JSON file
+/// Load credentials from JSON file with enhanced error handling
 fn load_from_json(connector_name: &str) -> Result<ConnectorAuthType, CredentialError> {
     let creds_file_path = get_creds_file_path();
-    let creds_content = fs::read_to_string(&creds_file_path)?;
-    let all_credentials: AllCredentials = serde_json::from_str(&creds_content)?;
+    let creds_content = fs::read_to_string(&creds_file_path).map_err(|e| {
+        eprintln!("Failed to read credentials file at: {}", creds_file_path);
+        eprintln!("Error: {}", e);
+        CredentialError::FileReadError(e)
+    })?;
+
+    // First, let's try to parse as raw JSON to provide better error context
+    let json_value: serde_json::Value = serde_json::from_str(&creds_content).map_err(|e| {
+        eprintln!("Failed to parse credentials JSON file");
+        eprintln!("JSON parsing error: {}", e);
+        eprintln!("File path: {}", creds_file_path);
+        CredentialError::ParseError(e)
+    })?;
+
+    // Try to load each connector individually to isolate issues
+    let all_credentials = match load_credentials_individually(&json_value) {
+        Ok(creds) => creds,
+        Err(e) => {
+            eprintln!("Failed to load credentials using individual parsing approach");
+            eprintln!("Falling back to standard parsing...");
+            
+            // Try standard parsing as fallback
+            serde_json::from_value(json_value).map_err(|e| {
+                eprintln!("Standard parsing also failed: {}", e);
+                CredentialError::ParseError(e)
+            })?
+        }
+    };
 
     let connector_creds = all_credentials
         .get(connector_name)
-        .ok_or_else(|| CredentialError::ConnectorNotFound(connector_name.to_string()))?;
+        .ok_or_else(|| {
+            eprintln!("Connector '{}' not found in credentials file", connector_name);
+            eprintln!("Available connectors: {:?}", all_credentials.keys().collect::<Vec<_>>());
+            CredentialError::ConnectorNotFound(connector_name.to_string())
+        })?;
 
     convert_to_auth_type(&connector_creds.connector_account_details, connector_name)
+}
+
+/// Load credentials by parsing each connector individually to isolate issues
+fn load_credentials_individually(json_value: &serde_json::Value) -> Result<AllCredentials, CredentialError> {
+    let mut all_credentials = std::collections::HashMap::new();
+    
+    let root_object = json_value.as_object()
+        .ok_or_else(|| CredentialError::ParseError(serde_json::Error::custom("Root JSON must be an object")))?;
+
+    for (connector_name, connector_value) in root_object {
+        match parse_single_connector(connector_name, connector_value) {
+            Ok(creds) => {
+                eprintln!("Successfully loaded credentials for connector: {}", connector_name);
+                all_credentials.insert(connector_name.clone(), creds);
+            }
+            Err(e) => {
+                eprintln!("Warning: Failed to load credentials for connector '{}': {}", connector_name, e);
+                eprintln!("Skipping connector '{}' and continuing with others", connector_name);
+                // Continue loading other connectors instead of failing completely
+            }
+        }
+    }
+
+    if all_credentials.is_empty() {
+        return Err(CredentialError::ParseError(serde_json::Error::custom(
+            "No valid connectors could be loaded from credentials file"
+        )));
+    }
+
+    Ok(all_credentials)
+}
+
+/// Parse a single connector's credentials with detailed error reporting
+fn parse_single_connector(connector_name: &str, connector_value: &serde_json::Value) -> Result<ConnectorCredentials, CredentialError> {
+    // First validate the basic structure
+    let connector_obj = connector_value.as_object()
+        .ok_or_else(|| CredentialError::ParseError(serde_json::Error::custom(
+            format!("Connector '{}' value must be an object", connector_name)
+        )))?;
+
+    // Check for required connector_account_details field
+    let account_details_value = connector_obj.get("connector_account_details")
+        .ok_or_else(|| CredentialError::ParseError(serde_json::Error::custom(
+            format!("Connector '{}' missing 'connector_account_details' field", connector_name)
+        )))?;
+
+    // Parse connector_account_details with enhanced error handling
+    let account_details = parse_connector_account_details(connector_name, account_details_value)?;
+
+    // Parse metadata if present
+    let metadata = connector_obj.get("metadata")
+        .map(|v| serde_json::from_value(v.clone()))
+        .transpose()
+        .map_err(|e| {
+            eprintln!("Failed to parse metadata for connector '{}': {}", connector_name, e);
+            CredentialError::ParseError(e)
+        })?;
+
+    Ok(ConnectorCredentials {
+        connector_account_details: account_details,
+        metadata,
+    })
+}
+
+/// Parse connector account details with field-specific error handling
+fn parse_connector_account_details(connector_name: &str, value: &serde_json::Value) -> Result<ConnectorAccountDetails, CredentialError> {
+    let obj = value.as_object()
+        .ok_or_else(|| CredentialError::ParseError(serde_json::Error::custom(
+            format!("connector_account_details for '{}' must be an object", connector_name)
+        )))?;
+
+    // Extract auth_type first
+    let auth_type = obj.get("auth_type")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| CredentialError::ParseError(serde_json::Error::custom(
+            format!("Connector '{}' missing or invalid 'auth_type' field", connector_name)
+        )))?
+        .to_string();
+
+    eprintln!("Parsing connector '{}' with auth_type: {}", connector_name, auth_type);
+
+    // Handle different auth types with specific parsing logic
+    match auth_type.as_str() {
+        "CurrencyAuthKey" => {
+            // Special handling for CurrencyAuthKey which has complex nested structure
+            parse_currency_auth_key_details(connector_name, obj)
+        }
+        _ => {
+            // For other auth types, use standard serde parsing
+            serde_json::from_value(value.clone()).map_err(|e| {
+                eprintln!("Failed to parse connector_account_details for '{}' with auth_type '{}': {}", 
+                         connector_name, auth_type, e);
+                CredentialError::ParseError(e)
+            })
+        }
+    }
+}
+
+/// Special parsing logic for CurrencyAuthKey auth type
+fn parse_currency_auth_key_details(connector_name: &str, obj: &serde_json::Map<String, serde_json::Value>) -> Result<ConnectorAccountDetails, CredentialError> {
+    let auth_key_map_value = obj.get("auth_key_map")
+        .ok_or_else(|| CredentialError::ParseError(serde_json::Error::custom(
+            format!("Connector '{}' with CurrencyAuthKey missing 'auth_key_map' field", connector_name)
+        )))?;
+
+    // Parse auth_key_map manually to provide better error messages
+    let auth_key_map = parse_auth_key_map(connector_name, auth_key_map_value)?;
+
+    Ok(ConnectorAccountDetails {
+        auth_type: "CurrencyAuthKey".to_string(),
+        api_key: None,
+        key1: None,
+        api_secret: None,
+        key2: None,
+        certificate: None,
+        private_key: None,
+        auth_key_map: Some(auth_key_map),
+    })
+}
+
+/// Parse auth_key_map with detailed error handling
+fn parse_auth_key_map(connector_name: &str, value: &serde_json::Value) -> Result<HashMap<Currency, SecretSerdeValue>, CredentialError> {
+    let obj = value.as_object()
+        .ok_or_else(|| CredentialError::ParseError(serde_json::Error::custom(
+            format!("auth_key_map for '{}' must be an object", connector_name)
+        )))?;
+
+    let mut auth_key_map = HashMap::new();
+
+    for (currency_str, secret_value) in obj {
+        // Parse currency string to Currency enum
+        let currency = currency_str.parse::<Currency>().map_err(|_| {
+            CredentialError::ParseError(serde_json::Error::custom(
+                format!("Invalid currency '{}' in auth_key_map for connector '{}'", currency_str, connector_name)
+            ))
+        })?;
+
+        // Create SecretSerdeValue from the JSON value
+        let secret_serde_value = SecretSerdeValue::new(secret_value.clone());
+        
+        auth_key_map.insert(currency, secret_serde_value);
+    }
+
+    Ok(auth_key_map)
 }
 
 /// Convert generic credential details to specific ConnectorAuthType
