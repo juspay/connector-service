@@ -1,5 +1,5 @@
 #![allow(clippy::expect_used, clippy::indexing_slicing)]
-
+#![allow(clippy::panic)]
 use grpc_server::{app, configs};
 use hyperswitch_masking::ExposeInterface;
 mod common;
