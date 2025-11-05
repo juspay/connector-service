@@ -820,6 +820,7 @@ impl_source_verification_stub!(SetupMandate, PaymentFlowData, SetupMandateReques
 impl_source_verification_stub!(CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData);
 impl_source_verification_stub!(CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData);
 impl_source_verification_stub!(CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse);
+impl_source_verification_stub!(CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse);
 
 fn get_tpsl_auth_headers(
     auth_type: &transformers::TpslAuth,
