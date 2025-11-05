@@ -394,7 +394,7 @@ where
         Ok(Self {
             key: auth.api_key.peek().clone(),
             txnid: transaction_id,
-            amount: item.amount.clone(),
+            amount: item.request.amount.clone(),
             currency,
             productinfo: constants::PRODUCT_INFO.to_string(),
             firstname: Secret::new(customer_name.to_string()),
