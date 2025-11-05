@@ -4,6 +4,42 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## [2025-01-XX] - Billdesk Connector Addition
+
+### Added
+- New Billdesk connector implementation
+- Payment methods supported: UPI (Unified Payments Interface)
+- Transaction flows: Authorize, PSync (Payment Sync), RSync (Refund Sync)
+- Support for UPI Intent/Collect payment flows
+- Comprehensive error handling and status mapping
+
+### Files Created/Modified
+- `src/connectors/billdesk.rs` - Main connector implementation
+- `src/connectors/billdesk/transformers.rs` - Request/response transformers
+- `src/connectors/billdesk/constants.rs` - API constants and endpoints
+- `src/connectors.rs` - Added connector registration
+- `src/types.rs` - Added connector to ConnectorEnum and convert_connector function
+- `backend/domain_types/src/connector_types.rs` - Added Billdesk to ConnectorEnum
+- `backend/grpc-api-types/proto/payment.proto` - Added BILLDESK to Connector enum
+
+### Technical Details
+- Migrated from Hyperswitch/Euler Haskell implementation
+- Uses UCS v2 macro framework for trait implementations
+- Implements proper error handling and status mapping
+- Full type safety with guard rails
+- Supports both UAT and production environments
+- Uses StringMinorUnit amount converter for proper monetary value handling
+- Implements checksum-based authentication pattern
+
+### API Endpoints
+- UAT: https://uat.billdesk.com
+- Production: https://www.billdesk.com
+- Authorize: /pgidsk/PGIDirectRequest?reqid=BDRDF011
+- PSync: /pgidsk/PGIDirectRequest?reqid=BDRDF002
+- RSync: /pgidsk/PGIDirectRequest?reqid=BDRDF004
+
+- - -
+
 ## 2025.11.05.0
 
 ### Documentation
