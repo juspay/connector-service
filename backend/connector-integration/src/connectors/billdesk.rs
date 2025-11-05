@@ -44,18 +44,6 @@ use transformers::{
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
-pub struct BilldeskRouterData<RD: super::macros::FlowTypes, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> {
-    pub connector: Billdesk<T>,
-    pub router_data: RD,
-}
-
-impl<RD: super::macros::FlowTypes, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> super::macros::FlowTypes for BilldeskRouterData<RD, T> {
-    type Flow = RD::Flow;
-    type FlowCommonData = RD::FlowCommonData;
-    type Request = RD::Request;
-    type Response = RD::Response;
-}
-
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
