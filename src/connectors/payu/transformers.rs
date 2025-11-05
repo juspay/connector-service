@@ -514,9 +514,6 @@ impl<T> TryFrom<PayuSyncResponse> for ResponseRouterData<T, PaymentsResponseData
 
         Ok(ResponseRouterData {
             response: Ok(PaymentsResponseData::Charged), // Simplified for now
-                ..Default::default()
-            }),
-            ..Default::default()
         })
     }
 }
