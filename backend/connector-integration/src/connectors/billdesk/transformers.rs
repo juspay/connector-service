@@ -262,7 +262,7 @@ impl<
         // Build status check message
         let msg = format!(
             "merchantid={}&transactionid={}",
-            auth.merchant_id.expose(),
+            format!("{}", auth.merchant_id),
             transaction_id
         );
         
