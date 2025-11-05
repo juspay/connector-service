@@ -98,42 +98,23 @@ pub fn load_connector_metadata(
     connector_name: &str,
 ) -> Result<HashMap<String, String>, CredentialError> {
     let creds_file_path = get_creds_file_path();
-    let creds_content = fs::read_to_string(&creds_file_path).map_err(|e| {
-        eprintln!("Failed to read credentials file at: {}", creds_file_path);
-        eprintln!("Error: {}", e);
-        CredentialError::FileReadError(e)
-    })?;
+    let creds_content = fs::read_to_string(&creds_file_path)?;
 
     // First, let's try to parse as raw JSON to provide better error context
-    let json_value: serde_json::Value = serde_json::from_str(&creds_content).map_err(|e| {
-        eprintln!("Failed to parse credentials JSON file for metadata loading");
-        eprintln!("JSON parsing error: {}", e);
-        eprintln!("File path: {}", creds_file_path);
-        CredentialError::ParseError(e)
-    })?;
+    let json_value: serde_json::Value = serde_json::from_str(&creds_content)?;
 
     // Try to load using the enhanced individual parsing approach
     let all_credentials = match load_credentials_individually(&json_value) {
         Ok(creds) => creds,
-        Err(e) => {
-            eprintln!("Failed to load credentials using individual parsing approach for metadata");
-            eprintln!("Falling back to standard parsing...");
-            
+        Err(_e) => {
             // Try standard parsing as fallback
-            serde_json::from_value(json_value).map_err(|e| {
-                eprintln!("Standard parsing also failed for metadata: {}", e);
-                CredentialError::ParseError(e)
-            })?
+            serde_json::from_value(json_value)?
         }
     };
 
     let connector_creds = all_credentials
         .get(connector_name)
-        .ok_or_else(|| {
-            eprintln!("Connector '{}' not found in credentials file for metadata", connector_name);
-            eprintln!("Available connectors: {:?}", all_credentials.keys().collect::<Vec<_>>());
-            CredentialError::ConnectorNotFound(connector_name.to_string())
-        })?;
+        .ok_or_else(|| CredentialError::ConnectorNotFound(connector_name.to_string()))?;
 
     Ok(connector_creds.metadata.clone().unwrap_or_default())
 }
@@ -141,42 +122,23 @@ pub fn load_connector_metadata(
 /// Load credentials from JSON file with enhanced error handling
 fn load_from_json(connector_name: &str) -> Result<ConnectorAuthType, CredentialError> {
     let creds_file_path = get_creds_file_path();
-    let creds_content = fs::read_to_string(&creds_file_path).map_err(|e| {
-        eprintln!("Failed to read credentials file at: {}", creds_file_path);
-        eprintln!("Error: {}", e);
-        CredentialError::FileReadError(e)
-    })?;
+    let creds_content = fs::read_to_string(&creds_file_path)?;
 
     // First, let's try to parse as raw JSON to provide better error context
-    let json_value: serde_json::Value = serde_json::from_str(&creds_content).map_err(|e| {
-        eprintln!("Failed to parse credentials JSON file");
-        eprintln!("JSON parsing error: {}", e);
-        eprintln!("File path: {}", creds_file_path);
-        CredentialError::ParseError(e)
-    })?;
+    let json_value: serde_json::Value = serde_json::from_str(&creds_content)?;
 
     // Try to load each connector individually to isolate issues
     let all_credentials = match load_credentials_individually(&json_value) {
         Ok(creds) => creds,
-        Err(e) => {
-            eprintln!("Failed to load credentials using individual parsing approach");
-            eprintln!("Falling back to standard parsing...");
-            
+        Err(_e) => {
             // Try standard parsing as fallback
-            serde_json::from_value(json_value).map_err(|e| {
-                eprintln!("Standard parsing also failed: {}", e);
-                CredentialError::ParseError(e)
-            })?
+            serde_json::from_value(json_value)?
         }
     };
 
     let connector_creds = all_credentials
         .get(connector_name)
-        .ok_or_else(|| {
-            eprintln!("Connector '{}' not found in credentials file", connector_name);
-            eprintln!("Available connectors: {:?}", all_credentials.keys().collect::<Vec<_>>());
-            CredentialError::ConnectorNotFound(connector_name.to_string())
-        })?;
+        .ok_or_else(|| CredentialError::ConnectorNotFound(connector_name.to_string()))?;
 
     convert_to_auth_type(&connector_creds.connector_account_details, connector_name)
 }
@@ -195,12 +157,9 @@ fn load_credentials_individually(json_value: &serde_json::Value) -> Result<AllCr
     for (connector_name, connector_value) in root_object {
         match parse_single_connector(connector_name, connector_value) {
             Ok(creds) => {
-                eprintln!("Successfully loaded credentials for connector: {}", connector_name);
                 all_credentials.insert(connector_name.clone(), creds);
             }
             Err(_e) => {
-                eprintln!("Warning: Failed to load credentials for connector '{}': {}", connector_name, _e);
-                eprintln!("Skipping connector '{}' and continuing with others", connector_name);
                 // Continue loading other connectors instead of failing completely
             }
         }
@@ -220,7 +179,6 @@ fn parse_single_connector(connector_name: &str, connector_value: &serde_json::Va
     // First validate the basic structure
     let connector_obj = connector_value.as_object()
         .ok_or_else(|| {
-            eprintln!("Connector '{}' value must be an object", connector_name);
             let parse_error = serde_json::from_str::<()>("").unwrap_err();
             CredentialError::ParseError(parse_error)
         })?;
@@ -228,7 +186,6 @@ fn parse_single_connector(connector_name: &str, connector_value: &serde_json::Va
     // Check for required connector_account_details field
     let account_details_value = connector_obj.get("connector_account_details")
         .ok_or_else(|| {
-            eprintln!("Connector '{}' missing 'connector_account_details' field", connector_name);
             let parse_error = serde_json::from_str::<()>("").unwrap_err();
             CredentialError::ParseError(parse_error)
         })?;
@@ -239,11 +196,7 @@ fn parse_single_connector(connector_name: &str, connector_value: &serde_json::Va
     // Parse metadata if present
     let metadata = connector_obj.get("metadata")
         .map(|v| serde_json::from_value(v.clone()))
-        .transpose()
-        .map_err(|e| {
-            eprintln!("Failed to parse metadata for connector '{}': {}", connector_name, e);
-            CredentialError::ParseError(e)
-        })?;
+        .transpose()?;
 
     Ok(ConnectorCredentials {
         connector_account_details: account_details,
@@ -255,7 +208,6 @@ fn parse_single_connector(connector_name: &str, connector_value: &serde_json::Va
 fn parse_connector_account_details(connector_name: &str, value: &serde_json::Value) -> Result<ConnectorAccountDetails, CredentialError> {
     let obj = value.as_object()
         .ok_or_else(|| {
-            eprintln!("connector_account_details for '{}' must be an object", connector_name);
             let parse_error = serde_json::from_str::<()>("").unwrap_err();
             CredentialError::ParseError(parse_error)
         })?;
@@ -264,13 +216,10 @@ fn parse_connector_account_details(connector_name: &str, value: &serde_json::Val
     let auth_type = obj.get("auth_type")
         .and_then(|v| v.as_str())
         .ok_or_else(|| {
-            eprintln!("Connector '{}' missing or invalid 'auth_type' field", connector_name);
             let parse_error = serde_json::from_str::<()>("").unwrap_err();
             CredentialError::ParseError(parse_error)
         })?
         .to_string();
-
-    eprintln!("Parsing connector '{}' with auth_type: {}", connector_name, auth_type);
 
     // Handle different auth types with specific parsing logic
     match auth_type.as_str() {
@@ -280,11 +229,7 @@ fn parse_connector_account_details(connector_name: &str, value: &serde_json::Val
         }
         _ => {
             // For other auth types, use standard serde parsing
-            serde_json::from_value(value.clone()).map_err(|e| {
-                eprintln!("Failed to parse connector_account_details for '{}' with auth_type '{}': {}", 
-                         connector_name, auth_type, e);
-                CredentialError::ParseError(e)
-            })
+            serde_json::from_value(value.clone()).map_err(CredentialError::ParseError)
         }
     }
 }
@@ -293,7 +238,6 @@ fn parse_connector_account_details(connector_name: &str, value: &serde_json::Val
 fn parse_currency_auth_key_details(connector_name: &str, obj: &serde_json::Map<String, serde_json::Value>) -> Result<ConnectorAccountDetails, CredentialError> {
     let auth_key_map_value = obj.get("auth_key_map")
         .ok_or_else(|| {
-            eprintln!("Connector '{}' with CurrencyAuthKey missing 'auth_key_map' field", connector_name);
             let parse_error = serde_json::from_str::<()>("").unwrap_err();
             CredentialError::ParseError(parse_error)
         })?;
@@ -317,7 +261,6 @@ fn parse_currency_auth_key_details(connector_name: &str, obj: &serde_json::Map<S
 fn parse_auth_key_map(connector_name: &str, value: &serde_json::Value) -> Result<HashMap<Currency, SecretSerdeValue>, CredentialError> {
     let obj = value.as_object()
         .ok_or_else(|| {
-            eprintln!("auth_key_map for '{}' must be an object", connector_name);
             let parse_error = serde_json::from_str::<()>("").unwrap_err();
             CredentialError::ParseError(parse_error)
         })?;
@@ -327,7 +270,6 @@ fn parse_auth_key_map(connector_name: &str, value: &serde_json::Value) -> Result
     for (currency_str, secret_value) in obj {
         // Parse currency string to Currency enum
         let currency = currency_str.parse::<Currency>().map_err(|_parse_err| {
-            eprintln!("Invalid currency '{}' in auth_key_map for connector '{}'", currency_str, connector_name);
             let parse_error = serde_json::from_str::<()>("").unwrap_err();
             CredentialError::ParseError(parse_error)
         })?;
