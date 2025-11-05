@@ -417,11 +417,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            let endpoint = if req.resource_common_data.test_mode.unwrap_or(false) {
-                crate::connectors::billdesk::constants::endpoints::UAT_AUTHORIZE_ENDPOINT
-            } else {
-                crate::connectors::billdesk::constants::endpoints::PROD_AUTHORIZE_ENDPOINT
-            };
+            let endpoint = crate::connectors::billdesk::constants::endpoints::PROD_AUTHORIZE_ENDPOINT;
             Ok(format!("{}{}", base_url, endpoint))
         }
     }
