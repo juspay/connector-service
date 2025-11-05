@@ -145,7 +145,7 @@ fn load_from_json(connector_name: &str) -> Result<ConnectorAuthType, CredentialE
 
 /// Load credentials by parsing each connector individually to isolate issues
 fn load_credentials_individually(json_value: &serde_json::Value) -> Result<AllCredentials, CredentialError> {
-    let mut all_credentials = std::collections::HashMap::new();
+    let mut all_credentials = HashMap::new();
     
     let root_object = json_value.as_object()
         .ok_or_else(|| {
@@ -258,7 +258,7 @@ fn parse_currency_auth_key_details(connector_name: &str, obj: &serde_json::Map<S
 }
 
 /// Parse auth_key_map with detailed error handling
-fn parse_auth_key_map(connector_name: &str, value: &serde_json::Value) -> Result<HashMap<Currency, SecretSerdeValue>, CredentialError> {
+fn parse_auth_key_map(_connector_name: &str, value: &serde_json::Value) -> Result<HashMap<Currency, SecretSerdeValue>, CredentialError> {
     let obj = value.as_object()
         .ok_or_else(|| {
             let parse_error = serde_json::from_str::<()>("").unwrap_err();
