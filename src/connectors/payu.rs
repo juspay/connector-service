@@ -2,9 +2,8 @@
 
 use std::fmt::Debug;
 
+use masking::ExposeInterface;
 use serde::Serialize;
-use common_enums::Currency;
-use domain_types::router_data_v2::RouterDataV2;
 use hyperswitch_masking::Secret;
 use interfaces::connector_types::*;
 
