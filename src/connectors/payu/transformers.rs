@@ -292,7 +292,7 @@ fn generate_payu_hash(
     // Generate SHA-512 hash
     let sha512 = common_utils::crypto::Sha512;
     let hash = sha512.generate_digest(hash_string.as_bytes())
-        .change_context(ConnectorError::RequestEncodingFailed)?;
+        .map_err(|_| ConnectorError::RequestEncodingFailed)?;
     
     Ok(hex::encode(hash))
 }
