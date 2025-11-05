@@ -549,7 +549,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<SubmitEvidence, domain_types::connector_types::DisputeSubmitEvidenceData, domain_types::connector_types::DisputeSubmitEvidenceResponse, domain_types::connector_types::DisputeSubmitEvidenceResponse>
+> ConnectorIntegrationV2<SubmitEvidence, domain_types::connector_types::SubmitEvidenceData, domain_types::connector_types::SubmitEvidenceResponse, domain_types::connector_types::SubmitEvidenceResponse>
     for TPSL<T>
 {
 }
@@ -561,7 +561,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<DefendDispute, domain_types::connector_types::DisputeDefendData, domain_types::connector_types::DisputeDefendResponse, domain_types::connector_types::DisputeDefendResponse>
+> ConnectorIntegrationV2<DefendDispute, domain_types::connector_types::DefendDisputeData, domain_types::connector_types::DefendDisputeResponse, domain_types::connector_types::DefendDisputeResponse>
     for TPSL<T>
 {
 }
@@ -573,7 +573,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<AcceptDispute, domain_types::connector_types::DisputeAcceptData, domain_types::connector_types::DisputeAcceptResponse, domain_types::connector_types::DisputeAcceptResponse>
+> ConnectorIntegrationV2<AcceptDispute, domain_types::connector_types::AcceptDisputeData, domain_types::connector_types::AcceptDisputeResponse, domain_types::connector_types::AcceptDisputeResponse>
     for TPSL<T>
 {
 }
