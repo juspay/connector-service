@@ -14,8 +14,8 @@ use domain_types::{
     connector_types::{
         ConnectorWebhookSecrets, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
         PaymentsSyncData, RequestDetails, DisputeResponseData, RepeatPaymentData, PaymentMethodTokenizationData, 
-        SetupMandateRequestData, SessionTokenRequestData, CreateAccessTokenData, CreateConnectorCustomerData,
-        ConnectorCustomerResponse, SessionTokenResponseData, PaymentMethodTokenResponse,
+        SetupMandateRequestData, SessionTokenRequestData, AccessTokenRequestData, AccessTokenResponseData,
+        ConnectorCustomerData, ConnectorCustomerResponse, SessionTokenResponseData, PaymentMethodTokenResponse,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
