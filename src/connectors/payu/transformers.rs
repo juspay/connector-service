@@ -499,7 +499,7 @@ impl TryFrom<PayuPaymentResponse> for ResponseRouterData {
         Ok(ResponseRouterData {
             headers: None,
             status_code: 200,
-            response: Bytes::from("success"),
+            response: "success".into(),
         })
     }
 }
