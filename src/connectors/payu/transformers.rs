@@ -394,7 +394,9 @@ where
         Ok(Self {
             key: auth.api_key.peek().clone(),
             txnid: transaction_id,
-            amount: item.request.amount.clone(),
+            amount: common_utils::types::MinorUnit(item.request.amount)
+                .to_major_unit_as_string(item.request.currency)
+                .map_err(|_| ConnectorError::RequestEncodingFailed)?,
             currency,
             productinfo: constants::PRODUCT_INFO.to_string(),
             firstname: Secret::new(customer_name.to_string()),
