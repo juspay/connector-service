@@ -1779,6 +1779,7 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<PaymentServiceVoidRequest>,
     ) -> Result<tonic::Response<PaymentServiceVoidResponse>, tonic::Status> {
+        info!("PAYMENT_VOID_FLOW: initiated");
         let service_name = request
             .extensions()
             .get::<String>()
@@ -1789,7 +1790,105 @@ impl PaymentService for Payments {
             &service_name,
             self.config.clone(),
             FlowName::Void,
-            |request_data| async move { self.internal_void_payment(request_data).await },
+            |mut request_data| {
+                let service_name = service_name.clone();
+                Box::pin(async move {
+                    let metadata_payload = &request_data.extracted_metadata;
+                    let connector = metadata_payload.connector;
+
+                    // Get connector data to check if access token is needed
+                    let connector_data: ConnectorData<DefaultPCIHolder> =
+                        ConnectorData::get_connector_by_name(&connector);
+
+                    // Check if connector supports access tokens
+                    let should_do_access_token = connector_data.connector.should_do_access_token();
+
+                    if should_do_access_token {
+                        // Extract access token from Hyperswitch request
+                        let cached_access_token = request_data
+                            .payload
+                            .state
+                            .as_ref()
+                            .and_then(|state| state.access_token.as_ref())
+                            .map(|access| (access.token.clone(), access.expires_in_seconds));
+
+                        if cached_access_token.is_none() {
+                            // No cached token - generate fresh one
+                            tracing::info!(
+                                "No cached access token found, generating new token for void flow"
+                            );
+
+                            // Create temporary payment flow data for access token creation
+                            let temp_payment_flow_data = PaymentFlowData::foreign_try_from((
+                                request_data.payload.clone(),
+                                self.config.connectors.clone(),
+                                &request_data.masked_metadata,
+                            ))
+                            .map_err(|e| {
+                                tonic::Status::internal(format!(
+                                    "Failed to create payment flow data: {e}"
+                                ))
+                            })?;
+
+                            let event_params = EventParams {
+                                _connector_name: &connector.to_string(),
+                                _service_name: &service_name,
+                                request_id: &metadata_payload.request_id,
+                                lineage_ids: &metadata_payload.lineage_ids,
+                                reference_id: &metadata_payload.reference_id,
+                                shadow_mode: metadata_payload.shadow_mode,
+                            };
+
+                            let access_token_data = self
+                                .handle_access_token(
+                                    connector_data,
+                                    &temp_payment_flow_data,
+                                    metadata_payload.connector_auth_type.clone(),
+                                    &connector.to_string(),
+                                    &service_name,
+                                    event_params,
+                                )
+                                .await
+                                .map_err(|e| {
+                                    let message = e.error_message.unwrap_or_else(|| {
+                                        "Access token creation failed".to_string()
+                                    });
+                                    tonic::Status::internal(message)
+                                })?;
+
+                            tracing::info!(
+                                "Access token created successfully with expiry: {:?}",
+                                access_token_data.expires_in
+                            );
+
+                            // Create access token info for the request
+                            let access_token_info = grpc_api_types::payments::AccessToken {
+                                token: access_token_data.access_token,
+                                expires_in_seconds: access_token_data.expires_in,
+                                token_type: access_token_data.token_type,
+                            };
+
+                            // Set the access token in the request payload
+                            if request_data.payload.state.is_none() {
+                                request_data.payload.state =
+                                    Some(grpc_api_types::payments::ConnectorState {
+                                        access_token: Some(access_token_info),
+                                        connector_customer_id: None,
+                                    });
+                            } else if let Some(ref mut state) = request_data.payload.state {
+                                state.access_token = Some(access_token_info);
+                            }
+                        } else {
+                            tracing::info!(
+                                "Using cached access token from Hyperswitch for void flow"
+                            );
+                        }
+                    }
+
+                    // Now call the existing internal_void_payment method
+                    self.internal_void_payment(request_data).await
+                })
+            },
         )
         .await
     }
@@ -2098,17 +2197,104 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<PaymentServiceCaptureRequest>,
     ) -> Result<tonic::Response<PaymentServiceCaptureResponse>, tonic::Status> {
+        info!("PAYMENT_CAPTURE_FLOW: initiated");
         let service_name = request
             .extensions()
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
+
         grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
             FlowName::Capture,
-            |request_data| async move { self.internal_payment_capture(request_data).await },
+            |mut request_data| {
+                let service_name = service_name.clone();
+                Box::pin(async move {
+                    let metadata_payload = &request_data.extracted_metadata;
+                    let connector = metadata_payload.connector;
+
+                    // Get connector data to check if access token is needed
+                    let connector_data: ConnectorData<DefaultPCIHolder> =
+                        ConnectorData::get_connector_by_name(&connector);
+
+                    // Check if connector supports access tokens
+                    let should_do_access_token = connector_data.connector.should_do_access_token();
+
+                    if should_do_access_token {
+                        // Extract access token from Hyperswitch request
+                        let cached_access_token = request_data.payload
+                            .state
+                            .as_ref()
+                            .and_then(|state| state.access_token.as_ref())
+                            .map(|access| (access.token.clone(), access.expires_in_seconds));
+                        if cached_access_token.is_none() {
+                            // No cached token - generate fresh one
+                            tracing::info!("No cached access token found, generating new token for capture flow");
+                            // Create temporary payment flow data for access token creation
+                            let temp_payment_flow_data = PaymentFlowData::foreign_try_from((
+                                request_data.payload.clone(),
+                                self.config.connectors.clone(),
+                                &request_data.masked_metadata,
+                            ))
+                            .map_err(|e| tonic::Status::internal(format!("Failed to create payment flow data: {e}")))?;
+
+                            let event_params = EventParams {
+                                _connector_name: &connector.to_string(),
+                                _service_name: &service_name,
+                                request_id: &metadata_payload.request_id,
+                                lineage_ids: &metadata_payload.lineage_ids,
+                                reference_id: &metadata_payload.reference_id,
+                                shadow_mode: metadata_payload.shadow_mode,
+                            };
+
+                            let access_token_data = self
+                                .handle_access_token(
+                                    connector_data,
+                                    &temp_payment_flow_data,
+                                    metadata_payload.connector_auth_type.clone(),
+                                    &connector.to_string(),
+                                    &service_name,
+                                    event_params,
+                                )
+                                .await
+                                .map_err(|e| {
+                                    let message = e.error_message.unwrap_or_else(|| {
+                                        "Access token creation failed".to_string()
+                                    });
+                                    tonic::Status::internal(message)
+                                })?;
+
+                            tracing::info!(
+                                "Access token created successfully with expiry: {:?}",
+                                access_token_data.expires_in
+                            );
+
+                            // Create access token info for the request
+                            let access_token_info = grpc_api_types::payments::AccessToken {
+                                token: access_token_data.access_token.clone(),
+                                expires_in_seconds: access_token_data.expires_in,
+                                token_type: access_token_data.token_type.clone(),
+                            };
+
+                            // Set the access token in the request payload
+                            if request_data.payload.state.is_none() {
+                                request_data.payload.state = Some(grpc_api_types::payments::ConnectorState {
+                                    access_token: Some(access_token_info),
+                                    connector_customer_id: None,
+                                });
+                            } else if let Some(ref mut state) = request_data.payload.state {
+                                state.access_token = Some(access_token_info);
+                            }
+                        } else {
+                            tracing::info!("Using cached access token from Hyperswitch for capture flow");
+                        }
+                    }
+                    // Now call the existing internal_payment_capture method
+                    self.internal_payment_capture(request_data).await
+                })
+            },
         )
         .await
     }

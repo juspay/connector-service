@@ -1174,6 +1174,7 @@ impl<
                 token_type: None,
                 expires_in: token.expires_in_seconds,
             });
+        let shipping_cost = Some(common_utils::types::MinorUnit::new(value.shipping_cost()));
         Ok(Self {
             authentication_data,
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
@@ -1260,7 +1261,7 @@ impl<
             },
             merchant_order_reference_id: value.merchant_order_reference_id,
             order_tax_amount: None,
-            shipping_cost: None,
+            shipping_cost,
             merchant_account_id,
             integrity_object: None,
             merchant_config_currency: Some(merchant_config_currency),
@@ -1893,6 +1894,24 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
         );
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let connector_meta_data = (!value.connector_metadata.is_empty()).then(|| {
+            Secret::new(serde_json::Value::Object(
+                value
+                    .connector_metadata
+                    .into_iter()
+                    .map(|(k, v)| (k, serde_json::Value::String(v)))
+                    .collect(),
+            ))
+        });
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(|token| crate::connector_types::AccessTokenResponseData {
+                access_token: token.token.clone(),
+                token_type: None,
+                expires_in: token.expires_in_seconds,
+            });
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -1909,11 +1928,11 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            connector_meta_data,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
-            access_token: None,
+            access_token,
             session_token: None,
             reference_id: None,
             payment_method_token: None,
@@ -4324,6 +4343,25 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let connector_meta_data = (!value.connector_metadata.is_empty()).then(|| {
+            Secret::new(serde_json::Value::Object(
+                value
+                    .connector_metadata
+                    .into_iter()
+                    .map(|(k, v)| (k, serde_json::Value::String(v)))
+                    .collect(),
+            ))
+        });
+
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(|token| crate::connector_types::AccessTokenResponseData {
+                access_token: token.token.clone(),
+                token_type: None,
+                expires_in: token.expires_in_seconds,
+            });
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -4340,11 +4378,11 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            connector_meta_data,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
-            access_token: None,
+            access_token,
             session_token: None,
             reference_id: None,
             payment_method_token: None,
