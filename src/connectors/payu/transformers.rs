@@ -352,21 +352,25 @@ where
             PaymentMethodData::Upi(upi_data) => {
                 let pg = Some(constants::UPI_PG.to_string());
                 
-                let (bankcode, vpa, upi_app_name) = if let Some(intent_data) = &upi_data.upi_intent_data {
-                    // UPI Intent flow
-                    (Some(constants::UPI_INTENT_BANKCODE.to_string()), None, Some(intent_data.provider_name.clone()))
-                } else if upi_data.vpa.is_some() {
-                    // UPI Collect flow
-                    (Some(constants::UPI_COLLECT_BANKCODE.to_string()), upi_data.vpa.as_ref().map(|v| v.expose().clone()), None)
-                } else {
-                    (None, None, None)
+                let (bankcode, vpa, upi_app_name) = match upi_data {
+                    UpiData::UpiIntent(_) => {
+                        // UPI Intent flow
+                        (Some(constants::UPI_INTENT_BANKCODE.to_string()), None, None)
+                    }
+                    UpiData::UpiCollect(collect_data) => {
+                        // UPI Collect flow
+                        (Some(constants::UPI_COLLECT_BANKCODE.to_string()), collect_data.vpa_id.as_ref().map(|v| v.expose().clone()), None)
+                    }
+                    UpiData::UpiQr(_) => {
+                        (None, None, None)
+                    }
                 };
                 
                 (pg, bankcode, vpa, upi_app_name)
             }
             _ => {
                 return Err(ConnectorError::MissingRequiredField {
-                    field_name: "upi_payment_method_data".to_string(),
+                    field_name: "upi_payment_method_data",
                 }
                 .into())
             }
