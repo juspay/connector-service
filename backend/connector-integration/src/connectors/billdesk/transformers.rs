@@ -433,18 +433,42 @@ impl TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, RouterDataV2<PSync
             http_code,
         } = item;
         
+        // Enhanced status mapping based on Haskell implementation
         let status = match response._auth_status.as_str() {
-            "0300" | "0399" => common_enums::AttemptStatus::Charged,
-            "0396" => common_enums::AttemptStatus::AuthenticationPending,
-            "0398" => common_enums::AttemptStatus::Failure,
-            _ => common_enums::AttemptStatus::Failure,
+            "0300" | "0399" => common_enums::AttemptStatus::Charged,      // Success
+            "0396" => common_enums::AttemptStatus::AuthenticationPending, // Pending
+            "0398" => common_enums::AttemptStatus::Failure,         // Failure
+            "0301" => common_enums::AttemptStatus::Pending,         // Initiated
+            "0302" => common_enums::AttemptStatus::AuthenticationPending, // In Progress
+            _ => {
+                // Check error status for more specific error handling
+                match response._error_status.as_str() {
+                    "000" => common_enums::AttemptStatus::Charged,      // Success
+                    "001" => common_enums::AttemptStatus::Failure,         // Failure
+                    "002" => common_enums::AttemptStatus::AuthenticationPending, // Pending
+                    _ => common_enums::AttemptStatus::Failure,         // Default to failure
+                }
+            }
         };
+
+        let connector_metadata = Some(serde_json::json!({
+            "bank_reference_no": response._bank_reference_no,
+            "auth_status": response._auth_status,
+            "error_status": response._error_status,
+            "error_description": response._error_description,
+            "query_status": response._query_status,
+            "refund_status": response._refund_status,
+            "total_refund_amount": response._total_refund_amount,
+            "last_refund_date": response._last_refund_date,
+            "last_refund_ref_no": response._last_refund_ref_no,
+            "checksum": response._checksum
+        }));
 
         let payments_response = PaymentsResponseData::TransactionResponse {
             resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(response._txn_reference_no),
             redirection_data: None,
             mandate_reference: None,
-            connector_metadata: None,
+            connector_metadata,
             network_txn_id: response._bank_reference_no,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
