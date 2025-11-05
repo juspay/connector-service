@@ -649,7 +649,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?
         };
 
-        event_builder.map(|i| i.set_error_response_body(&response));
+        if let Some(i) = event_builder {
+            i.set_error_response_body(&response);
+        }
 
         Ok(ErrorResponse {
             status_code: res.status_code,
