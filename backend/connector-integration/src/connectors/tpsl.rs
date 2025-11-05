@@ -1,8 +1,7 @@
 pub mod transformers;
 pub mod constants;
 
-use masking::{ExposeInterface, PeekInterface};
-use std::fmt::Debug;
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
 
 use common_enums::CurrencyUnit;
 use common_utils::{
