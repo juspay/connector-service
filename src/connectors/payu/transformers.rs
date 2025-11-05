@@ -390,9 +390,12 @@ where
         Ok(Self {
             key: auth.api_key.peek().clone(),
             txnid: transaction_id,
-            amount: common_utils::types::MinorUnit(item.request.amount)
-                .to_major_unit_as_string(item.request.currency)
-                .map_err(|_| ConnectorError::RequestEncodingFailed)?,
+            amount: {
+                let amount_minor = common_utils::types::MinorUnit(item.request.amount);
+                let amount_f64 = amount_minor.to_major_unit_as_f64(item.request.currency)
+                    .map_err(|_| ConnectorError::RequestEncodingFailed)?;
+                common_utils::types::StringMajorUnit::new(format!("{:.2}", amount_f64.0))
+            },
             currency,
             productinfo: constants::PRODUCT_INFO.to_string(),
             firstname: Secret::new(customer_name.to_string()),
