@@ -117,7 +117,7 @@ pub struct PayuPaymentRequest {
 
     // UPI specific fields
     pub txn_s2s_flow: String, // S2S flow type ("2" for UPI)
-    pub s2s_client_ip: Secret<String, IpAddress>, // Client IP
+    pub s2s_client_ip: Secret<String>, // Client IP
     pub s2s_device_info: String, // Device info
     #[serde(skip_serializing_if = "Option::is_none")]
     pub api_version: Option<String>, // API version ("2.0")
