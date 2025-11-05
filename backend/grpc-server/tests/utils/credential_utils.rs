@@ -41,7 +41,7 @@ pub struct ConnectorAccountDetails {
 pub struct ConnectorCredentials {
     pub connector_account_details: ConnectorAccountDetails,
     #[serde(default)]
-    pub metadata: Option<HashMap<String, String>>,
+    pub metadata: Option<serde_json::Value>,
 }
 
 /// All connector credentials stored in the JSON file
@@ -115,7 +115,18 @@ pub fn load_connector_metadata(
         .get(connector_name)
         .ok_or_else(|| CredentialError::ConnectorNotFound(connector_name.to_string()))?;
 
-    Ok(connector_creds.metadata.clone().unwrap_or_default())
+    match &connector_creds.metadata {
+        Some(serde_json::Value::Object(map)) => {
+            let mut result = HashMap::new();
+            for (key, value) in map {
+                if let Some(string_val) = value.as_str() {
+                    result.insert(key.clone(), string_val.to_string());
+                }
+            }
+            Ok(result)
+        }
+        _ => Ok(HashMap::new()),
+    }
 }
 
 /// Load credentials from JSON file
