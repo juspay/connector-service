@@ -132,7 +132,7 @@ pub struct BilldeskRefundSyncResponseData {
 
 fn get_auth_credentials(
     connector_auth_type: &ConnectorAuthType,
-) -> Result<BilldeskAuthType, errors::ConnectorError> {
+) -> Result<BilldeskAuthType, error_stack::Report<errors::ConnectorError>> {
     BilldeskAuthType::try_from(connector_auth_type)
 }
 
