@@ -197,9 +197,7 @@ impl<
             .resource_common_data
             .connector_request_reference_id;
         
-        let ip_address = item.router_data.request.get_ip_address_as_optional()
-            .map(|ip| ip.peek().to_string())
-            .unwrap_or_else(|| "127.0.0.1".to_string());
+        let ip_address = "127.0.0.1".to_string();
         
         let user_agent = item.router_data.request.browser_info
             .as_ref()
