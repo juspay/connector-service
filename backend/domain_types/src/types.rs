@@ -100,6 +100,7 @@ pub struct Connectors {
     pub fiuu: ConnectorParams,
     pub payu: ConnectorParams,
     pub cashtocode: ConnectorParams,
+    pub billdesk: ConnectorParams,
     pub novalnet: ConnectorParams,
     pub nexinets: ConnectorParams,
     pub noon: ConnectorParams,
