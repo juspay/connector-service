@@ -13,8 +13,6 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
-use bytes::Bytes;
 
 use crate::types::ResponseRouterData;
 
