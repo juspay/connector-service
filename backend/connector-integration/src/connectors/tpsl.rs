@@ -576,7 +576,7 @@ impl<
         + std::marker::Send
         + 'static
         + Serialize,
-> ConnectorIntegrationV2<interfaces::connector_types::AcceptDispute, domain_types::connector_types::AcceptDisputeData, DisputeResponseData, DisputeResponseData>
+> ConnectorIntegrationV2<Accept, domain_types::connector_types::AcceptDisputeData, DisputeResponseData, DisputeResponseData>
     for TPSL<T>
 {
 }
