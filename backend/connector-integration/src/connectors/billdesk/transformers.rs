@@ -301,7 +301,7 @@ impl<
         // Build refund status check message
         let msg = format!(
             "merchantid={}&transactionid={}",
-            auth.merchant_id.peek().to_string(),
+            auth.merchant_id.expose(),
             transaction_id
         );
         
