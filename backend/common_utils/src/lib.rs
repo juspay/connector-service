@@ -348,7 +348,7 @@ pub mod date_time {
         fn fmt(input: &PrimitiveDateTime, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result;
     }
 
-    impl<T: TimeStrategy> crate::masking::Serialize for DateTime<T> {
+    impl<T: TimeStrategy> serde::Serialize for DateTime<T> {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer,
