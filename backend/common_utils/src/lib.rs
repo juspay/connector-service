@@ -109,9 +109,18 @@ pub mod masking {
     }
     
     // Mock additional types needed for compatibility
-    pub trait ErasedMaskSerialize: serde::Serialize {}
+    pub trait ErasedMaskSerialize {}
     
-    impl<T: ErasedMaskSerialize> serde::Serialize for T {
+    impl serde::Serialize for dyn ErasedMaskSerialize {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            serializer.serialize_str("masked_data")
+        }
+    }
+    
+    impl serde::Serialize for dyn ErasedMaskSerialize + Send {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer,
