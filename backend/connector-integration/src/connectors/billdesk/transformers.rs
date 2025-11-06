@@ -292,7 +292,7 @@ impl<
         match item.router_data.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => {
                 // Extract VPA from payment method data (simplified)
-                let vpa = None;
+                let vpa: Option<String> = None;
                 
                 let msg = build_billdesk_upi_message(
                     &merchant_id,
