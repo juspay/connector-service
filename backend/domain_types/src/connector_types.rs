@@ -12,7 +12,7 @@ use common_utils::{
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
 use error_stack::ResultExt;
-// use common_utils::Secret;
+use common_utils::Secret;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
