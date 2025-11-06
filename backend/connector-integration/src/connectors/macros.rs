@@ -317,7 +317,7 @@ macro_rules! create_all_prerequisites {
 macro_rules! create_amount_converter_wrapper {
     (connector_name: $connector: ident, amount_type: $amount_type: ty) => {
         paste::paste! {
-            impl<$generic_type> $connector<$generic_type> {
+            impl<T> $connector<T> {
                 pub fn convert_amount(
                     &self,
                     amount: i64,
