@@ -3,7 +3,10 @@
 use std::{convert::AsRef, fmt, ops, str::FromStr};
 
 use error_stack::ResultExt;
-// use crate::masking::{ExposeInterface, Secret, Strategy, WithType};
+#[cfg(feature = "masking")]
+use crate::masking::{ExposeInterface, Secret, Strategy, WithType};
+#[cfg(not(feature = "masking"))]
+use crate::masking::{ExposeInterface, Secret, Strategy, WithType};
 use serde::Deserialize;
 
 use crate::{
