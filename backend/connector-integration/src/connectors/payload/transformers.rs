@@ -14,7 +14,7 @@ use domain_types::{
         RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
     errors,
-    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ConnectorResponseData,
         ErrorResponse,
@@ -22,22 +22,22 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeOptionInterface, PeekInterface, Secret};
+use hyperswitch_masking::{ExposeOptionInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use super::{requests, responses};
 use crate::connectors::payload::{PayloadAmountConvertor, PayloadRouterData};
 use crate::types::ResponseRouterData;
 
-// Re-export types for use in main connector file
 pub use super::requests::{
     PayloadCancelRequest, PayloadCaptureRequest, PayloadCardsRequestData, PayloadPaymentsRequest,
-    PayloadRefundRequest,
+    PayloadRefundRequest, PayloadRepeatPaymentRequest,
 };
 pub use super::responses::{
     PayloadAuthorizeResponse, PayloadCaptureResponse, PayloadErrorResponse, PayloadEventDetails,
     PayloadPSyncResponse, PayloadPaymentsResponse, PayloadRSyncResponse, PayloadRefundResponse,
-    PayloadSetupMandateResponse, PayloadVoidResponse, PayloadWebhookEvent, PayloadWebhooksTrigger,
+    PayloadRepeatPaymentResponse, PayloadSetupMandateResponse, PayloadVoidResponse,
+    PayloadWebhookEvent, PayloadWebhooksTrigger,
 };
 
 type Error = error_stack::Report<errors::ConnectorError>;
@@ -372,6 +372,83 @@ impl<
     }
 }
 
+// RepeatPayment request - for recurring/mandate payments
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        PayloadRouterData<
+            RouterDataV2<
+                domain_types::connector_flow::RepeatPayment,
+                PaymentFlowData,
+                domain_types::connector_types::RepeatPaymentData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for requests::PayloadRepeatPaymentRequest<T>
+{
+    type Error = Error;
+
+    fn try_from(
+        item: PayloadRouterData<
+            RouterDataV2<
+                domain_types::connector_flow::RepeatPayment,
+                PaymentFlowData,
+                domain_types::connector_types::RepeatPaymentData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
+        // Convert amount using PayloadAmountConvertor
+        let amount = PayloadAmountConvertor::convert(
+            router_data.request.minor_amount,
+            router_data.request.currency,
+        )?;
+
+        // For manual capture, set status to "authorized"
+        let status = if is_manual_capture(router_data.request.capture_method) {
+            Some(responses::PayloadPaymentStatus::Authorized)
+        } else {
+            None
+        };
+
+        // RepeatPayment flow requires a mandate reference
+        let mandate_id = match &router_data.request.mandate_reference {
+            domain_types::connector_types::MandateReferenceId::ConnectorMandateId(
+                connector_mandate_ref,
+            ) => connector_mandate_ref.get_connector_mandate_id().ok_or(
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_mandate_id",
+                },
+            )?,
+            _ => {
+                return Err(errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_mandate_id for RepeatPayment",
+                }
+                .into())
+            }
+        };
+
+        Ok(Self::PayloadMandateRequest(Box::new(
+            requests::PayloadMandateRequestData {
+                amount: amount.clone(),
+                transaction_types: requests::TransactionTypes::Payment,
+                payment_method_id: Secret::new(mandate_id),
+                status,
+            },
+        )))
+    }
+}
+
 // Refund request
 impl<
         T: PaymentMethodDataTypes
@@ -598,6 +675,44 @@ impl<
     ) -> Result<Self, Self::Error> {
         // SetupMandate is always a mandate payment
         handle_payment_response(item.response, item.router_data, item.http_code, true)
+    }
+}
+
+// RepeatPayment response - for recurring/mandate payments
+impl
+    TryFrom<
+        ResponseRouterData<
+            responses::PayloadPaymentsResponse,
+            RouterDataV2<
+                domain_types::connector_flow::RepeatPayment,
+                PaymentFlowData,
+                domain_types::connector_types::RepeatPaymentData,
+                PaymentsResponseData,
+            >,
+        >,
+    >
+    for RouterDataV2<
+        domain_types::connector_flow::RepeatPayment,
+        PaymentFlowData,
+        domain_types::connector_types::RepeatPaymentData,
+        PaymentsResponseData,
+    >
+{
+    type Error = Error;
+
+    fn try_from(
+        item: ResponseRouterData<
+            responses::PayloadPaymentsResponse,
+            RouterDataV2<
+                domain_types::connector_flow::RepeatPayment,
+                PaymentFlowData,
+                domain_types::connector_types::RepeatPaymentData,
+                PaymentsResponseData,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // RepeatPayment should not return mandate_reference as the mandate already exists
+        handle_payment_response(item.response, item.router_data, item.http_code, false)
     }
 }
 

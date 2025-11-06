@@ -103,3 +103,6 @@ pub struct PayloadRefundRequest {
     #[serde(rename = "ledger[0][assoc_transaction_id]")]
     pub ledger_assoc_transaction_id: String,
 }
+
+// Type alias for RepeatPayment request (same structure as PayloadPaymentsRequest)
+pub type PayloadRepeatPaymentRequest<T> = PayloadPaymentsRequest<T>;

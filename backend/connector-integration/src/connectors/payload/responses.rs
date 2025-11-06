@@ -148,4 +148,5 @@ pub type PayloadPSyncResponse = PayloadPaymentsResponse;
 pub type PayloadCaptureResponse = PayloadPaymentsResponse;
 pub type PayloadVoidResponse = PayloadPaymentsResponse;
 pub type PayloadSetupMandateResponse = PayloadPaymentsResponse;
+pub type PayloadRepeatPaymentResponse = PayloadPaymentsResponse;
 pub type PayloadRSyncResponse = PayloadRefundResponse;
