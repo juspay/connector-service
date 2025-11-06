@@ -55,10 +55,13 @@ macros::create_all_prerequisites!(
             response_body: PaytmInitiateTxnResponse,
             router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
         ),
+            (
             flow: Authorize,
             request_body: PaytmAuthorizeRequest,
             response_body: PaytmProcessTxnResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+        (
             flow: PSync,
             request_body: PaytmTransactionStatusRequest,
             response_body: PaytmTransactionStatusResponse,
