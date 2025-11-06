@@ -99,64 +99,7 @@ macros::create_all_prerequisites!(
     ],
     amount_converters: [
         amount_converter: StringMajorUnit
-    ],
-    member_functions: {
-        pub fn build_headers_for_payments<F, Req, Res>(
-            &self,
-            req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
-        where
-            Self: ConnectorIntegrationV2<F, PaymentFlowData, Req, Res>,
-        {
-        match req.resource_common_data.payment_method {
-            common_enums::PaymentMethod::BankRedirect | common_enums::PaymentMethod::BankTransfer => {
-                let token = req
-                    .resource_common_data
-                    .get_access_token()
-                    .change_context(errors::ConnectorError::MissingRequiredField {
-                        field_name: "access_token",
-                    })?;
-                Ok(vec![
-                    (
-                        headers::CONTENT_TYPE.to_string(),
-                        "application/json".to_owned().into(),
-                    ),
-                        headers::AUTHORIZATION.to_string(),
-                        format!("Bearer {token}").into_masked(),
-                ])
-            }
-            _ => {
-                let mut header = vec![(
-                    headers::CONTENT_TYPE.to_string(),
-                    self.get_content_type().to_string().into(),
-                )];
-                let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-                header.append(&mut api_key);
-                Ok(header)
-            }
-        }
-        pub fn connector_base_url_payments<'a, F, Req, Res>(
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.trustpay.base_url
-        }
-        
-        pub fn connector_base_url_bank_redirects_payments<'a, F, Req, Res>(
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.trustpay.base_url_bank_redirects
-        }
-        pub fn get_auth_header(
-            auth_type: &ConnectorAuthType,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = trustpay::TrustpayAuthType::try_from(auth_type)
-                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-            Ok(vec![(
-            headers::X_API_KEY.to_string(),
-                auth.api_key.into_masked(),
-            )])
-        }
-    }
+    ]
 );
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Trustpay<T> {
