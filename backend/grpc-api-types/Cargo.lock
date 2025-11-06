@@ -596,6 +596,7 @@ dependencies = [
  "tonic",
  "tonic-build",
  "ucs_cards",
+ "ucs_common_utils",
 ]
 
 [[package]]
