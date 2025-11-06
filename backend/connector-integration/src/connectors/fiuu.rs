@@ -54,6 +54,7 @@ use transformers::{
     FiuuPaymentSyncRequest, FiuuPaymentsRequest, FiuuPaymentsResponse, FiuuRefundRequest,
     FiuuRefundResponse, FiuuRefundSyncRequest, FiuuRefundSyncResponse, FiuuWebhooksResponse,
     PaymentCaptureRequest, PaymentCaptureResponse,
+};
 use super::macros;
 use crate::{
     types::ResponseRouterData, utils::xml_utils::flatten_json_structure, with_error_response_body,
