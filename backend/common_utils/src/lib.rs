@@ -170,7 +170,7 @@ pub mod masking {
 }
 
 // Always export the mock types
-pub use masking::{Strategy, Secret, Maskable, ExposeInterface, WithType, PeekInterface, StrongSecret};
+pub use masking::{Strategy, Secret, Maskable, ExposeInterface, WithType, WithoutType, PeekInterface, StrongSecret};
 
 pub mod crypto;
 pub mod custom_serde;
