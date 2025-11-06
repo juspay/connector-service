@@ -81,12 +81,26 @@ pub enum RequestContent {
     RawBytes(Vec<u8>),
 }
 
+#[cfg(feature = "masking")]
 impl RequestContent {
     pub fn get_inner_value(&self) -> Secret<String> {
         match self {
             Self::Json(i) => serde_json::to_string(&i).unwrap_or_default().into(),
-            Self::FormUrlEncoded(i) => serde_urlencoded::to_string(i).unwrap_or_default().into(),
+            Self::FormUrlEncoded(i) => serde_urlencoded::to_string(&i).unwrap_or_default().into(),
             Self::Xml(i) => quick_xml::se::to_string(&i).unwrap_or_default().into(),
+            Self::FormData(_) => String::new().into(),
+            Self::RawBytes(_) => String::new().into(),
+        }
+    }
+}
+
+#[cfg(not(feature = "masking"))]
+impl RequestContent {
+    pub fn get_inner_value(&self) -> Secret<String> {
+        match self {
+            Self::Json(i) => serde_json::to_string(&i).unwrap_or_default().into(),
+            Self::FormUrlEncoded(i) => i.clone().into(),
+            Self::Xml(i) => i.clone().into(),
             Self::FormData(_) => String::new().into(),
             Self::RawBytes(_) => String::new().into(),
         }
