@@ -176,13 +176,17 @@ macros::create_all_prerequisites!(
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
             &req.resource_common_data.connectors.adyen.base_url
+        }
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.adyen.base_url
+        }
         pub fn connector_base_url_disputes<'a, F, Req, Res>(
             req: &'a RouterDataV2<F, DisputeFlowData, Req, Res>,
         ) -> Option<&'a str> {
             req.resource_common_data.connectors.adyen.dispute_base_url.as_deref()
-    }
+        }
 );
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Adyen<T>
