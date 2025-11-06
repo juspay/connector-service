@@ -930,7 +930,7 @@ impl<
         &self,
         request: RequestDetails,
     ) -> CustomResult<
-        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
+        Box<dyn common_utils::ErasedMaskSerialize>,
         domain_types::errors::ConnectorError,
     > {
         let header = request

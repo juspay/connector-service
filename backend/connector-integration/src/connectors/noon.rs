@@ -255,7 +255,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn get_webhook_resource_object(
         &self,
         request: RequestDetails,
-    ) -> CustomResult<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, errors::ConnectorError>
+    ) -> CustomResult<Box<dyn common_utils::ErasedMaskSerialize>, errors::ConnectorError>
     {
         let resource: noon::NoonWebhookObject = request
             .body
