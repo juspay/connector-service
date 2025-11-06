@@ -29,6 +29,7 @@ chrono = { version = "0.4", features = ["serde"] }
 
 [features]
 default = []
+masking = []
 # masking = ["hyperswitch_masking"]  # Temporarily disabled due to serde compatibility issues
 
 [dev-dependencies]
