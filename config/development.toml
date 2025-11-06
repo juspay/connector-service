@@ -7,7 +7,7 @@ level = "TRACE"
 log_format = "default"
 
 [log.kafka]
-enabled = true
+enabled = false
 level = "info"
 filtering_directive = "info"
 brokers = ["localhost:9092"]
@@ -15,12 +15,12 @@ topic = "connector-service-logs"
 buffer_limit = 100000
 
 [server]
-host = "127.0.0.1"
+host = "0.0.0.0"
 port = 8000
 type = "grpc"
 
 [metrics]
-host = "127.0.0.1"
+host = "0.0.0.0"
 port = 8080
 
 [proxy]
@@ -67,7 +67,7 @@ worldpayvantiv.secondary_base_url = "https://onlinessr.vantivprelive.com"
 
 # Generic Events Configuration
 [events]
-enabled = true
+enabled = false
 brokers = ["localhost:9092"]
 topic = "audit-trail-events"
 partition_key_field = "request_id"
