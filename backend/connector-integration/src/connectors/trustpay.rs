@@ -98,7 +98,7 @@ macros::create_all_prerequisites!(
         )
     ],
     amount_converters: [
-        amount_converter: StringMajorUnit
+        amount_converter: StringMajorUnit,
     ]
 );
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
