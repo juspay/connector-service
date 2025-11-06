@@ -136,6 +136,8 @@ pub mod masking {
         }
     }
     
+    pub struct Mask;
+    
     pub fn masked_serialize<T: serde::Serialize>(_value: &T) -> Result<serde_json::Value, serde_json::Error> {
         serde_json::to_value(_value)
     }
