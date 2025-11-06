@@ -47,274 +47,86 @@ use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 use error_stack::ResultExt;
+
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Nexinets<T>
 {
+    fn common_get_content_type(&self) -> &'static str {
+        "application/json"
+    }
+
     fn id(&self) -> &'static str {
         "nexinets"
     }
-    fn common_get_content_type(&self) -> &'static str {
-        "application/json"
+
+    fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
+        common_enums::CurrencyUnit::Minor // For minor units
+    }
+
+    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
+        &connectors.nexinets.base_url
+    }
+
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let auth = nexinets::NexinetsAuthType::try_from(auth_type)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-        Ok(vec![(
-            headers::AUTHORIZATION.to_string(),
-            auth.api_key.into_masked(),
-        )])
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.nexinets.base_url.as_ref()
+        let auth = nexinets::NexinetsAuthType::try_from(auth_type)?;
+        Ok(vec![
+            (headers::CONTENT_TYPE.to_string(), "application/json".to_string().into()),
+            (
+                headers::AUTHORIZATION.to_string(),
+                format!("Basic {}", auth.auth_header).into_masked(),
+            ),
+        ])
+    }
+
     fn build_error_response(
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: NexinetsErrorResponse = res
+        let response: nexinets::NexinetsErrorResponse = res
             .response
             .parse_struct("NexinetsErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        
         with_error_response_body!(event_builder, response);
-        let errors = response.errors;
-        let mut message = String::new();
-        let mut static_message = String::new();
-        for error in errors.iter() {
-            let field = error.field.to_owned().unwrap_or_default();
-            let mut msg = String::new();
-            if !field.is_empty() {
-                msg.push_str(format!("{} : {}", field, error.message).as_str());
-            } else {
-                error.message.clone_into(&mut msg)
+
+        let error_message = if response.errors.is_empty() {
+            response.message.clone()
+        } else {
+            let mut error_messages = Vec::new();
+            for error in response.errors.iter() {
+                let message = if error.message.is_empty() {
+                    error.code.clone()
+                } else {
+                    error.message.clone()
+                };
+                error_messages.push(message);
             }
-            if message.is_empty() {
-                message.push_str(&msg);
-                static_message.push_str(&msg);
-                message.push_str(format!(", {msg}").as_str());
-        }
-        let connector_reason = format!("reason : {} , message : {}", response.message, message);
+            error_messages.join(", ")
+        };
+
         Ok(ErrorResponse {
-            status_code: response.status,
-            code: response.code.to_string(),
-            message: static_message,
-            reason: Some(connector_reason),
+            status_code: res.status_code,
+            code: response.code.clone(),
+            message: error_message,
+            reason: Some(response.message),
             attempt_status: None,
             connector_transaction_id: None,
-            network_advice_code: None,
             network_decline_code: None,
+            network_advice_code: None,
             network_error_message: None,
         })
-//marker traits
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ConnectorServiceTrait<T> for Nexinets<T>
-    connector_types::PaymentAuthorizeV2<T> for Nexinets<T>
-    connector_types::PaymentSyncV2 for Nexinets<T>
-    connector_types::PaymentSessionToken for Nexinets<T>
-    connector_types::PaymentAccessToken for Nexinets<T>
-    connector_types::CreateConnectorCustomer for Nexinets<T>
-    connector_types::PaymentVoidV2 for Nexinets<T>
-    connector_types::RefundSyncV2 for Nexinets<T>
-    connector_types::RefundV2 for Nexinets<T>
-    connector_types::PaymentCapture for Nexinets<T>
-    connector_types::ValidationTrait for Nexinets<T>
-    connector_types::PaymentOrderCreate for Nexinets<T>
-    connector_types::SetupMandateV2<T> for Nexinets<T>
-    connector_types::RepeatPaymentV2 for Nexinets<T>
-    connector_types::PaymentVoidPostCaptureV2 for Nexinets<T>
-    ConnectorIntegrationV2<
-        VoidPC,
-        PaymentFlowData,
-        PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Nexinets<T>
-    connector_types::AcceptDispute for Nexinets<T>
-    connector_types::SubmitEvidenceV2 for Nexinets<T>
-    connector_types::DisputeDefend for Nexinets<T>
-    connector_types::IncomingWebhook for Nexinets<T>
-    connector_types::PaymentTokenV2<T> for Nexinets<T>
-    connector_types::PaymentPreAuthenticateV2<T> for Nexinets<T>
-    connector_types::PaymentAuthenticateV2<T> for Nexinets<T>
-    connector_types::PaymentPostAuthenticateV2<T> for Nexinets<T>
-macros::create_all_prerequisites!(
-    connector_name: Nexinets,
-    generic_type: T,
-    api: [
-        (
-            flow: Authorize,
-            request_body: NexinetsPaymentsRequest<T>,
-            response_body: NexinetsPreAuthOrDebitResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ),
-            flow: PSync,
-            response_body: NexinetsPaymentResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            flow: Capture,
-            request_body: NexinetsCaptureOrVoidRequest,
-            response_body: NexinetsCaptureResponse,
-            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            flow: Refund,
-            request_body: NexinetsRefundRequest,
-            response_body: NexinetsRefundResponse,
-            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            flow: RSync,
-            response_body: RefundSyncResponse,
-            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        )
-    ],
-    amount_converters: [],
-    member_functions: {
-        pub fn build_headers<F, FCD, Req, Res>(
-            &self,
-            req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
-        where
-            Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
-        {
-            let mut header = vec![(
-                headers::CONTENT_TYPE.to_string(),
-                self.get_content_type().to_string().into(),
-            )];
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-            header.append(&mut api_key);
-            Ok(header)
-        pub fn connector_base_url_payments<'a, F, Req, Res>(
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.nexinets.base_url
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
-);
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Nexinets,
-    curl_request: Json(NexinetsPaymentsRequest),
-    curl_response: NexinetsPreAuthOrDebitResponse,
-    flow_name: Authorize,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsAuthorizeData<T>,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
-        fn get_url(
-        ) -> CustomResult<String, errors::ConnectorError> {
-                    let url = if matches!(
-            req.request.capture_method,
-            Some(common_enums::CaptureMethod::Automatic) | Some(common_enums::CaptureMethod::SequentialAutomatic)
-        ) {
-            format!("{}/orders/debit", self.connector_base_url_payments(req))
-        } else {
-            format!("{}/orders/preauth", self.connector_base_url_payments(req))
-        };
-        Ok(url)
-// Macro implementations for PSync, Capture, Refund, and RSync flows
-    flow_name: PSync,
-    flow_request: PaymentsSyncData,
-    http_method: Get,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        let transaction_id = req.request.get_connector_transaction_id()?;
-        let order_id = &req.resource_common_data.connector_request_reference_id;
-            Ok(format!(
-                "{}/orders/{order_id}/transactions/{transaction_id}",
-                self.connector_base_url_payments(req),
-            ))
-    curl_request: Json(NexinetsCaptureOrVoidRequest),
-    curl_response: NexinetsCaptureResponse,
-    flow_name: Capture,
-    flow_request: PaymentsCaptureData,
-            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        let transaction_id = req
-                .request
-                .connector_transaction_id
-                .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
-        Ok(format!(
-            "{}/orders/{order_id}/transactions/{transaction_id}/capture",
-            self.connector_base_url_payments(req),
-        ))
-    curl_request: Json(NexinetsRefundRequest),
-    curl_response: NexinetsRefundResponse,
-    flow_name: Refund,
-    resource_common_data: RefundFlowData,
-    flow_request: RefundsData,
-    flow_response: RefundsResponseData,
-            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            let connector_metadata = req
-                .get_connector_metadata()
-                .change_context(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_metadata",
-                })?;
-            // connector_metadata is a Value::String, so extract and parse
-            let metadata_str = connector_metadata
-                .as_str()
-                .ok_or(errors::ConnectorError::InvalidDataFormat {
-                    field_name: "connector_metadata as string",
-            let parsed_metadata: serde_json::Value =
-                serde_json::from_str(metadata_str).change_context(
-                    errors::ConnectorError::ParsingFailed
-                )?;
-            let order_id = parsed_metadata
-                .get("order_id")
-                .and_then(|v| v.as_str())
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "order_id in connector_metadata",
-                "{}/orders/{order_id}/transactions/{}/refund",
-                self.connector_base_url_refunds(req),
-                req.request.connector_transaction_id
-    curl_response: RefundSyncResponse,
-    flow_name: RSync,
-    flow_request: RefundSyncData,
-            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            let transaction_id = req
-                .connector_refund_id
-                .clone();
-            let order_id = req.resource_common_data.connector_request_reference_id.clone();
-        CreateOrder,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-        CreateSessionToken,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-        CreateAccessToken,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-        CreateConnectorCustomer,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-        SetupMandate,
-        SetupMandateRequestData<T>,
-    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-// SourceVerification implementations for all flows
-    interfaces::verification::SourceVerification<
-        Authorize,
-        PaymentsAuthorizeData<T>,
-        PSync,
-        PaymentsSyncData,
-        Capture,
-        PaymentsCaptureData,
-        Void,
-        PaymentVoidData,
-        Refund,
-        RefundFlowData,
-        RefundsData,
-        RefundsResponseData,
-        RSync,
-        RefundSyncData,
-        Accept,
-        DisputeFlowData,
-        AcceptDisputeData,
-        DisputeResponseData,
+    }
+}
+
+// Trait implementations with generic type parameters
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -322,22 +134,431 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    >
-        PaymentMethodToken,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-        SubmitEvidence,
-        SubmitEvidenceData,
-        DefendDispute,
-        DisputeDefendData,
-        RepeatPayment,
-        RepeatPaymentData,
+    > connector_types::PaymentPreAuthenticateV2<T> for Nexinets<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentAuthenticateV2<T> for Nexinets<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentPostAuthenticateV2<T> for Nexinets<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::ConnectorServiceTrait<T> for Nexinets<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentAuthorizeV2<T> for Nexinets<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentSessionToken for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAccessToken for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::CreateConnectorCustomer for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentOrderCreate for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSyncV2 for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidV2 for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundSyncV2 for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundV2 for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentCapture for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SetupMandateV2<T> for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RepeatPaymentV2<T> for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidPostCaptureV2<T> for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::AcceptDispute for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SubmitEvidenceV2 for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::DisputeDefend for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::IncomingWebhook for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentTokenV2<T> for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ValidationTrait for Nexinets<T>
+{
+    fn should_do_order_create(&self) -> bool {
+        false // Nexinets doesn't require separate order creation
+    }
+}
+
+// ConnectorIntegrationV2 implementations
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Nexinets<T>
+{
+}
+
+// Additional ConnectorIntegrationV2 implementations for unsupported flows
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateSessionToken, SessionTokenRequestData, SessionTokenResponseData>
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateAccessToken, AccessTokenRequestData, AccessTokenResponseData>
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateConnectorCustomer, ConnectorCustomerData, ConnectorCustomerResponse>
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-// ConnectorIntegrationV2 implementations for authentication flows
-        PreAuthenticate,
-        PaymentsPreAuthenticateData<T>,
-        Authenticate,
-        PaymentsAuthenticateData<T>,
-        PostAuthenticate,
-        PaymentsPostAuthenticateData<T>,
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PaymentMethodToken, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
+    for Nexinets<T>
+{
+}
+
 // SourceVerification implementations for authentication flows
+macro_rules! impl_source_verification_stub {
+    ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
+        impl<
+                T: PaymentMethodDataTypes
+                    + std::fmt::Debug
+                    + std::marker::Sync
+                    + std::marker::Send
+                    + 'static
+                    + Serialize,
+            > interfaces::verification::SourceVerification<$flow, $common_data, $req, $resp> for Nexinets<T>
+        {
+            fn get_secrets(
+                &self,
+                _secrets: interfaces::verification::ConnectorSourceVerificationSecrets,
+            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+                Ok(Vec::new()) // Stub implementation
+            }
+
+            fn get_algorithm(
+                &self,
+            ) -> CustomResult<Box<dyn common_utils::crypto::VerifySignature + Send>, errors::ConnectorError> {
+                Ok(Box::new(common_utils::crypto::NoAlgorithm)) // Stub implementation
+            }
+
+            fn get_signature(
+                &self,
+                _payload: &[u8],
+                _router_data: &domain_types::router_data_v2::RouterDataV2<
+                    $flow,
+                    $common_data,
+                    $req,
+                    $resp,
+                >,
+                _secrets: &[u8],
+            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+                Ok(Vec::new()) // Stub implementation
+            }
+
+            fn get_message(
+                &self,
+                payload: &[u8],
+            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+                Ok(payload.to_owned()) // Stub implementation
+            }
+        }
+    };
+}
+
+// Apply to all flows
+impl_source_verification_stub!(
+    Authorize,
+    PaymentFlowData,
+    PaymentsAuthorizeData<T>,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    PSync,
+    PaymentFlowData,
+    PaymentsSyncData,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    Capture,
+    PaymentFlowData,
+    PaymentsCaptureData,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
+impl_source_verification_stub!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
+impl_source_verification_stub!(RSync, RefundFlowData, RefundSyncData, RefundsResponseData);
+
+impl_source_verification_stub!(
+    SetupMandate,
+    PaymentFlowData,
+    SetupMandateRequestData<T>,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    RepeatPayment,
+    PaymentFlowData,
+    RepeatPaymentData,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    Accept,
+    DisputeFlowData,
+    AcceptDisputeData,
+    DisputeResponseData
+);
+
+impl_source_verification_stub!(
+    SubmitEvidence,
+    DisputeFlowData,
+    SubmitEvidenceData,
+    DisputeResponseData
+);
+
+impl_source_verification_stub!(
+    DefendDispute,
+    DisputeFlowData,
+    DisputeDefendData,
+    DisputeResponseData
+);
+
+impl_source_verification_stub!(
+    CreateSessionToken,
+    SessionTokenRequestData,
+    SessionTokenResponseData,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    CreateAccessToken,
+    AccessTokenRequestData,
+    AccessTokenResponseData,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    CreateConnectorCustomer,
+    ConnectorCustomerData,
+    ConnectorCustomerResponse,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    PaymentMethodToken,
+    PaymentMethodTokenizationData<T>,
+    PaymentMethodTokenResponse,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    PreAuthenticate,
+    PaymentFlowData,
+    PaymentsPreAuthenticateData<T>,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    Authenticate,
+    PaymentFlowData,
+    PaymentsAuthenticateData<T>,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    PostAuthenticate,
+    PaymentFlowData,
+    PaymentsPostAuthenticateData<T>,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    VoidPC,
+    PaymentFlowData,
+    PaymentsCancelPostCaptureData,
+    PaymentsResponseData
+);
