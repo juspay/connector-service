@@ -50,197 +50,12 @@ use transformers::{
 };
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
+
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
 }
-// Simplified macro usage to avoid duplicate type definitions
-macros::create_all_prerequisites!(
-    connector_name: Placetopay,
-    generic_type: T,
-    api: [
-        (
-            flow: Authorize,
-            request_body: PlacetopayPaymentsRequest<T>,
-            response_body: PlacetopayPaymentsResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ),
-            flow: PSync,
-            request_body: PlacetopayPsyncRequest,
-            response_body: PlacetopayPSyncResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            flow: Capture,
-            request_body: PlacetopayNextActionRequest,
-            response_body: PlacetopayCaptureResponse,
-            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            flow: Void,
-            request_body: PlacetopayVoidRequest,
-            response_body: PlacetopayVoidResponse,
-            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            flow: Refund,
-            request_body: PlacetopayRefundRequest,
-            response_body: PlacetopayRefundResponse,
-            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            flow: RSync,
-            request_body: PlacetopayRsyncRequest,
-            response_body: PlacetopayRSyncResponse,
-            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        )
-    ],
-    amount_converters: [],
-    member_functions: {
-        pub fn build_headers<F, FCD, Req, Res>(
-            &self,
-            req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
-        where
-            Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
-        {
-            let mut header = vec![(
-                headers::CONTENT_TYPE.to_string(),
-                "application/json".to_string().into(),
-            )];
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-            header.append(&mut api_key);
-            Ok(header)
-        }
-        pub fn connector_base_url_payments<'a, F, Req, Res>(
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.placetopay.base_url
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
-    }
-);
+
 // Trait implementations with generic type parameters
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthorizeV2<T> for Placetopay<T>
-{
-    ConnectorIntegrationV2<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    > for Placetopay<T>
-// Higher-level trait implementations
-    connector_types::ValidationTrait for Placetopay<T>
-    connector_types::PaymentSyncV2 for Placetopay<T>
-    connector_types::PaymentOrderCreate for Placetopay<T>
-    connector_types::PaymentSessionToken for Placetopay<T>
-    connector_types::PaymentTokenV2<T> for Placetopay<T>
-    connector_types::PaymentVoidV2 for Placetopay<T>
-    connector_types::IncomingWebhook for Placetopay<T>
-    connector_types::RefundV2 for Placetopay<T>
-    connector_types::PaymentCapture for Placetopay<T>
-    connector_types::SetupMandateV2<T> for Placetopay<T>
-    connector_types::RepeatPaymentV2 for Placetopay<T>
-    connector_types::AcceptDispute for Placetopay<T>
-    connector_types::RefundSyncV2 for Placetopay<T>
-    connector_types::DisputeDefend for Placetopay<T>
-    connector_types::SubmitEvidenceV2 for Placetopay<T>
-    connector_types::PaymentAccessToken for Placetopay<T>
-    connector_types::CreateConnectorCustomer for Placetopay<T>
-    connector_types::PaymentPreAuthenticateV2<T> for Placetopay<T>
-    connector_types::PaymentAuthenticateV2<T> for Placetopay<T>
-    connector_types::PaymentPostAuthenticateV2<T> for Placetopay<T>
-    connector_types::PaymentVoidPostCaptureV2 for Placetopay<T>
-        VoidPC,
-        PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    interfaces::verification::SourceVerification<
-// Finally implement ConnectorServiceTrait
-    connector_types::ConnectorServiceTrait<T> for Placetopay<T>
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-    for Placetopay<T>
-    fn id(&self) -> &'static str {
-        "placetopay"
-    fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
-        common_enums::CurrencyUnit::Minor
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.placetopay.base_url.as_ref()
-    fn build_error_response(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: placetopay::PlacetopayErrorResponse = res
-            .response
-            .parse_struct("PlacetopayErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-        with_error_response_body!(event_builder, response);
-        Ok(ErrorResponse {
-            status_code: res.status_code,
-            code: response
-                .status
-                .reason
-                .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
-            message: response
-                .message
-                .clone()
-                .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
-            reason: response.status.message,
-            attempt_status: None,
-            connector_transaction_id: None,
-            network_decline_code: None,
-            network_advice_code: None,
-            network_error_message: None,
-        })
-// Macro implementation for Authorize flow
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Placetopay,
-    curl_request: Json(PlacetopayPaymentsRequest<T>),
-    curl_response: PlacetopayPaymentsResponse,
-    flow_name: Authorize,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsAuthorizeData<T>,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
-        fn get_url(
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/process", self.connector_base_url_payments(req)))
-// Macro implementation for PSync flow
-    curl_request: Json(PlacetopayPsyncRequest),
-    curl_response: PlacetopayPSyncResponse,
-    flow_name: PSync,
-    flow_request: PaymentsSyncData,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-             Ok(format!("{}/query", self.connector_base_url_payments(req)))
-// Macro implementation for Capture flow
-    curl_request: Json(PlacetopayNextActionRequest),
-    curl_response: PlacetopayCaptureResponse,
-    flow_name: Capture,
-    flow_request: PaymentsCaptureData,
-            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            Ok(format!("{}/transaction", self.connector_base_url_payments(req)))
-// Macro implementation for Void flow
-    curl_request: Json(PlacetopayVoidRequest),
-    curl_response: PlacetopayVoidResponse,
-    flow_name: Void,
-    flow_request: PaymentVoidData,
-            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-// Macro implementation for Refund flow
-    curl_request: Json(PlacetopayRefundRequest),
-    curl_response: PlacetopayRefundResponse,
-    flow_name: Refund,
-    resource_common_data: RefundFlowData,
-    flow_request: RefundsData,
-    flow_response: RefundsResponseData,
-            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            Ok(format!("{}/transaction", self.connector_base_url_refunds(req)))
-// Macro implementation for RSync flow
-    curl_request: Json(PlacetopayRsyncRequest),
-    curl_response: PlacetopayRSyncResponse,
-    flow_name: RSync,
-    flow_request: RefundSyncData,
-            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            Ok(format!("{}/query", self.connector_base_url_refunds(req)))
-// Stub implementations for unsupported flows
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -248,53 +63,481 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    >
-        CreateOrder,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-        SetupMandate,
-        SetupMandateRequestData<T>,
+    > connector_types::PaymentPreAuthenticateV2<T> for Placetopay<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentAuthenticateV2<T> for Placetopay<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentPostAuthenticateV2<T> for Placetopay<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::ConnectorServiceTrait<T> for Placetopay<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentAuthorizeV2<T> for Placetopay<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentSessionToken for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAccessToken for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::CreateConnectorCustomer for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentOrderCreate for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSyncV2 for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidV2 for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundSyncV2 for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundV2 for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentCapture for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SetupMandateV2<T> for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RepeatPaymentV2<T> for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidPostCaptureV2<T> for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::AcceptDispute for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SubmitEvidenceV2 for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::DisputeDefend for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::IncomingWebhook for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentTokenV2<T> for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ValidationTrait for Placetopay<T>
+{
+    fn should_do_order_create(&self) -> bool {
+        false // Placetopay doesn't require separate order creation
+    }
+}
+
+// ConnectorCommon implementation
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon for Placetopay<T> {
+    fn id(&self) -> &'static str {
+        "placetopay"
+    }
+
+    fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
+        common_enums::CurrencyUnit::Minor // For minor units
+    }
+
+    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
+        &connectors.placetopay.base_url
+    }
+
+    fn get_auth_header(
+        &self,
+        auth_type: &domain_types::router_data::ConnectorAuthType,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let auth = placetopay::PlacetopayAuthType::try_from(auth_type)?;
+        Ok(vec![
+            (headers::CONTENT_TYPE.to_string(), "application/json".to_string().into()),
+            ("Authorization".to_string(), auth.auth_header.into_masked()),
+        ])
+    }
+
+    fn build_error_response(
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        let response: placetopay::PlacetopayErrorResponse = res
+            .response
+            .parse_struct("PlacetopayErrorResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        
+        with_error_response_body!(event_builder, response);
+
+        Ok(ErrorResponse {
+            status_code: res.status_code,
+            code: response.code.clone(),
+            message: response.message.clone(),
+            reason: Some(response.message),
+            attempt_status: None,
+            connector_transaction_id: None,
+            network_decline_code: None,
+            network_advice_code: None,
+            network_error_message: None,
+        })
+    }
+}
+
+// ConnectorIntegrationV2 implementations
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Placetopay<T>
+{
+}
+
+// Additional ConnectorIntegrationV2 implementations for unsupported flows
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateSessionToken, SessionTokenRequestData, SessionTokenResponseData>
+    for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateAccessToken, AccessTokenRequestData, AccessTokenResponseData>
+    for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateConnectorCustomer, ConnectorCustomerData, ConnectorCustomerResponse>
+    for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+    for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-        CreateSessionToken,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-        CreateAccessToken,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-        PreAuthenticate,
-        PaymentsPreAuthenticateData<T>,
-        Authenticate,
-        PaymentsAuthenticateData<T>,
-        PostAuthenticate,
-        PaymentsPostAuthenticateData<T>,
-        CreateConnectorCustomer,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-// SourceVerification implementations for all flows
-        Authorize,
-        PaymentsAuthorizeData<T>,
-        PSync,
-        PaymentsSyncData,
-        Capture,
-        PaymentsCaptureData,
-        Void,
-        PaymentVoidData,
-        Refund,
-        RefundFlowData,
-        RefundsData,
-        RefundsResponseData,
-        RSync,
-        RefundSyncData,
-        Accept,
-        DisputeFlowData,
-        AcceptDisputeData,
-        DisputeResponseData,
-        SubmitEvidence,
-        SubmitEvidenceData,
-        DefendDispute,
-        DisputeDefendData,
-        RepeatPayment,
-        RepeatPaymentData,
+    for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PaymentMethodToken, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
+    for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
+    for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
+    for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
+    for Placetopay<T>
+{
+}
+
+// SourceVerification implementations for authentication flows
+macro_rules! impl_source_verification_stub {
+    ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
+        impl<
+                T: PaymentMethodDataTypes
+                    + std::fmt::Debug
+                    + std::marker::Sync
+                    + std::marker::Send
+                    + 'static
+                    + Serialize,
+            > interfaces::verification::SourceVerification<$flow, $common_data, $req, $resp> for Placetopay<T>
+        {
+            fn get_secrets(
+                &self,
+                _secrets: interfaces::verification::ConnectorSourceVerificationSecrets,
+            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+                Ok(Vec::new()) // Stub implementation
+            }
+
+            fn get_algorithm(
+                &self,
+            ) -> CustomResult<Box<dyn common_utils::crypto::VerifySignature + Send>, errors::ConnectorError> {
+                Ok(Box::new(common_utils::crypto::NoAlgorithm)) // Stub implementation
+            }
+
+            fn get_signature(
+                &self,
+                _payload: &[u8],
+                _router_data: &domain_types::router_data_v2::RouterDataV2<
+                    $flow,
+                    $common_data,
+                    $req,
+                    $resp,
+                >,
+                _secrets: &[u8],
+            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+                Ok(Vec::new()) // Stub implementation
+            }
+
+            fn get_message(
+                &self,
+                payload: &[u8],
+            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+                Ok(payload.to_owned()) // Stub implementation
+            }
+        }
+    };
+}
+
+// Apply to all flows
+impl_source_verification_stub!(
+    Authorize,
+    PaymentFlowData,
+    PaymentsAuthorizeData<T>,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    PSync,
+    PaymentFlowData,
+    PaymentsSyncData,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    Capture,
+    PaymentFlowData,
+    PaymentsCaptureData,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
+impl_source_verification_stub!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
+impl_source_verification_stub!(RSync, RefundFlowData, RefundSyncData, RefundsResponseData);
+
+impl_source_verification_stub!(
+    SetupMandate,
+    PaymentFlowData,
+    SetupMandateRequestData<T>,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    RepeatPayment,
+    PaymentFlowData,
+    RepeatPaymentData,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    Accept,
+    DisputeFlowData,
+    AcceptDisputeData,
+    DisputeResponseData
+);
+
+impl_source_verification_stub!(
+    SubmitEvidence,
+    DisputeFlowData,
+    SubmitEvidenceData,
+    DisputeResponseData
+);
+
+impl_source_verification_stub!(
+    DefendDispute,
+    DisputeFlowData,
+    DisputeDefendData,
+    DisputeResponseData
+);
+
+impl_source_verification_stub!(
+    CreateSessionToken,
+    SessionTokenRequestData,
+    SessionTokenResponseData,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    CreateAccessToken,
+    AccessTokenRequestData,
+    AccessTokenResponseData,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    CreateConnectorCustomer,
+    ConnectorCustomerData,
+    ConnectorCustomerResponse,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    PaymentMethodToken,
+    PaymentMethodTokenizationData<T>,
+    PaymentMethodTokenResponse,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    PreAuthenticate,
+    PaymentFlowData,
+    PaymentsPreAuthenticateData<T>,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    Authenticate,
+    PaymentFlowData,
+    PaymentsAuthenticateData<T>,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    PostAuthenticate,
+    PaymentFlowData,
+    PaymentsPostAuthenticateData<T>,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    VoidPC,
+    PaymentFlowData,
+    PaymentsCancelPostCaptureData,
+    PaymentsResponseData
+);
