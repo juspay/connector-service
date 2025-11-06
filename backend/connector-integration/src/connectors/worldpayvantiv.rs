@@ -359,27 +359,74 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Err(errors::ConnectorError::NotImplemented("CreateSessionToken flow not implemented".to_string()).into())
     }
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+// Additional stub implementations
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
         domain_types::connector_flow::CreateAccessToken,
+        PaymentFlowData,
         domain_types::connector_types::AccessTokenRequestData,
         domain_types::connector_types::AccessTokenResponseData,
+    > for Worldpayvantiv<T>
+{
+    fn build_request(
+        &self,
+        _req: &RouterDataV2<
+            domain_types::connector_flow::CreateAccessToken,
+            PaymentFlowData,
+            domain_types::connector_types::AccessTokenRequestData,
+            domain_types::connector_types::AccessTokenResponseData,
+        >,
+    ) -> CustomResult<interfaces::api::Request, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("CreateAccessToken flow not implemented".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
         domain_types::connector_flow::PaymentMethodToken,
+        PaymentFlowData,
         domain_types::connector_types::PaymentMethodTokenizationData<T>,
         domain_types::connector_types::PaymentMethodTokenResponse,
-// SourceVerification implementations for all flows
-    > SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-    SourceVerification<
-    > SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    > SourceVerification<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    > SourceVerification<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    SourceVerification<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
-    > SourceVerification<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    > SourceVerification<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    > SourceVerification<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    > SourceVerification<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    > SourceVerification<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    > SourceVerification<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-        CreateConnectorCustomer,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-    > ConnectorSpecifications for Worldpayvantiv<T>
+    > for Worldpayvantiv<T>
+{
+    fn build_request(
+        &self,
+        _req: &RouterDataV2<
+            domain_types::connector_flow::PaymentMethodToken,
+            PaymentFlowData,
+            domain_types::connector_types::PaymentMethodTokenizationData<T>,
+            domain_types::connector_types::PaymentMethodTokenResponse,
+        >,
+    ) -> CustomResult<interfaces::api::Request, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("PaymentMethodToken flow not implemented".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::CreateConnectorCustomer,
+        PaymentFlowData,
+        domain_types::connector_types::ConnectorCustomerData,
+        domain_types::connector_types::ConnectorCustomerResponse,
+    > for Worldpayvantiv<T>
+{
+    fn build_request(
+        &self,
+        _req: &RouterDataV2<
+            domain_types::connector_flow::CreateConnectorCustomer,
+            PaymentFlowData,
+            domain_types::connector_types::ConnectorCustomerData,
+            domain_types::connector_types::ConnectorCustomerResponse,
+        >,
+    ) -> CustomResult<interfaces::api::Request, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("CreateConnectorCustomer flow not implemented".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    domain_types::connector_types::ConnectorSpecifications for Worldpayvantiv<T>
+{
+    fn get_connector_specifications(&self) -> domain_types::connector_types::ConnectorSpecificationsType {
+        domain_types::connector_types::ConnectorSpecificationsType::default()
+    }
+}
