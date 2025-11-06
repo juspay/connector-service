@@ -1,7 +1,4 @@
-use common_utils::{request::Method, CustomerId, Email, StringMajorUnit,
-use common_utils::{Secret};
-    
-};
+use common_utils::{request::Method, CustomerId, Email, StringMajorUnit, Secret};
 use domain_types::{
     connector_flow::{Authorize, Capture, Refund, RepeatPayment, SetupMandate, Void},
     connector_types::{
@@ -19,9 +16,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::{self, report, ResultExt};
-use common_utils::{ExposeInterface
-    
-};
+use common_utils::{ExposeInterface};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::str::FromStr;
