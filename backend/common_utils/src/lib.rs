@@ -92,6 +92,8 @@ pub mod masking {
 
 #[cfg(feature = "masking")]
 pub use hyperswitch_masking::{Strategy, Secret, Maskable, ExposeInterface, WithType, PeekInterface};
+#[cfg(feature = "masking")]
+pub type StrongSecret<T, S = ()> = Secret<T, S>;
 
 pub mod crypto;
 pub mod custom_serde;
