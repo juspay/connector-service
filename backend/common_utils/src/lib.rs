@@ -71,6 +71,18 @@ pub mod masking {
         }
     }
     
+    impl<T, S> Serialize for Secret<T, S>
+    where
+        T: Serialize,
+    {
+        fn serialize<SER>(&self, serializer: SER) -> Result<SER::Ok, SER::Error>
+        where
+            SER: serde::Serializer,
+        {
+            self.0.serialize(serializer)
+        }
+    }
+    
     impl<T: Default, S> Default for Secret<T, S> {
         fn default() -> Self {
             Self(T::default(), std::marker::PhantomData)
