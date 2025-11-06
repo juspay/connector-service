@@ -348,7 +348,7 @@ pub trait IncomingWebhook {
         &self,
         _request: RequestDetails,
     ) -> Result<
-        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
+        Box<dyn common_utils::masking::ErasedMaskSerialize>,
         error_stack::Report<domain_types::errors::ConnectorError>,
     > {
         Err(domain_types::errors::ConnectorError::NotImplemented(
