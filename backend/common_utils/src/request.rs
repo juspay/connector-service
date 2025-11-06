@@ -5,7 +5,7 @@ use crate::masking::{Maskable, Secret};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
+pub type Headers = Vec<(String, Maskable<String>)>;
 
 #[derive(
     Clone,
