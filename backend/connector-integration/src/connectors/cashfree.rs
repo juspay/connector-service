@@ -155,13 +155,31 @@ macros::macro_connector_implementation!(
             Ok(format!("{base_url}pg/orders"))
         }
 // Authorize flow implementation using macros
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Cashfree,
     curl_request: Json(CashfreePaymentRequest),
     curl_response: CashfreePaymentResponse,
     flow_name: Authorize,
+    resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthorizeData<T>,
     flow_response: PaymentsResponseData,
+    http_method: Post,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}pg/orders/sessions"))
+        }
+    }
+);
 // Type alias for non-generic trait implementations
     > ConnectorCommon for Cashfree<T>
     fn id(&self) -> &'static str {
