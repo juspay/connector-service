@@ -1,4 +1,4 @@
-use common_utils::{ExposeInterface, Secret};
+// use common_utils::{ExposeInterface, Secret};  // Temporarily disabled due to masking dependency issues
 
 fn apply_mask(val: &str, unmasked_char_count: usize, min_masked_char_count: usize) -> String {
     let len = val.len();
