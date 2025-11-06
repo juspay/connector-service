@@ -132,7 +132,7 @@ impl Request {
     }
 
     pub fn add_header(&mut self, header: &str, value: Maskable<String>) {
-        self.headers.insert((String::from(header), value));
+        self.headers.push((String::from(header), value));
     }
 
     pub fn add_certificate(&mut self, certificate: Option<Secret<String>>) {
