@@ -179,7 +179,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Worl
         )])
     }
 }
-// Implement the specific flows
 // Stub implementations for unsupported flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification for Worldpayvantiv<T>
@@ -191,11 +190,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Ok(true)
     }
 }
-            let txn_id = req.request.get_connector_transaction_id()
-                .change_context(ConnectorError::MissingConnectorTransactionID)?;
-            let secondary_base_url = req.resource_common_data.connectors.worldpayvantiv.secondary_base_url
-                .as_ref()
-                // Stub implementations for remaining flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
     for Worldpayvantiv<T>
