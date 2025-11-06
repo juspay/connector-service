@@ -104,17 +104,24 @@ macros::create_all_prerequisites!(
             response_body: PaymentsAuthorizeResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
+        (
             flow: RepeatPayment,
             request_body: RepeatPaymentRequest<T>,
             response_body: RepeatPaymentResponse,
             router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ),
+        (
             flow: PSync,
             response_body: PaymentSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
             flow: Capture,
             request_body: CaptureRequest,
             response_body: PaymentsCaptureResponse,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ),
+        (
             flow: Void,
             request_body: CancelRequest,
             response_body: PaymentsVoidResponse,
