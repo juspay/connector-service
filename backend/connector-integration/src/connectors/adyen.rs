@@ -190,6 +190,7 @@ macros::create_all_prerequisites!(
         ) -> Option<&'a str> {
             req.resource_common_data.connectors.adyen.dispute_base_url.as_deref()
         }
+    }
 );
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Adyen<T>
