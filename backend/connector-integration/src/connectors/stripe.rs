@@ -126,6 +126,8 @@ macros::create_all_prerequisites!(
             request_body: CancelRequest,
             response_body: PaymentsVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
             flow: Refund,
             request_body: StripeRefundRequest,
             response_body: RefundResponse,
