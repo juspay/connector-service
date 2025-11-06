@@ -207,8 +207,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             headers::X_API_KEY.to_string(),
             auth.api_key.into_masked(),
         )])
+    }
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
         connectors.adyen.base_url.as_ref()
+    }
     fn build_error_response(
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
