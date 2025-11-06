@@ -73,6 +73,8 @@ pub(crate) mod headers {
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Adyen<T>
 {
+    type Error = errors::ConnectorError;
+}
     connector_types::PaymentAuthorizeV2<T> for Adyen<T>
     connector_types::PaymentSessionToken for Adyen<T>
     connector_types::PaymentAccessToken for Adyen<T>
