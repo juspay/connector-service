@@ -26,5 +26,9 @@ sha2 = "0.10"
 uuid = { version = "1.0", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 
+[features]
+default = ["masking"]
+masking = ["hyperswitch_masking"]
+
 [dev-dependencies]
 tokio = { version = "1.0", features = ["full"] }
