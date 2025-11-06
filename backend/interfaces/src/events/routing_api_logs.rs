@@ -102,7 +102,7 @@ impl RoutingEvent {
 
     /// fn set_response_body
     pub fn set_response_body<T: Serialize>(&mut self, response: &T) {
-        match hyperswitch_masking::masked_serialize(response) {
+        match common_utils::masking::masked_serialize(response) {
             Ok(masked) => {
                 self.response = Some(masked.to_string());
             }
@@ -112,7 +112,7 @@ impl RoutingEvent {
 
     /// fn set_error_response_body
     pub fn set_error_response_body<T: Serialize>(&mut self, response: &T) {
-        match hyperswitch_masking::masked_serialize(response) {
+        match common_utils::masking::masked_serialize(response) {
             Ok(masked) => {
                 self.error = Some(masked.to_string());
             }
