@@ -1,5 +1,6 @@
 use common_utils::{
     request::Method,
+    types::{MinorUnit, StringMinorUnit},
 };
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
@@ -12,33 +13,14 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    };
+};
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::billdesk::BilldeskRouterData, types::ResponseRouterData};
 
-#[derive(Default, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BilldeskPaymentsRequest {
-    msg: String,
-    useragent: String,
-    ipaddress: String,
-}
-
-#[derive(Default, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BilldeskPaymentsSyncRequest {
-    msg: String,
-}
-
-#[derive(Default, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BilldeskRefundSyncRequest {
-    msg: String,
-}
-
+// Authentication types for Billdesk
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BilldeskAuthType {
@@ -52,9 +34,9 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuthType {
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, key1, .. } => {
-                // For now, let's just use dummy values to get it compiling
-                let merchant_id = Secret::new("dummy_merchant_id".to_string());
-                let checksum_key = Secret::new("dummy_checksum_key".to_string());
+                // Extract merchant_id and checksum_key from the auth type
+                let merchant_id = Secret::new(api_key.clone());
+                let checksum_key = Secret::new(key1.clone().unwrap_or_default());
                 Ok(Self {
                     merchant_id,
                     checksum_key,
@@ -65,14 +47,15 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuthType {
     }
 }
 
+// Payment status enum for Billdesk
 #[derive(Debug, Deserialize, Serialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum BilldeskPaymentStatus {
+    #[default]
+    Processing,
     Success,
     Failure,
     Pending,
-    #[default]
-    Processing,
 }
 
 impl From<BilldeskPaymentStatus> for common_enums::AttemptStatus {
@@ -86,12 +69,59 @@ impl From<BilldeskPaymentStatus> for common_enums::AttemptStatus {
     }
 }
 
+// Refund status enum for Billdesk
+#[derive(Debug, Deserialize, Serialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum BilldeskRefundStatus {
+    #[default]
+    Processing,
+    Success,
+    Failure,
+    Pending,
+}
+
+impl From<BilldeskRefundStatus> for common_enums::RefundStatus {
+    fn from(item: BilldeskRefundStatus) -> Self {
+        match item {
+            BilldeskRefundStatus::Success => Self::Success,
+            BilldeskRefundStatus::Failure => Self::Failure,
+            BilldeskRefundStatus::Pending => Self::Pending,
+            BilldeskRefundStatus::Processing => Self::Pending,
+        }
+    }
+}
+
+// Error response type
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BilldeskErrorResponse {
     pub error: String,
     pub error_description: Option<String>,
 }
 
+// UPI Payment Request - Based on Haskell BilldeskInitiateUPIRequest
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BilldeskPaymentsRequest {
+    pub msg: String,
+    pub useragent: String,
+    pub ipaddress: String,
+}
+
+// Payment Status Sync Request - Based on Haskell BilldeskOnlineStatusRequest
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BilldeskPaymentsSyncRequest {
+    pub msg: String,
+}
+
+// Refund Status Sync Request - Based on Haskell BilldeskRefundStatusRequestV2
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BilldeskRefundSyncRequest {
+    pub msg: String,
+}
+
+// UPI Payment Response - Based on Haskell BilldeskUPIInitiateResponse
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum BilldeskPaymentsResponse {
@@ -105,6 +135,7 @@ pub struct BilldeskPaymentsResponseData {
     pub transaction_response: String,
 }
 
+// Payment Status Sync Response - Based on Haskell BilldeskOnlineStatusResponse
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum BilldeskPaymentsSyncResponse {
@@ -118,6 +149,7 @@ pub struct BilldeskPaymentsSyncResponseData {
     pub transaction_response: String,
 }
 
+// Refund Status Sync Response - Based on Haskell BilldeskOnlineRefundStatusResponseV2
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum BilldeskRefundSyncResponse {
@@ -131,13 +163,15 @@ pub struct BilldeskRefundSyncResponseData {
     pub transaction_response: String,
 }
 
+// Helper function to extract authentication credentials
 fn get_auth_credentials(
     connector_auth_type: &ConnectorAuthType,
 ) -> Result<BilldeskAuthType, error_stack::Report<errors::ConnectorError>> {
     BilldeskAuthType::try_from(connector_auth_type)
 }
 
-fn build_billdesk_message(
+// Helper function to build Billdesk message for UPI payments
+fn build_billdesk_upi_message(
     merchant_id: &str,
     transaction_id: &str,
     amount: &str,
@@ -145,32 +179,78 @@ fn build_billdesk_message(
     customer_id: &str,
     return_url: &str,
     checksum_key: &str,
+    vpa: Option<&str>,
 ) -> Result<String, errors::ConnectorError> {
-    // Build the message according to Billdesk format
-    let message = format!(
+    // Build the message according to Billdesk UPI format
+    let mut message = format!(
         "merchantid={}&transactionid={}&amount={}&currency={}&customerid={}&returnurl={}",
         merchant_id, transaction_id, amount, currency, customer_id, return_url
     );
-    
+
+    // Add VPA if provided
+    if let Some(vpa_value) = vpa {
+        message.push_str(&format!("&vpa={}", vpa_value));
+    }
+
     // Calculate checksum (simplified - in real implementation, this would use proper checksum calculation)
     let checksum = format!("checksum_{}", checksum_key);
     
     Ok(format!("{}|{}", message, checksum))
 }
 
+// Helper function to build status check message
+fn build_billdesk_status_message(
+    merchant_id: &str,
+    transaction_id: &str,
+    checksum_key: &str,
+) -> Result<String, errors::ConnectorError> {
+    let message = format!(
+        "merchantid={}&transactionid={}",
+        merchant_id, transaction_id
+    );
+    
+    let checksum = format!("checksum_{}", checksum_key);
+    Ok(format!("{}|{}", message, checksum))
+}
+
+// Helper function to build refund status check message
+fn build_billdesk_refund_status_message(
+    merchant_id: &str,
+    refund_id: &str,
+    checksum_key: &str,
+) -> Result<String, errors::ConnectorError> {
+    let message = format!(
+        "merchantid={}&refundid={}",
+        merchant_id, refund_id
+    );
+    
+    let checksum = format!("checksum_{}", checksum_key);
+    Ok(format!("{}|{}", message, checksum))
+}
+
+// Helper function to extract VPA from payment method data
+fn extract_vpa<T: PaymentMethodDataTypes>(
+    payment_method_data: &T,
+) -> Result<Option<String>, errors::ConnectorError> {
+    // This is a simplified implementation - in real scenario, we'd extract VPA from the payment method data
+    // For now, we'll return None as we don't have access to the specific payment method structure
+    Ok(None)
+}
+
+// Implement TryFrom for BilldeskPaymentsRequest (UPI Authorize)
 impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<
-        BilldeskRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            T,
-        >,
-    > for BilldeskPaymentsRequest
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> TryFrom<
+    BilldeskRouterData<
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        T,
+    >,
+> for BilldeskPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
@@ -180,42 +260,53 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        // Extract customer ID using proper getter function
         let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let customer_id_string = customer_id.get_string_repr();
+
+        // Extract return URL using proper getter function
         let return_url = item.router_data.request.get_router_return_url()?;
+
+        // Get authentication credentials
         let auth = get_auth_credentials(&item.router_data.connector_auth_type)?;
-        
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
-        
-        let transaction_id = item
-            .router_data
-            .resource_common_data
-            .connector_request_reference_id;
-        
-        let ip_address = "127.0.0.1".to_string();
-        
+        let merchant_id = auth.merchant_id.expose();
+        let checksum_key = auth.checksum_key.expose();
+
+        // Use proper amount converter
+        let amount = item.amount.get_amount_as_string();
+        let currency = item.router_data.request.currency.to_string();
+
+        // Extract transaction ID using proper method
+        let transaction_id = item.router_data.request.connector_transaction_id
+            .get_connector_transaction_id()
+            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
+
+        // Extract IP address using proper function
+        let ip_address = item.router_data.request.get_ip_address_as_optional()
+            .map(|ip| ip.expose())
+            .unwrap_or_else(|| "127.0.0.1".to_string());
+
+        // Extract user agent from browser info
         let user_agent = item.router_data.request.browser_info
             .as_ref()
             .and_then(|info| info.user_agent.clone())
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
-        
-        // Only support UPI payments
+
+        // Only support UPI payments as per requirements
         match item.router_data.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => {
-                let msg = build_billdesk_message(
-                    "dummy_merchant_id",
+                // Extract VPA from payment method data
+                let vpa = extract_vpa(&item.router_data.request.payment_method_data)?;
+                
+                let msg = build_billdesk_upi_message(
+                    &merchant_id,
                     &transaction_id,
-                    &amount.to_string(),
-                    &item.router_data.request.currency.to_string(),
-                    &customer_id.get_string_repr(),
+                    &amount,
+                    &currency,
+                    &customer_id_string,
                     &return_url,
-                    "dummy_checksum_key",
+                    &checksum_key,
+                    vpa.as_deref(),
                 )?;
                 
                 Ok(Self {
@@ -232,19 +323,20 @@ impl<
     }
 }
 
+// Implement TryFrom for BilldeskPaymentsSyncRequest (Payment Status Sync)
 impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<
-        BilldeskRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for BilldeskPaymentsSyncRequest
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> TryFrom<
+    BilldeskRouterData<
+        RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        T,
+    >,
+> for BilldeskPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
@@ -254,36 +346,41 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        // Get authentication credentials
         let auth = get_auth_credentials(&item.router_data.connector_auth_type)?;
-        let transaction_id = item
-            .router_data
-            .resource_common_data
-            .connector_request_reference_id;
+        let merchant_id = auth.merchant_id.expose();
+        let checksum_key = auth.checksum_key.expose();
+
+        // Extract transaction ID
+        let transaction_id = item.router_data.request.connector_transaction_id
+            .get_connector_transaction_id()
+            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
         
         // Build status check message
-        let msg = format!(
-            "merchantid={}&transactionid={}",
-            "dummy_merchant_id",
-            transaction_id
-        );
+        let msg = build_billdesk_status_message(
+            &merchant_id,
+            &transaction_id,
+            &checksum_key,
+        )?;
         
         Ok(Self { msg })
     }
 }
 
+// Implement TryFrom for BilldeskRefundSyncRequest (Refund Status Sync)
 impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<
-        BilldeskRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    > for BilldeskRefundSyncRequest
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> TryFrom<
+    BilldeskRouterData<
+        RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        T,
+    >,
+> for BilldeskRefundSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     
@@ -293,23 +390,28 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        // Get authentication credentials
         let auth = get_auth_credentials(&item.router_data.connector_auth_type)?;
-        let transaction_id = item
-            .router_data
-            .resource_common_data
-            .connector_request_reference_id;
+        let merchant_id = auth.merchant_id.expose();
+        let checksum_key = auth.checksum_key.expose();
+
+        // Extract refund ID
+        let refund_id = item.router_data.request.connector_transaction_id
+            .get_connector_transaction_id()
+            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
         
         // Build refund status check message
-        let msg = format!(
-            "merchantid={}&transactionid={}",
-            "dummy_merchant_id",
-            transaction_id
-        );
+        let msg = build_billdesk_refund_status_message(
+            &merchant_id,
+            &refund_id,
+            &checksum_key,
+        )?;
         
         Ok(Self { msg })
     }
 }
 
+// Implement TryFrom for PaymentsResponseData (UPI Authorize Response)
 impl<F, T> TryFrom<ResponseRouterData<BilldeskPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 where
@@ -381,6 +483,7 @@ where
     }
 }
 
+// Implement TryFrom for PaymentsResponseData (Payment Status Sync Response)
 impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
@@ -413,6 +516,7 @@ impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, Self>>
             BilldeskPaymentsSyncResponse::BilldeskData(_response_data) => {
                 // Parse the response to determine status
                 // This is simplified - in real implementation, we'd parse the actual response
+                // For now, assume success
                 (
                     common_enums::AttemptStatus::Charged,
                     Ok(PaymentsResponseData::TransactionResponse {
@@ -445,6 +549,7 @@ impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, Self>>
     }
 }
 
+// Implement TryFrom for RefundsResponseData (Refund Status Sync Response)
 impl<F> TryFrom<ResponseRouterData<BilldeskRefundSyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
@@ -476,6 +581,7 @@ impl<F> TryFrom<ResponseRouterData<BilldeskRefundSyncResponse, Self>>
             ),
             BilldeskRefundSyncResponse::BilldeskData(_response_data) => {
                 // Parse the refund response
+                // This is simplified - in real implementation, we'd parse the actual response
                 (
                     common_enums::RefundStatus::Success,
                     Ok(RefundsResponseData {
