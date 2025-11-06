@@ -377,6 +377,7 @@ macro_rules! impl_source_verification_stub {
             > {
                 Ok(Box::new(common_utils::crypto::NoAlgorithm)) // Stub implementation
             fn get_signature(
+                &self,
                 _payload: &[u8],
                 _router_data: &domain_types::router_data_v2::RouterDataV2<
                     $flow,
@@ -385,9 +386,15 @@ macro_rules! impl_source_verification_stub {
                     $resp,
                 >,
                 _secrets: &[u8],
+            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+                Ok(Vec::new()) // Stub implementation
+            }
             fn get_message(
+                &self,
                 payload: &[u8],
+            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
                 Ok(payload.to_owned()) // Stub implementation
+            }
     };
 // Apply to all flows
 impl_source_verification_stub!(
