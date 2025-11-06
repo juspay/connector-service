@@ -1,4 +1,7 @@
-// use common_utils::{ExposeInterface, Secret};  // Temporarily disabled due to masking dependency issues
+#[cfg(feature = "masking")]
+use common_utils::{ExposeInterface, Secret};
+#[cfg(not(feature = "masking"))]
+use crate::masking::{ExposeInterface, Secret};
 
 fn apply_mask(val: &str, unmasked_char_count: usize, min_masked_char_count: usize) -> String {
     let len = val.len();
