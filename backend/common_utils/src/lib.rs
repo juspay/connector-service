@@ -124,14 +124,8 @@ pub mod masking {
     }
 }
 
-// Always export the mock types, and conditionally export the real ones
-#[cfg(not(feature = "masking"))]
+// Always export the mock types
 pub use masking::{Strategy, Secret, Maskable, ExposeInterface, WithType, PeekInterface, StrongSecret};
-
-#[cfg(feature = "masking")]
-pub use hyperswitch_masking::{Strategy, Secret, Maskable, ExposeInterface, WithType, PeekInterface};
-#[cfg(feature = "masking")]
-pub type StrongSecret<T, S = ()> = Secret<T, S>;
 
 pub mod crypto;
 pub mod custom_serde;
