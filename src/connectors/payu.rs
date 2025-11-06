@@ -48,8 +48,7 @@ use interfaces::{
 use serde::Serialize;
 use transformers::{self as payu, PayuPaymentsRequest, PayuPaymentsResponse};
 
-use super::macros;
-use crate::{types::ResponseRouterData, with_error_response_body};
+use crate::types::ResponseRouterData;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
