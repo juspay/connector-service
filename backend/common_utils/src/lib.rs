@@ -69,8 +69,10 @@ pub mod masking {
         }
     }
     
-    pub trait WithType {
-        fn fmt<T: AsRef<str>>(val: &T, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    pub struct WithType;
+    
+    impl WithType {
+        pub fn fmt<T: AsRef<str>>(val: &T, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(f, "{}", val.as_ref())
         }
     }
