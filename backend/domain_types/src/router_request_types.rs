@@ -7,7 +7,7 @@ use common_utils::{
     Email, MinorUnit,
 };
 use error_stack::ResultExt;
-// use common_utils::Secret;
+use common_utils::Secret;
 use serde::Serialize;
 
 use crate::utils::ForeignFrom;
