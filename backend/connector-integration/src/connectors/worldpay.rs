@@ -224,97 +224,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         })
     }
 }
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Worldpay,
-    curl_request: Json(WorldpayAuthorizeRequest<T>),
-    curl_response: WorldpayAuthorizeResponse,
-    flow_name: Authorize,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsAuthorizeData<T>,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
-        fn get_url(
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}api/payments", self.connector_base_url_payments(req)))
-    curl_response: WorldpaySyncResponse,
-    flow_name: PSync,
-    flow_request: PaymentsSyncData,
-    http_method: Get,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            let connector_payment_id = req
-                .request
-                .connector_transaction_id
-                .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
-            Ok(format!(
-                "{}api/payments/{}",
-                self.connector_base_url_payments(req),
-                urlencoding::encode(&connector_payment_id),
-            ))
-    curl_request: Json(WorldpayCaptureRequest),
-    curl_response: WorldpayCaptureResponse,
-    flow_name: Capture,
-    flow_request: PaymentsCaptureData,
-            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            let connector_payment_id = req.request.connector_transaction_id.get_connector_transaction_id()
-            // Use /settlements for full capture, /partialSettlements for partial captures
-            let endpoint = if req.request.is_multiple_capture() {
-                "partialSettlements"
-            } else {
-                "settlements"
-            };
-                "{}api/payments/{}/{}",
-                endpoint
-    curl_response: WorldpayVoidResponse,
-    flow_name: Void,
-    flow_request: PaymentVoidData,
-            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-                "{}api/payments/{}/cancellations",
-                urlencoding::encode(&req.request.connector_transaction_id),
-    curl_request: Json(WorldpayRefundRequest),
-    curl_response: WorldpayRefundResponse,
-    flow_name: Refund,
-    resource_common_data: RefundFlowData,
-    flow_request: RefundsData,
-    flow_response: RefundsResponseData,
-            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            let connector_payment_id = req.request.connector_transaction_id.clone();
-                "{}api/payments/{}/partialRefunds",
-                self.connector_base_url_refunds(req),
-    curl_response: WorldpayRefundSyncResponse,
-    flow_name: RSync,
-    flow_request: RefundSyncData,
-            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            req: &RouterDataV2<domain_types::connector_flow::RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-                urlencoding::encode(&req.request.connector_refund_id),
-    curl_request: Json(WorldpayPreAuthenticateRequest),
-    curl_response: WorldpayPreAuthenticateResponse,
-    flow_name: PreAuthenticate,
-    flow_request: PaymentsPreAuthenticateData<T>,
-            req: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
-            let link_data = Self::extract_link_data_from_metadata(req)?;
-                "{}api/payments/{}/3dsDeviceData",
-                urlencoding::encode(&link_data),
-    curl_request: Json(WorldpayPostAuthenticateRequest),
-    curl_response: WorldpayPostAuthenticateResponse,
-    flow_name: PostAuthenticate,
-    flow_request: PaymentsPostAuthenticateData<T>,
-            req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
-                "{}api/payments/{}/3dsChallenges",
-    curl_request: Json(WorldpayRepeatPaymentRequest<T>),
-    curl_response: WorldpayRepeatPaymentResponse,
-    flow_name: RepeatPayment,
-    flow_request: RepeatPaymentData,
-            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-// Stub implementations for unsupported flows - removed conflicting ones that are now macro-generated
-// Authenticate flow is replaced by PreAuthenticate and PostAuthenticate, but we need this stub for trait bounds
+// Stub implementations for unsupported flows
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -329,55 +239,30 @@ impl<
         domain_types::connector_types::PaymentsAuthenticateData<T>,
         PaymentsResponseData,
     > for Worldpay<T>
-        CreateOrder,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-        SetupMandate,
-        SetupMandateRequestData<T>,
-        CreateSessionToken,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-        domain_types::connector_flow::PaymentMethodToken,
-        domain_types::connector_types::PaymentMethodTokenizationData<T>,
-        domain_types::connector_types::PaymentMethodTokenResponse,
-        domain_types::connector_flow::CreateAccessToken,
-        domain_types::connector_types::AccessTokenRequestData,
-        domain_types::connector_types::AccessTokenResponseData,
-        domain_types::connector_flow::CreateConnectorCustomer,
-        domain_types::connector_types::ConnectorCustomerData,
-        domain_types::connector_types::ConnectorCustomerResponse,
-        VoidPC,
-        PaymentsCancelPostCaptureData,
-// SourceVerification implementations for all flows
-    interfaces::verification::SourceVerification<
-        Authorize,
-        PaymentsAuthorizeData<T>,
-        PSync,
-        PaymentsSyncData,
-        Capture,
-        PaymentsCaptureData,
-        Void,
-        PaymentVoidData,
-        Refund,
-        RefundFlowData,
-        RefundsData,
-        RefundsResponseData,
-        RSync,
-        RefundSyncData,
-        Accept,
-        DisputeFlowData,
-        AcceptDisputeData,
-        DisputeResponseData,
-        SubmitEvidence,
-        SubmitEvidenceData,
-        DefendDispute,
-        DisputeDefendData,
-        RepeatPayment,
-        RepeatPaymentData,
-        domain_types::connector_flow::PostAuthenticate,
-        domain_types::connector_types::PaymentsPostAuthenticateData<T>,
-        domain_types::connector_flow::PreAuthenticate,
-        domain_types::connector_types::PaymentsPreAuthenticateData<T>,
+{
+    fn build_request(
+        &self,
+        _req: &RouterDataV2<
+            domain_types::connector_flow::Authenticate,
+            PaymentFlowData,
+            domain_types::connector_types::PaymentsAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<
+        interfaces::api::Request,
+        errors::ConnectorError,
+    > {
+        Err(errors::ConnectorError::NotImplemented("Authenticate flow not implemented".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification for Worldpay<T>
+{
+    fn verify_source(
+        &self,
+        _request: &domain_types::router_data::RouterData,
+    ) -> CustomResult<bool, errors::ConnectorError> {
+        Ok(true)
+    }
+}
