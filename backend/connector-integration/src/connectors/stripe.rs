@@ -152,7 +152,9 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
         )
     ],
-    amount_converters: []
+    amount_converters: [
+        amount_converter: StringMajorUnit,
+    ]
 );
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
