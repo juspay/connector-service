@@ -44,6 +44,7 @@ use self::transformers::{
     PaytmProcessTxnResponse, PaytmTransactionStatusRequest, PaytmTransactionStatusResponse,
 };
 use crate::{connectors::macros, types::ResponseRouterData};
+
 // Define connector prerequisites using macros - following the exact pattern from other connectors
 macros::create_all_prerequisites!(
     connector_name: Paytm,
@@ -55,7 +56,7 @@ macros::create_all_prerequisites!(
             response_body: PaytmInitiateTxnResponse,
             router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
         ),
-            (
+        (
             flow: Authorize,
             request_body: PaytmAuthorizeRequest,
             response_body: PaytmProcessTxnResponse,
@@ -105,37 +106,37 @@ macros::create_all_prerequisites!(
                     network_advice_code: None,
                     network_error_message: None,
                 });
-            // Try to parse as callback error response format
-            if let Ok(callback_response) = res
-                .parse_struct::<paytm::PaytmCallbackErrorResponse>("PaytmCallbackErrorResponse")
-                    event.set_error_response_body(&callback_response);
-                    code: callback_response
-                        .body
-                        .txn_info
-                        .resp_code
-                        .unwrap_or(callback_response.body.result_info.result_code),
-                    message: callback_response
-                        .resp_msg
-                        .unwrap_or(callback_response.body.result_info.result_msg),
-                    connector_transaction_id: callback_response.body.txn_info.order_id,
-            // Try to parse as original JSON error response format
-            if let Ok(response) = res
-                .parse_struct::<paytm::PaytmErrorResponse>("PaytmErrorResponse")
-                    event.set_error_response_body(&response);
-                    code: response.error_code.unwrap_or_default(),
-                    message: response.error_message.unwrap_or_default(),
-                    reason: response.error_description,
-                    connector_transaction_id: response.transaction_id,
-            // Final fallback for non-JSON responses (HTML errors, etc.)
-            let raw_response = String::from_utf8_lossy(&res.response);
-            let error_message = match res.status_code {
-                503 => "Service temporarily unavailable".to_string(),
-                502 => "Bad gateway".to_string(),
-                500 => "Internal server error".to_string(),
-                404 => "Not found".to_string(),
-                400 => "Bad request".to_string(),
-                _ => format!("HTTP {} error", res.status_code),
+            }
+
+            // Try to parse as transaction error response format
+            if let Ok(txn_error_response) = res
+                .response
+                .parse_struct::<paytm::PaytmTransactionErrorResponse>("PaytmTransactionErrorResponse")
+            {
+                if let Some(event) = event_builder {
+                    event.set_error_response_body(&txn_error_response);
+                }
+                return Ok(domain_types::router_data::ErrorResponse {
+                    code: txn_error_response.body.result_info.result_code,
+                    message: txn_error_response.body.result_info.result_msg,
+                    reason: None,
+                    status_code: res.status_code,
+                    attempt_status: Some(Self::get_attempt_status_from_http_code(res.status_code)),
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                });
+            }
+
+            // If neither format matches, create a generic error response
+            let raw_response = res.response.clone();
+            let error_message = if raw_response.is_empty() {
+                "Empty response from Paytm".to_string()
+            } else {
+                "Failed to parse Paytm error response".to_string()
             };
+
             Ok(domain_types::router_data::ErrorResponse {
                 code: res.status_code.to_string(),
                 message: error_message,
@@ -150,8 +151,10 @@ macros::create_all_prerequisites!(
                 network_advice_code: None,
                 network_error_message: None,
             })
+        }
     }
 );
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Paytm<T>
 {
@@ -162,163 +165,597 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         false // Paytm doesn't require separate order creation
     }
 }
+
 // Service trait implementations with generic type parameters
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSessionToken for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAccessToken for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::CreateConnectorCustomer for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentOrderCreate for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RepeatPaymentV2 for Paytm<T>
-    connector_types::PaymentVoidPostCaptureV2 for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidPostCaptureV2<T> for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         VoidPC,
         PaymentFlowData,
         PaymentsCancelPostCaptureData,
         PaymentsResponseData,
     > for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
-    connector_types::PaymentCapture for Paytm<T>
-    connector_types::PaymentVoidV2 for Paytm<T>
-    connector_types::SetupMandateV2<T> for Paytm<T>
-    connector_types::AcceptDispute for Paytm<T>
-    connector_types::DisputeDefend for Paytm<T>
-    connector_types::SubmitEvidenceV2 for Paytm<T>
-    connector_types::IncomingWebhook for Paytm<T>
-    connector_types::PaymentTokenV2<T> for Paytm<T>
-// Authentication trait implementations
-    connector_types::PaymentPreAuthenticateV2<T> for Paytm<T>
-    connector_types::PaymentAuthenticateV2<T> for Paytm<T>
-    connector_types::PaymentPostAuthenticateV2<T> for Paytm<T>
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-    for Paytm<T>
-    fn id(&self) -> &'static str {
-        "paytm"
-    fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
-        common_enums::CurrencyUnit::Minor
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        &connectors.paytm.base_url
-    fn get_auth_header(
-        &self,
-        _auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        Ok(vec![(
-            constants::CONTENT_TYPE_HEADER.to_string(),
-            constants::CONTENT_TYPE_JSON.into(),
-        )])
-    fn build_error_response(
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
-        self.build_custom_error_response(res, event_builder)
-// SourceVerification implementations for all flows
-    verification::SourceVerification<
-        Authorize,
-        PaymentsAuthorizeData<T>,
-    verification::SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-        Capture,
-        PaymentsCaptureData,
-    verification::SourceVerification<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    verification::SourceVerification<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    verification::SourceVerification<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-        SetupMandate,
-        SetupMandateRequestData<T>,
-        Accept,
-        DisputeFlowData,
-        AcceptDisputeData,
-        DisputeResponseData,
-        SubmitEvidence,
-        SubmitEvidenceData,
-        DefendDispute,
-        DisputeDefendData,
         CreateSessionToken,
+        PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
-        CreateAccessToken,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-        CreateOrder,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-        RepeatPayment,
-        RepeatPaymentData,
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-        PaymentMethodToken,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-// CreateSessionToken flow implementation using macros
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Paytm,
-    curl_request: Json(PaytmInitiateTxnRequest),
-    curl_response: PaytmInitiateTxnResponse,
-    flow_name: CreateSessionToken,
-    resource_common_data: PaymentFlowData,
-    flow_request: SessionTokenRequestData,
-    flow_response: SessionTokenResponseData,
-    http_method: Post,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            req: &RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let headers = self.get_auth_header(&req.connector_auth_type)?;
-            Ok(headers)
-        fn get_url(
-        ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url(req);
-            let auth = paytm::PaytmAuthType::try_from(&req.connector_auth_type)?;
-            let merchant_id = auth.merchant_id.peek();
-            let order_id = &req.resource_common_data.connector_request_reference_id;
-            Ok(format!(
-                "{base_url}theia/api/v1/initiateTransaction?mid={merchant_id}&orderId={order_id}"
-            ))
-        fn get_5xx_error_response(
-            self.build_custom_error_response(res, event_builder)
-// CreateAccessToken implementation
-// CreateConnectorCustomer implementation
+    > for Paytm<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: interfaces::verification::ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new()) // Stub implementation
+    }
+
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<
+        Box<dyn common_utils::crypto::VerifySignature + Send>,
+        errors::ConnectorError,
+    > {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm)) // Stub implementation
+    }
+
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &domain_types::router_data_v2::RouterDataV2<
+            CreateSessionToken,
+            PaymentFlowData,
+            SessionTokenRequestData,
+            SessionTokenResponseData,
+        >,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new()) // Stub implementation
+    }
+
+    fn get_message(
+        &self,
+        payload: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned()) // Stub implementation
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentCapture for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidV2 for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SetupMandateV2<T> for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::AcceptDispute for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::DisputeDefend for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SubmitEvidenceV2 for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::IncomingWebhook for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentTokenV2<T> for Paytm<T>
+{
+}
+
+// Additional trait implementations for authentication flows
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentPreAuthenticateV2<T> for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAuthenticateV2<T> for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentPostAuthenticateV2<T> for Paytm<T>
+{
+}
+
+// Additional ConnectorIntegrationV2 implementations
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
+    for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+    for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PaymentMethodToken, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
+    for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateAccessToken, AccessTokenRequestData, AccessTokenResponseData>
+    for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateConnectorCustomer, ConnectorCustomerData, ConnectorCustomerResponse>
+    for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
+    for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
+    for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
+    for Paytm<T>
+{
+}
+
+// Additional SourceVerification implementations
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    > for Paytm<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: interfaces::verification::ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new()) // Stub implementation
+    }
+
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<
+        Box<dyn common_utils::crypto::VerifySignature + Send>,
+        errors::ConnectorError,
+    > {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm)) // Stub implementation
+    }
+
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &domain_types::router_data_v2::RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new()) // Stub implementation
+    }
+
+    fn get_message(
+        &self,
+        payload: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned()) // Stub implementation
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PSync,
+        PaymentFlowData,
+        PaymentsSyncData,
+        PaymentsResponseData,
+    > for Paytm<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: interfaces::verification::ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new()) // Stub implementation
+    }
+
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<
+        Box<dyn common_utils::crypto::VerifySignature + Send>,
+        errors::ConnectorError,
+    > {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm)) // Stub implementation
+    }
+
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &domain_types::router_data_v2::RouterDataV2<
+            PSync,
+            PaymentFlowData,
+            PaymentsSyncData,
+            PaymentsResponseData,
+        >,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new()) // Stub implementation
+    }
+
+    fn get_message(
+        &self,
+        payload: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned()) // Stub implementation
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Paytm<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: interfaces::verification::ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new()) // Stub implementation
+    }
+
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<
+        Box<dyn common_utils::crypto::VerifySignature + Send>,
+        errors::ConnectorError,
+    > {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm)) // Stub implementation
+    }
+
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &domain_types::router_data_v2::RouterDataV2<
+            PreAuthenticate,
+            PaymentFlowData,
+            PaymentsPreAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new()) // Stub implementation
+    }
+
+    fn get_message(
+        &self,
+        payload: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned()) // Stub implementation
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Paytm<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: interfaces::verification::ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new()) // Stub implementation
+    }
+
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<
+        Box<dyn common_utils::crypto::VerifySignature + Send>,
+        errors::ConnectorError,
+    > {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm)) // Stub implementation
+    }
+
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &domain_types::router_data_v2::RouterDataV2<
+            Authenticate,
+            PaymentFlowData,
+            PaymentsAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new()) // Stub implementation
+    }
+
+    fn get_message(
+        &self,
+        payload: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned()) // Stub implementation
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Paytm<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: interfaces::verification::ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new()) // Stub implementation
+    }
+
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<
+        Box<dyn common_utils::crypto::VerifySignature + Send>,
+        errors::ConnectorError,
+    > {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm)) // Stub implementation
+    }
+
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &domain_types::router_data_v2::RouterDataV2<
+            PostAuthenticate,
+            PaymentFlowData,
+            PaymentsPostAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new()) // Stub implementation
+    }
+
+    fn get_message(
+        &self,
+        payload: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned()) // Stub implementation
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
         CreateConnectorCustomer,
         ConnectorCustomerData,
         ConnectorCustomerResponse,
-// Authorize flow implementation using macros
-    curl_request: Json(PaytmAuthorizeRequest),
-    curl_response: PaytmProcessTxnResponse,
-    flow_name: Authorize,
-    flow_request: PaymentsAuthorizeData<T>,
-    flow_response: PaymentsResponseData,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-                "{base_url}theia/api/v1/processTransaction?mid={merchant_id}&orderId={order_id}"
-// PSync flow implementation using macros
-    curl_request: Json(PaytmTransactionStatusRequest),
-    curl_response: PaytmTransactionStatusResponse,
-    flow_name: PSync,
-    flow_request: PaymentsSyncData,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            Ok(format!("{base_url}/v3/order/status"))
-// Empty implementations for flows not yet implemented
-    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Paytm<T>
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-// Authentication flow ConnectorIntegrationV2 implementations
-        PreAuthenticate,
-        PaymentsPreAuthenticateData<T>,
-        Authenticate,
-        PaymentsAuthenticateData<T>,
-        PostAuthenticate,
-        PaymentsPostAuthenticateData<T>,
-// Authentication flow SourceVerification implementations
+        PaymentsResponseData,
+    > for Paytm<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: interfaces::verification::ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new()) // Stub implementation
+    }
+
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<
+        Box<dyn common_utils::crypto::VerifySignature + Send>,
+        errors::ConnectorError,
+    > {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm)) // Stub implementation
+    }
+
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &domain_types::router_data_v2::RouterDataV2<
+            CreateConnectorCustomer,
+            ConnectorCustomerData,
+            ConnectorCustomerResponse,
+            PaymentsResponseData,
+        >,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new()) // Stub implementation
+    }
+
+    fn get_message(
+        &self,
+        payload: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned()) // Stub implementation
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Paytm<T>
+{
+    fn get_secrets(
+        &self,
+        _secrets: interfaces::verification::ConnectorSourceVerificationSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new()) // Stub implementation
+    }
+
+    fn get_algorithm(
+        &self,
+    ) -> CustomResult<
+        Box<dyn common_utils::crypto::VerifySignature + Send>,
+        errors::ConnectorError,
+    > {
+        Ok(Box::new(common_utils::crypto::NoAlgorithm)) // Stub implementation
+    }
+
+    fn get_signature(
+        &self,
+        _payload: &[u8],
+        _router_data: &domain_types::router_data_v2::RouterDataV2<
+            VoidPC,
+            PaymentFlowData,
+            PaymentsCancelPostCaptureData,
+            PaymentsResponseData,
+        >,
+        _secrets: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(Vec::new()) // Stub implementation
+    }
+
+    fn get_message(
+        &self,
+        payload: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        Ok(payload.to_owned()) // Stub implementation
+    }
+}
