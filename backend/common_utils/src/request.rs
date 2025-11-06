@@ -115,7 +115,7 @@ impl Request {
         Self {
             method,
             url: String::from(url),
-            headers: std::collections::HashSet::new(),
+            headers: Vec::new(),
             certificate: None,
             certificate_key: None,
             body: None,
@@ -160,7 +160,7 @@ impl RequestBuilder {
         Self {
             method: Method::Get,
             url: String::with_capacity(1024),
-            headers: std::collections::HashSet::new(),
+            headers: Vec::new(),
             certificate: None,
             certificate_key: None,
             body: None,
