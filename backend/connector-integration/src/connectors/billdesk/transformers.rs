@@ -490,7 +490,7 @@ impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, Self>>
             http_code,
         } = item;
         
-        let (_status, response) = match response {
+        let (status, response) = match response {
             BilldeskPaymentsSyncResponse::BilldeskError(error_data) => (
                 common_enums::AttemptStatus::Failure,
                 Err(ErrorResponse {
