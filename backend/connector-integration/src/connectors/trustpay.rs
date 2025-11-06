@@ -154,13 +154,19 @@ macros::create_all_prerequisites!(
     }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-    for Trustpay<T>
+    for Trustpay<T> {
     fn id(&self) -> &'static str {
         "trustpay"
+    }
+    
     fn common_get_content_type(&self) -> &'static str {
         "application/x-www-form-urlencoded"
+    }
+    
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
         connectors.trustpay.base_url.as_ref()
+    }
+    
     fn build_error_response(
         &self,
         res: Response,
@@ -193,12 +199,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     network_decline_code: None,
                     network_error_message: None,
                 })
+            }
             Err(error_msg) => {
                 if let Some(event) = event_builder {
                     event.set_error(serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code}))
                 };
                 tracing::error!(deserialization_error =? error_msg);
                 domain_types::utils::handle_json_response_deserialization_failure(res, "trustpay")
+            }
+        }
+    }
+}
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Trustpay,
