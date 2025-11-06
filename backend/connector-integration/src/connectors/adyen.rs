@@ -267,10 +267,6 @@ macros::macro_connector_implementation!(
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Adyen<T>
 {
-// Additional trait implementations
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::IncomingWebhook for Adyen<T>
-{
     fn get_event_type(
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
