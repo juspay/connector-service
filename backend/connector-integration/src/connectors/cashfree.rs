@@ -402,53 +402,152 @@ impl_source_verification_stub!(
     PaymentFlowData,
     PaymentsAuthorizeData<T>,
     PaymentsResponseData
+);
+
+impl_source_verification_stub!(
     CreateOrder,
+    PaymentFlowData,
     PaymentCreateOrderData,
     PaymentCreateOrderResponse
+);
+
+impl_source_verification_stub!(
     PSync,
+    PaymentFlowData,
     PaymentsSyncData,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
     Capture,
+    PaymentFlowData,
     PaymentsCaptureData,
+    PaymentsResponseData
+);
+
 impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
 impl_source_verification_stub!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
 impl_source_verification_stub!(RSync, RefundFlowData, RefundSyncData, RefundsResponseData);
+
+impl_source_verification_stub!(
     SetupMandate,
+    PaymentFlowData,
     SetupMandateRequestData<T>,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
     RepeatPayment,
+    PaymentFlowData,
     RepeatPaymentData,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
     Accept,
     DisputeFlowData,
     AcceptDisputeData,
     DisputeResponseData
+);
+
+impl_source_verification_stub!(
     SubmitEvidence,
+    DisputeFlowData,
     SubmitEvidenceData,
+    DisputeResponseData
+);
+
+impl_source_verification_stub!(
     DefendDispute,
+    DisputeFlowData,
     DisputeDefendData,
+    DisputeResponseData
+);
+
+impl_source_verification_stub!(
     CreateSessionToken,
     SessionTokenRequestData,
-    SessionTokenResponseData
+    SessionTokenResponseData,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
     CreateAccessToken,
     AccessTokenRequestData,
-    AccessTokenResponseData
+    AccessTokenResponseData,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
     PaymentMethodToken,
     PaymentMethodTokenizationData<T>,
-    PaymentMethodTokenResponse
+    PaymentMethodTokenResponse,
+    PaymentsResponseData
+);
+
 // Authentication flow ConnectorIntegrationV2 implementations
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
+    ConnectorIntegrationV2<
         PreAuthenticate,
+        PaymentFlowData,
         PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
+    ConnectorIntegrationV2<
         Authenticate,
+        PaymentFlowData,
         PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
+    ConnectorIntegrationV2<
         PostAuthenticate,
+        PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Cashfree<T>
+{
+}
+
 // Authentication flow SourceVerification implementations
+impl_source_verification_stub!(
     PreAuthenticate,
+    PaymentFlowData,
     PaymentsPreAuthenticateData<T>,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
     Authenticate,
+    PaymentFlowData,
     PaymentsAuthenticateData<T>,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
     PostAuthenticate,
+    PaymentFlowData,
     PaymentsPostAuthenticateData<T>,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
     CreateConnectorCustomer,
     ConnectorCustomerData,
-    ConnectorCustomerResponse
+    ConnectorCustomerResponse,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
     VoidPC,
+    PaymentFlowData,
     PaymentsCancelPostCaptureData,
+    PaymentsResponseData
+);
