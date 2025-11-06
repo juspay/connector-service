@@ -77,7 +77,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
     
     
-    connector_types::AcceptDispute for Adyen<T>
+    
     connector_types::SubmitEvidenceV2 for Adyen<T>
     connector_types::DisputeDefend for Adyen<T>
     connector_types::RepeatPaymentV2 for Adyen<T>
