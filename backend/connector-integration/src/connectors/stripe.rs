@@ -60,11 +60,11 @@ use stripe::auth_headers;
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Stripe<T>
 {
-    connector_types::PaymentAuthorizeV2<T> for Stripe<T>
-    connector_types::PaymentSessionToken for Stripe<T>
-    connector_types::PaymentAccessToken for Stripe<T>
-    connector_types::CreateConnectorCustomer for Stripe<T>
-    connector_types::PaymentSyncV2 for Stripe<T>
+    type PaymentAuthorizeV2 = Stripe<T>;
+    type PaymentSessionToken = Stripe<T>;
+    type PaymentAccessToken = Stripe<T>;
+    type CreateConnectorCustomer = Stripe<T>;
+    type PaymentSyncV2 = Stripe<T>;
     connector_types::PaymentVoidV2 for Stripe<T>
     connector_types::PaymentVoidPostCaptureV2 for Stripe<T>
     ConnectorIntegrationV2<
