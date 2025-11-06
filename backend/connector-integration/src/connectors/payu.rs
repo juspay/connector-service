@@ -128,6 +128,9 @@ macros::create_all_prerequisites!(
             &req.resource_common_data.connectors.payu.base_url
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.payu.base_url
+        }
         pub fn preprocess_response_bytes<F, FCD, Res>(
             req: &RouterDataV2<F, FCD, PaymentsAuthorizeData<T>, Res>,
             bytes: bytes::Bytes,
