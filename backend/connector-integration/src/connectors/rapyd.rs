@@ -1,7 +1,9 @@
 pub mod transformers;
 
 use base64::Engine;
-use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, FloatMajorUnit};
+use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, FloatMajorUnit,
+    Maskable,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,

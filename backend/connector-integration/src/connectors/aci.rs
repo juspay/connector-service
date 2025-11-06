@@ -1,7 +1,9 @@
 pub mod aci_result_codes;
 pub mod transformers;
 
-use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, StringMajorUnit};
+use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, StringMajorUnit,
+    Maskable,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,

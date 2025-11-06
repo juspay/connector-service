@@ -1,5 +1,7 @@
 use base64::Engine;
-use common_utils::{consts, errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit};
+use common_utils::{consts, errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit,
+    Maskable,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,

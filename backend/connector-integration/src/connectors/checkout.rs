@@ -2,7 +2,9 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
-use common_utils::{consts, errors::CustomResult, ext_traits::ByteSliceExt};
+use common_utils::{consts, errors::CustomResult, ext_traits::ByteSliceExt,
+    Maskable,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,

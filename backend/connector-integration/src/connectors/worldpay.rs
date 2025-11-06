@@ -12,7 +12,9 @@ use self::response::{
     WorldpayRefundSyncResponse, WorldpayRepeatPaymentResponse, WorldpaySyncResponse,
     WorldpayVoidResponse,
 };
-use common_utils::{errors::CustomResult, ext_traits::BytesExt};
+use common_utils::{errors::CustomResult, ext_traits::BytesExt,
+    Maskable,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync,
