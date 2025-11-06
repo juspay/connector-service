@@ -153,8 +153,8 @@ macros::create_all_prerequisites!(
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
             Ok(vec![(
             headers::X_API_KEY.to_string(),
-            auth.api_key.into_masked(),
-        )])
+                auth.api_key.into_masked(),
+            )])
         }
     }
 }
