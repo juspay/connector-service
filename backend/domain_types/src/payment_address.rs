@@ -413,4 +413,4 @@ pub struct OrderDetailsWithAmount {
     pub product_tax_code: Option<String>,
 }
 
-impl hyperswitch_masking::SerializableSecret for OrderDetailsWithAmount {}
+impl common_utils::masking::SerializableSecret for OrderDetailsWithAmount {}
