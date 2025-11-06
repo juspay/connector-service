@@ -42,6 +42,7 @@ use transformers as paytm;
 use self::transformers::{
     PaytmAuthorizeRequest, PaytmInitiateTxnRequest, PaytmInitiateTxnResponse,
     PaytmProcessTxnResponse, PaytmTransactionStatusRequest, PaytmTransactionStatusResponse,
+};
 use crate::{connectors::macros, types::ResponseRouterData};
 // Define connector prerequisites using macros - following the exact pattern from other connectors
 macros::create_all_prerequisites!(
