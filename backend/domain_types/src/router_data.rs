@@ -59,7 +59,7 @@ impl ConnectorAuthType {
     pub fn from_secret_value(
         value: common_utils::pii::SecretSerdeValue,
     ) -> common_utils::errors::CustomResult<Self, common_utils::errors::ParsingError> {
-        value
+        value.clone()
             .parse_value::<Self>("ConnectorAuthType")
             .change_context(common_utils::errors::ParsingError::StructParseFailure(
                 "ConnectorAuthType",
