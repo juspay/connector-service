@@ -97,6 +97,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsCancelPostCaptureData,
         PaymentsResponseData,
     > for Adyen<T>
+{
+}
+
 macros::create_all_prerequisites!(
     connector_name: Adyen,
     generic_type: T,
