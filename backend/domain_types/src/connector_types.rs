@@ -684,7 +684,7 @@ impl PaymentFlowData {
     where
         T: serde::de::DeserializeOwned,
     {
-        self.get_connector_meta()?
+        self.get_connector_meta()?.clone()
             .parse_value(std::any::type_name::<T>())
             .change_context(ConnectorError::NoConnectorMetaData)
     }
