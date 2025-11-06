@@ -117,7 +117,7 @@ where
 }
 
 /// Strategy for masking UPI VPA's
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum UpiVpaMaskingStrategy {}
 
 impl<T> Strategy<T> for UpiVpaMaskingStrategy
@@ -135,7 +135,7 @@ where
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum EncryptionStrategy {}
 
 impl<T> Strategy<T> for EncryptionStrategy
