@@ -146,6 +146,7 @@ macros::create_all_prerequisites!(
     ],
     amount_converters: [
         amount_converter: StringMajorUnit
+    ],
     member_functions: {
         pub fn preprocess_response_bytes<F, FCD, Req, Res>(
             &self,
