@@ -37,10 +37,12 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
     utils::{self, ForeignTryFrom},
+};
 // use crate::masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
+};
 use serde::Serialize;
 use transformers::{
     self as novalnet, NovalnetCancelRequest, NovalnetCancelResponse, NovalnetCaptureRequest,
