@@ -25,16 +25,19 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
+    },
     errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::{Connectors, HasConnectors},
+};
 // use crate::masking::{ExposeInterface, Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
+};
 use serde::Serialize;
 pub mod transformers;
 use base64::Engine;
@@ -53,6 +56,7 @@ use transformers::{
     CybersourcePaymentsResponse as CybersourceRepeatPaymentResponse, CybersourceRefundRequest,
     CybersourceRefundResponse, CybersourceRepeatPaymentRequest, CybersourceRsyncResponse,
     CybersourceTransactionResponse, CybersourceVoidRequest, CybersourceZeroMandateRequest,
+};
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 pub(crate) mod headers {
@@ -64,34 +68,7 @@ pub(crate) mod headers {
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Cybersource<T>
 {
-    connector_types::PaymentAuthorizeV2<T> for Cybersource<T>
-    connector_types::PaymentSyncV2 for Cybersource<T>
-    connector_types::PaymentVoidV2 for Cybersource<T>
-    connector_types::PaymentVoidPostCaptureV2 for Cybersource<T>
-    ConnectorIntegrationV2<
-        VoidPC,
-        PaymentFlowData,
-        PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Cybersource<T>
-    connector_types::RefundSyncV2 for Cybersource<T>
-    connector_types::RefundV2 for Cybersource<T>
-    connector_types::PaymentCapture for Cybersource<T>
-    connector_types::ValidationTrait for Cybersource<T>
-    connector_types::PaymentOrderCreate for Cybersource<T>
-    connector_types::SetupMandateV2<T> for Cybersource<T>
-    connector_types::RepeatPaymentV2 for Cybersource<T>
-    connector_types::AcceptDispute for Cybersource<T>
-    connector_types::SubmitEvidenceV2 for Cybersource<T>
-    connector_types::DisputeDefend for Cybersource<T>
-    connector_types::IncomingWebhook for Cybersource<T>
-    connector_types::PaymentSessionToken for Cybersource<T>
-    connector_types::PaymentAccessToken for Cybersource<T>
-    connector_types::PaymentTokenV2<T> for Cybersource<T>
-    connector_types::PaymentPreAuthenticateV2<T> for Cybersource<T>
-    connector_types::PaymentAuthenticateV2<T> for Cybersource<T>
-    connector_types::PaymentPostAuthenticateV2<T> for Cybersource<T>
-    connector_types::CreateConnectorCustomer for Cybersource<T>
+}
 macros::create_all_prerequisites!(
     connector_name: Cybersource,
     generic_type: T,
@@ -145,6 +122,7 @@ macros::create_all_prerequisites!(
     ],
     amount_converters: [
         amount_converter: StringMajorUnit
+    ],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
@@ -204,15 +182,25 @@ macros::create_all_prerequisites!(
             ));
         }
         Ok(headers)
+        }
+        
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
             &req.resource_common_data.connectors.cybersource.base_url
+        }
+        
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.cybersource.base_url
+        }
+        
         pub fn generate_digest(&self, payload: &[u8]) -> String {
             let payload_digest = digest::digest(&digest::SHA256, payload);
             BASE64_ENGINE.encode(payload_digest)
+        }
+        
         pub fn generate_signature(
             auth: cybersource::CybersourceAuthType,
             host: String,
@@ -256,17 +244,26 @@ macros::create_all_prerequisites!(
         let signature_header = format!(
             r#"keyid="{}", algorithm="HmacSHA256", headers="{headers}", signature="{signature_value}""#,
             api_key.peek()
+        );
         Ok(signature_header)
+        }
     }
 );
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Cybersource<T>
+{
     fn id(&self) -> &'static str {
         "cybersource"
+    }
+    
     fn common_get_content_type(&self) -> &'static str {
         "application/json;charset=utf-8"
+    }
+    
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
         connectors.cybersource.base_url.as_ref()
+    }
+    
     fn build_error_response(
         &self,
         res: Response,
@@ -278,7 +275,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         > = res.response.parse_struct("Cybersource ErrorResponse");
         let error_message = if res.status_code == 401 {
             headers::CONNECTOR_UNAUTHORIZED_ERROR.to_string()
+        } else {
             NO_ERROR_MESSAGE.to_string()
+        };
         match response {
             Ok(transformers::CybersourceErrorResponse::StandardError(response)) => {
                 with_error_response_body!(event_builder, response);
@@ -302,13 +301,36 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     }
                     None => {
                         let detailed_error_info = response.details.map(|details| {
+                            details
+                                .iter()
+                                .map(|det| format!("{} : {}", det.field, det.reason))
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        });
+                        (
                             response
                                 .reason
                                 .clone()
                                 .map_or(NO_ERROR_CODE.to_string(), |reason| reason.to_string()),
+                            response
+                                .message
+                                .clone()
                                 .map_or(error_message.to_string(), |reason| reason.to_string()),
-                                response.message,
+                            None,
+                        )
+                    }
                 };
+                Ok(ErrorResponse {
+                    status_code: res.status_code,
+                    code,
+                    message,
+                    reason,
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    network_error_message: None,
+                })
                 Ok(ErrorResponse {
                     status_code: res.status_code,
                     code,
@@ -322,9 +344,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 })
             }
             Ok(transformers::CybersourceErrorResponse::AuthenticationError(response)) => {
+                Ok(ErrorResponse {
+                    status_code: res.status_code,
                     code: NO_ERROR_CODE.to_string(),
                     message: response.response.rmsg.clone(),
                     reason: Some(response.response.rmsg),
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    network_error_message: None,
+                })
+            }
             Ok(transformers::CybersourceErrorResponse::NotAvailableError(response)) => {
                 let error_response = response
                     .errors
@@ -334,19 +365,34 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                             "{}: {}",
                             error_info.error_type.clone().unwrap_or("".to_string()),
                             error_info.message.clone().unwrap_or("".to_string())
+                        )
                     })
                     .collect::<Vec<String>>()
                     .join(" & ");
+                Ok(ErrorResponse {
+                    status_code: res.status_code,
+                    code: NO_ERROR_CODE.to_string(),
                     message: error_response.clone(),
                     reason: Some(error_response),
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    network_error_message: None,
+                })
             Err(error_msg) => {
                 if let Some(event) = event_builder {
                     event.set_error(serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code}))
+                }
                 tracing::error!(deserialization_error =? error_msg);
                 domain_types::utils::handle_json_response_deserialization_failure(
                     res,
                     "cybersource",
                 )
+            }
+        }
+    }
+}
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Cybersource,
