@@ -1,7 +1,10 @@
 use std::collections::HashSet;
 
 use bytes::Bytes;
-// use crate::masking::{Maskable, Secret};
+#[cfg(feature = "masking")]
+use crate::masking::{Maskable, Secret};
+#[cfg(not(feature = "masking"))]
+use crate::masking::{Maskable, Secret};
 
 /// Configuration for header masking in gRPC metadata.
 #[derive(Debug, Clone)]
