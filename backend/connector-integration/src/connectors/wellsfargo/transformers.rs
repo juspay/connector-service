@@ -106,9 +106,17 @@ pub struct ClientReferenceInformation {
 pub struct WellsfargoPaymentsResponse {
     pub id: String,
     pub status: Option<WellsfargoPaymentStatus>,
+    pub status_information: Option<StatusInformation>, // For PSync/GET responses
     pub client_reference_information: Option<ClientReferenceInformation>,
     pub processor_information: Option<ClientProcessorInformation>,
     pub error_information: Option<WellsfargoErrorInformation>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StatusInformation {
+    pub reason: Option<String>,
+    pub message: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -362,6 +370,88 @@ impl<T: PaymentMethodDataTypes>
 
         // Check if the payment was successful
         let response_data = if is_payment_successful(&response.status) {
+            Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: response.processor_information
+                    .as_ref()
+                    .and_then(|info| info.network_transaction_id.clone()),
+                connector_response_reference_id: response.client_reference_information
+                    .as_ref()
+                    .and_then(|info| info.code.clone()),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            })
+        } else {
+            // Build error response
+            let error_message = response.error_information
+                .as_ref()
+                .and_then(|info| info.message.clone())
+                .or_else(|| response.error_information
+                    .as_ref()
+                    .and_then(|info| info.reason.clone()))
+                .unwrap_or_else(|| "Payment failed".to_string());
+
+            let error_code = response.error_information
+                .as_ref()
+                .and_then(|info| info.reason.clone());
+
+            Err(ErrorResponse {
+                code: error_code.unwrap_or_else(|| "DECLINED".to_string()),
+                message: error_message.clone(),
+                reason: Some(error_message),
+                status_code: item.http_code,
+                attempt_status: Some(status),
+                connector_transaction_id: Some(response.id.clone()),
+                network_decline_code: response.processor_information
+                    .as_ref()
+                    .and_then(|info| info.response_code.clone()),
+                network_advice_code: None,
+                network_error_message: None,
+            })
+        };
+
+        Ok(Self {
+            response: response_data,
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// PSync Response Conversion - Handles GET response format which is different from Authorize
+impl
+    TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>>>
+    for RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+
+        // For PSync, check both status (Authorize response) and status_information (GET response)
+        let is_success = is_payment_successful(&response.status) ||
+            response.status_information.as_ref()
+                .and_then(|info| info.reason.as_ref())
+                .map(|reason| reason.eq_ignore_ascii_case("Success"))
+                .unwrap_or(false);
+
+        let status = if is_success && response.status.is_none() {
+            // PSync GET response with statusInformation: Success → treat as Charged
+            AttemptStatus::Charged
+        } else {
+            get_payment_status(&response.status, &response.error_information)
+        };
+
+        // Check if the payment was successful
+        let response_data = if is_success {
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
                 redirection_data: None,
