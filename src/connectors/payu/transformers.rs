@@ -287,7 +287,7 @@ where
             .clone();
 
         // Use amount converter properly - CRITICAL: Use get_amount_as_string()
-        let amount = item.amount.get_amount_as_string();
+        let amount = item.request.amount.get_amount_as_string();
         let currency = item.request.currency;
 
         // Extract customer information - CRITICAL: Use proper getter functions
