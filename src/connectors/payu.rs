@@ -50,8 +50,8 @@ use transformers::{self as payu, PayuPaymentsRequest, PayuPaymentsResponse};
 
 use crate::types::ResponseRouterData;
 
-// Import the macros from the parent module
-use super::macros;
+// Import the macros from the connector integration
+use connector_integration::connectors::macros;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
