@@ -21,7 +21,7 @@ use grpc_api_types::{
         PaymentStatus, WalletPaymentMethodType,
     },
 };
-use hyperswitch_masking::Secret;
+# use hyperswitch_masking::Secret;
 use rand::{distributions::Alphanumeric, Rng};
 use tonic::{transport::Channel, Request};
 

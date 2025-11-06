@@ -7,7 +7,7 @@ use common_utils::{
     Email, MinorUnit,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+# use hyperswitch_masking::Secret;
 use serde::Serialize;
 
 use crate::utils::ForeignFrom;
@@ -199,7 +199,7 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
 
 impl utils::ForeignFrom<AuthenticationData> for payments::AuthenticationData {
     fn foreign_from(value: AuthenticationData) -> Self {
-        use hyperswitch_masking::ExposeInterface;
+        # use hyperswitch_masking::ExposeInterface;
         Self {
             ucaf_collection_indicator: value.ucaf_collection_indicator,
             eci: value.eci,

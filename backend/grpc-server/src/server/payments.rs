@@ -52,7 +52,7 @@ use grpc_api_types::payments::{
     PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse,
     WebhookTransformationStatus,
 };
-use hyperswitch_masking::ExposeInterface;
+# use hyperswitch_masking::ExposeInterface;
 use injector::{TokenData, VaultConnectors};
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;

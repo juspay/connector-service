@@ -13,7 +13,7 @@ use domain_types::{
 };
 use error_stack;
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+# use hyperswitch_masking::Secret;
 use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Debug;

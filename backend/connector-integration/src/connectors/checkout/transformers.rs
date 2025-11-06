@@ -17,7 +17,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::report;
-use hyperswitch_masking::Secret;
+# use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;

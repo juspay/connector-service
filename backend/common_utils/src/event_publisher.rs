@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use hyperswitch_masking::ErasedMaskSerialize;
+# use hyperswitch_masking::ErasedMaskSerialize;
 use once_cell::sync::OnceCell;
 use rdkafka::message::{Header, OwnedHeaders};
 use serde_json;

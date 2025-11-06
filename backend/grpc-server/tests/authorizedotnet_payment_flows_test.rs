@@ -5,7 +5,7 @@
 #![allow(dead_code)]
 
 use grpc_server::{app, configs};
-use hyperswitch_masking::Secret;
+# use hyperswitch_masking::Secret;
 mod common;
 
 use std::{

@@ -17,7 +17,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+# use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
@@ -1485,7 +1485,7 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         use domain_types::payment_method_data::{PaymentMethodData, UpiData};
-        use hyperswitch_masking::PeekInterface;
+        # use hyperswitch_masking::PeekInterface;
 
         // Determine flow type and extract VPA based on UPI payment method
         let (flow_type, vpa) = match &item.router_data.request.payment_method_data {

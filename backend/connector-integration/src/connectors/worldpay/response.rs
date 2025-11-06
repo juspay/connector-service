@@ -1,6 +1,6 @@
 use domain_types::errors;
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+# use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 use url::Url;
 

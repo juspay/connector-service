@@ -7,7 +7,7 @@ use common_utils::{
     ValidationError,
 };
 use error_stack::{self, ResultExt};
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+# use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use time::Date;
 use utoipa::ToSchema;

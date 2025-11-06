@@ -25,7 +25,7 @@ use grpc_api_types::{
         PaymentStatus, RefundServiceGetRequest, RefundStatus,
     },
 };
-use hyperswitch_masking::Secret;
+# use hyperswitch_masking::Secret;
 use tonic::{transport::Channel, Request};
 
 // Constants for Fiserv connector

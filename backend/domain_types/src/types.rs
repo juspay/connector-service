@@ -19,7 +19,7 @@ use grpc_api_types::payments::{
     PaymentServiceVoidPostCaptureResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
     RefundResponse,
 };
-use hyperswitch_masking::{ExposeInterface, Secret};
+# use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::Serialize;
 use tracing::info;
 use utoipa::ToSchema;
@@ -1958,7 +1958,7 @@ impl ForeignTryFrom<router_request_types::AuthenticationData>
     fn foreign_try_from(
         value: router_request_types::AuthenticationData,
     ) -> error_stack::Result<Self, Self::Error> {
-        use hyperswitch_masking::ExposeInterface;
+        # use hyperswitch_masking::ExposeInterface;
         let trans_status = value
             .trans_status
             .map(|ts| grpc_api_types::payments::TransactionStatus::foreign_from(ts).into());

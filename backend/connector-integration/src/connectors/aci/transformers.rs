@@ -16,7 +16,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::{self, report, ResultExt};
-use hyperswitch_masking::{ExposeInterface, Secret};
+# use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::str::FromStr;

@@ -5,7 +5,7 @@ use common_utils::{
     date_time, ValidationError,
 };
 use error_stack::report;
-use hyperswitch_masking::{PeekInterface, Strategy, StrongSecret, WithType};
+# use hyperswitch_masking::{PeekInterface, Strategy, StrongSecret, WithType};
 use regex::Regex;
 use serde::{
     de::{self},
@@ -338,7 +338,7 @@ impl prost::Message for CardNumber {
 mod tests {
     #![allow(clippy::unwrap_used)]
 
-    use hyperswitch_masking::Secret;
+    # use hyperswitch_masking::Secret;
 
     use super::*;
 

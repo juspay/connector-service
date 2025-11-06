@@ -20,7 +20,7 @@ use domain_types::{
 };
 use error_stack::{Report, ResultExt};
 use http::request::Request;
-use hyperswitch_masking;
+# use hyperswitch_masking;
 use tonic::metadata;
 
 use crate::{configs, error::ResultExtGrpc, request::RequestData};

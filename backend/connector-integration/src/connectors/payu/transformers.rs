@@ -13,7 +13,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::{report, ResultExt};
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+# use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
