@@ -32,6 +32,7 @@ use domain_types::{
         RefundsData, RefundsResponseData, RequestDetails, ResponseId, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
         SupportedPaymentMethodsExt, WebhookDetailsResponse,
+    },
     errors,
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorAuthType, ErrorResponse},
