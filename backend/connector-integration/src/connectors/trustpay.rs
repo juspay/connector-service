@@ -86,6 +86,7 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: PSync,
+            request_body: TrustpaySyncRequest,
             response_body: TrustpayPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
