@@ -113,22 +113,31 @@ macros::create_all_prerequisites!(
             response_body: FiuuPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
+            (
             flow: PSync,
             request_body: FiuuPaymentSyncRequest,
             response_body: FiuuPaymentResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
             flow: Capture,
             request_body: PaymentCaptureRequest,
             response_body: PaymentCaptureResponse,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ),
+        (
             flow: Void,
             request_body: FiuuPaymentCancelRequest,
             response_body: FiuuPaymentCancelResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
             flow: Refund,
             request_body: FiuuRefundRequest,
             response_body: FiuuRefundResponse,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
             flow: RSync,
             request_body: FiuuRefundSyncRequest,
             response_body: FiuuRefundSyncResponse,
