@@ -199,7 +199,7 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
 
 impl utils::ForeignFrom<AuthenticationData> for payments::AuthenticationData {
     fn foreign_from(value: AuthenticationData) -> Self {
-        # use hyperswitch_masking::ExposeInterface;
+        use common_utils::ExposeInterface;
         Self {
             ucaf_collection_indicator: value.ucaf_collection_indicator,
             eci: value.eci,

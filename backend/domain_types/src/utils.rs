@@ -7,7 +7,7 @@ use base64::Engine;
 use common_enums::{CurrencyUnit, PaymentMethodType};
 use common_utils::{consts, metadata::MaskedMetadata, AmountConvertor, CustomResult, MinorUnit};
 use error_stack::{report, Result, ResultExt};
-# use hyperswitch_masking::ExposeInterface;
+use common_utils::ExposeInterface;
 use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
