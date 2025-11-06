@@ -111,6 +111,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PSync,
+            request_body: PaymentSyncRequest,
             response_body: PaymentSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
