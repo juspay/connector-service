@@ -52,273 +52,8 @@ use transformers::{
 };
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
-use error_stack::ResultExt;
-pub(crate) mod headers {
-    pub(crate) const CONTENT_TYPE: &str = "Content-Type";
-    pub(crate) const AUTHORIZATION: &str = "Authorization";
-}
-pub const BRAINTREE_VERSION: &str = "Braintree-Version";
-pub const BRAINTREE_VERSION_VALUE: &str = "2019-01-01";
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-    for Braintree<T>
-{
-    fn id(&self) -> &'static str {
-        "braintree"
-    }
-    fn get_currency_unit(&self) -> CurrencyUnit {
-        CurrencyUnit::Base
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.braintree.base_url.as_ref()
-    fn get_auth_header(
-        &self,
-        auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, common_utils::Maskable<String>)>, errors::ConnectorError>
-    {
-        let auth = braintree::BraintreeAuthType::try_from(auth_type)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-        let auth_key = format!("{}:{}", auth.public_key.peek(), auth.private_key.peek());
-        let auth_header = format!("Basic {}", BASE64_ENGINE.encode(auth_key));
-        Ok(vec![(
-            headers::AUTHORIZATION.to_string(),
-            auth_header.into_masked(),
-        )])
-    fn build_error_response(
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: Result<braintree::ErrorResponses, Report<ParsingError>> =
-            res.response.parse_struct("Braintree Error Response");
-        match response {
-            Ok(braintree::ErrorResponses::BraintreeApiErrorResponse(response)) => {
-                with_error_response_body!(event_builder, response);
-                let error_object = response.api_error_response.errors;
-                let error = error_object.errors.first().or(error_object
-                    .transaction
-                    .as_ref()
-                    .and_then(|transaction_error| {
-                        transaction_error.errors.first().or(transaction_error
-                            .credit_card
-                            .as_ref()
-                            .and_then(|credit_card_error| credit_card_error.errors.first()))
-                    }));
-                let (code, message) = error.map_or(
-                    (NO_ERROR_CODE.to_string(), NO_ERROR_MESSAGE.to_string()),
-                    |error| (error.code.clone(), error.message.clone()),
-                );
-                Ok(ErrorResponse {
-                    status_code: res.status_code,
-                    code,
-                    message,
-                    reason: Some(response.api_error_response.message),
-                    attempt_status: None,
-                    connector_transaction_id: None,
-                    network_advice_code: None,
-                    network_decline_code: None,
-                    network_error_message: None,
-                })
-            }
-            Ok(braintree::ErrorResponses::BraintreeErrorResponse(response)) => {
-                    code: NO_ERROR_CODE.to_string(),
-                    message: NO_ERROR_MESSAGE.to_string(),
-                    reason: Some(response.errors),
-            Err(_) => {
-                if let Some(event) = event_builder {
-                    event.set_error(serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code}));
-                }
-                domain_types::utils::handle_json_response_deserialization_failure(res, "braintree")
-        }
-//marker traits
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ConnectorServiceTrait<T> for Braintree<T>
-    connector_types::PaymentAuthorizeV2<T> for Braintree<T>
-    connector_types::PaymentSyncV2 for Braintree<T>
-    connector_types::PaymentSessionToken for Braintree<T>
-    connector_types::PaymentAccessToken for Braintree<T>
-    connector_types::CreateConnectorCustomer for Braintree<T>
-    connector_types::PaymentVoidV2 for Braintree<T>
-    connector_types::PaymentVoidPostCaptureV2 for Braintree<T>
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::VoidPC,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Braintree<T>
-    connector_types::RefundSyncV2 for Braintree<T>
-    connector_types::RefundV2 for Braintree<T>
-    connector_types::PaymentCapture for Braintree<T>
-    connector_types::ValidationTrait for Braintree<T>
-    fn should_do_payment_method_token(&self) -> bool {
-        true
-    connector_types::PaymentOrderCreate for Braintree<T>
-    connector_types::SetupMandateV2<T> for Braintree<T>
-    connector_types::RepeatPaymentV2 for Braintree<T>
-    connector_types::AcceptDispute for Braintree<T>
-    connector_types::SubmitEvidenceV2 for Braintree<T>
-    connector_types::DisputeDefend for Braintree<T>
-    connector_types::IncomingWebhook for Braintree<T>
-    connector_types::PaymentTokenV2<T> for Braintree<T>
-    connector_types::PaymentPreAuthenticateV2<T> for Braintree<T>
-    connector_types::PaymentAuthenticateV2<T> for Braintree<T>
-    connector_types::PaymentPostAuthenticateV2<T> for Braintree<T>
-macros::create_all_prerequisites!(
-    connector_name: Braintree,
-    generic_type: T,
-    api: [
-        (
-            flow: PaymentMethodToken,
-            request_body: BraintreeTokenRequest<T>,
-            response_body: BraintreeTokenResponse,
-            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
-        ),
-            flow: Authorize,
-            request_body: BraintreePaymentsRequest,
-            response_body: BraintreePaymentsResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            flow: PSync,
-            request_body: BraintreePSyncRequest,
-            response_body: BraintreePSyncResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            flow: Capture,
-            request_body: BraintreeCaptureRequest,
-            response_body: BraintreeCaptureResponse,
-            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            flow: Void,
-            request_body: BraintreeCancelRequest,
-            response_body: BraintreeCancelResponse,
-            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            flow: Refund,
-            request_body: BraintreeRefundRequest,
-            response_body: BraintreeRefundResponse,
-            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            flow: RSync,
-            request_body: BraintreeRSyncRequest,
-            response_body: BraintreeRSyncResponse,
-            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        )
-    ],
-    amount_converters: [
-        amount_converter: StringMajorUnit
-        ],
-    member_functions: {
-        pub fn build_headers<F, FCD, Req, Res>(
-            &self,
-            req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
-        where
-            Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
-        {
-        let mut header = vec![
-            (
-                headers::CONTENT_TYPE.to_string(),
-                self.get_content_type().to_string().into(),
-            ),
-                BRAINTREE_VERSION.to_string(),
-                BRAINTREE_VERSION_VALUE.to_string().into(),
-        ];
-        let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut api_key);
-        Ok(header)
-        pub fn connector_base_url_payments<'a, F, Req, Res>(
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.braintree.base_url
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
-);
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Braintree,
-    curl_request: Json(BraintreePaymentsRequest),
-    curl_response: BraintreePaymentsResponse,
-    flow_name: Authorize,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsAuthorizeData<T>,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
-        fn get_url(
-        ) -> CustomResult<String, errors::ConnectorError> {
-        Ok(self.connector_base_url_payments(req).to_string())
-    curl_request: Json(BraintreePSyncRequest),
-    curl_response: BraintreePSyncResponse,
-    flow_name: PSync,
-    flow_request: PaymentsSyncData,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    curl_request: Json(BraintreeCaptureRequest),
-    curl_response: BraintreeCaptureResponse,
-    flow_name: Capture,
-    flow_request: PaymentsCaptureData,
-            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-         Ok(self.connector_base_url_payments(req).to_string())
-    curl_request: Json(BraintreeCancelRequest),
-    curl_response: BraintreeCancelResponse,
-    flow_name: Void,
-    flow_request: PaymentVoidData,
-            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-             Ok(self.connector_base_url_payments(req).to_string())
-    curl_request: Json(BraintreeTokenRequest),
-    curl_response: BraintreeTokenResponse,
-    flow_name: PaymentMethodToken,
-    flow_request: PaymentMethodTokenizationData<T>,
-    flow_response: PaymentMethodTokenResponse,
-            req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
-    curl_request: Json(BraintreeRefundRequest),
-    curl_response: BraintreeRefundResponse,
-    flow_name: Refund,
-    resource_common_data: RefundFlowData,
-    flow_request: RefundsData,
-    flow_response: RefundsResponseData,
-            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-          Ok(self.connector_base_url_refunds(req).to_string())
-    curl_request: Json(BraintreeRSyncRequest),
-    curl_response: BraintreeRSyncResponse,
-    flow_name: RSync,
-    flow_request: RefundSyncData,
-            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-             Ok(self.connector_base_url_refunds(req).to_string())
-        CreateOrder,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-        CreateSessionToken,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-        CreateAccessToken,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-        CreateConnectorCustomer,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-        SetupMandate,
-        SetupMandateRequestData<T>,
-// SourceVerification implementations for all flows
-    interfaces::verification::SourceVerification<
-        Authorize,
-        PaymentsAuthorizeData<T>,
-        PSync,
-        PaymentsSyncData,
-        Capture,
-        PaymentsCaptureData,
-        Void,
-        PaymentVoidData,
-        Refund,
-        RefundFlowData,
-        RefundsData,
-        RefundsResponseData,
-        RSync,
-        RefundSyncData,
-        Accept,
-        DisputeFlowData,
-        AcceptDisputeData,
-        DisputeResponseData,
+
+// Trait implementations with generic type parameters
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -326,22 +61,486 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    >
-        PaymentMethodToken,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-        SubmitEvidence,
-        SubmitEvidenceData,
-        DefendDispute,
-        DisputeDefendData,
-        RepeatPayment,
-        RepeatPaymentData,
+    > connector_types::PaymentPreAuthenticateV2<T> for Braintree<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentAuthenticateV2<T> for Braintree<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentPostAuthenticateV2<T> for Braintree<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::ConnectorServiceTrait<T> for Braintree<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentAuthorizeV2<T> for Braintree<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentSessionToken for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAccessToken for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::CreateConnectorCustomer for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentOrderCreate for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSyncV2 for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidV2 for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundSyncV2 for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundV2 for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentCapture for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SetupMandateV2<T> for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RepeatPaymentV2<T> for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidPostCaptureV2<T> for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::AcceptDispute for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SubmitEvidenceV2 for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::DisputeDefend for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::IncomingWebhook for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentTokenV2<T> for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ValidationTrait for Braintree<T>
+{
+    fn should_do_order_create(&self) -> bool {
+        false // Braintree doesn't require separate order creation
+    }
+
+    fn should_do_payment_method_token(&self) -> bool {
+        true // Braintree supports payment method tokenization
+    }
+}
+
+// ConnectorCommon implementation
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon for Braintree<T> {
+    fn id(&self) -> &'static str {
+        "braintree"
+    }
+
+    fn get_currency_unit(&self) -> CurrencyUnit {
+        CurrencyUnit::Minor // For minor units
+    }
+
+    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
+        &connectors.braintree.base_url
+    }
+
+    fn get_auth_header(
+        &self,
+        auth_type: &ConnectorAuthType,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let auth = braintree::BraintreeAuthType::try_from(auth_type)?;
+        Ok(vec![
+            ("Content-Type".to_string(), "application/json".to_string().into()),
+            ("Accept".to_string(), "application/json".to_string().into()),
+            ("Authorization".to_string(), auth.auth_header.into_masked()),
+        ])
+    }
+
+    fn build_error_response(
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        let response: braintree::BraintreeErrorResponse = res
+            .response
+            .parse_struct("BraintreeErrorResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        
+        with_error_response_body!(event_builder, response);
+
+        Ok(ErrorResponse {
+            status_code: res.status_code,
+            code: response.error_code.clone(),
+            message: response.error_message.clone(),
+            reason: Some(response.error_message),
+            attempt_status: None,
+            connector_transaction_id: None,
+            network_decline_code: None,
+            network_advice_code: None,
+            network_error_message: None,
+        })
+    }
+}
+
+// ConnectorIntegrationV2 implementations
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Braintree<T>
+{
+}
+
+// Additional ConnectorIntegrationV2 implementations for unsupported flows
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateSessionToken, SessionTokenRequestData, SessionTokenResponseData>
+    for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateAccessToken, AccessTokenRequestData, AccessTokenResponseData>
+    for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateConnectorCustomer, ConnectorCustomerData, ConnectorCustomerResponse>
+    for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+    for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-// ConnectorIntegrationV2 implementations for authentication flows
-        PreAuthenticate,
-        PaymentsPreAuthenticateData<T>,
-        Authenticate,
-        PaymentsAuthenticateData<T>,
-        PostAuthenticate,
-        PaymentsPostAuthenticateData<T>,
+    for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PaymentMethodToken, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
+    for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
+    for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
+    for Braintree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
+    for Braintree<T>
+{
+}
+
 // SourceVerification implementations for authentication flows
+macro_rules! impl_source_verification_stub {
+    ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
+        impl<
+                T: PaymentMethodDataTypes
+                    + std::fmt::Debug
+                    + std::marker::Sync
+                    + std::marker::Send
+                    + 'static
+                    + Serialize,
+            > interfaces::verification::SourceVerification<$flow, $common_data, $req, $resp> for Braintree<T>
+        {
+            fn get_secrets(
+                &self,
+                _secrets: interfaces::verification::ConnectorSourceVerificationSecrets,
+            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+                Ok(Vec::new()) // Stub implementation
+            }
+
+            fn get_algorithm(
+                &self,
+            ) -> CustomResult<Box<dyn common_utils::crypto::VerifySignature + Send>, errors::ConnectorError> {
+                Ok(Box::new(common_utils::crypto::NoAlgorithm)) // Stub implementation
+            }
+
+            fn get_signature(
+                &self,
+                _payload: &[u8],
+                _router_data: &domain_types::router_data_v2::RouterDataV2<
+                    $flow,
+                    $common_data,
+                    $req,
+                    $resp,
+                >,
+                _secrets: &[u8],
+            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+                Ok(Vec::new()) // Stub implementation
+            }
+
+            fn get_message(
+                &self,
+                payload: &[u8],
+            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+                Ok(payload.to_owned()) // Stub implementation
+            }
+        }
+    };
+}
+
+// Apply to all flows
+impl_source_verification_stub!(
+    Authorize,
+    PaymentFlowData,
+    PaymentsAuthorizeData<T>,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    PSync,
+    PaymentFlowData,
+    PaymentsSyncData,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    Capture,
+    PaymentFlowData,
+    PaymentsCaptureData,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
+impl_source_verification_stub!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
+impl_source_verification_stub!(RSync, RefundFlowData, RefundSyncData, RefundsResponseData);
+
+impl_source_verification_stub!(
+    SetupMandate,
+    PaymentFlowData,
+    SetupMandateRequestData<T>,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    RepeatPayment,
+    PaymentFlowData,
+    RepeatPaymentData,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    Accept,
+    DisputeFlowData,
+    AcceptDisputeData,
+    DisputeResponseData
+);
+
+impl_source_verification_stub!(
+    SubmitEvidence,
+    DisputeFlowData,
+    SubmitEvidenceData,
+    DisputeResponseData
+);
+
+impl_source_verification_stub!(
+    DefendDispute,
+    DisputeFlowData,
+    DisputeDefendData,
+    DisputeResponseData
+);
+
+impl_source_verification_stub!(
+    CreateSessionToken,
+    SessionTokenRequestData,
+    SessionTokenResponseData,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    CreateAccessToken,
+    AccessTokenRequestData,
+    AccessTokenResponseData,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    CreateConnectorCustomer,
+    ConnectorCustomerData,
+    ConnectorCustomerResponse,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    PaymentMethodToken,
+    PaymentMethodTokenizationData<T>,
+    PaymentMethodTokenResponse,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    PreAuthenticate,
+    PaymentFlowData,
+    PaymentsPreAuthenticateData<T>,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    Authenticate,
+    PaymentFlowData,
+    PaymentsAuthenticateData<T>,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    PostAuthenticate,
+    PaymentFlowData,
+    PaymentsPostAuthenticateData<T>,
+    PaymentsResponseData
+);
+
+impl_source_verification_stub!(
+    VoidPC,
+    PaymentFlowData,
+    PaymentsCancelPostCaptureData,
+    PaymentsResponseData
+);
