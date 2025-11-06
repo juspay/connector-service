@@ -46,6 +46,7 @@ use transformers::{
     RapydPaymentsResponse, RapydPaymentsResponse as RapydVoidResponse,
     RapydPaymentsResponse as RapydAuthorizeResponse, RapydRefundRequest, RefundResponse,
     RefundResponse as RapydRSyncResponse,
+};
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 pub(crate) mod headers {
