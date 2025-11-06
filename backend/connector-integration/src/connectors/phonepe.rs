@@ -286,6 +286,8 @@ macros::macro_connector_implementation!(
             let base_url = self.connector_base_url(req);
             Ok(format!("{}{}", base_url, constants::API_PAY_ENDPOINT))
         }
+    }
+);
 // PSync flow implementation using macros
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
