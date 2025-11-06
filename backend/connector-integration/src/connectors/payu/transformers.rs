@@ -1,5 +1,5 @@
 use common_enums::{self, AttemptStatus, Currency};
-use common_utils::{pii::IpAddress, Email};
+use common_utils::Email;
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{
