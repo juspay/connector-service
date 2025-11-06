@@ -158,7 +158,6 @@ macros::create_all_prerequisites!(
         }
     }
 );
-}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Trustpay<T> {
     fn id(&self) -> &'static str {
