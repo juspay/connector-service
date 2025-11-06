@@ -40,6 +40,7 @@ use interfaces::{
     connector_types,
     events::connector_api_logs::ConnectorEvent,
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
+};
 use serde::Serialize;
 use transformers::{self as cashtocode, CashtocodePaymentsRequest, CashtocodePaymentsResponse};
 use super::macros;
