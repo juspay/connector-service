@@ -28,6 +28,7 @@ use domain_types::{
         RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData, WebhookDetailsResponse,
+    },
     payment_method_data::PaymentMethodDataTypes,
     types::Connectors,
 use common_utils::{
