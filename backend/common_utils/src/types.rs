@@ -10,7 +10,7 @@ use std::{
 use common_enums::enums;
 use error_stack::ResultExt;
 #[cfg(feature = "masking")]
-use crate::masking::Deserialize;
+use serde::Deserialize;
 #[cfg(not(feature = "masking"))]
 use serde::Deserialize;
 use rust_decimal::{
