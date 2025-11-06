@@ -50,6 +50,9 @@ use transformers::{self as payu, PayuPaymentsRequest, PayuPaymentsResponse};
 
 use crate::types::ResponseRouterData;
 
+// Import the macros from the parent module
+use super::macros;
+
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
