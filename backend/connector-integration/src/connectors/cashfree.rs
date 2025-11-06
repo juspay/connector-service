@@ -104,6 +104,7 @@ macros::create_all_prerequisites!(
             response_body: CashfreeOrderCreateResponse,
             router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
         ),
+            (
             flow: Authorize,
             request_body: CashfreePaymentRequest,
             response_body: CashfreePaymentResponse,
