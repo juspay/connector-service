@@ -146,7 +146,7 @@ impl FromStr for CardNumber {
         let is_card_valid = sanitize_card_number(&card_number)?;
 
         if valid_test_cards.contains(&card_number.as_str()) || is_card_valid {
-            Ok(Self(StrongSecret::new(card_number)))
+            Ok(Self(StrongSecret::<String, CardNumberStrategy>::from(card_number)))
         } else {
             Err(CardNumberValidationErr("card number invalid"))
         }
@@ -170,7 +170,7 @@ impl FromStr for NetworkToken {
         let is_network_token_valid = sanitize_card_number(&network_token)?;
 
         if valid_test_network_tokens.contains(&network_token.as_str()) || is_network_token_valid {
-            Ok(Self(StrongSecret::new(network_token)))
+            Ok(Self(StrongSecret::<String, CardNumberStrategy>::from(network_token)))
         } else {
             Err(CardNumberValidationErr("network token invalid"))
         }
@@ -318,7 +318,7 @@ impl prost::Message for CardNumber {
         if tag == 1 {
             let mut temp_string = String::new();
             prost::encoding::string::merge(wire_type, &mut temp_string, buf, ctx)?;
-            *self = CardNumber(StrongSecret::new(temp_string));
+            *self = CardNumber(StrongSecret::<String, CardNumberStrategy>::from(temp_string));
             Ok(())
         } else {
             prost::encoding::skip_field(wire_type, tag, buf, ctx)
