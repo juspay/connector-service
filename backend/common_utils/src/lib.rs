@@ -13,6 +13,39 @@ pub mod masking {
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
     pub struct Secret<T, S = ()>(pub T, std::marker::PhantomData<S>);
     
+    impl<T> prost::Message for Secret<T>
+    where
+        T: prost::Message,
+    {
+        fn encode_raw<B>(&self, buf: &mut B)
+        where
+            B: prost::bytes::BufMut,
+        {
+            self.0.encode_raw(buf)
+        }
+
+        fn merge_field<B>(
+            &mut self,
+            tag: u32,
+            wire_type: prost::encoding::WireType,
+            buf: &mut B,
+            ctx: prost::encoding::DecodeContext,
+        ) -> ::core::result::Result<(), prost::DecodeError>
+        where
+            B: prost::bytes::Buf,
+        {
+            self.0.merge_field(tag, wire_type, buf, ctx)
+        }
+
+        fn encoded_len(&self) -> usize {
+            self.0.encoded_len()
+        }
+
+        fn clear(&mut self) {
+            self.0.clear()
+        }
+    }
+    
     pub type StrongSecret<T, S = ()> = Secret<T, S>;
     
     impl<T> Secret<T> {
