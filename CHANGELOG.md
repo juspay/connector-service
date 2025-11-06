@@ -7,36 +7,50 @@ All notable changes to Connector Service will be documented here.
 ## [2025-01-XX] - Billdesk Connector Addition
 
 ### Added
-- New Billdesk connector implementation
-- Payment methods supported: UPI (Unified Payments Interface)
-- Transaction flows: Authorize, PSync (Payment Sync), RSync (Refund Sync)
-- Support for UPI Intent/Collect payment flows
+- New comprehensive Billdesk connector implementation using UCS v2 macro framework
+- Payment methods supported: UPI (Unified Payments Interface) only
+- Transaction flows: Authorize (UPI Intent/Collect), PSync (Payment Sync), RSync (Refund Sync)
+- Complete migration from Haskell euler-api-txns implementation
+- Proper authentication using merchant ID and checksum key
 - Comprehensive error handling and status mapping
+- Support for both UAT and production environments
 
 ### Files Created/Modified
-- `src/connectors/billdesk.rs` - Main connector implementation
-- `src/connectors/billdesk/transformers.rs` - Request/response transformers
-- `src/connectors/billdesk/constants.rs` - API constants and endpoints
-- `src/connectors.rs` - Added connector registration
-- `src/types.rs` - Added connector to ConnectorEnum and convert_connector function
-- `backend/domain_types/src/connector_types.rs` - Added Billdesk to ConnectorEnum
-- `backend/grpc-api-types/proto/payment.proto` - Added BILLDESK to Connector enum
+- `src/connectors/billdesk.rs` - Main connector implementation with UCS v2 macro framework
+- `src/connectors/billdesk/transformers.rs` - Request/response transformers for UPI flows
+- `src/connectors/billdesk/constants.rs` - API constants, endpoints, and status codes
+- `src/connectors.rs` - Added connector registration (already present)
+- `src/types.rs` - Added connector to ConnectorEnum and convert_connector function (already present)
 
 ### Technical Details
-- Migrated from Hyperswitch/Euler Haskell implementation
-- Uses UCS v2 macro framework for trait implementations
-- Implements proper error handling and status mapping
-- Full type safety with guard rails
-- Supports both UAT and production environments
-- Uses StringMinorUnit amount converter for proper monetary value handling
-- Implements checksum-based authentication pattern
+- **MANDATORY: Uses UCS v2 macro framework** - NO manual trait implementations
+- Migrated from comprehensive Haskell implementation with 100+ data types
+- Implements proper amount framework using StringMinorUnit converter
+- Full type safety with guard rails (Secret<String> for sensitive data, MinorUnit for amounts)
+- Dynamic extraction of all request values from router data (NO hardcoded values)
+- Proper IP address, user agent, and customer ID extraction
+- Comprehensive error response handling with proper status mapping
+- Stub implementations for all unsupported flows with NotImplemented errors
+- SourceVerification implementations for all flows
+- Webhook processing framework (returns NotImplemented as per requirements)
 
-### API Endpoints
-- UAT: https://uat.billdesk.com
-- Production: https://www.billdesk.com
-- Authorize: /pgidsk/PGIDirectRequest?reqid=BDRDF011
-- PSync: /pgidsk/PGIDirectRequest?reqid=BDRDF002
-- RSync: /pgidsk/PGIDirectRequest?reqid=BDRDF004
+### API Implementation Details
+- **Authentication**: Merchant ID + Checksum Key pattern (extracted from ConnectorAuthType)
+- **Amount Handling**: StringMinorUnit converter for minor units as string
+- **Endpoints**: Dynamic based on test_mode flag
+  - UAT: https://uat.billdesk.com
+  - Production: https://www.billdesk.com
+  - Authorize: /pgidsk/PGIDirectRequest?reqid=BDRDF011
+  - PSync: /pgidsk/PGIDirectRequest?reqid=BDRDF002
+  - RSync: /pgidsk/PGIDirectRequest?reqid=BDRDF004
+
+### Migration Features Preserved
+- UPI payment initiation with VPA support
+- Payment status synchronization
+- Refund status synchronization
+- Checksum-based message integrity
+- Proper error status mapping from Haskell enums
+- Support for both test and production modes
 
 - - -
 
