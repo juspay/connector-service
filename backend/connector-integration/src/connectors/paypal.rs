@@ -213,7 +213,7 @@ macros::create_all_prerequisites!(
             let mut headers = vec![
                 (
                     headers::CONTENT_TYPE.to_string(),
-                    "application/json".to_string().into(),
+                    self.common_get_content_type().to_string().into(),
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
