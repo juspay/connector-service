@@ -50,6 +50,7 @@ use interfaces::{
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{self, ConnectorValidation},
     events::connector_api_logs::ConnectorEvent,
+};
 use serde::Serialize;
 use transformers::*;
 use super::macros;
