@@ -137,6 +137,8 @@ macros::create_all_prerequisites!(
             flow: RSync,
             response_body: RefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
             flow: SetupMandate,
             request_body: SetupMandateRequest<T>,
             response_body: SetupMandateResponse,
