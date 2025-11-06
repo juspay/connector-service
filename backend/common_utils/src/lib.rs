@@ -13,6 +13,8 @@ pub mod masking {
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
     pub struct Secret<T, S = ()>(pub T, std::marker::PhantomData<S>);
     
+    pub type StrongSecret<T, S = ()> = Secret<T, S>;
+    
     impl<T> Secret<T> {
         pub fn new(value: T) -> Self {
             Self(value, std::marker::PhantomData)
