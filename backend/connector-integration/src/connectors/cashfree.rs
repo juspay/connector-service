@@ -181,13 +181,19 @@ macros::macro_connector_implementation!(
     }
 );
 // Type alias for non-generic trait implementations
-    > ConnectorCommon for Cashfree<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon for Cashfree<T> {
     fn id(&self) -> &'static str {
         "cashfree"
+    }
+    
     fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
         common_enums::CurrencyUnit::Base // For major units
+    }
+    
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
         &connectors.cashfree.base_url
+    }
+    
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
@@ -199,9 +205,13 @@ macros::macro_connector_implementation!(
                 headers::X_CLIENT_SECRET.to_string(),
                 auth.secret_key.into_masked(),
             ),
+            (
                 headers::X_API_VERSION.to_string(),
                 "2022-09-01".to_string().into(),
+            ),
         ])
+    }
+    
     fn build_error_response(
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
@@ -230,6 +240,8 @@ macros::macro_connector_implementation!(
             network_advice_code: None,
             network_error_message: None,
         })
+    }
+}
 // Stub implementations for unsupported flows
     > ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
     for Cashfree<T>
