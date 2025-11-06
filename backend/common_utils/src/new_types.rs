@@ -1,5 +1,5 @@
 #[cfg(feature = "masking")]
-use common_utils::{ExposeInterface, Secret};
+use crate::masking::{ExposeInterface, Secret};
 #[cfg(not(feature = "masking"))]
 use crate::masking::{ExposeInterface, Secret};
 
