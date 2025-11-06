@@ -42,6 +42,7 @@ use domain_types::{
     types::{
         self, ConnectorInfo, Connectors, FeatureStatus, PaymentMethodDetails,
         SupportedPaymentMethods,
+};
 use error_stack::ResultExt;
 // use crate::masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
