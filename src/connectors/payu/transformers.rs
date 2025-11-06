@@ -429,7 +429,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
             productinfo: constants::PRODUCT_INFO.to_string(),
             firstname: Secret::new("".to_string()),
             lastname: None,
-            email: Email::try_from("test@example.com").map_err(|_| ConnectorError::RequestEncodingFailed)?,
+            email: Email::try_from("test@example.com".to_string()).map_err(|_| ConnectorError::RequestEncodingFailed)?,
             phone: None,
             surl: "".to_string(),
             furl: "".to_string(),
