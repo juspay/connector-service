@@ -47,6 +47,7 @@ use transformers::{
     DlocalPaymentsResponse as DlocalPaymentsCaptureResponse,
     DlocalPaymentsResponse as DlocalPaymentsVoidResponse, DlocalRefundRequest, RefundResponse,
     RefundResponse as RefundSyncResponse,
+};
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 const VERSION: &str = "2.1";
