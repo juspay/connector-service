@@ -59,6 +59,8 @@ use super::macros;
 use crate::{
     types::ResponseRouterData, utils::xml_utils::flatten_json_structure, with_error_response_body,
     with_response_body,
+};
+
 // Trait implementations with generic type parameters
 impl<
         T: PaymentMethodDataTypes
