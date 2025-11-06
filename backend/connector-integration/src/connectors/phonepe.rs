@@ -516,6 +516,7 @@ macro_rules! impl_source_verification_stub {
                     + 'static
                     + Serialize,
             > SourceVerification<$flow, $common_data, $req, $resp> for Phonepe<T>
+        {
             fn get_secrets(
                 &self,
                 _secrets: ConnectorSourceVerificationSecrets,
