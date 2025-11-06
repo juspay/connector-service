@@ -22,6 +22,7 @@ pub struct MaskedSerdeValue {
 }
 
 impl MaskedSerdeValue {
+    #[cfg(feature = "masking")]
     pub fn from_masked<T: Serialize>(value: &T) -> Result<Self, serde_json::Error> {
         let masked_value = hyperswitch_masking::masked_serialize(value)?;
         Ok(Self {
@@ -29,6 +30,15 @@ impl MaskedSerdeValue {
         })
     }
 
+    #[cfg(not(feature = "masking"))]
+    pub fn from_masked<T: Serialize>(value: &T) -> Result<Self, serde_json::Error> {
+        let masked_value = serde_json::to_value(value)?;
+        Ok(Self {
+            inner: masked_value,
+        })
+    }
+
+    #[cfg(feature = "masking")]
     pub fn from_masked_optional<T: Serialize>(value: &T, context: &str) -> Option<Self> {
         hyperswitch_masking::masked_serialize(value)
             .map(|masked_value| Self {
