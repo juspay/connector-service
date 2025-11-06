@@ -4,7 +4,7 @@ use common_utils::{crypto::GenerateDigest, types::StringMinorUnit, Email};
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
