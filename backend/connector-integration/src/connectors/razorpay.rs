@@ -105,8 +105,10 @@ impl<T> Razorpay<T> {
 impl<T> ConnectorCommon for Razorpay<T>
     fn id(&self) -> &'static str {
         "razorpay"
+    }
     fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
         common_enums::CurrencyUnit::Minor
+    }
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
