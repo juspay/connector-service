@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use common_enums::{self, CaptureMethod, Currency};
 use common_utils::{
-    pii::{self, IpAddress},
+    pii,
     types::SemanticVersion,
     Email, MinorUnit,
 };
