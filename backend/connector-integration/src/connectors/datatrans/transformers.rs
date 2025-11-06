@@ -50,8 +50,8 @@ impl TryFrom<&ConnectorAuthType> for DatatransAuthType {
                 password: api_secret.to_owned(),
             }),
             ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                merchant_id: api_key.to_owned(),
-                password: key1.to_owned(),
+                merchant_id: key1.to_owned(),
+                password: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType
@@ -192,7 +192,7 @@ impl<
             alias: None, // Alias is used for stored credentials, not for direct authorization
             number: Some(card_data.card_number.clone()),
             expiry_month: Some(card_data.card_exp_month.clone()),
-            expiry_year: Some(card_data.card_exp_year.clone()),
+            expiry_year: Some(card_data.get_card_expiry_year_2_digit()?),
             cvv: Some(card_data.card_cvc.clone()),
         };
 
