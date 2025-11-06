@@ -27,11 +27,13 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
+};
 use error_stack::ResultExt;
 // use crate::masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
+};
 use serde::Serialize;
 use std::{
     fmt::Debug,
