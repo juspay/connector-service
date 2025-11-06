@@ -236,7 +236,7 @@ pub mod date_time {
     #[cfg(feature = "async_ext")]
     use std::time::Instant;
     use std::{marker::PhantomData, num::NonZeroU8};
-    use serde::{Deserialize, Serialize};
+    use serde::Deserialize;
 
     // use crate::masking::{Deserialize, Serialize};
     use time::{
