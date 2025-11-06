@@ -484,6 +484,9 @@ impl connector_types::ConnectorValidation for Razorpay<DefaultPCIHolder> {
         .into())
     fn is_webhook_source_verification_mandatory(&self) -> bool {
         false
+    }
+}
+
 static RAZORPAY_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> =
     LazyLock::new(|| {
         let razorpay_supported_capture_methods = vec![
@@ -491,6 +494,7 @@ static RAZORPAY_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> =
             CaptureMethod::Manual,
             CaptureMethod::ManualMultiple,
             // CaptureMethod::Scheduled,
+        ];
         let razorpay_supported_card_network = vec![
             CardNetwork::Visa,
             CardNetwork::Mastercard,
