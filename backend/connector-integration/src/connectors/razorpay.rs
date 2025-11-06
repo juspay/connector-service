@@ -163,9 +163,8 @@ impl<T> ConnectorCommon for Razorpay<T>
             network_advice_code: None,
             network_error_message: None,
         })
-        Authorize,
-        PaymentsAuthorizeData<T>,
-    fn get_headers(
+    }
+}
         req: &RouterDataV2<
             Authorize,
             PaymentFlowData,
