@@ -3,7 +3,7 @@ pub mod transformers;
 use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit,
+    errors::CustomResult, ext_traits::ByteSliceExt,
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     request::{Method, Request, RequestBuilder, RequestContent},
     };
@@ -43,7 +43,8 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use transformers::{
-    self as wellsfargo, WellsfargoPaymentsRequest, WellsfargoPaymentsResponse,
+    self as wellsfargo, WellsfargoCaptureRequest, WellsfargoPaymentsRequest,
+    WellsfargoPaymentsResponse,
 };
 
 use super::macros;
@@ -576,6 +577,100 @@ macros::macro_connector_implementation!(
     }
 );
 
+// Capture implementation - POST request to capture authorized payment
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Wellsfargo<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Wellsfargo<T>
+{
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        self.build_headers(req)
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let connector_payment_id = req.request
+            .connector_transaction_id
+            .get_connector_transaction_id()
+            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+
+        Ok(format!(
+            "{}pts/v2/payments/{}/captures",
+            self.connector_base_url_payments(req),
+            connector_payment_id
+        ))
+    }
+
+    fn get_http_method(&self) -> Method {
+        Method::Post
+    }
+
+    fn get_content_type(&self) -> &'static str {
+        self.common_get_content_type()
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        let wellsfargo_req = WellsfargoCaptureRequest::try_from(req)?;
+        Ok(Some(RequestContent::Json(Box::new(wellsfargo_req))))
+    }
+
+    fn build_request_v2(
+        &self,
+        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
+        let wellsfargo_req = WellsfargoCaptureRequest::try_from(req)?;
+
+        Ok(Some(
+            RequestBuilder::new()
+                .method(Method::Post)
+                .url(&self.get_url(req)?)
+                .attach_default_headers()
+                .headers(self.get_headers(req)?)
+                .set_body(RequestContent::Json(Box::new(wellsfargo_req)))
+                .build(),
+        ))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        event_builder: Option<&mut ConnectorEvent>,
+        res: Response,
+    ) -> CustomResult<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, errors::ConnectorError> {
+        let response: wellsfargo::WellsfargoPaymentsResponse = res
+            .response
+            .parse_struct("WellsfargoPaymentsResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        event_builder.map(|i| i.set_response_body(&response));
+        RouterDataV2::try_from(ResponseRouterData {
+            response,
+            router_data: data.clone(),
+            http_code: res.status_code,
+        })
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+}
 
 // PSync (Payment Sync) implementation - GET request, no request body
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -656,18 +751,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // Stub implementations for unsupported flows
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Wellsfargo<T>
-{
-}
 
 impl<
         T: PaymentMethodDataTypes
@@ -822,16 +905,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PSync,
         PaymentFlowData,
         PaymentsSyncData,
-        PaymentsResponseData,
-    > for Wellsfargo<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Capture,
-        PaymentFlowData,
-        PaymentsCaptureData,
         PaymentsResponseData,
     > for Wellsfargo<T>
 {

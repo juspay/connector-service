@@ -3,16 +3,15 @@
 
 use domain_types::payment_method_data::RawCardNumber;
 use common_enums::AttemptStatus;
-use common_utils::errors::CustomResult;
 use domain_types::{
-    connector_flow::Authorize,
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
+    connector_flow::{Authorize, Capture},
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, ResponseId},
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
     router_data::ErrorResponse,
     errors,
 };
-use error_stack::{Report, ResultExt};
+use error_stack::{Report};
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 use crate::types::ResponseRouterData;
@@ -95,6 +94,23 @@ pub struct BillTo {
 #[serde(rename_all = "camelCase")]
 pub struct ClientReferenceInformation {
     code: Option<String>,
+}
+
+// ============================================================================
+// CAPTURE REQUEST STRUCTURES
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WellsfargoCaptureRequest {
+    order_information: OrderInformationAmount,
+    client_reference_information: ClientReferenceInformation,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderInformationAmount {
+    amount_details: Amount,
 }
 
 // ============================================================================
@@ -229,6 +245,18 @@ impl TryFrom<&domain_types::router_data::ConnectorAuthType> for WellsfargoAuthTy
 }
 
 // ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/// Convert minor units (cents) to major units (dollars) as decimal string
+/// Example: 1000 cents -> "10.00"
+fn minor_to_major_unit(minor_amount: i64) -> String {
+    let major = minor_amount / 100;
+    let minor_part = minor_amount % 100;
+    format!("{}.{:02}", major, minor_part)
+}
+
+// ============================================================================
 // REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoPaymentsRequest
 // ============================================================================
 
@@ -285,7 +313,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let currency = request.currency;
 
         let amount_details = Amount {
-            total_amount: amount.to_string(),
+            total_amount: minor_to_major_unit(amount.get_amount_as_i64()),
             currency: currency.to_string(),
         };
 
@@ -348,6 +376,47 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             order_information,
             client_reference_information,
             _phantom: std::marker::PhantomData,
+        })
+    }
+}
+
+// ============================================================================
+// CAPTURE REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoCaptureRequest
+// ============================================================================
+
+impl
+    TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>
+    for WellsfargoCaptureRequest
+{
+    type Error = Report<errors::ConnectorError>;
+
+    fn try_from(
+        router_data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+    ) -> Result<Self, Self::Error> {
+        let request = &router_data.request;
+        let common_data = &router_data.resource_common_data;
+
+        // Amount information
+        let amount = request.minor_amount_to_capture;
+        let currency = request.currency;
+
+        let amount_details = Amount {
+            total_amount: minor_to_major_unit(amount.get_amount_as_i64()),
+            currency: currency.to_string(),
+        };
+
+        let order_information = OrderInformationAmount {
+            amount_details,
+        };
+
+        // Client reference - use payment_id from common data
+        let client_reference_information = ClientReferenceInformation {
+            code: Some(common_data.payment_id.clone()),
+        };
+
+        Ok(Self {
+            order_information,
+            client_reference_information,
         })
     }
 }
@@ -506,6 +575,75 @@ impl
     }
 }
 
+// Capture Response Conversion - Reuses same response structure as Authorize
+impl
+    TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+{
+    type Error = Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+        let status = get_payment_status(&response.status, &response.error_information);
+
+        // Check if the capture was successful
+        let response_data = if is_payment_successful(&response.status) {
+            Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: response.processor_information
+                    .as_ref()
+                    .and_then(|info| info.network_transaction_id.clone()),
+                connector_response_reference_id: response.client_reference_information
+                    .as_ref()
+                    .and_then(|info| info.code.clone()),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            })
+        } else {
+            // Build error response
+            let error_message = response.error_information
+                .as_ref()
+                .and_then(|info| info.message.clone())
+                .or_else(|| response.error_information
+                    .as_ref()
+                    .and_then(|info| info.reason.clone()))
+                .unwrap_or_else(|| "Capture failed".to_string());
+
+            let error_code = response.error_information
+                .as_ref()
+                .and_then(|info| info.reason.clone());
+
+            Err(ErrorResponse {
+                code: error_code.unwrap_or_else(|| "DECLINED".to_string()),
+                message: error_message.clone(),
+                reason: Some(error_message),
+                status_code: item.http_code,
+                attempt_status: Some(status),
+                connector_transaction_id: Some(response.id.clone()),
+                network_decline_code: response.processor_information
+                    .as_ref()
+                    .and_then(|info| info.response_code.clone()),
+                network_advice_code: None,
+                network_error_message: None,
+            })
+        };
+
+        Ok(Self {
+            response: response_data,
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
@@ -516,6 +654,7 @@ fn is_payment_successful(status: &Option<WellsfargoPaymentStatus>) -> bool {
         Some(WellsfargoPaymentStatus::Authorized)
             | Some(WellsfargoPaymentStatus::AuthorizedPendingReview)
             | Some(WellsfargoPaymentStatus::PartialAuthorized)
+            | Some(WellsfargoPaymentStatus::Pending) // Capture operations return PENDING status
     )
 }
 
