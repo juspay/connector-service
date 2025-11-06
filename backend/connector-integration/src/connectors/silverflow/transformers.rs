@@ -1,5 +1,10 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, CaptureMethod};
+use common_utils::types::MinorUnit;
+
+// TODO: This should be configurable via connector metadata
+const DEFAULT_MERCHANT_ACCEPTOR_KEY: &str = "mac-default";
+
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -62,6 +67,62 @@ impl Default for SilverflowErrorResponse {
     }
 }
 
+// Silverflow enums for type safety
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SilverflowPaymentIntent {
+    Purchase,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum SilverflowCardEntry {
+    ECommerce,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SilverflowOrderType {
+    Checkout,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SilverflowClearingMode {
+    Manual,
+    Auto,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum SilverflowAuthorizationStatus {
+    Approved,
+    Declined,
+    #[serde(other)]
+    Unknown,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum SilverflowClearingStatus {
+    Cleared,
+    Settled,
+    Pending,
+    #[serde(other)]
+    Unknown,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SilverflowActionStatus {
+    Completed,
+    Success,
+    Failed,
+    Pending,
+    #[serde(other)]
+    Unknown,
+}
+
 #[derive(Debug, Serialize)]
 pub struct SilverflowPaymentsRequest<T: PaymentMethodDataTypes> {
     #[serde(rename = "merchantAcceptorResolver")]
@@ -71,7 +132,7 @@ pub struct SilverflowPaymentsRequest<T: PaymentMethodDataTypes> {
     pub payment_type: SilverflowPaymentType,
     pub amount: SilverflowAmount,
     #[serde(rename = "clearingMode")]
-    pub clearing_mode: String,
+    pub clearing_mode: SilverflowClearingMode,
 }
 
 #[derive(Debug, Serialize)]
@@ -94,35 +155,48 @@ pub struct SilverflowCard<T: PaymentMethodDataTypes> {
 
 #[derive(Debug, Serialize)]
 pub struct SilverflowPaymentType {
-    pub intent: String,
+    pub intent: SilverflowPaymentIntent,
     #[serde(rename = "cardEntry")]
-    pub card_entry: String,
-    pub order: String,
+    pub card_entry: SilverflowCardEntry,
+    pub order: SilverflowOrderType,
 }
 
 #[derive(Debug, Serialize)]
 pub struct SilverflowAmount {
-    pub value: i64,
+    pub value: MinorUnit,
     pub currency: String,
 }
 
-impl<T: PaymentMethodDataTypes>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        super::SilverflowRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for SilverflowPaymentsRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
+        item: super::SilverflowRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
         // Extract card data from payment method
-        let card_data = match &item.request.payment_method_data {
+        let card_data = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => card,
             _ => {
                 return Err(errors::ConnectorError::NotImplemented(
@@ -149,30 +223,29 @@ impl<T: PaymentMethodDataTypes>
 
         Ok(Self {
             merchant_acceptor_resolver: SilverflowMerchantAcceptorResolver {
-                // This should be configurable, using a placeholder for now
-                merchant_acceptor_key: "mac-default".to_string(),
+                merchant_acceptor_key: DEFAULT_MERCHANT_ACCEPTOR_KEY.to_string(),
             },
             card: SilverflowCard {
                 number: card_data.card_number.clone(),
                 expiry_year,
                 expiry_month,
                 cvc: card_data.card_cvc.clone(),
-                holder_name: item.request.customer_name.clone().map(Secret::new),
+                holder_name: router_data.request.customer_name.clone().map(Secret::new),
             },
             payment_type: SilverflowPaymentType {
-                intent: "purchase".to_string(),
-                card_entry: "e-commerce".to_string(),
-                order: "checkout".to_string(),
+                intent: SilverflowPaymentIntent::Purchase,
+                card_entry: SilverflowCardEntry::ECommerce,
+                order: SilverflowOrderType::Checkout,
             },
             amount: SilverflowAmount {
-                value: item.request.minor_amount.get_amount_as_i64(),
-                currency: item.request.currency.to_string(),
+                value: router_data.request.minor_amount,
+                currency: router_data.request.currency.to_string(),
             },
-            clearing_mode: match item.request.capture_method {
+            clearing_mode: match router_data.request.capture_method {
                 Some(CaptureMethod::Manual) | Some(CaptureMethod::ManualMultiple) => {
-                    "manual".to_string()
+                    SilverflowClearingMode::Manual
                 }
-                _ => "auto".to_string(),
+                _ => SilverflowClearingMode::Auto,
             },
         })
     }
@@ -215,7 +288,7 @@ pub struct SilverflowCardResponse {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SilverflowAmountResponse {
-    pub value: i64,
+    pub value: MinorUnit,
     pub currency: String,
 }
 
@@ -230,8 +303,8 @@ pub struct SilverflowPaymentTypeResponse {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SilverflowStatus {
     pub authentication: String,
-    pub authorization: String,
-    pub clearing: String,
+    pub authorization: SilverflowAuthorizationStatus,
+    pub clearing: SilverflowClearingStatus,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -303,19 +376,19 @@ impl<T: PaymentMethodDataTypes>
         >,
     ) -> Result<Self, Self::Error> {
         // Map status based on Silverflow's authorization and clearing status
-        let status = match item.response.status.authorization.as_str() {
-            "approved" => {
+        let status = match item.response.status.authorization {
+            SilverflowAuthorizationStatus::Approved => {
                 // Check clearing status for final status determination
-                match item.response.status.clearing.as_str() {
-                    "cleared" | "settled" => AttemptStatus::Charged,
-                    "pending" => AttemptStatus::Authorized,
-                    _ => AttemptStatus::Authorized,
+                match item.response.status.clearing {
+                    SilverflowClearingStatus::Cleared | SilverflowClearingStatus::Settled => {
+                        AttemptStatus::Charged
+                    }
+                    SilverflowClearingStatus::Pending => AttemptStatus::Authorized,
+                    SilverflowClearingStatus::Unknown => AttemptStatus::Authorized,
                 }
             }
-            "pending" => AttemptStatus::Pending,
-            "declined" | "failed" => AttemptStatus::Failure,
-            "voided" => AttemptStatus::Voided,
-            _ => AttemptStatus::Pending,
+            SilverflowAuthorizationStatus::Declined => AttemptStatus::Failure,
+            SilverflowAuthorizationStatus::Unknown => AttemptStatus::Pending,
         };
 
         // Extract network transaction ID from authorization ISO fields
@@ -361,13 +434,21 @@ pub struct SilverflowSyncRequest;
 pub type SilverflowSyncResponse = SilverflowPaymentsResponse;
 
 // PSync Request Transformation (empty for GET-based connector)
-impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
-    for SilverflowSyncRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        super::SilverflowRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    > for SilverflowSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        _item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        _item: super::SilverflowRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         // Empty request for GET-based sync
         Ok(Self)
@@ -392,19 +473,19 @@ impl
         >,
     ) -> Result<Self, Self::Error> {
         // Map status based on Silverflow's status fields
-        let status = match item.response.status.authorization.as_str() {
-            "approved" => {
+        let status = match item.response.status.authorization {
+            SilverflowAuthorizationStatus::Approved => {
                 // Check clearing status for final status determination
-                match item.response.status.clearing.as_str() {
-                    "cleared" | "settled" => AttemptStatus::Charged,
-                    "pending" => AttemptStatus::Authorized,
-                    _ => AttemptStatus::Authorized,
+                match item.response.status.clearing {
+                    SilverflowClearingStatus::Cleared | SilverflowClearingStatus::Settled => {
+                        AttemptStatus::Charged
+                    }
+                    SilverflowClearingStatus::Pending => AttemptStatus::Authorized,
+                    SilverflowClearingStatus::Unknown => AttemptStatus::Authorized,
                 }
             }
-            "pending" => AttemptStatus::Pending,
-            "declined" | "failed" => AttemptStatus::Failure,
-            "voided" => AttemptStatus::Voided,
-            _ => AttemptStatus::Pending,
+            SilverflowAuthorizationStatus::Declined => AttemptStatus::Failure,
+            SilverflowAuthorizationStatus::Unknown => AttemptStatus::Pending,
         };
 
         // Extract network transaction ID from authorization ISO fields
@@ -444,7 +525,7 @@ impl
 // Capture flow structures
 #[derive(Debug, Serialize)]
 pub struct SilverflowCaptureRequest {
-    pub amount: Option<i64>,
+    pub amount: Option<MinorUnit>,
     #[serde(rename = "closeCharge")]
     pub close_charge: Option<bool>,
     pub reference: Option<String>,
@@ -458,7 +539,7 @@ pub struct SilverflowCaptureResponse {
     pub key: String, // Action key (act-...)
     #[serde(rename = "chargeKey")]
     pub charge_key: String,
-    pub status: String, // "completed", "pending", etc.
+    pub status: SilverflowActionStatus,
     pub reference: Option<String>,
     pub amount: SilverflowAmountResponse,
     #[serde(rename = "closeCharge")]
@@ -472,20 +553,31 @@ pub struct SilverflowCaptureResponse {
 }
 
 // Capture Request Transformation
-impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>
-    for SilverflowCaptureRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        super::SilverflowRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for SilverflowCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        item: super::SilverflowRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
         // Use the capture amount for partial capture, omit for full capture
-        let amount = Some(item.request.minor_amount_to_capture.get_amount_as_i64());
+        let amount = Some(router_data.request.minor_amount_to_capture);
 
         // Get connector transaction ID string for reference
         let reference = Some(
-            item.request
+            router_data
+                .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?,
@@ -517,11 +609,13 @@ impl
         >,
     ) -> Result<Self, Self::Error> {
         // Map status based on Silverflow's action status for capture flow
-        let status = match item.response.status.as_str() {
-            "completed" => AttemptStatus::Charged,
-            "pending" => AttemptStatus::Pending,
-            "failed" | "declined" => AttemptStatus::Failure,
-            _ => AttemptStatus::Pending,
+        let status = match item.response.status {
+            SilverflowActionStatus::Completed | SilverflowActionStatus::Success => {
+                AttemptStatus::Charged
+            }
+            SilverflowActionStatus::Pending => AttemptStatus::Pending,
+            SilverflowActionStatus::Failed => AttemptStatus::Failure,
+            SilverflowActionStatus::Unknown => AttemptStatus::Pending,
         };
 
         Ok(Self {
@@ -548,7 +642,7 @@ impl
 #[derive(Debug, Serialize)]
 pub struct SilverflowRefundRequest {
     #[serde(rename = "refundAmount")]
-    pub refund_amount: Option<i64>,
+    pub refund_amount: Option<MinorUnit>,
     pub reference: Option<String>,
 }
 
@@ -564,7 +658,7 @@ pub struct SilverflowRefundResponse {
     pub refund_charge_key: Option<String>,
     pub reference: Option<String>,
     pub amount: SilverflowAmountResponse,
-    pub status: String,
+    pub status: SilverflowActionStatus,
     #[serde(rename = "authorizationResponse")]
     pub authorization_response: Option<SilverflowAuthorizationResponse>,
     pub created: Option<String>,
@@ -585,23 +679,33 @@ pub struct SilverflowAuthorizationResponse {
 // Void/Reversal status structure (simpler than charge status)
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SilverflowVoidStatus {
-    pub authorization: String,
+    pub authorization: SilverflowAuthorizationStatus,
 }
 
 // Refund Request Transformation
-impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
-    for SilverflowRefundRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        super::SilverflowRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for SilverflowRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        item: super::SilverflowRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
         // Use the refund amount for partial refund, omit for full refund
-        let amount = Some(item.request.minor_refund_amount.get_amount_as_i64());
+        let amount = Some(router_data.request.minor_refund_amount);
 
         // Get refund ID as reference
-        let reference = Some(item.request.refund_id.clone());
+        let reference = Some(router_data.request.refund_id.clone());
 
         Ok(Self {
             refund_amount: amount,
@@ -627,12 +731,14 @@ impl
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Map refund status based on Silverflow's status string
-        let refund_status = match item.response.status.as_str() {
-            "success" => common_enums::RefundStatus::Success,
-            "pending" => common_enums::RefundStatus::Pending,
-            "failed" | "declined" => common_enums::RefundStatus::Failure,
-            _ => common_enums::RefundStatus::Pending,
+        // Map refund status based on Silverflow's status
+        let refund_status = match item.response.status {
+            SilverflowActionStatus::Success | SilverflowActionStatus::Completed => {
+                common_enums::RefundStatus::Success
+            }
+            SilverflowActionStatus::Pending => common_enums::RefundStatus::Pending,
+            SilverflowActionStatus::Failed => common_enums::RefundStatus::Failure,
+            SilverflowActionStatus::Unknown => common_enums::RefundStatus::Pending,
         };
 
         Ok(Self {
@@ -654,13 +760,21 @@ pub struct SilverflowRefundSyncRequest;
 pub type SilverflowRefundSyncResponse = SilverflowPaymentsResponse;
 
 // Refund Sync Request Transformation (empty for GET-based connector)
-impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>
-    for SilverflowRefundSyncRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        super::SilverflowRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    > for SilverflowRefundSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        _item: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        _item: super::SilverflowRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         // Empty request for GET-based sync
         Ok(Self)
@@ -685,11 +799,10 @@ impl
         >,
     ) -> Result<Self, Self::Error> {
         // Map refund status based on Silverflow's status fields for sync
-        let refund_status = match item.response.status.authorization.as_str() {
-            "approved" => common_enums::RefundStatus::Success,
-            "pending" => common_enums::RefundStatus::Pending,
-            "declined" | "failed" => common_enums::RefundStatus::Failure,
-            _ => common_enums::RefundStatus::Pending,
+        let refund_status = match item.response.status.authorization {
+            SilverflowAuthorizationStatus::Approved => common_enums::RefundStatus::Success,
+            SilverflowAuthorizationStatus::Declined => common_enums::RefundStatus::Failure,
+            SilverflowAuthorizationStatus::Unknown => common_enums::RefundStatus::Pending,
         };
 
         Ok(Self {
@@ -705,7 +818,7 @@ impl
 #[derive(Debug, Serialize)]
 pub struct SilverflowVoidRequest {
     #[serde(rename = "replacementAmount")]
-    pub replacement_amount: Option<i64>,
+    pub replacement_amount: Option<MinorUnit>,
     pub reference: Option<String>,
 }
 
@@ -730,19 +843,29 @@ pub struct SilverflowVoidResponse {
 }
 
 // Void Request Transformation
-impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>
-    for SilverflowVoidRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        super::SilverflowRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for SilverflowVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        item: super::SilverflowRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
         // Get connector transaction ID string for reference
-        let reference = Some(item.request.connector_transaction_id.clone());
+        let reference = Some(router_data.request.connector_transaction_id.clone());
 
         Ok(Self {
-            replacement_amount: Some(0), // 0 means full reversal according to Silverflow docs
+            replacement_amount: Some(MinorUnit::zero()), // 0 means full reversal according to Silverflow docs
             reference,
         })
     }
@@ -766,11 +889,10 @@ impl
         >,
     ) -> Result<Self, Self::Error> {
         // Map status based on Silverflow's authorization status for void operations
-        let status = match item.response.status.authorization.as_str() {
-            "approved" => AttemptStatus::Voided, // Successful reversal
-            "pending" => AttemptStatus::Pending,
-            "declined" | "failed" => AttemptStatus::Failure,
-            _ => AttemptStatus::Pending,
+        let status = match item.response.status.authorization {
+            SilverflowAuthorizationStatus::Approved => AttemptStatus::Voided, // Successful reversal
+            SilverflowAuthorizationStatus::Declined => AttemptStatus::Failure,
+            SilverflowAuthorizationStatus::Unknown => AttemptStatus::Pending,
         };
 
         // Extract network transaction ID from authorization response (if available)
