@@ -99,7 +99,10 @@ impl<T> Razorpay<T> {
             amount_converter: &common_utils::types::MinorUnitForConnector,
             _phantom: std::marker::PhantomData,
         }
-    > ConnectorCommon for Razorpay<T>
+    }
+}
+
+impl<T> ConnectorCommon for Razorpay<T>
     fn id(&self) -> &'static str {
         "razorpay"
     fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
