@@ -1,6 +1,7 @@
 pub mod transformers;
 pub mod constants;
 
+use common_enums::CurrencyUnit;
 use common_utils::{
     errors::CustomResult,
     ext_traits::ByteSliceExt,
@@ -21,8 +22,8 @@ use domain_types::{
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
         PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, RequestDetails, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        RefundsResponseData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -139,8 +140,6 @@ pub struct BilldeskPaymentAuthenticateResponse;
 pub struct BilldeskPaymentPostAuthenticateRequest;
 #[derive(Debug, Clone)]
 pub struct BilldeskPaymentPostAuthenticateResponse;
-#[derive(Debug, Clone)]
-pub struct BilldeskSubmitEvidenceResponse;
 
 // MANDATORY: Use UCS v2 macro framework - NO manual implementations
 macros::create_all_prerequisites!(
