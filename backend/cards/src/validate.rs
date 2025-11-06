@@ -5,7 +5,10 @@ use common_utils::{
     date_time, ValidationError,
 };
 use error_stack::report;
-// use crate::masking::{PeekInterface, Strategy, StrongSecret, WithType};
+#[cfg(feature = "masking")]
+use crate::masking::{PeekInterface, Strategy, StrongSecret, WithType};
+#[cfg(not(feature = "masking"))]
+use common_utils::masking::{PeekInterface, Strategy, StrongSecret, WithType};
 use regex::Regex;
 use serde::{
     de::{self},
