@@ -1,5 +1,61 @@
 //! Common utilities for connector service
 
+// Mock types for when masking is not enabled
+#[cfg(not(feature = "masking"))]
+pub mod masking {
+    use serde::{Deserialize, Serialize};
+    
+    pub trait Strategy<T> {}
+    
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct Secret<T, S = ()>(pub T);
+    
+    impl<T> Secret<T> {
+        pub fn new(value: T) -> Self {
+            Self(value)
+        }
+    }
+    
+    impl<T, S> From<T> for Secret<T, S> {
+        fn from(value: T) -> Self {
+            Self(value)
+        }
+    }
+    
+    impl<T, S> std::ops::Deref for Secret<T, S> {
+        type Target = T;
+        
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+    
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct Maskable<T>(pub T);
+    
+    impl<T> Maskable<T> {
+        pub fn new_normal(value: T) -> Self {
+            Self(value)
+        }
+        
+        pub fn new_masked(_value: Secret<T>) -> Self {
+            // When masking is disabled, just extract the inner value
+            Self(_value.0)
+        }
+    }
+    
+    pub trait ExposeInterface<T> {
+        fn expose(self) -> T;
+    }
+    
+    pub trait WithType {}
+    
+    pub trait PeekInterface {}
+}
+
+#[cfg(feature = "masking")]
+pub use hyperswitch_masking::{Strategy, Secret, Maskable, ExposeInterface, WithType, PeekInterface};
+
 pub mod crypto;
 pub mod custom_serde;
 pub mod errors;
