@@ -2,7 +2,7 @@
 use std::ops::Deref;
 
 use error_stack::ResultExt;
-use common_utils::{ExposeInterface, Secret};
+// use common_utils::{ExposeInterface, Secret};  // Temporarily disabled due to masking dependency issues
 use md5;
 use ring::{
     aead::{self, BoundKey, OpeningKey, SealingKey, UnboundKey},
