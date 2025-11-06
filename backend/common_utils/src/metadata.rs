@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use bytes::Bytes;
-# use hyperswitch_masking::{Maskable, Secret};
+# use crate::masking::{Maskable, Secret};
 
 /// Configuration for header masking in gRPC metadata.
 #[derive(Debug, Clone)]

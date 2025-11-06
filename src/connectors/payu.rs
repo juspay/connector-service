@@ -37,7 +37,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-// // use hyperswitch_masking::{Maskable, PeekInterface, Secret};
+// // use crate::masking::{Maskable, PeekInterface, Secret};
 
 // Temporary stub types to avoid masking dependency issues
 pub type Maskable<T> = T;

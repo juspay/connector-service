@@ -13,7 +13,7 @@ use domain_types::{
     utils,
 };
 use error_stack::ResultExt;
-# use hyperswitch_masking::{PeekInterface, Secret};
+# use crate::masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 

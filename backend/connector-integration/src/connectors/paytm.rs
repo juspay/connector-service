@@ -29,7 +29,7 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
-# use hyperswitch_masking::{Maskable, PeekInterface};
+# use crate::masking::{Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent, verification,

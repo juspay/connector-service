@@ -9,7 +9,7 @@ use std::{
 
 use common_enums::enums;
 use error_stack::ResultExt;
-# use hyperswitch_masking::Deserialize;
+# use crate::masking::Deserialize;
 use rust_decimal::{
     prelude::{FromPrimitive, ToPrimitive},
     Decimal,

@@ -9,7 +9,7 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     types::Connectors,
 };
-# use hyperswitch_masking;
+# use crate::masking;
 
 use crate::events::connector_api_logs::ConnectorEvent;
 

@@ -861,7 +861,7 @@ macro_rules! expand_imports {
                 errors::ConnectorError, router_data::ErrorResponse, router_data_v2::RouterDataV2,
                 router_response_types::Response,
             };
-            pub(super) # use hyperswitch_masking::Maskable;
+            pub(super) # use crate::masking::Maskable;
             pub(super) use interfaces::events::connector_api_logs::ConnectorEvent;
 
             pub(super) use crate::types::*;

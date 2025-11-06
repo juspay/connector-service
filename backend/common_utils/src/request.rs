@@ -1,4 +1,4 @@
-# use hyperswitch_masking::{Maskable, Secret};
+# use crate::masking::{Maskable, Secret};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 

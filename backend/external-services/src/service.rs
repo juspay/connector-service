@@ -66,7 +66,7 @@ use common_utils::{
     events::{Event, EventConfig, EventStage, FlowName, MaskedSerdeValue},
 };
 use error_stack::{report, ResultExt};
-# use hyperswitch_masking::{ErasedMaskSerialize, ExposeInterface, Maskable};
+# use crate::masking::{ErasedMaskSerialize, ExposeInterface, Maskable};
 // TokenData is now imported from hyperswitch_injector
 use common_utils::consts;
 use injector::{injector_core, HttpMethod, TokenData};

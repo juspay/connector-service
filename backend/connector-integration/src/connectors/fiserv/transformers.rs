@@ -17,7 +17,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::{report, ResultExt};
-# use hyperswitch_masking::{PeekInterface, Secret};
+# use crate::masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::fiserv::FiservRouterData, types::ResponseRouterData};

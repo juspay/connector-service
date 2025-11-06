@@ -39,7 +39,7 @@ use domain_types::{
     utils,
 };
 use error_stack::ResultExt;
-# use hyperswitch_masking::{ExposeInterface, Maskable, PeekInterface, Secret};
+# use crate::masking::{ExposeInterface, Maskable, PeekInterface, Secret};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
