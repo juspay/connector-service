@@ -157,8 +157,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
     fn should_do_session_token(&self) -> bool {
         true // Enable CreateSessionToken flow for Paytm's initiate step
+    }
     fn should_do_order_create(&self) -> bool {
         false // Paytm doesn't require separate order creation
+    }
 }
 // Service trait implementations with generic type parameters
     connector_types::ConnectorServiceTrait<T> for Paytm<T>
