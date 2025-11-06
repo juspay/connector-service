@@ -87,7 +87,7 @@ impl FromStr for Email {
 }
 
 /// IP address strategy
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum IpAddress {}
 
 impl<T> Strategy<T> for IpAddress
