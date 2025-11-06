@@ -97,24 +97,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Inco
     > DisputeDefend for Worldpayvantiv<T>
     > RefundSyncV2 for Worldpayvantiv<T>
     > AcceptDispute for Worldpayvantiv<T>
-    > RepeatPaymentV2 for Worldpayvantiv<T>
-    > PaymentOrderCreate for Worldpayvantiv<T>
-    > PaymentAuthorizeV2<T> for Worldpayvantiv<T>
-    > PaymentSyncV2 for Worldpayvantiv<T>
-    > PaymentVoidV2 for Worldpayvantiv<T>
-    > PaymentVoidPostCaptureV2 for Worldpayvantiv<T>
-    > interfaces::connector_types::PaymentTokenV2<T> for Worldpayvantiv<T>
-    > interfaces::connector_types::PaymentAccessToken for Worldpayvantiv<T>
-    > RefundV2 for Worldpayvantiv<T>
-    > PaymentCapture for Worldpayvantiv<T>
-// Basic connector implementation
-    > ConnectorCommon for Worldpayvantiv<T>
+    // Basic connector implementation
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
+    for Worldpayvantiv<T>
+{
     fn id(&self) -> &'static str {
         "worldpayvantiv"
+    }
+    
     fn common_get_content_type(&self) -> &'static str {
         "text/xml"
+    }
+    
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
         connectors.worldpayvantiv.base_url.as_ref()
+    }
+    
     fn build_error_response(
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
@@ -135,8 +133,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Inco
             network_advice_code: None,
             network_error_message: None,
         })
+    }
+    
     fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
         common_enums::CurrencyUnit::Minor
+    }
+}
 // Define connector prerequisites for payment flows (XML-based)
 // Group flows by unique request/response combinations to avoid duplicate templating structs
 macros::create_all_prerequisites!(
