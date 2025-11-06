@@ -524,7 +524,7 @@ pub struct Encryptable<T: Clone> {
 }
 
 #[cfg(feature = "masking")]
-impl<T: Clone, S: crate::masking::Strategy<T>> Encryptable<Secret<T, S>> {
+impl<T: Clone, S: crate::masking::Strategy<T> + std::clone::Clone> Encryptable<Secret<T, S>> {
     /// constructor function to be used by the encryptor and decryptor to generate the data type
     pub fn new(
         masked_data: Secret<T, S>,
