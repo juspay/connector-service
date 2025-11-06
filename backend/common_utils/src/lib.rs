@@ -115,6 +115,14 @@ pub mod masking {
         }
     }
     
+    pub struct WithoutType;
+    
+    impl WithoutType {
+        pub fn fmt<T: AsRef<str>>(val: &T, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "{}", val.as_ref())
+        }
+    }
+    
     // Mock additional types needed for compatibility
     pub trait ErasedMaskSerialize {}
     
