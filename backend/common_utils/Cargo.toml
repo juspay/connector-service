@@ -46,7 +46,7 @@ prost = { version = "0.13", optional = true }
 default = []
 kafka = ["dep:rdkafka", "dep:tracing-kafka"]
 async_ext = ["dep:async-trait", "dep:futures"]
-masking = ["dep:prost", "dep:hyperswitch_masking"]  # Placeholder for masking feature
+masking = ["dep:prost"]  # Placeholder for masking feature
 
 [dependencies.async-trait]
 version = "0.1.74"
