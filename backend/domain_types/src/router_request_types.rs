@@ -41,7 +41,7 @@ pub struct BrowserInformation {
 }
 
 impl BrowserInformation {
-    pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
+    pub fn get_ip_address(&self) -> Result<Secret<String>, Error> {
         let ip_address = self
             .ip_address
             .ok_or_else(utils::missing_field_err("browser_info.ip_address"))?;

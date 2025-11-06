@@ -842,7 +842,7 @@ impl PaymentVoidData {
             .clone()
             .and_then(|browser_info| browser_info.language)
     }
-    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
+    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String>> {
         self.browser_info.clone().and_then(|browser_info| {
             browser_info
                 .ip_address
@@ -850,7 +850,7 @@ impl PaymentVoidData {
         })
     }
 
-    pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
+    pub fn get_ip_address(&self) -> Result<Secret<String>, Error> {
         self.get_ip_address_as_optional()
             .ok_or_else(missing_field_err("browser_info.ip_address"))
     }
@@ -1048,7 +1048,7 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
         self.connector_mandate_id()
             .ok_or_else(missing_field_err("connector_mandate_id"))
     }
-    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
+    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String>> {
         self.browser_info.clone().and_then(|browser_info| {
             browser_info
                 .ip_address
@@ -1056,7 +1056,7 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
         })
     }
 
-    pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
+    pub fn get_ip_address(&self) -> Result<Secret<String>, Error> {
         self.get_ip_address_as_optional()
             .ok_or_else(missing_field_err("browser_info.ip_address"))
     }
@@ -1888,7 +1888,7 @@ impl RefundsData {
             .clone()
             .and_then(|browser_info| browser_info.language)
     }
-    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
+    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String>> {
         self.browser_info.clone().and_then(|browser_info| {
             browser_info
                 .ip_address
@@ -1896,7 +1896,7 @@ impl RefundsData {
         })
     }
 
-    pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
+    pub fn get_ip_address(&self) -> Result<Secret<String>, Error> {
         self.get_ip_address_as_optional()
             .ok_or_else(missing_field_err("browser_info.ip_address"))
     }
@@ -1940,7 +1940,7 @@ impl PaymentsCaptureData {
             .clone()
             .and_then(|browser_info| browser_info.language)
     }
-    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
+    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String>> {
         self.browser_info.clone().and_then(|browser_info| {
             browser_info
                 .ip_address
@@ -1948,7 +1948,7 @@ impl PaymentsCaptureData {
         })
     }
 
-    pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
+    pub fn get_ip_address(&self) -> Result<Secret<String>, Error> {
         self.get_ip_address_as_optional()
             .ok_or_else(missing_field_err("browser_info.ip_address"))
     }
@@ -2013,7 +2013,7 @@ impl<T: PaymentMethodDataTypes> SetupMandateRequestData<T> {
             .clone()
             .ok_or_else(missing_field_err("return_url"))
     }
-    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
+    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String>> {
         self.browser_info.clone().and_then(|browser_info| {
             browser_info
                 .ip_address
@@ -2021,7 +2021,7 @@ impl<T: PaymentMethodDataTypes> SetupMandateRequestData<T> {
         })
     }
 
-    pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
+    pub fn get_ip_address(&self) -> Result<Secret<String>, Error> {
         self.get_ip_address_as_optional()
             .ok_or_else(missing_field_err("browser_info.ip_address"))
     }

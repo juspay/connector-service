@@ -21,7 +21,7 @@ pub struct CustomerAcceptance {
 pub struct OnlineMandate {
     /// Ip address of the customer machine from which the mandate was created
     #[serde(skip_deserializing)]
-    pub ip_address: Option<Secret<String, IpAddress>>,
+    pub ip_address: Option<Secret<String>>,
     /// The user-agent of the customer's browser
     pub user_agent: String,
 }
