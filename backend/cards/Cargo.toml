@@ -4,6 +4,9 @@ description = "Types to handle card masking and validation"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+masking = []
+
 [dependencies]
 error-stack = "0.4.1"
 serde = { version = "1.0.189", features = ["derive"] }
