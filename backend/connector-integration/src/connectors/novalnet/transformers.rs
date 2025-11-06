@@ -27,7 +27,9 @@ use domain_types::{
     utils::{self, ForeignTryFrom},
 };
 use error_stack::ResultExt;
-use common_utils::{ExposeInterface, Secret};
+use common_utils::{ExposeInterface, Secret,
+    Secret,
+};
 use serde::{Deserialize, Serialize};
 use strum::Display;
 

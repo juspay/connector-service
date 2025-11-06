@@ -41,7 +41,9 @@ use domain_types::{
     utils::CardIssuer,
 };
 use error_stack::{report, ResultExt};
-use common_utils::{ExposeInterface, PeekInterface, Secret};
+use common_utils::{ExposeInterface, PeekInterface, Secret,
+    Secret,
+};
 use serde::{Deserialize, Serialize};
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 pub const REFUND_VOIDED: &str = "Refund request has been voided.";

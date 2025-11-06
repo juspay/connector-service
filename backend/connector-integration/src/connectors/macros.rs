@@ -1,6 +1,8 @@
 use std::marker::PhantomData;
 
-use common_utils::{errors::CustomResult, ext_traits::BytesExt};
+use common_utils::{errors::CustomResult, ext_traits::BytesExt,
+    Maskable,
+};
 use domain_types::{errors, router_data_v2::RouterDataV2};
 use error_stack::ResultExt;
 
@@ -856,7 +858,9 @@ macro_rules! expand_imports {
             // pub(super) use domain_models::{
             //     AuthenticationInitiation, Confirmation, PostAuthenticationSync, PreAuthentication,
             // };
-            pub(super) use common_utils::{errors::CustomResult, request::RequestContent};
+            pub(super) use common_utils::{errors::CustomResult, request::RequestContent,
+    Maskable,
+};
             pub(super) use domain_types::{
                 errors::ConnectorError, router_data::ErrorResponse, router_data_v2::RouterDataV2,
                 router_response_types::Response,

@@ -22,7 +22,9 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use common_utils::{ExposeInterface, PeekInterface, Secret};
+use common_utils::{ExposeInterface, PeekInterface, Secret,
+    Secret,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{

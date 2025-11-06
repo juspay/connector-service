@@ -1,5 +1,7 @@
 use common_enums::enums::{self, AttemptStatus, CountryAlpha2};
-use common_utils::{ext_traits::Encode, pii, request::Method, types::StringMajorUnit};
+use common_utils::{ext_traits::Encode, pii, request::Method, types::StringMajorUnit,
+    Secret,
+};
 use domain_types::{
     connector_flow::{Authorize, Capture, Refund, SetupMandate, Void},
     connector_types::{
@@ -17,7 +19,9 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use common_utils::{ExposeInterface, Secret};
+use common_utils::{ExposeInterface, Secret,
+    Secret,
+};
 use serde::{Deserialize, Serialize};
 
 use super::NoonRouterData;

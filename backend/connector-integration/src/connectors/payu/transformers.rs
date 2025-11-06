@@ -13,7 +13,9 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::{report, ResultExt};
-use common_utils::{ExposeInterface, PeekInterface, Secret};
+use common_utils::{ExposeInterface, PeekInterface, Secret,
+    Secret,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;

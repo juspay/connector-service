@@ -22,7 +22,9 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::{report, ResultExt};
-use common_utils::{PeekInterface, Secret, WithoutType};
+use common_utils::{PeekInterface, Secret, WithoutType,
+    Secret,
+};
 use serde::{
     de::{self, Deserializer},
     Deserialize, Serialize,

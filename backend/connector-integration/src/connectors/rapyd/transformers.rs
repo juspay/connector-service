@@ -1,4 +1,6 @@
-use common_utils::{ext_traits::OptionExt, request::Method, FloatMajorUnit};
+use common_utils::{ext_traits::OptionExt, request::Method, FloatMajorUnit,
+    Secret,
+};
 use domain_types::{
     connector_flow::{Authorize, Capture},
     connector_types::{

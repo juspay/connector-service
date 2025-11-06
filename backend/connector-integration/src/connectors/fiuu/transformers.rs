@@ -30,7 +30,9 @@ use domain_types::{
     utils,
 };
 use error_stack::ResultExt;
-use common_utils::{ExposeInterface, PeekInterface, Secret};
+use common_utils::{ExposeInterface, PeekInterface, Secret,
+    Secret,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use strum::Display;

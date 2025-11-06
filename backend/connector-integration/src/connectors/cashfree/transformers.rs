@@ -11,7 +11,9 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::report;
-use common_utils::{ExposeInterface, PeekInterface, Secret};
+use common_utils::{ExposeInterface, PeekInterface, Secret,
+    Secret,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;

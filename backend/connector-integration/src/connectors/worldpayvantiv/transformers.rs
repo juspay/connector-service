@@ -1,5 +1,7 @@
 use common_enums::{self, CountryAlpha2, Currency};
-use common_utils::{types::MinorUnit, StringMajorUnit};
+use common_utils::{types::MinorUnit, StringMajorUnit,
+    Secret,
+};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, VoidPC},
     connector_types::{
@@ -13,7 +15,9 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use common_utils::{ExposeInterface, PeekInterface, Secret};
+use common_utils::{ExposeInterface, PeekInterface, Secret,
+    Secret,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::worldpayvantiv::WorldpayvantivRouterData, types::ResponseRouterData};

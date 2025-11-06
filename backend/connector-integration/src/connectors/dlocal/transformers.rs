@@ -1,4 +1,6 @@
-use common_utils::{pii, request::Method, types::MinorUnit};
+use common_utils::{pii, request::Method, types::MinorUnit,
+    Secret,
+};
 use domain_types::{
     connector_flow::{self, Authorize, PSync, RSync, Void},
     connector_types::{

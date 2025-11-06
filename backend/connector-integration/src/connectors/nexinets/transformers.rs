@@ -1,6 +1,8 @@
 use base64::Engine;
 use common_enums::{enums, AttemptStatus};
-use common_utils::{errors::CustomResult, request::Method};
+use common_utils::{errors::CustomResult, request::Method,
+    Secret,
+};
 use domain_types::{
     connector_flow::{Authorize, Capture},
     connector_types::{
@@ -19,7 +21,9 @@ use domain_types::{
     utils,
 };
 use error_stack::ResultExt;
-use common_utils::{ExposeInterface, PeekInterface, Secret};
+use common_utils::{ExposeInterface, PeekInterface, Secret,
+    Secret,
+};
 use serde::{Deserialize, Serialize};
 use url::Url;
 

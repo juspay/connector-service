@@ -1,5 +1,7 @@
 use common_enums::{self, enums, AttemptStatus, RefundStatus};
-use common_utils::{consts, ext_traits::OptionExt, pii::Email, types::FloatMajorUnit};
+use common_utils::{consts, ext_traits::OptionExt, pii::Email, types::FloatMajorUnit,
+    Secret,
+};
 use domain_types::{
     connector_flow::{
         Authorize, CreateConnectorCustomer, PSync, RSync, Refund, RepeatPayment, SetupMandate,
@@ -25,7 +27,9 @@ type HsInterfacesConnectorError = ConnectorError;
 use std::str::FromStr;
 
 use error_stack::ResultExt;
-use common_utils::{ExposeInterface, PeekInterface, Secret};
+use common_utils::{ExposeInterface, PeekInterface, Secret,
+    Secret,
+};
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;

@@ -19,7 +19,9 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use common_utils::{ExposeInterface, Secret};
+use common_utils::{ExposeInterface, Secret,
+    Secret,
+};
 use serde::{Deserialize, Serialize};
 use time::PrimitiveDateTime;
 

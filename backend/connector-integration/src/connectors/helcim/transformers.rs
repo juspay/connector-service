@@ -1,4 +1,6 @@
-use common_utils::{pii, types::FloatMajorUnit};
+use common_utils::{pii, types::FloatMajorUnit,
+    Secret,
+};
 use domain_types::{
     connector_flow::{Authorize, Capture, SetupMandate, Void},
     connector_types::{
