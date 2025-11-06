@@ -3,7 +3,7 @@ use std::ops::Deref;
 
 use error_stack::ResultExt;
 #[cfg(feature = "masking")]
-use common_utils::{ExposeInterface, Secret};
+use crate::masking::{ExposeInterface, Secret};
 #[cfg(not(feature = "masking"))]
 use crate::masking::{ExposeInterface, Secret};
 use md5;
@@ -524,7 +524,7 @@ pub struct Encryptable<T: Clone> {
 }
 
 #[cfg(feature = "masking")]
-impl<T: Clone, S: hyperswitch_masking::Strategy<T>> Encryptable<Secret<T, S>> {
+impl<T: Clone, S: crate::masking::Strategy<T>> Encryptable<Secret<T, S>> {
     /// constructor function to be used by the encryptor and decryptor to generate the data type
     pub fn new(
         masked_data: Secret<T, S>,
@@ -590,7 +590,7 @@ impl<T: Clone> Deref for Encryptable<Secret<T>> {
 }
 
 #[cfg(feature = "masking")]
-impl<T: Clone> hyperswitch_masking::Serialize for Encryptable<T>
+impl<T: Clone> crate::masking::Serialize for Encryptable<T>
 where
     T: hyperswitch_masking::Serialize,
 {
