@@ -20,7 +20,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
-# use hyperswitch_masking::{ExposeInterface, Secret};
+use common_utils::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use reqwest::Url;

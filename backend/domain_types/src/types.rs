@@ -19,7 +19,7 @@ use grpc_api_types::payments::{
     PaymentServiceVoidPostCaptureResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
     RefundResponse,
 };
-# use hyperswitch_masking::{ExposeInterface, Secret};
+use common_utils::{ExposeInterface, Secret};
 use serde::Serialize;
 use tracing::info;
 use utoipa::ToSchema;

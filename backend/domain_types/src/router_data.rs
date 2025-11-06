@@ -6,7 +6,7 @@ use cards::{
 };
 use common_utils::ext_traits::{OptionExt, ValueExt};
 use error_stack::ResultExt;
-# use hyperswitch_masking::{ExposeInterface, Secret};
+use common_utils::{ExposeInterface, Secret};
 
 use crate::utils::missing_field_err;
 

@@ -2,7 +2,7 @@
 use std::ops::Deref;
 
 use error_stack::ResultExt;
-# use hyperswitch_masking::{ExposeInterface, Secret};
+use common_utils::{ExposeInterface, Secret};
 use md5;
 use ring::{
     aead::{self, BoundKey, OpeningKey, SealingKey, UnboundKey},
