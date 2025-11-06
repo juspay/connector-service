@@ -383,6 +383,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     network_decline_code: None,
                     network_error_message: None,
                 })
+            }
             Err(error_msg) => {
                 if let Some(event) = event_builder {
                     event.set_error(serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code}))
