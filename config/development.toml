@@ -30,9 +30,33 @@ idle_pool_connection_timeout = 90               # Timeout for idle pool connecti
 bypass_proxy_urls = ["localhost", "local"]
 
 [test]
-enabled = true
-mock_server_url = "http://localhost:3000"
+enabled = false
+mock_server_url = "http://localhost:3000/mockGateway"
 
+[api_tags.tags]
+# Payment Flow API Tags
+Authorize = "GW_INIT_COLLECT"
+CreateOrder = "GW_CREATE_ORDER"
+SetupMandate = "GW_SETUP_MANDATE"
+RepeatPayment = "GW_REPEAT_PAYMENT"
+CreateSessionToken = "GW_SESSION_TOKEN"
+Capture = "GW_CAPTURE"
+Void = "GW_VOID"
+Refund = "GW_REFUND"
+
+# Sync Flow API Tags
+Psync = "GW_TXN_SYNC"
+Rsync = "GW_RSYNC"
+Dsync = "GW_DSYNC"
+
+# Dispute Flow API Tags
+AcceptDispute = "GW_ACCEPT_DISPUTE"
+SubmitEvidence = "GW_SUBMIT_EVIDENCE"
+DefendDispute = "GW_DEFEND_DISPUTE"
+
+# Webhook and Other Flow API Tags
+IncomingWebhook = "GW_INCOMING_WEBHOOK"
+Unknown = "GW_UNKNOWN"
 
 [connectors]
 adyen.base_url = "https://checkout-test.adyen.com/"

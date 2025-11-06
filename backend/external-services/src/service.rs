@@ -170,6 +170,7 @@ pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Re
     all_keys_required: Option<bool>,
     event_params: EventProcessingParams<'_>,
     test_context: Option<TestContext>,
+    api_tag: Option<String>,
 ) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
 where
     F: Clone + 'static,
@@ -196,8 +197,7 @@ where
             // Replace URL with mock server URL
             request.url = test_ctx.get_request_url(request.url.clone());
 
-            // Add test headers with API tag from connector
-            let api_tag = connector.get_api_tag(&router_data);
+            // Add test headers with API tag from config
             let test_headers = test_ctx.get_test_headers(&original_url, api_tag);
             request.headers.extend(test_headers);
 

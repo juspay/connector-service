@@ -482,8 +482,35 @@ macro_rules! implement_connector_operation {
                 response: Err(domain_types::router_data::ErrorResponse::default()),
             };
 
-            // Execute connector processing
+            // Calculate flow name for dynamic flow-specific configurations
             let flow_name = $crate::utils::flow_marker_to_flow_name::<$flow_marker>();
+
+            // Get API tag for the current flow
+            let api_tag = self
+                .config
+                .api_tags
+                .get_tag_for_flow(flow_name);
+
+            // Create test context if test mode is enabled
+            let test_context = if self.config.test.enabled {
+                let ctx = external_services::service::TestContext::new(
+                    self.config.test.mock_server_url.clone(),
+                    &metadata,
+                );
+                tracing::info!(
+                    "Test context created: flow={:?}, enabled={}, mock_server_url={:?}, is_test_env={}",
+                    flow_name,
+                    self.config.test.enabled,
+                    self.config.test.mock_server_url,
+                    ctx.is_test_env
+                );
+                Some(ctx)
+            } else {
+                tracing::info!("Test mode disabled for flow={:?}", flow_name);
+                None
+            };
+
+            // Execute connector processing
             let event_params = external_services::service::EventProcessingParams {
                 connector_name: &connector.to_string(),
                 service_name: &service_name,
@@ -500,7 +527,8 @@ macro_rules! implement_connector_operation {
                 router_data,
                 $all_keys_required,
                 event_params,
-                None, // TODO: Add test context support for macro-generated calls
+                test_context,
+                api_tag,
             )
             .await
             .switch()
