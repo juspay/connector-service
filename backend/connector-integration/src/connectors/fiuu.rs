@@ -45,6 +45,7 @@ use interfaces::{
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{self},
     events::connector_api_logs::ConnectorEvent,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tracing::{error, info, warn};
