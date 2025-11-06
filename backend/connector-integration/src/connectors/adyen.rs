@@ -475,5 +475,19 @@ impl ConnectorValidation for Adyen<DefaultPCIHolder> {
         .into())
     fn is_webhook_source_verification_mandatory(&self) -> bool {
         false
-        domain_types::connector_flow::RepeatPayment,
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RepeatPaymentV2<T> for Adyen<T>
+{
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<
+            domain_types::connector_flow::RepeatPayment,
+            PaymentFlowData,
+            domain_types::connector_types::RepeatPaymentData,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<serde_json::Value, errors::ConnectorError> {
         domain_types::connector_types::RepeatPaymentData,
