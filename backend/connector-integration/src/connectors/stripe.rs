@@ -27,6 +27,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
+    },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -51,12 +52,15 @@ use transformers::{
 };
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
+
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
     pub(crate) const STRIPE_COMPATIBLE_CONNECT_ACCOUNT: &str = "Stripe-Account";
 }
+
 use stripe::auth_headers;
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Stripe<T>
 {
@@ -74,7 +78,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     type AcceptDispute = Stripe<T>;
     type SubmitEvidenceV2 = Stripe<T>;
     type DisputeDefend = Stripe<T>;
-    connector_types::RepeatPaymentV2 for Stripe<T>
     type PaymentTokenV2 = Stripe<T>;
     type PaymentPreAuthenticateV2 = Stripe<T>;
     type PaymentOrderCreate = Stripe<T>;
@@ -87,7 +90,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         true
     }
 }
+
 macros::create_amount_converter_wrapper!(connector_name: Stripe, amount_type: MinorUnit);
+
 macros::create_all_prerequisites!(
     connector_name: Stripe,
     generic_type: T,
@@ -147,6 +152,7 @@ macros::create_all_prerequisites!(
     ],
     amount_converters: []
 );
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Stripe<T>
 {
@@ -162,6 +168,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         // &self.base_url
         connectors.stripe.base_url.as_ref()
     }
+    
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
@@ -216,3 +223,5 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         })
     }
 }
+
+// Implementation stubs for various connector integrations would go here
