@@ -233,6 +233,7 @@ macros::create_all_prerequisites!(
         let signature_string = format!(
             "host: {host}\ndate: {date}\n{request_target}v-c-merchant-id: {}",
             merchant_account.peek()
+        );
         let key_value = BASE64_ENGINE
             .decode(api_secret.expose())
             .change_context(errors::ConnectorError::InvalidConnectorConfig {
