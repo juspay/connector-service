@@ -279,6 +279,7 @@ impl<'de> Deserialize<'de> for NetworkToken {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CardNumberStrategy {}
 
 impl<T> Strategy<T> for CardNumberStrategy
