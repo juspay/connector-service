@@ -1,4 +1,5 @@
 pub mod transformers;
+use common_utils::Maskable;
 
 use common_enums;
 use common_utils::{

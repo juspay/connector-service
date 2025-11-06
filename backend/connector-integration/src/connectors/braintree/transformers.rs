@@ -1,4 +1,5 @@
 use common_enums::enums;
+use common_utils::Secret;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     pii,

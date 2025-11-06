@@ -1,4 +1,5 @@
 //! RazorpayV2 transformers for converting between domain types and RazorpayV2 API types
+use common_utils::Secret;
 
 use std::str::FromStr;
 

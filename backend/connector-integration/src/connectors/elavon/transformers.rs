@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use common_utils::Secret;
 
 use common_enums::{
     AttemptStatus as HyperswitchAttemptStatus, CaptureMethod as HyperswitchCaptureMethod, Currency,

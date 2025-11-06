@@ -1,4 +1,5 @@
 use common_enums::{self, enums, AttemptStatus, RefundStatus};
+use common_utils::Secret;
 use common_utils::{consts, ext_traits::OptionExt, pii::Email, types::FloatMajorUnit,
     
 };

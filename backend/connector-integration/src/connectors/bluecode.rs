@@ -1,4 +1,5 @@
 #[cfg(test)]
+use common_utils::Maskable;
 mod test;
 pub mod transformers;
 

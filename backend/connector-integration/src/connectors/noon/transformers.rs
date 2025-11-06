@@ -1,4 +1,5 @@
 use common_enums::enums::{self, AttemptStatus, CountryAlpha2};
+use common_utils::Secret;
 use common_utils::{ext_traits::Encode, pii, request::Method, types::StringMajorUnit,
     
 };

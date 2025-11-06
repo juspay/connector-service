@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use common_utils::Maskable;
 
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},

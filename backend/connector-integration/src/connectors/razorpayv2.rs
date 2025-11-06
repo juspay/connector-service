@@ -1,4 +1,5 @@
 pub mod test;
+use common_utils::Maskable;
 pub mod transformers;
 use common_enums::AttemptStatus;
 use common_utils::{

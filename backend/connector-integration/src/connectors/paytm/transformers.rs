@@ -1,4 +1,5 @@
 use std::{
+use common_utils::Secret;
     cmp,
     collections::HashMap,
     time::{SystemTime, UNIX_EPOCH},

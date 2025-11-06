@@ -1,4 +1,5 @@
 use std::{collections::HashMap, fmt::Debug, ops::Deref, str::FromStr};
+use common_utils::{Secret, Maskable};
 
 use common_utils::{
     collect_missing_value_keys, consts, custom_serde,

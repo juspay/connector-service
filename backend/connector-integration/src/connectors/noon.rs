@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use common_utils::Maskable;
 
 use base64::Engine;
 use common_enums::AttemptStatus;

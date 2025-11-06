@@ -1,4 +1,5 @@
 pub mod transformers;
+use common_utils::Maskable;
 
 use common_utils::{
     consts::NO_ERROR_CODE, errors::CustomResult, ext_traits::BytesExt, fp_utils::generate_id,

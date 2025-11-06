@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use common_utils::Maskable;
 
 use common_utils::{errors::CustomResult, ext_traits::BytesExt,
     Maskable,

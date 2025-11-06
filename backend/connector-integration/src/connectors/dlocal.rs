@@ -1,4 +1,5 @@
 pub mod transformers;
+use common_utils::Maskable;
 
 use common_utils::{
     crypto::{self, SignMessage},

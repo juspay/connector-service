@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use common_utils::Secret;
 
 use common_enums as enums;
 use common_utils::{ext_traits::OptionExt, pii, types::MinorUnit, CustomResult,

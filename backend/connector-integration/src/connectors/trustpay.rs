@@ -1,4 +1,5 @@
 use base64::Engine;
+use common_utils::Maskable;
 use common_utils::{consts, errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit,
     Maskable,
 };

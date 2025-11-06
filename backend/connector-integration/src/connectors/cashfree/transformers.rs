@@ -1,4 +1,5 @@
 use common_enums;
+use common_utils::Secret;
 use domain_types::{
     connector_flow::{Authorize, CreateOrder},
     connector_types::{

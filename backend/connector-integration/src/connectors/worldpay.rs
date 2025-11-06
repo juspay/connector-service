@@ -1,4 +1,5 @@
 pub mod requests;
+use common_utils::Maskable;
 pub mod response;
 pub mod transformers;
 

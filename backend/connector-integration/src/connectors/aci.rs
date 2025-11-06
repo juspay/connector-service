@@ -1,4 +1,5 @@
 pub mod aci_result_codes;
+use common_utils::Maskable;
 pub mod transformers;
 
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, StringMajorUnit,

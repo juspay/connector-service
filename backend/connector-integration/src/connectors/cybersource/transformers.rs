@@ -1,4 +1,5 @@
 use base64::Engine;
+use common_utils::Secret;
 use jsonwebtoken as jwt;
 use serde_json::Value;
 

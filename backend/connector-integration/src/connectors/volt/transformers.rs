@@ -1,4 +1,5 @@
 use common_enums::{self, AttemptStatus, Currency};
+use common_utils::Secret;
 use common_utils::{consts, id_type::CustomerId, request::Method, types::MinorUnit,
     
 };
