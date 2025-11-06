@@ -1,7 +1,6 @@
 //! Common utilities for connector service
 
-// Mock types for when masking is not enabled
-#[cfg(not(feature = "masking"))]
+// Mock types for masking (always available since hyperswitch_masking has compatibility issues)
 pub mod masking {
     use serde::{Deserialize, Serialize};
     use std::fmt;
