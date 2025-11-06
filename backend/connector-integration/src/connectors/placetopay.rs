@@ -47,6 +47,7 @@ use transformers::{
     PlacetopayPaymentsResponse as PlacetopayVoidResponse, PlacetopayPsyncRequest,
     PlacetopayRefundRequest, PlacetopayRefundResponse as PlacetopayRSyncResponse,
     PlacetopayRefundResponse, PlacetopayRsyncRequest,
+};
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 pub(crate) mod headers {
