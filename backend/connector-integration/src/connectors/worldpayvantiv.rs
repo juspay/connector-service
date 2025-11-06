@@ -151,13 +151,15 @@ macros::create_all_prerequisites!(
             response_body: CnpOnlineResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
+        (
             flow: PSync,
             response_body: VantivSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        )
+        ),
     ],
     amount_converters: [
         amount_converter: MinorUnit
+    ],
     member_functions: {
         fn preprocess_response_bytes<F, FCD, Req, Res>(
             &self,
@@ -173,19 +175,24 @@ macros::create_all_prerequisites!(
                 let xml_response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
                     .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
                 let json_bytes = serde_json::to_vec(&xml_response)
+                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
                 Ok(bytes::Bytes::from(json_bytes))
             } else {
                 // This is already JSON or another format
                 Ok(bytes)
             }
         }
+        
         pub fn build_headers<F, FCD, Req, Res>(
+            &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             let mut header = vec![];
             let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
             header.append(&mut api_key);
             Ok(header)
+        }
+        
         pub fn connector_base_url_payments<F, Req, Res>(
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> String {
