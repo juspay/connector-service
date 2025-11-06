@@ -165,23 +165,6 @@ impl<T> ConnectorCommon for Razorpay<T>
         })
     }
 }
-        req: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
-    where
-        Self: ConnectorIntegrationV2<
-    {
-        let mut header = vec![
-            (
-                headers::CONTENT_TYPE.to_string(),
-                "application/x-www-form-urlencoded".to_string().into(),
-            ),
-                headers::ACCEPT.to_string(),
-                "application/json".to_string().into(),
         ];
         let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
         header.append(&mut api_key);
