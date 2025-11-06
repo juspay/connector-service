@@ -420,7 +420,7 @@ where
             http_code,
         } = item;
         
-        let (_status, response) = match response {
+        let (status, response) = match response {
             BilldeskPaymentsResponse::BilldeskError(error_data) => (
                 common_enums::AttemptStatus::Failure,
                 Err(ErrorResponse {
