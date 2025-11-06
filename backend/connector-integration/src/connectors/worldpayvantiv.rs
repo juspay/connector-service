@@ -25,29 +25,35 @@ use domain_types::{
         RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
         RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
+    },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
+};
 use error_stack::ResultExt;
 // use crate::masking::{Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
+    connector_types::{
         AcceptDispute, ConnectorServiceTrait,
         CreateConnectorCustomer as CreateConnectorCustomerTrait, DisputeDefend, IncomingWebhook,
         PaymentAuthenticateV2, PaymentAuthorizeV2, PaymentCapture, PaymentOrderCreate,
         PaymentPostAuthenticateV2, PaymentPreAuthenticateV2, PaymentSessionToken, PaymentSyncV2,
         PaymentVoidPostCaptureV2, PaymentVoidV2, RefundSyncV2, RefundV2, RepeatPaymentV2,
         SetupMandateV2, SubmitEvidenceV2, ValidationTrait,
+    },
     events::connector_api_logs::ConnectorEvent,
     verification::SourceVerification,
+};
 use serde::Serialize;
 use self::transformers::{
     CnpOnlineResponse, VantivSyncResponse, WorldpayvantivAuthType, WorldpayvantivPaymentsRequest,
     BASE64_ENGINE,
+};
 use super::macros;
 use crate::{types::ResponseRouterData, with_response_body};
 pub(crate) mod headers {
