@@ -190,10 +190,13 @@ macros::create_all_prerequisites!(
 );
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Adyen<T>
+{
     fn id(&self) -> &'static str {
         "adyen"
+    }
     fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
         common_enums::CurrencyUnit::Minor
+    }
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
