@@ -1,5 +1,5 @@
 use common_enums::{self, AttemptStatus, Currency};
-use common_utils::{Email, crypto::GenerateDigest, AmountConvertor};
+use common_utils::{crypto::GenerateDigest, types::StringMinorUnit, Email};
 
 use domain_types::{
     connector_flow::{Authorize, PSync},
@@ -17,26 +17,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
 
-pub mod constants {
-    // Payu API versions
-    pub const API_VERSION: &str = "2.0";
-
-    // Payu device info
-    pub const DEVICE_INFO: &str = "web";
-
-    // Payu UPI specific constants
-    pub const PRODUCT_INFO: &str = "Payment"; // Default product info
-    pub const UPI_PG: &str = "UPI"; // UPI payment gateway
-    pub const UPI_COLLECT_BANKCODE: &str = "UPI"; // UPI Collect bank code
-    pub const UPI_INTENT_BANKCODE: &str = "INTENT"; // UPI Intent bank code
-    pub const UPI_S2S_FLOW: &str = "2"; // S2S flow type for UPI
-
-    // Payu PSync specific constants
-    pub const COMMAND: &str = "verify_payment";
-}
-
 // PayU Status enum to handle both integer and string status values
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, Deserialize)]
 pub enum PayuStatusValue {
     IntStatus(i32),       // 1 for UPI Intent success
     StringStatus(String), // "success" for UPI Collect success
@@ -84,16 +66,13 @@ impl TryFrom<&ConnectorAuthType> for PayuAuthType {
     }
 }
 
-// Note: Integrity Framework implementation will be handled by the framework itself
-// since we can't implement foreign traits for foreign types (orphan rules)
-
 // Request structure based on Payu UPI analysis
 #[derive(Debug, Serialize)]
-pub struct PayuPaymentRequest {
+pub struct PayuPaymentsRequest {
     // Core payment fields
     pub key: String,                                  // Merchant key
     pub txnid: String,                                // Transaction ID
-    pub amount: common_utils::types::StringMajorUnit, // Amount in string major units
+    pub amount: StringMinorUnit,                      // Amount in string minor units
     pub currency: Currency,                           // Currency code
     pub productinfo: String,                          // Product description
     // Customer information
@@ -101,7 +80,8 @@ pub struct PayuPaymentRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub lastname: Option<Secret<String>>,
     pub email: Email,
-    pub phone: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phone: Option<Secret<String>>,
 
     // URLs
     pub surl: String, // Success URL
@@ -170,7 +150,7 @@ pub struct PayuPaymentRequest {
 
 // Response structure based on actual PayU API response
 #[derive(Debug, Deserialize, Serialize)]
-pub struct PayuPaymentResponse {
+pub struct PayuPaymentsResponse {
     // Success response fields - PayU can return status as either int or string
     #[serde(deserialize_with = "deserialize_payu_status")]
     pub status: Option<PayuStatusValue>, // Status can be 1 (int) or "success" (string)
@@ -225,21 +205,11 @@ pub struct PayuUpiApp {
     pub package_name: Option<String>,
 }
 
-// PSync Request structure
-#[derive(Debug, Serialize)]
-pub struct PayuSyncRequest {
-    pub key: String,        // Merchant key
-    pub command: String,    // "verify_payment"
-    pub var1: String,       // Transaction ID
-    pub hash: String,       // SHA-512 signature
-}
-
-// PSync Response structure
+// Error response structure
 #[derive(Debug, Deserialize, Serialize)]
-pub struct PayuSyncResponse {
-    pub status: Option<i32>, // Status code (1 = success, 0 = error)
-    pub msg: Option<String>, // Message
-    pub transaction_details: Option<serde_json::Value>, // Transaction details
+pub struct PayuErrorResponse {
+    pub error_code: Option<String>,
+    pub error_description: Option<String>,
 }
 
 // Helper function to check if this is a UPI collect flow
@@ -300,7 +270,7 @@ fn generate_payu_hash(
 // Transformer implementations
 
 impl<T> TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
-    for PayuPaymentRequest
+    for PayuPaymentsRequest
 where
     T: PaymentMethodDataTypes,
 {
@@ -316,34 +286,26 @@ where
             .connector_request_reference_id
             .clone();
 
-        // Use AmountConvertor to convert amount properly
-        let converter = common_utils::types::StringMajorUnitForConnector;
-        let amount = converter.convert(
-            common_utils::types::MinorUnit(item.request.amount),
-            item.request.currency
-        ).map_err(|_| ConnectorError::RequestEncodingFailed)?;
+        // Use amount converter properly - CRITICAL: Use get_amount_as_string()
+        let amount = item.amount.get_amount_as_string();
         let currency = item.request.currency;
 
-        // Extract customer information
+        // Extract customer information - CRITICAL: Use proper getter functions
         let email = item.request.email.clone().ok_or_else(|| {
             ConnectorError::MissingRequiredField {
                 field_name: "email",
             }
         })?;
 
-        // Phone is not directly available in PaymentsAuthorizeData, skip for now
-        let phone = Secret::new("".to_string());
-
         let customer_name = item.request.customer_name.clone().unwrap_or_else(|| "Customer".to_string());
 
-        // Get return URLs - use router_return_url instead
-        let return_url = item.request.router_return_url.clone().unwrap_or_else(|| "https://default.com".to_string());
+        // Get return URLs - CRITICAL: Use proper getter function
+        let return_url = item.request.get_router_return_url()?;
 
-        // Get client IP
-        let client_ip_address = item.request.browser_info.clone()
-            .and_then(|info| info.ip_address)
-            .unwrap_or_else(|| "127.0.0.1".parse().unwrap());
-        let client_ip = Secret::new(client_ip_address.to_string());
+        // Get client IP - CRITICAL: Use proper getter function
+        let client_ip = item.request.get_ip_address_as_optional()
+            .map(|ip| ip.expose())
+            .unwrap_or_else(|| "127.0.0.1".to_string());
 
         // Extract payment method data
         let (pg, bankcode, vpa, upi_app_name) = match &item.request.payment_method_data {
@@ -357,7 +319,7 @@ where
                     }
                     UpiData::UpiCollect(collect_data) => {
                         // UPI Collect flow
-                        (Some(constants::UPI_COLLECT_BANKCODE.to_string()), collect_data.vpa_id.as_ref().map(|v| v.clone().expose().to_string()), None)
+                        (Some(constants::UPI_COLLECT_BANKCODE.to_string()), collect_data.vpa_id.as_ref().map(|v| v.expose().to_string()), None)
                     }
                     UpiData::UpiQr(_) => {
                         (None, None, None)
@@ -381,7 +343,7 @@ where
         let hash = generate_payu_hash(
             &auth.api_key.peek(),
             &transaction_id,
-            &format!("{:?}", amount), // Use Debug trait
+            &amount,
             constants::PRODUCT_INFO,
             &customer_name,
             &email.peek().to_string(),
@@ -392,27 +354,20 @@ where
         Ok(Self {
             key: auth.api_key.peek().clone(),
             txnid: transaction_id,
-            amount: {
-                // Use AmountConvertor to convert amount properly
-                let converter = common_utils::types::StringMajorUnitForConnector;
-                converter.convert(
-                    common_utils::types::MinorUnit(item.request.amount),
-                    item.request.currency
-                ).map_err(|_| ConnectorError::RequestEncodingFailed)?
-            },
+            amount: item.amount.clone(), // Use the amount converter directly
             currency,
             productinfo: constants::PRODUCT_INFO.to_string(),
             firstname: Secret::new(customer_name.to_string()),
             lastname: None,
             email,
-            phone,
+            phone: None, // Phone is optional
             surl: return_url.clone(),
             furl: return_url,
             pg,
             bankcode,
             vpa,
             txn_s2s_flow: constants::UPI_S2S_FLOW.to_string(),
-            s2s_client_ip: client_ip,
+            s2s_client_ip: Secret::new(client_ip),
             s2s_device_info: constants::DEVICE_INFO.to_string(),
             api_version: Some(constants::API_VERSION.to_string()),
             hash,
@@ -440,7 +395,7 @@ where
 }
 
 impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
-    for PayuSyncRequest
+    for PayuPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
@@ -454,7 +409,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
             .connector_request_reference_id
             .clone();
 
-        // Generate hash for PSync
+        // Generate hash for PSync - different format than payment
         let hash_string = format!("{}|{}|{}|{}", 
             auth.api_key.peek(), 
             constants::COMMAND, 
@@ -468,20 +423,54 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
         
         Ok(Self {
             key: auth.api_key.peek().clone(),
-            command: constants::COMMAND.to_string(),
-            var1: transaction_id,
+            txnid: transaction_id,
+            amount: StringMinorUnit::default(), // Not used in PSync
+            currency: common_enums::Currency::USD, // Default currency
+            productinfo: constants::PRODUCT_INFO.to_string(),
+            firstname: Secret::new("".to_string()),
+            lastname: None,
+            email: Email::try_from("test@example.com").map_err(|_| ConnectorError::RequestEncodingFailed)?,
+            phone: None,
+            surl: "".to_string(),
+            furl: "".to_string(),
+            pg: None,
+            bankcode: None,
+            vpa: None,
+            txn_s2s_flow: constants::UPI_S2S_FLOW.to_string(),
+            s2s_client_ip: Secret::new("127.0.0.1".to_string()),
+            s2s_device_info: constants::DEVICE_INFO.to_string(),
+            api_version: Some(constants::API_VERSION.to_string()),
             hash: hex::encode(hash),
+            udf1: None,
+            udf2: None,
+            udf3: None,
+            udf4: None,
+            udf5: None,
+            udf6: None,
+            udf7: None,
+            udf8: None,
+            udf9: None,
+            udf10: None,
+            offer_key: None,
+            si: None,
+            si_details: None,
+            beneficiarydetail: None,
+            user_token: None,
+            offer_auto_apply: None,
+            additional_charges: None,
+            additional_gst_charges: None,
+            upi_app_name: None,
         })
     }
 }
 
 // Response transformers
 
-impl TryFrom<PayuPaymentResponse> for ResponseRouterData {
+impl TryFrom<PayuPaymentsResponse> for ResponseRouterData {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(response: PayuPaymentResponse) -> Result<Self, Self::Error> {
-        let _status = match response.status {
+    fn try_from(response: PayuPaymentsResponse) -> Result<Self, Self::Error> {
+        let status = match response.status {
             Some(PayuStatusValue::IntStatus(1)) => {
                 AttemptStatus::Charged
             }
@@ -503,32 +492,31 @@ impl TryFrom<PayuPaymentResponse> for ResponseRouterData {
             _ => AttemptStatus::Pending,
         };
 
-        let _error_message = response.error.or(response.message).or(response.msg);
+        let error_message = response.error.or(response.message).or(response.msg);
 
         Ok(ResponseRouterData {
             headers: None,
             status_code: 200,
-            response: "success".into(),
+            response: status,
         })
     }
 }
 
-impl TryFrom<PayuSyncResponse> for ResponseRouterData {
-    type Error = error_stack::Report<ConnectorError>;
+// Constants module
+pub mod constants {
+    // Payu API versions
+    pub const API_VERSION: &str = "2.0";
 
-    fn try_from(response: PayuSyncResponse) -> Result<Self, Self::Error> {
-        let _status = match response.status {
-            Some(1) => AttemptStatus::Charged,
-            Some(0) => AttemptStatus::Failure,
-            _ => AttemptStatus::Pending,
-        };
+    // Payu device info
+    pub const DEVICE_INFO: &str = "web";
 
-        let _error_message = response.msg;
+    // Payu UPI specific constants
+    pub const PRODUCT_INFO: &str = "Payment"; // Default product info
+    pub const UPI_PG: &str = "UPI"; // UPI payment gateway
+    pub const UPI_COLLECT_BANKCODE: &str = "UPI"; // UPI Collect bank code
+    pub const UPI_INTENT_BANKCODE: &str = "INTENT"; // UPI Intent bank code
+    pub const UPI_S2S_FLOW: &str = "2"; // S2S flow type for UPI
 
-        Ok(ResponseRouterData {
-            headers: None,
-            status_code: 200,
-            response: "success".into(),
-        })
-    }
+    // Payu PSync specific constants
+    pub const COMMAND: &str = "verify_payment";
 }
