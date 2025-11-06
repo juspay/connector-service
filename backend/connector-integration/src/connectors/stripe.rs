@@ -65,23 +65,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     type PaymentAccessToken = Stripe<T>;
     type CreateConnectorCustomer = Stripe<T>;
     type PaymentSyncV2 = Stripe<T>;
-    connector_types::PaymentVoidV2 for Stripe<T>
-    connector_types::PaymentVoidPostCaptureV2 for Stripe<T>
-    ConnectorIntegrationV2<
-        VoidPC,
-        PaymentFlowData,
-        PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Stripe<T>
-    SourceVerification<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
-    for Stripe<T>
-    connector_types::RefundSyncV2 for Stripe<T>
-    connector_types::RefundV2 for Stripe<T>
-    connector_types::PaymentCapture for Stripe<T>
-    connector_types::SetupMandateV2<T> for Stripe<T>
-    connector_types::AcceptDispute for Stripe<T>
-    connector_types::SubmitEvidenceV2 for Stripe<T>
-    connector_types::DisputeDefend for Stripe<T>
+    type PaymentVoidV2 = Stripe<T>;
+    type PaymentVoidPostCaptureV2 = Stripe<T>;
+    type RefundSyncV2 = Stripe<T>;
+    type RefundV2 = Stripe<T>;
+    type PaymentCapture = Stripe<T>;
+    type SetupMandateV2 = Stripe<T>;
+    type AcceptDispute = Stripe<T>;
+    type SubmitEvidenceV2 = Stripe<T>;
+    type DisputeDefend = Stripe<T>;
     connector_types::RepeatPaymentV2 for Stripe<T>
     connector_types::PaymentTokenV2<T> for Stripe<T>
     connector_types::PaymentPreAuthenticateV2<T> for Stripe<T>
