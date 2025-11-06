@@ -552,4 +552,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PaymentsResponseData,
         >,
     ) -> CustomResult<serde_json::Value, errors::ConnectorError> {
-        domain_types::connector_types::RepeatPaymentData,
+        todo!("Implement RepeatPaymentV2 for Adyen")
+    }
+}
