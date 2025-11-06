@@ -71,11 +71,11 @@ impl FromStr for Email {
     type Err = error_stack::Report<ValidationError>;
     fn from_str(email: &str) -> Result<Self, Self::Err> {
         if email.eq(REDACTED) {
-            return Ok(Self(Secret::new(email.to_string())));
+            return Ok(Self(Secret::<String, EmailStrategy>::from(email.to_string())));
         }
         // Basic email validation - in production you'd use a more robust validator
         if email.contains('@') && email.len() > 3 {
-            let secret = Secret::<String, EmailStrategy>::new(email.to_string());
+            let secret = Secret::<String, EmailStrategy>::from(email.to_string());
             Ok(Self(secret))
         } else {
             Err(ValidationError::InvalidValue {
