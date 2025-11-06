@@ -16,7 +16,7 @@ pub mod masking {
         }
     }
     
-    #[derive(Debug, Clone, SerdeSerialize, Deserialize, PartialEq, Eq, Hash)]
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
     pub struct Secret<T, S = ()>(pub T, std::marker::PhantomData<S>);
     
     #[cfg(feature = "masking")]
@@ -77,7 +77,7 @@ pub mod masking {
         }
     }
     
-    #[derive(Debug, Clone, SerdeSerialize, Deserialize, PartialEq, Eq, Hash)]
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
     pub struct Maskable<T>(pub T);
     
     impl<T> From<T> for Maskable<T> {
