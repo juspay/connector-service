@@ -277,7 +277,7 @@ impl<
         let transaction_id = item.router_data.resource_common_data.connector_request_reference_id;
 
         // Extract IP address using proper function
-        let ip_address = item.router_data.request.get_ip_address_as_optional()
+        let ip_address: String = item.router_data.request.get_ip_address_as_optional()
             .map(|ip| ip.expose())
             .unwrap_or_else(|| "127.0.0.1".to_string());
 
@@ -555,7 +555,7 @@ impl<F> TryFrom<ResponseRouterData<BilldeskRefundSyncResponse, Self>>
             http_code,
         } = item;
         
-        let (status, response) = match response {
+        let (_status, response) = match response {
             BilldeskRefundSyncResponse::BilldeskError(error_data) => (
                 common_enums::RefundStatus::Failure,
                 Err(ErrorResponse {
