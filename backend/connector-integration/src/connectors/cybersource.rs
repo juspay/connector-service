@@ -228,8 +228,10 @@ macros::create_all_prerequisites!(
         } else if is_patch_method {
             format!("(request-target): patch {resource}\ndigest: SHA-256={payload}\n")
         } else if is_delete_method {
-            format!("(request-target): delete {resource}\n")
-            format!("(request-target): get {resource}\n")
+            format!("(request-target): delete {resource}\\n")
+        } else {
+            format!("(request-target): get {resource}\\n")
+        };
         let signature_string = format!(
             "host: {host}\ndate: {date}\n{request_target}v-c-merchant-id: {}",
             merchant_account.peek()
