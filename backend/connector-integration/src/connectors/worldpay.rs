@@ -169,14 +169,23 @@ macros::create_all_prerequisites!(
 );
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Worldpay<T>
+{
     fn id(&self) -> &'static str {
         "worldpay"
+    }
+    
     fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
         common_enums::CurrencyUnit::Minor
+    }
+    
     fn common_get_content_type(&self) -> &'static str {
         "application/json"
+    }
+    
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
         connectors.worldpay.base_url.as_ref()
+    }
+    
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
@@ -188,6 +197,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             headers::AUTHORIZATION.to_string(),
             auth.api_key.into_masked(),
         )])
+    }
+    
     fn build_error_response(
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
@@ -211,6 +222,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             network_decline_code: None,
             network_error_message: None,
         })
+    }
+}
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpay,
