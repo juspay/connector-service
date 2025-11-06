@@ -303,17 +303,34 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             amount_captured: None,
             error_reason: None,
             network_txn_id: None,
+        })
+    }
+    
     fn process_refund_webhook(
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<
         domain_types::connector_types::RefundWebhookDetailsResponse,
         error_stack::Report<errors::ConnectorError>,
     > {
+        let notif: AdyenNotificationRequestItemWH =
+            transformers::get_webhook_object_from_body(request.body).map_err(|err| {
+                report!(errors::ConnectorError::WebhookBodyDecodingFailed)
+                    .attach_printable(format!("error while decoding webhook body {err}"))
+            })?;
         Ok(RefundWebhookDetailsResponse {
             connector_refund_id: Some(notif.psp_reference.clone()),
             status: transformers::get_adyen_refund_webhook_event(notif.event_code, notif.success)?,
             connector_response_reference_id: Some(notif.psp_reference.clone()),
+        })
+    }
+    
     fn process_dispute_webhook(
-        domain_types::connector_types::DisputeWebhookDetailsResponse,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<domain_types::connector_types::DisputeWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
         let (stage, status) = transformers::get_dispute_stage_and_status(
             notif.event_code,
             notif.additional_data.dispute_status,
