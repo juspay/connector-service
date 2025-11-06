@@ -45,6 +45,7 @@ semver = { version = "1.0.26", features = ["serde"] }
 default = []
 kafka = ["dep:rdkafka", "dep:tracing-kafka"]
 async_ext = ["dep:async-trait", "dep:futures"]
+masking = []  # Placeholder for masking feature
 
 [dependencies.async-trait]
 version = "0.1.74"
