@@ -373,6 +373,7 @@ fn get_b64_auth_cashtocode(
                 password.peek()
             ))
         .into_masked())
+    }
     let auth_header = match payment_method_type {
         Some(common_enums::PaymentMethodType::ClassicReward) => construct_basic_auth(
             auth_type.username_classic.to_owned(),
