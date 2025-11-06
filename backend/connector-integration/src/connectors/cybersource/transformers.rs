@@ -39,7 +39,7 @@ use domain_types::{
     router_response_types::RedirectForm,
     utils::CardIssuer,
 };
-use error_stack::{report, ResultExt};
+use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
@@ -179,95 +179,84 @@ impl<
             ),
         };
 
-        let (payment_information, solution) = match item
-            .router_data
-            .request
-            .payment_method_data
-            .clone()
-        {
-            PaymentMethodData::Card(ccard) => {
-                let card_type = match ccard
-                    .card_network
-                    .clone()
-                    .and_then(get_cybersource_card_type)
-                {
-                    Some(card_network) => Some(card_network.to_string()),
-                    None => domain_types::utils::get_card_issuer(
-                        &(format!("{:?}", ccard.card_number.0)),
+        let (payment_information, solution) =
+            match item.router_data.request.payment_method_data.clone() {
+                PaymentMethodData::Card(ccard) => {
+                    let card_type = match ccard
+                        .card_network
+                        .clone()
+                        .and_then(get_cybersource_card_type)
+                    {
+                        Some(card_network) => Some(card_network.to_string()),
+                        None => domain_types::utils::get_card_issuer(
+                            &(format!("{:?}", ccard.card_number.0)),
+                        )
+                        .ok()
+                        .map(card_issuer_to_string),
+                    };
+
+                    (
+                        PaymentInformation::Cards(Box::new(CardPaymentInformation {
+                            card: Card {
+                                number: ccard.card_number,
+                                expiration_month: ccard.card_exp_month,
+                                expiration_year: ccard.card_exp_year,
+                                security_code: Some(ccard.card_cvc),
+                                card_type,
+                                type_selection_indicator: Some("1".to_owned()),
+                            },
+                        })),
+                        None,
                     )
-                    .ok()
-                    .map(card_issuer_to_string),
-                };
+                }
 
-                (
-                    PaymentInformation::Cards(Box::new(CardPaymentInformation {
-                        card: Card {
-                            number: ccard.card_number,
-                            expiration_month: ccard.card_exp_month,
-                            expiration_year: ccard.card_exp_year,
-                            security_code: Some(ccard.card_cvc),
-                            card_type,
-                            type_selection_indicator: Some("1".to_owned()),
-                        },
-                    })),
-                    None,
-                )
-            }
-
-            PaymentMethodData::Wallet(wallet_data) => {
-                match wallet_data {
+                PaymentMethodData::Wallet(wallet_data) => match wallet_data {
                     WalletData::ApplePay(apple_pay_data) => match item
                         .router_data
                         .resource_common_data
                         .payment_method_token
                         .clone()
                     {
-                        Some(payment_method_token) => {
-                            match payment_method_token {
-                                PaymentMethodToken::ApplePayDecrypt(decrypt_data) => {
-                                    let expiration_month =
-                                        decrypt_data.get_expiry_month().change_context(
-                                            errors::ConnectorError::InvalidDataFormat {
-                                                field_name: "expiration_month",
+                        Some(payment_method_token) => match payment_method_token {
+                            PaymentMethodToken::ApplePayDecrypt(decrypt_data) => {
+                                let expiration_month = decrypt_data
+                                    .get_expiry_month()
+                                    .change_context(errors::ConnectorError::InvalidDataFormat {
+                                        field_name: "expiration_month",
+                                    })?;
+                                let expiration_year = decrypt_data.get_four_digit_expiry_year();
+                                (
+                                    PaymentInformation::ApplePay(Box::new(
+                                        ApplePayPaymentInformation {
+                                            tokenized_card: TokenizedCard {
+                                                number: decrypt_data
+                                                    .application_primary_account_number,
+                                                cryptogram: Some(
+                                                    decrypt_data
+                                                        .payment_data
+                                                        .online_payment_cryptogram,
+                                                ),
+                                                transaction_type: TransactionType::InApp,
+                                                expiration_year,
+                                                expiration_month,
                                             },
-                                        )?;
-                                    let expiration_year =
-                                        decrypt_data.get_four_digit_expiry_year()?;
-                                    (
-                                PaymentInformation::ApplePay(Box::new(
-                                    ApplePayPaymentInformation {
-                                        tokenized_card: TokenizedCard {
-                                            number: cards::CardNumber::try_from(decrypt_data.application_primary_account_number.expose().to_string())
-                                                .change_context(errors::ConnectorError::InvalidDataFormat {
-                                                    field_name: "application_primary_account_number",
-                                                })?,
-                                            cryptogram: Some(
-                                                decrypt_data.payment_data.online_payment_cryptogram,
-                                            ),
-                                            transaction_type: TransactionType::InApp,
-                                            expiration_year,
-                                            expiration_month,
                                         },
-                                    },
-                                )),
-                                Some(PaymentSolution::ApplePay),
-                            )
-                                }
-                                PaymentMethodToken::Token(_) => {
-                                    Err(unimplemented_payment_method!(
-                                        "Apple Pay",
-                                        "Manual",
-                                        "Cybersource"
-                                    ))?
-                                }
-                                PaymentMethodToken::PazeDecrypt(_) => {
-                                    Err(unimplemented_payment_method!("Paze", "Cybersource"))?
-                                }
-                                PaymentMethodToken::GooglePayDecrypt(_) => {
-                                    Err(unimplemented_payment_method!("Google Pay", "Cybersource"))?
-                                }
+                                    )),
+                                    Some(PaymentSolution::ApplePay),
+                                )
                             }
-                        }
+                            PaymentMethodToken::Token(_) => Err(unimplemented_payment_method!(
+                                "Apple Pay",
+                                "Manual",
+                                "Cybersource"
+                            ))?,
+                            PaymentMethodToken::PazeDecrypt(_) => {
+                                Err(unimplemented_payment_method!("Paze", "Cybersource"))?
+                            }
+                            PaymentMethodToken::GooglePayDecrypt(_) => {
+                                Err(unimplemented_payment_method!("Google Pay", "Cybersource"))?
+                            }
+                        },
                         None => {
                             let apple_pay_encrypted_data = apple_pay_data
                                 .payment_data
@@ -353,32 +342,31 @@ impl<
                             "Cybersource",
                         ),
                     ))?,
+                },
+                PaymentMethodData::CardRedirect(_)
+                | PaymentMethodData::PayLater(_)
+                | PaymentMethodData::BankRedirect(_)
+                | PaymentMethodData::BankDebit(_)
+                | PaymentMethodData::BankTransfer(_)
+                | PaymentMethodData::Crypto(_)
+                | PaymentMethodData::MandatePayment
+                | PaymentMethodData::Reward
+                | PaymentMethodData::RealTimePayment(_)
+                | PaymentMethodData::MobilePayment(_)
+                | PaymentMethodData::Upi(_)
+                | PaymentMethodData::Voucher(_)
+                | PaymentMethodData::GiftCard(_)
+                | PaymentMethodData::OpenBanking(_)
+                | PaymentMethodData::CardToken(_)
+                | PaymentMethodData::NetworkToken(_)
+                | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                    Err(errors::ConnectorError::NotImplemented(
+                        domain_types::utils::get_unimplemented_payment_method_error_message(
+                            "Cybersource",
+                        ),
+                    ))?
                 }
-            }
-            PaymentMethodData::CardRedirect(_)
-            | PaymentMethodData::PayLater(_)
-            | PaymentMethodData::BankRedirect(_)
-            | PaymentMethodData::BankDebit(_)
-            | PaymentMethodData::BankTransfer(_)
-            | PaymentMethodData::Crypto(_)
-            | PaymentMethodData::MandatePayment
-            | PaymentMethodData::Reward
-            | PaymentMethodData::RealTimePayment(_)
-            | PaymentMethodData::MobilePayment(_)
-            | PaymentMethodData::Upi(_)
-            | PaymentMethodData::Voucher(_)
-            | PaymentMethodData::GiftCard(_)
-            | PaymentMethodData::OpenBanking(_)
-            | PaymentMethodData::CardToken(_)
-            | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(errors::ConnectorError::NotImplemented(
-                    domain_types::utils::get_unimplemented_payment_method_error_message(
-                        "Cybersource",
-                    ),
-                ))?
-            }
-        };
+            };
 
         let processing_information = ProcessingInformation {
             capture: Some(false),
@@ -1572,7 +1560,11 @@ impl<
             Some(apple_pay_wallet_data.payment_method.network.clone()),
         ))?;
         let client_reference_information = ClientReferenceInformation::from(item);
-        let expiration_month = apple_pay_data.get_expiry_month()?;
+        let expiration_month = apple_pay_data.get_expiry_month().change_context(
+            errors::ConnectorError::InvalidDataFormat {
+                field_name: "expiration_month",
+            },
+        )?;
 
         if let Err(parse_err) = expiration_month.peek().parse::<u8>() {
             tracing::warn!(
@@ -1581,21 +1573,11 @@ impl<
                 parse_err
             );
         }
-        let expiration_year = apple_pay_data.get_four_digit_expiry_year()?;
+        let expiration_year = apple_pay_data.get_four_digit_expiry_year();
         let payment_information =
             PaymentInformation::ApplePay(Box::new(ApplePayPaymentInformation {
                 tokenized_card: TokenizedCard {
-                    number: apple_pay_data
-                        .application_primary_account_number
-                        .expose()
-                        .parse::<cards::CardNumber>()
-                        .map_err(|err| {
-                            tracing::error!(
-                                "Failed to parse Apple Pay account number as CardNumber: {:?}",
-                                err
-                            );
-                            report!(ConnectorError::RequestEncodingFailed)
-                        })?,
+                    number: apple_pay_data.application_primary_account_number,
                     cryptogram: Some(apple_pay_data.payment_data.online_payment_cryptogram),
                     transaction_type,
                     expiration_year,

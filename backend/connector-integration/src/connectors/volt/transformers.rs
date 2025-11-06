@@ -178,7 +178,7 @@ impl<
                     let transaction_type = TransactionType::Services; //transaction_type is a form of enum, it is pre defined and value for this can not be taken from user so we are keeping it as Services as this transaction is type of service.
 
                     Ok(Self {
-                        amount: MinorUnit::new(amount),
+                        amount: amount,
                         currency_code,
                         merchant_internal_reference,
                         payment_success_url,
