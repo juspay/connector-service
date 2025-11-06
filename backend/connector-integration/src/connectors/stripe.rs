@@ -154,13 +154,20 @@ macros::create_all_prerequisites!(
     amount_converters: []
 );
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
+    for Stripe<T>
+{
     fn id(&self) -> &'static str {
         "stripe"
+    }
+    
     fn common_get_content_type(&self) -> &'static str {
         "application/x-www-form-urlencoded"
+    }
+    
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
         // &self.base_url
         connectors.stripe.base_url.as_ref()
+    }
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
