@@ -331,12 +331,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<domain_types::connector_types::DisputeWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
+        let notif: AdyenNotificationRequestItemWH =
+            transformers::get_webhook_object_from_body(request.body).map_err(|err| {
+                report!(errors::ConnectorError::WebhookBodyDecodingFailed)
+                    .attach_printable(format!("error while decoding webhook body {err}"))
+            })?;
+        let request_body_copy = request.body.clone();
         let (stage, status) = transformers::get_dispute_stage_and_status(
             notif.event_code,
             notif.additional_data.dispute_status,
         );
         let amount = utils::convert_amount(
-            self.amount_converter_webhooks,
+            &StringMinorUnit,
             notif.amount.value,
             notif.amount.currency,
         )?;
@@ -356,7 +362,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 status_code: 200,
                 response_headers: None,
             },
-    curl_request: Json(AdyenRefundRequest),
+        )
+    }
+}
     curl_response: AdyenRefundResponse,
     flow_name: Refund,
     resource_common_data: RefundFlowData,
