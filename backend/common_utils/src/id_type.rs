@@ -91,6 +91,7 @@ impl TryFrom<Cow<'_, str>> for CustomerId {
     }
 }
 
+#[cfg(feature = "masking")]
 impl hyperswitch_masking::SerializableSecret for CustomerId {}
 
 #[derive(Debug, Clone, Serialize, Hash, PartialEq, Eq)]
