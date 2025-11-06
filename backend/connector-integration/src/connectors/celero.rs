@@ -3,11 +3,7 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
-use common_utils::{
-    errors::CustomResult,
-    ext_traits::ByteSliceExt,
-    request::{Method, RequestContent},
-};
+use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
@@ -22,8 +18,8 @@ use domain_types::{
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
         PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors::{self},
     payment_method_data::PaymentMethodDataTypes,
@@ -39,26 +35,19 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
-use transformers as celero;
+use transformers::{
+    self as celero, CeleroCaptureRequest, CeleroCaptureResponse, CeleroPaymentsRequest,
+    CeleroPaymentsResponse, CeleroRefundRequest, CeleroRefundResponse, CeleroRefundSyncRequest,
+    CeleroRefundSyncResponse, CeleroSyncRequest, CeleroSyncResponse, CeleroVoidRequest,
+    CeleroVoidResponse,
+};
 
+use super::macros;
 use crate::types::ResponseRouterData;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
-}
-
-#[derive(Debug, Clone)]
-pub struct Celero<T: PaymentMethodDataTypes> {
-    payment_method_type: std::marker::PhantomData<T>,
-}
-
-impl<T: PaymentMethodDataTypes> Celero<T> {
-    pub const fn new() -> &'static Self {
-        &Self {
-            payment_method_type: std::marker::PhantomData,
-        }
-    }
 }
 
 // ===== CONNECTOR SERVICE TRAIT IMPLEMENTATIONS =====
@@ -186,276 +175,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== MAIN CONNECTOR INTEGRATION IMPLEMENTATIONS =====
-// Primary authorize implementation - customize as needed
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData<T>,
-        PaymentsResponseData,
-    > for Celero<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut auth_header);
-        Ok(header)
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        let base_url = &req.resource_common_data.connectors.celero.base_url;
-        Ok(format!("{}/api/transaction", base_url))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let request = celero::CeleroPaymentsRequest::try_from(req)?;
-        Ok(Some(RequestContent::Json(Box::new(request))))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        errors::ConnectorError,
-    > {
-        let response: celero::CeleroPaymentsResponse = res
-            .response
-            .parse_struct("CeleroPaymentsResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        if let Some(i) = event_builder {
-            i.set_response_body(&response);
-        }
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
-
-// ===== EMPTY IMPLEMENTATIONS FOR OTHER FLOWS =====
-// Implement these as needed for your connector
-
-// Payment Sync
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Celero<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut auth_header);
-        Ok(header)
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
-    }
-
-    fn get_http_method(&self) -> Method {
-        Method::Get
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        // Extract transaction ID from the sync request
-        let transaction_id = req
-            .request
-            .get_connector_transaction_id()
-            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
-
-        let base_url = &req.resource_common_data.connectors.celero.base_url;
-        Ok(format!("{}/api/transaction/{}", base_url, transaction_id))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let _request = celero::CeleroSyncRequest::try_from(req)?;
-        // No request body needed for GET-based sync
-        Ok(None)
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        errors::ConnectorError,
-    > {
-        let response: celero::CeleroSyncResponse = res
-            .response
-            .parse_struct("CeleroSyncResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        if let Some(i) = event_builder {
-            i.set_response_body(&response);
-        }
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
-
-// Payment Void
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Celero<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut auth_header);
-        Ok(header)
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        // Extract transaction ID from the void request
-        let transaction_id = &req.request.connector_transaction_id;
-
-        // Validate transaction ID
-        if transaction_id.is_empty() {
-            return Err(errors::ConnectorError::MissingRequiredField {
-                field_name: "connector_transaction_id",
-            }
-            .into());
-        }
-
-        let base_url = &req.resource_common_data.connectors.celero.base_url;
-        Ok(format!(
-            "{}/api/transaction/{}/void",
-            base_url, transaction_id
-        ))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let _request = celero::CeleroVoidRequest::try_from(req)?;
-        // No request body needed for void operation
-        Ok(None)
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        errors::ConnectorError,
-    > {
-        let response: celero::CeleroVoidResponse = res
-            .response
-            .parse_struct("CeleroVoidResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        if let Some(i) = event_builder {
-            i.set_response_body(&response);
-        }
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
-
 // Payment Void Post Capture
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -465,252 +184,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsResponseData,
     > for Celero<T>
 {
-}
-
-// Payment Capture
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Celero<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut auth_header);
-        Ok(header)
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        // Extract transaction ID from the capture request
-        let transaction_id = match &req.request.connector_transaction_id {
-            ResponseId::ConnectorTransactionId(id) => id,
-            _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into()),
-        };
-
-        let base_url = &req.resource_common_data.connectors.celero.base_url;
-        Ok(format!(
-            "{}/api/transaction/{}/capture",
-            base_url, transaction_id
-        ))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let request = celero::CeleroCaptureRequest::try_from(req)?;
-        Ok(Some(RequestContent::Json(Box::new(request))))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        errors::ConnectorError,
-    > {
-        let response: celero::CeleroCaptureResponse = res
-            .response
-            .parse_struct("CeleroCaptureResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        if let Some(i) = event_builder {
-            i.set_response_body(&response);
-        }
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
-
-// Refund
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Celero<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut auth_header);
-        Ok(header)
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        let base_url = &req.resource_common_data.connectors.celero.base_url;
-        let transaction_id = req.request.connector_transaction_id.clone();
-        Ok(format!(
-            "{}/api/transaction/{}/refund",
-            base_url, transaction_id
-        ))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let request = celero::CeleroRefundRequest::try_from(req)?;
-        Ok(Some(RequestContent::Json(Box::new(request))))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        errors::ConnectorError,
-    > {
-        let response: celero::CeleroRefundResponse = res
-            .response
-            .parse_struct("CeleroRefundResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        if let Some(i) = event_builder {
-            i.set_response_body(&response);
-        }
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
-
-// Refund Sync
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Celero<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut auth_header);
-        Ok(header)
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
-    }
-
-    fn get_http_method(&self) -> Method {
-        Method::Get
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        // Celero API uses the transaction endpoint to check transaction status
-        // which includes refund information
-        let base_url = &req.resource_common_data.connectors.celero.base_url;
-        let transaction_id = req.request.connector_transaction_id.clone();
-
-        // Validate transaction ID
-        if transaction_id.is_empty() {
-            return Err(errors::ConnectorError::MissingRequiredField {
-                field_name: "connector_transaction_id",
-            }
-            .into());
-        }
-
-        Ok(format!("{}/api/transaction/{}", base_url, transaction_id))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let _request = celero::CeleroRefundSyncRequest::try_from(req)?;
-        // No request body needed for GET-based sync
-        Ok(None)
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        errors::ConnectorError,
-    > {
-        // Use the same response structure as PSync since we're calling the same endpoint
-        let response: celero::CeleroSyncResponse = res
-            .response
-            .parse_struct("CeleroSyncResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        if let Some(i) = event_builder {
-            i.set_response_body(&response);
-        }
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
 }
 
 // Setup Mandate
@@ -1045,6 +518,79 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+// ===== MACRO PREREQUISITES =====
+macros::create_all_prerequisites!(
+    connector_name: Celero,
+    generic_type: T,
+    api: [
+        (
+            flow: Authorize,
+            request_body: CeleroPaymentsRequest<T>,
+            response_body: CeleroPaymentsResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PSync,
+            request_body: CeleroSyncRequest,
+            response_body: CeleroSyncResponse,
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
+            flow: Void,
+            request_body: CeleroVoidRequest,
+            response_body: CeleroVoidResponse,
+            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: Capture,
+            request_body: CeleroCaptureRequest,
+            response_body: CeleroCaptureResponse,
+            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ),
+        (
+            flow: Refund,
+            request_body: CeleroRefundRequest,
+            response_body: CeleroRefundResponse,
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
+            flow: RSync,
+            request_body: CeleroRefundSyncRequest,
+            response_body: CeleroRefundSyncResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        )
+    ],
+    amount_converters: [],
+    member_functions: {
+        pub fn build_headers<F, FCD, Req, Res>(
+            &self,
+            req: &RouterDataV2<F, FCD, Req, Res>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let mut header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                "application/json".to_string().into(),
+            )];
+            let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
+            header.append(&mut auth_header);
+            Ok(header)
+        }
+
+        pub fn connector_base_url_payments<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.celero.base_url
+        }
+
+        pub fn connector_base_url_refunds<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.celero.base_url
+        }
+    }
+);
+
 // ===== CONNECTOR COMMON IMPLEMENTATION =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Celero<T>
@@ -1118,3 +664,203 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         })
     }
 }
+
+// ===== FLOW-SPECIFIC CONNECTOR INTEGRATION IMPLEMENTATIONS =====
+
+// Authorize Flow
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Celero,
+    curl_request: Json(celero::CeleroPaymentsRequest),
+    curl_response: celero::CeleroPaymentsResponse,
+    flow_name: Authorize,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthorizeData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/api/transaction", self.connector_base_url_payments(req)))
+        }
+    }
+);
+
+// PSync Flow (GET request)
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Celero,
+    curl_request: Json(celero::CeleroSyncRequest),
+    curl_response: celero::CeleroSyncResponse,
+    flow_name: PSync,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsSyncData,
+    flow_response: PaymentsResponseData,
+    http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let transaction_id = req
+                .request
+                .get_connector_transaction_id()
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+            Ok(format!("{}/api/transaction/{}", self.connector_base_url_payments(req), transaction_id))
+        }
+    }
+);
+
+// Void Flow (POST request with no body)
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Celero,
+    curl_request: Json(celero::CeleroVoidRequest),
+    curl_response: celero::CeleroVoidResponse,
+    flow_name: Void,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentVoidData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let transaction_id = &req.request.connector_transaction_id;
+            if transaction_id.is_empty() {
+                return Err(errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_transaction_id",
+                }
+                .into());
+            }
+            Ok(format!("{}/api/transaction/{}/void", self.connector_base_url_payments(req), transaction_id))
+        }
+    }
+);
+
+// Capture Flow
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Celero,
+    curl_request: Json(celero::CeleroCaptureRequest),
+    curl_response: celero::CeleroCaptureResponse,
+    flow_name: Capture,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsCaptureData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            use domain_types::connector_types::ResponseId;
+            let transaction_id = match &req.request.connector_transaction_id {
+                ResponseId::ConnectorTransactionId(id) => id,
+                _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into()),
+            };
+            Ok(format!("{}/api/transaction/{}/capture", self.connector_base_url_payments(req), transaction_id))
+        }
+    }
+);
+
+// Refund Flow
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Celero,
+    curl_request: Json(celero::CeleroRefundRequest),
+    curl_response: celero::CeleroRefundResponse,
+    flow_name: Refund,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundsData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let transaction_id = &req.request.connector_transaction_id;
+            Ok(format!("{}/api/transaction/{}/refund", self.connector_base_url_refunds(req), transaction_id))
+        }
+    }
+);
+
+// RSync Flow (GET request)
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Celero,
+    curl_request: Json(celero::CeleroRefundSyncRequest),
+    curl_response: celero::CeleroRefundSyncResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let transaction_id = &req.request.connector_transaction_id;
+            if transaction_id.is_empty() {
+                return Err(errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_transaction_id",
+                }
+                .into());
+            }
+            Ok(format!("{}/api/transaction/{}", self.connector_base_url_refunds(req), transaction_id))
+        }
+    }
+);
