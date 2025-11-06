@@ -75,11 +75,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
     type Error = errors::ConnectorError;
 }
-    connector_types::PaymentAuthorizeV2<T> for Adyen<T>
-    connector_types::PaymentSessionToken for Adyen<T>
-    connector_types::PaymentAccessToken for Adyen<T>
-    connector_types::CreateConnectorCustomer for Adyen<T>
-    connector_types::PaymentSyncV2 for Adyen<T>
+    
     connector_types::PaymentVoidV2 for Adyen<T>
     connector_types::RefundSyncV2 for Adyen<T>
     connector_types::RefundV2 for Adyen<T>
