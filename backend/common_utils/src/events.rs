@@ -54,6 +54,15 @@ impl MaskedSerdeValue {
             .ok()
     }
 
+    #[cfg(not(feature = "masking"))]
+    pub fn from_masked_optional<T: Serialize>(value: &T, _context: &str) -> Option<Self> {
+        serde_json::to_value(value)
+            .map(|masked_value| Self {
+                inner: masked_value,
+            })
+            .ok()
+    }
+
     pub fn inner(&self) -> &serde_json::Value {
         &self.inner
     }
