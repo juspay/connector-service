@@ -75,16 +75,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     type SubmitEvidenceV2 = Stripe<T>;
     type DisputeDefend = Stripe<T>;
     connector_types::RepeatPaymentV2 for Stripe<T>
-    connector_types::PaymentTokenV2<T> for Stripe<T>
-    connector_types::PaymentPreAuthenticateV2<T> for Stripe<T>
-    connector_types::PaymentOrderCreate for Stripe<T>
-    connector_types::PaymentAuthenticateV2<T> for Stripe<T>
-    connector_types::PaymentPostAuthenticateV2<T> for Stripe<T>
-    connector_types::IncomingWebhook for Stripe<T>
-    connector_types::ValidationTrait for Stripe<T>
+    type PaymentTokenV2 = Stripe<T>;
+    type PaymentPreAuthenticateV2 = Stripe<T>;
+    type PaymentOrderCreate = Stripe<T>;
+    type PaymentAuthenticateV2 = Stripe<T>;
+    type PaymentPostAuthenticateV2 = Stripe<T>;
+    type IncomingWebhook = Stripe<T>;
+    type ValidationTrait = Stripe<T>;
+    
     fn should_create_connector_customer(&self) -> bool {
         true
     }
+}
 macros::create_amount_converter_wrapper!(connector_name: Stripe, amount_type: MinorUnit);
 macros::create_all_prerequisites!(
     connector_name: Stripe,
