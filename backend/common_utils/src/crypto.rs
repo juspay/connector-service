@@ -592,7 +592,7 @@ impl<T: Clone> Deref for Encryptable<Secret<T>> {
 #[cfg(feature = "masking")]
 impl<T: Clone> crate::masking::Serialize for Encryptable<T>
 where
-    T: hyperswitch_masking::Serialize,
+    T: crate::masking::Serialize,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
