@@ -145,11 +145,15 @@ macros::macro_connector_implementation!(
     other_functions: {
         fn get_headers(
             req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
+        }
         fn get_url(
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}pg/orders"))
+        }
 // Authorize flow implementation using macros
     curl_request: Json(CashfreePaymentRequest),
     curl_response: CashfreePaymentResponse,
