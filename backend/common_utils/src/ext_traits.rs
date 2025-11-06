@@ -2,7 +2,10 @@
 //! & inbuilt datatypes.
 
 use error_stack::ResultExt;
-// use crate::masking::{ExposeInterface, PeekInterface, Secret, Strategy};
+#[cfg(feature = "masking")]
+use crate::masking::{ExposeInterface, PeekInterface, Secret, Strategy};
+#[cfg(not(feature = "masking"))]
+use crate::masking::{ExposeInterface, PeekInterface, Secret, Strategy};
 use quick_xml::de;
 use serde::{Deserialize, Serialize};
 
