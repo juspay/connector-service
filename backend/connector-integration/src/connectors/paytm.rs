@@ -81,6 +81,7 @@ macros::create_all_prerequisites!(
                 500..=599 => AttemptStatus::Pending, // 5xx errors should be pending for retry
                 _ => AttemptStatus::Failure,          // All other errors are final failures
             }
+        }
         fn build_custom_error_response(
             res: Response,
             event_builder: Option<&mut ConnectorEvent>,
