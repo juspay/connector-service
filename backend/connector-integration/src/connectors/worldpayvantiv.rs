@@ -158,7 +158,7 @@ macros::create_all_prerequisites!(
         ),
     ],
     amount_converters: [
-        amount_converter: MinorUnit
+        amount_converter: MinorUnit,
     ],
     member_functions: {
         fn preprocess_response_bytes<F, FCD, Req, Res>(
