@@ -89,7 +89,7 @@ pub mod masking {
         }
     }
     
-    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+    #[derive(Debug, Clone, Deserialize, PartialEq, Eq, Hash)]
     pub struct Maskable<T>(pub T);
     
     impl<T> From<T> for Maskable<T> {
