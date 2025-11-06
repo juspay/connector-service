@@ -49,7 +49,7 @@ use crate::{
         VoidPC,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, ConnectorCustomerData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorMandateReferenceId, ConnectorResponseHeaders, ContinueRedirectionResponse,
         DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
         MandateReferenceId, MultipleCaptureRequestData, PaymentCreateOrderData,
@@ -1169,11 +1169,7 @@ impl<
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(|token| crate::connector_types::AccessTokenResponseData {
-                access_token: token.token.clone(),
-                token_type: None,
-                expires_in: token.expires_in_seconds,
-            });
+            .map(AccessTokenResponseData::from);
         let shipping_cost = Some(common_utils::types::MinorUnit::new(value.shipping_cost()));
         Ok(Self {
             authentication_data,
@@ -1833,11 +1829,7 @@ impl
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(|token| crate::connector_types::AccessTokenResponseData {
-                access_token: token.token.clone(),
-                token_type: None,
-                expires_in: token.expires_in_seconds,
-            });
+            .map(AccessTokenResponseData::from);
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -1907,11 +1899,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(|token| crate::connector_types::AccessTokenResponseData {
-                access_token: token.token.clone(),
-                token_type: None,
-                expires_in: token.expires_in_seconds,
-            });
+            .map(AccessTokenResponseData::from);
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -3101,11 +3089,7 @@ impl
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(|token| crate::connector_types::AccessTokenResponseData {
-                access_token: token.token.clone(),
-                token_type: None,
-                expires_in: token.expires_in_seconds,
-            });
+            .map(AccessTokenResponseData::from);
         Ok(RefundFlowData {
             status: common_enums::RefundStatus::Pending,
             refund_id: None,
@@ -3141,11 +3125,7 @@ impl
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(|token| crate::connector_types::AccessTokenResponseData {
-                access_token: token.token.clone(),
-                token_type: None,
-                expires_in: token.expires_in_seconds,
-            });
+            .map(AccessTokenResponseData::from);
         Ok(RefundFlowData {
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
@@ -3180,11 +3160,7 @@ impl
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(|token| crate::connector_types::AccessTokenResponseData {
-                access_token: token.token.clone(),
-                token_type: None,
-                expires_in: token.expires_in_seconds,
-            });
+            .map(AccessTokenResponseData::from);
         Ok(RefundFlowData {
             status: common_enums::RefundStatus::Pending,
             refund_id: Some(value.refund_id),
@@ -3220,11 +3196,7 @@ impl
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(|token| crate::connector_types::AccessTokenResponseData {
-                access_token: token.token.clone(),
-                token_type: None,
-                expires_in: token.expires_in_seconds,
-            });
+            .map(AccessTokenResponseData::from);
         Ok(RefundFlowData {
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
@@ -4357,11 +4329,7 @@ impl
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(|token| crate::connector_types::AccessTokenResponseData {
-                access_token: token.token.clone(),
-                token_type: None,
-                expires_in: token.expires_in_seconds,
-            });
+            .map(AccessTokenResponseData::from);
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -5835,6 +5803,16 @@ pub fn generate_repeat_payment_response(
                     minor_captured_amount: None,
                 },
             )
+        }
+    }
+}
+
+impl From<&grpc_api_types::payments::AccessToken> for AccessTokenResponseData {
+    fn from(token: &grpc_api_types::payments::AccessToken) -> Self {
+        Self {
+            access_token: token.token.clone(),
+            token_type: token.token_type.clone(),
+            expires_in: token.expires_in_seconds,
         }
     }
 }

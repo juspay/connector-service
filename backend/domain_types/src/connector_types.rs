@@ -1904,7 +1904,7 @@ impl RefundsData {
             .ok_or_else(missing_field_err("browser_info.ip_address"))
     }
 
-    pub fn get_connector_meta(&self) -> Result<SecretSerdeValue, Error> {
+    pub fn get_refund_connector_metadata(&self) -> Result<SecretSerdeValue, Error> {
         self.refund_connector_metadata
             .clone()
             .ok_or_else(missing_field_err("connector_meta_data"))
@@ -1914,7 +1914,7 @@ impl RefundsData {
     where
         T: serde::de::DeserializeOwned,
     {
-        self.get_connector_meta()?
+        self.get_refund_connector_metadata()?
             .parse_value(std::any::type_name::<T>())
             .change_context(ConnectorError::NoConnectorMetaData)
     }
