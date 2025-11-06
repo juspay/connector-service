@@ -128,23 +128,31 @@ macros::create_all_prerequisites!(
                 let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
                 header.append(&mut api_key);
                 Ok(header)
+            }
         }
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
             &req.resource_common_data.connectors.trustpay.base_url
+        }
+        
         pub fn connector_base_url_bank_redirects_payments<'a, F, Req, Res>(
+            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> &'a str {
             &req.resource_common_data.connectors.trustpay.base_url_bank_redirects
+        }
         pub fn get_auth_header(
             auth_type: &ConnectorAuthType,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let auth = trustpay::TrustpayAuthType::try_from(auth_type)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-        Ok(vec![(
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            Ok(vec![(
             headers::X_API_KEY.to_string(),
             auth.api_key.into_masked(),
         )])
-);
+        }
+    }
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Trustpay<T>
     fn id(&self) -> &'static str {
