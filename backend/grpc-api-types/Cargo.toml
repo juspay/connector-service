@@ -15,6 +15,7 @@ error-stack = "0.5.0"
 
 # First-party dependencies
 cards = { path = "../cards", package = "ucs_cards" }
+common_utils = { path = "../common_utils", package = "ucs_common_utils" }
 # hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.09.24.0", package = "masking", features = ["proto_tonic"] }
 
 [build-dependencies]
