@@ -295,6 +295,7 @@ macros::macro_connector_implementation!(
             ))
         }
     }
+}
 );
 // Implementation for empty stubs - these will need to be properly implemented later
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
