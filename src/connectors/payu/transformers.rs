@@ -494,10 +494,15 @@ impl TryFrom<PayuPaymentsResponse> for PaymentsResponseData {
 
         let error_message = response.error.or(response.message).or(response.msg);
 
-        Ok(ResponseRouterData {
-            headers: None,
+        Ok(PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::NoId,
+            redirection_data: None,
+            connector_metadata: None,
+            mandate_reference: None,
+            network_txn_id: response.txnid.clone(),
+            connector_response_reference_id: response.txnid,
+            incremental_authorization_allowed: None,
             status_code: 200,
-            response: status,
         })
     }
 }
