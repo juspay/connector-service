@@ -8,7 +8,7 @@ pub mod masking {
     pub trait Strategy<T> {}
     
     #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct Secret<T, S = ()>(pub T);
+    pub struct Secret<T, S = ()>(pub T, std::marker::PhantomData<S>);
     
     impl<T> Secret<T> {
         pub fn new(value: T) -> Self {
