@@ -287,6 +287,7 @@ macro_rules! impl_source_verification_stub {
                     + 'static
                     + Serialize,
             > SourceVerification<$flow, $common_data, $req, $resp> for Cashtocode<T>
+        {
             fn get_secrets(
                 &self,
                 _secrets: ConnectorSourceVerificationSecrets,
@@ -294,18 +295,28 @@ macro_rules! impl_source_verification_stub {
                 Ok(Vec::new()) // STUB - will be implemented in Phase 10
             }
             fn get_algorithm(
+                &self,
             ) -> CustomResult<
                 Box<dyn common_utils::crypto::VerifySignature + Send>,
                 errors::ConnectorError,
             > {
                 Ok(Box::new(common_utils::crypto::NoAlgorithm)) // STUB - will be implemented in Phase 10
+            }
             fn get_signature(
+                &self,
                 _payload: &[u8],
                 _router_data: &RouterDataV2<$flow, $common_data, $req, $resp>,
                 _secrets: &[u8],
+            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+                Ok(Vec::new()) // STUB - will be implemented in Phase 10
+            }
             fn get_message(
+                &self,
                 payload: &[u8],
+            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
                 Ok(payload.to_owned()) // STUB - will be implemented in Phase 10
+            }
+        }
     };
 // Apply to all flows
 impl_source_verification_stub!(
