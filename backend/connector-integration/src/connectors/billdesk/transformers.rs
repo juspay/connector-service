@@ -36,7 +36,8 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuthType {
             ConnectorAuthType::SignatureKey { api_key, key1, .. } => {
                 // Extract merchant_id and checksum_key from the auth type
                 let merchant_id = hyperswitch_masking::Secret::new(api_key.clone());
-                let checksum_key = hyperswitch_masking::Secret::new(key1.clone().unwrap_or_else(|| "".to_string()));
+                let checksum_key_value = key1.clone().unwrap_or_else(|| "".to_string());
+                let checksum_key = hyperswitch_masking::Secret::new(checksum_key_value);
                 Ok(Self {
                     merchant_id,
                     checksum_key,
