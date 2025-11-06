@@ -129,7 +129,7 @@ macros::create_all_prerequisites!(
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> String {
             req.resource_common_data.connectors.cashfree.base_url.to_string()
-);
+        }
 // CreateOrder flow implementation using macros
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
