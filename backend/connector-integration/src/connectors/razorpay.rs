@@ -524,5 +524,5 @@ static RAZORPAY_SUPPORTED_WEBHOOK_FLOWS: &[EventClass] =
         Some(RAZORPAY_SUPPORTED_WEBHOOK_FLOWS)
     fn get_supported_payment_methods(&self) -> Option<&'static SupportedPaymentMethods> {
         Some(&RAZORPAY_SUPPORTED_PAYMENT_METHODS)
-        domain_types::connector_flow::RepeatPayment,
-        domain_types::connector_types::RepeatPaymentData,
+    }
+}
