@@ -143,6 +143,8 @@ macros::create_all_prerequisites!(
             request_body: SetupMandateRequest<T>,
             response_body: SetupMandateResponse,
             router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
             flow: CreateConnectorCustomer,
             request_body: CreateConnectorCustomerRequest,
             response_body: CreateConnectorCustomerResponse,
