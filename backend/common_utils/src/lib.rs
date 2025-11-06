@@ -9,7 +9,7 @@ pub mod masking {
         fn fmt(val: &T, f: &mut fmt::Formatter<'_>) -> fmt::Result;
     }
     
-    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+    #[derive(Debug, Clone, SerdeSerialize, Deserialize, PartialEq, Eq, Hash)]
     pub struct Secret<T, S = ()>(pub T, std::marker::PhantomData<S>);
     
     #[cfg(feature = "masking")]
