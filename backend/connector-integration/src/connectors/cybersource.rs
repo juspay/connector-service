@@ -103,25 +103,37 @@ macros::create_all_prerequisites!(
             response_body: CybersourceTransactionResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
+        (
             flow: Capture,
             request_body: CybersourcePaymentsCaptureRequest,
             response_body: CybersourceCaptureResponse,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ),
+        (
             flow: Void,
             request_body: CybersourceVoidRequest,
             response_body: CybersourceVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
             flow: Refund,
             request_body: CybersourceRefundRequest,
             response_body: CybersourceRefundResponse,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
             flow: SetupMandate,
             request_body: CybersourceZeroMandateRequest<T>,
             response_body: CybersourceSetupMandateResponse,
             router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
             flow: RSync,
+            request_body: CybersourceRsyncRequest,
             response_body: CybersourceRsyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
             flow: RepeatPayment,
             request_body: CybersourceRepeatPaymentRequest,
             response_body: CybersourceRepeatPaymentResponse,
