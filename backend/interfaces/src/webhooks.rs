@@ -209,7 +209,7 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
         &self,
         _request: &IncomingWebhookRequestDetails<'_>,
     ) -> CustomResult<
-        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
+        Box<dyn common_utils::masking::ErasedMaskSerialize>,
         domain_types::errors::ConnectorError,
     >;
 
