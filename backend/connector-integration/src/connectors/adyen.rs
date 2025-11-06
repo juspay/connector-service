@@ -248,10 +248,14 @@ macros::macro_connector_implementation!(
     other_functions: {
         fn get_headers(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
+        }
         fn get_url(
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}{}/payments", self.connector_base_url_payments(req), ADYEN_API_VERSION))
+        }
     curl_request: Json(AdyenRedirectRequest),
     curl_response: AdyenPSyncResponse,
     flow_name: PSync,
