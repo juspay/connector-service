@@ -409,64 +409,112 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
+        }
+        
         fn get_url(
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}pts/v2/payments/", self.connector_base_url_payments(req)))
+        }
     curl_request: Json(CybersourceAuthSetupRequest<T>),
     curl_response: CybersourceAuthSetupResponse,
     flow_name: PreAuthenticate,
     flow_request: PaymentsPreAuthenticateData<T>,
+        fn get_url(
             req: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
-            "{}risk/v1/authentication-setups",
-            self.connector_base_url_payments(req)
-        ))
+                "{}risk/v1/authentication-setups",
+                self.connector_base_url_payments(req)
+            ))
+        }
     curl_request: Json(CybersourceAuthEnrollmentRequest<T>),
     curl_response: CybersourceAuthenticateResponse,
     flow_name: Authenticate,
     flow_request: PaymentsAuthenticateData<T>,
+        fn get_url(
             req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
-            "{}risk/v1/authentications",
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+                "{}risk/v1/authentications",
+                self.connector_base_url_payments(req)
+            ))
+        }
     curl_request: Json(CybersourceAuthValidateRequest<T>),
     curl_response: CybersourcePostAuthenticateResponse,
     flow_name: PostAuthenticate,
     flow_request: PaymentsPostAuthenticateData<T>,
+        fn get_url(
             req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
-            "{}risk/v1/authentication-results",
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+                "{}risk/v1/authentication-results",
+                self.connector_base_url_payments(req)
             ))
+        }
     curl_request: Json(CybersourceZeroMandateRequest<T>),
     curl_response: CybersourceSetupMandateResponse,
     flow_name: SetupMandate,
     flow_request: SetupMandateRequestData<T>,
+        fn get_url(
             req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+                "{}pts/v2/payments/",
+                self.connector_base_url_payments(req)
+            ))
+        }
     curl_response: CybersourceTransactionResponse,
     flow_name: PSync,
     flow_request: PaymentsSyncData,
     http_method: Get,
+        fn get_url(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        let connector_payment_id = req
-            .request
-            .connector_transaction_id
-            .get_connector_transaction_id()
-            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
-        Ok(format!(
-            "{}tss/v2/transactions/{}",
-            self.connector_base_url_payments(req),
-            connector_payment_id
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let connector_payment_id = req
+                .request
+                .connector_transaction_id
+                .get_connector_transaction_id()
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+            Ok(format!(
+                "{}tss/v2/transactions/{}",
+                self.connector_base_url_payments(req),
+                connector_payment_id
+            ))
+        }
     curl_request: Json(CybersourcePaymentsCaptureRequest),
     curl_response: CybersourceCaptureResponse,
     flow_name: Capture,
     flow_request: PaymentsCaptureData,
+        fn get_url(
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            "{}pts/v2/payments/{}/captures",
-            connector_payment_id,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let connector_payment_id = req
+                .request
+                .connector_transaction_id
+                .get_connector_transaction_id()
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+            Ok(format!(
+                "{}pts/v2/payments/{}/captures",
+                self.connector_base_url_payments(req),
+                connector_payment_id
+            ))
+        }
 // Add implementation for Void
     curl_request: Json(CybersourceVoidRequest),
     curl_response: CybersourceVoidResponse,
     flow_name: Void,
     flow_request: PaymentVoidData,
+        fn get_url(
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        let connector_payment_id = req.request.connector_transaction_id.clone();
-            "{}pts/v2/payments/{connector_payment_id}/reversals",
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let connector_payment_id = req.request.connector_transaction_id.clone();
+            Ok(format!(
+                "{}pts/v2/payments/{}/reversals",
+                self.connector_base_url_payments(req),
+                connector_payment_id
+            ))
+        }
 // Add implementation for Refund
     curl_request: Json(CybersourceRefundRequest),
     curl_response: CybersourceRefundResponse,
@@ -474,25 +522,47 @@ macros::macro_connector_implementation!(
     resource_common_data: RefundFlowData,
     flow_request: RefundsData,
     flow_response: RefundsResponseData,
+        fn get_url(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            "{}pts/v2/payments/{}/refunds",
-            self.connector_base_url_refunds(req),
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let connector_payment_id = req
+                .request
+                .connector_transaction_id
+                .get_connector_transaction_id()
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+            Ok(format!(
+                "{}pts/v2/payments/{}/refunds",
+                self.connector_base_url_refunds(req),
+                connector_payment_id
+            ))
+        }
 // Implement RSync to fix the RefundSyncV2 trait requirement
     curl_response: CybersourceRsyncResponse,
     flow_name: RSync,
     flow_request: RefundSyncData,
+        fn get_url(
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            req: &RouterDataV2<domain_types::connector_flow::RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        let refund_id = req.request.connector_refund_id.clone();
-            refund_id
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let refund_id = req.request.connector_refund_id.clone();
+            Ok(format!(
+                "{}pts/v2/refunds/{}",
+                self.connector_base_url_refunds(req),
+                refund_id
+            ))
+        }
     curl_request: Json(CybersourceRepeatPaymentRequest),
     curl_response: CybersourceRepeatPaymentResponse,
     flow_name: RepeatPayment,
     flow_request: RepeatPaymentData,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+        fn get_url(
             req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
                 "{}pts/v2/payments/",
-                self.connector_base_url_payments(req),
+                self.connector_base_url_payments(req)
+            ))
+        }
 // Stub implementations for unsupported flows
 impl<
         T: PaymentMethodDataTypes
