@@ -13,6 +13,7 @@ pub mod masking {
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
     pub struct Secret<T, S = ()>(pub T, std::marker::PhantomData<S>);
     
+    #[cfg(feature = "masking")]
     impl<T> prost::Message for Secret<T>
     where
         T: prost::Message,
