@@ -243,41 +243,115 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 }
 // Stub implementations for unsupported flows
-    > ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
+    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
     for Cashfree<T>
-    > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    > ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    >
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
+    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
+    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
+    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
+    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
     ConnectorIntegrationV2<
         SetupMandate,
         PaymentFlowData,
         SetupMandateRequestData<T>,
         PaymentsResponseData,
     > for Cashfree<T>
-    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
+    ConnectorIntegrationV2<
         PaymentMethodToken,
         PaymentMethodTokenizationData<T>,
         PaymentMethodTokenResponse,
+    > for Cashfree<T>
+{
+}
+
 // CreateSessionToken stub implementation
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
+    ConnectorIntegrationV2<
         CreateSessionToken,
         SessionTokenRequestData,
         SessionTokenResponseData,
+    > for Cashfree<T>
+{
+}
+
 // CreateAccessToken stub implementation
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
+    ConnectorIntegrationV2<
         CreateAccessToken,
         AccessTokenRequestData,
         AccessTokenResponseData,
+    > for Cashfree<T>
+{
+}
+
 // CreateConnectorCustomer stub implementation
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
+    ConnectorIntegrationV2<
         CreateConnectorCustomer,
         ConnectorCustomerData,
         ConnectorCustomerResponse,
-    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    > for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Cashfree<T>
+{
+}
+
 // Default ConnectorIntegrationV2 implementations for unsupported flows
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
     ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-        VoidPC,
-        PaymentsCancelPostCaptureData,
+    for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
+    ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    for Cashfree<T>
+{
+}
 // SourceVerification implementations for all flows
 macro_rules! impl_source_verification_stub {
     ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
