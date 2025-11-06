@@ -333,7 +333,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
-                })
+                });
                 Ok(ErrorResponse {
                     status_code: res.status_code,
                     code,
