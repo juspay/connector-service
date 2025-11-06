@@ -257,30 +257,11 @@ macros::macro_connector_implementation!(
             Ok(format!("{}{}/payments", self.connector_base_url_payments(req), ADYEN_API_VERSION))
         }
 );
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-        CreateSessionToken,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-        CreateAccessToken,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-        CreateConnectorCustomer,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-        PreAuthenticate,
-        PaymentsPreAuthenticateData<T>,
-        Authenticate,
-        PaymentsAuthenticateData<T>,
-        PostAuthenticate,
-        PaymentsPostAuthenticateData<T>,
+
+// Additional trait implementations
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::IncomingWebhook for Adyen<T>
+{
 // SourceVerification implementations for all flows
     interfaces::verification::SourceVerification<
         Authorize,
