@@ -260,6 +260,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}{}/payments", self.connector_base_url_payments(req), ADYEN_API_VERSION))
         }
+    }
 );
 
 // Additional trait implementations
