@@ -111,6 +111,15 @@ pub mod masking {
     // Mock additional types needed for compatibility
     pub trait ErasedMaskSerialize {}
     
+    impl serde::Serialize for dyn ErasedMaskSerialize {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            serializer.serialize_str("masked_data")
+        }
+    }
+    
     pub fn masked_serialize<T: serde::Serialize>(_value: &T) -> Result<serde_json::Value, serde_json::Error> {
         serde_json::to_value(_value)
     }
