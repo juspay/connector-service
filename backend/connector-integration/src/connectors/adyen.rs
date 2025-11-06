@@ -80,7 +80,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     
     
     
-    connector_types::RepeatPaymentV2 for Adyen<T>
+    
     connector_types::PaymentTokenV2<T> for Adyen<T>
     connector_types::PaymentPreAuthenticateV2<T> for Adyen<T>
     connector_types::PaymentAuthenticateV2<T> for Adyen<T>
