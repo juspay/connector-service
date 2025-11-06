@@ -147,7 +147,7 @@ macros::create_all_prerequisites!(
         )
     ],
     amount_converters: [
-        amount_converter_webhooks: StringMinorUnit
+        amount_converter: StringMinorUnit
     ],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
