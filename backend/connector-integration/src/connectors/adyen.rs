@@ -85,7 +85,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     
     
     
-    connector_types::PaymentVoidPostCaptureV2 for Adyen<T>
+    
     ConnectorIntegrationV2<
         PaymentFlowData,
         PaymentsCancelPostCaptureData,
