@@ -105,6 +105,43 @@ pub struct BilldeskSubmitEvidenceRequest;
 #[derive(Debug, Clone)]
 pub struct BilldeskSubmitEvidenceResponse;
 
+#[derive(Debug, Clone, Serialize)]
+pub struct BilldeskAccessTokenRequest;
+#[derive(Debug, Clone)]
+pub struct BilldeskAccessTokenResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct BilldeskCreateConnectorCustomerRequest;
+#[derive(Debug, Clone)]
+pub struct BilldeskCreateConnectorCustomerResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct BilldeskPaymentMethodTokenRequest;
+#[derive(Debug, Clone)]
+pub struct BilldeskPaymentMethodTokenResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct BilldeskPaymentVoidPostCaptureRequest;
+#[derive(Debug, Clone)]
+pub struct BilldeskPaymentVoidPostCaptureResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct BilldeskPaymentPreAuthenticateRequest;
+#[derive(Debug, Clone)]
+pub struct BilldeskPaymentPreAuthenticateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct BilldeskPaymentAuthenticateRequest;
+#[derive(Debug, Clone)]
+pub struct BilldeskPaymentAuthenticateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct BilldeskPaymentPostAuthenticateRequest;
+#[derive(Debug, Clone)]
+pub struct BilldeskPaymentPostAuthenticateResponse;
+#[derive(Debug, Clone)]
+pub struct BilldeskSubmitEvidenceResponse;
+
 // MANDATORY: Use UCS v2 macro framework - NO manual implementations
 macros::create_all_prerequisites!(
     connector_name: Billdesk,
