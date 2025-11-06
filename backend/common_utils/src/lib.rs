@@ -2,7 +2,7 @@
 
 // Mock types for masking (always available since hyperswitch_masking has compatibility issues)
 pub mod masking {
-    use serde::{Deserialize, Serialize as SerdeSerialize};
+    use serde::Deserialize;
     use std::fmt;
     
     pub trait Strategy<T> {
@@ -230,7 +230,7 @@ pub mod date_time {
     #[cfg(feature = "async_ext")]
     use std::time::Instant;
     use std::{marker::PhantomData, num::NonZeroU8};
-    use serde::{Deserialize, Serialize as SerdeSerialize};
+    use serde::Deserialize;
 
     // use crate::masking::{Deserialize, Serialize};
     use time::{
