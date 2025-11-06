@@ -522,6 +522,7 @@ impl ConnectorValidation for Adyen<DefaultPCIHolder> {
             return Ok(());
         Err(errors::ConnectorError::MissingRequiredField {
             field_name: "encoded_data",
+        }
         .into())
     fn is_webhook_source_verification_mandatory(&self) -> bool {
         false
