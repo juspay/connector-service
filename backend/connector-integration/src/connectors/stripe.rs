@@ -136,26 +136,7 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
         )
     ],
-    amount_converters: [],
-    member_functions: {
-        pub fn build_headers<F, FCD, Req, Res>(
-            &self,
-            req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut header = vec![(
-                headers::CONTENT_TYPE.to_string(),
-                Self::common_get_content_type(self).to_string().into(),
-            )];
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-            header.append(&mut api_key);
-            Ok(header)
-        }
-        pub fn connector_base_url_payments<'a, F, Req, Res>(
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.stripe.base_url
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+    amount_converters: []
 );
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     fn id(&self) -> &'static str {
