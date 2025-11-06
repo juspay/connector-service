@@ -597,6 +597,14 @@ impl_not_implemented_flow!(RepeatPayment, PaymentFlowData, domain_types::connect
 impl_not_implemented_flow!(Accept, DisputeFlowData, domain_types::connector_types::AcceptDisputeData, DisputeResponseData);
 impl_not_implemented_flow!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
 impl_not_implemented_flow!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
+// Additional missing flows
+impl_not_implemented_flow!(CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData);
+impl_not_implemented_flow!(CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse);
+impl_not_implemented_flow!(PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse);
+impl_not_implemented_flow!(VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData);
+impl_not_implemented_flow!(PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData);
+impl_not_implemented_flow!(Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData);
+impl_not_implemented_flow!(PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData);
 
 // MANDATORY: SourceVerification implementations for all flows
 macro_rules! impl_source_verification_stub {
