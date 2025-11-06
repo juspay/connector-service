@@ -42,6 +42,7 @@ pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::genera
 use transformers::{
     self as trustpay, TrustpayAuthUpdateRequest, TrustpayAuthUpdateResponse, TrustpayErrorResponse,
     TrustpayPaymentsResponse as TrustpayPaymentsSyncResponse,
+};
 use super::macros;
 use crate::types::ResponseRouterData;
 // Local headers module
@@ -53,31 +54,33 @@ mod headers {
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Trustpay<T>
 {
-    connector_types::PaymentAuthorizeV2<T> for Trustpay<T>
-    connector_types::PaymentSyncV2 for Trustpay<T>
-    connector_types::PaymentVoidV2 for Trustpay<T>
-    connector_types::RefundSyncV2 for Trustpay<T>
-    connector_types::RefundV2 for Trustpay<T>
-    connector_types::PaymentCapture for Trustpay<T>
-    connector_types::ValidationTrait for Trustpay<T>
+    type PaymentAuthorizeV2 = Trustpay<T>;
+    type PaymentSyncV2 = Trustpay<T>;
+    type PaymentVoidV2 = Trustpay<T>;
+    type RefundSyncV2 = Trustpay<T>;
+    type RefundV2 = Trustpay<T>;
+    type PaymentCapture = Trustpay<T>;
+    type ValidationTrait = Trustpay<T>;
+    type PaymentOrderCreate = Trustpay<T>;
+    type SetupMandateV2 = Trustpay<T>;
+    type RepeatPaymentV2 = Trustpay<T>;
+    type AcceptDispute = Trustpay<T>;
+    type SubmitEvidenceV2 = Trustpay<T>;
+    type DisputeDefend = Trustpay<T>;
+    type IncomingWebhook = Trustpay<T>;
+    type PaymentSessionToken = Trustpay<T>;
+    type PaymentAccessToken = Trustpay<T>;
+    type CreateConnectorCustomer = Trustpay<T>;
+    type PaymentTokenV2 = Trustpay<T>;
+    type PaymentPreAuthenticateV2 = Trustpay<T>;
+    type PaymentAuthenticateV2 = Trustpay<T>;
+    type PaymentPostAuthenticateV2 = Trustpay<T>;
+    type PaymentVoidPostCaptureV2 = Trustpay<T>;
+    
     fn should_do_access_token(&self) -> bool {
         true
     }
-    connector_types::PaymentOrderCreate for Trustpay<T>
-    connector_types::SetupMandateV2<T> for Trustpay<T>
-    connector_types::RepeatPaymentV2 for Trustpay<T>
-    connector_types::AcceptDispute for Trustpay<T>
-    connector_types::SubmitEvidenceV2 for Trustpay<T>
-    connector_types::DisputeDefend for Trustpay<T>
-    connector_types::IncomingWebhook for Trustpay<T>
-    connector_types::PaymentSessionToken for Trustpay<T>
-    connector_types::PaymentAccessToken for Trustpay<T>
-    connector_types::CreateConnectorCustomer for Trustpay<T>
-    connector_types::PaymentTokenV2<T> for Trustpay<T>
-    connector_types::PaymentPreAuthenticateV2<T> for Trustpay<T>
-    connector_types::PaymentAuthenticateV2<T> for Trustpay<T>
-    connector_types::PaymentPostAuthenticateV2<T> for Trustpay<T>
-    connector_types::PaymentVoidPostCaptureV2 for Trustpay<T>
+}
 macros::create_all_prerequisites!(
     connector_name: Trustpay,
     generic_type: T,
@@ -87,6 +90,7 @@ macros::create_all_prerequisites!(
             response_body: TrustpayPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
+        (
             flow: CreateAccessToken,
             request_body: TrustpayAuthUpdateRequest,
             response_body: TrustpayAuthUpdateResponse,
@@ -95,6 +99,7 @@ macros::create_all_prerequisites!(
     ],
     amount_converters: [
         amount_converter: StringMajorUnit
+    ],
     member_functions: {
         pub fn build_headers_for_payments<F, Req, Res>(
             &self,
