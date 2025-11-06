@@ -69,6 +69,8 @@ pub struct Razorpay<T> {
     #[allow(dead_code)]
     pub(crate) amount_converter: &'static (dyn AmountConvertor<Output = MinorUnit> + Sync),
     _phantom: std::marker::PhantomData<T>,
+}
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
