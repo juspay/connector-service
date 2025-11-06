@@ -498,14 +498,19 @@ static ADYEN_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
     display_name: "Adyen", 
     description: "Adyen is a Dutch payment company with the status of an acquiring bank that allows businesses to accept e-commerce, mobile, and point-of-sale payments. It is listed on the stock exchange Euronext Amsterdam.",
     connector_type: types::PaymentConnectorCategory::PaymentGateway,
+};
 static ADYEN_SUPPORTED_WEBHOOK_FLOWS: &[EventClass] = &[EventClass::Payments, EventClass::Refunds];
 impl ConnectorSpecifications for Adyen<DefaultPCIHolder> {
     fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {
         Some(&ADYEN_CONNECTOR_INFO)
+    }
     fn get_supported_payment_methods(&self) -> Option<&'static SupportedPaymentMethods> {
         Some(&ADYEN_SUPPORTED_PAYMENT_METHODS)
+    }
     fn get_supported_webhook_flows(&self) -> Option<&'static [EventClass]> {
         Some(ADYEN_SUPPORTED_WEBHOOK_FLOWS)
+    }
+}
 impl ConnectorValidation for Adyen<DefaultPCIHolder> {
     fn validate_mandate_payment(
         pm_type: Option<PaymentMethodType>,
