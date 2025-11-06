@@ -520,6 +520,7 @@ pub struct Encryptable<T: Clone> {
     encrypted: Secret<Vec<u8>, EncryptionStrategy>,
 }
 
+#[cfg(feature = "masking")]
 impl<T: Clone, S: hyperswitch_masking::Strategy<T>> Encryptable<Secret<T, S>> {
     /// constructor function to be used by the encryptor and decryptor to generate the data type
     pub fn new(
@@ -585,6 +586,7 @@ impl<T: Clone> Deref for Encryptable<Secret<T>> {
     }
 }
 
+#[cfg(feature = "masking")]
 impl<T: Clone> hyperswitch_masking::Serialize for Encryptable<T>
 where
     T: hyperswitch_masking::Serialize,
