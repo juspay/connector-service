@@ -54,119 +54,64 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
-macros::create_all_prerequisites!(
-    connector_name: Worldpay,
-    generic_type: T,
-    api: [
-        (
-            flow: Authorize,
-            request_body: WorldpayAuthorizeRequest<T>,
-            response_body: WorldpayAuthorizeResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: PSync,
-            response_body: WorldpaySyncResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ),
-        (
-            flow: Capture,
-            request_body: WorldpayCaptureRequest,
-            response_body: WorldpayCaptureResponse,
-            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ),
-        (
-            flow: Void,
-            response_body: WorldpayVoidResponse,
-            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ),
-        (
-            flow: Refund,
-            request_body: WorldpayRefundRequest,
-            response_body: WorldpayRefundResponse,
-            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ),
-        (
-            flow: RSync,
-            response_body: WorldpayRefundSyncResponse,
-            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ),
-        (
-            flow: PreAuthenticate,
-            request_body: WorldpayPreAuthenticateRequest,
-            response_body: WorldpayPreAuthenticateResponse,
-            router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: PostAuthenticate,
-            request_body: WorldpayPostAuthenticateRequest,
-            response_body: WorldpayPostAuthenticateResponse,
-            router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: RepeatPayment,
-            request_body: WorldpayRepeatPaymentRequest<T>,
-            response_body: WorldpayRepeatPaymentResponse,
-            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-        ),
-    ],
-    amount_converters: [],
-    member_functions: {
-        pub fn build_headers<F, FCD, Req, Res>(
-            &self,
-            req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
-        where
-            Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
-        {
-            let mut headers = vec![
-                (
-                    "Accept".to_string(),
-                    self.get_content_type().to_string().into(),
-                ),
-                ("Content-Type".to_string(), "application/json".into()),
-                ("WP-API-Version".to_string(), "2024-06-01".into()),
-            ];
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-            headers.append(&mut api_key);
-            Ok(headers)
-        }
-        
-        pub fn connector_base_url_payments<'a, F, Req, Res>(
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.worldpay.base_url
-        }
-        
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.worldpay.base_url
-        }
-        
-        /// Helper function to extract link_data from connector_meta_data
-        /// Used by PreAuthenticate and PostAuthenticate flows to avoid code duplication
-        pub fn extract_link_data_from_metadata<F, Req, Res>(
-            req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> Result<String, error_stack::Report<errors::ConnectorError>> {
-            let metadata_obj = req
-                .resource_common_data
-                .connector_meta_data
-                .as_ref()
-                .and_then(|metadata| metadata.peek().as_object())
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data",
-                })?;
-            metadata_obj
-                .get("link_data")
-                .and_then(|value| value.as_str())
-                .map(|s| s.to_string())
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data.link_data",
-                }.into())
-        }
+// Helper functions for the connector
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Worldpay<T> {
+    pub fn build_headers<F, FCD, Req, Res>(
+        &self,
+        req: &RouterDataV2<F, FCD, Req, Res>,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+    where
+        Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
+    {
+        let mut headers = vec![
+            (
+                "Accept".to_string(),
+                self.get_content_type().to_string().into(),
+            ),
+            ("Content-Type".to_string(), "application/json".into()),
+            ("WP-API-Version".to_string(), "2024-06-01".into()),
+        ];
+        let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+        headers.append(&mut api_key);
+        Ok(headers)
     }
-);
+    
+    pub fn connector_base_url_payments<'a, F, Req, Res>(
+        &self,
+        req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+    ) -> &'a str {
+        &req.resource_common_data.connectors.worldpay.base_url
+    }
+    
+    pub fn connector_base_url_refunds<'a, F, Req, Res>(
+        &self,
+        req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+    ) -> &'a str {
+        &req.resource_common_data.connectors.worldpay.base_url
+    }
+    
+    /// Helper function to extract link_data from connector_meta_data
+    /// Used by PreAuthenticate and PostAuthenticate flows to avoid code duplication
+    pub fn extract_link_data_from_metadata<F, Req, Res>(
+        req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
+    ) -> Result<String, error_stack::Report<errors::ConnectorError>> {
+        let metadata_obj = req
+            .resource_common_data
+            .connector_meta_data
+            .as_ref()
+            .and_then(|metadata| metadata.peek().as_object())
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "connector_meta_data",
+            })?;
+        metadata_obj
+            .get("link_data")
+            .and_then(|value| value.as_str())
+            .map(|s| s.to_string())
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "connector_meta_data.link_data",
+            }.into())
+    }
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Worldpay<T>
 {
