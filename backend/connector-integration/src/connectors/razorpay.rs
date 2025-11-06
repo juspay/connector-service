@@ -83,15 +83,14 @@ impl<
     fn should_do_order_create(&self) -> bool {
         true
     }
+}
+
 // Type alias for non-generic trait implementations
-    > connector_types::ConnectorServiceTrait<T> for Razorpay<T>
-    > connector_types::PaymentAuthorizeV2<T> for Razorpay<T>
-    > connector_types::PaymentSessionToken for Razorpay<T>
-    > connector_types::PaymentAccessToken for Razorpay<T>
-    > connector_types::CreateConnectorCustomer for Razorpay<T>
-    > connector_types::PaymentSyncV2 for Razorpay<T>
-    > connector_types::PaymentOrderCreate for Razorpay<T>
-    > connector_types::PaymentVoidV2 for Razorpay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ConnectorServiceTrait<T> for Razorpay<T>
+{
+    type Error = errors::ConnectorError;
+}
     > connector_types::RefundSyncV2 for Razorpay<T>
     > connector_types::RefundV2 for Razorpay<T>
     > connector_types::PaymentCapture for Razorpay<T>
