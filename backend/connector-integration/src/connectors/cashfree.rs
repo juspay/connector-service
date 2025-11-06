@@ -49,12 +49,14 @@ use serde::Serialize;
 use transformers as cashfree;
 use super::macros;
 use crate::{types::ResponseRouterData, with_response_body};
+
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const X_CLIENT_ID: &str = "X-Client-Id";
     pub(crate) const X_CLIENT_SECRET: &str = "X-Client-Secret";
     pub(crate) const X_API_VERSION: &str = "x-api-version";
 }
+
 // Trait implementations will be added after the macro creates the struct
 impl<
         T: PaymentMethodDataTypes
@@ -65,34 +67,153 @@ impl<
             + Serialize,
     > connector_types::PaymentPreAuthenticateV2<T> for Cashfree<T>
 {
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     > connector_types::PaymentAuthenticateV2<T> for Cashfree<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     > connector_types::PaymentPostAuthenticateV2<T> for Cashfree<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     > connector_types::ConnectorServiceTrait<T> for Cashfree<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     > connector_types::PaymentAuthorizeV2<T> for Cashfree<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     > connector_types::PaymentSessionToken for Cashfree<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAccessToken for Cashfree<T>
-    > connector_types::CreateConnectorCustomer for Cashfree<T>
-    > connector_types::PaymentOrderCreate for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::CreateConnectorCustomer for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentOrderCreate for Cashfree<T>
+{
+}
+
 // Trait implementations for all flows
-    > connector_types::PaymentSyncV2 for Cashfree<T>
-    > connector_types::PaymentVoidV2 for Cashfree<T>
-    > connector_types::RefundSyncV2 for Cashfree<T>
-    > connector_types::RefundV2 for Cashfree<T>
-    > connector_types::PaymentCapture for Cashfree<T>
-    > connector_types::SetupMandateV2<T> for Cashfree<T>
-    > connector_types::RepeatPaymentV2 for Cashfree<T>
-    > connector_types::PaymentVoidPostCaptureV2 for Cashfree<T>
-    > connector_types::AcceptDispute for Cashfree<T>
-    > connector_types::SubmitEvidenceV2 for Cashfree<T>
-    > connector_types::DisputeDefend for Cashfree<T>
-    > connector_types::IncomingWebhook for Cashfree<T>
-    > connector_types::PaymentTokenV2<T> for Cashfree<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSyncV2 for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidV2 for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundSyncV2 for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundV2 for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentCapture for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SetupMandateV2<T> for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RepeatPaymentV2<T> for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidPostCaptureV2<T> for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::AcceptDispute for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SubmitEvidenceV2 for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::DisputeDefend for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::IncomingWebhook for Cashfree<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentTokenV2<T> for Cashfree<T>
+{
+}
+
 // Trait implementations after the macro creates the struct
-    > connector_types::ValidationTrait for Cashfree<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ValidationTrait for Cashfree<T>
+{
     fn should_do_order_create(&self) -> bool {
         true // Cashfree V3 requires order creation
     }
+}
+
 // Define connector prerequisites
 macros::create_all_prerequisites!(
     connector_name: Cashfree,
@@ -104,7 +225,7 @@ macros::create_all_prerequisites!(
             response_body: CashfreeOrderCreateResponse,
             router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
         ),
-            (
+        (
             flow: Authorize,
             request_body: CashfreePaymentRequest,
             response_body: CashfreePaymentResponse,
@@ -130,6 +251,9 @@ macros::create_all_prerequisites!(
         ) -> String {
             req.resource_common_data.connectors.cashfree.base_url.to_string()
         }
+    }
+);
+
 // CreateOrder flow implementation using macros
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -154,6 +278,9 @@ macros::macro_connector_implementation!(
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}pg/orders"))
         }
+    }
+);
+
 // Authorize flow implementation using macros
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -180,6 +307,7 @@ macros::macro_connector_implementation!(
         }
     }
 );
+
 // Type alias for non-generic trait implementations
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon for Cashfree<T> {
     fn id(&self) -> &'static str {
@@ -242,6 +370,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         })
     }
 }
+
 // Stub implementations for unsupported flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> 
     ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
@@ -352,6 +481,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     for Cashfree<T>
 {
 }
+
 // SourceVerification implementations for all flows
 macro_rules! impl_source_verification_stub {
     ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
@@ -371,11 +501,13 @@ macro_rules! impl_source_verification_stub {
                 Ok(Vec::new()) // Stub implementation
             }
             fn get_algorithm(
+                &self,
             ) -> CustomResult<
                 Box<dyn common_utils::crypto::VerifySignature + Send>,
                 errors::ConnectorError,
             > {
                 Ok(Box::new(common_utils::crypto::NoAlgorithm)) // Stub implementation
+            }
             fn get_signature(
                 &self,
                 _payload: &[u8],
@@ -395,7 +527,10 @@ macro_rules! impl_source_verification_stub {
             ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
                 Ok(payload.to_owned()) // Stub implementation
             }
+        }
     };
+}
+
 // Apply to all flows
 impl_source_verification_stub!(
     Authorize,
