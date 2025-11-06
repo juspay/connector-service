@@ -1,4 +1,5 @@
 use common_utils::types::MinorUnit;
+use common_utils::Secret;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Void},
     connector_types::{
