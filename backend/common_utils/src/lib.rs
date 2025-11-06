@@ -9,6 +9,13 @@ pub mod masking {
         fn fmt(val: &T, f: &mut fmt::Formatter<'_>) -> fmt::Result;
     }
     
+    // Implement Strategy for () for compatibility
+    impl<T> Strategy<T> for () {
+        fn fmt(_val: &T, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "masked")
+        }
+    }
+    
     #[derive(Debug, Clone, SerdeSerialize, Deserialize, PartialEq, Eq, Hash)]
     pub struct Secret<T, S = ()>(pub T, std::marker::PhantomData<S>);
     
