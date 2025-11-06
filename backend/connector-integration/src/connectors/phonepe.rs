@@ -521,21 +521,12 @@ macro_rules! impl_source_verification_stub {
                 Ok(Vec::new()) // Stub implementation
             }
             fn get_algorithm(
+                &self,
             ) -> CustomResult<
                 Box<dyn common_utils::crypto::VerifySignature + Send>,
                 errors::ConnectorError,
             > {
                 Ok(Box::new(common_utils::crypto::NoAlgorithm)) // Stub implementation
-            fn get_signature(
-                _payload: &[u8],
-                _router_data: &RouterDataV2<$flow, $common_data, $req, $resp>,
-                _secrets: &[u8],
-            fn get_message(
-                _payload: &[u8],
-                _router_data: &RouterDataV2<$flow, $common_data, $req, $resp>,
-                _secrets: &[u8],
-            ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
-                Ok(Vec::new()) // Stub implementation
             }
             
             fn get_signature(
@@ -553,7 +544,9 @@ macro_rules! impl_source_verification_stub {
             ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
                 Ok(payload.to_owned()) // Stub implementation
             }
+        }
     };
+}
 // Stub implementations for missing flows
         CreateSessionToken,
         SessionTokenRequestData,
