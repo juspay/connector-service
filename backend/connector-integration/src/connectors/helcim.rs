@@ -38,6 +38,7 @@ use serde::Serialize;
 use std::{
     fmt::Debug,
     marker::{Send, Sync},
+};
 use transformers::{
     self as helcim, HelcimCaptureRequest, HelcimPaymentsCaptureResponse, HelcimPaymentsRequest,
     HelcimPaymentsResponse, HelcimPaymentsSyncResponse, HelcimPaymentsVoidResponse,
