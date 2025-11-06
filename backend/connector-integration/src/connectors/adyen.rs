@@ -262,36 +262,10 @@ macros::macro_connector_implementation!(
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Adyen<T>
 {
-// SourceVerification implementations for all flows
-    interfaces::verification::SourceVerification<
-        Authorize,
-        PaymentsAuthorizeData<T>,
-        PSync,
-        PaymentsSyncData,
-        Capture,
-        PaymentsCaptureData,
-        Void,
-        PaymentVoidData,
-        Refund,
-        RefundFlowData,
-        RefundsData,
-        RefundsResponseData,
-        RSync,
-        RefundSyncData,
-        SetupMandate,
-        SetupMandateRequestData<T>,
-        Accept,
-        DisputeFlowData,
-        AcceptDisputeData,
-        DisputeResponseData,
-        SubmitEvidence,
-        SubmitEvidenceData,
-        DefendDispute,
-        DisputeDefendData,
-        PaymentMethodToken,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
+// Additional trait implementations
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Adyen<T>
+{
     fn get_event_type(
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
