@@ -3248,6 +3248,7 @@ dependencies = [
  "md5",
  "nanoid",
  "once_cell",
+ "prost",
  "quick-xml",
  "rand 0.8.5",
  "regex",

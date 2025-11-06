@@ -2290,6 +2290,7 @@ dependencies = [
  "md5",
  "nanoid",
  "once_cell",
+ "prost",
  "quick-xml",
  "rand",
  "regex",
