@@ -237,106 +237,128 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .change_context(ConnectorError::MissingConnectorTransactionID)?;
             let secondary_base_url = req.resource_common_data.connectors.worldpayvantiv.secondary_base_url
                 .as_ref()
-                .unwrap_or(&req.resource_common_data.connectors.worldpayvantiv.base_url);
-            Ok(format!(
-                "{secondary_base_url}/reports/dtrPaymentStatus/{txn_id}"
-            ))
-// Manual implementations for flows that share request/response types
-    > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+                // Stub implementations for remaining flows
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
     for Worldpayvantiv<T>
-    fn get_headers(
-        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-        self.build_headers(req)
-    fn get_content_type(&self) -> &'static str {
-        self.common_get_content_type()
-    fn get_url(
-    ) -> CustomResult<String, ConnectorError> {
-        Ok(self.connector_base_url_payments(req).to_string())
-    fn get_request_body(
-    ) -> CustomResult<Option<RequestContent>, ConnectorError> {
-        let request = WorldpayvantivPaymentsRequest::try_from(WorldpayvantivRouterData {
-            router_data: req.clone(),
-            connector: self.clone(),
-        })?;
-        Ok(Some(RequestContent::Xml(Box::new(request))))
-    fn handle_response_v2(
-        data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<
-        RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ConnectorError,
-    > {
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
-        let response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
-        if let Some(i) = event_builder {
-            i.set_response_body(&response)
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-    fn get_error_response_v2(
-    ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
-    fn get_http_method(&self) -> common_utils::request::Method {
-        common_utils::request::Method::Post
-    > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-        req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        data: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        VoidPC,
-        PaymentsCancelPostCaptureData,
-        req: &RouterDataV2<
-            VoidPC,
-            PaymentFlowData,
-            PaymentsCancelPostCaptureData,
-            PaymentsResponseData,
-        >,
-        data: &RouterDataV2<
-        RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
-    > ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        Ok(self.connector_base_url_refunds(req).to_string())
-        data: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        self.get_auth_header(&req.connector_auth_type)
-        "application/json"
-        let refund_id = req.request.connector_refund_id.clone();
-        let secondary_base_url = req
-            .resource_common_data
-            .connectors
-            .worldpayvantiv
-            .secondary_base_url
-            .as_ref()
-            .unwrap_or(&req.resource_common_data.connectors.worldpayvantiv.base_url);
-        Ok(format!(
-            "{}/reports/dtrPaymentStatus/{}",
-            secondary_base_url, refund_id
-        ))
+{
+    fn build_request(
+        &self,
+        _req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+    ) -> CustomResult<interfaces::api::Request, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("Capture flow not implemented".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Worldpayvantiv<T>
+{
+    fn build_request(
+        &self,
+        _req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+    ) -> CustomResult<interfaces::api::Request, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("Void flow not implemented".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    for Worldpayvantiv<T>
+{
+    fn build_request(
+        &self,
+        _req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+    ) -> CustomResult<interfaces::api::Request, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("Refund flow not implemented".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Worldpayvantiv<T>
+{
+    fn build_request(
+        &self,
         _req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        // GET request doesn't need a body
-        Ok(None)
-        data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        let response: VantivSyncResponse = res
-            .response
-            .parse_struct("VantivSyncResponse")
-        common_utils::request::Method::Get
-        SetupMandate,
-        SetupMandateRequestData<T>,
+    ) -> CustomResult<interfaces::api::Request, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("RSync flow not implemented".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-// Empty implementations for dispute flows
-    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Worldpayvantiv<T>
+{
+    fn build_request(
+        &self,
+        _req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+    ) -> CustomResult<interfaces::api::Request, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("RepeatPayment flow not implemented".to_string()).into())
+    }
+}
+
+// Stub implementations for dispute flows
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Worldpayvantiv<T>
+{
+    fn build_request(
+        &self,
+        _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+    ) -> CustomResult<interfaces::api::Request, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("Accept dispute flow not implemented".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-// Empty implementations for order flows
-        CreateOrder,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-        CreateSessionToken,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
+    for Worldpayvantiv<T>
+{
+    fn build_request(
+        &self,
+        _req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+    ) -> CustomResult<interfaces::api::Request, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("SubmitEvidence flow not implemented".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Worldpayvantiv<T>
+{
+    fn build_request(
+        &self,
+        _req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+    ) -> CustomResult<interfaces::api::Request, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("DefendDispute flow not implemented".to_string()).into())
+    }
+}
+
+// Stub implementations for order flows
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
+    for Worldpayvantiv<T>
+{
+    fn build_request(
+        &self,
+        _req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+    ) -> CustomResult<interfaces::api::Request, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("CreateOrder flow not implemented".to_string()).into())
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
+    for Worldpayvantiv<T>
+{
+    fn build_request(
+        &self,
+        _req: &RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
+    ) -> CustomResult<interfaces::api::Request, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("CreateSessionToken flow not implemented".to_string()).into())
+    }
+}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
         domain_types::connector_flow::CreateAccessToken,
         domain_types::connector_types::AccessTokenRequestData,
