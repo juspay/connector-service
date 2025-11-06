@@ -92,24 +92,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     type Error = errors::ConnectorError;
 }
     > connector_types::RefundSyncV2 for Razorpay<T>
-    > connector_types::RefundV2 for Razorpay<T>
-    > connector_types::PaymentCapture for Razorpay<T>
-    > connector_types::SetupMandateV2<T> for Razorpay<T>
-    > connector_types::AcceptDispute for Razorpay<T>
-    > connector_types::SubmitEvidenceV2 for Razorpay<T>
-    > connector_types::DisputeDefend for Razorpay<T>
-    > connector_types::RepeatPaymentV2 for Razorpay<T>
-    > connector_types::PaymentVoidPostCaptureV2 for Razorpay<T>
-    >
-    ConnectorIntegrationV2<
-        PaymentFlowData,
-        PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Razorpay<T>
-    > connector_types::PaymentTokenV2<T> for Razorpay<T>
-    > connector_types::PaymentPreAuthenticateV2<T> for Razorpay<T>
-    > connector_types::PaymentAuthenticateV2<T> for Razorpay<T>
-    > connector_types::PaymentPostAuthenticateV2<T> for Razorpay<T>
+    
 impl<T> Razorpay<T> {
     pub const fn new() -> &'static Self {
         &Self {
