@@ -2058,7 +2058,6 @@ dependencies = [
  "error-stack 0.4.1",
  "hex",
  "interfaces",
- "masking",
  "serde",
  "serde_json",
  "sha2",
