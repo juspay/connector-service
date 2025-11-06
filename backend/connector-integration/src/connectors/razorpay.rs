@@ -59,11 +59,13 @@ use crate::{
     connectors::razorpayv2::transformers::RazorpayV2SyncResponse, with_error_response_body,
     with_response_body,
 };
+
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
     pub(crate) const ACCEPT: &str = "Accept";
 }
+
 #[derive(Clone)]
 pub struct Razorpay<T> {
     #[allow(dead_code)]
@@ -86,7 +88,7 @@ impl<
 }
 
 // Type alias for non-generic trait implementations
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Razorpay<T>
 {
     type Error = errors::ConnectorError;
@@ -101,13 +103,15 @@ impl<T> Razorpay<T> {
     }
 }
 
-impl<T> ConnectorCommon for Razorpay<T>
+impl<T> ConnectorCommon for Razorpay<T> {
     fn id(&self) -> &'static str {
         "razorpay"
     }
+    
     fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
         common_enums::CurrencyUnit::Minor
     }
+    
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
@@ -118,8 +122,12 @@ impl<T> ConnectorCommon for Razorpay<T>
             headers::AUTHORIZATION.to_string(),
             auth.generate_authorization_header().into_masked(),
         )])
+    }
+    
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
         connectors.razorpay.base_url.as_ref()
+    }
+    
     fn build_error_response(
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
@@ -150,6 +158,7 @@ impl<T> ConnectorCommon for Razorpay<T>
                     Some(message.clone()),
                     AttemptStatus::Failure,
                 )
+            }
         };
         Ok(ErrorResponse {
             status_code: res.status_code,
@@ -164,6 +173,7 @@ impl<T> ConnectorCommon for Razorpay<T>
         })
     }
 }
+
 impl<T> ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData> for Razorpay<T> {
     fn get_http_method(&self) -> Method {
         Method::Post
@@ -209,14 +219,19 @@ impl<T> ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData
             }
         }
     }
+    
     fn handle_response_v2(
-        data: &RouterDataV2<
+        &self,
+        data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         errors::ConnectorError,
     > {
         // Handle UPI payments differently from regular payments
         match &data.request.payment_method_data {
+            PaymentMethodData::Upi(_) => {
                 // Try to parse as UPI response first
                 let upi_response_result = res
                     .response
@@ -244,11 +259,17 @@ impl<T> ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData
                                 errors::ConnectorError::ResponseDeserializationFailed,
                             )?;
                         with_response_body!(event_builder, response);
+                        RouterDataV2::foreign_try_from((
                             response,
                             data.request.capture_method,
                             false,
                             data.request.payment_method_type,
+                        ))
+                        .change_context(errors::ConnectorError::ResponseHandlingFailed)
+                    }
                 }
+            }
+            _ => {
                 // Regular payment response handling
                 let response: razorpay::RazorpayResponse = res
                     .parse_struct("RazorpayPaymentResponse")
@@ -263,18 +284,50 @@ impl<T> ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData
                     data.request.payment_method_type,
                 ))
                 .change_context(errors::ConnectorError::ResponseHandlingFailed)
+            }
+        }
+    }
+    
     fn get_error_response_v2(
-        self.build_error_response(res, event_builder)
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+    
     fn get_5xx_error_response(
-    > ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Razorpay<T>
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+}
+
+impl<T> ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> for Razorpay<T> {
     fn get_http_method(&self) -> Method {
         Method::Get
+    }
+    
+    fn get_headers(
+        &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let mut header = vec![(
             headers::CONTENT_TYPE.to_string(),
             "application/json".to_string().into(),
         )];
+        Ok(header)
+    }
+    
+    fn get_url(
+        &self,
+        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        connectors: &Connectors,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let base_url = self.base_url(connectors);
         // Check if request_ref_id is provided to determine URL pattern
         let request_ref_id = &req.resource_common_data.connector_request_reference_id;
         if request_ref_id != "default_reference_id" {
@@ -289,8 +342,19 @@ impl<T> ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?;
             let url = format!("{base_url}v1/payments/{payment_id}");
+            Ok(url)
+        }
+    }
+    
+    fn handle_response_v2(
+        &self,
         data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<
         RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        errors::ConnectorError,
+    > {
         // Parse the response using the enum that handles both collection and direct payment responses
         let sync_response: RazorpayV2SyncResponse = res
             .parse_struct("RazorpayV2SyncResponse")
@@ -304,12 +368,14 @@ impl<T> ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData
             res.response.to_vec(),
         ))
         .change_context(errors::ConnectorError::ResponseHandlingFailed)
+    }
+    
     fn get_error_response_v2(
         &self,
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
+        Self::build_error_response(res, event_builder)
     }
     
     fn get_5xx_error_response(
@@ -317,7 +383,7 @@ impl<T> ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
+        Self::build_error_response(res, event_builder)
     }
 }
 
@@ -369,12 +435,13 @@ impl<T> ConnectorIntegrationV2<CreateOrder, PaymentCreateOrderData, PaymentCreat
         RouterDataV2::foreign_try_from((response, data.clone(), res.status_code, false))
             .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
+    
     fn get_error_response_v2(
         &self,
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
+        Self::build_error_response(res, event_builder)
     }
     
     fn get_5xx_error_response(
@@ -382,7 +449,7 @@ impl<T> ConnectorIntegrationV2<CreateOrder, PaymentCreateOrderData, PaymentCreat
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
+        Self::build_error_response(res, event_builder)
     }
 }
 
@@ -418,12 +485,13 @@ impl<T> ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRes
         RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
             .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
+    
     fn get_error_response_v2(
         &self,
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
+        Self::build_error_response(res, event_builder)
     }
     
     fn get_5xx_error_response(
@@ -431,7 +499,7 @@ impl<T> ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRes
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
+        Self::build_error_response(res, event_builder)
     }
 }
 
@@ -508,6 +576,7 @@ impl<T> connector_types::IncomingWebhook for Razorpay<T> {
         })
     }
 }
+
 impl<T> ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Razorpay<T> {
     fn get_http_method(&self) -> Method {
         Method::Post
@@ -561,7 +630,7 @@ impl<T> ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsR
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
+        Self::build_error_response(res, event_builder)
     }
     
     fn get_5xx_error_response(
@@ -569,7 +638,7 @@ impl<T> ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsR
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
+        Self::build_error_response(res, event_builder)
     }
 }
 
@@ -620,12 +689,13 @@ impl<T> ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsRespo
         RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
             .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
+    
     fn get_error_response_v2(
         &self,
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
+        Self::build_error_response(res, event_builder)
     }
     
     fn get_5xx_error_response(
@@ -633,7 +703,7 @@ impl<T> ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsRespo
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
+        Self::build_error_response(res, event_builder)
     }
 }
 
@@ -690,51 +760,581 @@ impl<T> ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, Pa
         RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
             .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
-        SetupMandate,
-        SetupMandateRequestData<T>,
-    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-        PaymentMethodToken,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-        PreAuthenticate,
-        PaymentsPreAuthenticateData<T>,
-        Authenticate,
-        PaymentsAuthenticateData<T>,
-        PostAuthenticate,
-        PaymentsPostAuthenticateData<T>,
+    
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+    
+    fn get_5xx_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+}
+
+// Stub implementations for unsupported flows
+impl<T> ConnectorIntegrationV2<SetupMandate, SetupMandateRequestData<T>, PaymentsResponseData> for Razorpay<T> {
+    fn get_http_method(&self) -> Method {
+        Method::Post
+    }
+    
+    fn get_url(
+        &self,
+        _req: &RouterDataV2<SetupMandate, SetupMandateRequestData<T>, PaymentsResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("SetupMandate flow not supported".to_string()).into())
+    }
+    
+    fn get_request_body(
+        &self,
+        _req: &RouterDataV2<SetupMandate, SetupMandateRequestData<T>, PaymentsResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("SetupMandate flow not supported".to_string()).into())
+    }
+    
+    fn handle_response_v2(
+        &self,
+        _data: &RouterDataV2<SetupMandate, SetupMandateRequestData<T>, PaymentsResponseData>,
+        _res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<
+        RouterDataV2<SetupMandate, SetupMandateRequestData<T>, PaymentsResponseData>,
+        errors::ConnectorError,
+    > {
+        Err(errors::ConnectorError::NotImplemented("SetupMandate flow not supported".to_string()).into())
+    }
+    
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+    
+    fn get_5xx_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+}
+
+impl<T> ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Razorpay<T> {
+    fn get_http_method(&self) -> Method {
+        Method::Post
+    }
+    
+    fn get_url(
+        &self,
+        _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("Accept dispute flow not supported".to_string()).into())
+    }
+    
+    fn get_request_body(
+        &self,
+        _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("Accept dispute flow not supported".to_string()).into())
+    }
+    
+    fn handle_response_v2(
+        &self,
+        _data: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        _res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<
+        RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        errors::ConnectorError,
+    > {
+        Err(errors::ConnectorError::NotImplemented("Accept dispute flow not supported".to_string()).into())
+    }
+    
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+    
+    fn get_5xx_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+}
+
+impl<T> ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for Razorpay<T> {
+    fn get_http_method(&self) -> Method {
+        Method::Post
+    }
+    
+    fn get_url(
+        &self,
+        _req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("SubmitEvidence flow not supported".to_string()).into())
+    }
+    
+    fn get_request_body(
+        &self,
+        _req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("SubmitEvidence flow not supported".to_string()).into())
+    }
+    
+    fn handle_response_v2(
+        &self,
+        _data: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        _res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<
+        RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        errors::ConnectorError,
+    > {
+        Err(errors::ConnectorError::NotImplemented("SubmitEvidence flow not supported".to_string()).into())
+    }
+    
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+    
+    fn get_5xx_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+}
+
+impl<T> ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData> for Razorpay<T> {
+    fn get_http_method(&self) -> Method {
+        Method::Post
+    }
+    
+    fn get_url(
+        &self,
+        _req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("DefendDispute flow not supported".to_string()).into())
+    }
+    
+    fn get_request_body(
+        &self,
+        _req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("DefendDispute flow not supported".to_string()).into())
+    }
+    
+    fn handle_response_v2(
+        &self,
+        _data: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        _res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<
+        RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        errors::ConnectorError,
+    > {
+        Err(errors::ConnectorError::NotImplemented("DefendDispute flow not supported".to_string()).into())
+    }
+    
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+    
+    fn get_5xx_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+}
+
+// Stub implementations for tokenization flows
+impl<T> ConnectorIntegrationV2<PaymentMethodToken, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse> for Razorpay<T> {
+    fn get_http_method(&self) -> Method {
+        Method::Post
+    }
+    
+    fn get_url(
+        &self,
+        _req: &RouterDataV2<PaymentMethodToken, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        _connectors: &Connectors,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("PaymentMethodToken flow not supported".to_string()).into())
+    }
+    
+    fn get_request_body(
+        &self,
+        _req: &RouterDataV2<PaymentMethodToken, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        _connectors: &Connectors,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("PaymentMethodToken flow not supported".to_string()).into())
+    }
+    
+    fn handle_response_v2(
+        &self,
+        _data: &RouterDataV2<PaymentMethodToken, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        _res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<
+        RouterDataV2<PaymentMethodToken, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        errors::ConnectorError,
+    > {
+        Err(errors::ConnectorError::NotImplemented("PaymentMethodToken flow not supported".to_string()).into())
+    }
+    
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+    
+    fn get_5xx_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+}
+
+impl<T> ConnectorIntegrationV2<PreAuthenticate, PaymentsPreAuthenticateData<T>, PaymentsResponseData> for Razorpay<T> {
+    fn get_http_method(&self) -> Method {
+        Method::Post
+    }
+    
+    fn get_url(
+        &self,
+        _req: &RouterDataV2<PreAuthenticate, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("PreAuthenticate flow not supported".to_string()).into())
+    }
+    
+    fn get_request_body(
+        &self,
+        _req: &RouterDataV2<PreAuthenticate, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("PreAuthenticate flow not supported".to_string()).into())
+    }
+    
+    fn handle_response_v2(
+        &self,
+        _data: &RouterDataV2<PreAuthenticate, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        _res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<
+        RouterDataV2<PreAuthenticate, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        errors::ConnectorError,
+    > {
+        Err(errors::ConnectorError::NotImplemented("PreAuthenticate flow not supported".to_string()).into())
+    }
+    
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+    
+    fn get_5xx_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+}
+
+impl<T> ConnectorIntegrationV2<Authenticate, PaymentsAuthenticateData<T>, PaymentsResponseData> for Razorpay<T> {
+    fn get_http_method(&self) -> Method {
+        Method::Post
+    }
+    
+    fn get_url(
+        &self,
+        _req: &RouterDataV2<Authenticate, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("Authenticate flow not supported".to_string()).into())
+    }
+    
+    fn get_request_body(
+        &self,
+        _req: &RouterDataV2<Authenticate, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("Authenticate flow not supported".to_string()).into())
+    }
+    
+    fn handle_response_v2(
+        &self,
+        _data: &RouterDataV2<Authenticate, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        _res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<
+        RouterDataV2<Authenticate, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        errors::ConnectorError,
+    > {
+        Err(errors::ConnectorError::NotImplemented("Authenticate flow not supported".to_string()).into())
+    }
+    
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+    
+    fn get_5xx_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+}
+
+impl<T> ConnectorIntegrationV2<PostAuthenticate, PaymentsPostAuthenticateData<T>, PaymentsResponseData> for Razorpay<T> {
+    fn get_http_method(&self) -> Method {
+        Method::Post
+    }
+    
+    fn get_url(
+        &self,
+        _req: &RouterDataV2<PostAuthenticate, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("PostAuthenticate flow not supported".to_string()).into())
+    }
+    
+    fn get_request_body(
+        &self,
+        _req: &RouterDataV2<PostAuthenticate, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("PostAuthenticate flow not supported".to_string()).into())
+    }
+    
+    fn handle_response_v2(
+        &self,
+        _data: &RouterDataV2<PostAuthenticate, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        _res: Response,
+        _event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<
+        RouterDataV2<PostAuthenticate, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        errors::ConnectorError,
+    > {
+        Err(errors::ConnectorError::NotImplemented("PostAuthenticate flow not supported".to_string()).into())
+    }
+    
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+    
+    fn get_5xx_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        Self::build_error_response(res, event_builder)
+    }
+}
+
 // SourceVerification implementations for all flows
-    interfaces::verification::SourceVerification<
-        CreateSessionToken,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-        CreateAccessToken,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-        CreateConnectorCustomer,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-        PSync,
-        PaymentsSyncData,
-        Capture,
-        PaymentsCaptureData,
-        Void,
-        PaymentVoidData,
-        Refund,
-        RefundFlowData,
-        RefundsData,
-        RefundsResponseData,
-        RSync,
-        RefundSyncData,
-        Accept,
-        DisputeFlowData,
-        AcceptDisputeData,
-        DisputeResponseData,
-        SubmitEvidence,
-        SubmitEvidenceData,
-        DefendDispute,
-        DisputeDefendData,
+impl<T> interfaces::verification::SourceVerification<
+    CreateSessionToken,
+    SessionTokenRequestData,
+    SessionTokenResponseData,
+> for Razorpay<T> {
+    fn verify_source(
+        &self,
+        _request: &RouterDataV2<CreateSessionToken, SessionTokenRequestData, SessionTokenResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<bool, errors::ConnectorError> {
+        Ok(true)
+    }
+}
+
+impl<T> interfaces::verification::SourceVerification<
+    CreateAccessToken,
+    AccessTokenRequestData,
+    AccessTokenResponseData,
+> for Razorpay<T> {
+    fn verify_source(
+        &self,
+        _request: &RouterDataV2<CreateAccessToken, AccessTokenRequestData, AccessTokenResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<bool, errors::ConnectorError> {
+        Ok(true)
+    }
+}
+
+impl<T> interfaces::verification::SourceVerification<
+    CreateConnectorCustomer,
+    ConnectorCustomerData,
+    ConnectorCustomerResponse,
+> for Razorpay<T> {
+    fn verify_source(
+        &self,
+        _request: &RouterDataV2<CreateConnectorCustomer, ConnectorCustomerData, ConnectorCustomerResponse>,
+        _connectors: &Connectors,
+    ) -> CustomResult<bool, errors::ConnectorError> {
+        Ok(true)
+    }
+}
+
+impl<T> interfaces::verification::SourceVerification<
+    PSync,
+    PaymentsSyncData,
+    PaymentsResponseData,
+> for Razorpay<T> {
+    fn verify_source(
+        &self,
+        _request: &RouterDataV2<PSync, PaymentsSyncData, PaymentsResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<bool, errors::ConnectorError> {
+        Ok(true)
+    }
+}
+
+impl<T> interfaces::verification::SourceVerification<
+    Capture,
+    PaymentsCaptureData,
+    PaymentsResponseData,
+> for Razorpay<T> {
+    fn verify_source(
+        &self,
+        _request: &RouterDataV2<Capture, PaymentsCaptureData, PaymentsResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<bool, errors::ConnectorError> {
+        Ok(true)
+    }
+}
+
+impl<T> interfaces::verification::SourceVerification<
+    Void,
+    PaymentVoidData,
+    PaymentsResponseData,
+> for Razorpay<T> {
+    fn verify_source(
+        &self,
+        _request: &RouterDataV2<Void, PaymentVoidData, PaymentsResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<bool, errors::ConnectorError> {
+        Ok(true)
+    }
+}
+
+impl<T> interfaces::verification::SourceVerification<
+    Refund,
+    RefundFlowData,
+    RefundsResponseData,
+> for Razorpay<T> {
+    fn verify_source(
+        &self,
+        _request: &RouterDataV2<Refund, RefundFlowData, RefundsResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<bool, errors::ConnectorError> {
+        Ok(true)
+    }
+}
+
+impl<T> interfaces::verification::SourceVerification<
+    RSync,
+    RefundSyncData,
+    RefundsResponseData,
+> for Razorpay<T> {
+    fn verify_source(
+        &self,
+        _request: &RouterDataV2<RSync, RefundSyncData, RefundsResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<bool, errors::ConnectorError> {
+        Ok(true)
+    }
+}
+
+impl<T> interfaces::verification::SourceVerification<
+    Accept,
+    DisputeFlowData,
+    DisputeResponseData,
+> for Razorpay<T> {
+    fn verify_source(
+        &self,
+        _request: &RouterDataV2<Accept, DisputeFlowData, DisputeResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<bool, errors::ConnectorError> {
+        Ok(true)
+    }
+}
+
+impl<T> interfaces::verification::SourceVerification<
+    SubmitEvidence,
+    SubmitEvidenceData,
+    DisputeResponseData,
+> for Razorpay<T> {
+    fn verify_source(
+        &self,
+        _request: &RouterDataV2<SubmitEvidence, SubmitEvidenceData, DisputeResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<bool, errors::ConnectorError> {
+        Ok(true)
+    }
+}
+
+impl<T> interfaces::verification::SourceVerification<
+    DefendDispute,
+    DisputeDefendData,
+    DisputeResponseData,
+> for Razorpay<T> {
+    fn verify_source(
+        &self,
+        _request: &RouterDataV2<DefendDispute, DisputeDefendData, DisputeResponseData>,
+        _connectors: &Connectors,
+    ) -> CustomResult<bool, errors::ConnectorError> {
+        Ok(true)
+    }
+}
+
 impl connector_types::ConnectorValidation for Razorpay<DefaultPCIHolder> {
     fn validate_mandate_payment(
         pm_type: Option<PaymentMethodType>,
@@ -817,6 +1417,7 @@ static RAZORPAY_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> =
         );
         razorpay_supported_payment_methods
     });
+
 static RAZORPAY_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
     display_name: "Razorpay",
     description: "Razorpay is a payment gateway that allows businesses to accept, process, and disburse payments with its product suite.",
