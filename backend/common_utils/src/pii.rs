@@ -18,7 +18,7 @@ use crate::{
 pub type SecretSerdeValue = Secret<serde_json::Value>;
 
 /// Strategy for masking Email
-#[derive(Debug, Copy, Clone, Deserialize)]
+#[derive(Debug, Copy, Clone, Deserialize, PartialEq, Eq)]
 pub enum EmailStrategy {}
 
 impl<T> Strategy<T> for EmailStrategy
