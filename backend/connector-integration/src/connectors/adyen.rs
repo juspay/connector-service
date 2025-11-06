@@ -365,28 +365,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         )
     }
 }
-    curl_response: AdyenRefundResponse,
-    flow_name: Refund,
-    resource_common_data: RefundFlowData,
-    flow_request: RefundsData,
-    flow_response: RefundsResponseData,
-            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            let connector_payment_id = req.request.connector_transaction_id.clone();
-            Ok(format!("{}{}/payments/{}/refunds", self.connector_base_url_refunds(req), ADYEN_API_VERSION, connector_payment_id))
-    curl_request: Json(SetupMandateRequest),
-    curl_response: SetupMandateResponse,
-    flow_name: SetupMandate,
-    flow_request: SetupMandateRequestData<T>,
-            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-    curl_request: Json(AdyenDisputeAcceptRequest),
-    curl_response: AdyenDisputeAcceptResponse,
-    flow_name: Accept,
-    flow_request: AcceptDisputeData,
-            req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
-                                  .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
-            Ok(format!("{dispute_url}ca/services/DisputeService/v30/acceptDispute"))
-    curl_request: Json(AdyenDisputeSubmitEvidenceRequest),
-    curl_response: AdyenSubmitEvidenceResponse,
+
+// Additional trait implementations can be added here as needed
     flow_name: SubmitEvidence,
     flow_request: SubmitEvidenceData,
             req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
