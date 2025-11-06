@@ -194,15 +194,24 @@ macros::create_all_prerequisites!(
         }
         
         pub fn connector_base_url_payments<F, Req, Res>(
+            &self,
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> String {
             let base_url = &req.resource_common_data.connectors.worldpayvantiv.base_url;
             base_url.to_string()
+        }
+        
         pub fn connector_base_url_refunds<F, Req, Res>(
+            &self,
             req: &RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> String {
             req.resource_common_data.connectors.worldpayvantiv.base_url.to_string()
+        }
+        
         pub fn get_auth_header(
+            &self,
             auth_type: &ConnectorAuthType,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             let auth = WorldpayvantivAuthType::try_from(auth_type)?;
             let auth_key = format!("{}:{}", auth.user.peek(), auth.password.peek());
             let auth_header = format!("Basic {}", BASE64_ENGINE.encode(auth_key));
@@ -210,6 +219,7 @@ macros::create_all_prerequisites!(
                 headers::AUTHORIZATION.to_string(),
                 auth_header.into(),
             )])
+        }
 );
 // Implement the specific flows
 macros::macro_connector_implementation!(
