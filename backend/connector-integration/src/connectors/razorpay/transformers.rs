@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{self, AttemptStatus, CardNetwork};
 use common_utils::{ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit,
-    Secret,
+    
 };
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, RSync, Refund},
@@ -19,8 +19,8 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use common_utils::{ExposeInterface, PeekInterface, Secret,
-    Secret,
+use common_utils::{ExposeInterface
+    
 };
 use serde::{Deserialize, Serialize};
 use tracing::info;

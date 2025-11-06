@@ -5,7 +5,7 @@ use std::str::FromStr;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::{consts, pii::Email, types::MinorUnit,
-    Secret,
+    
 };
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
@@ -21,8 +21,8 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
-use common_utils::{ExposeInterface, PeekInterface, Secret,
-    Secret,
+use common_utils::{ExposeInterface
+    
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

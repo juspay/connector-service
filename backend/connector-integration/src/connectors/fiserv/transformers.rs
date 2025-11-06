@@ -3,7 +3,7 @@ use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     pii,
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
-    Secret,
+    
 };
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},

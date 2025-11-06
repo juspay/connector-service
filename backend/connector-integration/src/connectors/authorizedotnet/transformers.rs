@@ -1,6 +1,6 @@
 use common_enums::{self, enums, AttemptStatus, RefundStatus};
 use common_utils::{consts, ext_traits::OptionExt, pii::Email, types::FloatMajorUnit,
-    Secret,
+    
 };
 use domain_types::{
     connector_flow::{
@@ -27,8 +27,8 @@ type HsInterfacesConnectorError = ConnectorError;
 use std::str::FromStr;
 
 use error_stack::ResultExt;
-use common_utils::{ExposeInterface, PeekInterface, Secret,
-    Secret,
+use common_utils::{ExposeInterface
+    
 };
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};

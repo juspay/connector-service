@@ -11,7 +11,7 @@ use common_enums::{
 };
 use common_utils::{
     errors::CustomResult, ext_traits::ByteSliceExt, pii::SecretSerdeValue, types::StringMinorUnit,
-    Maskable, Secret,
+    Maskable
 };
 use domain_types::{
     connector_flow::{

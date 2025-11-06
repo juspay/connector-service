@@ -1,6 +1,6 @@
 use common_enums::enums::{self, AttemptStatus, CountryAlpha2};
 use common_utils::{ext_traits::Encode, pii, request::Method, types::StringMajorUnit,
-    Secret,
+    
 };
 use domain_types::{
     connector_flow::{Authorize, Capture, Refund, SetupMandate, Void},
@@ -19,8 +19,8 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use common_utils::{ExposeInterface, Secret,
-    Secret,
+use common_utils::{ExposeInterface
+    
 };
 use serde::{Deserialize, Serialize};
 

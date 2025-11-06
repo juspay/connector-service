@@ -1,6 +1,6 @@
 use common_enums::{self, AttemptStatus, Currency};
 use common_utils::{consts, id_type::CustomerId, request::Method, types::MinorUnit,
-    Secret,
+    
 };
 use domain_types::{
     connector_flow::{Authorize, CreateAccessToken, PSync},
@@ -16,8 +16,8 @@ use domain_types::{
     router_response_types::RedirectForm,
     utils,
 };
-use common_utils::{ExposeInterface, Secret,
-    Secret,
+use common_utils::{ExposeInterface
+    
 };
 use interfaces::webhooks::IncomingWebhookEvent;
 use serde::{Deserialize, Serialize};

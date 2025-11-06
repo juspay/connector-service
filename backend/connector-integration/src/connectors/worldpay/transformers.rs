@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use common_enums as enums;
 use common_utils::{ext_traits::OptionExt, pii, types::MinorUnit, CustomResult,
-    Secret,
+    
 };
 use domain_types::{
     connector_flow::{Authorize, Capture, Void},
@@ -23,8 +23,8 @@ use domain_types::{
     utils,
 };
 use error_stack::ResultExt;
-use common_utils::{ExposeInterface, PeekInterface, Secret,
-    Secret,
+use common_utils::{ExposeInterface
+    
 };
 use serde::{Deserialize, Serialize};
 

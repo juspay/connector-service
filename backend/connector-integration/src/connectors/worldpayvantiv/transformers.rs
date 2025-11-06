@@ -1,6 +1,6 @@
 use common_enums::{self, CountryAlpha2, Currency};
 use common_utils::{types::MinorUnit, StringMajorUnit,
-    Secret,
+    
 };
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, VoidPC},
@@ -15,8 +15,8 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use common_utils::{ExposeInterface, PeekInterface, Secret,
-    Secret,
+use common_utils::{ExposeInterface
+    
 };
 use serde::{Deserialize, Serialize};
 

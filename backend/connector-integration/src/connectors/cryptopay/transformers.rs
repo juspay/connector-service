@@ -10,7 +10,7 @@ use domain_types::{
 use crate::connectors::cryptopay::{CryptopayAmountConvertor, CryptopayRouterData};
 use crate::types::ResponseRouterData;
 use common_utils::{pii, types::StringMajorUnit,
-    Secret,
+    
 };
 
 use url::Url;
