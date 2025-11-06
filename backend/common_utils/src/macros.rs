@@ -109,7 +109,7 @@ mod id_type {
     macro_rules! impl_serializable_secret_id_type {
         ($type:ty) => {
             #[cfg(feature = "masking")]
-            impl hyperswitch_masking::SerializableSecret for $type {}
+            impl crate::masking::SerializableSecret for $type {}
         };
     }
 }
