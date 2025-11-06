@@ -356,10 +356,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // Additional trait implementations can be added here as needed
-    flow_name: SubmitEvidence,
-    flow_request: SubmitEvidenceData,
-            req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
-            Ok(format!("{dispute_url}ca/services/DisputeService/v30/supplyDefenseDocument"))
 static ADYEN_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyLock::new(|| {
     let adyen_supported_capture_methods = vec![
         CaptureMethod::Automatic,
