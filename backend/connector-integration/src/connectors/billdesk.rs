@@ -226,6 +226,49 @@ macros::create_all_prerequisites!(
             request_body: BilldeskSubmitEvidenceRequest,
             response_body: BilldeskSubmitEvidenceResponse,
             router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        ),
+        // Additional missing flows
+        (
+            flow: CreateAccessToken,
+            request_body: BilldeskAccessTokenRequest,
+            response_body: BilldeskAccessTokenResponse,
+            router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        ),
+        (
+            flow: CreateConnectorCustomer,
+            request_body: BilldeskCreateConnectorCustomerRequest,
+            response_body: BilldeskCreateConnectorCustomerResponse,
+            router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+        ),
+        (
+            flow: PaymentMethodToken,
+            request_body: BilldeskPaymentMethodTokenRequest,
+            response_body: BilldeskPaymentMethodTokenResponse,
+            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        ),
+        (
+            flow: VoidPC,
+            request_body: BilldeskPaymentVoidPostCaptureRequest,
+            response_body: BilldeskPaymentVoidPostCaptureResponse,
+            router_data: RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        ),
+        (
+            flow: PreAuthenticate,
+            request_body: BilldeskPaymentPreAuthenticateRequest,
+            response_body: BilldeskPaymentPreAuthenticateResponse,
+            router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: Authenticate,
+            request_body: BilldeskPaymentAuthenticateRequest,
+            response_body: BilldeskPaymentAuthenticateResponse,
+            router_data: RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PostAuthenticate,
+            request_body: BilldeskPaymentPostAuthenticateRequest,
+            response_body: BilldeskPaymentPostAuthenticateResponse,
+            router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [
