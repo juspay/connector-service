@@ -292,50 +292,170 @@ macros::macro_connector_implementation!(
     }
 );
 // Implementation for empty stubs - these will need to be properly implemented later
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         Authorize,
         PaymentFlowData,
         PaymentsAuthorizeData<T>,
         PaymentsResponseData,
     > for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
         CreateOrder,
+        PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
+    > for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
         CreateConnectorCustomer,
+        PaymentFlowData,
         ConnectorCustomerData,
         ConnectorCustomerResponse,
+    > for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
         CreateSessionToken,
+        PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
+    > for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
         SetupMandate,
+        PaymentFlowData,
         SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    > for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
         VoidPC,
+        PaymentFlowData,
         PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Trustpay<T>
+{
+    // Empty implementation
+}
+
 impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize
-            + Serialize,
-    > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    >
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
         PaymentMethodToken,
+        PaymentFlowData,
         PaymentMethodTokenizationData<T>,
         PaymentMethodTokenResponse,
+    > for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
         PreAuthenticate,
+        PaymentFlowData,
         PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
         Authenticate,
+        PaymentFlowData,
         PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
         PostAuthenticate,
+        PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Trustpay<T>
+{
+    // Empty implementation
+},
 // SourceVerification implementations for all flows
     interfaces::verification::SourceVerification<
         PSync,
