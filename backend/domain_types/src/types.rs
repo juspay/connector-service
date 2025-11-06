@@ -125,7 +125,7 @@ pub struct Connectors {
     pub stripe: ConnectorParams,
     pub cybersource: ConnectorParams,
     pub worldpay: ConnectorParams,
-    pub archipel: ConnectorParams
+    pub archipel: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]

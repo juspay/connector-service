@@ -1,48 +1,44 @@
 pub mod transformers;
 
 use common_enums::{self as enums, CurrencyUnit};
-use common_utils::{ 
-    errors::CustomResult,
-    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    };
+use common_utils::{consts::NO_ERROR_MESSAGE, errors::CustomResult, ext_traits::BytesExt};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
-        CreateOrder, DefendDispute, PaymentMethodToken, PostAuthenticate, PreAuthenticate, PSync,
-        RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, CreateSessionToken,
+        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
+        SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenizationData, PaymentMethodTokenResponse, PaymentVoidData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SetupMandateRequestData, SubmitEvidenceData, SessionTokenRequestData,
-        SessionTokenResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
-    types::{Connectors},
+    types::Connectors,
 };
-use serde::Serialize;
-use std::fmt::Debug;
 use hyperswitch_masking::{Maskable, Secret};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
+use serde::Serialize;
+use std::fmt::Debug;
 
-use transformers::{
-    ArchipelCardAuthorizationRequest, ArchipelPaymentsResponse,
-};
+use transformers::{ArchipelCardAuthorizationRequest, ArchipelPaymentsResponse};
 
 use super::macros;
-use crate::{types::ResponseRouterData};
+use crate::types::ResponseRouterData;
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
@@ -179,13 +175,6 @@ macros::create_all_prerequisites!(
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.archipel.base_url
-        }
-
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
-            &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
             &req.resource_common_data.connectors.archipel.base_url
         }
@@ -662,7 +651,8 @@ fn build_env_specific_endpoint(
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-for Archipel<T> {
+    for Archipel<T>
+{
     fn id(&self) -> &'static str {
         "archipel"
     }
@@ -689,20 +679,43 @@ for Archipel<T> {
     fn build_error_response(
         &self,
         res: Response,
-        _event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        // TODO: Implement proper error response parsing
-        Ok(ErrorResponse {
-            status_code: res.status_code,
-            code: NO_ERROR_CODE.to_string(),
-            attempt_status: None,
-            connector_transaction_id: None,
-            message: NO_ERROR_MESSAGE.to_string(),
-            reason: None,
-            network_decline_code: None,
-            network_advice_code: None,
-            network_error_message: None,
-        })
+        let archipel_error: CustomResult<
+            transformers::ArchipelErrorMessage,
+            common_utils::errors::ParsingError,
+        > = res.response.parse_struct("ArchipelErrorMessage");
+        match archipel_error {
+            Ok(err) => {
+                event_builder.map(|i| i.set_error_response_body(&err));
+                tracing::info!(connector_response=?err);
+
+                Ok(ErrorResponse {
+                    status_code: res.status_code,
+                    code: err.code,
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    message: err
+                        .description
+                        .clone()
+                        .unwrap_or(NO_ERROR_MESSAGE.to_string()),
+                    reason: err.description,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                })
+            }
+            Err(error) => {
+                event_builder.map(|event| {
+                    event.set_error(serde_json::json!({
+                        "error": res.response.escape_ascii().to_string(),
+                        "status_code": res.status_code
+                    }))
+                });
+                tracing::error!(deserialization_error=?error);
+                crate::utils::handle_json_response_deserialization_failure(res, "archipel")
+            }
+        }
     }
 }
 
@@ -732,12 +745,16 @@ macros::macro_connector_implementation!(
             let capture_method = req
                 .request
                 .capture_method
-                .ok_or(errors::ConnectorError::CaptureMethodNotSupported)?;
+                .clone()
+                .ok_or_else(Box::new(move || {
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "capture_method",
+                    }
+                }))?;
             let base_url =
                 build_env_specific_endpoint(self.connector_base_url_payments(req), &req.request.metadata)?;
             match capture_method {
                 enums::CaptureMethod::Automatic | enums::CaptureMethod::SequentialAutomatic => {
-                    println!("here");
                     Ok(format!("{}{}", base_url, "/pay"))
                 }
                 enums::CaptureMethod::Manual => Ok(format!("{}{}", base_url, "/authorize")),

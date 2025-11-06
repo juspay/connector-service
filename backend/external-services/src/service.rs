@@ -667,7 +667,6 @@ pub async fn call_connector_api(
     request: Request,
     _flow_name: &str,
 ) -> CustomResult<Result<Response, Response>, ApiClientError> {
-    println!(">>> {:?}", request.body);
     let url =
         reqwest::Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
 
@@ -732,7 +731,6 @@ pub fn create_client(
     client_certificate_key: Option<Secret<String>>,
     ca_certificate: Option<Secret<String>>,
 ) -> CustomResult<Client, ApiClientError> {
-
     if let (Some(_encoded_certificate), Some(_encoded_certificate_key)) =
         (client_certificate.clone(), client_certificate_key.clone())
     {
@@ -752,8 +750,8 @@ pub fn create_client(
         let cert = reqwest::Certificate::from_pem(pem.as_bytes())
             .change_context(ApiClientError::ClientConstructionFailed)
             .attach_printable("Failed to parse CA certificate PEM block")?;
-        let client_builder = get_client_builder(proxy_config, should_bypass_proxy)?
-            .add_root_certificate(cert);
+        let client_builder =
+            get_client_builder(proxy_config, should_bypass_proxy)?.add_root_certificate(cert);
         return client_builder
             .use_rustls_tls()
             .build()
