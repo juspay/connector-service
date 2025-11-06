@@ -42,24 +42,12 @@ pub use super::responses::{
 
 type Error = error_stack::Report<errors::ConnectorError>;
 
+// Constants
+const PAYMENT_METHOD_TYPE_CARD: &str = "card";
+
 // Helper function to check if capture method is manual
 fn is_manual_capture(capture_method: Option<enums::CaptureMethod>) -> bool {
     matches!(capture_method, Some(enums::CaptureMethod::Manual))
-}
-
-// Helper function to get card expiry in format "MM/YY"
-fn get_card_expiry<T: PaymentMethodDataTypes>(card: &Card<T>) -> Result<Secret<String>, Error> {
-    let month = card.card_exp_month.peek();
-    let year = card.card_exp_year.peek();
-
-    // Get last 2 digits of year
-    let year_2_digit = if year.len() >= 2 {
-        &year[year.len() - 2..]
-    } else {
-        year
-    };
-
-    Ok(Secret::new(format!("{}/{}", month, year_2_digit)))
 }
 
 // Auth Struct
@@ -136,7 +124,7 @@ fn build_payload_cards_request_data<T: PaymentMethodDataTypes>(
 
         let card = requests::PayloadCard {
             number: req_card.card_number.clone(),
-            expiry: get_card_expiry(req_card)?,
+            expiry: req_card.get_card_expiry_month_year_2_digit_with_delimiter("/".to_string())?,
             cvc: req_card.card_cvc.clone(),
         };
 
@@ -170,16 +158,17 @@ fn build_payload_cards_request_data<T: PaymentMethodDataTypes>(
             amount,
             card,
             transaction_types: requests::TransactionTypes::Payment,
-            payment_method_type: "card".to_string(),
+            payment_method_type: PAYMENT_METHOD_TYPE_CARD.to_string(),
             status,
             billing_address,
             processing_id: payload_auth.processing_account_id,
             keep_active: is_mandate,
         })
     } else {
-        Err(errors::ConnectorError::NotImplemented(
-            "Payment method not implemented for Payload".to_string(),
-        )
+        Err(errors::ConnectorError::NotSupported {
+            message: "Payment method".to_string(),
+            connector: "Payload",
+        }
         .into())
     }
 }
@@ -302,31 +291,23 @@ impl<
 
                 Ok(Self::PayloadCardsRequest(Box::new(cards_data)))
             }
-            PaymentMethodData::MandatePayment => {
-                // For manual capture, set status to "authorized"
-                let status = if is_manual_capture(router_data.request.capture_method) {
-                    Some(responses::PayloadPaymentStatus::Authorized)
-                } else {
-                    None
-                };
-
-                let mandate_id = router_data
-                    .request
-                    .get_connector_mandate_id()
-                    .change_context(errors::ConnectorError::MissingRequiredField {
-                        field_name: "connector_mandate_id",
-                    })?;
-
-                Ok(Self::PayloadMandateRequest(Box::new(
-                    requests::PayloadMandateRequestData {
-                        amount: amount.clone(),
-                        transaction_types: requests::TransactionTypes::Payment,
-                        payment_method_id: Secret::new(mandate_id),
-                        status,
-                    },
-                )))
+            // Payload connector supports GooglePay and ApplePay wallets, but not yet integrated
+            PaymentMethodData::Wallet(wallet_data) => match wallet_data {
+                domain_types::payment_method_data::WalletData::GooglePay(_)
+                | domain_types::payment_method_data::WalletData::ApplePay(_) => {
+                    Err(errors::ConnectorError::NotImplemented("Payment method".to_string()).into())
+                }
+                _ => Err(errors::ConnectorError::NotSupported {
+                    message: "Wallet".to_string(),
+                    connector: "Payload",
+                }
+                .into()),
+            },
+            _ => Err(errors::ConnectorError::NotSupported {
+                message: "Payment method".to_string(),
+                connector: "Payload",
             }
-            _ => Err(errors::ConnectorError::NotImplemented("Payment method".to_string()).into()),
+            .into()),
         }
     }
 }
