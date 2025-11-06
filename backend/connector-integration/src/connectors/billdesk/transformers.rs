@@ -1,8 +1,7 @@
 use common_utils::{
     request::Method,
-    types::StringMinorUnit,
 };
-use masking::ExposeInterface;
+use hyperswitch_masking::ExposeInterface;
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
     connector_types::{
@@ -36,8 +35,8 @@ impl TryFrom<&ConnectorAuthType> for BilldeskAuthType {
         match auth_type {
             ConnectorAuthType::SignatureKey { api_key, key1, .. } => {
                 // Extract merchant_id and checksum_key from the auth type
-                let merchant_id = Secret::new(api_key.clone());
-                let checksum_key = Secret::new(key1.clone().unwrap_or_default());
+                let merchant_id = hyperswitch_masking::Secret::new(api_key.clone());
+                let checksum_key = hyperswitch_masking::Secret::new(key1.clone().unwrap_or_else(|| "".to_string()));
                 Ok(Self {
                     merchant_id,
                     checksum_key,
@@ -271,6 +270,7 @@ impl<
             item.router_data.request.minor_amount,
             item.router_data.request.currency,
         ).map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
+        let amount_str = amount.to_string();
         let currency = item.router_data.request.currency.to_string();
 
         // Extract transaction ID using proper method
@@ -296,7 +296,7 @@ impl<
                 let msg = build_billdesk_upi_message(
                     &merchant_id,
                     &transaction_id,
-                    &amount,
+                    &amount_str,
                     &currency,
                     &customer_id_string,
                     &return_url,
@@ -489,7 +489,7 @@ impl<F> TryFrom<ResponseRouterData<BilldeskPaymentsSyncResponse, Self>>
             http_code,
         } = item;
         
-        let (status, response) = match response {
+        let (_status, response) = match response {
             BilldeskPaymentsSyncResponse::BilldeskError(error_data) => (
                 common_enums::AttemptStatus::Failure,
                 Err(ErrorResponse {
