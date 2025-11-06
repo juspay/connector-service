@@ -109,6 +109,18 @@ pub mod masking {
         }
     }
     
+    impl<T> Serialize for Maskable<T>
+    where
+        T: Serialize,
+    {
+        fn serialize<SER>(&self, serializer: SER) -> Result<SER::Ok, SER::Error>
+        where
+            SER: serde::Serializer,
+        {
+            self.0.serialize(serializer)
+        }
+    }
+    
     pub trait ExposeInterface<T> {
         fn expose(self) -> T;
     }
