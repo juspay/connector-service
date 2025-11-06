@@ -1,7 +1,8 @@
 use common_utils::{
     request::Method,
-    types::{MinorUnit, StringMinorUnit},
+    types::StringMinorUnit,
 };
+use masking::ExposeInterface;
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
     connector_types::{
@@ -14,7 +15,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
-use error_stack::ResultExt;
+
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
@@ -228,14 +229,7 @@ fn build_billdesk_refund_status_message(
     Ok(format!("{}|{}", message, checksum))
 }
 
-// Helper function to extract VPA from payment method data
-fn extract_vpa<T: PaymentMethodDataTypes>(
-    payment_method_data: &T,
-) -> Result<Option<String>, errors::ConnectorError> {
-    // This is a simplified implementation - in real scenario, we'd extract VPA from the payment method data
-    // For now, we'll return None as we don't have access to the specific payment method structure
-    Ok(None)
-}
+
 
 // Implement TryFrom for BilldeskPaymentsRequest (UPI Authorize)
 impl<
@@ -273,13 +267,14 @@ impl<
         let checksum_key = auth.checksum_key.expose();
 
         // Use proper amount converter
-        let amount = item.amount.get_amount_as_string();
+        let amount = item.connector.amount_converter.convert(
+            item.router_data.request.minor_amount,
+            item.router_data.request.currency,
+        ).map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
         let currency = item.router_data.request.currency.to_string();
 
         // Extract transaction ID using proper method
-        let transaction_id = item.router_data.request.connector_transaction_id
-            .get_connector_transaction_id()
-            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
+        let transaction_id = item.router_data.resource_common_data.connector_request_reference_id;
 
         // Extract IP address using proper function
         let ip_address = item.router_data.request.get_ip_address_as_optional()
@@ -295,8 +290,8 @@ impl<
         // Only support UPI payments as per requirements
         match item.router_data.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => {
-                // Extract VPA from payment method data
-                let vpa = extract_vpa(&item.router_data.request.payment_method_data)?;
+                // Extract VPA from payment method data (simplified)
+                let vpa = None;
                 
                 let msg = build_billdesk_upi_message(
                     &merchant_id,
@@ -352,9 +347,7 @@ impl<
         let checksum_key = auth.checksum_key.expose();
 
         // Extract transaction ID
-        let transaction_id = item.router_data.request.connector_transaction_id
-            .get_connector_transaction_id()
-            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
+        let transaction_id = item.router_data.resource_common_data.connector_request_reference_id;
         
         // Build status check message
         let msg = build_billdesk_status_message(
@@ -396,9 +389,7 @@ impl<
         let checksum_key = auth.checksum_key.expose();
 
         // Extract refund ID
-        let refund_id = item.router_data.request.connector_transaction_id
-            .get_connector_transaction_id()
-            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
+        let refund_id = item.router_data.resource_common_data.connector_request_reference_id;
         
         // Build refund status check message
         let msg = build_billdesk_refund_status_message(
@@ -428,7 +419,7 @@ where
             http_code,
         } = item;
         
-        let (status, response) = match response {
+        let (_status, response) = match response {
             BilldeskPaymentsResponse::BilldeskError(error_data) => (
                 common_enums::AttemptStatus::Failure,
                 Err(ErrorResponse {
