@@ -164,12 +164,6 @@ pub mod masking {
     
     pub trait SerializableSecret {}
     
-    pub trait Serialize {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer;
-}
-    
     pub trait PeekInterface<T> {
         fn peek(&self) -> &T;
     }
