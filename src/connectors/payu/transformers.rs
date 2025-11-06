@@ -354,7 +354,7 @@ where
         Ok(Self {
             key: auth.api_key.peek().clone(),
             txnid: transaction_id,
-            amount: item.amount.clone(), // Use the amount converter directly
+            amount: item.request.amount.clone(), // Use the amount converter directly
             currency,
             productinfo: constants::PRODUCT_INFO.to_string(),
             firstname: Secret::new(customer_name.to_string()),
