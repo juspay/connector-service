@@ -7,7 +7,6 @@ use common_enums::{
 use common_utils::{
     errors,
     ext_traits::{OptionExt, ValueExt},
-    pii::IpAddress,
     types::{MinorUnit, StringMinorUnit},
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
