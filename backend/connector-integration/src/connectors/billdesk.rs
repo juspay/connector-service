@@ -1,13 +1,10 @@
 pub mod transformers;
 pub mod constants;
 
-use std::marker::PhantomData;
-
-use common_enums::CurrencyUnit;
 use common_utils::{
     errors::CustomResult,
     ext_traits::ByteSliceExt,
-    types::{StringMinorUnit, MinorUnit},
+    types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -19,7 +16,7 @@ use domain_types::{
         DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RequestDetails, ResponseId, SessionTokenRequestData, SessionTokenResponseData,
+        RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
@@ -223,7 +220,7 @@ macros::create_all_prerequisites!(
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
             // Use test mode to determine base URL
-            if req.resource_common_data.test_mode.unwrap_or(false) {
+            if req.resource_common_data.connectors.billdesk.base_url.contains("uat") {
                 constants::endpoints::UAT_BASE_URL
             } else {
                 constants::endpoints::PROD_BASE_URL
@@ -348,7 +345,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_refunds(req);
-            let endpoint = if req.resource_common_data.test_mode.unwrap_or(false) {
+            let endpoint = if req.resource_common_data.connectors.billdesk.base_url.contains("uat") {
                 constants::endpoints::UAT_RSYNC_ENDPOINT
             } else {
                 constants::endpoints::PROD_RSYNC_ENDPOINT
@@ -433,7 +430,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::SetupMandateV2<T> for Billdesk<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2<T> for Billdesk<T> {}
+    connector_types::RepeatPaymentV2 for Billdesk<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     connector_types::AcceptDispute for Billdesk<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
