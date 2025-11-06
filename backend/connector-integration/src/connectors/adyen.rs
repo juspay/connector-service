@@ -256,45 +256,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}{}/payments", self.connector_base_url_payments(req), ADYEN_API_VERSION))
         }
-    curl_request: Json(AdyenRedirectRequest),
-    curl_response: AdyenPSyncResponse,
-    flow_name: PSync,
-    flow_request: PaymentsSyncData,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            Ok(format!("{}{}/payments/details", self.connector_base_url_payments(req), ADYEN_API_VERSION))
-    curl_request: Json(AdyenCaptureRequest),
-    curl_response: AdyenCaptureResponse,
-    flow_name: Capture,
-    flow_request: PaymentsCaptureData,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            let id = match &req.request.connector_transaction_id {
-                ResponseId::ConnectorTransactionId(id) => id,
-                _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into())
-            };
-            Ok(format!("{}{}/payments/{}/captures", self.connector_base_url_payments(req), ADYEN_API_VERSION, id))
-    connector_types::ValidationTrait for Adyen<T>
-    connector_types::PaymentOrderCreate for Adyen<T>
-        CreateOrder,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    curl_request: Json(AdyenVoidRequest),
-    curl_response: AdyenVoidResponse,
-    flow_name: Void,
-    flow_request: PaymentVoidData,
-            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            let id = req.request.connector_transaction_id.clone();
-            Ok(format!("{}{}/payments/{}/cancels", self.connector_base_url_payments(req), ADYEN_API_VERSION, id))
-    curl_request: Json(AdyenDefendDisputeRequest),
-    curl_response: AdyenDefendDisputeResponse,
-    flow_name: DefendDispute,
-    resource_common_data: DisputeFlowData,
-    flow_request: DisputeDefendData,
-    flow_response: DisputeResponseData,
-            req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
-            let dispute_url = self.connector_base_url_disputes(req)
-                .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
-            Ok(format!("{dispute_url}ca/services/DisputeService/v30/defendDispute"))
+);
     ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
         CreateSessionToken,
         SessionTokenRequestData,
