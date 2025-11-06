@@ -12,13 +12,13 @@ pub mod masking {
     
     impl<T> Secret<T> {
         pub fn new(value: T) -> Self {
-            Self(value)
+            Self(value, std::marker::PhantomData)
         }
     }
     
     impl<T, S> From<T> for Secret<T, S> {
         fn from(value: T) -> Self {
-            Self(value)
+            Self(value, std::marker::PhantomData)
         }
     }
     
