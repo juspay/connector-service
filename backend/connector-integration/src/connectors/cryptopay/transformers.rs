@@ -27,7 +27,7 @@ use common_utils::consts;
 
 use serde::{Deserialize, Serialize};
 
-# use common_utils::Secret;
+// use common_utils::Secret;
 
 #[derive(Default, Debug, Serialize)]
 pub struct CryptopayPaymentsRequest {
