@@ -58,6 +58,7 @@ use crate::types::ResponseRouterData;
 
 // Import the macros from the connector integration
 use connector_integration::connectors::macros;
+use connector_integration::utils::with_error_response_body;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
