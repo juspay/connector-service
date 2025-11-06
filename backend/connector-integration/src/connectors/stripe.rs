@@ -179,9 +179,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 headers::AUTHORIZATION.to_string(),
                 format!("Bearer {}", auth.api_key.peek()).into_masked(),
             ),
+            (
                 auth_headers::STRIPE_API_VERSION.to_string(),
                 auth_headers::STRIPE_VERSION.to_string().into_masked(),
+            ),
         ])
+    }
+    
     fn build_error_response(
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
