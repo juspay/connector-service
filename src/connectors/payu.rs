@@ -37,7 +37,11 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-// use hyperswitch_masking::{Maskable, PeekInterface, Secret};
+// // use hyperswitch_masking::{Maskable, PeekInterface, Secret};
+
+// Temporary replacements for masking types
+pub type Maskable<T> = T;
+pub struct Secret<T>(pub T);
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
