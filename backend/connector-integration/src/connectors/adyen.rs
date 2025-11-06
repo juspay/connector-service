@@ -231,6 +231,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             network_advice_code: None,
             network_error_message: None,
         })
+    }
+}
 const ADYEN_API_VERSION: &str = "v68";
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
