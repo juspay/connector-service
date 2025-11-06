@@ -457,32 +457,104 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     // Empty implementation
 },
 // SourceVerification implementations for all flows
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         PSync,
+        PaymentFlowData,
         PaymentsSyncData,
+        PaymentsResponseData,
+    > for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
         Capture,
+        PaymentFlowData,
         PaymentsCaptureData,
+        PaymentsResponseData,
+    > for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
         Void,
+        PaymentFlowData,
         PaymentVoidData,
+        PaymentsResponseData,
+    > for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
         Refund,
         RefundFlowData,
         RefundsData,
         RefundsResponseData,
+    > for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
         RSync,
+        RefundFlowData,
         RefundSyncData,
+        RefundsResponseData,
+    > for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
         Accept,
         DisputeFlowData,
         AcceptDisputeData,
         DisputeResponseData,
+    > for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
         SubmitEvidence,
+        DisputeFlowData,
         SubmitEvidenceData,
+        DisputeResponseData,
+    > for Trustpay<T>
+{
+    // Empty implementation
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
         DefendDispute,
+        DisputeFlowData,
         DisputeDefendData,
+        DisputeResponseData,
+    > for Trustpay<T>
+{
+    // Empty implementation
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorSpecifications
-        CreateAccessToken,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
+    for Trustpay<T>
+{
+    // Empty implementation
+}
+
 // We already have an implementation for ValidationTrait above
-        RepeatPayment,
-        RepeatPaymentData,
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Trustpay<T>
+{
+    // Empty implementation
+}
