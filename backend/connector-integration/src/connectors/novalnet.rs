@@ -51,6 +51,7 @@ use transformers::{
     NovalnetPaymentsRequest as NovalnetRepeatPaymentsRequest, NovalnetPaymentsResponse,
     NovalnetPaymentsResponse as NovalnetPaymentsResponseMandate,
     NovalnetPaymentsResponse as NovalnetRepeatPaymentsResponse, NovalnetRefundRequest,
+};
     NovalnetRefundResponse, NovalnetRefundSyncResponse, NovalnetSyncRequest,
     NovalnetSyncRequest as NovalnetRSyncRequest,
 use super::macros;
