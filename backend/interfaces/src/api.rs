@@ -27,7 +27,7 @@ pub trait ConnectorCommon {
         &self,
         _auth_type: &ConnectorAuthType,
     ) -> CustomResult<
-        Vec<(String, hyperswitch_masking::Maskable<String>)>,
+        Vec<(String, common_utils::masking::Maskable<String>)>,
         domain_types::errors::ConnectorError,
     > {
         Ok(Vec::new())
@@ -74,6 +74,6 @@ pub enum ApplicationResponse<R> {
     Form(Box<RedirectionFormData>),
     PaymentLinkForm(Box<PaymentLinkAction>),
     FileData((Vec<u8>, mime::Mime)),
-    JsonWithHeaders((R, Vec<(String, hyperswitch_masking::Maskable<String>)>)),
+    JsonWithHeaders((R, Vec<(String, common_utils::masking::Maskable<String>)>)),
     GenericLinkForm(Box<GenericLinks>),
 }
