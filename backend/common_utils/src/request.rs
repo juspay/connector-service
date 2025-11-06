@@ -184,7 +184,7 @@ impl RequestBuilder {
     }
 
     pub fn header(mut self, header: &str, value: &str) -> Self {
-        self.headers.push((header.into(), value.into()));
+        self.headers.push((header.into(), Maskable::from(value.to_string())));
         self
     }
 
