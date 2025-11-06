@@ -329,13 +329,21 @@ macros::macro_connector_implementation!(
 );
 // Type alias for non-generic trait implementations
 // Implement ConnectorServiceTrait by virtue of implementing all required traits
-    > ConnectorCommon for Phonepe<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorCommon for Phonepe<T>
+{
     fn id(&self) -> &'static str {
         "phonepe"
+    }
+    
     fn get_currency_unit(&self) -> enums::CurrencyUnit {
         enums::CurrencyUnit::Minor
+    }
+    
     fn common_get_content_type(&self) -> &'static str {
         "application/json"
+    }
+    
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
@@ -346,8 +354,12 @@ macros::macro_connector_implementation!(
             "Content-Type".to_string(),
             "application/json".to_string().into(),
         )])
+    }
+    
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
         connectors.phonepe.base_url.as_ref()
+    }
+    
     fn build_error_response(
         res: Response,
         _event_builder: Option<&mut ConnectorEvent>,
@@ -356,6 +368,7 @@ macros::macro_connector_implementation!(
         let (error_message, error_code, attempt_status) = if let Ok(error_response) =
             res.response
                 .parse_struct::<phonepe::PhonepeErrorResponse>("PhonePe ErrorResponse")
+        {
             let attempt_status = phonepe::get_phonepe_error_status(&error_response.code);
             (error_response.message, error_response.code, attempt_status)
         } else {
