@@ -223,31 +223,46 @@ macros::macro_connector_implementation!(
     other_functions: {
         fn get_headers(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers_for_payments(req)
+        }
+        
         fn get_url(
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-        let transaction_id = req
+            let transaction_id = req
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
-            common_enums::PaymentMethod::BankRedirect | common_enums::PaymentMethod::BankTransfer => Ok(format!(
-                "{}{}/{}",
-                self.connector_base_url_bank_redirects_payments(req),
-                "api/Payments/Payment",
-                transaction_id,
-            )),
-            _ => Ok(format!(
-                self.connector_base_url_payments(req),
-                "api/v1/instance",
+            
+            match req.resource_common_data.payment_method {
+                common_enums::PaymentMethod::BankRedirect | common_enums::PaymentMethod::BankTransfer => Ok(format!(
+                    "{}{}/{}",
+                    self.connector_base_url_bank_redirects_payments(req),
+                    "api/Payments/Payment",
+                    transaction_id,
+                )),
+                _ => Ok(format!(
+                    "{}{}",
+                    self.connector_base_url_payments(req),
+                    "api/v1/instance"
+                )),
+            }
+        }
+    },
     curl_request: FormUrlEncoded(TrustpayAuthUpdateRequest),
     curl_response: TrustpayAuthUpdateResponse,
     flow_name: CreateAccessToken,
     flow_request: AccessTokenRequestData,
     flow_response: AccessTokenResponseData,
     http_method: Post,
+    other_functions: {
+        fn get_headers(
             req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let auth = trustpay::TrustpayAuthType::try_from(&req.connector_auth_type)
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
             let auth_value = auth
                 .project_id
                 .zip(auth.secret_key)
@@ -257,16 +272,25 @@ macros::macro_connector_implementation!(
                         BASE64_ENGINE
                             .encode(format!("{project_id}:{secret_key}"))
                     )
+                });
             Ok(vec![
                 (
                     self.common_get_content_type().to_string().into(),
                 ),
                 (headers::AUTHORIZATION.to_string(), auth_value.into_masked()),
             ])
+        }
+        
+        fn get_url(
+            req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
-            "{}{}",
-            self.connector_base_url_bank_redirects_payments(req), "api/oauth2/token"
-        ))
+                "{}{}",
+                self.connector_base_url_bank_redirects_payments(req), "api/oauth2/token"
+            ))
+        }
+    }
+);
 // Implementation for empty stubs - these will need to be properly implemented later
     ConnectorIntegrationV2<
         Authorize,
