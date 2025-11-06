@@ -94,10 +94,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Inco
         Err(error_stack::report!(ConnectorError::WebhooksNotImplemented))
     }
 }
-    > DisputeDefend for Worldpayvantiv<T>
-    > RefundSyncV2 for Worldpayvantiv<T>
-    > AcceptDispute for Worldpayvantiv<T>
-    // Basic connector implementation
+
+// Basic connector implementation
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Worldpayvantiv<T>
 {
