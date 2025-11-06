@@ -538,75 +538,99 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .connector_transaction_id
             .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
-            Ok(format!(
-                "{}pts/v2/payments/{}/captures",
-                self.connector_base_url_payments(req),
-                connector_payment_id
-            ))
-        }
-// Add implementation for Void
-    curl_request: Json(CybersourceVoidRequest),
-    curl_response: CybersourceVoidResponse,
-    flow_name: Void,
-    flow_request: PaymentVoidData,
-        fn get_url(
-            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            let connector_payment_id = req.request.connector_transaction_id.clone();
-            Ok(format!(
-                "{}pts/v2/payments/{}/reversals",
-                self.connector_base_url_payments(req),
-                connector_payment_id
-            ))
-        }
-// Add implementation for Refund
-    curl_request: Json(CybersourceRefundRequest),
-    curl_response: CybersourceRefundResponse,
-    flow_name: Refund,
-    resource_common_data: RefundFlowData,
-    flow_request: RefundsData,
-    flow_response: RefundsResponseData,
-        fn get_url(
-            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            let connector_payment_id = req
-                .request
-                .connector_transaction_id
-                .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
-            Ok(format!(
-                "{}pts/v2/payments/{}/refunds",
-                self.connector_base_url_refunds(req),
-                connector_payment_id
-            ))
-        }
-// Implement RSync to fix the RefundSyncV2 trait requirement
-    curl_response: CybersourceRsyncResponse,
-    flow_name: RSync,
-    flow_request: RefundSyncData,
-        fn get_url(
-            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            let refund_id = req.request.connector_refund_id.clone();
-            Ok(format!(
-                "{}pts/v2/refunds/{}",
-                self.connector_base_url_refunds(req),
-                refund_id
-            ))
-        }
-    curl_request: Json(CybersourceRepeatPaymentRequest),
-    curl_response: CybersourceRepeatPaymentResponse,
-    flow_name: RepeatPayment,
-    flow_request: RepeatPaymentData,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
-        fn get_url(
-            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!(
-                "{}pts/v2/payments/",
-                self.connector_base_url_payments(req)
-            ))
-        }
+        Ok(format!(
+            "{}pts/v2/payments/{}/captures",
+            self.connector_base_url_payments(req),
+            connector_payment_id
+        ))
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        Void,
+        PaymentFlowData,
+        PaymentVoidData,
+        PaymentsResponseData,
+    > for Cybersource<T>
+{
+    fn get_url(
+        &self,
+        req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let connector_payment_id = req.request.connector_transaction_id.clone();
+        Ok(format!(
+            "{}pts/v2/payments/{}/reversals",
+            self.connector_base_url_payments(req),
+            connector_payment_id
+        ))
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        Refund,
+        RefundFlowData,
+        RefundsData,
+        RefundsResponseData,
+    > for Cybersource<T>
+{
+    fn get_url(
+        &self,
+        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let connector_payment_id = req
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id()
+            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+        Ok(format!(
+            "{}pts/v2/payments/{}/refunds",
+            self.connector_base_url_refunds(req),
+            connector_payment_id
+        ))
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        RSync,
+        RefundFlowData,
+        RefundSyncData,
+        RefundsResponseData,
+    > for Cybersource<T>
+{
+    fn get_url(
+        &self,
+        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let refund_id = req.request.connector_refund_id.clone();
+        Ok(format!(
+            "{}pts/v2/refunds/{}",
+            self.connector_base_url_refunds(req),
+            refund_id
+        ))
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Cybersource<T>
+{
+    fn get_url(
+        &self,
+        req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        Ok(format!(
+            "{}pts/v2/payments/",
+            self.connector_base_url_payments(req)
+        ))
+    }
+}
 // Stub implementations for unsupported flows
 impl<
         T: PaymentMethodDataTypes
