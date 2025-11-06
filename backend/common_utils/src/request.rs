@@ -1,4 +1,7 @@
-// use crate::masking::{Maskable, Secret};
+#[cfg(feature = "masking")]
+use crate::masking::{Maskable, Secret};
+#[cfg(not(feature = "masking"))]
+use crate::masking::{Maskable, Secret};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
