@@ -191,7 +191,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
     ) -> CustomResult<
-        Option<hyperswitch_masking::Secret<String>>,
+        Option<common_utils::Secret<String>>,
         domain_types::errors::ConnectorError,
     > {
         Ok(None)
@@ -202,7 +202,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
     ) -> CustomResult<
-        Option<hyperswitch_masking::Secret<String>>,
+        Option<common_utils::Secret<String>>,
         domain_types::errors::ConnectorError,
     > {
         Ok(None)

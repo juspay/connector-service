@@ -338,7 +338,7 @@ impl prost::Message for CardNumber {
 mod tests {
     #![allow(clippy::unwrap_used)]
 
-    # use hyperswitch_masking::Secret;
+    # use common_utils::Secret;
 
     use super::*;
 

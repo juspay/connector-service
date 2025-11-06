@@ -6,7 +6,7 @@ pub struct ExternalAuthenticationPayload {
     /// trans_status
     pub trans_status: common_enums::TransactionStatus,
     /// authentication_value
-    pub authentication_value: Option<hyperswitch_masking::Secret<String>>,
+    pub authentication_value: Option<common_utils::Secret<String>>,
     /// eci
     pub eci: Option<String>,
 }

@@ -136,7 +136,7 @@ pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> 
 ///
 /// SECURITY WARNING: This struct should only contain non-sensitive business metadata.
 /// For any sensitive data (API keys, tokens, credentials, etc.), always:
-/// 1. Wrap in hyperswitch_masking::Secret<T>
+/// 1. Wrap in common_utils::Secret<T>
 /// 2. Extract via MaskedMetadata methods instead of adding here
 ///
 #[derive(Clone, Debug)]

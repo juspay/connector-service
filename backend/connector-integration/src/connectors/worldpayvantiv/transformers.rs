@@ -20,7 +20,7 @@ use crate::{connectors::worldpayvantiv::WorldpayvantivRouterData, types::Respons
 
 // Helper function to extract report group from connector metadata
 fn extract_report_group(
-    connector_meta_data: &Option<hyperswitch_masking::Secret<serde_json::Value>>,
+    connector_meta_data: &Option<common_utils::Secret<serde_json::Value>>,
 ) -> Option<String> {
     connector_meta_data.as_ref().and_then(|metadata| {
         let metadata_value = metadata.peek();

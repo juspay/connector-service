@@ -12,7 +12,7 @@ use common_utils::{
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
 use error_stack::ResultExt;
-# use hyperswitch_masking::Secret;
+# use common_utils::Secret;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
@@ -1467,7 +1467,7 @@ pub struct RequestDetails {
 #[derive(Debug, Clone)]
 pub struct ConnectorWebhookSecrets {
     pub secret: Vec<u8>,
-    pub additional_secret: Option<hyperswitch_masking::Secret<String>>,
+    pub additional_secret: Option<common_utils::Secret<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

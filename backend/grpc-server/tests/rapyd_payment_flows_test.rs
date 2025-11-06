@@ -24,7 +24,7 @@ use grpc_api_types::{
         PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentStatus, RefundStatus,
     },
 };
-# use hyperswitch_masking::Secret;
+# use common_utils::Secret;
 use tonic::{transport::Channel, Request};
 
 // Constants for rapyd connector

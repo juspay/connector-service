@@ -38,7 +38,7 @@ pub enum RedirectForm {
     Nmi {
         amount: String,
         currency: common_enums::Currency,
-        public_key: hyperswitch_masking::Secret<String>,
+        public_key: common_utils::Secret<String>,
         customer_vault_id: String,
         order_id: String,
     },

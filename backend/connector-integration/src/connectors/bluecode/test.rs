@@ -19,7 +19,7 @@ mod tests {
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
         };
-        # use hyperswitch_masking::Secret;
+        # use common_utils::Secret;
         use interfaces::{
             connector_integration_v2::BoxedConnectorIntegrationV2, connector_types::BoxedConnector,
         };

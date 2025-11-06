@@ -13,7 +13,7 @@ use domain_types::{
     router_response_types::Response,
     types::Proxy,
 };
-# use hyperswitch_masking::Secret;
+# use common_utils::Secret;
 use injector;
 
 pub trait ConnectorRequestReference {
@@ -871,8 +871,8 @@ fn get_client_builder(
 }
 
 // pub fn create_identity_from_certificate_and_key(
-//     encoded_certificate: hyperswitch_masking::Secret<String>,
-//     encoded_certificate_key: hyperswitch_masking::Secret<String>,
+//     encoded_certificate: common_utils::Secret<String>,
+//     encoded_certificate_key: common_utils::Secret<String>,
 // ) -> Result<reqwest::Identity, error_stack::Report<ApiClientError>> {
 //     let decoded_certificate = BASE64_ENGINE
 //         .decode(encoded_certificate.expose())
@@ -894,7 +894,7 @@ fn get_client_builder(
 // }
 
 // pub fn create_certificate(
-//     encoded_certificate: hyperswitch_masking::Secret<String>,
+//     encoded_certificate: common_utils::Secret<String>,
 // ) -> Result<Vec<reqwest::Certificate>, error_stack::Report<ApiClientError>> {
 //     let decoded_certificate = BASE64_ENGINE
 //         .decode(encoded_certificate.expose())

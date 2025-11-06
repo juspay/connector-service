@@ -13,7 +13,7 @@ use domain_types::{
     router_request_types::SyncRequestType,
 };
 use error_stack::ResultExt;
-# use hyperswitch_masking::Secret;
+# use common_utils::Secret;
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::helcim::HelcimRouterData, types::ResponseRouterData};

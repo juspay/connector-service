@@ -319,7 +319,7 @@ impl<
                         Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::Mifinity(mifinity_data)) => {
                             Ok(PaymentMethodData::Wallet(payment_method_data::WalletData::Mifinity(
                                 payment_method_data::MifinityData {
-                                    date_of_birth: hyperswitch_masking::Secret::<time::Date>::foreign_try_from(mifinity_data.date_of_birth.ok_or(
+                                    date_of_birth: common_utils::Secret::<time::Date>::foreign_try_from(mifinity_data.date_of_birth.ok_or(
                                         ApplicationErrorResponse::BadRequest(ApiError {
                                             sub_code: "MISSING_DATE_OF_BIRTH".to_owned(),
                                             error_identifier: 400,
@@ -5223,7 +5223,7 @@ pub enum PaymentMethodDataType {
     RevolutPay,
 }
 
-impl ForeignTryFrom<String> for hyperswitch_masking::Secret<time::Date> {
+impl ForeignTryFrom<String> for common_utils::Secret<time::Date> {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(date_string: String) -> Result<Self, error_stack::Report<Self::Error>> {
@@ -5240,7 +5240,7 @@ impl ForeignTryFrom<String> for hyperswitch_masking::Secret<time::Date> {
                 error_object: None,
             })
         })?;
-        Ok(hyperswitch_masking::Secret::new(date))
+        Ok(common_utils::Secret::new(date))
     }
 }
 

@@ -23,7 +23,7 @@ use grpc_api_types::{
         PaymentStatus, RefundResponse, RefundServiceGetRequest, RefundStatus,
     },
 };
-# use hyperswitch_masking::Secret;
+# use common_utils::Secret;
 use tonic::{transport::Channel, Request};
 
 // Helper function to get current timestamp

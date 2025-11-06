@@ -24,7 +24,7 @@ use grpc_api_types::{
         PaymentServiceVoidRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus,
     },
 };
-# use hyperswitch_masking::Secret;
+# use common_utils::Secret;
 use tonic::{transport::Channel, Request};
 
 // Constants for Noon connector

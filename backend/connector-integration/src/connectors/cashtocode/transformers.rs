@@ -15,7 +15,7 @@ use domain_types::{
     utils,
 };
 use error_stack::ResultExt;
-# use hyperswitch_masking::Secret;
+# use common_utils::Secret;
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::cashtocode::CashtocodeRouterData, types::ResponseRouterData};

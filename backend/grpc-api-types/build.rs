@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     config.extern_path(".ucs.v2.CardNumberType", "::cards::CardNumber");
     config.extern_path(
         ".ucs.v2.SecretString",
-        "::hyperswitch_masking::Secret<String>",
+        "::common_utils::Secret<String>",
     );
 
     // Use compile_protos_with_config which handles everything internally

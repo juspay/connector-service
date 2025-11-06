@@ -1,5 +1,5 @@
 use common_utils::types::MinorUnit;
-# use hyperswitch_masking::Secret;
+# use common_utils::Secret;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize)]

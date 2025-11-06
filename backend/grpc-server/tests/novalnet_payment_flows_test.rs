@@ -21,7 +21,7 @@ use grpc_api_types::{
         PaymentServiceAuthorizeRequest, PaymentStatus,
     },
 };
-# use hyperswitch_masking::Secret;
+# use common_utils::Secret;
 use tonic::{transport::Channel, Request};
 use uuid::Uuid;
 

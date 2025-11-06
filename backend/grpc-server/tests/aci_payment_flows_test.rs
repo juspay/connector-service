@@ -26,7 +26,7 @@ use grpc_api_types::{
         PaymentServiceVoidRequest, PaymentStatus, RefundStatus,
     },
 };
-# use hyperswitch_masking::Secret;
+# use common_utils::Secret;
 use tonic::{transport::Channel, Request};
 
 // Constants for aci connector
