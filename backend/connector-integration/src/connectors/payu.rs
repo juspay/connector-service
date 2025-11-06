@@ -99,6 +99,7 @@ macros::create_all_prerequisites!(
             response_body: PayuPaymentResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
+            (
             flow: PSync,
             request_body: PayuSyncRequest,
             response_body: PayuSyncResponse,
