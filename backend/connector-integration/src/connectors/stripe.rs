@@ -132,6 +132,8 @@ macros::create_all_prerequisites!(
             request_body: StripeRefundRequest,
             response_body: RefundResponse,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
             flow: RSync,
             response_body: RefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
