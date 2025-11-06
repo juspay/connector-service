@@ -222,31 +222,17 @@ macros::create_all_prerequisites!(
         }
 );
 // Implement the specific flows
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Worldpayvantiv,
-    curl_request: Xml(WorldpayvantivPaymentsRequest<T>),
-    curl_response: CnpOnlineResponse,
-    flow_name: Authorize,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsAuthorizeData<T>,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    preprocess_response: true,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            self.build_headers(req)
-        fn get_url(
-        ) -> CustomResult<String, ConnectorError> {
-            Ok(self.connector_base_url_payments(req).to_string())
-    curl_response: VantivSyncResponse,
-    flow_name: PSync,
-    flow_request: PaymentsSyncData,
-    http_method: Get,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            self.get_auth_header(&req.connector_auth_type)
+// Stub implementations for unsupported flows
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification for Worldpayvantiv<T>
+{
+    fn verify_source(
+        &self,
+        _request: &domain_types::router_data::RouterData,
+    ) -> CustomResult<bool, errors::ConnectorError> {
+        Ok(true)
+    }
+}
             let txn_id = req.request.get_connector_transaction_id()
                 .change_context(ConnectorError::MissingConnectorTransactionID)?;
             let secondary_base_url = req.resource_common_data.connectors.worldpayvantiv.secondary_base_url
