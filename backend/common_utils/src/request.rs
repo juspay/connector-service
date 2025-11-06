@@ -63,11 +63,21 @@ impl std::fmt::Debug for RequestContent {
     }
 }
 
+#[cfg(feature = "masking")]
 pub enum RequestContent {
     Json(Box<dyn hyperswitch_masking::ErasedMaskSerialize + Send>),
     FormUrlEncoded(Box<dyn hyperswitch_masking::ErasedMaskSerialize + Send>),
     FormData(reqwest::multipart::Form),
     Xml(Box<dyn hyperswitch_masking::ErasedMaskSerialize + Send>),
+    RawBytes(Vec<u8>),
+}
+
+#[cfg(not(feature = "masking"))]
+pub enum RequestContent {
+    Json(serde_json::Value),
+    FormUrlEncoded(String),
+    FormData(reqwest::multipart::Form),
+    Xml(String),
     RawBytes(Vec<u8>),
 }
 
