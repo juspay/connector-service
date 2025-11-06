@@ -547,7 +547,7 @@ macro_rules! impl_source_verification_stub {
                 Ok(payload.to_owned()) // Stub implementation
             }
         }
-    };
+    }
 // Stub implementations for missing flows
 impl_source_verification_stub!(
     CreateSessionToken,
