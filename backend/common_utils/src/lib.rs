@@ -4,10 +4,13 @@
 #[cfg(not(feature = "masking"))]
 pub mod masking {
     use serde::{Deserialize, Serialize};
+    use std::fmt;
     
-    pub trait Strategy<T> {}
+    pub trait Strategy<T> {
+        fn fmt(val: &T, f: &mut fmt::Formatter<'_>) -> fmt::Result;
+    }
     
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
     pub struct Secret<T, S = ()>(pub T, std::marker::PhantomData<S>);
     
     impl<T> Secret<T> {
@@ -30,8 +33,20 @@ pub mod masking {
         }
     }
     
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    impl<T: Default, S> Default for Secret<T, S> {
+        fn default() -> Self {
+            Self(T::default(), std::marker::PhantomData)
+        }
+    }
+    
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
     pub struct Maskable<T>(pub T);
+    
+    impl<T> From<T> for Maskable<T> {
+        fn from(value: T) -> Self {
+            Self(value)
+        }
+    }
     
     impl<T> Maskable<T> {
         pub fn new_normal(value: T) -> Self {
@@ -48,9 +63,27 @@ pub mod masking {
         fn expose(self) -> T;
     }
     
-    pub trait WithType {}
+    impl<T, S> ExposeInterface<T> for Secret<T, S> {
+        fn expose(self) -> T {
+            self.0
+        }
+    }
     
-    pub trait PeekInterface {}
+    pub trait WithType {
+        fn fmt<T: AsRef<str>>(val: &T, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "{}", val.as_ref())
+        }
+    }
+    
+    pub trait PeekInterface<T> {
+        fn peek(&self) -> &T;
+    }
+    
+    impl<T, S> PeekInterface<T> for Secret<T, S> {
+        fn peek(&self) -> &T {
+            &self.0
+        }
+    }
 }
 
 #[cfg(feature = "masking")]
