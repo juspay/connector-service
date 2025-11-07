@@ -673,7 +673,7 @@ impl<
                     is_registration: "N".to_string(),
                     identifier: item
                         .router_data
-                        item.router_data.resource_common_data
+                        .resource_common_data
                         .connector_request_reference_id
                         .clone(),
                     date_time: "2024-01-01T00:00:00".to_string(), // Static timestamp for now
