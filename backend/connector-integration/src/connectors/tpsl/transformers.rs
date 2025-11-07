@@ -750,7 +750,7 @@ impl<
             ),
             TpslPaymentsResponse::TpslData(response_data) => {
                 let payment_method_type = router_data
-                    item.router_data.request
+                    .request
                     .payment_method_type
                     .ok_or(errors::ConnectorError::MissingPaymentMethodType)?;
                 
