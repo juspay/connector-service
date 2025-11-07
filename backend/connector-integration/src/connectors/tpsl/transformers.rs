@@ -692,7 +692,11 @@ impl<
                     amount: amount.to_string(),
                     forced3_d_s_call: "N".to_string(),
                     transaction_type: "SALE".to_string(),
-                    description: "UPI Transaction".to_string(),
+                    description: format!("UPI {} Payment", match payment_method_type {
+                        common_enums::PaymentMethodType::UpiIntent => "Intent",
+                        common_enums::PaymentMethodType::UpiCollect => "Collect",
+                        _ => "Transaction",
+                    }),
                     currency: item.router_data.request.currency.to_string(),
                     is_registration: "N".to_string(),
                     identifier: item
@@ -700,10 +704,14 @@ impl<
                         .resource_common_data
                         .connector_request_reference_id
                         .clone(),
-                    date_time: "2024-01-01T00:00:00".to_string(), // Static timestamp for now
-                    token: "TXN_TOKEN".to_string(),
+                    date_time: chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string(), // Current timestamp
+                    token: format!("TXN_TOKEN_{}", item.router_data.resource_common_data.connector_request_reference_id),
                     security_token: "SECURITY_TOKEN".to_string(),
-                    sub_type: "UPI".to_string(),
+                    sub_type: match payment_method_type {
+                        common_enums::PaymentMethodType::UpiIntent => "INTENT",
+                        common_enums::PaymentMethodType::UpiCollect => "COLLECT",
+                        _ => "UPI",
+                    }.to_string(),
                     request_type: "SALE".to_string(),
                     reference: item
                         .router_data
