@@ -617,15 +617,5 @@ async fn test_repeat_payment() {
             i32::from(PaymentStatus::Charged),
             "Repeat payment should be in Charged state with automatic capture"
         );
-
-        if let Some(connector_response) = &repeat_response.connector_response {
-            println!("Connector response populated with AVS data");
-
-            if connector_response.additional_payment_method_data.is_some() {
-                println!("AVS data is present in connector response");
-            }
-        }
-
-        println!("Repeat payment successful!");
     });
 }
