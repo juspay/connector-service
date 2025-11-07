@@ -615,7 +615,7 @@ impl<
                             month: "12".to_string(),
                             date_time: "2024-12-31T23:59:59".to_string(),
                         },
-                        provider: "UPI_PROVIDER".to_string(),
+                        provider: "TECHPROCESS".to_string(), // TPSL provider
                         i_f_s_c: "".to_string(),
                         holder: TpslHolderPayload {
                             name: customer_id.get_string_repr().to_string(),
@@ -640,17 +640,25 @@ impl<
                             month: "12".to_string(),
                             date_time: "2024-12-31T23:59:59".to_string(),
                         },
-                        alias: "UPI_ALIAS".to_string(),
-                        identifier: "UPI_INSTRUMENT_ID".to_string(),
+                        alias: format!("UPI_ALIAS_{}", customer_id.get_string_repr()),
+                        identifier: format!("UPI_INSTRUMENT_{}", item.router_data.resource_common_data.connector_request_reference_id),
                         token: "UPI_INSTRUMENT_TOKEN".to_string(),
                         authentication: TpslAuthenticationPayload {
                             token: "UPI_AUTH_TOKEN".to_string(),
-                            auth_type: "OTP".to_string(),
+                            auth_type: match payment_method_type {
+                                common_enums::PaymentMethodType::UpiIntent => "INTENT",
+                                common_enums::PaymentMethodType::UpiCollect => "COLLECT",
+                                _ => "OTP",
+                            }.to_string(),
                             sub_type: "UPI".to_string(),
                         },
-                        sub_type: "COLLECT".to_string(),
+                        sub_type: match payment_method_type {
+                            common_enums::PaymentMethodType::UpiIntent => "INTENT",
+                            common_enums::PaymentMethodType::UpiCollect => "COLLECT",
+                            _ => "COLLECT",
+                        }.to_string(),
                         issuer: "UPI_ISSUER".to_string(),
-                        acquirer: "UPI_ACQUIRER".to_string(),
+                        acquirer: "TPSL_ACQUIRER".to_string(),
                     },
                     instruction: TpslInstructionPayload {
                         occurrence: "ONCE".to_string(),
