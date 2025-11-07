@@ -660,7 +660,7 @@ impl<
                 transaction: TpslTransactionPayload {
                     device_identifier: item
                         .router_data
-                        item.router_data.request
+                        .request
                         .get_ip_address_as_optional()
                         .map(|ip| ip.expose())
                         .unwrap_or_else(|| "127.0.0.1".to_string()),
