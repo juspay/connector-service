@@ -485,6 +485,17 @@ pub struct TpslErrorResponse {
     pub errors: Option<Vec<TpslErrors>>,
 }
 
+impl TpslErrorResponse {
+    pub fn get_error_status(&self) -> common_enums::AttemptStatus {
+        match self.error_code.as_str() {
+            "000" => common_enums::AttemptStatus::Charged,
+            "001" | "002" => common_enums::AttemptStatus::Failure,
+            "003" => common_enums::AttemptStatus::AuthenticationPending,
+            _ => common_enums::AttemptStatus::Failure,
+        }
+    }
+}
+
 fn get_redirect_form_data(
     payment_method_type: common_enums::PaymentMethodType,
     response_data: TpslPaymentsResponseData,
