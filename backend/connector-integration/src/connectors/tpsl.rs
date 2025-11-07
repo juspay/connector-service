@@ -6,7 +6,7 @@ use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use common_enums::CurrencyUnit;
 use common_utils::{
     errors::CustomResult,
-    ext_traits::ByteSliceExt,
+    ext_traits::{ByteSliceExt, ValueExt},
     types::StringMinorUnit,
 };
 use domain_types::{
