@@ -142,6 +142,20 @@ macros::create_all_prerequisites!(
             request_body: TpslPaymentsSyncRequest,
             response_body: TpslPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        // UPI Token Generation flow
+        (
+            flow: CreateSessionToken,
+            request_body: TpslUPITokenRequest,
+            response_body: TpslCombinedTokenResponse,
+            router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
+        ),
+        // UPI Transaction flow
+        (
+            flow: Authorize,
+            request_body: TpslUPITxnRequest,
+            response_body: TpslUPITxnResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -169,6 +183,35 @@ macros::create_all_prerequisites!(
                 constants::TPSL_TEST_BASE_URL
             } else {
                 constants::TPSL_PROD_BASE_URL
+            }
+        }
+
+        // Enhanced authentication function based on Haskell patterns
+        pub fn get_tpsl_merchant_auth(
+            &self,
+            auth_type: &ConnectorAuthType,
+        ) -> CustomResult<transformers::TpslMerchantAuth, errors::ConnectorError> {
+            match auth_type {
+                ConnectorAuthType::CurrencyAuthKey { auth_key_map } => {
+                    // For now, we'll use the first available currency's auth
+                    if let Some((_, identity_auth_key)) = auth_key_map.iter().next() {
+                        let tpsl_auth: transformers::TpslAuth = identity_auth_key
+                            .to_owned()
+                            .parse_value("TpslAuth")
+                            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+                        
+                        Ok(transformers::TpslMerchantAuth {
+                            merchant_code: tpsl_auth.merchant_code
+                                .ok_or(errors::ConnectorError::FailedToObtainAuthType)?,
+                            api_key: tpsl_auth.api_key
+                                .ok_or(errors::ConnectorError::FailedToObtainAuthType)?,
+                            checksum_key: None, // Optional checksum key for enhanced security
+                        })
+                    } else {
+                        Err(errors::ConnectorError::FailedToObtainAuthType.into())
+                    }
+                }
+                _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
             }
         }
     }
