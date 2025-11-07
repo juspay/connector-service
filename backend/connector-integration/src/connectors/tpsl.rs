@@ -149,13 +149,6 @@ macros::create_all_prerequisites!(
             request_body: TpslUPITokenRequest,
             response_body: TpslCombinedTokenResponse,
             router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
-        ),
-        // UPI Transaction flow
-        (
-            flow: Authorize,
-            request_body: TpslUPITxnRequest,
-            response_body: TpslUPITxnResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [
