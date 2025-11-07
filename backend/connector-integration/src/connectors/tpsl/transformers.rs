@@ -554,7 +554,7 @@ impl<
             .merchant_code
             .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
 
-        match item.resource_common_data.payment_method {
+        match item.router_data.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => Ok(Self {
                 merchant: TpslMerchantPayload {
                     webhook_endpoint_url: return_url.clone(),
