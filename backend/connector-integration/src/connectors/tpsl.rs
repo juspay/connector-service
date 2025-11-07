@@ -190,7 +190,7 @@ macros::create_all_prerequisites!(
                     if let Some((_, identity_auth_key)) = auth_key_map.iter().next() {
                         let tpsl_auth: transformers::TpslAuth = identity_auth_key
                             .to_owned()
-                            .parse_value("TpslAuth")
+                            .parse_struct("TpslAuth")
                             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
                         
                         Ok(transformers::TpslMerchantAuth {
