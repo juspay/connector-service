@@ -18,10 +18,11 @@ use grpc_api_types::{
         card_payment_method_type, identifier::IdType, payment_method,
         payment_service_client::PaymentServiceClient, AcceptanceType, Address, AuthenticationType,
         CaptureMethod, CardDetails, CardPaymentMethodType, CountryAlpha2, Currency,
-        CustomerAcceptance, FutureUsage, Identifier, PaymentAddress, PaymentMethod,
-        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        CustomerAcceptance, FutureUsage, Identifier, MandateReference, PaymentAddress,
+        PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentServiceRegisterRequest, PaymentServiceVoidRequest, PaymentStatus, RefundStatus,
+        PaymentServiceRegisterRequest, PaymentServiceRepeatEverythingRequest,
+        PaymentServiceVoidRequest, PaymentStatus, RefundStatus,
     },
 };
 use hyperswitch_masking::Secret;
@@ -229,6 +230,46 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
             _ => None,
         })
         .expect("Failed to extract connector transaction ID from response")
+}
+
+#[allow(clippy::field_reassign_with_default)]
+fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEverythingRequest {
+    // Use random amount to avoid duplicates
+    let mut rng = rand::thread_rng();
+    let unique_amount = rng.gen_range(1000..10000); // Amount between $10.00 and $100.00
+
+    let mandate_reference = MandateReference {
+        mandate_id: Some(mandate_id.to_string()),
+        payment_method_id: None,
+    };
+
+    let mut metadata = HashMap::new();
+    metadata.insert("order_type".to_string(), "recurring".to_string());
+    metadata.insert(
+        "customer_note".to_string(),
+        "Recurring payment using saved payment method".to_string(),
+    );
+
+    PaymentServiceRepeatEverythingRequest {
+        request_ref_id: Some(Identifier {
+            id_type: Some(IdType::Id(generate_unique_id("repeat"))),
+        }),
+        mandate_reference: Some(mandate_reference),
+        amount: unique_amount,
+        currency: i32::from(Currency::Usd),
+        minor_amount: unique_amount,
+        merchant_order_reference_id: Some(generate_unique_id("repeat_order")),
+        metadata,
+        webhook_url: None,
+        capture_method: None,
+        email: Some(Secret::new(TEST_EMAIL.to_string())),
+        browser_info: None,
+        test_mode: None,
+        payment_method_type: None,
+        merchant_account_metadata: HashMap::new(),
+        state: None,
+        ..Default::default()
+    }
 }
 
 fn create_register_request() -> PaymentServiceRegisterRequest {
@@ -517,5 +558,74 @@ async fn test_setup_mandate() {
             i32::from(PaymentStatus::Charged),
             "Setup mandate should be in Charged/Success state"
         );
+    });
+}
+
+#[tokio::test]
+async fn test_repeat_payment() {
+    grpc_test!(client, PaymentServiceClient<Channel>, {
+        // NOTE: This test may fail with "duplicate transaction" error if run too soon
+        // after other tests that use the same test card. Payload has duplicate detection.
+        tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
+
+        let register_request = create_register_request_with_prefix("payload_repeat_test");
+        let mut register_grpc_request = Request::new(register_request);
+        add_payload_metadata(&mut register_grpc_request);
+
+        let register_response = client
+            .register(register_grpc_request)
+            .await
+            .expect("gRPC register call failed")
+            .into_inner();
+
+        if register_response.mandate_reference.is_none() {
+            panic!(
+                "Mandate reference should be present. Status: {}, Error: {:?}",
+                register_response.status, register_response.error_message
+            );
+        }
+
+        let mandate_ref = register_response
+            .mandate_reference
+            .as_ref()
+            .expect("Mandate reference should be present");
+
+        let mandate_id = mandate_ref
+            .mandate_id
+            .as_ref()
+            .expect("mandate_id should be present");
+
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+
+        let repeat_request = create_repeat_payment_request(mandate_id);
+        let mut repeat_grpc_request = Request::new(repeat_request);
+        add_payload_metadata(&mut repeat_grpc_request);
+
+        let repeat_response = client
+            .repeat_everything(repeat_grpc_request)
+            .await
+            .expect("gRPC repeat_everything call failed")
+            .into_inner();
+
+        assert!(
+            repeat_response.transaction_id.is_some(),
+            "Transaction ID should be present in repeat payment response"
+        );
+
+        assert_eq!(
+            repeat_response.status,
+            i32::from(PaymentStatus::Charged),
+            "Repeat payment should be in Charged state with automatic capture"
+        );
+
+        if let Some(connector_response) = &repeat_response.connector_response {
+            println!("Connector response populated with AVS data");
+
+            if connector_response.additional_payment_method_data.is_some() {
+                println!("AVS data is present in connector response");
+            }
+        }
+
+        println!("Repeat payment successful!");
     });
 }
