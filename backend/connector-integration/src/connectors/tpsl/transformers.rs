@@ -650,7 +650,7 @@ impl<
                         identifier: "UPI_INSTRUCTION_ID".to_string(),
                         reference: item
                             .router_data
-                            item.router_data.resource_common_data
+                            .resource_common_data
                             .connector_request_reference_id
                             .clone(),
                         start_date_time: "2024-01-01T00:00:00".to_string(),
