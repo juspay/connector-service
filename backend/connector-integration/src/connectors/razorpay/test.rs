@@ -1947,8 +1947,11 @@ mod tests {
             "message": "Order receipt should be unique.",
             "reason": "input_validation_failed",
             "status_code": 400,
-            "attempt_status": null,
-            "connector_transaction_id": null
+            "attempt_status": "failure",
+            "connector_transaction_id": null,
+            "network_advice_code": null,
+            "network_decline_code": null,
+            "network_error_message": null
         });
         assert_eq!(actual_json, expected_json);
     }
@@ -1994,8 +1997,21 @@ mod tests {
                 domain_types::connector_types::PaymentFlowData,
                 domain_types::connector_types::PaymentCreateOrderData,
                 domain_types::connector_types::PaymentCreateOrderResponse,
-            >>::get_error_response_v2(&**connector, http_response, None);
+            >>::get_error_response_v2(&**connector, http_response, None)
+            .unwrap();
 
-        assert!(result.is_err(), "Expected error for missing 'error' field");
+        let actual_json = to_value(&result).unwrap();
+        let expected_json = json!({
+            "code": "ROUTE_ERROR",
+            "message": "Some generic message",
+            "reason": "Some generic message",
+            "status_code": 400,
+            "attempt_status": "failure",
+            "connector_transaction_id": null,
+            "network_advice_code": null,
+            "network_decline_code": null,
+            "network_error_message": null
+        });
+        assert_eq!(actual_json, expected_json);
     }
 }

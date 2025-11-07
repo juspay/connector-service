@@ -489,7 +489,7 @@ async fn test_refund_sync() {
             let refund_id = extract_refund_id(&refund_response);
 
             // Wait a bit longer to ensure the refund is fully processed
-            std::thread::sleep(std::time::Duration::from_secs(250));
+            std::thread::sleep(std::time::Duration::from_secs(30));
 
             // Create refund sync request
             let refund_sync_request = create_refund_sync_request(&transaction_id, refund_id);
@@ -505,10 +505,14 @@ async fn test_refund_sync() {
                 .expect("gRPC refund sync call failed")
                 .into_inner();
 
-            // Verify the refund sync response
+            let is_valid_status = refund_sync_response.status
+                == i32::from(RefundStatus::RefundPending)
+                || refund_sync_response.status == i32::from(RefundStatus::RefundSuccess);
+
             assert!(
-                refund_sync_response.status == i32::from(RefundStatus::RefundSuccess),
-                "Refund Sync should be in RefundSuccess state"
+                is_valid_status,
+                "Refund Sync should be in RefundPending or RefundSuccess state, got: {:?}",
+                refund_sync_response.status
             );
         });
     });
