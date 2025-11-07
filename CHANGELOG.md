@@ -22,14 +22,22 @@ All notable changes to Connector Service will be documented here.
 - `backend/domain_types/src/types.rs` - Added tpsl to Connectors struct
 
 ### Technical Details
-- Migrated from Hyperswitch/Euler Haskell implementation
-- Uses UCS v2 macro framework for trait implementations
-- Implements proper error handling and status mapping
-- Full type safety with guard rails (Secret<String>, MinorUnit, Email, Currency types)
-- Supports test and production environments with different base URLs
-- Authentication via API key with Bearer token scheme
-- Amount handling using StringMinorUnit converter
-- Comprehensive request/response transformation for UPI flows
+- Migrated from Hyperswitch/Euler Haskell implementation preserving all business logic
+- Uses UCS v2 macro framework for all trait implementations (no manual code)
+- Implements proper TPSL authentication with Bearer token support
+- Dynamic payment method configuration based on UPI Intent/Collect types
+- Comprehensive error response mapping with TPSL error code interpretation
+- Full type safety with guard rails (Secret<String> for sensitive data, proper amount handling)
+- Support for both test and production TPSL environments
+- Proper request/response transformation maintaining Haskell implementation parity
+
+### UPI-Specific Features
+- UPI Intent flow for app-based UPI payments
+- UPI Collect flow for VPA-based payments
+- Dynamic token generation based on payment method type
+- ACS (Access Control Server) redirect handling for 3DS flows
+- Proper status mapping for UPI transaction states
+- TPSL-specific error code handling (000=Success, 001/002=Failure, 003=Pending)
 
 - - -
 
