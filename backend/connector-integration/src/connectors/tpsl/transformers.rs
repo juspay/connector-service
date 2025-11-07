@@ -21,8 +21,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
 
-// Type alias for TPSL router data
-pub type TPSLRouterData<T, U> = crate::connectors::macros::RouterDataType<T>;
+// Type alias for TPSL router data - use the same pattern as other connectors
+pub type TPSLRouterData<T> = crate::connectors::macros::RouterDataType<T>;
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
