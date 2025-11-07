@@ -537,7 +537,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let customer_id = itemitem.router_data.resource_common_data.get_customer_id()?;
+        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let return_url = item.router_dataitem.router_data.request.get_router_return_url()?;
         let amount = item
             .connector
@@ -554,7 +554,7 @@ impl<
             .merchant_code
             .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
 
-        match itemitem.router_data.resource_common_data.payment_method {
+        match item.router_data.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => Ok(Self {
                 merchant: TpslMerchantPayload {
                     webhook_endpoint_url: return_url.clone(),
