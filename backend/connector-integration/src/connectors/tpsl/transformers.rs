@@ -669,7 +669,7 @@ impl<
                     forced3_d_s_call: "N".to_string(),
                     transaction_type: "SALE".to_string(),
                     description: "UPI Transaction".to_string(),
-                    currency: item.request.currency.to_string(),
+                    currency: item.router_data.request.currency.to_string(),
                     is_registration: "N".to_string(),
                     identifier: item
                         .router_data
@@ -834,7 +834,7 @@ impl<
             transaction: TpslTransactionDataType {
                 device_identifier: "127.0.0.1".to_string(),
                 transaction_type: "SALE".to_string(),
-                currency: item.request.currency.to_string(),
+                currency: item.router_data.request.currency.to_string(),
                 identifier: item
                     .router_data
                     .resource_common_data
