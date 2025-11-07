@@ -1,5 +1,5 @@
 use base64::Engine;
-use common_utils::{consts, errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit};
+use common_utils::{consts, errors::CustomResult, events, ext_traits::BytesExt, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
@@ -29,7 +29,6 @@ use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 
 use serde::Serialize;
@@ -257,7 +256,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: Result<TrustpayErrorResponse, Report<common_utils::errors::ParsingError>> =
             res.response.parse_struct("trustpay ErrorResponse");
@@ -265,7 +264,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         match response {
             Ok(response_data) => {
                 if let Some(i) = event_builder {
-                    i.set_error_response_body(&response_data);
+                    i.set_connector_response(&response_data);
                 }
                 let reason = response_data.errors.map(|errors| {
                     errors
@@ -290,7 +289,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             }
             Err(error_msg) => {
                 if let Some(event) = event_builder {
-                    event.set_error(serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code}))
+                    event.set_connector_response(&serde_json::json!({"error": "Error response parsing failed", "status_code": res.status_code}))
                 };
                 tracing::error!(deserialization_error =? error_msg);
                 domain_types::utils::handle_json_response_deserialization_failure(res, "trustpay")

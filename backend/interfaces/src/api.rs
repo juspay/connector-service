@@ -1,7 +1,6 @@
 use common_enums::CurrencyUnit;
 use common_utils::{
-    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    CustomResult,
+    CustomResult, consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE}, events
 };
 use domain_types::{
     api::{GenericLinks, PaymentLinkAction, RedirectionFormData},
@@ -11,7 +10,6 @@ use domain_types::{
 };
 use hyperswitch_masking;
 
-use crate::events::connector_api_logs::ConnectorEvent;
 
 pub trait ConnectorCommon {
     /// Name of the connector (in lowercase).
@@ -49,7 +47,7 @@ pub trait ConnectorCommon {
     fn build_error_response(
         &self,
         res: domain_types::router_response_types::Response,
-        _event_builder: Option<&mut ConnectorEvent>,
+        _event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, domain_types::errors::ConnectorError> {
         Ok(ErrorResponse {
             status_code: res.status_code,

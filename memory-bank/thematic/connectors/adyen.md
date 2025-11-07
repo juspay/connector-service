@@ -137,7 +137,7 @@ The connector implements custom error handling for Adyen-specific errors:
 fn build_error_response(
     &self,
     res: Response,
-    event_builder: Option<&mut ConnectorEvent>,
+    event_builder: Option<&mut events::Event>,
 ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
     let response: adyen::AdyenErrorResponse = res
         .response
