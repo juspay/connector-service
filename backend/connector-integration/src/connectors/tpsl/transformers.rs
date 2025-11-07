@@ -347,6 +347,14 @@ pub struct TpslAuth {
     pub merchant_code: Option<Secret<String>>,
 }
 
+// Additional authentication structures based on Haskell implementation
+#[derive(Default, Debug, Deserialize)]
+pub struct TpslMerchantAuth {
+    pub merchant_code: Secret<String>,
+    pub api_key: Secret<String>,
+    pub checksum_key: Option<Secret<String>>,
+}
+
 impl TryFrom<&ConnectorAuthType> for TpslAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
