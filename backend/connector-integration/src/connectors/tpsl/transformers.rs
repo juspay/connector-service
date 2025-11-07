@@ -771,6 +771,10 @@ impl<
                 },
             })
                     }
+                    _ => Err(errors::ConnectorError::NotImplemented(
+                        format!("UPI payment method {:?} not supported", payment_method_type),
+                    )
+                    .into()),
                 }
             },
             _ => Err(errors::ConnectorError::NotImplemented(
