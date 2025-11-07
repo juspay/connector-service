@@ -574,7 +574,7 @@ impl<
                         s_k_u: "UPI_ITEM".to_string(),
                         reference: item
                             .router_data
-                            item.router_data.resource_common_data
+                            .resource_common_data
                             .connector_request_reference_id
                             .clone(),
                         identifier: "UPI_ITEM_ID".to_string(),
