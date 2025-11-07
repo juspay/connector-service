@@ -388,11 +388,21 @@ impl<T: PaymentMethodDataTypes>
         // Extract payment method data
         let payment_method = match &item.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
+                // Convert year to YY format (last 2 digits)
+                let year_str = card_data.card_exp_year.peek();
+                let year_yy = if year_str.len() == 4 {
+                    // YYYY format - take last 2 digits
+                    Secret::new(year_str[2..].to_string())
+                } else {
+                    // Already YY format
+                    card_data.card_exp_year.clone()
+                };
+
                 let payment_card = PaymentCard {
                     number: card_data.card_number.clone(),
                     expiry_date: ExpiryDate {
                         month: card_data.card_exp_month.peek().clone(),
-                        year: card_data.card_exp_year.peek().clone(),
+                        year: year_yy.peek().clone(),
                     },
                     security_code: Some(card_data.card_cvc.clone()),
                     holder: item.request.customer_name.clone(),
@@ -511,7 +521,7 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
         // For void transactions, we only need to specify the transaction type
         // The transaction ID is passed in the URL path parameter
         Ok(Self {
-            request_type: "VoidTransaction".to_string(),
+            request_type: "VoidPreAuthTransactions".to_string(),
         })
     }
 }
