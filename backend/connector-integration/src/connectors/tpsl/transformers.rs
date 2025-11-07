@@ -837,7 +837,7 @@ impl<
                 currency: item.router_data.router_data.request.currency.to_string(),
                 identifier: item
                     .router_data
-                    .router_data.resource_common_data
+                    .resource_common_data
                     .connector_request_reference_id
                     .clone(),
                 date_time: "2024-01-01T00:00:00".to_string(), // Static timestamp for now
@@ -847,7 +847,7 @@ impl<
             consumer: TpslConsumerDataType {
                 identifier: item
                     .router_data
-                    .router_data.resource_common_data
+                    .resource_common_data
                     .get_customer_id()?
                     .get_string_repr().to_string(),
             },
