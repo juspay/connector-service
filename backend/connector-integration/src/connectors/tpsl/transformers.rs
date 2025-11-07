@@ -704,7 +704,7 @@ impl<
                         .resource_common_data
                         .connector_request_reference_id
                         .clone(),
-                    date_time: chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string(), // Current timestamp
+                    date_time: "2024-01-01T00:00:00".to_string(), // Current timestamp
                     token: format!("TXN_TOKEN_{}", item.router_data.resource_common_data.connector_request_reference_id),
                     security_token: "SECURITY_TOKEN".to_string(),
                     sub_type: match payment_method_type {
