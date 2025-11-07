@@ -19,7 +19,10 @@ use domain_types::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::tpsl::TPSLRouterData, types::ResponseRouterData};
+use crate::types::ResponseRouterData;
+
+// Type alias for TPSL router data
+pub type TPSLRouterData<T, U> = crate::connectors::macros::RouterDataType<T>;
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
