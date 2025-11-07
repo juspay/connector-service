@@ -531,14 +531,14 @@ impl<
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
-        let return_url = item.router_data.request.get_router_return_url()?;
+        let customer_id = item.resource_common_data.get_customer_id()?;
+        let return_url = item.request.get_router_return_url()?;
         let amount = item
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
+                item.request.minor_amount,
+                item.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
@@ -548,7 +548,7 @@ impl<
             .merchant_code
             .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
 
-        match item.router_data.resource_common_data.payment_method {
+        match item.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => Ok(Self {
                 merchant: TpslMerchantPayload {
                     webhook_endpoint_url: return_url.clone(),
@@ -663,7 +663,7 @@ impl<
                     forced3_d_s_call: "N".to_string(),
                     transaction_type: "SALE".to_string(),
                     description: "UPI Transaction".to_string(),
-                    currency: item.router_data.request.currency.to_string(),
+                    currency: item.request.currency.to_string(),
                     is_registration: "N".to_string(),
                     identifier: item
                         .router_data
@@ -823,7 +823,7 @@ impl<
             transaction: TpslTransactionDataType {
                 device_identifier: "127.0.0.1".to_string(),
                 transaction_type: "SALE".to_string(),
-                currency: item.router_data.request.currency.to_string(),
+                currency: item.request.currency.to_string(),
                 identifier: item
                     .router_data
                     .resource_common_data
