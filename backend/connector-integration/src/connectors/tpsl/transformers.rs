@@ -538,13 +538,13 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let customer_id = itemitem.router_data.resource_common_data.get_customer_id()?;
-        let return_url = item.router_data.request.get_router_return_url()?;
+        let return_url = item.router_dataitem.router_data.request.get_router_return_url()?;
         let amount = item
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
+                item.router_dataitem.router_data.request.minor_amount,
+                item.router_dataitem.router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
@@ -660,7 +660,7 @@ impl<
                 transaction: TpslTransactionPayload {
                     device_identifier: item
                         .router_data
-                        .request
+                        item.router_data.request
                         .get_ip_address_as_optional()
                         .map(|ip| ip.expose())
                         .unwrap_or_else(|| "127.0.0.1".to_string()),
@@ -669,7 +669,7 @@ impl<
                     forced3_d_s_call: "N".to_string(),
                     transaction_type: "SALE".to_string(),
                     description: "UPI Transaction".to_string(),
-                    currency: item.router_data.request.currency.to_string(),
+                    currency: item.router_dataitem.router_data.request.currency.to_string(),
                     is_registration: "N".to_string(),
                     identifier: item
                         .router_data
@@ -693,7 +693,7 @@ impl<
                     mobile_number: "9999999999".to_string(),
                     email_i_d: item
                         .router_data
-                        .request
+                        item.router_data.request
                         .email
                         .clone()
                         .map(|e| e.peek().to_string())
@@ -750,7 +750,7 @@ impl<
             ),
             TpslPaymentsResponse::TpslData(response_data) => {
                 let payment_method_type = router_data
-                    .request
+                    item.router_data.request
                     .payment_method_type
                     .ok_or(errors::ConnectorError::MissingPaymentMethodType)?;
                 
@@ -834,7 +834,7 @@ impl<
             transaction: TpslTransactionDataType {
                 device_identifier: "127.0.0.1".to_string(),
                 transaction_type: "SALE".to_string(),
-                currency: item.router_data.request.currency.to_string(),
+                currency: item.router_dataitem.router_data.request.currency.to_string(),
                 identifier: item
                     .router_data
                     item.router_data.resource_common_data
