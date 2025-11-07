@@ -529,7 +529,7 @@ fn handle_payment_response<F, T>(
                 None
             };
 
-            let _connector_response = card_response
+            let connector_response = card_response
                 .avs
                 .map(|avs_response| {
                     let payment_checks = serde_json::json!({
@@ -582,6 +582,10 @@ fn handle_payment_response<F, T>(
                 .set_status(status);
 
             Ok(RouterDataV2 {
+                resource_common_data: PaymentFlowData {
+                    connector_response,
+                    ..router_data_with_status.resource_common_data
+                },
                 response: response_result,
                 ..router_data_with_status
             })
