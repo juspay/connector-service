@@ -583,6 +583,80 @@ pub struct TpslErrorResponse {
     pub errors: Option<Vec<TpslErrors>>,
 }
 
+// UPI specific response structures based on Haskell implementation
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum TpslCombinedTokenResponse {
+    TpslUPISuccessTxnResponse(TpslUPITxnResponse),
+    TokenFailureResponse(TpslUPITokenResponse),
+    TokenErrorResponse(TpslErrorPayload),
+    TxnErrorResponse(TpslErrorPayload),
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TpslUPITokenResponse {
+    pub merchant_code: String,
+    pub merchant_transaction_identifier: String,
+    pub merchant_transaction_request_type: String,
+    pub response_type: String,
+    pub payment_method: TpslUPIPaymentPayload,
+    pub error: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TpslUPITxnResponse {
+    pub merchant_code: String,
+    pub merchant_transaction_identifier: String,
+    pub merchant_transaction_request_type: String,
+    pub response_type: String,
+    pub transaction_state: String,
+    pub merchant_additional_details: serde_json::Value,
+    pub payment_method: TpslUPIPaymentPayload,
+    pub error: Option<serde_json::Value>,
+    pub merchant_response_string: Option<serde_json::Value>,
+    pub pdf_download_url: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TpslUPIPaymentPayload {
+    pub token: Option<String>,
+    pub instrument_alias_name: String,
+    pub instrument_token: String,
+    pub bank_selection_code: String,
+    pub a_c_s: TpslAcsPayload,
+    pub o_t_p: Option<serde_json::Value>,
+    pub payment_transaction: TpslPaymentTxnPayload,
+    pub authentication: Option<serde_json::Value>,
+    pub error: TpslPaymentMethodErrorPayload,
+    pub payment_mode: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TpslPaymentTxnPayload {
+    pub amount: String,
+    pub balance_amount: Option<String>,
+    pub bank_reference_identifier: Option<String>,
+    pub date_time: Option<String>,
+    pub error_message: Option<String>,
+    pub identifier: Option<String>,
+    pub refund_identifier: String,
+    pub status_code: String,
+    pub status_message: String,
+    pub instruction: Option<serde_json::Value>,
+    pub reference: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TpslErrorPayload {
+    pub error_code: String,
+    pub error_message: String,
+}
+
 impl TpslErrorResponse {
     pub fn get_error_status(&self) -> common_enums::AttemptStatus {
         match self.error_code.as_str() {
