@@ -163,11 +163,13 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
             511 => "network_authentication_required",
             _ => "unknown_error",
         };
-        
+
         if let Some(event) = event_builder {
-            event.set_connector_response(&json!({"error": error_message, "status_code": res.status_code}))
+            event.set_connector_response(
+                &json!({"error": error_message, "status_code": res.status_code}),
+            )
         }
-        
+
         Ok(ErrorResponse {
             code: res.status_code.to_string(),
             message: error_message.to_string(),

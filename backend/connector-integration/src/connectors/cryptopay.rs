@@ -61,7 +61,6 @@ use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 
 use crate::with_error_response_body;
 
-
 use base64::Engine;
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;

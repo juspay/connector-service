@@ -1034,7 +1034,10 @@ impl
             __bank_account_91_account_number_93_: metadata_map
                 .get("__bank_account_91_account_number_93_")
                 .cloned(),
-            __bank_account_91_ifsc_93_: metadata_map.get("__bank_account_91_ifsc_93_").cloned().map(Secret::new),
+            __bank_account_91_ifsc_93_: metadata_map
+                .get("__bank_account_91_ifsc_93_")
+                .cloned()
+                .map(Secret::new),
             account_id: metadata_map.get("account_id").cloned(),
             phonepe_switch_context: metadata_map.get("phonepe_switch_context").cloned(),
             __notes_91_crm1_93_: metadata_map.get("__notes_91_crm1_93_").cloned(),

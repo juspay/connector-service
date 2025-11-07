@@ -402,12 +402,14 @@ impl
                 .map(|id| id.get_string_repr().to_string())
                 .unwrap_or_else(|| "guest".to_string()),
             customer_email: billing.email.as_ref().map(|e| e.peek().to_string()),
-            customer_phone: Secret::new(billing
-                .phone
-                .as_ref()
-                .and_then(|phone| phone.number.as_ref())
-                .map(|number| number.peek().to_string())
-                .unwrap_or_else(|| "9999999999".to_string())),
+            customer_phone: Secret::new(
+                billing
+                    .phone
+                    .as_ref()
+                    .and_then(|phone| phone.number.as_ref())
+                    .map(|number| number.peek().to_string())
+                    .unwrap_or_else(|| "9999999999".to_string()),
+            ),
             customer_name: billing.get_optional_full_name().map(|name| name.expose()),
         };
 

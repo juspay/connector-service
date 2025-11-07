@@ -2056,9 +2056,9 @@ impl<
                     }),
                     common_enums::StripeChargeType::Destination => Some(IntentCharges {
                         application_fee_amount: stripe_split_payment.application_fees,
-                        destination_account_id: Some(
-                            Secret::new(stripe_split_payment.transfer_account_id.clone()),
-                        ),
+                        destination_account_id: Some(Secret::new(
+                            stripe_split_payment.transfer_account_id.clone(),
+                        )),
                     }),
                 },
             },
@@ -4872,9 +4872,9 @@ impl<
                     }),
                     common_enums::StripeChargeType::Destination => Some(IntentCharges {
                         application_fee_amount: stripe_split_payment.application_fees,
-                        destination_account_id: Some(
-                            Secret::new(stripe_split_payment.transfer_account_id.clone()),
-                        ),
+                        destination_account_id: Some(Secret::new(
+                            stripe_split_payment.transfer_account_id.clone(),
+                        )),
                     }),
                 },
             },

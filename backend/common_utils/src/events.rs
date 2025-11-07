@@ -258,8 +258,7 @@ impl Event {
     }
 
     pub fn set_connector_response<R: Serialize>(&mut self, response: &R) {
-        self.response_data =
-            MaskedSerdeValue::from_masked_optional(response, "connector_response");
+        self.response_data = MaskedSerdeValue::from_masked_optional(response, "connector_response");
     }
 }
 

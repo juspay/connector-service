@@ -442,12 +442,13 @@ impl<
                 .resource_common_data
                 .get_billing_email()
                 .unwrap_or_else(|_| Email::from_str("customer@example.com").unwrap()),
-            contact: Secret::new(item
-                .router_data
-                .resource_common_data
-                .get_billing_phone_number()
-                .map(|phone| phone.expose())
-                .unwrap_or_else(|_| "9999999999".to_string())),
+            contact: Secret::new(
+                item.router_data
+                    .resource_common_data
+                    .get_billing_phone_number()
+                    .map(|phone| phone.expose())
+                    .unwrap_or_else(|_| "9999999999".to_string()),
+            ),
             method: "upi".to_string(),
             description: Some("Payment via RazorpayV2".to_string()),
             notes: item.router_data.request.metadata.clone(),

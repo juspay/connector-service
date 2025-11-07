@@ -314,12 +314,13 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            authorization_id: Secret::new(item
-                .router_data
-                .request
-                .connector_transaction_id
-                .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?),
+            authorization_id: Secret::new(
+                item.router_data
+                    .request
+                    .connector_transaction_id
+                    .get_connector_transaction_id()
+                    .change_context(errors::ConnectorError::MissingConnectorTransactionID)?,
+            ),
             amount: item.router_data.request.amount_to_capture,
             currency: item.router_data.request.currency.to_string(),
             order_id: item

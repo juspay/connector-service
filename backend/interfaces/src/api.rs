@@ -1,6 +1,7 @@
 use common_enums::CurrencyUnit;
 use common_utils::{
-    CustomResult, consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE}, events
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    events, CustomResult,
 };
 use domain_types::{
     api::{GenericLinks, PaymentLinkAction, RedirectionFormData},
@@ -9,7 +10,6 @@ use domain_types::{
     types::Connectors,
 };
 use hyperswitch_masking;
-
 
 pub trait ConnectorCommon {
     /// Name of the connector (in lowercase).

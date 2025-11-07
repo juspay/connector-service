@@ -397,19 +397,17 @@ where
                     tracing::info!(?response, "response from connector");
 
                     // Extract status code BEFORE creating event - one liner
-                    let status_code = response.as_ref()
-                        .ok()
-                        .map(|result| match result {
-                            Ok(body) | Err(body) => i32::from(body.status_code)
-                        });
+                    let status_code = response.as_ref().ok().map(|result| match result {
+                        Ok(body) | Err(body) => i32::from(body.status_code),
+                    });
 
                     // Construct masked request for event
                     let masked_request_data = req.as_ref().and_then(|r| {
                         MaskedSerdeValue::from_masked_optional(r, "connector_request")
                     });
 
-                    let latency = u64::try_from(external_service_elapsed.as_millis())
-                        .unwrap_or(u64::MAX);
+                    let latency =
+                        u64::try_from(external_service_elapsed.as_millis()).unwrap_or(u64::MAX);
 
                     // Create single event (response_data will be set by connector)
                     let mut event = Event {
@@ -470,15 +468,15 @@ where
                                     // Log response body and headers using properly masked data from connector
                                     if let Some(response_data) = &event.response_data {
                                         tracing::Span::current().record(
-                                            "response.body", 
-                                            tracing::field::display(response_data.inner())
+                                            "response.body",
+                                            tracing::field::display(response_data.inner()),
                                         );
                                     }
 
                                     // Log response headers from event (already masked)
                                     tracing::Span::current().record(
                                         "response.headers",
-                                        tracing::field::debug(&event.headers)
+                                        tracing::field::debug(&event.headers),
                                     );
 
                                     match handle_response_result {
@@ -513,10 +511,14 @@ where
                                     }
 
                                     let error = match body.status_code {
-                                        500..=511 => {
-                                            connector.get_5xx_error_response(body.clone(), Some(&mut event))?
-                                        }
-                                        _ => connector.get_error_response_v2(body.clone(), Some(&mut event))?,
+                                        500..=511 => connector.get_5xx_error_response(
+                                            body.clone(),
+                                            Some(&mut event),
+                                        )?,
+                                        _ => connector.get_error_response_v2(
+                                            body.clone(),
+                                            Some(&mut event),
+                                        )?,
                                     };
                                     tracing::Span::current().record(
                                         "response.error_message",

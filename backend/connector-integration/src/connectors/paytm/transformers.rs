@@ -114,11 +114,11 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct PaytmAuthType {
-    pub merchant_id: Secret<String>,  // From api_key
-    pub merchant_key: Secret<String>, // From key1
-    pub website: Secret<String>,      // From api_secret
-    pub channel_id: String,           // Hardcoded "WEB"
-    pub client_id: Option<Secret<String>>,    // None as specified
+    pub merchant_id: Secret<String>,       // From api_key
+    pub merchant_key: Secret<String>,      // From key1
+    pub website: Secret<String>,           // From api_secret
+    pub channel_id: String,                // Hardcoded "WEB"
+    pub client_id: Option<Secret<String>>, // None as specified
 }
 
 impl TryFrom<&ConnectorAuthType> for PaytmAuthType {
@@ -932,8 +932,8 @@ pub struct PaytmTransactionStatusRequest {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaytmTransactionStatusReqBody {
-    pub mid: Secret<String>,      // Merchant ID
-    pub order_id: String, // Order ID
+    pub mid: Secret<String>, // Merchant ID
+    pub order_id: String,    // Order ID
     #[serde(skip_serializing_if = "Option::is_none")]
     pub txn_type: Option<String>, // PREAUTH, CAPTURE, RELEASE, WITHDRAW
 }
