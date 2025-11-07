@@ -794,12 +794,18 @@ impl<
         + Serialize,
 >
     TryFrom<
-        &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        TPSLRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
     > for TpslPaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: TPSLRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let auth_type = TpslAuth::try_from(&item.connector_auth_type)?;
         let merchant_code = auth_type
