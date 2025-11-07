@@ -543,7 +543,7 @@ impl<
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         // Extract authentication data
-        let auth_type = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
+        let auth_type = TpslAuth::try_from(&item.connector_auth_type)?;
         let merchant_code = auth_type
             .merchant_code
             .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
@@ -799,7 +799,7 @@ impl<
     fn try_from(
         item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let auth_type = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
+        let auth_type = TpslAuth::try_from(&item.connector_auth_type)?;
         let merchant_code = auth_type
             .merchant_code
             .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
