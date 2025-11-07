@@ -514,7 +514,7 @@ fn get_redirect_form_data(
                 }
                 TpslAuthCaptureResponse::TpslAuthErrorOrDecryptedResponse(decrypted_response) => {
                     // Handle decrypted response with UPI specific data
-                    if let Some(acs) = decrypted_response.payment_method.a_c_s {
+                    if let Some(_acs) = decrypted_response.payment_method.a_c_s {
                         // If ACS data is present, we might need to redirect to ACS URL
                         Ok(RedirectForm::Form {
                             endpoint: "https://tpsl-acs-redirect.com".to_string(), // Extract from ACS data
