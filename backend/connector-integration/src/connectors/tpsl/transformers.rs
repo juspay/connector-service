@@ -780,7 +780,7 @@ impl<
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
-                .item.router_data.resource_common_data
+                ..router_data.resource_common_data
             },
             response,
             ..router_data
