@@ -4,7 +4,9 @@ pub mod transformers;
 
 use base64::Engine;
 use common_enums::CurrencyUnit;
-use common_utils::{crypto::VerifySignature, errors::CustomResult, ext_traits::ByteSliceExt, events};
+use common_utils::{
+    crypto::VerifySignature, errors::CustomResult, events, ext_traits::ByteSliceExt,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
