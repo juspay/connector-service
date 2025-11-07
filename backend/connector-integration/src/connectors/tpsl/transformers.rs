@@ -537,7 +537,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let customer_id = item.resource_common_data.get_customer_id()?;
         let return_url = item.router_data.request.get_router_return_url()?;
         let amount = item
             .connector
@@ -554,7 +554,7 @@ impl<
             .merchant_code
             .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
 
-        match item.router_data.resource_common_data.payment_method {
+        match item.resource_common_data.payment_method {
             common_enums::PaymentMethod::Upi => Ok(Self {
                 merchant: TpslMerchantPayload {
                     webhook_endpoint_url: return_url.clone(),
@@ -574,14 +574,14 @@ impl<
                         s_k_u: "UPI_ITEM".to_string(),
                         reference: item
                             .router_data
-                            .router_data.resource_common_data
+                            .resource_common_data
                             .connector_request_reference_id
                             .clone(),
                         identifier: "UPI_ITEM_ID".to_string(),
                     }],
                     reference: item
                         .router_data
-                        .router_data.resource_common_data
+                        .resource_common_data
                         .connector_request_reference_id
                         .clone(),
                     identifier: "CART_ID".to_string(),
@@ -650,7 +650,7 @@ impl<
                         identifier: "UPI_INSTRUCTION_ID".to_string(),
                         reference: item
                             .router_data
-                            .router_data.resource_common_data
+                            .resource_common_data
                             .connector_request_reference_id
                             .clone(),
                         start_date_time: "2024-01-01T00:00:00".to_string(),
@@ -673,7 +673,7 @@ impl<
                     is_registration: "N".to_string(),
                     identifier: item
                         .router_data
-                        .router_data.resource_common_data
+                        .resource_common_data
                         .connector_request_reference_id
                         .clone(),
                     date_time: "2024-01-01T00:00:00".to_string(), // Static timestamp for now
@@ -683,7 +683,7 @@ impl<
                     request_type: "SALE".to_string(),
                     reference: item
                         .router_data
-                        .router_data.resource_common_data
+                        .resource_common_data
                         .connector_request_reference_id
                         .clone(),
                     merchant_initiated: "N".to_string(),
@@ -761,7 +761,7 @@ impl<
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
                             router_data
-                                .router_data.resource_common_data
+                                .resource_common_data
                                 .connector_request_reference_id
                                 .clone(),
                         ),
@@ -780,7 +780,7 @@ impl<
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
-                ..router_data.resource_common_data
+                ..resource_common_data
             },
             response,
             ..router_data
@@ -825,7 +825,7 @@ impl<
                     end_date_time: None,
                     identifier: Some(
                         item.router_data
-                            .router_data.resource_common_data
+                            .resource_common_data
                             .connector_request_reference_id
                             .clone(),
                     ),
@@ -894,7 +894,7 @@ impl<
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status: attempt_status,
-                ..router_data.resource_common_data
+                ..resource_common_data
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
