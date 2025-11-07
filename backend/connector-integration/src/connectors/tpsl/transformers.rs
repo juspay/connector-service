@@ -683,7 +683,7 @@ impl<
                     request_type: "SALE".to_string(),
                     reference: item
                         .router_data
-                        item.router_data.resource_common_data
+                        .resource_common_data
                         .connector_request_reference_id
                         .clone(),
                     merchant_initiated: "N".to_string(),
