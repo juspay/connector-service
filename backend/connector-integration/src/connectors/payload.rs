@@ -34,10 +34,10 @@ use interfaces::{
 use serde::Serialize;
 use std::fmt::Debug;
 use transformers::{
-    self as payload, PayloadAuthorizeResponse, PayloadVoidRequest, PayloadCaptureRequest,
-    PayloadCaptureResponse, PayloadCardsRequestData, PayloadErrorResponse, PayloadPSyncResponse,
-    PayloadPaymentsRequest, PayloadRSyncResponse, PayloadRefundRequest, PayloadRefundResponse,
-    PayloadRepeatPaymentRequest, PayloadRepeatPaymentResponse, PayloadSetupMandateResponse,
+    self as payload, PayloadAuthorizeResponse, PayloadCaptureRequest, PayloadCaptureResponse,
+    PayloadCardsRequestData, PayloadErrorResponse, PayloadPSyncResponse, PayloadPaymentsRequest,
+    PayloadRSyncResponse, PayloadRefundRequest, PayloadRefundResponse, PayloadRepeatPaymentRequest,
+    PayloadRepeatPaymentResponse, PayloadSetupMandateResponse, PayloadVoidRequest,
     PayloadVoidResponse,
 };
 

@@ -283,7 +283,7 @@ impl<
                     &router_data.request.payment_method_data,
                     &router_data.connector_auth_type,
                     router_data.request.currency,
-                    amount.clone(),
+                    amount,
                     &router_data.resource_common_data,
                     router_data.request.capture_method,
                     is_mandate,
@@ -440,7 +440,7 @@ impl<
 
         Ok(Self::PayloadMandateRequest(Box::new(
             requests::PayloadMandateRequestData {
-                amount: amount.clone(),
+                amount,
                 transaction_types: requests::TransactionTypes::Payment,
                 payment_method_id: Secret::new(mandate_id),
                 status,
