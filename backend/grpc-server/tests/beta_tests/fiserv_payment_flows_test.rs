@@ -419,11 +419,21 @@ async fn test_payment_authorization_manual_capture() {
         add_fiserv_metadata(&mut capture_grpc_request);
 
         // Send the capture request
-        let capture_response = client
-            .capture(capture_grpc_request)
-            .await
-            .expect("gRPC payment_capture call failed")
-            .into_inner();
+        let capture_result = client.capture(capture_grpc_request).await;
+        
+        // Add debugging for capture failure
+        let capture_response = match capture_result {
+            Ok(response) => response.into_inner(),
+            Err(status) => {
+                println!("=== FISERV CAPTURE DEBUG ===");
+                println!("Capture failed with status: {:?}", status);
+                println!("Error code: {:?}", status.code());
+                println!("Error message: {:?}", status.message());
+                println!("Metadata: {:?}", status.metadata());
+                println!("=== END DEBUG ===");
+                panic!("gRPC payment_capture call failed: {}", status);
+            }
+        };
 
         // Verify payment status is charged after capture
         assert!(
@@ -583,8 +593,24 @@ async fn test_refund_sync() {
                 .expect("gRPC payment_authorize call failed")
                 .into_inner();
 
-            // Extract the transaction ID
-            let transaction_id = extract_transaction_id(&auth_response);
+            // Extract the transaction ID with debugging
+            let transaction_id = match &auth_response.transaction_id {
+                Some(id) => match id.id_type.as_ref().unwrap() {
+                    IdType::Id(id) => id.clone(),
+                    IdType::NoResponseIdMarker(_) => {
+                        println!("=== FISERV REFUND SYNC DEBUG ===");
+                        println!("NoResponseIdMarker detected in refund sync test");
+                        println!("Auth response: {:?}", auth_response);
+                        println!("=== END DEBUG ===");
+                        panic!("NoResponseIdMarker found - authentication issue");
+                    }
+                    IdType::EncodedData(_) => {
+                        println!("EncodedData found instead of transaction ID");
+                        panic!("Unexpected EncodedData in transaction ID");
+                    }
+                },
+                None => panic!("Resource ID is None"),
+            };
 
             // Wait for payment to process
             tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;

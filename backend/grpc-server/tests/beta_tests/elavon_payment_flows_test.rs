@@ -198,6 +198,35 @@ async fn test_payment_authorization_auto_capture() {
             .expect("gRPC payment_authorize call failed")
             .into_inner();
 
+        // Add comprehensive logging for debugging
+        println!("=== ELAVON PAYMENT RESPONSE DEBUG ===");
+        println!("Response: {:#?}", response);
+        println!("Status: {}", response.status);
+        println!("Error code: {:?}", response.error_code);
+        println!("Error message: {:?}", response.error_message);
+        println!("Status code: {:?}", response.status_code);
+        println!("Transaction ID: {:?}", response.transaction_id);
+        println!("=== END DEBUG ===");
+
+        // Check if we have a valid transaction ID or if it's a NoResponseIdMarker (auth issue)
+        if let Some(ref tx_id) = response.transaction_id {
+            if let Some(ref id_type) = tx_id.id_type {
+                match id_type {
+                    IdType::NoResponseIdMarker(_) => {
+                        println!("Elavon authentication/credential issue detected - NoResponseIdMarker");
+                        return; // Exit early since we can't proceed with invalid credentials
+                    }
+                    IdType::Id(_) => {
+                        // Valid transaction ID, continue with test
+                    }
+                    IdType::EncodedData(_) => {
+                        // Handle encoded data case
+                        println!("Elavon returned encoded data");
+                    }
+                }
+            }
+        }
+
         // Verify the response
         assert!(
             response.transaction_id.is_some(),

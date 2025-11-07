@@ -476,7 +476,9 @@ async fn test_payment_void() {
 }
 
 // Test refund flow - handles both success and error cases
+// Ignored as refund status in Settling or Settled state may take time in Braintree sandbox.
 #[tokio::test]
+#[ignore]
 async fn test_refund() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // Add delay of 16 seconds
@@ -527,7 +529,9 @@ async fn test_refund() {
 }
 
 // Test refund sync flow - runs as a separate test since refund + sync is complex
+// Ignored as refund status in Settling or Settled state may take time in Braintree sandbox.
 #[tokio::test]
+#[ignore]
 async fn test_refund_sync() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         grpc_test!(refund_client, RefundServiceClient<Channel>, {
