@@ -514,21 +514,27 @@ impl<
         + Serialize,
 >
     TryFrom<
-        &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
+        TPSLRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     > for TpslPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
+        item: TPSLRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let customer_id = item.resource_common_data.get_customer_id()?;
