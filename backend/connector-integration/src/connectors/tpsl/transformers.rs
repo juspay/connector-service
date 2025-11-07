@@ -549,7 +549,7 @@ impl<
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         // Extract authentication data
-        let auth_type = TpslAuth::try_from(&item.connector_auth_type)?;
+        let auth_type = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
         let merchant_code = auth_type
             .merchant_code
             .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
@@ -811,7 +811,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth_type = TpslAuth::try_from(&item.connector_auth_type)?;
+        let auth_type = TpslAuth::try_from(&item.router_data.connector_auth_type)?;
         let merchant_code = auth_type
             .merchant_code
             .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
