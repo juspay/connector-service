@@ -543,7 +543,7 @@ impl<
             .connector
             .amount_converter
             .convert(
-                item.request.minor_amount,
+                item.router_data.request.minor_amount,
                 item.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
