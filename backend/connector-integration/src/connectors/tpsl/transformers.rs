@@ -825,7 +825,7 @@ impl<
                     end_date_time: None,
                     identifier: Some(
                         item.router_data
-                            item.router_data.resource_common_data
+                            .resource_common_data
                             .connector_request_reference_id
                             .clone(),
                     ),
