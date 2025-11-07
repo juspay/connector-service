@@ -671,7 +671,31 @@ impl TpslErrorResponse {
             "000" => common_enums::AttemptStatus::Charged,
             "001" | "002" => common_enums::AttemptStatus::Failure,
             "003" => common_enums::AttemptStatus::AuthenticationPending,
+            "004" | "005" => common_enums::AttemptStatus::Failure,
             _ => common_enums::AttemptStatus::Failure,
+        }
+    }
+}
+
+// Enhanced status mapping based on Haskell implementation
+impl TpslPaymentsResponseData {
+    pub fn get_attempt_status(&self) -> common_enums::AttemptStatus {
+        match self.status.as_str().to_lowercase().as_str() {
+            "success" | "completed" => common_enums::AttemptStatus::Charged,
+            "pending" | "processing" | "initiated" => common_enums::AttemptStatus::AuthenticationPending,
+            "failure" | "failed" | "error" => common_enums::AttemptStatus::Failure,
+            _ => common_enums::AttemptStatus::AuthenticationPending,
+        }
+    }
+}
+
+impl TpslPaymentsSyncResponse {
+    pub fn get_attempt_status(&self) -> common_enums::AttemptStatus {
+        match self.transaction_state.as_deref().unwrap_or("pending").to_lowercase().as_str() {
+            "success" | "completed" | "charged" => common_enums::AttemptStatus::Charged,
+            "pending" | "processing" | "initiated" => common_enums::AttemptStatus::AuthenticationPending,
+            "failure" | "failed" | "error" => common_enums::AttemptStatus::Failure,
+            _ => common_enums::AttemptStatus::AuthenticationPending,
         }
     }
 }
