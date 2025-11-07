@@ -115,7 +115,7 @@ pub struct CashfreeOrderMeta {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CashfreeOrderCreateResponse {
-    pub payment_session_id: Secret<String>, // KEY: Used in Authorize flow
+    pub payment_session_id: String, // KEY: Used in Authorize flow
     pub cf_order_id: i64,
     pub order_id: String,
     pub entity: String, // ADDED: Missing field from Haskell
@@ -147,7 +147,7 @@ pub struct CashfreeOrderCreateResponse {
 
 #[derive(Debug, Serialize)]
 pub struct CashfreePaymentRequest {
-    pub payment_session_id: Secret<String>, // From order creation response
+    pub payment_session_id: String, // From order creation response
     pub payment_method: CashfreePaymentMethod,
     pub payment_surcharge: Option<CashfreePaymentSurcharge>,
 }
@@ -522,7 +522,7 @@ impl<
         let payment_method = get_cashfree_payment_method_data(&item.request.payment_method_data)?;
 
         Ok(Self {
-            payment_session_id: Secret::new(payment_session_id),
+            payment_session_id,
             payment_method,
             payment_surcharge: None, // TODO: Add surcharge logic if needed
         })
@@ -538,7 +538,7 @@ impl TryFrom<CashfreeOrderCreateResponse> for PaymentCreateOrderResponse {
 
     fn try_from(response: CashfreeOrderCreateResponse) -> Result<Self, Self::Error> {
         Ok(Self {
-            order_id: response.payment_session_id.expose(),
+            order_id: response.payment_session_id,
         })
     }
 }
