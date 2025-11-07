@@ -124,6 +124,9 @@ pub struct DatatransCard<
     pub number: Option<RawCardNumber<T>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cvv: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "type")]
+    pub card_type: Option<String>,
 }
 
 // Authorize request structure based on tech spec
@@ -143,6 +146,16 @@ pub struct DatatransPaymentsRequest<
     pub card: DatatransCard<T>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub auto_settle: Option<bool>,
+    // Don't skip serializing - we want "option": null to appear in JSON
+    pub option: Option<DatatransPaymentOptions>,
+}
+
+// Payment options for Datatrans API
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatatransPaymentOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub create_alias: Option<bool>,
 }
 
 impl<
@@ -194,6 +207,7 @@ impl<
             expiry_month: Some(card_data.card_exp_month.clone()),
             expiry_year: Some(card_data.get_card_expiry_year_2_digit()?),
             cvv: Some(card_data.card_cvc.clone()),
+            card_type: Some("PLAIN".to_string()), // Set card type to PLAIN to match Hyperswitch
         };
 
         // Determine auto_settle based on capture method
@@ -212,6 +226,7 @@ impl<
             amount: router_data.request.minor_amount,
             card,
             auto_settle,
+            option: None, // Set to null to match Hyperswitch
         })
     }
 }
@@ -794,8 +809,12 @@ impl
 
 // Void Request structure based on tech spec POST /v1/transactions/{transactionId}/cancel
 // The tech spec shows "object (CancelRequest)" as request body which appears to be empty/optional
+// Using an empty struct to serialize as {} instead of null
 #[derive(Debug, Serialize)]
-pub struct DatatransVoidRequest;
+#[serde(rename_all = "camelCase")]
+pub struct DatatransVoidRequest {
+    // Empty struct - will serialize as {} instead of null
+}
 
 impl<
         T: PaymentMethodDataTypes
@@ -821,8 +840,8 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         // Empty request body for cancel endpoint based on tech spec
-        // The CancelRequest object appears to be empty
-        Ok(Self)
+        // The CancelRequest object appears to be empty - serializes as {}
+        Ok(Self {})
     }
 }
 
