@@ -597,9 +597,17 @@ impl<
                 },
                 payment: TpslPaymentPayload {
                     method: TpslMethodPayload {
-                        token: "UPI_TOKEN".to_string(),
+                        token: match payment_method_type {
+                            common_enums::PaymentMethodType::UpiIntent => "UPI_INTENT".to_string(),
+                            common_enums::PaymentMethodType::UpiCollect => "UPI_COLLECT".to_string(),
+                            _ => "UPI".to_string(),
+                        },
                         method_type: "UPI".to_string(),
-                        code: "UPI".to_string(),
+                        code: match payment_method_type {
+                            common_enums::PaymentMethodType::UpiIntent => "UPI_INTENT",
+                            common_enums::PaymentMethodType::UpiCollect => "UPI_COLLECT",
+                            _ => "UPI",
+                        }.to_string(),
                     },
                     instrument: TpslInstrumentPayload {
                         expiry: TpslExpiryPayload {
