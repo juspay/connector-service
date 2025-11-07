@@ -487,17 +487,39 @@ pub struct TpslErrorResponse {
 
 fn get_redirect_form_data(
     payment_method_type: common_enums::PaymentMethodType,
-    _response_data: TpslPaymentsResponseData,
+    response_data: TpslPaymentsResponseData,
 ) -> CustomResult<RedirectForm, errors::ConnectorError> {
     match payment_method_type {
         common_enums::PaymentMethodType::UpiCollect | common_enums::PaymentMethodType::UpiIntent => {
-            // For UPI, we might need to redirect to a payment URL or return a form
-            // This would depend on the actual TPSL UPI flow
-            Ok(RedirectForm::Form {
-                endpoint: "https://tpsl-upi-redirect-url.com".to_string(), // This would come from response
-                method: Method::Post,
-                form_fields: Default::default(),
-            })
+            // Extract redirect information from TPSL response
+            match response_data.response {
+                TpslAuthCaptureResponse::TpslAuthS2sResponse(auth_response) => {
+                    // For UPI Intent/Collect, TPSL might return a token or redirect URL
+                    Ok(RedirectForm::Form {
+                        endpoint: format!("https://www.tpsl-india.in/PaymentGateway/merchant2.pg/{}", auth_response.token),
+                        method: Method::Post,
+                        form_fields: Default::default(),
+                    })
+                }
+                TpslAuthCaptureResponse::TpslAuthErrorOrDecryptedResponse(decrypted_response) => {
+                    // Handle decrypted response with UPI specific data
+                    if let Some(acs) = decrypted_response.payment_method.a_c_s {
+                        // If ACS data is present, we might need to redirect to ACS URL
+                        Ok(RedirectForm::Form {
+                            endpoint: "https://tpsl-acs-redirect.com".to_string(), // Extract from ACS data
+                            method: Method::Post,
+                            form_fields: Default::default(),
+                        })
+                    } else {
+                        // No ACS redirect needed, return success
+                        Ok(RedirectForm::Form {
+                            endpoint: "https://tpsl-success.com".to_string(),
+                            method: Method::Get,
+                            form_fields: Default::default(),
+                        })
+                    }
+                }
+            }
         }
         _ => Err(errors::ConnectorError::NotImplemented(
             utils::get_unimplemented_payment_method_error_message("TPSL"),
