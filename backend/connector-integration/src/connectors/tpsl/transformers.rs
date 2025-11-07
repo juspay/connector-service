@@ -34,6 +34,101 @@ pub struct TpslPaymentsRequest {
     pub consumer: TpslConsumerPayload,
 }
 
+// UPI specific request structures based on Haskell implementation
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TpslUPITokenRequest {
+    pub merchant: TpslMerchantDataType,
+    pub cart: TpslUPITokenCart,
+    pub transaction: TpslUPITokenTxn,
+    pub consumer: TpslConsumerDataType,
+}
+
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TpslUPITxnRequest {
+    pub merchant: TpslMerchantPayload,
+    pub cart: TpslUPITokenCart,
+    pub payment: TpslPaymentIntentPayload,
+    pub transaction: TpslTransactionPayload,
+    pub consumer: TpslConsumerIntentPayload,
+    pub merchant_input_flags: TpslFlagsType,
+}
+
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TpslUPITokenCart {
+    pub item: Vec<TpslUPIItem>,
+    pub description: Option<String>,
+}
+
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TpslUPIItem {
+    pub amount: String,
+    pub com_amt: String,
+    pub s_k_u: String,
+    pub reference: String,
+    pub identifier: String,
+}
+
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TpslUPITokenTxn {
+    pub amount: String,
+    #[serde(rename = "type")]
+    pub txn_type: String,
+    pub currency: String,
+    pub identifier: String,
+    pub sub_type: String,
+    pub request_type: String,
+}
+
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TpslPaymentIntentPayload {
+    pub method: TpslMethodUPIPayload,
+    pub instrument: TpslUPIInstrumentPayload,
+    pub instruction: serde_json::Value,
+}
+
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TpslMethodUPIPayload {
+    pub token: String,
+    #[serde(rename = "type")]
+    pub method_type: String,
+}
+
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TpslUPIInstrumentPayload {
+    pub expiry: serde_json::Value,
+}
+
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TpslConsumerIntentPayload {
+    pub mobile_number: String,
+    pub email_i_d: String,
+    pub identifier: String,
+    pub account_no: String,
+    pub account_type: String,
+    pub account_holder_name: String,
+    pub vpa: String,
+    pub aadhar_no: String,
+}
+
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TpslFlagsType {
+    pub account_no: bool,
+    pub mobile_number: bool,
+    pub email_i_d: bool,
+    pub card_details: bool,
+    pub mandate_details: bool,
+}
+
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TpslMerchantPayload {
