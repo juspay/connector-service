@@ -4,7 +4,7 @@ use common_enums::enums;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     ext_traits::ValueExt,
-    types::StringMajorUnit,
+    types::FloatMajorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, Capture, RSync, Refund, SetupMandate, Void},
@@ -114,7 +114,7 @@ fn build_payload_cards_request_data<T: PaymentMethodDataTypes>(
     payment_method_data: &PaymentMethodData<T>,
     connector_auth_type: &ConnectorAuthType,
     currency: enums::Currency,
-    amount: StringMajorUnit,
+    amount: FloatMajorUnit,
     resource_common_data: &PaymentFlowData,
     capture_method: Option<enums::CaptureMethod>,
     is_mandate: bool,
@@ -223,7 +223,7 @@ impl<
                     &router_data.request.payment_method_data,
                     &router_data.connector_auth_type,
                     router_data.request.currency,
-                    StringMajorUnit::zero(),
+                    FloatMajorUnit::zero(),
                     &router_data.resource_common_data,
                     None, // No capture_method for SetupMandate
                     true,

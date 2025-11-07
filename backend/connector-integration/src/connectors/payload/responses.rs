@@ -1,3 +1,4 @@
+use common_utils::FloatMajorUnit;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
@@ -32,7 +33,7 @@ pub enum AvsResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PayloadCardsResponseData {
-    pub amount: f64,
+    pub amount: FloatMajorUnit,
     pub avs: Option<AvsResponse>,
     pub customer_id: Option<Secret<String>>,
     #[serde(rename = "id")]
@@ -63,7 +64,7 @@ pub enum RefundStatus {
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct RefundsLedger {
-    pub amount: f64,
+    pub amount: FloatMajorUnit,
     #[serde(rename = "assoc_transaction_id")]
     pub associated_transaction_id: String, // Connector transaction id
     #[serde(rename = "id")]
@@ -72,7 +73,7 @@ pub struct RefundsLedger {
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct PayloadRefundResponse {
-    pub amount: f64,
+    pub amount: FloatMajorUnit,
     #[serde(rename = "id")]
     pub transaction_id: String,
     pub ledger: Vec<RefundsLedger>,

@@ -1,4 +1,4 @@
-use common_utils::types::StringMajorUnit;
+use common_utils::types::FloatMajorUnit;
 use domain_types::payment_method_data::{PaymentMethodDataTypes, RawCardNumber};
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
@@ -40,7 +40,7 @@ pub struct BillingAddress {
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct PayloadCardsRequestData<T: PaymentMethodDataTypes> {
-    pub amount: StringMajorUnit,
+    pub amount: FloatMajorUnit,
     #[serde(flatten)]
     pub card: PayloadCard<T>,
     #[serde(rename = "type")]
@@ -62,7 +62,7 @@ pub struct PayloadCardsRequestData<T: PaymentMethodDataTypes> {
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct PayloadMandateRequestData {
-    pub amount: StringMajorUnit,
+    pub amount: FloatMajorUnit,
     #[serde(rename = "type")]
     pub transaction_types: TransactionTypes,
     // Based on the connectors' response, we can do recurring payment either based on a default payment method id saved in the customer profile or a specific payment method id
@@ -99,7 +99,7 @@ pub struct PayloadCaptureRequest {
 pub struct PayloadRefundRequest {
     #[serde(rename = "type")]
     pub transaction_type: TransactionTypes,
-    pub amount: StringMajorUnit,
+    pub amount: FloatMajorUnit,
     #[serde(rename = "ledger[0][assoc_transaction_id]")]
     pub ledger_assoc_transaction_id: String,
 }
