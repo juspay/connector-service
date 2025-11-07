@@ -712,7 +712,10 @@ impl<
                     account_holder_name: customer_id.get_string_repr().to_string(),
                     aadhar_no: "".to_string(),
                 },
-            }),
+            })
+                    }
+                }
+            },
             _ => Err(errors::ConnectorError::NotImplemented(
                 "Payment methods".to_string(),
             )
