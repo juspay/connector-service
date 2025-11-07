@@ -894,7 +894,7 @@ impl<
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status: attempt_status,
-                .router_data.resource_common_data
+                ..router_data.resource_common_data
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
