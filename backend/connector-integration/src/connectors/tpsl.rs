@@ -303,7 +303,7 @@ impl<
             code: response.error_code.to_string(),
             message: response.error_message.clone(),
             reason: Some(response.error_message),
-            attempt_status: None,
+            attempt_status: Some(response.get_error_status()),
             connector_transaction_id: None,
             network_advice_code: None,
             network_decline_code: None,
