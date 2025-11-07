@@ -39,7 +39,7 @@ use interfaces::{
 use serde::Serialize;
 use transformers::{
     self as tpsl, TpslPaymentsRequest, TpslPaymentsResponse, TpslPaymentsSyncRequest, TpslPaymentsSyncResponse,
-    TpslUPITokenRequest, TpslUPITxnRequest, TpslCombinedTokenResponse, TpslUPITxnResponse
+    TpslUPITokenRequest, TpslCombinedTokenResponse
 };
 
 use super::macros;
