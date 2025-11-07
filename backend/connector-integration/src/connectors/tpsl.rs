@@ -877,8 +877,45 @@ fn get_tpsl_auth_headers(
         .clone()
         .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
     
-    Ok(vec![(
-        headers::AUTHORIZATION.to_string(),
-        format!("Bearer {}", api_key.peek()).into_masked(),
-    )])
+    let merchant_code = auth_type
+        .merchant_code
+        .clone()
+        .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
+    
+    Ok(vec![
+        (
+            headers::AUTHORIZATION.to_string(),
+            format!("Bearer {}", api_key.peek()).into_masked(),
+        ),
+        (
+            "X-Merchant-Code".to_string(),
+            merchant_code.peek().to_string().into_masked(),
+        ),
+    ])
+}
+
+// Enhanced authentication function for UPI flows
+fn get_tpsl_upi_auth_headers(
+    merchant_auth: &transformers::TpslMerchantAuth,
+) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    let mut headers = vec![
+        (
+            headers::AUTHORIZATION.to_string(),
+            format!("Bearer {}", merchant_auth.api_key.peek()).into_masked(),
+        ),
+        (
+            "X-Merchant-Code".to_string(),
+            merchant_auth.merchant_code.peek().to_string().into_masked(),
+        ),
+    ];
+
+    // Add checksum header if available (enhanced security)
+    if let Some(checksum_key) = &merchant_auth.checksum_key {
+        headers.push((
+            "X-Checksum".to_string(),
+            checksum_key.peek().to_string().into_masked(),
+        ));
+    }
+
+    Ok(headers)
 }
