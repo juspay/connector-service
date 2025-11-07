@@ -337,20 +337,49 @@ impl<
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: tpsl::TpslErrorResponse = res
-            .response
-            .parse_struct("TpslErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        // Try to parse as TpslErrorResponse first
+        if let Ok(response) = res.response.parse_struct::<tpsl::TpslErrorResponse>("TpslErrorResponse") {
+            with_error_response_body!(event_builder, response);
 
-        with_error_response_body!(event_builder, response);
+            let error_message = response.error_message.clone();
+            return Ok(ErrorResponse {
+                status_code: res.status_code,
+                code: response.error_code.to_string(),
+                message: error_message.clone(),
+                reason: Some(error_message),
+                attempt_status: Some(response.get_error_status()),
+                connector_transaction_id: None,
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+            });
+        }
 
-        let error_message = response.error_message.clone();
+        // Try to parse as TpslErrorPayload (UPI specific errors)
+        if let Ok(response) = res.response.parse_struct::<tpsl::TpslErrorPayload>("TpslErrorPayload") {
+            with_error_response_body!(event_builder, response);
+
+            let error_message = response.error_message.clone();
+            return Ok(ErrorResponse {
+                status_code: res.status_code,
+                code: response.error_code.to_string(),
+                message: error_message.clone(),
+                reason: Some(error_message),
+                attempt_status: Some(common_enums::AttemptStatus::Failure),
+                connector_transaction_id: None,
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+            });
+        }
+
+        // Fallback to generic error
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: response.error_code.to_string(),
-            message: error_message.clone(),
-            reason: Some(error_message),
-            attempt_status: Some(response.get_error_status()),
+            code: "UNKNOWN_ERROR".to_string(),
+            message: "Unknown error occurred".to_string(),
+            reason: Some("Unknown error occurred".to_string()),
+            attempt_status: Some(common_enums::AttemptStatus::Failure),
             connector_transaction_id: None,
             network_advice_code: None,
             network_decline_code: None,
