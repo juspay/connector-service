@@ -540,9 +540,13 @@ impl<
         let customer_id = item.resource_common_data.get_customer_id()?;
         let return_url = item.router_data.request.get_router_return_url()?;
         let amount = item
-            .request
-            .minor_amount
-            .to_string();
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
+            .change_context(ConnectorError::RequestEncodingFailed)?;
 
         // Extract authentication data
         let auth_type = TpslAuth::try_from(&item.connector_auth_type)?;
