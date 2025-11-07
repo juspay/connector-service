@@ -538,13 +538,13 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let customer_id = item.router_data.resource_common_data.get_customer_id()?;
-        let return_url = item.router_data.router_data.request.get_router_return_url()?;
+        let return_url = item.router_data.request.get_router_return_url()?;
         let amount = item
             .connector
             .amount_converter
             .convert(
-                item.router_data.router_data.request.minor_amount,
-                item.router_data.router_data.request.currency,
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
