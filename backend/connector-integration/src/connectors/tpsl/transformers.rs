@@ -693,7 +693,7 @@ impl<
                     mobile_number: "9999999999".to_string(),
                     email_i_d: item
                         .router_data
-                        item.router_data.request
+                        .request
                         .email
                         .clone()
                         .map(|e| e.peek().to_string())
