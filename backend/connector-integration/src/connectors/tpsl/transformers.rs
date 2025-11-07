@@ -761,7 +761,7 @@ impl<
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
                             router_data
-                                item.router_data.resource_common_data
+                                .resource_common_data
                                 .connector_request_reference_id
                                 .clone(),
                         ),
