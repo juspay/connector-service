@@ -34,7 +34,7 @@ use interfaces::{
 use serde::Serialize;
 use std::fmt::Debug;
 use transformers::{
-    self as payload, PayloadAuthorizeResponse, PayloadCancelRequest, PayloadCaptureRequest,
+    self as payload, PayloadAuthorizeResponse, PayloadVoidRequest, PayloadCaptureRequest,
     PayloadCaptureResponse, PayloadCardsRequestData, PayloadErrorResponse, PayloadPSyncResponse,
     PayloadPaymentsRequest, PayloadRSyncResponse, PayloadRefundRequest, PayloadRefundResponse,
     PayloadRepeatPaymentRequest, PayloadRepeatPaymentResponse, PayloadSetupMandateResponse,
@@ -166,7 +166,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: Void,
-            request_body: PayloadCancelRequest,
+            request_body: PayloadVoidRequest,
             response_body: PayloadVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
@@ -405,7 +405,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Payload,
-    curl_request: FormUrlEncoded(PayloadCancelRequest),
+    curl_request: FormUrlEncoded(PayloadVoidRequest),
     curl_response: PayloadVoidResponse,
     flow_name: Void,
     resource_common_data: PaymentFlowData,

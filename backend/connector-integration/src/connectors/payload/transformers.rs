@@ -30,8 +30,8 @@ use crate::connectors::payload::{PayloadAmountConvertor, PayloadRouterData};
 use crate::types::ResponseRouterData;
 
 pub use super::requests::{
-    PayloadCancelRequest, PayloadCaptureRequest, PayloadCardsRequestData, PayloadPaymentsRequest,
-    PayloadRefundRequest, PayloadRepeatPaymentRequest,
+    PayloadCaptureRequest, PayloadCardsRequestData, PayloadPaymentsRequest, PayloadRefundRequest,
+    PayloadRepeatPaymentRequest, PayloadVoidRequest,
 };
 pub use super::responses::{
     PayloadAuthorizeResponse, PayloadCaptureResponse, PayloadErrorResponse, PayloadEventDetails,
@@ -356,7 +356,7 @@ impl<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
             T,
         >,
-    > for requests::PayloadCancelRequest
+    > for requests::PayloadVoidRequest
 {
     type Error = Error;
 

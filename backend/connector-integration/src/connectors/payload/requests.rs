@@ -84,7 +84,7 @@ pub struct PayloadCard<T: PaymentMethodDataTypes> {
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq)]
-pub struct PayloadCancelRequest {
+pub struct PayloadVoidRequest {
     pub status: responses::PayloadPaymentStatus,
 }
 
