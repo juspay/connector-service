@@ -102,7 +102,7 @@ pub struct CashfreeOrderSplitsType {
 pub struct CashfreeCustomerDetails {
     pub customer_id: String,
     pub customer_email: Option<String>,
-    pub customer_phone: String,
+    pub customer_phone: Secret<String>,
     pub customer_name: Option<String>,
 }
 
@@ -115,7 +115,7 @@ pub struct CashfreeOrderMeta {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CashfreeOrderCreateResponse {
-    pub payment_session_id: String, // KEY: Used in Authorize flow
+    pub payment_session_id: Secret<String>, // KEY: Used in Authorize flow
     pub cf_order_id: i64,
     pub order_id: String,
     pub entity: String, // ADDED: Missing field from Haskell
@@ -147,7 +147,7 @@ pub struct CashfreeOrderCreateResponse {
 
 #[derive(Debug, Serialize)]
 pub struct CashfreePaymentRequest {
-    pub payment_session_id: String, // From order creation response
+    pub payment_session_id: Secret<String>, // From order creation response
     pub payment_method: CashfreePaymentMethod,
     pub payment_surcharge: Option<CashfreePaymentSurcharge>,
 }
@@ -173,11 +173,15 @@ pub struct CashfreePaymentMethod {
     pub cardless_emi: Option<()>, // CashFreeCardlessEmiType - None for UPI-only
 }
 
+fn secret_is_empty(secret: &Secret<String>) -> bool {
+    secret.peek().is_empty()
+}
+
 #[derive(Debug, Serialize)]
 pub struct CashfreeUpiDetails {
     pub channel: String, // "link" for Intent, "collect" for Collect
-    #[serde(skip_serializing_if = "String::is_empty")]
-    pub upi_id: String, // VPA for collect, empty for intent
+    #[serde(skip_serializing_if = "secret_is_empty")]
+    pub upi_id: Secret<String>, // VPA for collect, empty for intent
 }
 
 #[derive(Debug, Serialize)]
@@ -247,7 +251,7 @@ fn get_cashfree_payment_method_data<
                     Ok(CashfreePaymentMethod {
                         upi: Some(CashfreeUpiDetails {
                             channel: "collect".to_string(),
-                            upi_id: vpa,
+                            upi_id: Secret::new(vpa),
                         }),
                         app: None,
                         netbanking: None,
@@ -264,7 +268,7 @@ fn get_cashfree_payment_method_data<
                     Ok(CashfreePaymentMethod {
                         upi: Some(CashfreeUpiDetails {
                             channel: "link".to_string(),
-                            upi_id: "".to_string(),
+                            upi_id: Secret::new("".to_string()),
                         }),
                         app: None,
                         netbanking: None,
@@ -398,12 +402,12 @@ impl
                 .map(|id| id.get_string_repr().to_string())
                 .unwrap_or_else(|| "guest".to_string()),
             customer_email: billing.email.as_ref().map(|e| e.peek().to_string()),
-            customer_phone: billing
+            customer_phone: Secret::new(billing
                 .phone
                 .as_ref()
                 .and_then(|phone| phone.number.as_ref())
                 .map(|number| number.peek().to_string())
-                .unwrap_or_else(|| "9999999999".to_string()),
+                .unwrap_or_else(|| "9999999999".to_string())),
             customer_name: billing.get_optional_full_name().map(|name| name.expose()),
         };
 
@@ -516,7 +520,7 @@ impl<
         let payment_method = get_cashfree_payment_method_data(&item.request.payment_method_data)?;
 
         Ok(Self {
-            payment_session_id,
+            payment_session_id: Secret::new(payment_session_id),
             payment_method,
             payment_surcharge: None, // TODO: Add surcharge logic if needed
         })
@@ -532,7 +536,7 @@ impl TryFrom<CashfreeOrderCreateResponse> for PaymentCreateOrderResponse {
 
     fn try_from(response: CashfreeOrderCreateResponse) -> Result<Self, Self::Error> {
         Ok(Self {
-            order_id: response.payment_session_id,
+            order_id: response.payment_session_id.expose(),
         })
     }
 }

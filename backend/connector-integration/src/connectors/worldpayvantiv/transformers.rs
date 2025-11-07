@@ -201,7 +201,7 @@ impl<
                         .resource_common_data
                         .get_customer_id()
                         .ok()
-                        .map(|id| id.get_string_repr().to_string()),
+                        .map(|id| Secret::new(id.get_string_repr().to_string())),
                     order_id: merchant_txn_id.clone(),
                     amount,
                     order_source,
@@ -222,7 +222,7 @@ impl<
                         .resource_common_data
                         .get_customer_id()
                         .ok()
-                        .map(|id| id.get_string_repr().to_string()),
+                        .map(|id| Secret::new(id.get_string_repr().to_string())),
                     order_id: merchant_txn_id.clone(),
                     amount,
                     order_source,
@@ -337,7 +337,7 @@ pub struct Authorization<T: PaymentMethodDataTypes> {
     #[serde(rename = "@reportGroup")]
     pub report_group: String,
     #[serde(rename = "@customerId", skip_serializing_if = "Option::is_none")]
-    pub customer_id: Option<String>,
+    pub customer_id: Option<Secret<String>>,
     pub order_id: String,
     pub amount: MinorUnit,
     pub order_source: OrderSource,
@@ -363,7 +363,7 @@ pub struct Sale<T: PaymentMethodDataTypes> {
     #[serde(rename = "@reportGroup")]
     pub report_group: String,
     #[serde(rename = "@customerId", skip_serializing_if = "Option::is_none")]
-    pub customer_id: Option<String>,
+    pub customer_id: Option<Secret<String>>,
     pub order_id: String,
     pub amount: MinorUnit,
     pub order_source: OrderSource,
@@ -661,7 +661,7 @@ pub struct PaymentResponse {
     #[serde(rename = "@reportGroup")]
     pub report_group: String,
     #[serde(rename = "@customerId", skip_serializing_if = "Option::is_none")]
-    pub customer_id: Option<String>,
+    pub customer_id: Option<Secret<String>>,
     pub cnp_txn_id: String,
     pub order_id: String,
     pub response: WorldpayvantivResponseCode,

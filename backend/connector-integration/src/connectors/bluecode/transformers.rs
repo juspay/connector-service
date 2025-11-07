@@ -66,7 +66,7 @@ pub struct BluecodeWebhookResponse {
     pub user_id: Option<i64>,
     pub customer_id: Option<String>,
     pub customer_email: Option<common_utils::Email>,
-    pub customer_phone: Option<String>,
+    pub customer_phone: Option<Secret<String>>,
     pub status: BluecodePaymentStatus,
     pub payment_provider: Option<String>,
     pub payment_connector: Option<String>,

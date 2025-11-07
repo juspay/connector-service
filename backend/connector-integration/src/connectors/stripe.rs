@@ -37,7 +37,7 @@ use domain_types::{
 };
 
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface};
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface, Secret};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     verification::SourceVerification,
@@ -459,7 +459,7 @@ macros::macro_connector_implementation!(
                     matches!(stripe_split_payment.charge_type, common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct))
                 })
                 .map(|stripe_split_payment| stripe_split_payment.transfer_account_id.clone())
-                .or_else(|| stripe_split_payment_metadata.transfer_account_id.clone());
+                .or_else(|| stripe_split_payment_metadata.transfer_account_id.clone().map(|s| s.expose()));
 
             if let Some(transfer_account_id) = transfer_account_id {
                 let mut customer_account_header = vec![(
@@ -609,7 +609,7 @@ macros::macro_connector_implementation!(
             {
                 transformers::transform_headers_for_connect_platform(
                     stripe_split_payment.charge_type.clone(),
-                    stripe_split_payment.transfer_account_id.clone(),
+                    Secret::new(stripe_split_payment.transfer_account_id.clone()),
                     &mut header,
                 );
             }
@@ -802,7 +802,7 @@ macros::macro_connector_implementation!(
             {
                 transformers::transform_headers_for_connect_platform(
                     stripe_refund.charge_type.clone(),
-                    stripe_refund.transfer_account_id.clone(),
+                    Secret::new(stripe_refund.transfer_account_id.clone()),
                     &mut header,
                 );
             }
