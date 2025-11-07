@@ -581,7 +581,7 @@ impl<
                     }],
                     reference: item
                         .router_data
-                        item.router_data.resource_common_data
+                        .resource_common_data
                         .connector_request_reference_id
                         .clone(),
                     identifier: "CART_ID".to_string(),
