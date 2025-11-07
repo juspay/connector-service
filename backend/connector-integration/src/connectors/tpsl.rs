@@ -298,11 +298,12 @@ impl<
 
         with_error_response_body!(event_builder, response);
 
+        let error_message = response.error_message.clone();
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.error_code.to_string(),
-            message: response.error_message.clone(),
-            reason: Some(response.error_message),
+            message: error_message.clone(),
+            reason: Some(error_message),
             attempt_status: Some(response.get_error_status()),
             connector_transaction_id: None,
             network_advice_code: None,
