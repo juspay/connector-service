@@ -1,22 +1,22 @@
+mod requests;
+mod responses;
 pub mod transformers;
 
+use base64::Engine;
+use common_enums::CurrencyUnit;
 use common_utils::{
-    consts::NO_ERROR_CODE, errors::CustomResult, events, ext_traits::BytesExt,
-    fp_utils::generate_id, types::FloatMajorUnit,
+    crypto::VerifySignature, errors::CustomResult, events, ext_traits::ByteSliceExt,
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateConnectorCustomer, CreateOrder,
-        CreateSessionToken, DefendDispute, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund,
-        RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, ConnectorCustomerData, ConnectorCustomerResponse, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
-        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData,
     },
@@ -33,14 +33,13 @@ use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
 use serde::Serialize;
-use std::{
-    fmt::Debug,
-    marker::{Send, Sync},
-};
+use std::fmt::Debug;
 use transformers::{
-    self as helcim, HelcimCaptureRequest, HelcimPaymentsCaptureResponse, HelcimPaymentsRequest,
-    HelcimPaymentsResponse, HelcimPaymentsSyncResponse, HelcimPaymentsVoidResponse,
-    HelcimRefundRequest, HelcimVoidRequest, RefundResponse, RefundSyncResponse,
+    self as payload, PayloadAuthorizeResponse, PayloadCaptureRequest, PayloadCaptureResponse,
+    PayloadCardsRequestData, PayloadErrorResponse, PayloadPSyncResponse, PayloadPaymentsRequest,
+    PayloadRSyncResponse, PayloadRefundRequest, PayloadRefundResponse, PayloadRepeatPaymentRequest,
+    PayloadRepeatPaymentResponse, PayloadSetupMandateResponse, PayloadVoidRequest,
+    PayloadVoidResponse,
 };
 
 use super::macros;
@@ -48,172 +47,155 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
-// Helcim requires an Idempotency Key of length 25. We prefix every ID by "HS_".
-const ID_LENGTH: usize = 22;
-
-pub(crate) mod headers {
-    pub(crate) const CONTENT_TYPE: &str = "Content-Type";
-
-    pub(crate) const API_TOKEN: &str = "api-token";
-    pub(crate) const IDEMPOTENCY_KEY: &str = "idempotency-key";
-}
-
 // Trait implementations with generic type parameters
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ConnectorServiceTrait<T> for Helcim<T>
+    connector_types::ConnectorServiceTrait<T> for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthorizeV2<T> for Helcim<T>
+    connector_types::PaymentAuthorizeV2<T> for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSyncV2 for Helcim<T>
+    connector_types::PaymentSyncV2 for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidV2 for Helcim<T>
+    connector_types::PaymentVoidV2 for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundSyncV2 for Helcim<T>
+    connector_types::RefundSyncV2 for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundV2 for Helcim<T>
+    connector_types::RefundV2 for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentCapture for Helcim<T>
+    connector_types::PaymentCapture for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidPostCaptureV2 for Helcim<T>
+    connector_types::ValidationTrait for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        VoidPC,
-        PaymentFlowData,
-        PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Helcim<T>
+    connector_types::PaymentOrderCreate for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        VoidPC,
-        PaymentFlowData,
-        PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Helcim<T>
+    connector_types::SetupMandateV2<T> for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ValidationTrait for Helcim<T>
+    connector_types::RepeatPaymentV2 for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate for Helcim<T>
+    connector_types::AcceptDispute for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SetupMandateV2<T> for Helcim<T>
+    connector_types::SubmitEvidenceV2 for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Helcim<T>
+    connector_types::DisputeDefend for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::AcceptDispute for Helcim<T>
+    connector_types::PaymentSessionToken for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SubmitEvidenceV2 for Helcim<T>
+    connector_types::PaymentPostAuthenticateV2<T> for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::DisputeDefend for Helcim<T>
+    connector_types::PaymentAuthenticateV2<T> for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::IncomingWebhook for Helcim<T>
+    connector_types::PaymentPreAuthenticateV2<T> for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for Helcim<T>
+    connector_types::PaymentVoidPostCaptureV2 for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentTokenV2<T> for Helcim<T>
+    connector_types::PaymentTokenV2<T> for Payload<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for Helcim<T>
+    connector_types::CreateConnectorCustomer for Payload<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAccessToken for Payload<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::CreateConnectorCustomer for Helcim<T>
-{
+pub(crate) mod headers {
+    pub(crate) const AUTHORIZATION: &str = "Authorization";
+    pub(crate) const CONTENT_TYPE: &str = "Content-Type";
+    pub(crate) const X_PAYLOAD_SIGNATURE: &str = "X-PAYLOAD-SIGNATURE";
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPreAuthenticateV2<T> for Helcim<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthenticateV2<T> for Helcim<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPostAuthenticateV2<T> for Helcim<T>
-{
-}
-
+macros::create_amount_converter_wrapper!(connector_name: Payload, amount_type: FloatMajorUnit);
 macros::create_all_prerequisites!(
-    connector_name: Helcim,
+    connector_name: Payload,
     generic_type: T,
     api: [
         (
             flow: Authorize,
-            request_body: HelcimPaymentsRequest<T>,
-            response_body: HelcimPaymentsResponse,
+            request_body: PayloadPaymentsRequest<T>,
+            response_body: PayloadAuthorizeResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: PSync,
-            response_body: HelcimPaymentsSyncResponse,
+            response_body: PayloadPSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
             flow: Capture,
-            request_body: HelcimCaptureRequest,
-            response_body: HelcimPaymentsCaptureResponse,
+            request_body: PayloadCaptureRequest,
+            response_body: PayloadCaptureResponse,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ),
         (
             flow: Void,
-            request_body: HelcimVoidRequest,
-            response_body: HelcimPaymentsVoidResponse,
+            request_body: PayloadVoidRequest,
+            response_body: PayloadVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
         (
             flow: Refund,
-            request_body: HelcimRefundRequest,
-            response_body: RefundResponse,
+            request_body: PayloadRefundRequest,
+            response_body: PayloadRefundResponse,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
         (
             flow: RSync,
-            response_body: RefundSyncResponse,
+            response_body: PayloadRSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: PayloadCardsRequestData<T>,
+            response_body: PayloadSetupMandateResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: PayloadRepeatPaymentRequest<T>,
+            response_body: PayloadRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
         )
     ],
-    amount_converters: [amount_converter: FloatMajorUnit],
+    amount_converters: [],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
@@ -224,18 +206,10 @@ macros::create_all_prerequisites!(
         {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
-                "application/json".to_string().into(),
+                Self::common_get_content_type(self).to_string().into(),
             )];
             let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-
-            // Helcim requires an Idempotency Key of length 25. We prefix every ID by "HS_".
-            let mut idempotency_key = vec![(
-                headers::IDEMPOTENCY_KEY.to_string(),
-                generate_id(ID_LENGTH, "HS").into_masked(),
-            )];
-
             header.append(&mut api_key);
-            header.append(&mut idempotency_key);
             Ok(header)
         }
 
@@ -243,44 +217,57 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.helcim.base_url
+            &req.resource_common_data.connectors.payload.base_url
         }
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.helcim.base_url
+            &req.resource_common_data.connectors.payload.base_url
         }
     }
 );
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-    for Helcim<T>
+    for Payload<T>
 {
     fn id(&self) -> &'static str {
-        "helcim"
+        "payload"
     }
 
-    fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
-        common_enums::CurrencyUnit::Base
+    fn get_currency_unit(&self) -> CurrencyUnit {
+        CurrencyUnit::Minor
+    }
+
+    fn common_get_content_type(&self) -> &'static str {
+        "application/x-www-form-urlencoded"
+    }
+
+    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
+        connectors.payload.base_url.as_ref()
     }
 
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let auth = helcim::HelcimAuthType::try_from(auth_type)
+        let auth = payload::PayloadAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+        // The API key is the same for all currencies, so we can take any.
+        let api_key = auth
+            .auths
+            .values()
+            .next()
+            .ok_or(errors::ConnectorError::FailedToObtainAuthType)?
+            .api_key
+            .clone();
 
+        let encoded_api_key = BASE64_ENGINE.encode(format!("{}:", api_key.expose()));
         Ok(vec![(
-            headers::API_TOKEN.to_string(),
-            auth.api_key.expose().into_masked(),
+            headers::AUTHORIZATION.to_string(),
+            format!("Basic {encoded_api_key}").into_masked(),
         )])
-    }
-
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.helcim.base_url.as_ref()
     }
 
     fn build_error_response(
@@ -288,26 +275,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: helcim::HelcimErrorResponse = res
+        let response: PayloadErrorResponse = res
             .response
-            .parse_struct("HelcimErrorResponse")
+            .parse_struct("PayloadErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_error_response_body!(event_builder, response);
 
-        let error_string = match response {
-            helcim::HelcimErrorResponse::Payment(response) => match response.errors {
-                helcim::HelcimErrorTypes::StringType(error) => error,
-                helcim::HelcimErrorTypes::JsonType(error) => error.to_string(),
-            },
-            helcim::HelcimErrorResponse::General(error_string) => error_string,
-        };
-
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: NO_ERROR_CODE.to_owned(),
-            message: error_string.clone(),
-            reason: Some(error_string),
+            code: response.error_type,
+            message: response.error_description,
+            reason: response
+                .details
+                .as_ref()
+                .map(|details_value| details_value.to_string()),
             attempt_status: None,
             connector_transaction_id: None,
             network_advice_code: None,
@@ -320,9 +302,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 // Authorize flow implementation
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Helcim,
-    curl_request: Json(HelcimPaymentsRequest),
-    curl_response: HelcimPaymentsResponse,
+    connector: Payload,
+    curl_request: FormUrlEncoded(PayloadPaymentsRequest<T>),
+    curl_response: PayloadAuthorizeResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthorizeData<T>,
@@ -341,10 +323,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            if req.request.is_auto_capture()? {
-                return Ok(format!("{}v2/payment/purchase", self.connector_base_url_payments(req)));
-            }
-            Ok(format!("{}v2/payment/preauth", self.connector_base_url_payments(req)))
+            Ok(format!("{}/transactions", self.connector_base_url_payments(req)))
         }
     }
 );
@@ -352,8 +331,8 @@ macros::macro_connector_implementation!(
 // PSync flow implementation
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Helcim,
-    curl_response: HelcimPaymentsResponse,
+    connector: Payload,
+    curl_response: PayloadPSyncResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
@@ -366,22 +345,22 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut header = vec![(
-                headers::CONTENT_TYPE.to_string(),
-                "application/json".to_string().into(),
-            )];
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-            header.append(&mut api_key);
-            Ok(header)
+            self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let connector_payment_id = req.request.get_connector_transaction_id()?;
+            let payment_id = req
+                .request
+                .connector_transaction_id
+                .get_connector_transaction_id()
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+
             Ok(format!(
-                "{}v2/card-transactions/{connector_payment_id}",
-                self.connector_base_url_payments(req)
+                "{}/transactions/{}",
+                self.connector_base_url_payments(req),
+                payment_id
             ))
         }
     }
@@ -390,14 +369,14 @@ macros::macro_connector_implementation!(
 // Capture flow implementation
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Helcim,
-    curl_request: Json(HelcimCaptureRequest),
-    curl_response: HelcimPaymentsResponse,
+    connector: Payload,
+    curl_request: FormUrlEncoded(PayloadCaptureRequest),
+    curl_response: PayloadCaptureResponse,
     flow_name: Capture,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsCaptureData,
     flow_response: PaymentsResponseData,
-    http_method: Post,
+    http_method: Put,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
@@ -411,7 +390,14 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}v2/payment/capture", self.connector_base_url_payments(req)))
+            let connector_transaction_id = req.request.connector_transaction_id
+                .get_connector_transaction_id()
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+            Ok(format!(
+                "{}/transactions/{}",
+                self.connector_base_url_payments(req),
+                connector_transaction_id
+            ))
         }
     }
 );
@@ -419,14 +405,14 @@ macros::macro_connector_implementation!(
 // Void flow implementation
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Helcim,
-    curl_request: Json(HelcimVoidRequest),
-    curl_response: HelcimPaymentsResponse,
+    connector: Payload,
+    curl_request: FormUrlEncoded(PayloadVoidRequest),
+    curl_response: PayloadVoidResponse,
     flow_name: Void,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentVoidData,
     flow_response: PaymentsResponseData,
-    http_method: Post,
+    http_method: Put,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
@@ -440,7 +426,12 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}v2/payment/reverse", self.connector_base_url_payments(req)))
+            let payment_id = &req.request.connector_transaction_id;
+            Ok(format!(
+                "{}/transactions/{}",
+                self.connector_base_url_payments(req),
+                payment_id
+            ))
         }
     }
 );
@@ -448,9 +439,9 @@ macros::macro_connector_implementation!(
 // Refund flow implementation
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Helcim,
-    curl_request: Json(HelcimRefundRequest),
-    curl_response: RefundResponse,
+    connector: Payload,
+    curl_request: FormUrlEncoded(PayloadRefundRequest),
+    curl_response: PayloadRefundResponse,
     flow_name: Refund,
     resource_common_data: RefundFlowData,
     flow_request: RefundsData,
@@ -469,7 +460,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}v2/payment/refund", self.connector_base_url_refunds(req)))
+            Ok(format!("{}/transactions", self.connector_base_url_refunds(req)))
         }
     }
 );
@@ -477,8 +468,8 @@ macros::macro_connector_implementation!(
 // RSync flow implementation
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Helcim,
-    curl_response: RefundResponse,
+    connector: Payload,
+    curl_response: PayloadRSyncResponse,
     flow_name: RSync,
     resource_common_data: RefundFlowData,
     flow_request: RefundSyncData,
@@ -491,23 +482,46 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut header = vec![(
-                headers::CONTENT_TYPE.to_string(),
-                "application/json".to_string().into(),
-            )];
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-            header.append(&mut api_key);
-            Ok(header)
+            self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let connector_refund_id = req.request.connector_refund_id.clone();
             Ok(format!(
-                "{}v2/card-transactions/{connector_refund_id}",
-                self.connector_base_url_refunds(req)
+                "{}/transactions/{}",
+                self.connector_base_url_refunds(req),
+                req.request.connector_refund_id
             ))
+        }
+    }
+);
+
+// SetupMandate flow implementation
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Payload,
+    curl_request: FormUrlEncoded(PayloadCardsRequestData<T>),
+    curl_response: PayloadSetupMandateResponse,
+    flow_name: SetupMandate,
+    resource_common_data: PaymentFlowData,
+    flow_request: SetupMandateRequestData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/transactions", self.connector_base_url_payments(req)))
         }
     }
 );
@@ -522,28 +536,11 @@ impl<
             + Serialize,
     >
     ConnectorIntegrationV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Helcim<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Helcim<T>
+    > for Payload<T>
 {
 }
 
@@ -556,7 +553,7 @@ impl<
             + Serialize,
     >
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Helcim<T>
+    for Payload<T>
 {
 }
 
@@ -568,7 +565,7 @@ impl<
             + 'static
             + Serialize,
     > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Helcim<T>
+    for Payload<T>
 {
 }
 
@@ -580,22 +577,38 @@ impl<
             + 'static
             + Serialize,
     > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Helcim<T>
+    for Payload<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Helcim<T>
-{
-}
+// RepeatPayment flow implementation
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Payload,
+    curl_request: FormUrlEncoded(PayloadRepeatPaymentRequest<T>),
+    curl_response: PayloadRepeatPaymentResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/transactions", self.connector_base_url_payments(req)))
+        }
+    }
+);
 
 impl<
         T: PaymentMethodDataTypes
@@ -610,7 +623,75 @@ impl<
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
-    > for Helcim<T>
+    > for Payload<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::PostAuthenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Payload<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::Authenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Payload<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::PreAuthenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Payload<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::VoidPC,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Payload<T>
 {
 }
 
@@ -627,7 +708,24 @@ impl<
         PaymentFlowData,
         domain_types::connector_types::PaymentMethodTokenizationData<T>,
         domain_types::connector_types::PaymentMethodTokenResponse,
-    > for Helcim<T>
+    > for Payload<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::CreateConnectorCustomer,
+        PaymentFlowData,
+        domain_types::connector_types::ConnectorCustomerData,
+        domain_types::connector_types::ConnectorCustomerResponse,
+    > for Payload<T>
 {
 }
 
@@ -644,46 +742,7 @@ impl<
         PaymentFlowData,
         domain_types::connector_types::AccessTokenRequestData,
         domain_types::connector_types::AccessTokenResponseData,
-    > for Helcim<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PreAuthenticate,
-        PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Helcim<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Helcim<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Helcim<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateConnectorCustomer,
-        PaymentFlowData,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-    > for Helcim<T>
+    > for Payload<T>
 {
 }
 
@@ -694,7 +753,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsAuthorizeData<T>,
         PaymentsResponseData,
-    > for Helcim<T>
+    > for Payload<T>
 {
 }
 
@@ -704,7 +763,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsSyncData,
         PaymentsResponseData,
-    > for Helcim<T>
+    > for Payload<T>
 {
 }
 
@@ -714,7 +773,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsCaptureData,
         PaymentsResponseData,
-    > for Helcim<T>
+    > for Payload<T>
 {
 }
 
@@ -724,7 +783,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentVoidData,
         PaymentsResponseData,
-    > for Helcim<T>
+    > for Payload<T>
 {
 }
 
@@ -734,7 +793,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RefundFlowData,
         RefundsData,
         RefundsResponseData,
-    > for Helcim<T>
+    > for Payload<T>
 {
 }
 
@@ -744,7 +803,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RefundFlowData,
         RefundSyncData,
         RefundsResponseData,
-    > for Helcim<T>
+    > for Payload<T>
 {
 }
 
@@ -754,7 +813,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         SetupMandateRequestData<T>,
         PaymentsResponseData,
-    > for Helcim<T>
+    > for Payload<T>
 {
 }
 
@@ -764,7 +823,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         DisputeFlowData,
         AcceptDisputeData,
         DisputeResponseData,
-    > for Helcim<T>
+    > for Payload<T>
 {
 }
 
@@ -774,7 +833,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         DisputeFlowData,
         SubmitEvidenceData,
         DisputeResponseData,
-    > for Helcim<T>
+    > for Payload<T>
 {
 }
 
@@ -784,7 +843,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         DisputeFlowData,
         DisputeDefendData,
         DisputeResponseData,
-    > for Helcim<T>
+    > for Payload<T>
 {
 }
 
@@ -794,7 +853,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Helcim<T>
+    > for Payload<T>
 {
 }
 
@@ -804,7 +863,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         RepeatPaymentData,
         PaymentsResponseData,
-    > for Helcim<T>
+    > for Payload<T>
 {
 }
 
@@ -814,7 +873,47 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
-    > for Helcim<T>
+    > for Payload<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::PostAuthenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Payload<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::Authenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Payload<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::PreAuthenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Payload<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::VoidPC,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Payload<T>
 {
 }
 
@@ -824,7 +923,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         domain_types::connector_types::PaymentMethodTokenizationData<T>,
         domain_types::connector_types::PaymentMethodTokenResponse,
-    > for Helcim<T>
+    > for Payload<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::CreateConnectorCustomer,
+        PaymentFlowData,
+        domain_types::connector_types::ConnectorCustomerData,
+        domain_types::connector_types::ConnectorCustomerResponse,
+    > for Payload<T>
 {
 }
 
@@ -834,45 +943,93 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         domain_types::connector_types::AccessTokenRequestData,
         domain_types::connector_types::AccessTokenResponseData,
-    > for Helcim<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        PreAuthenticate,
-        PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Helcim<T>
+    > for Payload<T>
 {
 }
 
+// Webhook implementation
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Helcim<T>
+    connector_types::IncomingWebhook for Payload<T>
 {
-}
+    fn get_webhook_source_verification_signature(
+        &self,
+        request: &domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: &domain_types::connector_types::ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<errors::ConnectorError>> {
+        let signature = request
+            .headers
+            .get(headers::X_PAYLOAD_SIGNATURE)
+            .map(|header_value| header_value.as_bytes().to_vec())
+            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)?;
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Helcim<T>
-{
-}
+        Ok(signature)
+    }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        CreateConnectorCustomer,
-        PaymentFlowData,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-    > for Helcim<T>
-{
+    fn get_webhook_source_verification_message(
+        &self,
+        request: &domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: &domain_types::connector_types::ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<errors::ConnectorError>> {
+        Ok(request.body.to_vec())
+    }
+
+    fn verify_webhook_source(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
+        let algorithm = common_utils::crypto::Sha256;
+
+        let connector_webhook_secrets = match connector_webhook_secret {
+            Some(secrets) => secrets,
+            None => {
+                return Ok(false);
+            }
+        };
+
+        let signature = self
+            .get_webhook_source_verification_signature(&request, &connector_webhook_secrets)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+        let message = self
+            .get_webhook_source_verification_message(&request, &connector_webhook_secrets)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+        algorithm
+            .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+    }
+
+    fn get_event_type(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<errors::ConnectorError>>
+    {
+        let webhook_body: transformers::PayloadWebhookEvent = request
+            .body
+            .parse_struct("PayloadWebhookEvent")
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        Ok(transformers::get_event_type_from_trigger(
+            webhook_body.trigger,
+        ))
+    }
+
+    fn get_webhook_resource_object(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+    ) -> Result<
+        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
+        error_stack::Report<errors::ConnectorError>,
+    > {
+        let webhook_body: transformers::PayloadWebhookEvent = request
+            .body
+            .parse_struct("PayloadWebhookEvent")
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        Ok(Box::new(webhook_body))
+    }
 }

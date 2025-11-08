@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 macro_rules! with_error_response_body {
     ($event_builder:ident, $response:ident) => {
         if let Some(body) = $event_builder {
-            body.set_error_response_body(&$response);
+            body.set_connector_response(&$response);
         }
     };
 }
@@ -33,7 +33,7 @@ macro_rules! with_error_response_body {
 macro_rules! with_response_body {
     ($event_builder:ident, $response:ident) => {
         if let Some(body) = $event_builder {
-            body.set_response_body(&$response);
+            body.set_connector_response(&$response);
         }
     };
 }

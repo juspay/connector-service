@@ -232,7 +232,7 @@ pub struct IntentCharges {
         rename = "transfer_data[destination]",
         skip_serializing_if = "Option::is_none"
     )]
-    pub destination_account_id: Option<String>,
+    pub destination_account_id: Option<Secret<String>>,
 }
 
 // Field rename is required only in case of serialization as it is passed in the request to the connector.
@@ -2056,9 +2056,9 @@ impl<
                     }),
                     common_enums::StripeChargeType::Destination => Some(IntentCharges {
                         application_fee_amount: stripe_split_payment.application_fees,
-                        destination_account_id: Some(
+                        destination_account_id: Some(Secret::new(
                             stripe_split_payment.transfer_account_id.clone(),
-                        ),
+                        )),
                     }),
                 },
             },
@@ -2156,7 +2156,7 @@ impl From<BrowserInformation> for StripeBrowserInformation {
 pub struct StripeSplitPaymentRequest {
     pub charge_type: Option<common_enums::PaymentChargeType>,
     pub application_fees: Option<MinorUnit>,
-    pub transfer_account_id: Option<String>,
+    pub transfer_account_id: Option<Secret<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -3911,7 +3911,7 @@ impl<
 
 pub(super) fn transform_headers_for_connect_platform(
     charge_type: common_enums::PaymentChargeType,
-    transfer_account_id: String,
+    transfer_account_id: Secret<String>,
     header: &mut Vec<(String, Maskable<String>)>,
 ) {
     if let common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct) =
@@ -4679,7 +4679,7 @@ impl TryFrom<&RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, Pa
                 || mit_transfer_account_id
                     != from_metadata
                         .as_ref()
-                        .and_then(|m| m.transfer_account_id.clone())
+                        .and_then(|m| m.transfer_account_id.clone().map(|s| s.expose()))
             {
                 let mismatched_fields = ["transfer_account_id", "application_fees", "charge_type"];
 
@@ -4872,9 +4872,9 @@ impl<
                     }),
                     common_enums::StripeChargeType::Destination => Some(IntentCharges {
                         application_fee_amount: stripe_split_payment.application_fees,
-                        destination_account_id: Some(
+                        destination_account_id: Some(Secret::new(
                             stripe_split_payment.transfer_account_id.clone(),
-                        ),
+                        )),
                     }),
                 },
             },

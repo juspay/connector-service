@@ -39,6 +39,7 @@ use common_utils::{
     crypto::{self, GenerateDigest, SignMessage, VerifySignature},
     date_time,
     errors::CustomResult,
+    events,
     ext_traits::ByteSliceExt,
     request::Method,
 };
@@ -53,7 +54,7 @@ use domain_types::errors;
 use domain_types::router_response_types::Response;
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent, verification::SourceVerification,
+    verification::SourceVerification,
 };
 
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
@@ -111,7 +112,7 @@ impl<
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: cryptopay::CryptopayErrorResponse = res
             .response
