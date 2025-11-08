@@ -12,19 +12,22 @@ use domain_types::{
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 // ===== HELPER FUNCTIONS =====
 
 /// Determines the order type based on payment method
-/// Most payments use redirect flow, but this can be customized per payment method
+/// Cards use direct flow, other payment methods use redirect flow
 fn get_order_type_from_payment_method<T: PaymentMethodDataTypes>(
-    _payment_method_data: &domain_types::payment_method_data::PaymentMethodData<T>,
+    payment_method_data: &domain_types::payment_method_data::PaymentMethodData<T>,
 ) -> &'static str {
-    // For now, MultiSafepay primarily uses redirect flow
-    // This can be extended to return "direct" for specific payment methods if needed
-    "redirect"
+    use domain_types::payment_method_data::PaymentMethodData;
+
+    match payment_method_data {
+        PaymentMethodData::Card(_) => "direct",
+        _ => "redirect",
+    }
 }
 
 /// Maps payment method data to MultiSafepay gateway identifier
@@ -54,6 +57,28 @@ fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
         // Add more payment methods as needed
         _ => None,
     }
+}
+
+/// Helper function to extract card number as string from RawCardNumber
+/// For direct transactions, we need actual PCI data (DefaultPCIHolder), not vault tokens
+fn get_card_number_string<T: PaymentMethodDataTypes>(
+    card_number: &domain_types::payment_method_data::RawCardNumber<T>,
+) -> Result<String, error_stack::Report<errors::ConnectorError>> {
+    use error_stack::ResultExt;
+
+    // Serialize the card number and extract the string value
+    // This works for both DefaultPCIHolder (cards::CardNumber) and VaultTokenHolder (String)
+    let serialized = serde_json::to_value(card_number)
+        .change_context(errors::ConnectorError::RequestEncodingFailed)
+        .attach_printable("Failed to serialize card number")?;
+
+    // Extract the string from the JSON value
+    serialized
+        .as_str()
+        .map(|s| s.to_string())
+        .ok_or(errors::ConnectorError::RequestEncodingFailed)
+        .attach_printable("Card number is not a valid string")
+        .map_err(error_stack::Report::from)
 }
 
 // ===== STATUS ENUMS =====
@@ -163,15 +188,45 @@ pub struct MultisafepayErrorData {
     pub error_info: Option<String>,
 }
 
+// ===== DIRECT TRANSACTION STRUCTURES =====
+
+#[derive(Debug, Serialize)]
+pub struct PaymentOptions {
+    pub notification_url: String,
+    pub redirect_url: String,
+    pub cancel_url: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CustomerInfo {
+    pub locale: String,
+    pub ip_address: String,
+    pub email: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GatewayInfo {
+    pub card_number: Secret<String>,
+    pub card_expiry_date: Secret<String>,  // Format: YYMM
+    pub card_cvc: Secret<String>,
+    pub card_holder_name: String,
+}
+
+// ===== PAYMENT REQUEST STRUCTURES =====
+
 #[derive(Debug, Serialize)]
 pub struct MultisafepayPaymentsRequest {
     #[serde(rename = "type")]
     pub order_type: String,
     pub order_id: String,
-    pub gateway: Option<String>,
+    pub gateway: String,
     pub currency: String,
     pub amount: MinorUnit,
     pub description: String,
+    // Required fields for direct transactions
+    pub payment_options: PaymentOptions,
+    pub customer: CustomerInfo,
+    pub gateway_info: GatewayInfo,
 }
 
 // Implementation for macro-generated wrapper type
@@ -208,9 +263,104 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        use domain_types::payment_method_data::PaymentMethodData;
+        use error_stack::ResultExt;
+
         let item = &wrapper.router_data;
         let order_type = get_order_type_from_payment_method(&item.request.payment_method_data);
-        let gateway = get_gateway_from_payment_method(&item.request.payment_method_data);
+        let gateway = get_gateway_from_payment_method(&item.request.payment_method_data)
+            .unwrap_or_else(|| "VISA".to_string());
+
+        // Extract card data for direct transactions - requires actual PCI data, not tokens
+        let card = match &item.request.payment_method_data {
+            PaymentMethodData::Card(card_data) => card_data,
+            _ => {
+                return Err(errors::ConnectorError::NotImplemented(
+                    "Non-card payment methods not supported for direct transactions".to_string(),
+                ))?
+            }
+        };
+
+        // Build gateway_info with card details
+        // Format card expiry as YYMM (2-digit year + 2-digit month)
+        let card_exp_year_str = card.card_exp_year.peek();
+        let card_exp_year_2digit = if card_exp_year_str.len() == 4 {
+            &card_exp_year_str[2..]
+        } else {
+            card_exp_year_str
+        };
+
+        let card_expiry_date = Secret::new(format!(
+            "{}{}",
+            card_exp_year_2digit,
+            card.card_exp_month.peek()
+        ));
+
+        // Get card number as string - for direct transactions we need PCI data
+        let card_number_str = get_card_number_string(&card.card_number)?;
+
+        let gateway_info = GatewayInfo {
+            card_number: Secret::new(card_number_str),
+            card_expiry_date,
+            card_cvc: card.card_cvc.clone(),
+            card_holder_name: card
+                .card_holder_name
+                .clone()
+                .map(|s| s.expose())
+                .unwrap_or_else(|| String::new()),
+        };
+
+        // Build customer info
+        let browser_info = item.request.browser_info.as_ref();
+        let customer = CustomerInfo {
+            locale: browser_info
+                .and_then(|b| b.language.clone())
+                .unwrap_or_else(|| "en_US".to_string()),
+            ip_address: browser_info
+                .and_then(|b| b.ip_address.map(|ip| ip.to_string()))
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "browser_info.ip_address",
+                })
+                .attach_printable("Missing IP address for direct transaction")?,
+            email: item
+                .request
+                .email
+                .clone()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "email",
+                })
+                .attach_printable("Missing email for direct transaction")?
+                .expose()
+                .expose(),
+        };
+
+        // Build payment_options
+        let payment_options = PaymentOptions {
+            notification_url: item
+                .request
+                .webhook_url
+                .clone()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "webhook_url",
+                })
+                .attach_printable("Missing webhook URL for direct transaction")?,
+            redirect_url: item
+                .request
+                .router_return_url
+                .clone()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "router_return_url",
+                })
+                .attach_printable("Missing return URL for direct transaction")?,
+            cancel_url: item
+                .request
+                .router_return_url
+                .clone()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "router_return_url",
+                })
+                .attach_printable("Missing cancel URL for direct transaction")?,
+        };
 
         Ok(Self {
             order_type: order_type.to_string(),
@@ -226,6 +376,9 @@ impl<
                 .statement_descriptor
                 .clone()
                 .unwrap_or_else(|| "Payment".to_string()),
+            payment_options,
+            customer,
+            gateway_info,
         })
     }
 }
@@ -246,8 +399,103 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
+        use domain_types::payment_method_data::PaymentMethodData;
+        use error_stack::ResultExt;
+
         let order_type = get_order_type_from_payment_method(&item.request.payment_method_data);
-        let gateway = get_gateway_from_payment_method(&item.request.payment_method_data);
+        let gateway = get_gateway_from_payment_method(&item.request.payment_method_data)
+            .unwrap_or_else(|| "VISA".to_string());
+
+        // Extract card data for direct transactions - requires actual PCI data, not tokens
+        let card = match &item.request.payment_method_data {
+            PaymentMethodData::Card(card_data) => card_data,
+            _ => {
+                return Err(errors::ConnectorError::NotImplemented(
+                    "Non-card payment methods not supported for direct transactions".to_string(),
+                ))?
+            }
+        };
+
+        // Build gateway_info with card details
+        // Format card expiry as YYMM (2-digit year + 2-digit month)
+        let card_exp_year_str = card.card_exp_year.peek();
+        let card_exp_year_2digit = if card_exp_year_str.len() == 4 {
+            &card_exp_year_str[2..]
+        } else {
+            card_exp_year_str
+        };
+
+        let card_expiry_date = Secret::new(format!(
+            "{}{}",
+            card_exp_year_2digit,
+            card.card_exp_month.peek()
+        ));
+
+        // Get card number as string - for direct transactions we need PCI data
+        let card_number_str = get_card_number_string(&card.card_number)?;
+
+        let gateway_info = GatewayInfo {
+            card_number: Secret::new(card_number_str),
+            card_expiry_date,
+            card_cvc: card.card_cvc.clone(),
+            card_holder_name: card
+                .card_holder_name
+                .clone()
+                .map(|s| s.expose())
+                .unwrap_or_else(|| String::new()),
+        };
+
+        // Build customer info
+        let browser_info = item.request.browser_info.as_ref();
+        let customer = CustomerInfo {
+            locale: browser_info
+                .and_then(|b| b.language.clone())
+                .unwrap_or_else(|| "en_US".to_string()),
+            ip_address: browser_info
+                .and_then(|b| b.ip_address.map(|ip| ip.to_string()))
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "browser_info.ip_address",
+                })
+                .attach_printable("Missing IP address for direct transaction")?,
+            email: item
+                .request
+                .email
+                .clone()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "email",
+                })
+                .attach_printable("Missing email for direct transaction")?
+                .expose()
+                .expose(),
+        };
+
+        // Build payment_options
+        let payment_options = PaymentOptions {
+            notification_url: item
+                .request
+                .webhook_url
+                .clone()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "webhook_url",
+                })
+                .attach_printable("Missing webhook URL for direct transaction")?,
+            redirect_url: item
+                .request
+                .router_return_url
+                .clone()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "router_return_url",
+                })
+                .attach_printable("Missing return URL for direct transaction")?,
+            cancel_url: item
+                .request
+                .router_return_url
+                .clone()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "router_return_url",
+                })
+                .attach_printable("Missing cancel URL for direct transaction")?,
+        };
 
         Ok(Self {
             order_type: order_type.to_string(),
@@ -263,6 +511,9 @@ impl<T: PaymentMethodDataTypes>
                 .statement_descriptor
                 .clone()
                 .unwrap_or_else(|| "Payment".to_string()),
+            payment_options,
+            customer,
+            gateway_info,
         })
     }
 }
@@ -279,7 +530,8 @@ pub type MultisafepayRefundSyncResponse = MultisafepayPaymentsResponse;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MultisafepayResponseData {
-    pub order_id: String,
+    #[serde(default)]
+    pub order_id: Option<String>,
     pub payment_url: Option<String>,
     // transaction_id can be either a string or integer in different responses
     #[serde(deserialize_with = "deserialize_transaction_id", default)]
@@ -344,7 +596,8 @@ impl<T: PaymentMethodDataTypes>
         let transaction_id = response_data
             .transaction_id
             .clone()
-            .unwrap_or_else(|| response_data.order_id.clone());
+            .or_else(|| response_data.order_id.clone())
+            .unwrap_or_else(|| "unknown".to_string());
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -353,7 +606,7 @@ impl<T: PaymentMethodDataTypes>
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
-                connector_response_reference_id: Some(response_data.order_id.clone()),
+                connector_response_reference_id: response_data.order_id.clone(),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
@@ -390,7 +643,8 @@ impl
         let transaction_id = response_data
             .transaction_id
             .clone()
-            .unwrap_or_else(|| response_data.order_id.clone());
+            .or_else(|| response_data.order_id.clone())
+            .unwrap_or_else(|| "unknown".to_string());
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -399,7 +653,7 @@ impl
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
-                connector_response_reference_id: Some(response_data.order_id.clone()),
+                connector_response_reference_id: response_data.order_id.clone(),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
@@ -574,7 +828,8 @@ impl
         let connector_refund_id = response_data
             .transaction_id
             .clone()
-            .unwrap_or_else(|| response_data.order_id.clone());
+            .or_else(|| response_data.order_id.clone())
+            .unwrap_or_else(|| "unknown".to_string());
 
         Ok(Self {
             response: Ok(RefundsResponseData {
