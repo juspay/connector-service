@@ -384,6 +384,9 @@ UCS tests require actual payment processor credentials to run successfully. Thes
     ```bash
     cargo nextest run --test authorizedotnet_payment_flows_test test_payment_authorization_auto_capture
     ```
+
+**Note**: Tests in the `beta_tests/` directories are work in progress and may not be fully functional. These tests are under development and should not be used for production validation.
+
 ## Development Commands (Optional)
 
 UCS includes a Makefile with convenient development commands:
