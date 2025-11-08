@@ -4,10 +4,10 @@
 
 use grpc_server::{app, configs};
 mod common;
+mod utils;
 
 use std::{
     collections::HashMap,
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -24,15 +24,11 @@ use grpc_api_types::{
         PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentStatus, RefundStatus,
     },
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use tonic::{transport::Channel, Request};
 
 // Constants for rapyd connector
 const CONNECTOR_NAME: &str = "rapyd";
-
-// Environment variable names for API credentials
-const TEST_RAPYD_API_KEY_ENV: &str = "TEST_RAPYD_API_KEY";
-const TEST_RAPYD_KEY1_ENV: &str = "TEST_RAPYD_KEY1";
 
 const TEST_AMOUNT: i64 = 1000;
 const TEST_CARD_NUMBER: &str = "4111111111111111";
@@ -52,11 +48,15 @@ fn get_timestamp() -> u64 {
 
 // Helper function to add rapyd metadata headers to a request
 fn add_rapyd_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables
-    let api_key = env::var(TEST_RAPYD_API_KEY_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable TEST_RAPYD_API_KEY_ENV must be set"));
-    let key1 = env::var(TEST_RAPYD_KEY1_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable TEST_RAPYD_KEY1_ENV must be set"));
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load rapyd credentials");
+
+    let (api_key, key1) = match auth {
+        domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
+            (api_key.expose(), key1.expose())
+        }
+        _ => panic!("Expected BodyKey auth type for rapyd"),
+    };
 
     request.metadata_mut().append(
         "x-connector",

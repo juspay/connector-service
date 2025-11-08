@@ -4,6 +4,7 @@
 
 use grpc_server::{app, configs};
 mod common;
+mod utils;
 
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
@@ -14,7 +15,7 @@ use grpc_api_types::{
         PaymentServiceAuthorizeResponse, PaymentServiceGetRequest, PaymentStatus,
     },
 };
-use std::env;
+use hyperswitch_masking::ExposeInterface;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tonic::{transport::Channel, Request};
 
@@ -31,10 +32,6 @@ const CONNECTOR_NAME: &str = "cryptopay";
 const AUTH_TYPE: &str = "body-key";
 const MERCHANT_ID: &str = "merchant_1234";
 
-// Environment variable names for API credentials (can be set or overridden with provided values)
-const CRYPTOPAY_API_KEY_ENV: &str = "TEST_CRYPTOPAY_API_KEY";
-const CRYPTOPAY_KEY1_ENV: &str = "TEST_CRYPTOPAY_KEY1";
-
 const TEST_EMAIL: &str = "customer@example.com";
 
 // Test card data
@@ -43,11 +40,15 @@ const TEST_PAY_CURRENCY: &str = "LTC";
 const TEST_NETWORK: &str = "litecoin";
 
 fn add_cryptopay_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables - throw error if not set
-    let api_key = env::var(CRYPTOPAY_API_KEY_ENV)
-        .expect("TEST_CRYPTOPAY_API_KEY environment variable is required");
-    let key1 = env::var(CRYPTOPAY_KEY1_ENV)
-        .expect("TEST_CRYPTOPAY_KEY1_ENV environment variable is required");
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load cryptopay credentials");
+
+    let (api_key, key1) = match auth {
+        domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
+            (api_key.expose(), key1.expose())
+        }
+        _ => panic!("Expected BodyKey auth type for cryptopay"),
+    };
 
     request.metadata_mut().append(
         "x-connector",

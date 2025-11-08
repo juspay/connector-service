@@ -4,11 +4,11 @@
 
 use cards::CardNumber;
 use grpc_server::{app, configs};
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 mod common;
+mod utils;
 
 use std::{
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -30,11 +30,6 @@ use tonic::{transport::Channel, Request};
 const CONNECTOR_NAME: &str = "checkout";
 const AUTH_TYPE: &str = "signature-key";
 
-// Environment variable names for API credentials
-const CHECKOUT_API_KEY_ENV: &str = "TEST_CHECKOUT_API_KEY";
-const CHECKOUT_KEY1_ENV: &str = "TEST_CHECKOUT_KEY1"; // processing_channel_id
-const CHECKOUT_API_SECRET_ENV: &str = "TEST_CHECKOUT_API_SECRET";
-
 // Test card data
 const TEST_AMOUNT: i64 = 1000;
 const AUTO_CAPTURE_CARD_NUMBER: &str = "4000020000000000"; // Card number from checkout_grpcurl_test.sh for auto capture
@@ -55,13 +50,17 @@ fn get_timestamp() -> u64 {
 
 // Helper function to add checkout metadata headers to a request
 fn add_checkout_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables - throw error if not present
-    let api_key = env::var(CHECKOUT_API_KEY_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable {CHECKOUT_API_KEY_ENV} must be set"));
-    let key1 = env::var(CHECKOUT_KEY1_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable {CHECKOUT_KEY1_ENV} must be set"));
-    let api_secret = env::var(CHECKOUT_API_SECRET_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable {CHECKOUT_API_SECRET_ENV} must be set"));
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load checkout credentials");
+
+    let (api_key, key1, api_secret) = match auth {
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
+            api_key,
+            key1,
+            api_secret,
+        } => (api_key.expose(), key1.expose(), api_secret.expose()),
+        _ => panic!("Expected SignatureKey auth type for checkout"),
+    };
 
     request.metadata_mut().append(
         "x-connector",
