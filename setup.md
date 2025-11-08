@@ -374,10 +374,16 @@ UCS tests require actual payment processor credentials to run successfully. Thes
 
 #### Running Tests
 
-```bash
-cargo test --test authorizedotnet_payment_flows_test
-```
+1. Install [nextest](https://nexte.st/docs/installation/pre-built-binaries/)
 
+2. Run all tests for a connector
+    ```bash
+    cargo nextest run --test authorizedotnet_payment_flows_test
+    ```
+3. Run a specific test within the test file.
+    ```bash
+    cargo nextest run --test authorizedotnet_payment_flows_test test_payment_authorization_auto_capture
+    ```
 ## Development Commands (Optional)
 
 UCS includes a Makefile with convenient development commands:
