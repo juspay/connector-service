@@ -355,7 +355,7 @@ pub struct SubMerchant {
     pub country_code: String,
     pub street: Secret<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tax_id: Option<String>,
+    pub tax_id: Option<Secret<String>>,
 }
 
 #[derive(Default, Debug, Serialize)]

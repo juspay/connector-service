@@ -2889,7 +2889,7 @@ pub struct CybersourceErrorInformationResponse {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CybersourceConsumerAuthInformationResponse {
-    access_token: String,
+    access_token: Secret<String>,
     device_data_collection_url: String,
     reference_id: String,
 }
@@ -3128,7 +3128,8 @@ impl<
                     redirection_data: Some(Box::new(RedirectForm::CybersourceAuthSetup {
                         access_token: info_response
                             .consumer_authentication_information
-                            .access_token,
+                            .access_token
+                            .expose(),
                         ddc_url: info_response
                             .consumer_authentication_information
                             .device_data_collection_url,
