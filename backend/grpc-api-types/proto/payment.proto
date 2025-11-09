@@ -1258,6 +1258,8 @@ message PaymentServiceGetRequest {
 
   // State Information
   optional ConnectorState state = 3; // State data for access token storage and other connector-specific state
+  
+  map<string, string> connector_metadata = 7;
 }
 
 // Response message for a payment status synchronization.

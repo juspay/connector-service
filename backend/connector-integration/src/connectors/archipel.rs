@@ -1,16 +1,26 @@
 pub mod transformers;
-
 use common_enums::{self as enums, CurrencyUnit};
-use common_utils::{ 
-    errors::CustomResult,
-    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+use common_utils::{
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE}, errors::CustomResult
     };
+use error_stack::report;
 use domain_types::{
+    // connector_flow::{
+    //     Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+    //     RepeatPayment, SetupMandate, SubmitEvidence, Void, CreateSessionToken,
+    // },
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, DefendDispute, PaymentMethodToken, PostAuthenticate, PreAuthenticate, PSync,
         RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, CreateSessionToken,
     },
+    // connector_types::{
+    //     AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+    //     PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+    //     PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+    //     RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+    //     SetupMandateRequestData, SubmitEvidenceData, SessionTokenRequestData, SessionTokenResponseData,
+    // },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
@@ -27,7 +37,7 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
-    types::{Connectors},
+    types::Connectors,
 };
 use serde::Serialize;
 use std::fmt::Debug;
@@ -36,9 +46,8 @@ use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
-
 use transformers::{
-    ArchipelCardAuthorizationRequest, ArchipelPaymentsResponse,
+    self as archipel,ArchipelCardAuthorizationRequest, ArchipelPaymentsResponse,ArchipelPSyncResponse
 };
 
 use super::macros;
@@ -145,6 +154,11 @@ macros::create_all_prerequisites!(
             request_body: ArchipelCardAuthorizationRequest<T>,
             response_body: ArchipelPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PSync,
+            response_body: ArchipelPSyncResponse,
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -182,33 +196,24 @@ macros::create_all_prerequisites!(
         ) -> &'a str {
             &req.resource_common_data.connectors.archipel.base_url
         }
-
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
-            &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.archipel.base_url
-        }
     }
 );
+
+fn build_env_specific_endpoint(
+    base_url: &str,
+    connector_metadata: &Option<serde_json::Value>,
+) -> CustomResult<String, errors::ConnectorError> {
+    let archipel_connector_metadata_object =
+        transformers::ArchipelConfigData::try_from(connector_metadata)?;
+    let endpoint_prefix = archipel_connector_metadata_object.platform_url;
+    Ok(base_url.replace("{{merchant_endpoint_prefix}}", &endpoint_prefix))
+}
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
 }
 
 // Stub implementations for unsupported flows
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Archipel<T>
-{
-}
-
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -651,16 +656,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-fn build_env_specific_endpoint(
-    base_url: &str,
-    connector_metadata: &Option<serde_json::Value>,
-) -> CustomResult<String, errors::ConnectorError> {
-    let archipel_connector_metadata_object =
-        transformers::ArchipelConfigData::try_from(connector_metadata)?;
-    let endpoint_prefix = archipel_connector_metadata_object.platform_url;
-    Ok(base_url.replace("{{merchant_endpoint_prefix}}", &endpoint_prefix))
-}
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
 for Archipel<T> {
     fn id(&self) -> &'static str {
@@ -752,5 +747,61 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<Option<Secret<String>>, errors::ConnectorError> {
             self.get_ca_cert(req)
         }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Archipel,
+    curl_response: ArchipelPSyncResponse,
+    flow_name: PSync,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsSyncData,
+    flow_response: PaymentsResponseData,
+    http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url =
+                build_env_specific_endpoint(self.connector_base_url_payments(req), &req.request.connector_meta)?;
+            print!("connector_meta sayak {:?}",req
+                .request
+                .connector_meta);
+
+            // Extract the nested JSON string from connector_meta_data key
+            let meta_obj = req.request.connector_meta
+                .clone()
+                .ok_or_else(|| errors::ConnectorError::MissingConnectorTransactionID)?;
+
+            let connector_meta_str = meta_obj
+                .get("connector_meta_data")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| errors::ConnectorError::InvalidDataFormat { field_name: "connector_meta_data" })?;
+
+            // Parse the JSON string into the struct
+            let metadata: archipel::ArchipelTransactionMetadata = serde_json::from_str(connector_meta_str)
+                .map_err(|_| report!(errors::ConnectorError::InvalidDataFormat { field_name: "ArchipelTransactionMetadata" }))?;
+
+            Ok(format!(
+                "{}{}{}",
+                base_url, "/transactions/", metadata.transaction_id
+            ))
+        }
+        fn get_ca_certificate(
+                &self,
+                req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            ) -> CustomResult<Option<Secret<String>>, errors::ConnectorError> {
+                self.get_ca_cert(req)
+            }
     }
 );

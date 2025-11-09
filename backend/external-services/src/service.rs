@@ -667,7 +667,6 @@ pub async fn call_connector_api(
     request: Request,
     _flow_name: &str,
 ) -> CustomResult<Result<Response, Response>, ApiClientError> {
-    println!(">>> {:?}", request.body);
     let url =
         reqwest::Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
 
