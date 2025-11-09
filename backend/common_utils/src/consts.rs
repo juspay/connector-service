@@ -51,6 +51,17 @@ pub const X_FLOW_NAME: &str = "x-flow";
 pub const X_SHADOW_MODE: &str = "x-shadow-mode";
 
 // =============================================================================
+// Test Environment Headers
+// =============================================================================
+
+/// Header key for session ID (test mode)
+pub const X_SESSION_ID: &str = "x-session-id";
+/// Header key for API URL (test mode)
+pub const X_API_URL: &str = "x-api-url";
+/// Header key for API tag (test mode)
+pub const X_API_TAG: &str = "x-api-tag";
+
+// =============================================================================
 // Authentication Headers (Internal)
 // =============================================================================
 

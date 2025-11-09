@@ -19,6 +19,10 @@ pub struct Config {
     pub lineage: LineageConfig,
     #[serde(default)]
     pub unmasked_headers: HeaderMaskingConfig,
+    #[serde(default)]
+    pub test: TestConfig,
+    #[serde(default)]
+    pub api_tags: ApiTagConfig,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -39,6 +43,82 @@ fn default_lineage_header() -> String {
 
 fn default_lineage_prefix() -> String {
     consts::LINEAGE_FIELD_PREFIX.to_string()
+}
+
+/// Test mode configuration for mock server integration
+#[derive(Clone, serde::Deserialize, Debug, Default)]
+pub struct TestConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    pub mock_server_url: Option<String>,
+}
+
+/// API tag configuration for flow-based tagging with payment method type support
+///
+/// Environment variable format (case-insensitive):
+/// - Simple flow: CS__API_TAGS__TAGS__PSYNC=GW_TXN_SYNC
+/// - With payment method: CS__API_TAGS__TAGS__AUTHORIZE_UPICOLLECT=GW_INIT_COLLECT
+///
+/// TOML format:
+/// ```toml
+/// [api_tags.tags]
+/// psync = "GW_TXN_SYNC"
+/// authorize_upicollect = "GW_INIT_COLLECT"
+/// ```
+///
+/// Note: Config crate lowercases env var keys, lookup is case-insensitive
+#[derive(Clone, serde::Deserialize, Debug, Default)]
+pub struct ApiTagConfig {
+    #[serde(default)]
+    pub tags: std::collections::HashMap<String, String>,
+}
+
+impl ApiTagConfig {
+    /// Get API tag for a flow, optionally refined by payment method type
+    ///
+    /// Lookup order (case-insensitive):
+    /// 1. If payment_method_type provided: try "flow_paymentmethodtype" (composite key)
+    /// 2. Fall back to "flow" (simple key)
+    /// 3. Return None if not found
+    ///
+    /// Note: Case-insensitive lookup because config crate lowercases env var keys
+    pub fn get_tag(
+        &self,
+        flow: common_utils::events::FlowName,
+        payment_method_type: Option<common_enums::PaymentMethodType>,
+    ) -> Option<String> {
+        let flow_str = flow.as_str();
+
+        // Try payment-method-specific key first (case-insensitive)
+        if let Some(pmt) = payment_method_type {
+            let composite_key = format!("{}_{:?}", flow_str, pmt);
+            if let Some(tag) = self
+                .tags
+                .iter()
+                .find(|(k, _)| k.eq_ignore_ascii_case(&composite_key))
+                .map(|(_, v)| v.clone())
+            {
+                return Some(tag);
+            }
+        }
+
+        // Fall back to simple flow key (case-insensitive)
+        let result = self
+            .tags
+            .iter()
+            .find(|(k, _)| k.eq_ignore_ascii_case(flow_str))
+            .map(|(_, v)| v.clone());
+
+        if result.is_none() {
+            tracing::debug!(
+                flow = %flow_str,
+                payment_method_type = ?payment_method_type,
+                "No API tag configured for flow"
+            );
+        }
+
+        result
+    }
 }
 
 #[derive(Clone, serde::Deserialize, Debug)]

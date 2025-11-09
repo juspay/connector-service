@@ -576,8 +576,27 @@ macro_rules! implement_connector_operation {
                 response: Err(domain_types::router_data::ErrorResponse::default()),
             };
 
-            // Execute connector processing
+            // Calculate flow name for dynamic flow-specific configurations
             let flow_name = $crate::utils::flow_marker_to_flow_name::<$flow_marker>();
+
+            // Get API tag for the current flow
+            // Note: Flows with payment_method_type should implement manually (e.g., authorize, psync)
+            let api_tag = self
+                .config
+                .api_tags
+                .get_tag(flow_name, None);
+
+            // Create test context if test mode is enabled
+            let test_context = if self.config.test.enabled {
+                Some(external_services::service::TestContext::new(true, 
+                    self.config.test.mock_server_url.clone(),
+                    request_id.to_string(),
+                ))
+            } else {
+                None
+            };
+
+            // Execute connector processing
             let event_params = external_services::service::EventProcessingParams {
                 connector_name: &connector.to_string(),
                 service_name: &service_name,
@@ -596,6 +615,8 @@ macro_rules! implement_connector_operation {
                 event_params,
                 None,
                 common_enums::CallConnectorAction::Trigger,
+                test_context,
+                api_tag,
             )
             .await
             .switch()
