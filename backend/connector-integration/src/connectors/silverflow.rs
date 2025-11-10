@@ -4,7 +4,7 @@ use std::fmt::Debug;
 
 use base64::Engine;
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt};
+use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
@@ -33,7 +33,6 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
 use transformers as silverflow;
@@ -435,8 +434,16 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
+            // Refund sync queries the refund action, not the charge
+            // Endpoint: GET /charges/{chargeKey}/actions/{actionKey}
             let charge_key = req.request.connector_transaction_id.clone();
-            Ok(format!("{}/charges/{}", self.connector_base_url_refunds(req), charge_key))
+            let action_key = req.request.connector_refund_id.clone();
+            Ok(format!(
+                "{}/charges/{}/actions/{}",
+                self.connector_base_url_refunds(req),
+                charge_key,
+                action_key
+            ))
         }
     }
 );
@@ -814,7 +821,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: silverflow::SilverflowErrorResponse = if res.response.is_empty() {
             silverflow::SilverflowErrorResponse::default()
@@ -824,33 +831,27 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?
         };
 
-        if let Some(i) = event_builder {
-            i.set_error_response_body(&response);
-        }
+        crate::with_error_response_body!(event_builder, response);
 
         // Map specific error codes to attempt statuses
-        let attempt_status = match response.code.as_deref() {
-            Some("INSUFFICIENT_FUNDS") => Some(common_enums::AttemptStatus::Failure),
-            Some("INVALID_CARD_NUMBER") => Some(common_enums::AttemptStatus::Failure),
-            Some("EXPIRED_CARD") => Some(common_enums::AttemptStatus::Failure),
-            Some("INVALID_CVC") => Some(common_enums::AttemptStatus::Failure),
-            Some("AUTHENTICATION_FAILED") => {
-                Some(common_enums::AttemptStatus::AuthenticationFailed)
-            }
-            Some("AUTHORIZATION_DECLINED") => {
-                Some(common_enums::AttemptStatus::AuthorizationFailed)
-            }
-            Some("NETWORK_ERROR") => Some(common_enums::AttemptStatus::Pending),
+        let attempt_status = match response.error.code.as_str() {
+            "INSUFFICIENT_FUNDS" => Some(common_enums::AttemptStatus::Failure),
+            "INVALID_CARD_NUMBER" => Some(common_enums::AttemptStatus::Failure),
+            "EXPIRED_CARD" => Some(common_enums::AttemptStatus::Failure),
+            "INVALID_CVC" => Some(common_enums::AttemptStatus::Failure),
+            "AUTHENTICATION_FAILED" => Some(common_enums::AttemptStatus::AuthenticationFailed),
+            "AUTHORIZATION_DECLINED" => Some(common_enums::AttemptStatus::AuthorizationFailed),
+            "NETWORK_ERROR" => Some(common_enums::AttemptStatus::Pending),
             _ => Some(common_enums::AttemptStatus::Failure),
         };
 
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: response.code.unwrap_or_default(),
-            message: response.message.unwrap_or_default(),
-            reason: response.detail,
+            code: response.error.code,
+            message: response.error.message,
+            reason: response.error.details.and_then(|d| d.issue),
             attempt_status,
-            connector_transaction_id: response.trace_id,
+            connector_transaction_id: response.error.trace_id,
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
