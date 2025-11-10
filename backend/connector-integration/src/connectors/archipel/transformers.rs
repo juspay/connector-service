@@ -9,9 +9,9 @@ use common_utils::{consts,
 };
 use domain_types::{
     payment_address::AddressDetails,
-    connector_flow::Authorize,
+    connector_flow::{Authorize, Capture},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
         PaymentsSyncData,ResponseId,
     },
     errors::{self, ConnectorError},
@@ -567,6 +567,114 @@ impl From<&ArchipelPaymentsResponse> for ArchipelTransactionMetadata {
             authorization_code: payment_response.authorization_code.clone(),
             payment_account_reference: payment_response.payment_account_reference.clone(),
         }
+    }
+}
+
+// CAPTURE FLOW
+#[derive(Debug, Serialize, Eq, PartialEq)]
+pub struct ArchipelCaptureRequest {
+    order: ArchipelCaptureOrderRequest,
+}
+
+#[derive(Debug, Serialize, Eq, PartialEq)]
+pub struct ArchipelCaptureOrderRequest {
+    amount: MinorUnit,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(transparent)]
+pub struct ArchipelCaptureResponse(ArchipelPaymentsResponse);
+
+impl std::ops::Deref for ArchipelCaptureResponse {
+    type Target = ArchipelPaymentsResponse;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        ArchipelRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for ArchipelCaptureRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ArchipelRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            order: ArchipelCaptureOrderRequest {
+                amount: MinorUnit::new(item.router_data.request.amount_to_capture),
+            },
+        })
+    }
+}
+
+impl
+    TryFrom<
+        ResponseRouterData<
+            ArchipelCaptureResponse,
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        >,
+    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            ArchipelCaptureResponse,
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        if let Some(error) = item.response.0.error {
+            return Ok(Self {
+                response: Err(ArchipelErrorMessageWithHttpCode::new(error, item.http_code).into()),
+                ..item.router_data
+            });
+        };
+
+        let connector_metadata: Option<serde_json::Value> =
+            ArchipelTransactionMetadata::from(&item.response.0)
+                .encode_to_value()
+                .ok();
+
+        let status: AttemptStatus = ArchipelFlowStatus::new(
+            item.response.0.transaction_result,
+            ArchipelPaymentFlow::Capture,
+        )
+        .into();
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(item.response.0.order.id),
+                status_code: item.http_code,
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata,
+                network_txn_id: None,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+            }),
+            ..item.router_data
+        })
     }
 }
 

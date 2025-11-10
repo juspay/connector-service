@@ -47,7 +47,8 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use transformers::{
-    self as archipel,ArchipelCardAuthorizationRequest, ArchipelPaymentsResponse,ArchipelPSyncResponse
+    self as archipel,ArchipelCardAuthorizationRequest, ArchipelCaptureRequest,
+    ArchipelCaptureResponse, ArchipelPaymentsResponse, ArchipelPSyncResponse
 };
 
 use super::macros;
@@ -159,6 +160,12 @@ macros::create_all_prerequisites!(
             flow: PSync,
             response_body: ArchipelPSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
+            flow: Capture,
+            request_body: ArchipelCaptureRequest,
+            response_body: ArchipelCaptureResponse,
+            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -214,17 +221,6 @@ pub(crate) mod headers {
 }
 
 // Stub implementations for unsupported flows
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Archipel<T>
-{
-}
 
 impl<
         T: PaymentMethodDataTypes
@@ -803,5 +799,51 @@ macros::macro_connector_implementation!(
             ) -> CustomResult<Option<Secret<String>>, errors::ConnectorError> {
                 self.get_ca_cert(req)
             }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Archipel,
+    curl_request: Json(ArchipelCaptureRequest),
+    curl_response: ArchipelCaptureResponse,
+    flow_name: Capture,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsCaptureData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url =
+                build_env_specific_endpoint(self.connector_base_url_payments(req), &req.request.connector_metadata)?;
+
+            // Extract the connector transaction ID from ResponseId
+            let connector_transaction_id = match &req.request.connector_transaction_id {
+                domain_types::connector_types::ResponseId::ConnectorTransactionId(id) => id.clone(),
+                _ => Err(errors::ConnectorError::MissingConnectorTransactionID)?,
+            };
+
+            Ok(format!(
+                "{}/capture/{}",
+                base_url, connector_transaction_id
+            ))
+        }
+        fn get_ca_certificate(
+            &self,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<Option<Secret<String>>, errors::ConnectorError> {
+            self.get_ca_cert(req)
+        }
     }
 );
