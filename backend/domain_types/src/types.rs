@@ -133,6 +133,7 @@ pub struct Connectors {
     pub stripe: ConnectorParams,
     pub cybersource: ConnectorParams,
     pub worldpay: ConnectorParams,
+    pub bankofamerica: ConnectorParams,
     pub worldpayvantiv: ConnectorParams,
     pub multisafepay: ConnectorParams,
     pub payload: ConnectorParams,
