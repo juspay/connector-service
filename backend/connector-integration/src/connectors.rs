@@ -92,5 +92,9 @@ pub use self::worldpay::Worldpay;
 pub mod worldpayvantiv;
 pub use self::worldpayvantiv::Worldpayvantiv;
 
+
 pub mod payload;
 pub use self::payload::Payload;
+
+pub mod hipay;
+pub use self::hipay::Hipay;

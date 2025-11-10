@@ -21,6 +21,7 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+hipay.base_url = "https://secure-gateway.hipay-tpp.com/rest/"
 adyen.base_url = "https://checkout-test.adyen.com/"
 adyen.dispute_base_url = "https://ca-test.adyen.com/"
 razorpay.base_url = "https://api.razorpay.com/"
