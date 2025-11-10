@@ -1155,19 +1155,15 @@ impl Payments {
         };
 
         // Execute connector processing
-        let response = Box::pin(
-            external_services::service::execute_connector_processing_step(
-                &self.config.proxy,
-                connector_integration,
-                session_token_router_data,
-                None,
-                external_event_params,
-                None,
-                common_enums::CallConnectorAction::Trigger,
-                test_context,
-                api_tag,
-            ),
-        )
+        let response = Box::pin(external_services::service::execute_connector_processing_step(
+            &self.config.proxy,
+            connector_integration,
+            session_token_router_data,
+            None,
+            external_event_params,
+            None,
+            common_enums::CallConnectorAction::Trigger,
+        ))
         .await
         .switch()
         .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
@@ -1294,19 +1290,15 @@ impl Payments {
             shadow_mode: event_params.shadow_mode,
         };
 
-        let response = Box::pin(
-            external_services::service::execute_connector_processing_step(
-                &self.config.proxy,
-                connector_integration,
-                access_token_router_data,
-                None,
-                external_event_params,
-                None,
-                common_enums::CallConnectorAction::Trigger,
-                test_context,
-                api_tag,
-            ),
-        )
+        let response = Box::pin(external_services::service::execute_connector_processing_step(
+            &self.config.proxy,
+            connector_integration,
+            access_token_router_data,
+            None,
+            external_event_params,
+            None,
+            common_enums::CallConnectorAction::Trigger,
+        ))
         .await
         .switch()
         .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
@@ -1776,13 +1768,11 @@ impl PaymentOperationsInternal for Payments {
                         Connector {} requires OAuth but token was not forwarded from Authorize flow.",
                         connector.to_string()
                     );
-                    return Err(tonic::Status::failed_precondition(
-                        format!(
-                            "Access token required for {} Void flow but not provided by Hyperswitch. \
+                    return Err(tonic::Status::failed_precondition(format!(
+                        "Access token required for {} Void flow but not provided by Hyperswitch. \
                             Token should be forwarded from Authorize flow.",
-                            connector.to_string()
-                        )
-                    ));
+                        connector
+                    )));
                 }
             };
 
@@ -2042,7 +2032,7 @@ impl PaymentOperationsInternal for Payments {
                 None => {
                     // Capture flow should receive token from Hyperswitch (forwarded from Authorize)
                     // Don't try to create a new one - fail fast with clear error
-                    tracing::error!( 
+                    tracing::error!(
                         "Access token not provided by Hyperswitch for Capture flow. \
                         Connector {} requires OAuth but token was not forwarded from Authorize flow.",
                         connector.to_string()
@@ -2051,7 +2041,7 @@ impl PaymentOperationsInternal for Payments {
                         format!(
                             "Access token required for {} Capture flow but not provided by Hyperswitch. \
                             Token should be forwarded from Authorize flow.",
-                            connector.to_string()
+                            connector
                         )
                     ));
                 }
@@ -2456,7 +2446,7 @@ impl PaymentService for Payments {
                     let metadata_payload = request_data.extracted_metadata;
                     let utils::MetadataPayload {
                         connector,
-                        
+
                         ..
                     } = metadata_payload;
                     let payload = request_data.payload;
@@ -2520,7 +2510,7 @@ impl PaymentService for Payments {
                                     format!(
                                         "Access token required for {} PSync flow but not provided by Hyperswitch. \
                                         Token should be forwarded from Authorize flow.",
-                                        connector.to_string()
+                                        connector
                                     )
                                 ));
                             }
