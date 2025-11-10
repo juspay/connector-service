@@ -97,3 +97,6 @@ pub use self::payload::Payload;
 
 pub mod fiservemea;
 pub use self::fiservemea::Fiservemea;
+
+pub mod paysafe;
+pub use self::paysafe::Paysafe;
