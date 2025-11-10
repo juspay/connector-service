@@ -353,15 +353,10 @@ impl<
         let item = &wrapper.router_data;
         let payment_method = match &item.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
-                // Convert 4-digit year to 2-digit (e.g., "2030" -> "30")
-                let expiry_year_2digit = {
-                    let year = card_data.card_exp_year.peek();
-                    if year.len() == 4 {
-                        Secret::new(year[2..].to_string())
-                    } else {
-                        card_data.card_exp_year.clone()
-                    }
-                };
+                // Convert to 2-digit year using built-in helper method
+                let expiry_year_2digit = card_data
+                    .get_card_expiry_year_2_digit()
+                    .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
                 GlobalpayPaymentMethod {
                     name: item.request.customer_name.clone().map(Secret::new),
@@ -1010,16 +1005,21 @@ impl
         >,
     ) -> Result<Self, Self::Error> {
         // Map GlobalPay void statuses to UCS AttemptStatus
-        // For void, we need special handling since REVERSED is success but other failures map differently
+        // Void flow uses VoidFailed instead of generic Failure for failed void attempts
         let status = match item.response.status.clone() {
+            // Success case - void completed
             GlobalpayPaymentStatus::Reversed => AttemptStatus::Voided,
-            GlobalpayPaymentStatus::Pending | GlobalpayPaymentStatus::Initiated => {
-                AttemptStatus::Pending
-            }
+            // Pending cases - void in progress
+            GlobalpayPaymentStatus::Pending
+            | GlobalpayPaymentStatus::Initiated
+            | GlobalpayPaymentStatus::ForReview => AttemptStatus::Pending,
+            // Failure cases - void attempt failed or invalid states
             GlobalpayPaymentStatus::Declined
             | GlobalpayPaymentStatus::Failed
-            | GlobalpayPaymentStatus::Rejected => AttemptStatus::VoidFailed,
-            _ => AttemptStatus::VoidFailed, // Conservative default for unknown statuses
+            | GlobalpayPaymentStatus::Rejected
+            | GlobalpayPaymentStatus::Captured
+            | GlobalpayPaymentStatus::Preauthorized
+            | GlobalpayPaymentStatus::Funded => AttemptStatus::VoidFailed,
         };
 
         Ok(Self {
