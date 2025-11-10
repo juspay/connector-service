@@ -13,7 +13,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorAuthType,
+    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -523,12 +523,27 @@ pub struct GlobalpayPaymentsResponse {
 pub struct GlobalpayPaymentMethodResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub card: Option<GlobalpayCardResponse>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub apm: Option<GlobalpayApmResponse>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub result: Option<String>,
+}
+
+/// Data associated with the response of an APM transaction
+#[derive(Debug, Deserialize, Serialize)]
+pub struct GlobalpayApmResponse {
+    #[serde(alias = "provider_redirect_url")]
+    pub redirect_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GlobalpayCardResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub brand: Option<String>,
+    pub brand_reference: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub masked_number_last4: Option<String>,
 }
@@ -561,17 +576,68 @@ impl<T: PaymentMethodDataTypes>
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::from(item.response.status.clone());
 
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
+        // TODO: Add redirect URL support for APM flows (PayPal, bank redirects)
+        // Extract from: item.response.payment_method.apm.redirect_url
+        // Need to convert to RedirectForm type
+
+        // Extract network transaction ID from card response
+        let network_txn_id = item
+            .response
+            .payment_method
+            .as_ref()
+            .and_then(|pm| pm.card.as_ref())
+            .and_then(|card| card.brand_reference.as_ref())
+            .map(|s| s.peek().to_string());
+
+        // Handle failure responses separately
+        let response = match status {
+            AttemptStatus::Failure => Err(ErrorResponse {
+                status_code: item.http_code,
+                code: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.result.clone())
+                    .unwrap_or_else(|| "UNKNOWN_ERROR".to_string()),
+                message: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.message.clone())
+                    .unwrap_or_else(|| "Transaction failed".to_string()),
+                reason: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.message.clone()),
+                attempt_status: Some(status),
+                connector_transaction_id: Some(item.response.id.clone()),
+                network_decline_code: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.result.clone()),
+                network_advice_code: None,
+                network_error_message: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.message.clone()),
+            }),
+            _ => Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
-                network_txn_id: None,
+                network_txn_id,
                 connector_response_reference_id: item.response.reference.clone(),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
+        };
+
+        Ok(Self {
+            response,
             resource_common_data: PaymentFlowData {
                 status,
                 ..item.router_data.resource_common_data
@@ -600,17 +666,68 @@ impl
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::from(item.response.status.clone());
 
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
+        // TODO: Add redirect URL support for APM flows
+        // Extract from: item.response.payment_method.apm.redirect_url
+        // Need to convert to RedirectForm type
+
+        // Extract network transaction ID from card response
+        let network_txn_id = item
+            .response
+            .payment_method
+            .as_ref()
+            .and_then(|pm| pm.card.as_ref())
+            .and_then(|card| card.brand_reference.as_ref())
+            .map(|s| s.peek().to_string());
+
+        // Handle failure responses separately
+        let response = match status {
+            AttemptStatus::Failure => Err(ErrorResponse {
+                status_code: item.http_code,
+                code: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.result.clone())
+                    .unwrap_or_else(|| "UNKNOWN_ERROR".to_string()),
+                message: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.message.clone())
+                    .unwrap_or_else(|| "Transaction failed".to_string()),
+                reason: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.message.clone()),
+                attempt_status: Some(status),
+                connector_transaction_id: Some(item.response.id.clone()),
+                network_decline_code: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.result.clone()),
+                network_advice_code: None,
+                network_error_message: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.message.clone()),
+            }),
+            _ => Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
-                network_txn_id: None,
+                network_txn_id,
                 connector_response_reference_id: item.response.reference.clone(),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
+        };
+
+        Ok(Self {
+            response,
             resource_common_data: PaymentFlowData {
                 status,
                 ..item.router_data.resource_common_data
@@ -639,17 +756,64 @@ impl
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::from(item.response.status.clone());
 
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
+        // Extract network transaction ID from card response
+        let network_txn_id = item
+            .response
+            .payment_method
+            .as_ref()
+            .and_then(|pm| pm.card.as_ref())
+            .and_then(|card| card.brand_reference.as_ref())
+            .map(|s| s.peek().to_string());
+
+        // Handle failure responses separately
+        let response = match status {
+            AttemptStatus::Failure => Err(ErrorResponse {
+                status_code: item.http_code,
+                code: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.result.clone())
+                    .unwrap_or_else(|| "UNKNOWN_ERROR".to_string()),
+                message: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.message.clone())
+                    .unwrap_or_else(|| "Capture failed".to_string()),
+                reason: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.message.clone()),
+                attempt_status: Some(status),
+                connector_transaction_id: Some(item.response.id.clone()),
+                network_decline_code: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.result.clone()),
+                network_advice_code: None,
+                network_error_message: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.message.clone()),
+            }),
+            _ => Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
-                network_txn_id: None,
+                network_txn_id,
                 connector_response_reference_id: item.response.reference.clone(),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
+        };
+
+        Ok(Self {
+            response,
             resource_common_data: PaymentFlowData {
                 status,
                 ..item.router_data.resource_common_data
