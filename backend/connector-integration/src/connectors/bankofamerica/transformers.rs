@@ -17,12 +17,13 @@ use crate::{
     unimplemented_payment_method, utils,
 };
 use cards;
+use common_enums;
 use domain_types::{
-    connector_flow::{Authorize, Capture, SetupMandate, Void},
+    connector_flow::{Authorize, Capture, Refund, SetupMandate, Void},
     connector_types::{
         MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, ResponseId,
-        SetupMandateRequestData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
     errors::{self, ConnectorError},
     payment_address::Address,
@@ -30,10 +31,7 @@ use domain_types::{
         self, ApplePayWalletData, GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes,
         RawCardNumber, SamsungPayWalletData, WalletData,
     },
-    router_data::{
-        ApplePayPredecryptData, ConnectorAuthType,
-        ErrorResponse, PaymentMethodToken,
-    },
+    router_data::{ApplePayPredecryptData, ConnectorAuthType, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
     utils::{is_payment_failure, CardIssuer},
 };
@@ -90,7 +88,7 @@ pub enum BankOfAmericaActionsTokenType {
 #[serde(rename_all = "camelCase")]
 pub struct BankOfAmericaAuthorizationOptions {
     initiator: Option<BankOfAmericaPaymentInitiator>,
-    merchant_intitiated_transaction: Option<MerchantInitiatedTransaction>,
+    merchant_initiated_transaction: Option<MerchantInitiatedTransaction>,
 }
 
 #[derive(Debug, Serialize)]
@@ -119,7 +117,6 @@ pub enum BankOfAmericaPaymentInitiatorTypes {
 #[serde(rename_all = "camelCase")]
 pub struct MerchantInitiatedTransaction {
     reason: Option<String>,
-    //Required for recurring mandates payment
     original_authorized_amount: Option<String>,
 }
 
@@ -170,7 +167,6 @@ pub struct Card<
     security_code: Option<Secret<String>>,
     #[serde(rename = "type")]
     card_type: Option<String>,
-    type_selection_indicator: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -347,13 +343,15 @@ fn build_bill_to(
                 first_name: addr.first_name.remove_new_line(),
                 last_name: addr.last_name.remove_new_line(),
                 address1: addr.line1.remove_new_line(),
-                locality: addr.city.remove_new_line(),
-                administrative_area: addr.to_state_code_as_optional().unwrap_or_else(|_| {
-                    addr.state
-                        .remove_new_line()
-                        .as_ref()
-                        .map(|state| truncate_string(state, 20)) //NOTE: Cybersource connector throws error if billing state exceeds 20 characters, so truncation is done to avoid payment failure
-                }),
+                locality: addr.city.clone().map(|c| c.expose()),
+                administrative_area: addr.to_state_code_as_optional().ok().flatten().or_else(
+                    || {
+                        addr.state
+                            .remove_new_line()
+                            .as_ref()
+                            .map(|state| truncate_string(state, 20))
+                    },
+                ),
                 postal_code: addr.zip.remove_new_line(),
                 country: addr.country,
                 email,
@@ -468,7 +466,7 @@ fn get_boa_mandate_action_details() -> (
                 credential_stored_on_file: Some(true),
                 stored_credential_used: None,
             }),
-            merchant_intitiated_transaction: None,
+            merchant_initiated_transaction: None,
         }),
     )
 }
@@ -757,9 +755,9 @@ impl<
     ) -> Result<Self, Self::Error> {
         let email = item
             .router_data
-            .resource_common_data
-            .get_billing_email()
-            .or(item.router_data.request.get_email())?;
+            .request
+            .get_email()
+            .or(item.router_data.resource_common_data.get_billing_email())?;
         let bill_to = build_bill_to(
             item.router_data.resource_common_data.get_optional_billing(),
             email,
@@ -788,60 +786,244 @@ impl<
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
-pub enum BankOfAmericaPaymentsResponse {
+pub enum BankofamericaPaymentsResponse {
     ClientReferenceInformation(Box<BankOfAmericaClientReferenceResponse>),
     ErrorInformation(Box<BankOfAmericaErrorInformationResponse>),
 }
 
-// Alias to avoid template duplication in macros - same type but different name
-pub type BankOfAmericaPaymentsResponseForCapture = BankOfAmericaPaymentsResponse;
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankOfAmericaRefundRequest {
+    order_information: OrderInformation,
+    client_reference_information: ClientReferenceInformation,
+}
 
-// Alias for SetupMandate to avoid template duplication - same types but different names
-pub type BankofamericaPaymentsRequestForSetupMandate<T> = BankofamericaPaymentsRequest<T>;
-pub type BankOfAmericaPaymentsResponseForSetupMandate = BankOfAmericaPaymentsResponse;
-
-// Alias for Void to avoid template duplication - same types but different names
-pub type BankOfAmericaVoidRequestForVoid = BankOfAmericaVoidRequest;
-pub type BankOfAmericaPaymentsResponseForVoid = BankOfAmericaPaymentsResponse;
-
-// TryFrom implementation for aliased Void request - delegates to existing tuple-based implementation
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
             + std::marker::Sync
             + std::marker::Send
             + 'static
-            + serde::Serialize,
+            + Serialize,
     >
     TryFrom<
         BankofamericaRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
             T,
         >,
-    > for BankOfAmericaVoidRequestForVoid
+    > for BankOfAmericaRefundRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: BankofamericaRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        // Delegate to the existing tuple-based implementation
-        BankOfAmericaVoidRequest::try_from((&item,))
+        Ok(Self {
+            order_information: OrderInformation {
+                amount_details: Amount {
+                    total_amount: item
+                        .connector
+                        .amount_converter
+                        .convert(
+                            item.router_data.request.minor_refund_amount,
+                            item.router_data.request.currency,
+                        )
+                        .change_context(ConnectorError::RequestEncodingFailed)?,
+                    currency: item.router_data.request.currency,
+                },
+            },
+            client_reference_information: ClientReferenceInformation {
+                code: Some(item.router_data.request.refund_id.clone()),
+            },
+        })
     }
 }
 
-impl<F> TryFrom<ResponseRouterData<BankOfAmericaPaymentsResponseForCapture, Self>>
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankOfAmericaRefundResponse {
+    id: String,
+    status: BankofamericaRefundStatus,
+    error_information: Option<BankOfAmericaErrorInformation>,
+}
+
+impl From<BankOfAmericaRefundResponse> for common_enums::RefundStatus {
+    fn from(item: BankOfAmericaRefundResponse) -> Self {
+        let error_reason = item
+            .error_information
+            .and_then(|error_info| error_info.reason);
+        match item.status {
+            BankofamericaRefundStatus::Succeeded | BankofamericaRefundStatus::Transmitted => {
+                Self::Success
+            }
+            BankofamericaRefundStatus::Cancelled
+            | BankofamericaRefundStatus::Failed
+            | BankofamericaRefundStatus::Voided => Self::Failure,
+            BankofamericaRefundStatus::Pending => Self::Pending,
+            BankofamericaRefundStatus::TwoZeroOne => {
+                if error_reason == Some("PROCESSOR_DECLINED".to_string()) {
+                    Self::Failure
+                } else {
+                    Self::Pending
+                }
+            }
+        }
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<BankOfAmericaRefundResponse, Self>>
+    for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<BankOfAmericaRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let refund_status = common_enums::RefundStatus::from(item.response.clone());
+        let response = if utils::is_refund_failure(refund_status) {
+            Err(get_error_response(
+                &item.response.error_information,
+                &None,
+                &None,
+                None,
+                item.http_code,
+                item.response.id.clone(),
+            ))
+        } else {
+            Ok(RefundsResponseData {
+                connector_refund_id: item.response.id,
+                refund_status,
+                status_code: item.http_code,
+            })
+        };
+
+        Ok(Self {
+            response,
+            ..item.router_data
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum BankofamericaRefundStatus {
+    Succeeded,
+    Transmitted,
+    Failed,
+    Pending,
+    Voided,
+    Cancelled,
+    #[serde(rename = "201")]
+    TwoZeroOne,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RsyncApplicationInformation {
+    status: Option<BankofamericaRefundStatus>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankOfAmericaRsyncResponse {
+    id: String,
+    application_information: Option<RsyncApplicationInformation>,
+    error_information: Option<BankOfAmericaErrorInformation>,
+}
+
+impl<F> TryFrom<ResponseRouterData<BankOfAmericaRsyncResponse, Self>>
+    for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<BankOfAmericaRsyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = match item
+            .response
+            .application_information
+            .and_then(|application_information| application_information.status)
+        {
+            Some(status) => {
+                let error_reason = item
+                    .response
+                    .error_information
+                    .clone()
+                    .and_then(|error_info| error_info.reason);
+                let refund_status = match status {
+                    BankofamericaRefundStatus::Succeeded
+                    | BankofamericaRefundStatus::Transmitted => common_enums::RefundStatus::Success,
+                    BankofamericaRefundStatus::Cancelled
+                    | BankofamericaRefundStatus::Failed
+                    | BankofamericaRefundStatus::Voided => common_enums::RefundStatus::Failure,
+                    BankofamericaRefundStatus::Pending => common_enums::RefundStatus::Pending,
+                    BankofamericaRefundStatus::TwoZeroOne => {
+                        if error_reason == Some("PROCESSOR_DECLINED".to_string()) {
+                            common_enums::RefundStatus::Failure
+                        } else {
+                            common_enums::RefundStatus::Pending
+                        }
+                    }
+                };
+                if utils::is_refund_failure(refund_status) {
+                    Err(get_error_response(
+                        &item.response.error_information,
+                        &None,
+                        &None,
+                        None,
+                        item.http_code,
+                        item.response.id.clone(),
+                    ))
+                } else {
+                    Ok(RefundsResponseData {
+                        connector_refund_id: item.response.id.clone(),
+                        refund_status,
+                        status_code: item.http_code,
+                    })
+                }
+            }
+            None => Err(get_error_response(
+                &item.response.error_information,
+                &None,
+                &None,
+                None,
+                item.http_code,
+                item.response.id.clone(),
+            )),
+        };
+
+        Ok(Self {
+            response,
+            ..item.router_data
+        })
+    }
+}
+
+pub type BankofamericaPaymentsResponseForCapture = BankofamericaPaymentsResponse;
+
+pub type BankofamericaPaymentsRequestForSetupMandate<T> = BankofamericaPaymentsRequest<T>;
+pub type BankOfAmericaPaymentsResponseForSetupMandate = BankofamericaPaymentsResponse;
+
+pub type BankofamericaVoidRequestForVoid = BankofamericaVoidRequest;
+pub type BankOfAmericaPaymentsResponseForVoid = BankofamericaPaymentsResponse;
+
+pub type BankOfAmericaRefundRequestForRefund = BankOfAmericaRefundRequest;
+pub type BankOfAmericaRefundResponseForRefund = BankOfAmericaRefundResponse;
+
+pub type BankOfAmericaRsyncResponseForRSync = BankOfAmericaRsyncResponse;
+
+impl<F> TryFrom<ResponseRouterData<BankofamericaPaymentsResponseForCapture, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<BankOfAmericaPaymentsResponseForCapture, Self>,
+        item: ResponseRouterData<BankofamericaPaymentsResponseForCapture, Self>,
     ) -> Result<Self, Self::Error> {
         match item.response {
-            BankOfAmericaPaymentsResponseForCapture::ClientReferenceInformation(info_response) => {
+            BankofamericaPaymentsResponseForCapture::ClientReferenceInformation(info_response) => {
                 let status = map_boa_attempt_status((info_response.status.clone(), true));
                 let response = get_payment_response((&info_response, status, item.http_code))
                     .map_err(|err| *err);
@@ -850,7 +1032,7 @@ impl<F> TryFrom<ResponseRouterData<BankOfAmericaPaymentsResponseForCapture, Self
                     ..item.router_data
                 })
             }
-            BankOfAmericaPaymentsResponseForCapture::ErrorInformation(ref error_response) => {
+            BankofamericaPaymentsResponseForCapture::ErrorInformation(ref error_response) => {
                 Ok(map_error_response(&error_response.clone(), item, None))
             }
         }
@@ -898,7 +1080,6 @@ pub enum BankofamericaPaymentStatus {
     PendingReview,
     Accepted,
     Cancelled,
-    //PartialAuthorized, not being consumed yet.
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1193,7 +1374,7 @@ pub struct BankOfAmericaAuthenticationErrorResponse {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
-pub enum BankOfAmericaErrorResponse {
+pub enum BankofamericaErrorResponse {
     AuthenticationError(BankOfAmericaAuthenticationErrorResponse),
     StandardError(BankOfAmericaStandardErrorResponse),
 }
@@ -1210,56 +1391,13 @@ pub struct AuthenticationErrorInformation {
     pub rmsg: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum BankofamericaRefundStatus {
-    Succeeded,
-    Transmitted,
-    Failed,
-    Pending,
-    Voided,
-    Cancelled,
-    #[serde(rename = "201")]
-    TwoZeroOne,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RsyncApplicationInformation {
-    status: Option<BankofamericaRefundStatus>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BankOfAmericaRsyncResponse {
-    id: String,
-    application_information: Option<RsyncApplicationInformation>,
-    error_information: Option<BankOfAmericaErrorInformation>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BankOfAmericaRefundResponse {
-    id: String,
-    status: BankofamericaRefundStatus,
-    error_information: Option<BankOfAmericaErrorInformation>,
-}
-
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BankOfAmericaRefundRequest {
-    order_information: OrderInformation,
-    client_reference_information: ClientReferenceInformation,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BankOfAmericaVoidRequest {
+pub struct BankofamericaVoidRequest {
     client_reference_information: ClientReferenceInformation,
     reversal_information: ReversalInformation,
     #[serde(skip_serializing_if = "Option::is_none")]
     merchant_defined_information: Option<Vec<MerchantDefinedInformation>>,
-    // The connector documentation does not mention the merchantDefinedInformation field for Void requests. But this has been still added because it works!
 }
 
 #[derive(Debug, Serialize)]
@@ -1277,7 +1415,7 @@ pub struct OrderInformation {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BankOfAmericaCaptureRequest {
+pub struct BankofamericaCaptureRequest {
     order_information: OrderInformation,
     client_reference_information: ClientReferenceInformation,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1332,13 +1470,10 @@ pub enum BankOfAmericaSetupMandatesResponse {
     ErrorInformation(Box<BankOfAmericaErrorInformationResponse>),
 }
 
-// functions
-
 fn card_issuer_to_string(card_issuer: CardIssuer) -> String {
     let card_type = match card_issuer {
         CardIssuer::AmericanExpress => "003",
         CardIssuer::Master => "002",
-        //"042" is the type code for Masetro Cards(International). For Maestro Cards(UK-Domestic) the mapping should be "024"
         CardIssuer::Maestro => "042",
         CardIssuer::Visa => "001",
         CardIssuer::Discover => "004",
@@ -1360,7 +1495,6 @@ fn get_boa_card_type(card_network: common_enums::CardNetwork) -> Option<&'static
         common_enums::CardNetwork::Discover => Some("004"),
         common_enums::CardNetwork::CartesBancaires => Some("006"),
         common_enums::CardNetwork::UnionPay => Some("062"),
-        //"042" is the type code for Masetro Cards(International). For Maestro Cards(UK-Domestic) the mapping should be "024"
         common_enums::CardNetwork::Maestro => Some("042"),
         common_enums::CardNetwork::Interac
         | common_enums::CardNetwork::RuPay
@@ -1370,8 +1504,6 @@ fn get_boa_card_type(card_network: common_enums::CardNetwork) -> Option<&'static
         | common_enums::CardNetwork::Nyce => None,
     }
 }
-
-//
 
 impl<T> TryFrom<(StringMajorUnit, T)> for BankOfAmericaRouterData<T> {
     type Error = error_stack::Report<ConnectorError>;
@@ -1435,8 +1567,6 @@ impl<
         }
     }
 }
-
-// implementation for ConnectorIntegrationV2 trait
 
 impl TryFrom<&ConnectorAuthType> for BankOfAmericaAuthType {
     type Error = error_stack::Report<ConnectorError>;
@@ -1511,33 +1641,7 @@ impl<
                     .is_some_and(|mandate_details| mandate_details.customer_acceptance.is_some()))
         {
             get_boa_mandate_action_details()
-        }
-        // else if item.router_data.request.connector_mandate_id().is_some() {
-        //     let original_amount = item
-        //         .router_data
-        //         .get_recurring_mandate_payment_data()?
-        //         .get_original_payment_amount()?;
-        //     let original_currency = item
-        //         .router_data
-        //         .get_recurring_mandate_payment_data()?
-        //         .get_original_payment_currency()?;
-        //     (
-        //         None,
-        //         None,
-        //         Some(BankOfAmericaAuthorizationOptions {
-        //             initiator: None,
-        //             merchant_intitiated_transaction: Some(MerchantInitiatedTransaction {
-        //                 reason: None,
-        //                 original_authorized_amount: Some(domain_types::utils::get_amount_as_string(
-        //                     &common_enums::CurrencyUnit::Base,
-        //                     original_amount,
-        //                     original_currency,
-        //                 )?),
-        //             }),
-        //         }),
-        //     )
-        // }
-        else {
+        } else {
             (None, None, None)
         };
 
@@ -1597,7 +1701,7 @@ impl<
     ) -> Result<Self, Self::Error> {
         let card_type = match ccard.card_network.clone().and_then(get_boa_card_type) {
             Some(card_network) => Some(card_network.to_string()),
-            None => domain_types::utils::get_card_issuer(&(format!("{:?}", ccard.card_number.0)))
+            None => domain_types::utils::get_card_issuer(ccard.card_number.peek())
                 .ok()
                 .map(card_issuer_to_string),
         };
@@ -1607,8 +1711,7 @@ impl<
                 expiration_month: ccard.card_exp_month.clone(),
                 expiration_year: ccard.card_exp_year.clone(),
                 security_code: Some(ccard.card_cvc),
-                card_type: card_type.clone(),
-                type_selection_indicator: Some("1".to_owned()),
+                card_type,
             },
         })))
     }
@@ -1656,9 +1759,9 @@ impl<
         let (item, apple_pay_data, apple_pay_wallet_data) = item;
         let email = item
             .router_data
-            .resource_common_data
-            .get_billing_email()
-            .or(item.router_data.request.get_email())?;
+            .request
+            .get_email()
+            .or(item.router_data.resource_common_data.get_billing_email())?;
         let bill_to = build_bill_to(
             item.router_data.resource_common_data.get_optional_billing(),
             email,
@@ -1743,9 +1846,9 @@ impl<
     ) -> Result<Self, Self::Error> {
         let email = item
             .router_data
-            .resource_common_data
-            .get_billing_email()
-            .or(item.router_data.request.get_email())?;
+            .request
+            .get_email()
+            .or(item.router_data.resource_common_data.get_billing_email())?;
         let bill_to = build_bill_to(
             item.router_data.resource_common_data.get_optional_billing(),
             email,
@@ -1791,7 +1894,6 @@ impl<
     }
 }
 
-//check
 fn map_boa_attempt_status(
     (status, auto_capture): (BankofamericaPaymentStatus, bool),
 ) -> common_enums::AttemptStatus {
@@ -1799,7 +1901,6 @@ fn map_boa_attempt_status(
         BankofamericaPaymentStatus::Authorized
         | BankofamericaPaymentStatus::AuthorizedPendingReview => {
             if auto_capture {
-                // Because BankOfAmerica will return Payment Status as Authorized even in AutoCapture Payment
                 common_enums::AttemptStatus::Charged
             } else {
                 common_enums::AttemptStatus::Authorized
@@ -1843,7 +1944,7 @@ impl<
     >
     TryFrom<
         ResponseRouterData<
-            BankOfAmericaPaymentsResponse,
+            BankofamericaPaymentsResponse,
             RouterDataV2<
                 SetupMandate,
                 PaymentFlowData,
@@ -1863,7 +1964,7 @@ impl<
 
     fn try_from(
         item: ResponseRouterData<
-            BankOfAmericaPaymentsResponse,
+            BankofamericaPaymentsResponse,
             RouterDataV2<
                 SetupMandate,
                 PaymentFlowData,
@@ -1873,7 +1974,7 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         match item.response {
-            BankOfAmericaPaymentsResponse::ClientReferenceInformation(info_response) => {
+            BankofamericaPaymentsResponse::ClientReferenceInformation(info_response) => {
                 let is_auto_capture = matches!(
                     item.router_data.request.capture_method,
                     Some(common_enums::CaptureMethod::Automatic)
@@ -1889,7 +1990,7 @@ impl<
                     ..item.router_data
                 })
             }
-            BankOfAmericaPaymentsResponse::ErrorInformation(ref error_response) => {
+            BankofamericaPaymentsResponse::ErrorInformation(ref error_response) => {
                 Ok(map_error_response(
                     &error_response.clone(),
                     item,
@@ -1903,7 +2004,7 @@ impl<
 fn map_error_response<F, T>(
     error_response: &BankOfAmericaErrorInformationResponse,
     item: ResponseRouterData<
-        BankOfAmericaPaymentsResponse,
+        BankofamericaPaymentsResponse,
         RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>,
     >,
     _transaction_status: Option<common_enums::AttemptStatus>,
@@ -2100,7 +2201,7 @@ impl<
             .request
             .metadata
             .clone()
-            .map(|metadata| convert_metadata_to_merchant_defined_info(metadata));
+            .map(convert_metadata_to_merchant_defined_info);
         let payment_information = PaymentInformation::try_from(&ccard)?;
         let processing_information = ProcessingInformation::try_from((item, None, None))?;
         Ok(Self {
@@ -2151,7 +2252,7 @@ impl<
     ) -> Self {
         Self {
             amount_details: Amount {
-                total_amount: StringMajorUnit::zero(), //item.router_data.request.amount.to_owned(),
+                total_amount: StringMajorUnit::zero(),
                 currency: item.router_data.request.currency,
             },
             bill_to,
@@ -2205,7 +2306,7 @@ impl<
             .change_context(ConnectorError::RequestEncodingFailed)?;
         Ok(Self {
             amount_details: Amount {
-                total_amount: amount, //item.router_data.request.min ,  //.amount.to_owned(),
+                total_amount: amount,
                 currency: item.router_data.request.currency,
             },
             bill_to,
@@ -2312,7 +2413,7 @@ impl<
     fn try_from(ccard: &payment_method_data::Card<T>) -> Result<Self, Self::Error> {
         let card_type = match ccard.card_network.clone().and_then(get_boa_card_type) {
             Some(card_network) => Some(card_network.to_string()),
-            None => domain_types::utils::get_card_issuer(&(format!("{:?}", ccard.card_number.0)))
+            None => domain_types::utils::get_card_issuer(ccard.card_number.peek())
                 .ok()
                 .map(card_issuer_to_string),
         };
@@ -2323,7 +2424,6 @@ impl<
                 expiration_year: ccard.card_exp_year.clone(),
                 security_code: Some(ccard.card_cvc.clone()),
                 card_type,
-                type_selection_indicator: Some("1".to_owned()),
             },
         })))
     }
@@ -2373,7 +2473,7 @@ impl<
             .request
             .metadata
             .clone()
-            .map(|metadata| convert_metadata_to_merchant_defined_info(metadata));
+            .map(convert_metadata_to_merchant_defined_info);
         let payment_information = match item
             .router_data
             .resource_common_data
@@ -2484,14 +2584,14 @@ impl<
             },
         )?;
 
-        let expiration_year = apple_pay_data.get_four_digit_expiry_year()?;
+        let expiration_year = apple_pay_data.get_four_digit_expiry_year();
 
         Ok(Self::ApplePay(Box::new(ApplePayPaymentInformation {
             tokenized_card: TokenizedCard {
                 number: apple_pay_data
                     .application_primary_account_number
                     .clone()
-                    .expose()
+                    .peek()
                     .parse::<cards::CardNumber>()
                     .map_err(|err| {
                         tracing::error!(
@@ -2556,7 +2656,7 @@ impl<
             .request
             .metadata
             .clone()
-            .map(|metadata| convert_metadata_to_merchant_defined_info(metadata));
+            .map(convert_metadata_to_merchant_defined_info);
         let payment_information = PaymentInformation::try_from(&google_pay_data)?;
         let processing_information =
             ProcessingInformation::try_from((item, Some(PaymentSolution::GooglePay), None))?;
@@ -2603,8 +2703,6 @@ impl<
     }
 }
 
-// Additional PaymentsAuthorizeRouterData-related implementations
-
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -2640,9 +2738,9 @@ impl<
     ) -> Result<Self, Self::Error> {
         let email = item
             .router_data
-            .resource_common_data
-            .get_billing_email()
-            .or(item.router_data.request.get_email())?;
+            .request
+            .get_email()
+            .or(item.router_data.resource_common_data.get_billing_email())?;
         let bill_to = build_bill_to(
             item.router_data.resource_common_data.get_optional_billing(),
             email,
@@ -2800,7 +2898,6 @@ pub struct SamsungPayFluidDataValue {
     version: String,
     data: Secret<String>,
 }
-// use error_stack::ResultExt;
 
 fn get_samsung_pay_fluid_data_value(
     samsung_pay_token_data: &payment_method_data::SamsungPayTokenData,
@@ -2863,9 +2960,9 @@ impl<
     ) -> Result<Self, Self::Error> {
         let email = item
             .router_data
-            .resource_common_data
-            .get_billing_email()
-            .or(item.router_data.request.get_email())?;
+            .request
+            .get_email()
+            .or(item.router_data.resource_common_data.get_billing_email())?;
         let bill_to = build_bill_to(
             item.router_data.resource_common_data.get_optional_billing(),
             email,
@@ -2969,8 +3066,6 @@ impl<
     }
 }
 
-//-----
-
 impl<F> TryFrom<ResponseRouterData<BankOfAmericaSetupMandatesResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
@@ -2993,7 +3088,6 @@ impl<F> TryFrom<ResponseRouterData<BankOfAmericaSetupMandatesResponse, Self>>
                 let mut mandate_status =
                     map_boa_attempt_status((info_response.status.clone(), false));
                 if matches!(mandate_status, common_enums::AttemptStatus::Authorized) {
-                    //In case of zero auth mandates we want to make the payment reach the terminal status so we are converting the authorized status to charged as well.
                     mandate_status = common_enums::AttemptStatus::Charged
                 }
                 let error_response =
@@ -3038,6 +3132,34 @@ impl<F> TryFrom<ResponseRouterData<BankOfAmericaSetupMandatesResponse, Self>>
     }
 }
 
+fn convert_to_additional_payment_method_connector_response(
+    processor_information: &ClientProcessorInformation,
+    consumer_authentication_information: &ConsumerAuthenticationInformation,
+) -> domain_types::router_data::AdditionalPaymentMethodConnectorResponse {
+    let payment_checks = Some(serde_json::json!({
+        "avs_response": processor_information.avs,
+        "card_verification": processor_information.card_verification,
+        "approval_code": processor_information.approval_code,
+        "consumer_authentication_response": processor_information.consumer_authentication_response,
+        "cavv": consumer_authentication_information.cavv,
+        "eci": consumer_authentication_information.eci,
+        "eci_raw": consumer_authentication_information.eci_raw,
+    }));
+
+    let authentication_data = Some(serde_json::json!({
+        "retrieval_reference_number": processor_information.retrieval_reference_number,
+        "acs_transaction_id": consumer_authentication_information.acs_transaction_id,
+        "system_trace_audit_number": processor_information.system_trace_audit_number,
+    }));
+
+    domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Card {
+        authentication_data,
+        payment_checks,
+        card_network: None,
+        domestic_network: None,
+    }
+}
+
 impl<
         F,
         T: PaymentMethodDataTypes
@@ -3046,31 +3168,78 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > TryFrom<ResponseRouterData<BankOfAmericaPaymentsResponse, Self>>
+    > TryFrom<ResponseRouterData<BankofamericaPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<BankOfAmericaPaymentsResponse, Self>,
+        item: ResponseRouterData<BankofamericaPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        match item.response {
-            BankOfAmericaPaymentsResponse::ClientReferenceInformation(info_response) => {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+        match response {
+            BankofamericaPaymentsResponse::ClientReferenceInformation(info_response) => {
                 let status = map_boa_attempt_status((
                     info_response.status.clone(),
-                    item.router_data.request.is_auto_capture()?,
+                    router_data.request.is_auto_capture()?,
                 ));
-                let response = get_payment_response((&info_response, status, item.http_code))
-                    .map_err(|err| *err);
+                let response =
+                    get_payment_response((&info_response, status, http_code)).map_err(|err| *err);
+                let connector_response = match router_data.resource_common_data.payment_method {
+                    common_enums::PaymentMethod::Card => info_response
+                        .processor_information
+                        .as_ref()
+                        .and_then(|processor_information| {
+                            info_response
+                                .consumer_authentication_information
+                                .as_ref()
+                                .map(|consumer_auth_information| {
+                                    convert_to_additional_payment_method_connector_response(
+                                        processor_information,
+                                        consumer_auth_information,
+                                    )
+                                })
+                        })
+                        .map(domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data),
+                    common_enums::PaymentMethod::CardRedirect
+                    | common_enums::PaymentMethod::PayLater
+                    | common_enums::PaymentMethod::Wallet
+                    | common_enums::PaymentMethod::BankRedirect
+                    | common_enums::PaymentMethod::BankTransfer
+                    | common_enums::PaymentMethod::Crypto
+                    | common_enums::PaymentMethod::BankDebit
+                    | common_enums::PaymentMethod::Reward
+                    | common_enums::PaymentMethod::RealTimePayment
+                    | common_enums::PaymentMethod::MobilePayment
+                    | common_enums::PaymentMethod::Upi
+                    | common_enums::PaymentMethod::Voucher
+                    | common_enums::PaymentMethod::OpenBanking
+                    | common_enums::PaymentMethod::GiftCard => None,
+                };
 
                 Ok(Self {
                     response,
-                    ..item.router_data
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        connector_response,
+                        ..router_data.resource_common_data
+                    },
+                    ..router_data
                 })
             }
-            BankOfAmericaPaymentsResponse::ErrorInformation(ref error_response) => {
+            BankofamericaPaymentsResponse::ErrorInformation(ref error_response) => {
                 Ok(map_error_response(
                     &error_response.clone(),
-                    item,
+                    ResponseRouterData {
+                        response: BankofamericaPaymentsResponse::ErrorInformation(
+                            error_response.clone(),
+                        ),
+                        router_data,
+                        http_code,
+                    },
                     Some(common_enums::AttemptStatus::Failure),
                 ))
             }
@@ -3078,15 +3247,15 @@ impl<
     }
 }
 
-impl<F> TryFrom<ResponseRouterData<BankOfAmericaPaymentsResponse, Self>>
+impl<F> TryFrom<ResponseRouterData<BankofamericaPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<BankOfAmericaPaymentsResponse, Self>,
+        item: ResponseRouterData<BankofamericaPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         match item.response {
-            BankOfAmericaPaymentsResponse::ClientReferenceInformation(info_response) => {
+            BankofamericaPaymentsResponse::ClientReferenceInformation(info_response) => {
                 let status = map_boa_attempt_status((info_response.status.clone(), false));
                 let response = get_payment_response((&info_response, status, item.http_code))
                     .map_err(|err| *err);
@@ -3095,7 +3264,7 @@ impl<F> TryFrom<ResponseRouterData<BankOfAmericaPaymentsResponse, Self>>
                     ..item.router_data
                 })
             }
-            BankOfAmericaPaymentsResponse::ErrorInformation(ref error_response) => {
+            BankofamericaPaymentsResponse::ErrorInformation(ref error_response) => {
                 Ok(map_error_response(&error_response.clone(), item, None))
             }
         }
@@ -3168,8 +3337,6 @@ impl<F> TryFrom<ResponseRouterData<BankOfAmericaTransactionResponse, Self>>
     }
 }
 
-// Capture
-
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -3183,7 +3350,7 @@ impl<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
             T,
         >,
-    > for BankOfAmericaCaptureRequest
+    > for BankofamericaCaptureRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
@@ -3202,12 +3369,24 @@ impl<
         Ok(Self {
             order_information: OrderInformation {
                 amount_details: Amount {
-                    total_amount: StringMajorUnit::zero(), //item.router_data.request.minor_amount_to_capture,
+                    total_amount: item
+                        .connector
+                        .amount_converter
+                        .convert(
+                            item.router_data.request.minor_amount_to_capture,
+                            item.router_data.request.currency,
+                        )
+                        .change_context(errors::ConnectorError::AmountConversionFailed)?,
                     currency: item.router_data.request.currency,
                 },
             },
             client_reference_information: ClientReferenceInformation {
-                code: None, //Some(item.router_data.connector_request_reference_id.clone()),
+                code: Some(
+                    item.router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                ),
             },
             merchant_defined_information,
         })
@@ -3222,58 +3401,64 @@ impl<
             + 'static
             + Serialize,
     >
-    TryFrom<(
-        &BankofamericaRouterData<
+    TryFrom<
+        BankofamericaRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
             T,
         >,
-    )> for BankOfAmericaVoidRequest
+    > for BankofamericaVoidRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: (
-            &BankofamericaRouterData<
-                RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-                T,
-            >,
-        ),
+        item: BankofamericaRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let merchant_defined_information = item
-            .0
             .router_data
             .request
             .connector_metadata
             .clone()
             .map(|metadata| convert_metadata_to_merchant_defined_info(metadata.expose()));
+
+        let amount = item.router_data.request.amount.ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "Amount",
+            },
+        )?;
+
+        let currency = item.router_data.request.currency.ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "Currency",
+            },
+        )?;
+
         Ok(Self {
             client_reference_information: ClientReferenceInformation {
                 code: Some(
-                    item.0
-                        .router_data
+                    item.router_data
                         .resource_common_data
                         .connector_request_reference_id
                         .clone(),
                 ),
             },
+
             reversal_information: ReversalInformation {
                 amount_details: Amount {
-                    total_amount: StringMajorUnit::zero(), //item.amount.to_owned(),
-                    currency: item.0.router_data.request.currency.ok_or(
-                        errors::ConnectorError::MissingRequiredField {
-                            field_name: "Currency",
-                        },
-                    )?,
+                    total_amount: item
+                        .connector
+                        .amount_converter
+                        .convert(amount, currency)
+                        .change_context(errors::ConnectorError::AmountConversionFailed)?,
+                    currency,
                 },
-                reason: item
-                    .0
-                    .router_data
-                    .request
-                    .cancellation_reason
-                    .clone()
-                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                reason: item.router_data.request.cancellation_reason.clone().ok_or(
+                    errors::ConnectorError::MissingRequiredField {
                         field_name: "Cancellation Reason",
-                    })?,
+                    },
+                )?,
             },
             merchant_defined_information,
         })

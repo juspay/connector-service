@@ -76,7 +76,6 @@ trustpay.base_url_bank_redirects = "https://aapi.trustpay.eu/"
 stripe.base_url = "https://api.stripe.com/"
 cybersource.base_url = "https://apitest.cybersource.com/"
 worldpay.base_url = "https://try.access.worldpay.com/"
-bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
 worldpayvantiv.base_url = "https://transact.vantivprelive.com/vap/communicator/online"
 worldpayvantiv.secondary_base_url = "https://onlinessr.vantivprelive.com"
 paypal.base_url = "https://api-m.sandbox.paypal.com/"
@@ -85,6 +84,7 @@ billwerk.base_url = "https://api.reepay.com/"
 billwerk.secondary_base_url = "https://card.reepay.com/"
 nuvei.base_url = "https://ppp-test.nuvei.com/ppp/api/v1"
 bamboraapac.base_url = "https://demo.ippayments.com.au/interface/api"
+bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
 
 # Generic Events Configuration
 [events]
