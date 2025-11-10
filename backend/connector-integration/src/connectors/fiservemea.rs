@@ -4,7 +4,8 @@ use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
 use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent, types::StringMajorUnit,
+    errors::CustomResult, events, ext_traits::ByteSliceExt, request::RequestContent,
+    types::StringMajorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -35,7 +36,6 @@ use hyperswitch_masking::Mask;
 use hyperswitch_masking::{ExposeInterface, Maskable, Secret};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
 use transformers as fiservemea;
@@ -47,6 +47,7 @@ use transformers::{
 
 use super::macros;
 use crate::types::ResponseRouterData;
+use crate::with_error_response_body;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -118,7 +119,7 @@ macros::create_all_prerequisites!(
             let request_body_str = match temp_request_body {
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
                     .change_context(errors::ConnectorError::RequestEncodingFailed)?,
-                None => String::from(""), // For GET requests
+                None => String::new(), // For GET requests
                 _ => return Err(errors::ConnectorError::RequestEncodingFailed)?,
             };
 
@@ -850,7 +851,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: fiservemea::FiservemeaErrorResponse = if res.response.is_empty() {
             fiservemea::FiservemeaErrorResponse::default()
@@ -860,15 +861,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?
         };
 
-        if let Some(i) = event_builder {
-            i.set_error_response_body(&response);
-        }
+        with_error_response_body!(event_builder, response);
 
         // Map specific error codes to attempt statuses
         let attempt_status = match response.code.as_deref() {
-            Some("INSUFFICIENT_FUNDS") => Some(common_enums::AttemptStatus::Failure),
-            Some("INVALID_CARD") => Some(common_enums::AttemptStatus::Failure),
-            Some("EXPIRED_CARD") => Some(common_enums::AttemptStatus::Failure),
             Some("AUTHENTICATION_FAILED") => {
                 Some(common_enums::AttemptStatus::AuthenticationFailed)
             }

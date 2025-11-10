@@ -121,10 +121,19 @@ impl Default for FiservemeaErrorResponse {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum FiservemeaRequestType {
+    PaymentCardSaleTransaction,
+    PaymentCardPreAuthTransaction,
+    PostAuthTransaction,
+    VoidPreAuthTransactions,
+    ReturnTransaction,
+}
+
 #[derive(Debug, Serialize)]
 pub struct FiservemeaPaymentsRequest<T: PaymentMethodDataTypes> {
     #[serde(rename = "requestType")]
-    pub request_type: String,
+    pub request_type: FiservemeaRequestType,
     #[serde(rename = "merchantTransactionId")]
     pub merchant_transaction_id: String,
     #[serde(rename = "transactionAmount")]
@@ -138,7 +147,7 @@ pub struct FiservemeaPaymentsRequest<T: PaymentMethodDataTypes> {
 #[derive(Debug, Serialize)]
 pub struct PaymentCardSaleTransaction<T: PaymentMethodDataTypes> {
     #[serde(rename = "requestType")]
-    pub request_type: String,
+    pub request_type: FiservemeaRequestType,
     #[serde(rename = "transactionAmount")]
     pub transaction_amount: TransactionAmount,
     #[serde(rename = "paymentMethod")]
@@ -150,7 +159,7 @@ pub struct PaymentCardSaleTransaction<T: PaymentMethodDataTypes> {
 #[derive(Debug, Serialize)]
 pub struct PaymentCardPreAuthTransaction<T: PaymentMethodDataTypes> {
     #[serde(rename = "requestType")]
-    pub request_type: String,
+    pub request_type: FiservemeaRequestType,
     #[serde(rename = "transactionAmount")]
     pub transaction_amount: TransactionAmount,
     #[serde(rename = "paymentMethod")]
@@ -186,22 +195,22 @@ pub struct PaymentCard<T: PaymentMethodDataTypes> {
     #[serde(rename = "securityCode")]
     pub security_code: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub holder: Option<String>,
+    pub holder: Option<Secret<String>>,
     #[serde(skip)]
     _phantom: std::marker::PhantomData<T>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ExpiryDate {
-    pub month: String,
-    pub year: String,
+    pub month: Secret<String>,
+    pub year: Secret<String>,
 }
 
 // Capture Request Structure - PostAuthTransaction for Secondary Transaction endpoint
 #[derive(Debug, Serialize)]
 pub struct PostAuthTransaction {
     #[serde(rename = "requestType")]
-    pub request_type: String,
+    pub request_type: FiservemeaRequestType,
     #[serde(rename = "transactionAmount")]
     pub transaction_amount: TransactionAmount,
 }
@@ -210,7 +219,7 @@ pub struct PostAuthTransaction {
 #[derive(Debug, Serialize)]
 pub struct ReturnTransaction {
     #[serde(rename = "requestType")]
-    pub request_type: String,
+    pub request_type: FiservemeaRequestType,
     #[serde(rename = "transactionAmount")]
     pub transaction_amount: TransactionAmount,
 }
@@ -219,7 +228,7 @@ pub struct ReturnTransaction {
 #[derive(Debug, Serialize)]
 pub struct VoidTransaction {
     #[serde(rename = "requestType")]
-    pub request_type: String,
+    pub request_type: FiservemeaRequestType,
 }
 
 // Type aliases for flow-specific responses (to avoid macro templating conflicts)
@@ -401,11 +410,11 @@ impl<T: PaymentMethodDataTypes>
                 let payment_card = PaymentCard {
                     number: card_data.card_number.clone(),
                     expiry_date: ExpiryDate {
-                        month: card_data.card_exp_month.peek().clone(),
-                        year: year_yy.peek().clone(),
+                        month: Secret::new(card_data.card_exp_month.peek().clone()),
+                        year: Secret::new(year_yy.peek().clone()),
                     },
                     security_code: Some(card_data.card_cvc.clone()),
-                    holder: item.request.customer_name.clone(),
+                    holder: item.request.customer_name.clone().map(Secret::new),
                     _phantom: std::marker::PhantomData,
                 };
                 PaymentMethod { payment_card }
@@ -440,7 +449,7 @@ impl<T: PaymentMethodDataTypes>
 
         if is_manual_capture {
             Ok(Self {
-                request_type: "PaymentCardPreAuthTransaction".to_string(),
+                request_type: FiservemeaRequestType::PaymentCardPreAuthTransaction,
                 merchant_transaction_id,
                 transaction_amount,
                 order,
@@ -448,7 +457,7 @@ impl<T: PaymentMethodDataTypes>
             })
         } else {
             Ok(Self {
-                request_type: "PaymentCardSaleTransaction".to_string(),
+                request_type: FiservemeaRequestType::PaymentCardSaleTransaction,
                 merchant_transaction_id,
                 transaction_amount,
                 order,
@@ -478,7 +487,7 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
         };
 
         Ok(Self {
-            request_type: "PostAuthTransaction".to_string(),
+            request_type: FiservemeaRequestType::PostAuthTransaction,
             transaction_amount,
         })
     }
@@ -504,7 +513,7 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
         };
 
         Ok(Self {
-            request_type: "ReturnTransaction".to_string(),
+            request_type: FiservemeaRequestType::ReturnTransaction,
             transaction_amount,
         })
     }
@@ -521,53 +530,191 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
         // For void transactions, we only need to specify the transaction type
         // The transaction ID is passed in the URL path parameter
         Ok(Self {
-            request_type: "VoidPreAuthTransactions".to_string(),
+            request_type: FiservemeaRequestType::VoidPreAuthTransactions,
         })
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "UPPERCASE")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum FiservemeaTransactionType {
     Sale,
     Preauth,
     Credit,
+    ForcedTicket,
     Void,
     Return,
     Postauth,
+    PayerAuth,
+    Disbursement,
     #[serde(other)]
     Unknown,
 }
 
-impl From<FiservemeaTransactionType> for AttemptStatus {
-    fn from(transaction_type: FiservemeaTransactionType) -> Self {
-        match transaction_type {
-            FiservemeaTransactionType::Sale => Self::Charged,
-            FiservemeaTransactionType::Preauth => Self::Authorized,
-            FiservemeaTransactionType::Credit => Self::Charged,
-            FiservemeaTransactionType::Void => Self::Voided,
-            FiservemeaTransactionType::Return => Self::Charged,
-            FiservemeaTransactionType::Postauth => Self::Charged,
-            FiservemeaTransactionType::Unknown => Self::Pending,
-        }
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FiservemeaPaymentStatus {
+    Approved,
+    Waiting,
+    Partial,
+    ValidationFailed,
+    ProcessingFailed,
+    Declined,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FiservemeaPaymentResult {
+    Approved,
+    Declined,
+    Failed,
+    Waiting,
+    Partial,
+    Fraud,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum FiservemeaTransactionOrigin {
+    Ecom,
+    Moto,
+    Mail,
+    Phone,
+    Retail,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservemeaPaymentCardResponse {
+    pub expiry_date: Option<ExpiryDate>,
+    pub bin: Option<String>,
+    pub last4: Option<String>,
+    pub brand: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservemeaPaymentMethodDetails {
+    pub payment_card: Option<FiservemeaPaymentCardResponse>,
+    pub payment_method_type: Option<String>,
+    pub payment_method_brand: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Components {
+    pub subtotal: Option<f64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AmountDetails {
+    pub total: Option<f64>,
+    pub currency: Option<common_enums::Currency>,
+    pub components: Option<Components>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AvsResponse {
+    pub street_match: Option<String>,
+    pub postal_code_match: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Processor {
+    pub reference_number: Option<String>,
+    pub authorization_code: Option<String>,
+    pub response_code: Option<String>,
+    pub response_message: Option<String>,
+    pub avs_response: Option<AvsResponse>,
+    pub security_code_response: Option<String>,
+}
+
+fn map_status(
+    fiservemea_status: Option<FiservemeaPaymentStatus>,
+    fiservemea_result: Option<FiservemeaPaymentResult>,
+    transaction_type: FiservemeaTransactionType,
+) -> AttemptStatus {
+    match fiservemea_status {
+        Some(status) => match status {
+            FiservemeaPaymentStatus::Approved => match transaction_type {
+                FiservemeaTransactionType::Preauth => AttemptStatus::Authorized,
+                FiservemeaTransactionType::Void => AttemptStatus::Voided,
+                FiservemeaTransactionType::Sale | FiservemeaTransactionType::Postauth => {
+                    AttemptStatus::Charged
+                }
+                FiservemeaTransactionType::Credit
+                | FiservemeaTransactionType::ForcedTicket
+                | FiservemeaTransactionType::Return
+                | FiservemeaTransactionType::PayerAuth
+                | FiservemeaTransactionType::Disbursement
+                | FiservemeaTransactionType::Unknown => AttemptStatus::Failure,
+            },
+            FiservemeaPaymentStatus::Waiting => AttemptStatus::Pending,
+            FiservemeaPaymentStatus::Partial => AttemptStatus::PartialCharged,
+            FiservemeaPaymentStatus::ValidationFailed
+            | FiservemeaPaymentStatus::ProcessingFailed
+            | FiservemeaPaymentStatus::Declined => AttemptStatus::Failure,
+        },
+        None => match fiservemea_result {
+            Some(result) => match result {
+                FiservemeaPaymentResult::Approved => match transaction_type {
+                    FiservemeaTransactionType::Preauth => AttemptStatus::Authorized,
+                    FiservemeaTransactionType::Void => AttemptStatus::Voided,
+                    FiservemeaTransactionType::Sale | FiservemeaTransactionType::Postauth => {
+                        AttemptStatus::Charged
+                    }
+                    FiservemeaTransactionType::Credit
+                    | FiservemeaTransactionType::ForcedTicket
+                    | FiservemeaTransactionType::Return
+                    | FiservemeaTransactionType::PayerAuth
+                    | FiservemeaTransactionType::Disbursement
+                    | FiservemeaTransactionType::Unknown => AttemptStatus::Failure,
+                },
+                FiservemeaPaymentResult::Waiting => AttemptStatus::Pending,
+                FiservemeaPaymentResult::Partial => AttemptStatus::PartialCharged,
+                FiservemeaPaymentResult::Declined
+                | FiservemeaPaymentResult::Failed
+                | FiservemeaPaymentResult::Fraud => AttemptStatus::Failure,
+            },
+            None => AttemptStatus::Pending,
+        },
     }
 }
 
-impl From<FiservemeaTransactionType> for common_enums::RefundStatus {
-    fn from(transaction_type: FiservemeaTransactionType) -> Self {
-        match transaction_type {
-            FiservemeaTransactionType::Return => Self::Success,
-            FiservemeaTransactionType::Sale
-            | FiservemeaTransactionType::Preauth
-            | FiservemeaTransactionType::Credit
-            | FiservemeaTransactionType::Postauth => Self::Success,
-            FiservemeaTransactionType::Void => Self::Pending,
-            FiservemeaTransactionType::Unknown => Self::Pending,
-        }
+fn map_refund_status(
+    fiservemea_status: Option<FiservemeaPaymentStatus>,
+    fiservemea_result: Option<FiservemeaPaymentResult>,
+) -> common_enums::RefundStatus {
+    match fiservemea_status {
+        Some(status) => match status {
+            FiservemeaPaymentStatus::Approved => common_enums::RefundStatus::Success,
+            FiservemeaPaymentStatus::Partial | FiservemeaPaymentStatus::Waiting => {
+                common_enums::RefundStatus::Pending
+            }
+            FiservemeaPaymentStatus::ValidationFailed
+            | FiservemeaPaymentStatus::ProcessingFailed
+            | FiservemeaPaymentStatus::Declined => common_enums::RefundStatus::Failure,
+        },
+        None => match fiservemea_result {
+            Some(result) => match result {
+                FiservemeaPaymentResult::Approved => common_enums::RefundStatus::Success,
+                FiservemeaPaymentResult::Partial | FiservemeaPaymentResult::Waiting => {
+                    common_enums::RefundStatus::Pending
+                }
+                FiservemeaPaymentResult::Declined
+                | FiservemeaPaymentResult::Failed
+                | FiservemeaPaymentResult::Fraud => common_enums::RefundStatus::Failure,
+            },
+            None => common_enums::RefundStatus::Pending,
+        },
     }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FiservemeaPaymentsResponse {
     #[serde(rename = "clientRequestId")]
     pub client_request_id: Option<String>,
@@ -585,6 +732,25 @@ pub struct FiservemeaPaymentsResponse {
     pub user_id: Option<String>,
     #[serde(rename = "transactionType")]
     pub transaction_type: FiservemeaTransactionType,
+    #[serde(rename = "transactionOrigin")]
+    pub transaction_origin: Option<FiservemeaTransactionOrigin>,
+    pub payment_method_details: Option<FiservemeaPaymentMethodDetails>,
+    pub country: Option<Secret<String>>,
+    pub terminal_id: Option<String>,
+    pub merchant_id: Option<String>,
+    pub merchant_transaction_id: Option<String>,
+    pub transaction_time: Option<i64>,
+    pub approved_amount: Option<AmountDetails>,
+    pub transaction_amount: Option<AmountDetails>,
+    #[serde(rename = "transactionStatus")]
+    pub transaction_status: Option<FiservemeaPaymentStatus>,
+    #[serde(rename = "transactionResult")]
+    pub transaction_result: Option<FiservemeaPaymentResult>,
+    pub approval_code: Option<String>,
+    pub error_message: Option<String>,
+    pub transaction_state: Option<String>,
+    pub scheme_transaction_id: Option<String>,
+    pub processor: Option<Processor>,
     #[serde(rename = "paymentToken")]
     pub payment_token: Option<PaymentToken>,
 }
@@ -623,8 +789,12 @@ impl<T: PaymentMethodDataTypes>
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        // Map transaction type to status using From implementation
-        let status = AttemptStatus::from(item.response.transaction_type.clone());
+        // Map transaction status using status/result and transaction type
+        let status = map_status(
+            item.response.transaction_status.clone(),
+            item.response.transaction_result.clone(),
+            item.response.transaction_type.clone(),
+        );
 
         // Prepare connector metadata if available
         let connector_metadata = item.response.payment_token.as_ref().map(|token| {
@@ -681,8 +851,12 @@ impl
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Map transaction type to status using From implementation
-        let status = AttemptStatus::from(item.response.transaction_type.clone());
+        // Map transaction status using status/result and transaction type
+        let status = map_status(
+            item.response.transaction_status.clone(),
+            item.response.transaction_result.clone(),
+            item.response.transaction_type.clone(),
+        );
 
         // Prepare connector metadata if available
         let connector_metadata = item.response.payment_token.as_ref().map(|token| {
@@ -739,8 +913,12 @@ impl
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Map transaction type to status using From implementation
-        let status = AttemptStatus::from(item.response.transaction_type.clone());
+        // Map transaction status using status/result and transaction type
+        let status = map_status(
+            item.response.transaction_status.clone(),
+            item.response.transaction_result.clone(),
+            item.response.transaction_type.clone(),
+        );
 
         // Prepare connector metadata if available
         let connector_metadata = item.response.payment_token.as_ref().map(|token| {
@@ -797,9 +975,11 @@ impl
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Map transaction type to refund status using From implementation
-        let refund_status =
-            common_enums::RefundStatus::from(item.response.transaction_type.clone());
+        // Map transaction status using status/result fields
+        let refund_status = map_refund_status(
+            item.response.transaction_status.clone(),
+            item.response.transaction_result.clone(),
+        );
 
         Ok(Self {
             response: Ok(RefundsResponseData {
@@ -828,9 +1008,11 @@ impl
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Map transaction type to refund status using From implementation
-        let refund_status =
-            common_enums::RefundStatus::from(item.response.transaction_type.clone());
+        // Map transaction status using status/result fields
+        let refund_status = map_refund_status(
+            item.response.transaction_status.clone(),
+            item.response.transaction_result.clone(),
+        );
 
         Ok(Self {
             response: Ok(RefundsResponseData {
@@ -859,12 +1041,13 @@ impl
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Map transaction type to void status
-        // Note: For void operations, any non-VOID response means the void failed
-        let status = match item.response.transaction_type {
-            FiservemeaTransactionType::Void => AttemptStatus::Voided,
-            _ => AttemptStatus::VoidFailed,
-        };
+        // Map transaction status using status/result and transaction type
+        // The map_status function properly handles void status based on transaction_type
+        let status = map_status(
+            item.response.transaction_status.clone(),
+            item.response.transaction_result.clone(),
+            item.response.transaction_type.clone(),
+        );
 
         // Prepare connector metadata if available
         let connector_metadata = item.response.payment_token.as_ref().map(|token| {
