@@ -1525,12 +1525,12 @@ impl PaymentOperationsInternal for Payments {
         // Check if connector supports access tokens
         let should_do_access_token = connector_data.connector.should_do_access_token();
 
-        // Conditional token generation - ONLY if not provided in request
+        // Void is a subsequent flow - EXPECT access token from Hyperswitch, don't create it
         if should_do_access_token {
             let access_token_data = match cached_access_token {
                 Some((token, expires_in)) => {
                     // Use cached token
-                    tracing::info!("Using cached access token from Hyperswitch");
+                    tracing::info!("Using cached access token from Hyperswitch for Void flow");
                     Some(AccessTokenResponseData {
                         access_token: token,
                         token_type: None,
@@ -1538,40 +1538,20 @@ impl PaymentOperationsInternal for Payments {
                     })
                 }
                 None => {
-                    // Generate fresh token
-                    tracing::info!("No cached access token found, generating new token");
-                    let event_params = EventParams {
-                        _connector_name: &connector.to_string(),
-                        _service_name: &service_name,
-                        request_id,
-                        lineage_ids,
-                        reference_id,
-                        shadow_mode: metadata_payload.shadow_mode,
-                    };
-
-                    let access_token_data = Box::pin(self.handle_access_token(
-                        connector_data.clone(),
-                        &payment_flow_data,
-                        connector_auth_details.clone(),
-                        &connector.to_string(),
-                        &service_name,
-                        event_params,
-                    ))
-                    .await
-                    .map_err(|err| {
-                        tracing::error!("Failed to obtain access token: {:?}", err);
-                        tonic::Status::internal(
-                            err.error_message
-                                .unwrap_or_else(|| "Failed to obtain access token".to_string()),
-                        )
-                    })?;
-
-                    tracing::info!(
-                        "Access token created successfully with expiry: {:?}",
-                        access_token_data.expires_in
+                    // Void flow should receive token from Hyperswitch (forwarded from Authorize)
+                    // Don't try to create a new one - fail fast with clear error
+                    tracing::error!(
+                        "Access token not provided by Hyperswitch for Void flow. \
+                        Connector {} requires OAuth but token was not forwarded from Authorize flow.",
+                        connector.to_string()
                     );
-
-                    Some(access_token_data)
+                    return Err(tonic::Status::failed_precondition(
+                        format!(
+                            "Access token required for {} Void flow but not provided by Hyperswitch. \
+                            Token should be forwarded from Authorize flow.",
+                            connector.to_string()
+                        )
+                    ));
                 }
             };
 
@@ -1816,12 +1796,12 @@ impl PaymentOperationsInternal for Payments {
         // Check if connector supports access tokens
         let should_do_access_token = connector_data.connector.should_do_access_token();
 
-        // Conditional token generation - ONLY if not provided in request
+        // Capture is a subsequent flow - EXPECT access token from Hyperswitch, don't create it
         if should_do_access_token {
             let access_token_data = match cached_access_token {
                 Some((token, expires_in)) => {
                     // Use cached token
-                    tracing::info!("Using cached access token from Hyperswitch");
+                    tracing::info!("Using cached access token from Hyperswitch for Capture flow");
                     Some(AccessTokenResponseData {
                         access_token: token,
                         token_type: None,
@@ -1829,40 +1809,20 @@ impl PaymentOperationsInternal for Payments {
                     })
                 }
                 None => {
-                    // Generate fresh token
-                    tracing::info!("No cached access token found, generating new token");
-                    let event_params = EventParams {
-                        _connector_name: &connector.to_string(),
-                        _service_name: &service_name,
-                        request_id,
-                        lineage_ids,
-                        reference_id,
-                        shadow_mode: metadata_payload.shadow_mode,
-                    };
-
-                    let access_token_data = Box::pin(self.handle_access_token(
-                        connector_data.clone(),
-                        &payment_flow_data,
-                        connector_auth_details.clone(),
-                        &connector.to_string(),
-                        &service_name,
-                        event_params,
-                    ))
-                    .await
-                    .map_err(|err| {
-                        tracing::error!("Failed to obtain access token: {:?}", err);
-                        tonic::Status::internal(
-                            err.error_message
-                                .unwrap_or_else(|| "Failed to obtain access token".to_string()),
-                        )
-                    })?;
-
-                    tracing::info!(
-                        "Access token created successfully with expiry: {:?}",
-                        access_token_data.expires_in
+                    // Capture flow should receive token from Hyperswitch (forwarded from Authorize)
+                    // Don't try to create a new one - fail fast with clear error
+                    tracing::error!( 
+                        "Access token not provided by Hyperswitch for Capture flow. \
+                        Connector {} requires OAuth but token was not forwarded from Authorize flow.",
+                        connector.to_string()
                     );
-
-                    Some(access_token_data)
+                    return Err(tonic::Status::failed_precondition(
+                        format!(
+                            "Access token required for {} Capture flow but not provided by Hyperswitch. \
+                            Token should be forwarded from Authorize flow.",
+                            connector.to_string()
+                        )
+                    ));
                 }
             };
 
@@ -2162,9 +2122,7 @@ impl PaymentService for Payments {
                     let metadata_payload = request_data.extracted_metadata;
                     let utils::MetadataPayload {
                         connector,
-                        ref request_id,
-                        ref lineage_ids,
-                        ref reference_id,
+                        
                         ..
                     } = metadata_payload;
                     let payload = request_data.payload;
@@ -2204,12 +2162,12 @@ impl PaymentService for Payments {
                     // Check if connector supports access tokens
                     let should_do_access_token = connector_data.connector.should_do_access_token();
 
-                    // Conditional token generation - ONLY if not provided in request
+                    // PSync is a subsequent flow - EXPECT access token from Hyperswitch, don't create it
                     let payment_flow_data = if should_do_access_token {
                         let access_token_data = match cached_access_token {
                             Some((token, expires_in)) => {
-                                // If provided cached token - use it, don't generate new one
-                                tracing::info!("Using cached access token from Hyperswitch");
+                                // Use cached token
+                                tracing::info!("Using cached access token from Hyperswitch for PSync flow");
                                 Some(AccessTokenResponseData {
                                     access_token: token,
                                     token_type: None,
@@ -2217,41 +2175,20 @@ impl PaymentService for Payments {
                                 })
                             }
                             None => {
-                                // No cached token - generate fresh one
-                                tracing::info!(
-                                    "No cached access token found, generating new token"
+                                // PSync flow should receive token from Hyperswitch (forwarded from Authorize)
+                                // Don't try to create a new one - fail fast with clear error
+                                tracing::error!(
+                                    "Access token not provided by Hyperswitch for PSync flow. \
+                                    Connector {} requires OAuth but token was not forwarded from Authorize flow.",
+                                    connector.to_string()
                                 );
-                                let event_params = EventParams {
-                                    _connector_name: &connector.to_string(),
-                                    _service_name: &service_name,
-                                    request_id,
-                                    lineage_ids,
-                                    reference_id,
-                                    shadow_mode: metadata_payload.shadow_mode,
-                                };
-
-                                let access_token_data = Box::pin(self.handle_access_token(
-                                    connector_data.clone(),
-                                    &payment_flow_data,
-                                    metadata_payload.connector_auth_type.clone(),
-                                    &metadata_payload.connector.to_string(),
-                                    &service_name,
-                                    event_params,
-                                ))
-                                .await
-                                .map_err(|e| {
-                                    let message = e.error_message.unwrap_or_else(|| {
-                                        "Access token creation failed".to_string()
-                                    });
-                                    tonic::Status::internal(message)
-                                })?;
-
-                                tracing::info!(
-                                    "Access token created successfully with expiry: {:?}",
-                                    access_token_data.expires_in
-                                );
-
-                                Some(access_token_data)
+                                return Err(tonic::Status::failed_precondition(
+                                    format!(
+                                        "Access token required for {} PSync flow but not provided by Hyperswitch. \
+                                        Token should be forwarded from Authorize flow.",
+                                        connector.to_string()
+                                    )
+                                ));
                             }
                         };
 
