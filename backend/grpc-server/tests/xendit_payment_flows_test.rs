@@ -4,9 +4,9 @@
 
 use grpc_server::{app, configs};
 mod common;
+mod utils;
 
 use std::{
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -23,7 +23,7 @@ use grpc_api_types::{
         PaymentStatus, RefundResponse, RefundServiceGetRequest, RefundStatus,
     },
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use tonic::{transport::Channel, Request};
 
 // Helper function to get current timestamp
@@ -39,9 +39,6 @@ const CONNECTOR_NAME: &str = "xendit";
 const MERCHANT_ID: &str = "merchant_1753672298";
 const CONNECTOR_CUSTOMER_ID: &str = "abc123";
 
-// Environment variable names for API credentials (can be set or overridden with provided values)
-const XENDIT_API_KEY_ENV: &str = "TEST_XENDIT_API_KEY";
-
 // Test card data - Updated to match new JSON payload
 const TEST_AMOUNT: i64 = 10000000000; // 10 trillion from new payload
 const TEST_MINOR_AMOUNT: i64 = 10000000000; // Minor amount from new payload
@@ -54,9 +51,13 @@ const TEST_EMAIL: &str = "test@t.com";
 const TEST_REQUEST_REF_ID: &str = "12345678_123";
 
 fn add_xendit_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables - throw error if not set
-    let api_key =
-        env::var(XENDIT_API_KEY_ENV).expect("TEST_XENDIT_API_KEY environment variable is required");
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load xendit credentials");
+
+    let api_key = match auth {
+        domain_types::router_data::ConnectorAuthType::HeaderKey { api_key } => api_key.expose(),
+        _ => panic!("Expected HeaderKey auth type for xendit"),
+    };
 
     request.metadata_mut().append(
         "x-connector",
