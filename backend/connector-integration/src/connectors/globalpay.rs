@@ -4,7 +4,7 @@ use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
 use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent, types::StringMinorUnit,
+    errors::CustomResult, events, ext_traits::ByteSliceExt, request::RequestContent, types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -34,7 +34,6 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
 use transformers as globalpay;
@@ -46,6 +45,8 @@ use transformers::{
 
 use crate::connectors::macros;
 use crate::types::ResponseRouterData;
+use crate::with_error_response_body;
+use crate::with_response_body;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -745,7 +746,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             AccessTokenRequestData,
             AccessTokenResponseData,
         >,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
         RouterDataV2<
@@ -761,9 +762,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .parse_struct("GlobalpayAccessTokenResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        if let Some(i) = event_builder {
-            i.set_response_body(&response)
-        }
+        with_response_body!(event_builder, response);
 
         RouterDataV2::try_from(ResponseRouterData {
             response,
@@ -775,7 +774,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn get_error_response_v2(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
@@ -1062,7 +1061,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         // Try to parse as structured error first
         let error_response = match res
@@ -1070,9 +1069,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .parse_struct::<globalpay::GlobalpayErrorResponse>("GlobalpayErrorResponse")
         {
             Ok(response) => {
-                if let Some(i) = event_builder {
-                    i.set_error_response_body(&response)
-                }
+                with_error_response_body!(event_builder, response);
                 ErrorResponse {
                     status_code: res.status_code,
                     code: response.code.unwrap_or_else(|| "UNKNOWN_ERROR".to_string()),
