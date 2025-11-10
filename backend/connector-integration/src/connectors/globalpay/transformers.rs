@@ -18,8 +18,8 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
+use rand::distributions::DistString;
 use serde::{Deserialize, Serialize};
-use time::OffsetDateTime;
 
 // ===== TYPE ALIASES FOR MACRO =====
 // These type aliases are needed because the create_all_prerequisites! macro
@@ -47,20 +47,17 @@ mod constants {
     /// Entry mode for e-commerce transactions
     pub(super) const ENTRY_MODE_ECOM: &str = "ECOM";
 
-    /// CVV indicator when CVV is present
-    pub(super) const CVV_INDICATOR_PRESENT: &str = "PRESENT";
-
     /// Capture mode for manual/delayed capture
     pub(super) const CAPTURE_MODE_LATER: &str = "LATER";
+
+    /// Capture mode for automatic/immediate capture
+    pub(super) const CAPTURE_MODE_AUTO: &str = "AUTO";
 
     /// Default country code when billing country is not provided
     pub(super) const DEFAULT_COUNTRY: &str = "US";
 
     /// Account name for transaction processing
     pub(super) const ACCOUNT_NAME: &str = "transaction_processing";
-
-    /// Transaction type for sale transactions
-    pub(super) const TRANSACTION_TYPE_SALE: &str = "SALE";
 
     /// Channel for card-not-present transactions
     pub(super) const CHANNEL_CNP: &str = "CNP";
@@ -165,13 +162,21 @@ impl From<GlobalpayRefundStatus> for RefundStatus {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum Sequence {
+    First,
+    Last,
+    Subsequent,
+}
+
 // ===== OAUTH / ACCESS TOKEN FLOW STRUCTURES =====
 
 #[derive(Debug, Serialize)]
 pub struct GlobalpayAccessTokenRequest {
-    pub app_id: String,
-    pub nonce: String,
-    pub secret: String,
+    pub app_id: Secret<String>,
+    pub nonce: Secret<String>,
+    pub secret: Secret<String>,
     pub grant_type: String,
 }
 
@@ -182,8 +187,8 @@ impl TryFrom<&ConnectorAuthType> for GlobalpayAccessTokenRequest {
         if let ConnectorAuthType::BodyKey { api_key, key1 } = auth_type {
             use sha2::{Digest, Sha512};
 
-            // Generate nonce using current timestamp in milliseconds
-            let nonce = (OffsetDateTime::now_utc().unix_timestamp() * 1000).to_string();
+            // Generate random alphanumeric nonce (matching Hyperswitch implementation)
+            let nonce = rand::distributions::Alphanumeric.sample_string(&mut rand::thread_rng(), 12);
 
             // Create secret: SHA512(nonce + app_key)
             let secret_input = format!("{}{}", nonce, key1.peek());
@@ -195,9 +200,9 @@ impl TryFrom<&ConnectorAuthType> for GlobalpayAccessTokenRequest {
             let secret_hex = hex::encode(result);
 
             Ok(Self {
-                app_id: api_key.peek().clone(),
-                nonce,
-                secret: secret_hex,
+                app_id: api_key.clone(),
+                nonce: Secret::new(nonce),
+                secret: Secret::new(secret_hex),
                 grant_type: constants::GRANT_TYPE.to_string(),
             })
         } else {
@@ -270,10 +275,15 @@ impl<F, T>
 // ===== PAYMENT FLOW STRUCTURES =====
 
 #[derive(Debug, Serialize)]
+pub struct GlobalpayNotifications {
+    pub cancel_url: String,
+    pub return_url: String,
+    pub status_url: String,
+}
+
+#[derive(Debug, Serialize)]
 pub struct GlobalpayPaymentsRequest<T: PaymentMethodDataTypes> {
     pub account_name: String,
-    #[serde(rename = "type")]
-    pub transaction_type: String,
     pub channel: String,
     pub amount: StringMinorUnit,
     pub currency: String,
@@ -281,6 +291,10 @@ pub struct GlobalpayPaymentsRequest<T: PaymentMethodDataTypes> {
     pub country: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub capture_mode: Option<String>,
+    pub initiator: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notifications: Option<GlobalpayNotifications>,
+    pub stored_credential: Option<serde_json::Value>,
     pub payment_method: GlobalpayPaymentMethod<T>,
 }
 
@@ -338,16 +352,28 @@ impl<
     ) -> Result<Self, Self::Error> {
         let item = &wrapper.router_data;
         let payment_method = match &item.request.payment_method_data {
-            PaymentMethodData::Card(card_data) => GlobalpayPaymentMethod {
-                name: item.request.customer_name.clone().map(Secret::new),
-                entry_mode: constants::ENTRY_MODE_ECOM.to_string(),
-                card: Some(GlobalpayCard {
-                    number: card_data.card_number.clone(),
-                    expiry_month: card_data.card_exp_month.clone(),
-                    expiry_year: card_data.card_exp_year.clone(),
-                    cvv: card_data.card_cvc.clone(),
-                    cvv_indicator: Some(constants::CVV_INDICATOR_PRESENT.to_string()),
-                }),
+            PaymentMethodData::Card(card_data) => {
+                // Convert 4-digit year to 2-digit (e.g., "2030" -> "30")
+                let expiry_year_2digit = {
+                    let year = card_data.card_exp_year.peek();
+                    if year.len() == 4 {
+                        Secret::new(year[2..].to_string())
+                    } else {
+                        card_data.card_exp_year.clone()
+                    }
+                };
+
+                GlobalpayPaymentMethod {
+                    name: item.request.customer_name.clone().map(Secret::new),
+                    entry_mode: constants::ENTRY_MODE_ECOM.to_string(),
+                    card: Some(GlobalpayCard {
+                        number: card_data.card_number.clone(),
+                        expiry_month: card_data.card_exp_month.clone(),
+                        expiry_year: expiry_year_2digit,
+                        cvv: card_data.card_cvc.clone(),
+                        cvv_indicator: None,
+                    }),
+                }
             },
             _ => {
                 return Err(error_stack::report!(
@@ -363,7 +389,7 @@ impl<
             Some(common_enums::CaptureMethod::Manual) => {
                 Some(constants::CAPTURE_MODE_LATER.to_string())
             }
-            _ => None, // AUTO is default, no need to send
+            _ => Some(constants::CAPTURE_MODE_AUTO.to_string()),
         };
 
         // Get country from billing address or use default
@@ -376,9 +402,22 @@ impl<
             .map(|c| c.to_string())
             .unwrap_or_else(|| constants::DEFAULT_COUNTRY.to_string());
 
+        // Build notifications object from router data
+        let notifications = if let (Some(return_url), Some(webhook_url)) = (
+            item.request.router_return_url.as_ref(),
+            item.request.webhook_url.as_ref(),
+        ) {
+            Some(GlobalpayNotifications {
+                cancel_url: return_url.clone(),
+                return_url: return_url.clone(),
+                status_url: webhook_url.clone(),
+            })
+        } else {
+            None
+        };
+
         Ok(Self {
             account_name: constants::ACCOUNT_NAME.to_string(),
-            transaction_type: constants::TRANSACTION_TYPE_SALE.to_string(),
             channel: constants::CHANNEL_CNP.to_string(),
             amount: GlobalpayAmountConvertor::convert(
                 item.request.minor_amount,
@@ -392,6 +431,9 @@ impl<
                 .clone(),
             country,
             capture_mode,
+            initiator: None,
+            notifications,
+            stored_credential: None,
             payment_method,
         })
     }
@@ -400,8 +442,9 @@ impl<
 // Capture Request Structure
 #[derive(Debug, Serialize)]
 pub struct GlobalpayCaptureRequest {
-    pub amount: StringMinorUnit,
-    pub currency: String,
+    pub amount: Option<StringMinorUnit>,
+    pub capture_sequence: Option<Sequence>,
+    pub reference: Option<String>,
 }
 
 impl<
@@ -435,12 +478,29 @@ impl<
             .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
 
         Ok(Self {
-            amount: GlobalpayAmountConvertor::convert(
-                item.request.minor_amount_to_capture,
-                item.request.currency,
-            )
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?,
-            currency: item.request.currency.to_string(),
+            amount: Some(
+                GlobalpayAmountConvertor::convert(
+                    item.request.minor_amount_to_capture,
+                    item.request.currency,
+                )
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?,
+            ),
+            capture_sequence: item
+                .request
+                .multiple_capture_data
+                .as_ref()
+                .map(|mcd| {
+                    if mcd.capture_sequence == 1 {
+                        Sequence::First
+                    } else {
+                        Sequence::Subsequent
+                    }
+                }),
+            reference: item
+                .request
+                .multiple_capture_data
+                .as_ref()
+                .map(|mcd| mcd.capture_reference.clone()),
         })
     }
 }
@@ -606,7 +666,6 @@ impl
 #[derive(Debug, Clone, Serialize)]
 pub struct GlobalpayRefundRequest {
     pub amount: StringMinorUnit,
-    pub currency: String,
 }
 
 impl<
@@ -639,7 +698,6 @@ impl<
                 item.request.currency,
             )
             .change_context(errors::ConnectorError::RequestEncodingFailed)?,
-            currency: item.request.currency.to_string(),
         })
     }
 }
@@ -718,9 +776,10 @@ impl
 // ===== VOID FLOW STRUCTURES =====
 
 // Void Request - Based on tech spec, /transactions/{transaction_id}/reverse endpoint
-// The API doesn't specify required request body fields, so we use an empty struct
 #[derive(Debug, Clone, Serialize)]
-pub struct GlobalpayVoidRequest {}
+pub struct GlobalpayVoidRequest {
+    pub amount: Option<StringMinorUnit>,
+}
 
 impl<
         T: PaymentMethodDataTypes
@@ -753,8 +812,18 @@ impl<
             ));
         }
 
-        // Return empty request body
-        Ok(Self {})
+        // Convert amount from MinorUnit to StringMinorUnit if present
+        let amount = item
+            .request
+            .amount
+            .zip(item.request.currency)
+            .map(|(amount_value, currency)| {
+                GlobalpayAmountConvertor::convert(amount_value, currency)
+                    .change_context(errors::ConnectorError::RequestEncodingFailed)
+            })
+            .transpose()?;
+
+        Ok(Self { amount })
     }
 }
 
