@@ -649,16 +649,18 @@ impl Payments {
         };
 
         // Execute connector processing
-        let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            order_router_data,
-            None,
-            external_event_params,
-            None,
-            common_enums::CallConnectorAction::Trigger,
-            test_context,
-            api_tag,
+        let response = Box::pin(
+            external_services::service::execute_connector_processing_step(
+                &self.config.proxy,
+                connector_integration,
+                order_router_data,
+                None,
+                external_event_params,
+                None,
+                common_enums::CallConnectorAction::Trigger,
+                test_context,
+                api_tag,
+            ),
         )
         .await
         .map_err(
@@ -768,16 +770,18 @@ impl Payments {
         };
 
         // Execute connector processing
-        let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            order_router_data,
-            None,
-            external_event_params,
-            None,
-            common_enums::CallConnectorAction::Trigger,
-            test_context,
-            api_tag,
+        let response = Box::pin(
+            external_services::service::execute_connector_processing_step(
+                &self.config.proxy,
+                connector_integration,
+                order_router_data,
+                None,
+                external_event_params,
+                None,
+                common_enums::CallConnectorAction::Trigger,
+                test_context,
+                api_tag,
+            ),
         )
         .await
         .switch()
