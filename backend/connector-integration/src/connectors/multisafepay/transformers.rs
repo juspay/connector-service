@@ -192,24 +192,52 @@ pub struct MultisafepayErrorData {
 
 #[derive(Debug, Serialize)]
 pub struct PaymentOptions {
-    pub notification_url: String,
     pub redirect_url: String,
     pub cancel_url: String,
 }
 
 #[derive(Debug, Serialize)]
 pub struct CustomerInfo {
-    pub locale: String,
-    pub ip_address: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub locale: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ip_address: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reference: Option<String>,
     pub email: String,
 }
 
 #[derive(Debug, Serialize)]
 pub struct GatewayInfo {
     pub card_number: Secret<String>,
-    pub card_expiry_date: Secret<String>,  // Format: YYMM
+    pub card_expiry_date: i64,  // Format: YYMM as integer
     pub card_cvc: Secret<String>,
-    pub card_holder_name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_holder_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flexible_3d: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub moto: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub term_url: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DeliveryObject {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub first_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address1: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub house_number: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub zip_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub city: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub country: Option<String>,
 }
 
 // ===== PAYMENT REQUEST STRUCTURES =====
@@ -227,6 +255,12 @@ pub struct MultisafepayPaymentsRequest {
     pub payment_options: PaymentOptions,
     pub customer: CustomerInfo,
     pub gateway_info: GatewayInfo,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delivery: Option<DeliveryObject>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub days_active: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub seconds_active: Option<i32>,
 }
 
 // Implementation for macro-generated wrapper type
@@ -282,7 +316,7 @@ impl<
         };
 
         // Build gateway_info with card details
-        // Format card expiry as YYMM (2-digit year + 2-digit month)
+        // Format card expiry as YYMM (2-digit year + 2-digit month) as integer
         let card_exp_year_str = card.card_exp_year.peek();
         let card_exp_year_2digit = if card_exp_year_str.len() == 4 {
             &card_exp_year_str[2..]
@@ -290,11 +324,16 @@ impl<
             card_exp_year_str
         };
 
-        let card_expiry_date = Secret::new(format!(
+        let card_expiry_str = format!(
             "{}{}",
             card_exp_year_2digit,
             card.card_exp_month.peek()
-        ));
+        );
+
+        let card_expiry_date: i64 = card_expiry_str
+            .parse::<i64>()
+            .change_context(errors::ConnectorError::RequestEncodingFailed)
+            .attach_printable("Failed to parse card expiry date as integer")?;
 
         // Get card number as string - for direct transactions we need PCI data
         let card_number_str = get_card_number_string(&card.card_number)?;
@@ -303,25 +342,17 @@ impl<
             card_number: Secret::new(card_number_str),
             card_expiry_date,
             card_cvc: card.card_cvc.clone(),
-            card_holder_name: card
-                .card_holder_name
-                .clone()
-                .map(|s| s.expose())
-                .unwrap_or_else(|| String::new()),
+            card_holder_name: card.card_holder_name.clone().map(|s| s.expose()),
+            flexible_3d: None,
+            moto: None,
+            term_url: None,
         };
 
         // Build customer info
-        let browser_info = item.request.browser_info.as_ref();
         let customer = CustomerInfo {
-            locale: browser_info
-                .and_then(|b| b.language.clone())
-                .unwrap_or_else(|| "en_US".to_string()),
-            ip_address: browser_info
-                .and_then(|b| b.ip_address.map(|ip| ip.to_string()))
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "browser_info.ip_address",
-                })
-                .attach_printable("Missing IP address for direct transaction")?,
+            locale: None,
+            ip_address: None,
+            reference: Some(item.resource_common_data.connector_request_reference_id.clone()),
             email: item
                 .request
                 .email
@@ -336,14 +367,6 @@ impl<
 
         // Build payment_options
         let payment_options = PaymentOptions {
-            notification_url: item
-                .request
-                .webhook_url
-                .clone()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "webhook_url",
-                })
-                .attach_printable("Missing webhook URL for direct transaction")?,
             redirect_url: item
                 .request
                 .router_return_url
@@ -362,6 +385,22 @@ impl<
                 .attach_printable("Missing cancel URL for direct transaction")?,
         };
 
+        // Build delivery object from billing address if available
+        let delivery = item
+            .resource_common_data
+            .get_billing()
+            .ok()
+            .and_then(|billing| billing.address.as_ref())
+            .map(|address| DeliveryObject {
+                first_name: address.first_name.clone().map(|s| s.expose()),
+                last_name: address.last_name.clone().map(|s| s.expose()),
+                address1: address.line1.clone().map(|s| s.expose()),
+                house_number: address.line2.clone().map(|s| s.expose()),
+                zip_code: address.zip.clone().map(|s| s.expose()),
+                city: address.city.clone(),
+                country: address.country.map(|c| c.to_string()),
+            });
+
         Ok(Self {
             order_type: order_type.to_string(),
             order_id: item
@@ -379,6 +418,9 @@ impl<
             payment_options,
             customer,
             gateway_info,
+            delivery,
+            days_active: Some(30),
+            seconds_active: Some(259200),
         })
     }
 }
@@ -417,7 +459,7 @@ impl<T: PaymentMethodDataTypes>
         };
 
         // Build gateway_info with card details
-        // Format card expiry as YYMM (2-digit year + 2-digit month)
+        // Format card expiry as YYMM (2-digit year + 2-digit month) as integer
         let card_exp_year_str = card.card_exp_year.peek();
         let card_exp_year_2digit = if card_exp_year_str.len() == 4 {
             &card_exp_year_str[2..]
@@ -425,11 +467,16 @@ impl<T: PaymentMethodDataTypes>
             card_exp_year_str
         };
 
-        let card_expiry_date = Secret::new(format!(
+        let card_expiry_str = format!(
             "{}{}",
             card_exp_year_2digit,
             card.card_exp_month.peek()
-        ));
+        );
+
+        let card_expiry_date: i64 = card_expiry_str
+            .parse::<i64>()
+            .change_context(errors::ConnectorError::RequestEncodingFailed)
+            .attach_printable("Failed to parse card expiry date as integer")?;
 
         // Get card number as string - for direct transactions we need PCI data
         let card_number_str = get_card_number_string(&card.card_number)?;
@@ -438,25 +485,17 @@ impl<T: PaymentMethodDataTypes>
             card_number: Secret::new(card_number_str),
             card_expiry_date,
             card_cvc: card.card_cvc.clone(),
-            card_holder_name: card
-                .card_holder_name
-                .clone()
-                .map(|s| s.expose())
-                .unwrap_or_else(|| String::new()),
+            card_holder_name: card.card_holder_name.clone().map(|s| s.expose()),
+            flexible_3d: None,
+            moto: None,
+            term_url: None,
         };
 
         // Build customer info
-        let browser_info = item.request.browser_info.as_ref();
         let customer = CustomerInfo {
-            locale: browser_info
-                .and_then(|b| b.language.clone())
-                .unwrap_or_else(|| "en_US".to_string()),
-            ip_address: browser_info
-                .and_then(|b| b.ip_address.map(|ip| ip.to_string()))
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "browser_info.ip_address",
-                })
-                .attach_printable("Missing IP address for direct transaction")?,
+            locale: None,
+            ip_address: None,
+            reference: Some(item.resource_common_data.connector_request_reference_id.clone()),
             email: item
                 .request
                 .email
@@ -471,14 +510,6 @@ impl<T: PaymentMethodDataTypes>
 
         // Build payment_options
         let payment_options = PaymentOptions {
-            notification_url: item
-                .request
-                .webhook_url
-                .clone()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "webhook_url",
-                })
-                .attach_printable("Missing webhook URL for direct transaction")?,
             redirect_url: item
                 .request
                 .router_return_url
@@ -497,6 +528,22 @@ impl<T: PaymentMethodDataTypes>
                 .attach_printable("Missing cancel URL for direct transaction")?,
         };
 
+        // Build delivery object from billing address if available
+        let delivery = item
+            .resource_common_data
+            .get_billing()
+            .ok()
+            .and_then(|billing| billing.address.as_ref())
+            .map(|address| DeliveryObject {
+                first_name: address.first_name.clone().map(|s| s.expose()),
+                last_name: address.last_name.clone().map(|s| s.expose()),
+                address1: address.line1.clone().map(|s| s.expose()),
+                house_number: address.line2.clone().map(|s| s.expose()),
+                zip_code: address.zip.clone().map(|s| s.expose()),
+                city: address.city.clone(),
+                country: address.country.map(|c| c.to_string()),
+            });
+
         Ok(Self {
             order_type: order_type.to_string(),
             order_id: item
@@ -514,6 +561,9 @@ impl<T: PaymentMethodDataTypes>
             payment_options,
             customer,
             gateway_info,
+            delivery,
+            days_active: Some(30),
+            seconds_active: Some(259200),
         })
     }
 }
