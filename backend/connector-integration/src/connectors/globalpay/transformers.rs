@@ -188,7 +188,8 @@ impl TryFrom<&ConnectorAuthType> for GlobalpayAccessTokenRequest {
             use sha2::{Digest, Sha512};
 
             // Generate random alphanumeric nonce (matching Hyperswitch implementation)
-            let nonce = rand::distributions::Alphanumeric.sample_string(&mut rand::thread_rng(), 12);
+            let nonce =
+                rand::distributions::Alphanumeric.sample_string(&mut rand::thread_rng(), 12);
 
             // Create secret: SHA512(nonce + app_key)
             let secret_input = format!("{}{}", nonce, key1.peek());
@@ -369,7 +370,7 @@ impl<
                         cvv_indicator: None,
                     }),
                 }
-            },
+            }
             _ => {
                 return Err(error_stack::report!(
                     errors::ConnectorError::NotImplemented(
@@ -480,17 +481,13 @@ impl<
                 )
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?,
             ),
-            capture_sequence: item
-                .request
-                .multiple_capture_data
-                .as_ref()
-                .map(|mcd| {
-                    if mcd.capture_sequence == 1 {
-                        Sequence::First
-                    } else {
-                        Sequence::Subsequent
-                    }
-                }),
+            capture_sequence: item.request.multiple_capture_data.as_ref().map(|mcd| {
+                if mcd.capture_sequence == 1 {
+                    Sequence::First
+                } else {
+                    Sequence::Subsequent
+                }
+            }),
             reference: item
                 .request
                 .multiple_capture_data
