@@ -73,6 +73,7 @@ worldpayvantiv.base_url = "https://transact.vantivcnp.com/vap/communicator/onlin
 worldpayvantiv.secondary_base_url = "https://onlinessr.vantivcnp.com"
 paypal.base_url = "https://api-m.paypal.com/"
 paysafe.base_url = "https://api.paysafe.com/paymenthub/"
+bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
 
 # Generic Events Configuration
 [events]
