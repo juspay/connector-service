@@ -588,10 +588,16 @@ macro_rules! implement_connector_operation {
 
             // Create test context if test mode is enabled
             let test_context = if self.config.test.enabled {
-                Some(external_services::service::TestContext::new(true,
-                    self.config.test.mock_server_url.clone(),
-                    request_id.to_string(),
-                ))
+                Some(
+                    external_services::service::TestContext::new(
+                        self.config.test.enabled,
+                        self.config.test.mock_server_url.clone(),
+                        request_id.to_string(),
+                    )
+                    .map_err(|e| {
+                        tonic::Status::internal(format!("Test mode configuration error: {e}"))
+                    })?,
+                )
             } else {
                 None
             };

@@ -27,19 +27,25 @@ pub struct TestContext {
 
 impl TestContext {
     /// Create a new TestContext (session_id is typically the request_id)
-    pub fn new(is_test_env: bool, mock_server_url: Option<String>, session_id: String) -> Self {
+    ///
+    /// Returns an error if test mode is enabled but mock_server_url is not configured
+    pub fn new(
+        is_test_env: bool,
+        mock_server_url: Option<String>,
+        session_id: String,
+    ) -> Result<Self, ConnectorError> {
         // Validate that mock_server_url is provided when test mode is enabled
         if is_test_env && mock_server_url.is_none() {
-            tracing::error!(
-                "Test mode is enabled but mock_server_url is not configured. Please set CS__TEST__MOCK_SERVER_URL environment variable or test.mock_server_url in config file"
-            );
+            return Err(ConnectorError::MissingRequiredField {
+                field_name: "mock_server_url",
+            });
         }
 
-        Self {
+        Ok(Self {
             mock_server_url,
             is_test_env,
             session_id,
-        }
+        })
     }
 
     /// Get test headers to be added to connector requests

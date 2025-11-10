@@ -453,11 +453,21 @@ impl Payments {
 
         // Create test context if test mode is enabled
         let test_context = if self.config.test.enabled {
-            Some(external_services::service::TestContext::new(
-                true,
-                self.config.test.mock_server_url.clone(),
-                request_id.to_string(),
-            ))
+            Some(
+                external_services::service::TestContext::new(
+                    self.config.test.enabled,
+                    self.config.test.mock_server_url.clone(),
+                    request_id.to_string(),
+                )
+                .map_err(|e| {
+                    PaymentAuthorizationError::new(
+                        grpc_api_types::payments::PaymentStatus::Pending,
+                        Some(format!("Test mode configuration error: {e}")),
+                        Some("TEST_CONFIG_ERROR".to_string()),
+                        None,
+                    )
+                })?,
+            )
         } else {
             None
         };
@@ -627,11 +637,21 @@ impl Payments {
 
         // Create test context if test mode is enabled
         let test_context = if self.config.test.enabled {
-            Some(external_services::service::TestContext::new(
-                true,
-                self.config.test.mock_server_url.clone(),
-                event_params.request_id.to_string(),
-            ))
+            Some(
+                external_services::service::TestContext::new(
+                    self.config.test.enabled,
+                    self.config.test.mock_server_url.clone(),
+                    event_params.request_id.to_string(),
+                )
+                .map_err(|e| {
+                    PaymentAuthorizationError::new(
+                        grpc_api_types::payments::PaymentStatus::Pending,
+                        Some(format!("Test mode configuration error: {e}")),
+                        Some("TEST_CONFIG_ERROR".to_string()),
+                        None,
+                    )
+                })?,
+            )
         } else {
             None
         };
@@ -748,11 +768,16 @@ impl Payments {
 
         // Create test context if test mode is enabled
         let test_context = if self.config.test.enabled {
-            Some(external_services::service::TestContext::new(
-                true,
-                self.config.test.mock_server_url.clone(),
-                event_params.request_id.to_string(),
-            ))
+            Some(
+                external_services::service::TestContext::new(
+                    self.config.test.enabled,
+                    self.config.test.mock_server_url.clone(),
+                    event_params.request_id.to_string(),
+                )
+                .map_err(|e| {
+                    tonic::Status::internal(format!("Test mode configuration error: {e}"))
+                })?,
+            )
         } else {
             None
         };
@@ -863,11 +888,21 @@ impl Payments {
 
         // Create test context if test mode is enabled
         let test_context = if self.config.test.enabled {
-            Some(external_services::service::TestContext::new(
-                true,
-                self.config.test.mock_server_url.clone(),
-                event_params.request_id.to_string(),
-            ))
+            Some(
+                external_services::service::TestContext::new(
+                    self.config.test.enabled,
+                    self.config.test.mock_server_url.clone(),
+                    event_params.request_id.to_string(),
+                )
+                .map_err(|e| {
+                    PaymentAuthorizationError::new(
+                        grpc_api_types::payments::PaymentStatus::Pending,
+                        Some(format!("Test mode configuration error: {e}")),
+                        Some("TEST_CONFIG_ERROR".to_string()),
+                        None,
+                    )
+                })?,
+            )
         } else {
             None
         };
@@ -998,11 +1033,21 @@ impl Payments {
 
         // Create test context if test mode is enabled
         let test_context = if self.config.test.enabled {
-            Some(external_services::service::TestContext::new(
-                true,
-                self.config.test.mock_server_url.clone(),
-                event_params.request_id.to_string(),
-            ))
+            Some(
+                external_services::service::TestContext::new(
+                    self.config.test.enabled,
+                    self.config.test.mock_server_url.clone(),
+                    event_params.request_id.to_string(),
+                )
+                .map_err(|e| {
+                    PaymentAuthorizationError::new(
+                        grpc_api_types::payments::PaymentStatus::Pending,
+                        Some(format!("Test mode configuration error: {e}")),
+                        Some("TEST_CONFIG_ERROR".to_string()),
+                        None,
+                    )
+                })?,
+            )
         } else {
             None
         };
@@ -1128,11 +1173,21 @@ impl Payments {
 
         // Create test context if test mode is enabled
         let test_context = if self.config.test.enabled {
-            Some(external_services::service::TestContext::new(
-                true,
-                self.config.test.mock_server_url.clone(),
-                event_params.request_id.to_string(),
-            ))
+            Some(
+                external_services::service::TestContext::new(
+                    self.config.test.enabled,
+                    self.config.test.mock_server_url.clone(),
+                    event_params.request_id.to_string(),
+                )
+                .map_err(|e| {
+                    PaymentAuthorizationError::new(
+                        grpc_api_types::payments::PaymentStatus::Pending,
+                        Some(format!("Test mode configuration error: {e}")),
+                        Some("TEST_CONFIG_ERROR".to_string()),
+                        None,
+                    )
+                })?,
+            )
         } else {
             None
         };
@@ -1249,11 +1304,16 @@ impl Payments {
 
         // Create test context if test mode is enabled
         let test_context = if self.config.test.enabled {
-            Some(external_services::service::TestContext::new(
-                true,
-                self.config.test.mock_server_url.clone(),
-                event_params.request_id.to_string(),
-            ))
+            Some(
+                external_services::service::TestContext::new(
+                    self.config.test.enabled,
+                    self.config.test.mock_server_url.clone(),
+                    event_params.request_id.to_string(),
+                )
+                .map_err(|e| {
+                    tonic::Status::internal(format!("Test mode configuration error: {e}"))
+                })?,
+            )
         } else {
             None
         };
@@ -1392,11 +1452,21 @@ impl Payments {
 
         // Create test context if test mode is enabled
         let test_context = if self.config.test.enabled {
-            Some(external_services::service::TestContext::new(
-                true,
-                self.config.test.mock_server_url.clone(),
-                event_params.request_id.to_string(),
-            ))
+            Some(
+                external_services::service::TestContext::new(
+                    self.config.test.enabled,
+                    self.config.test.mock_server_url.clone(),
+                    event_params.request_id.to_string(),
+                )
+                .map_err(|e| {
+                    PaymentAuthorizationError::new(
+                        grpc_api_types::payments::PaymentStatus::Pending,
+                        Some(format!("Test mode configuration error: {e}")),
+                        Some("TEST_CONFIG_ERROR".to_string()),
+                        None,
+                    )
+                })?,
+            )
         } else {
             None
         };
@@ -1867,11 +1937,18 @@ impl PaymentService for Payments {
 
                     // Create test context if test mode is enabled
                     let test_context = if self.config.test.enabled {
-                        Some(external_services::service::TestContext::new(
-                            true,
-                            self.config.test.mock_server_url.clone(),
-                            metadata_payload.request_id.clone(),
-                        ))
+                        Some(
+                            external_services::service::TestContext::new(
+                                self.config.test.enabled,
+                                self.config.test.mock_server_url.clone(),
+                                metadata_payload.request_id.clone(),
+                            )
+                            .map_err(|e| {
+                                tonic::Status::internal(format!(
+                                    "Test mode configuration error: {e}"
+                                ))
+                            })?,
+                        )
                     } else {
                         None
                     };
@@ -2447,11 +2524,18 @@ impl PaymentService for Payments {
 
                     // Create test context if test mode is enabled
                     let test_context = if self.config.test.enabled {
-                        Some(external_services::service::TestContext::new(
-                            true,
-                            self.config.test.mock_server_url.clone(),
-                            request_id.clone(),
-                        ))
+                        Some(
+                            external_services::service::TestContext::new(
+                                self.config.test.enabled,
+                                self.config.test.mock_server_url.clone(),
+                                request_id.clone(),
+                            )
+                            .map_err(|e| {
+                                tonic::Status::internal(format!(
+                                    "Test mode configuration error: {e}"
+                                ))
+                            })?,
+                        )
                     } else {
                         None
                     };
@@ -2587,11 +2671,18 @@ impl PaymentService for Payments {
 
                     // Create test context if test mode is enabled
                     let test_context = if self.config.test.enabled {
-                        Some(external_services::service::TestContext::new(
-                            true,
-                            self.config.test.mock_server_url.clone(),
-                            request_id.clone(),
-                        ))
+                        Some(
+                            external_services::service::TestContext::new(
+                                self.config.test.enabled,
+                                self.config.test.mock_server_url.clone(),
+                                request_id.clone(),
+                            )
+                            .map_err(|e| {
+                                tonic::Status::internal(format!(
+                                    "Test mode configuration error: {e}"
+                                ))
+                            })?,
+                        )
                     } else {
                         None
                     };
