@@ -54,6 +54,7 @@ trustpay.base_url_bank_redirects = "https://aapi.trustpay.eu/"
 stripe.base_url = "https://api.stripe.com/"
 cybersource.base_url = "https://apitest.cybersource.com/"
 worldpay.base_url = "https://access.worldpay.com/"
+bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
 
 # Generic Events Configuration
 [events]

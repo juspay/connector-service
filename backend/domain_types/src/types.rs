@@ -125,6 +125,7 @@ pub struct Connectors {
     pub stripe: ConnectorParams,
     pub cybersource: ConnectorParams,
     pub worldpay: ConnectorParams,
+    pub bankofamerica: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]

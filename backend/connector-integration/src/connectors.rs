@@ -88,3 +88,6 @@ pub use self::cybersource::Cybersource;
 
 pub mod worldpay;
 pub use self::worldpay::Worldpay;
+
+pub mod bankofamerica;
+pub use self::bankofamerica::Bankofamerica;

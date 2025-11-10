@@ -4,7 +4,7 @@ use domain_types::{connector_types::ConnectorEnum, payment_method_data::PaymentM
 use interfaces::connector_types::BoxedConnector;
 
 use crate::connectors::{
-    Aci, Adyen, Authorizedotnet, Bluecode, Braintree, Cashfree, Cashtocode, Checkout, Cryptopay,
+    Aci, Adyen, Authorizedotnet, Bankofamerica, Bluecode, Braintree, Cashfree, Cashtocode, Checkout, Cryptopay,
     Cybersource, Dlocal, Elavon, Fiserv, Fiuu, Helcim, Mifinity, Nexinets, Noon, Novalnet, Paytm,
     Payu, Phonepe, Placetopay, Rapyd, Razorpay, RazorpayV2, Stripe, Trustpay, Volt, Worldpay,
     Xendit,
@@ -60,6 +60,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Stripe => Box::new(Stripe::new()),
             ConnectorEnum::Cybersource => Box::new(Cybersource::new()),
             ConnectorEnum::Worldpay => Box::new(Worldpay::new()),
+            ConnectorEnum::Bankofamerica => Box::new(Bankofamerica::new()),
         }
     }
 }

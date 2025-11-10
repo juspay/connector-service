@@ -21,7 +21,7 @@ type = "grpc"
 
 [metrics]
 host = "127.0.0.1"
-port = 8080
+port = 8090
 
 [proxy]
 idle_pool_connection_timeout = 90
@@ -62,6 +62,7 @@ trustpay.base_url_bank_redirects = "https://aapi.trustpay.eu/"
 stripe.base_url = "https://api.stripe.com/"
 cybersource.base_url = "https://apitest.cybersource.com/"
 worldpay.base_url = "https://try.access.worldpay.com/"
+bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
 
 # Generic Events Configuration
 [events]
