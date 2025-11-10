@@ -41,14 +41,15 @@ use domain_types::{
 };
 use serde::Serialize;
 use std::fmt::Debug;
-use hyperswitch_masking::{Maskable, Secret};
+use hyperswitch_masking::{ExposeInterface, Maskable, Secret};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
 use transformers::{
-    self as archipel,ArchipelCardAuthorizationRequest, ArchipelCaptureRequest,
-    ArchipelCaptureResponse, ArchipelPaymentsResponse, ArchipelPSyncResponse
+    self as archipel, ArchipelCardAuthorizationRequest, ArchipelCaptureRequest,
+    ArchipelCaptureResponse, ArchipelPaymentsResponse, ArchipelPSyncResponse,
+    ArchipelVoidRequest, ArchipelVoidResponse
 };
 
 use super::macros;
@@ -166,6 +167,12 @@ macros::create_all_prerequisites!(
             request_body: ArchipelCaptureRequest,
             response_body: ArchipelCaptureResponse,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ),
+        (
+            flow: Void,
+            request_body: ArchipelVoidRequest,
+            response_body: ArchipelVoidResponse,
+            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -221,18 +228,6 @@ pub(crate) mod headers {
 }
 
 // Stub implementations for unsupported flows
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Archipel<T>
-{
-}
 
 impl<
         T: PaymentMethodDataTypes
@@ -842,6 +837,53 @@ macros::macro_connector_implementation!(
         fn get_ca_certificate(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<Option<Secret<String>>, errors::ConnectorError> {
+            self.get_ca_cert(req)
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Archipel,
+    curl_request: Json(ArchipelVoidRequest),
+    curl_response: ArchipelVoidResponse,
+    flow_name: Void,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentVoidData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let metadata_value = req.request.connector_metadata
+                .as_ref()
+                .map(|secret| secret.clone().expose());
+
+            let base_url =
+                build_env_specific_endpoint(self.connector_base_url_payments(req), &metadata_value)?;
+
+            // Get the order ID from connector_transaction_id (it's a String in PaymentVoidData)
+            let order_id = &req.request.connector_transaction_id;
+
+            Ok(format!(
+                "{}/cancel/{}",
+                base_url, order_id
+            ))
+        }
+        fn get_ca_certificate(
+            &self,
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<Option<Secret<String>>, errors::ConnectorError> {
             self.get_ca_cert(req)
         }

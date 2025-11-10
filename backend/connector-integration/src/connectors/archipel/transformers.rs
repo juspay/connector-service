@@ -9,10 +9,10 @@ use common_utils::{consts,
 };
 use domain_types::{
     payment_address::AddressDetails,
-    connector_flow::{Authorize, Capture},
+    connector_flow::{Authorize, Capture, Void},
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData,ResponseId,
+        PaymentsSyncData, PaymentVoidData, ResponseId,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
@@ -24,7 +24,7 @@ use domain_types::{
     utils::CardIssuer,
 };
 use error_stack::{ report};
-use hyperswitch_masking::{Secret};
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -990,6 +990,115 @@ impl<F> TryFrom<ResponseRouterData<ArchipelPSyncResponse, Self>>
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.0.order.id.clone()),
+                status_code: item.http_code,
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata,
+                network_txn_id: None,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+// VOID FLOW (Cancel Payment)
+#[derive(Debug, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchipelVoidRequest {
+    tenant_id: ArchipelTenantId,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(transparent)]
+pub struct ArchipelVoidResponse(ArchipelPaymentsResponse);
+
+impl std::ops::Deref for ArchipelVoidResponse {
+    type Target = ArchipelPaymentsResponse;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        ArchipelRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for ArchipelVoidRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ArchipelRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Extract the value from Secret wrapper
+        let metadata_value = item.router_data.request.connector_metadata
+            .as_ref()
+            .map(|secret| secret.clone().expose());
+
+        let connector_metadata = ArchipelConfigData::try_from(&metadata_value)?;
+
+        Ok(Self {
+            tenant_id: connector_metadata.tenant_id,
+        })
+    }
+}
+
+impl<F>
+    TryFrom<
+        ResponseRouterData<
+            ArchipelVoidResponse,
+            RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        >,
+    > for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            ArchipelVoidResponse,
+            RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        if let Some(error) = item.response.0.error {
+            return Ok(Self {
+                response: Err(ArchipelErrorMessageWithHttpCode::new(error, item.http_code).into()),
+                ..item.router_data
+            });
+        };
+
+        let connector_metadata: Option<serde_json::Value> =
+            ArchipelTransactionMetadata::from(&item.response.0)
+                .encode_to_value()
+                .ok();
+
+        let status: AttemptStatus = ArchipelFlowStatus::new(
+            item.response.0.transaction_result,
+            ArchipelPaymentFlow::Cancel,
+        )
+        .into();
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(item.response.0.order.id),
                 status_code: item.http_code,
                 redirection_data: None,
                 mandate_reference: None,
