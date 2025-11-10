@@ -128,6 +128,7 @@ pub struct Connectors {
     pub celero: ConnectorParams,
     pub paypal: ConnectorParams,
     pub stax: ConnectorParams,
+    pub hipay: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]

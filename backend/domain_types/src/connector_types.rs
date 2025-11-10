@@ -84,6 +84,7 @@ pub enum ConnectorEnum {
     Celero,
     Paypal,
     Stax,
+    Hipay,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -132,6 +133,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Celero => Ok(Self::Celero),
             grpc_api_types::payments::Connector::Paypal => Ok(Self::Paypal),
             grpc_api_types::payments::Connector::Stax => Ok(Self::Stax),
+            grpc_api_types::payments::Connector::Hipay => Ok(Self::Hipay),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
