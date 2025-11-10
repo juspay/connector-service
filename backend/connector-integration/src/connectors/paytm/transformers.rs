@@ -99,7 +99,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use ring::{
     digest,
     rand::{SecureRandom, SystemRandom},
@@ -114,11 +114,11 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct PaytmAuthType {
-    pub merchant_id: Secret<String>,  // From api_key
-    pub merchant_key: Secret<String>, // From key1
-    pub website: Secret<String>,      // From api_secret
-    pub channel_id: String,           // Hardcoded "WEB"
-    pub client_id: Option<String>,    // None as specified
+    pub merchant_id: Secret<String>,       // From api_key
+    pub merchant_key: Secret<String>,      // From key1
+    pub website: Secret<String>,           // From api_secret
+    pub channel_id: String,                // Hardcoded "WEB"
+    pub client_id: Option<Secret<String>>, // None as specified
 }
 
 impl TryFrom<&ConnectorAuthType> for PaytmAuthType {
@@ -186,24 +186,24 @@ pub struct PaytmInitiateTxnRequest {
 #[derive(Debug, Serialize)]
 pub struct PaytmRequestHeader {
     #[serde(rename = "clientId")]
-    pub client_id: Option<String>, // None
+    pub client_id: Option<Secret<String>>, // None
     pub version: String, // "v2"
     #[serde(rename = "requestTimestamp")]
     pub request_timestamp: String,
     #[serde(rename = "channelId")]
     pub channel_id: String, // "WEB"
-    pub signature: String,
+    pub signature: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct PaytmInitiateReqBody {
     #[serde(rename = "requestType")]
     pub request_type: String, // "Payment"
-    pub mid: String, // Merchant ID
+    pub mid: Secret<String>, // Merchant ID
     #[serde(rename = "orderId")]
     pub order_id: String, // Payment ID
     #[serde(rename = "websiteName")]
-    pub website_name: String, // From api_secret
+    pub website_name: Secret<String>, // From api_secret
     #[serde(rename = "txnAmount")]
     pub txn_amount: PaytmAmount,
     #[serde(rename = "userInfo")]
@@ -258,7 +258,7 @@ pub struct PaytmRespBody {
     #[serde(rename = "resultInfo")]
     pub result_info: PaytmResultInfo,
     #[serde(rename = "txnToken")]
-    pub txn_token: String, // This will be stored as session_token
+    pub txn_token: Secret<String>, // This will be stored as session_token
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -277,8 +277,8 @@ pub struct PaytmRespHead {
     pub response_timestamp: Option<String>,
     pub version: String,
     #[serde(rename = "clientId")]
-    pub client_id: Option<String>,
-    pub signature: Option<String>,
+    pub client_id: Option<Secret<String>>,
+    pub signature: Option<Secret<String>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -372,12 +372,12 @@ pub struct PaytmProcessHeadTypes {
     #[serde(rename = "channelId")]
     pub channel_id: String, // "WEB"
     #[serde(rename = "txnToken")]
-    pub txn_token: String, // From CreateSessionToken
+    pub txn_token: Secret<String>, // From CreateSessionToken
 }
 
 #[derive(Debug, Serialize)]
 pub struct PaytmProcessBodyTypes {
-    pub mid: String,
+    pub mid: Secret<String>,
     #[serde(rename = "orderId")]
     pub order_id: String,
     #[serde(rename = "requestType")]
@@ -398,14 +398,14 @@ pub struct PaytmNativeProcessTxnRequest {
 #[derive(Debug, Serialize)]
 pub struct PaytmTxnTokenType {
     #[serde(rename = "txnToken")]
-    pub txn_token: String, // From CreateSessionToken
+    pub txn_token: Secret<String>, // From CreateSessionToken
 }
 
 #[derive(Debug, Serialize)]
 pub struct PaytmNativeProcessRequestBody {
     #[serde(rename = "requestType")]
     pub request_type: String, // "NATIVE"
-    pub mid: String,
+    pub mid: Secret<String>,
     #[serde(rename = "orderId")]
     pub order_id: String,
     #[serde(rename = "paymentMode")]
@@ -417,7 +417,7 @@ pub struct PaytmNativeProcessRequestBody {
     #[serde(rename = "channelId")]
     pub channel_id: String, // "WEB"
     #[serde(rename = "txnToken")]
-    pub txn_token: String, // From CreateSessionToken
+    pub txn_token: Secret<String>, // From CreateSessionToken
     #[serde(rename = "authMode")]
     pub auth_mode: Option<String>, // "DEBIT_PIN"
 }
@@ -687,7 +687,7 @@ pub fn create_paytm_header(
         version: constants::API_VERSION.to_string(),
         request_timestamp: timestamp,
         channel_id: auth.channel_id.clone(), // "WEB"
-        signature,
+        signature: Secret::new(signature),
     })
 }
 
@@ -711,7 +711,7 @@ pub struct PaytmAuthorizeRouterData<T: domain_types::payment_method_data::Paymen
     pub amount: StringMajorUnit,
     pub currency: Currency,
     pub payment_id: String,
-    pub session_token: String,
+    pub session_token: Secret<String>,
     pub payment_method_data: PaymentMethodData<T>,
     pub customer_id: Option<String>,
     pub email: Option<Email>,
@@ -772,9 +772,9 @@ impl PaytmInitiateTxnRequest {
     ) -> CustomResult<Self, errors::ConnectorError> {
         let body = PaytmInitiateReqBody {
             request_type: constants::REQUEST_TYPE_PAYMENT.to_string(),
-            mid: auth.merchant_id.peek().to_string(),
+            mid: Secret::new(auth.merchant_id.peek().to_string()),
             order_id: item.payment_id.clone(),
-            website_name: auth.website.peek().to_string(),
+            website_name: Secret::new(auth.website.peek().to_string()),
             txn_amount: PaytmAmount {
                 value: item.amount.clone(),
                 currency: item.currency,
@@ -845,7 +845,7 @@ impl<T: domain_types::payment_method_data::PaymentMethodDataTypes> PaytmAuthoriz
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            session_token,
+            session_token: Secret::new(session_token),
             payment_method_data: item.request.payment_method_data.clone(),
             customer_id,
             email,
@@ -877,7 +877,7 @@ impl PaytmProcessTxnRequest {
         };
 
         let body = PaytmProcessBodyTypes {
-            mid: auth.merchant_id.peek().to_string(),
+            mid: Secret::new(auth.merchant_id.peek().to_string()),
             order_id: item.payment_id.clone(),
             request_type: constants::REQUEST_TYPE_PAYMENT.to_string(),
             payment_mode: format!("{}_{}", constants::PAYMENT_MODE_UPI, "INTENT"), // "UPI_INTENT" for intent
@@ -907,7 +907,7 @@ impl PaytmNativeProcessTxnRequest {
 
         let body = PaytmNativeProcessRequestBody {
             request_type: constants::REQUEST_TYPE_NATIVE.to_string(),
-            mid: auth.merchant_id.peek().to_string(),
+            mid: Secret::new(auth.merchant_id.peek().to_string()),
             order_id: item.payment_id.clone(),
             payment_mode: constants::PAYMENT_MODE_UPI.to_string(),
             payer_account: Some(vpa),
@@ -932,8 +932,8 @@ pub struct PaytmTransactionStatusRequest {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaytmTransactionStatusReqBody {
-    pub mid: String,      // Merchant ID
-    pub order_id: String, // Order ID
+    pub mid: Secret<String>, // Merchant ID
+    pub order_id: String,    // Order ID
     #[serde(skip_serializing_if = "Option::is_none")]
     pub txn_type: Option<String>, // PREAUTH, CAPTURE, RELEASE, WITHDRAW
 }
@@ -1020,7 +1020,7 @@ impl PaytmTransactionStatusRequest {
         auth: &PaytmAuthType,
     ) -> CustomResult<Self, errors::ConnectorError> {
         let body = PaytmTransactionStatusReqBody {
-            mid: auth.merchant_id.peek().to_string(),
+            mid: Secret::new(auth.merchant_id.peek().to_string()),
             order_id: item.payment_id.clone(),
             txn_type: item.txn_type.clone(),
         };
@@ -1305,7 +1305,7 @@ impl
         };
 
         router_data.response = Ok(SessionTokenResponseData {
-            session_token: session_token.unwrap_or_default(),
+            session_token: session_token.unwrap_or_default().expose(),
         });
 
         Ok(router_data)

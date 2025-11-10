@@ -4,10 +4,10 @@
 
 use grpc_server::{app, configs};
 mod common;
+mod utils;
 
 use std::{
     collections::HashMap,
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -24,18 +24,13 @@ use grpc_api_types::{
         PaymentStatus, RefundResponse, RefundServiceGetRequest, RefundStatus,
     },
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use tonic::{transport::Channel, Request};
 
 // Constants for Nexinets connector
 const CONNECTOR_NAME: &str = "nexinets";
 const AUTH_TYPE: &str = "body-key";
 const MERCHANT_ID: &str = "12abc123-f8a3-99b8-9ef8-b31180358hh4";
-
-// Environment variable names for API credentials (can be set or overridden with
-// provided values)
-const NEXINETS_API_KEY_ENV: &str = "TEST_NEXINETS_API_KEY";
-const NEXINETS_KEY1_ENV: &str = "TEST_NEXINETS_KEY1";
 
 // Test card data
 const TEST_AMOUNT: i64 = 1000;
@@ -56,11 +51,15 @@ fn get_timestamp() -> u64 {
 
 // Helper function to add Nexinets metadata headers to a request
 fn add_nexinets_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables - throw error if not set
-    let api_key = env::var(NEXINETS_API_KEY_ENV)
-        .expect("TEST_NEXINETS_API_KEY environment variable is required");
-    let key1 =
-        env::var(NEXINETS_KEY1_ENV).expect("TEST_NEXINETS_KEY1 environment variable is required");
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load nexinets credentials");
+
+    let (api_key, key1) = match auth {
+        domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
+            (api_key.expose(), key1.expose())
+        }
+        _ => panic!("Expected BodyKey auth type for nexinets"),
+    };
 
     request.metadata_mut().append(
         "x-connector",
@@ -257,9 +256,14 @@ fn create_refund_sync_request(
 async fn visit_3ds_authentication_url(
     request_ref_id: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // Get the KEY1 value from environment variable for the URL
-    let key1 = env::var(NEXINETS_KEY1_ENV)
-        .expect("TEST_NEXINETS_KEY1 environment variable is required for 3DS URL");
+    // Get the key1 value from auth credentials for the URL
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load nexinets credentials");
+
+    let key1 = match auth {
+        domain_types::router_data::ConnectorAuthType::BodyKey { key1, .. } => key1.expose(),
+        _ => panic!("Expected BodyKey auth type for nexinets"),
+    };
 
     // Construct the 3DS authentication URL with correct format
     let url = format!("https://pptest.payengine.de/three-ds-v2-order/{key1}/{request_ref_id}",);
