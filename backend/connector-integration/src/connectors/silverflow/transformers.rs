@@ -47,22 +47,36 @@ impl TryFrom<&ConnectorAuthType> for SilverflowAuthType {
     }
 }
 
+// Error response structures matching Silverflow's nested error format
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SilverflowErrorResponse {
-    pub code: Option<String>,
-    pub message: Option<String>,
-    pub detail: Option<String>,
+pub struct SilverflowErrorDetails {
+    pub field: Option<String>,
+    pub issue: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SilverflowError {
+    pub code: String,
+    pub message: String,
     #[serde(rename = "traceId")]
     pub trace_id: Option<String>,
+    pub details: Option<SilverflowErrorDetails>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SilverflowErrorResponse {
+    pub error: SilverflowError,
 }
 
 impl Default for SilverflowErrorResponse {
     fn default() -> Self {
         Self {
-            code: Some("UNKNOWN_ERROR".to_string()),
-            message: Some("An unknown error occurred".to_string()),
-            detail: None,
-            trace_id: None,
+            error: SilverflowError {
+                code: "UNKNOWN_ERROR".to_string(),
+                message: "An unknown error occurred".to_string(),
+                trace_id: None,
+                details: None,
+            },
         }
     }
 }
@@ -98,6 +112,8 @@ pub enum SilverflowClearingMode {
 pub enum SilverflowAuthorizationStatus {
     Approved,
     Declined,
+    Failed,
+    Pending,
     #[serde(other)]
     Unknown,
 }
@@ -108,6 +124,7 @@ pub enum SilverflowClearingStatus {
     Cleared,
     Settled,
     Pending,
+    Failed,
     #[serde(other)]
     Unknown,
 }
@@ -376,19 +393,34 @@ impl<T: PaymentMethodDataTypes>
         >,
     ) -> Result<Self, Self::Error> {
         // Map status based on Silverflow's authorization and clearing status
-        let status = match item.response.status.authorization {
-            SilverflowAuthorizationStatus::Approved => {
-                // Check clearing status for final status determination
-                match item.response.status.clearing {
-                    SilverflowClearingStatus::Cleared | SilverflowClearingStatus::Settled => {
-                        AttemptStatus::Charged
-                    }
-                    SilverflowClearingStatus::Pending => AttemptStatus::Authorized,
-                    SilverflowClearingStatus::Unknown => AttemptStatus::Authorized,
-                }
+        // This follows the multi-dimensional status mapping pattern as per best practices
+        let status = match (
+            &item.response.status.authorization,
+            &item.response.status.clearing,
+        ) {
+            // Approved authorization - check clearing status for final determination
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Cleared) => {
+                AttemptStatus::Charged
             }
-            SilverflowAuthorizationStatus::Declined => AttemptStatus::Failure,
-            SilverflowAuthorizationStatus::Unknown => AttemptStatus::Pending,
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Settled) => {
+                AttemptStatus::Charged
+            }
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Pending) => {
+                AttemptStatus::Authorized
+            }
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Failed) => {
+                AttemptStatus::Failure
+            }
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Unknown) => {
+                AttemptStatus::Authorized
+            }
+            // Failed or declined authorization
+            (SilverflowAuthorizationStatus::Declined, _) => AttemptStatus::Failure,
+            (SilverflowAuthorizationStatus::Failed, _) => AttemptStatus::Failure,
+            // Pending authorization
+            (SilverflowAuthorizationStatus::Pending, _) => AttemptStatus::Pending,
+            // Unknown authorization status
+            (SilverflowAuthorizationStatus::Unknown, _) => AttemptStatus::Pending,
         };
 
         // Extract network transaction ID from authorization ISO fields
@@ -473,19 +505,34 @@ impl
         >,
     ) -> Result<Self, Self::Error> {
         // Map status based on Silverflow's status fields
-        let status = match item.response.status.authorization {
-            SilverflowAuthorizationStatus::Approved => {
-                // Check clearing status for final status determination
-                match item.response.status.clearing {
-                    SilverflowClearingStatus::Cleared | SilverflowClearingStatus::Settled => {
-                        AttemptStatus::Charged
-                    }
-                    SilverflowClearingStatus::Pending => AttemptStatus::Authorized,
-                    SilverflowClearingStatus::Unknown => AttemptStatus::Authorized,
-                }
+        // This follows the multi-dimensional status mapping pattern as per best practices
+        let status = match (
+            &item.response.status.authorization,
+            &item.response.status.clearing,
+        ) {
+            // Approved authorization - check clearing status for final determination
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Cleared) => {
+                AttemptStatus::Charged
             }
-            SilverflowAuthorizationStatus::Declined => AttemptStatus::Failure,
-            SilverflowAuthorizationStatus::Unknown => AttemptStatus::Pending,
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Settled) => {
+                AttemptStatus::Charged
+            }
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Pending) => {
+                AttemptStatus::Authorized
+            }
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Failed) => {
+                AttemptStatus::Failure
+            }
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Unknown) => {
+                AttemptStatus::Authorized
+            }
+            // Failed or declined authorization
+            (SilverflowAuthorizationStatus::Declined, _) => AttemptStatus::Failure,
+            (SilverflowAuthorizationStatus::Failed, _) => AttemptStatus::Failure,
+            // Pending authorization
+            (SilverflowAuthorizationStatus::Pending, _) => AttemptStatus::Pending,
+            // Unknown authorization status
+            (SilverflowAuthorizationStatus::Unknown, _) => AttemptStatus::Pending,
         };
 
         // Extract network transaction ID from authorization ISO fields
@@ -756,8 +803,9 @@ impl
 #[derive(Debug, Serialize)]
 pub struct SilverflowRefundSyncRequest;
 
-// Reuse SilverflowPaymentsResponse for refund sync response since GET /charges/{chargeKey} returns the same structure
-pub type SilverflowRefundSyncResponse = SilverflowPaymentsResponse;
+// Refund sync returns the refund action details, not the charge details
+// The response structure is the same as the refund execute response
+pub type SilverflowRefundSyncResponse = SilverflowRefundResponse;
 
 // Refund Sync Request Transformation (empty for GET-based connector)
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -798,11 +846,15 @@ impl
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Map refund status based on Silverflow's status fields for sync
-        let refund_status = match item.response.status.authorization {
-            SilverflowAuthorizationStatus::Approved => common_enums::RefundStatus::Success,
-            SilverflowAuthorizationStatus::Declined => common_enums::RefundStatus::Failure,
-            SilverflowAuthorizationStatus::Unknown => common_enums::RefundStatus::Pending,
+        // Map refund status based on Silverflow's refund action status
+        // This is the CORRECT way - check the action status, not authorization status
+        let refund_status = match item.response.status {
+            SilverflowActionStatus::Success | SilverflowActionStatus::Completed => {
+                common_enums::RefundStatus::Success
+            }
+            SilverflowActionStatus::Failed => common_enums::RefundStatus::Failure,
+            SilverflowActionStatus::Pending => common_enums::RefundStatus::Pending,
+            SilverflowActionStatus::Unknown => common_enums::RefundStatus::Pending,
         };
 
         Ok(Self {
@@ -890,8 +942,10 @@ impl
     ) -> Result<Self, Self::Error> {
         // Map status based on Silverflow's authorization status for void operations
         let status = match item.response.status.authorization {
-            SilverflowAuthorizationStatus::Approved => AttemptStatus::Voided, // Successful reversal
-            SilverflowAuthorizationStatus::Declined => AttemptStatus::Failure,
+            SilverflowAuthorizationStatus::Approved => AttemptStatus::Voided,
+            SilverflowAuthorizationStatus::Declined => AttemptStatus::VoidFailed,
+            SilverflowAuthorizationStatus::Failed => AttemptStatus::VoidFailed,
+            SilverflowAuthorizationStatus::Pending => AttemptStatus::Pending,
             SilverflowAuthorizationStatus::Unknown => AttemptStatus::Pending,
         };
 
