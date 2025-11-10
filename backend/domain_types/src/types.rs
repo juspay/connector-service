@@ -3645,7 +3645,12 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
         value: PaymentServiceVoidRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let amount = Some(common_utils::types::MinorUnit::new(value.amount()));
-        let currency = Some(common_enums::Currency::foreign_try_from(value.currency())?);
+        // If currency is unspecified, send None, otherwise try to convert it
+        let currency = if value.currency() == grpc_api_types::payments::Currency::Unspecified {
+            None
+        } else {
+            Some(common_enums::Currency::foreign_try_from(value.currency())?)
+        };
         Ok(Self {
             browser_info: value
                 .browser_info

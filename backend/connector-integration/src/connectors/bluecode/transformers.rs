@@ -15,7 +15,7 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
-use error_stack::{report, ResultExt};
+use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -122,20 +122,18 @@ impl TryFrom<&pii::SecretSerdeValue> for BluecodeMetadataObject {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(secret_value: &pii::SecretSerdeValue) -> Result<Self, Self::Error> {
-        let secret_value_str = match secret_value.peek() {
-            serde_json::Value::String(s) => s.clone(),
-            _ => {
-                return Err(report!(errors::ConnectorError::InvalidConnectorConfig {
-                    config: "BluecodeMetadataObject in connector_meta_data was not a JSON string",
-                }));
-            }
-        };
-
-        serde_json::from_str(&secret_value_str).change_context(
-            errors::ConnectorError::InvalidConnectorConfig {
-                config: "Deserializing BluecodeMetadataObject from connector_meta_data string",
-            },
-        )
+        match secret_value.peek() {
+            serde_json::Value::String(s) => serde_json::from_str(s).change_context(
+                errors::ConnectorError::InvalidConnectorConfig {
+                    config: "Deserializing BluecodeMetadataObject from connector_meta_data string",
+                },
+            ),
+            value => serde_json::from_value(value.clone()).change_context(
+                errors::ConnectorError::InvalidConnectorConfig {
+                    config: "Deserializing BluecodeMetadataObject from connector_meta_data value",
+                },
+            ),
+        }
     }
 }
 
