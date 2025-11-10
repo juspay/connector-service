@@ -161,6 +161,7 @@ pub struct Connectors {
     pub barclaycard: ConnectorParams,
     pub nexixpay: ConnectorParams,
     pub airwallex: ConnectorParams,
+    pub bankofamerica: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
