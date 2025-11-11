@@ -30,7 +30,38 @@ fn get_order_type_from_payment_method<T: PaymentMethodDataTypes>(
     }
 }
 
+/// Maps CardNetwork enum to MultiSafepay gateway identifier
+/// Returns None for unrecognized networks to trigger fallback to card number detection
+fn card_network_to_gateway(network: &common_enums::CardNetwork) -> Option<String> {
+    match network {
+        common_enums::CardNetwork::Visa => Some("VISA".to_string()),
+        common_enums::CardNetwork::Mastercard => Some("MASTERCARD".to_string()),
+        common_enums::CardNetwork::AmericanExpress => Some("AMEX".to_string()),
+        common_enums::CardNetwork::Maestro => Some("MAESTRO".to_string()),
+        common_enums::CardNetwork::DinersClub => Some("DINER".to_string()),
+        common_enums::CardNetwork::Discover => Some("DISCOVER".to_string()),
+        // Unknown card networks will fall through to card number detection
+        _ => None,
+    }
+}
+
+/// Maps CardIssuer (from card number analysis) to MultiSafepay gateway identifier
+/// Returns None for unsupported card types to trigger CREDITCARD fallback
+fn card_issuer_to_gateway(issuer: domain_types::utils::CardIssuer) -> Option<String> {
+    match issuer {
+        domain_types::utils::CardIssuer::Visa => Some("VISA".to_string()),
+        domain_types::utils::CardIssuer::Master => Some("MASTERCARD".to_string()),
+        domain_types::utils::CardIssuer::AmericanExpress => Some("AMEX".to_string()),
+        domain_types::utils::CardIssuer::Maestro => Some("MAESTRO".to_string()),
+        domain_types::utils::CardIssuer::DinersClub => Some("DINER".to_string()),
+        domain_types::utils::CardIssuer::Discover => Some("DISCOVER".to_string()),
+        // Unsupported card types (JCB, CarteBlanche, etc.) will use CREDITCARD fallback
+        _ => None,
+    }
+}
+
 /// Maps payment method data to MultiSafepay gateway identifier
+/// Uses three-tier detection: card_network metadata -> card number analysis -> CREDITCARD fallback
 fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
     payment_method_data: &domain_types::payment_method_data::PaymentMethodData<T>,
 ) -> Option<String> {
@@ -38,30 +69,31 @@ fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
 
     match payment_method_data {
         PaymentMethodData::Card(card_data) => {
-            // Map card network to gateway identifier
-            card_data.card_network.as_ref().map(|network| {
-                match network {
-                    common_enums::CardNetwork::Visa => "VISA",
-                    common_enums::CardNetwork::Mastercard => "MASTERCARD",
-                    common_enums::CardNetwork::AmericanExpress => "AMEX",
-                    common_enums::CardNetwork::Maestro => "MAESTRO",
-                    common_enums::CardNetwork::DinersClub => "DINER",
-                    common_enums::CardNetwork::Discover => "DISCOVER",
-                    _ => "CREDITCARD", // Default for unrecognized card networks
+            // Tier 1: Try to use card_network metadata (fast path)
+            if let Some(ref network) = card_data.card_network {
+                if let Some(gateway) = card_network_to_gateway(network) {
+                    return Some(gateway);
                 }
-                .to_string()
-            })
-        }
-        PaymentMethodData::BankRedirect(bank_redirect_data) => match bank_redirect_data {
-            BankRedirectData::Ideal { .. } => Some("IDEAL".to_string()),
-            _ => None,
-        },
-        PaymentMethodData::Wallet(wallet_data) => match wallet_data {
-            WalletData::PaypalRedirect(_) | WalletData::PaypalSdk(_) => {
-                Some("PAYPAL".to_string())
             }
-            _ => None,
-        },
+
+            // Tier 2: Try to detect from card number (more reliable)
+            if let Ok(card_number_str) = get_card_number_string(&card_data.card_number) {
+                if let Ok(issuer) = domain_types::utils::get_card_issuer(&card_number_str) {
+                    if let Some(gateway) = card_issuer_to_gateway(issuer) {
+                        return Some(gateway);
+                    }
+                }
+            }
+
+            // Tier 3: Final fallback for unsupported or undetectable card types
+            Some("CREDITCARD".to_string())
+        }
+        PaymentMethodData::BankRedirect(BankRedirectData::Ideal { .. }) => {
+            Some("IDEAL".to_string())
+        }
+        PaymentMethodData::Wallet(WalletData::PaypalRedirect(_) | WalletData::PaypalSdk(_)) => {
+            Some("PAYPAL".to_string())
+        }
         // Add more payment methods as needed
         _ => None,
     }
@@ -86,7 +118,6 @@ fn get_card_number_string<T: PaymentMethodDataTypes>(
         .map(|s| s.to_string())
         .ok_or(errors::ConnectorError::RequestEncodingFailed)
         .attach_printable("Card number is not a valid string")
-        .map_err(error_stack::Report::from)
 }
 
 // ===== STATUS ENUMS =====
@@ -188,7 +219,7 @@ pub struct CustomerInfo {
 #[derive(Debug, Serialize)]
 pub struct GatewayInfo {
     pub card_number: Secret<String>,
-    pub card_expiry_date: i64,  // Format: YYMM as integer
+    pub card_expiry_date: i64, // Format: YYMM as integer
     pub card_cvc: Secret<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub card_holder_name: Option<Secret<String>>,
@@ -280,10 +311,9 @@ impl<
 
         let item = &wrapper.router_data;
         let order_type = get_order_type_from_payment_method(&item.request.payment_method_data);
-        let gateway = get_gateway_from_payment_method(&item.request.payment_method_data)
-            .ok_or(errors::ConnectorError::NotImplemented(
-                "Payment method not supported".to_string(),
-            ))?;
+        let gateway = get_gateway_from_payment_method(&item.request.payment_method_data).ok_or(
+            errors::ConnectorError::NotImplemented("Payment method not supported".to_string()),
+        )?;
 
         // Extract card data for direct transactions - requires actual PCI data, not tokens
         let card = match &item.request.payment_method_data {
@@ -304,11 +334,7 @@ impl<
             card_exp_year_str
         };
 
-        let card_expiry_str = format!(
-            "{}{}",
-            card_exp_year_2digit,
-            card.card_exp_month.peek()
-        );
+        let card_expiry_str = format!("{}{}", card_exp_year_2digit, card.card_exp_month.peek());
 
         let card_expiry_date: i64 = card_expiry_str
             .parse::<i64>()
@@ -332,7 +358,11 @@ impl<
         let customer = CustomerInfo {
             locale: None,
             ip_address: None,
-            reference: Some(item.resource_common_data.connector_request_reference_id.clone()),
+            reference: Some(
+                item.resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
             email: item
                 .request
                 .email
@@ -425,10 +455,9 @@ impl<T: PaymentMethodDataTypes>
         use error_stack::ResultExt;
 
         let order_type = get_order_type_from_payment_method(&item.request.payment_method_data);
-        let gateway = get_gateway_from_payment_method(&item.request.payment_method_data)
-            .ok_or(errors::ConnectorError::NotImplemented(
-                "Payment method not supported".to_string(),
-            ))?;
+        let gateway = get_gateway_from_payment_method(&item.request.payment_method_data).ok_or(
+            errors::ConnectorError::NotImplemented("Payment method not supported".to_string()),
+        )?;
 
         // Extract card data for direct transactions - requires actual PCI data, not tokens
         let card = match &item.request.payment_method_data {
@@ -449,11 +478,7 @@ impl<T: PaymentMethodDataTypes>
             card_exp_year_str
         };
 
-        let card_expiry_str = format!(
-            "{}{}",
-            card_exp_year_2digit,
-            card.card_exp_month.peek()
-        );
+        let card_expiry_str = format!("{}{}", card_exp_year_2digit, card.card_exp_month.peek());
 
         let card_expiry_date: i64 = card_expiry_str
             .parse::<i64>()
@@ -477,7 +502,11 @@ impl<T: PaymentMethodDataTypes>
         let customer = CustomerInfo {
             locale: None,
             ip_address: None,
-            reference: Some(item.resource_common_data.connector_request_reference_id.clone()),
+            reference: Some(
+                item.resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
             email: item
                 .request
                 .email

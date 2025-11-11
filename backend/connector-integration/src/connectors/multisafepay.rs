@@ -3,6 +3,7 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
+use common_utils::events;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
@@ -23,7 +24,7 @@ use domain_types::{
     },
     errors::{self},
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -32,7 +33,6 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
 use transformers::{
@@ -42,7 +42,7 @@ use transformers::{
 };
 
 use super::macros;
-use crate::types::ResponseRouterData;
+use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -205,7 +205,7 @@ macros::create_all_prerequisites!(
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
-            req: &RouterDataV2<F, FCD, Req, Res>,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let header = vec![(
                 headers::CONTENT_TYPE.to_string(),
@@ -760,16 +760,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: multisafepay::MultisafepayErrorResponse = res
             .response
             .parse_struct("MultisafepayErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        if let Some(i) = event_builder {
-            i.set_error_response_body(&response);
-        }
+        with_error_response_body!(event_builder, response);
 
         let error_data = response
             .data
