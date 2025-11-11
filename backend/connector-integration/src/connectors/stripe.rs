@@ -182,16 +182,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         payment_method: common_enums::PaymentMethod,
         payment_method_type: Option<common_enums::PaymentMethodType>,
     ) -> bool {
-        if matches!(payment_method, common_enums::PaymentMethod::Wallet)
+        matches!(payment_method, common_enums::PaymentMethod::Wallet)
             && !matches!(
                 payment_method_type,
                 Some(common_enums::PaymentMethodType::GooglePay)
             )
-        {
-            true
-        } else {
-            false
-        }
     }
 }
 

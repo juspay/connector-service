@@ -7,6 +7,7 @@ use cards::{
 use common_utils::{
     errors::ValidationError,
     ext_traits::{OptionExt, ValueExt},
+    MinorUnit,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -197,7 +198,7 @@ pub struct ApplePayPredecryptData {
     pub application_expiration_month: Secret<String>,
     pub application_expiration_year: Secret<String>,
     pub currency_code: String,
-    pub transaction_amount: i64,
+    pub transaction_amount: MinorUnit,
     pub device_manufacturer_identifier: Secret<String>,
     pub payment_data_type: Secret<String>,
     pub payment_data: ApplePayCryptogramData,
@@ -225,8 +226,7 @@ impl ApplePayPredecryptData {
         if !(1..=12).contains(&month) {
             return Err(ValidationError::InvalidValue {
                 message: format!("Invalid expiry month: {month}. Must be between 1 and 12"),
-            }
-            .into());
+            });
         }
         Ok(self.application_expiration_month.clone())
     }
