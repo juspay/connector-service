@@ -95,16 +95,16 @@ impl TryFrom<&ConnectorAuthType> for FiservemeaAuthType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FiservemeaErrorResponse {
     pub code: Option<String>,
     pub message: Option<String>,
-    #[serde(rename = "details")]
     pub details: Option<Vec<ErrorDetail>>,
-    #[serde(rename = "apiTraceId")]
     pub api_trace_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ErrorDetail {
     pub field: Option<String>,
     pub message: Option<String>,
@@ -131,40 +131,30 @@ pub enum FiservemeaRequestType {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FiservemeaPaymentsRequest<T: PaymentMethodDataTypes> {
-    #[serde(rename = "requestType")]
     pub request_type: FiservemeaRequestType,
-    #[serde(rename = "merchantTransactionId")]
     pub merchant_transaction_id: String,
-    #[serde(rename = "transactionAmount")]
     pub transaction_amount: TransactionAmount,
-    #[serde(rename = "order")]
     pub order: OrderDetails,
-    #[serde(rename = "paymentMethod")]
     pub payment_method: PaymentMethod<T>,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PaymentCardSaleTransaction<T: PaymentMethodDataTypes> {
-    #[serde(rename = "requestType")]
     pub request_type: FiservemeaRequestType,
-    #[serde(rename = "transactionAmount")]
     pub transaction_amount: TransactionAmount,
-    #[serde(rename = "paymentMethod")]
     pub payment_method: PaymentMethod<T>,
-    #[serde(rename = "transactionType")]
     pub transaction_type: String,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PaymentCardPreAuthTransaction<T: PaymentMethodDataTypes> {
-    #[serde(rename = "requestType")]
     pub request_type: FiservemeaRequestType,
-    #[serde(rename = "transactionAmount")]
     pub transaction_amount: TransactionAmount,
-    #[serde(rename = "paymentMethod")]
     pub payment_method: PaymentMethod<T>,
-    #[serde(rename = "transactionType")]
     pub transaction_type: String,
 }
 
@@ -175,32 +165,29 @@ pub struct TransactionAmount {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OrderDetails {
-    #[serde(rename = "orderId")]
     pub order_id: String,
 }
 
 #[derive(Debug, Serialize)]
-#[serde(tag = "paymentCard")]
+#[serde(rename_all = "camelCase")]
 pub struct PaymentMethod<T: PaymentMethodDataTypes> {
-    #[serde(rename = "paymentCard")]
     pub payment_card: PaymentCard<T>,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PaymentCard<T: PaymentMethodDataTypes> {
     pub number: RawCardNumber<T>,
-    #[serde(rename = "expiryDate")]
     pub expiry_date: ExpiryDate,
-    #[serde(rename = "securityCode")]
     pub security_code: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub holder: Option<Secret<String>>,
-    #[serde(skip)]
-    _phantom: std::marker::PhantomData<T>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ExpiryDate {
     pub month: Secret<String>,
     pub year: Secret<String>,
@@ -208,26 +195,24 @@ pub struct ExpiryDate {
 
 // Capture Request Structure - PostAuthTransaction for Secondary Transaction endpoint
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PostAuthTransaction {
-    #[serde(rename = "requestType")]
     pub request_type: FiservemeaRequestType,
-    #[serde(rename = "transactionAmount")]
     pub transaction_amount: TransactionAmount,
 }
 
 // Refund Request Structure - ReturnTransaction for Secondary Transaction endpoint
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ReturnTransaction {
-    #[serde(rename = "requestType")]
     pub request_type: FiservemeaRequestType,
-    #[serde(rename = "transactionAmount")]
     pub transaction_amount: TransactionAmount,
 }
 
 // Void Request Structure - VoidTransaction for Secondary Transaction endpoint
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct VoidTransaction {
-    #[serde(rename = "requestType")]
     pub request_type: FiservemeaRequestType,
 }
 
@@ -415,7 +400,6 @@ impl<T: PaymentMethodDataTypes>
                     },
                     security_code: Some(card_data.card_cvc.clone()),
                     holder: item.request.customer_name.clone().map(Secret::new),
-                    _phantom: std::marker::PhantomData,
                 };
                 PaymentMethod { payment_card }
             }
@@ -716,23 +700,15 @@ fn map_refund_status(
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservemeaPaymentsResponse {
-    #[serde(rename = "clientRequestId")]
     pub client_request_id: Option<String>,
-    #[serde(rename = "apiTraceId")]
     pub api_trace_id: Option<String>,
-    #[serde(rename = "responseType")]
     pub response_type: Option<String>,
     #[serde(rename = "type")]
     pub response_type_field: Option<String>,
-    #[serde(rename = "ipgTransactionId")]
     pub ipg_transaction_id: String,
-    #[serde(rename = "orderId")]
     pub order_id: Option<String>,
-    #[serde(rename = "userId")]
     pub user_id: Option<String>,
-    #[serde(rename = "transactionType")]
     pub transaction_type: FiservemeaTransactionType,
-    #[serde(rename = "transactionOrigin")]
     pub transaction_origin: Option<FiservemeaTransactionOrigin>,
     pub payment_method_details: Option<FiservemeaPaymentMethodDetails>,
     pub country: Option<Secret<String>>,
@@ -742,24 +718,21 @@ pub struct FiservemeaPaymentsResponse {
     pub transaction_time: Option<i64>,
     pub approved_amount: Option<AmountDetails>,
     pub transaction_amount: Option<AmountDetails>,
-    #[serde(rename = "transactionStatus")]
     pub transaction_status: Option<FiservemeaPaymentStatus>,
-    #[serde(rename = "transactionResult")]
     pub transaction_result: Option<FiservemeaPaymentResult>,
     pub approval_code: Option<String>,
     pub error_message: Option<String>,
     pub transaction_state: Option<String>,
     pub scheme_transaction_id: Option<String>,
     pub processor: Option<Processor>,
-    #[serde(rename = "paymentToken")]
     pub payment_token: Option<PaymentToken>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PaymentToken {
     pub value: Option<String>,
     pub reusable: Option<bool>,
-    #[serde(rename = "declineDuplicates")]
     pub decline_duplicates: Option<bool>,
 }
 
