@@ -16,12 +16,64 @@ use domain_types::{
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-// Constants for Celero API values
-const TRANSACTION_TYPE_SALE: &str = "sale";
-const TRANSACTION_TYPE_AUTHORIZE: &str = "authorize";
-const STATUS_SUCCESS: &str = "success";
-const STATUS_ERROR: &str = "error";
-const STATUS_FAILED: &str = "failed";
+// ===== ENUMS FOR STATUS MAPPING =====
+
+/// Celero API response status
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum CeleroApiStatus {
+    Success,
+    Error,
+    Failed,
+}
+
+/// Celero transaction type
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum CeleroTransactionType {
+    Sale,
+    Authorize,
+    Refund,
+}
+
+/// Celero card status
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum CeleroCardStatus {
+    Settled,
+    Authorized,
+    Approved,
+    PendingSettlement,
+    Pending,
+    Voided,
+    Declined,
+    Failed,
+    Error,
+    Rejected,
+    Blocked,
+    Cancelled,
+    Refunded,
+    PartiallyRefunded,
+}
+
+impl From<CeleroCardStatus> for AttemptStatus {
+    fn from(status: CeleroCardStatus) -> Self {
+        match status {
+            CeleroCardStatus::Settled => Self::Charged,
+            CeleroCardStatus::Authorized | CeleroCardStatus::Approved => Self::Authorized,
+            CeleroCardStatus::PendingSettlement | CeleroCardStatus::Pending => Self::Pending,
+            CeleroCardStatus::Voided => Self::Voided,
+            CeleroCardStatus::Declined
+            | CeleroCardStatus::Failed
+            | CeleroCardStatus::Error
+            | CeleroCardStatus::Rejected
+            | CeleroCardStatus::Blocked
+            | CeleroCardStatus::Cancelled => Self::Failure,
+            CeleroCardStatus::Refunded => Self::Charged,
+            CeleroCardStatus::PartiallyRefunded => Self::PartialCharged,
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct CeleroAuthType {
@@ -62,7 +114,7 @@ pub struct CeleroError {
 impl Default for CeleroErrorResponse {
     fn default() -> Self {
         Self {
-            status: Some(STATUS_ERROR.to_string()),
+            status: Some("error".to_string()),
             msg: Some("Unknown error occurred".to_string()),
             code: Some("UNKNOWN_ERROR".to_string()),
             message: Some("Unknown error occurred".to_string()),
@@ -72,11 +124,12 @@ impl Default for CeleroErrorResponse {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub struct CeleroPaymentsRequest<T: PaymentMethodDataTypes> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub idempotency_key: Option<String>,
     #[serde(rename = "type")]
-    pub transaction_type: String,
+    pub transaction_type: CeleroTransactionType,
     pub amount: MinorUnit,
     pub currency: String,
     pub order_id: String,
@@ -238,9 +291,9 @@ impl<T: PaymentMethodDataTypes>
         Ok(Self {
             idempotency_key: Some(format!("{}_idempotency", reference_id)),
             transaction_type: if is_auto_capture {
-                TRANSACTION_TYPE_SALE.to_string()
+                CeleroTransactionType::Sale
             } else {
-                TRANSACTION_TYPE_AUTHORIZE.to_string()
+                CeleroTransactionType::Authorize
             },
             amount: item.request.minor_amount,
             currency: item.request.currency.to_string(),
@@ -252,6 +305,7 @@ impl<T: PaymentMethodDataTypes>
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub struct CeleroPaymentsResponse {
     pub status: String,
     pub msg: String,
@@ -259,10 +313,11 @@ pub struct CeleroPaymentsResponse {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub struct CeleroTransactionResponseData {
     pub id: String,
     #[serde(rename = "type")]
-    pub transaction_type: String,
+    pub transaction_type: CeleroTransactionType,
     pub amount: MinorUnit,
     pub currency: String,
     pub response: Option<CeleroPaymentResponse>,
@@ -283,7 +338,7 @@ pub struct CeleroCardResponse {
     pub last_four: Option<String>,
     pub masked_card: Option<String>,
     pub expiration_date: Option<String>,
-    pub status: Option<String>,
+    pub status: Option<CeleroCardStatus>,
     pub auth_code: Option<String>,
     pub processor_response_code: Option<String>,
     pub processor_response_text: Option<String>,
@@ -318,13 +373,14 @@ impl<T: PaymentMethodDataTypes>
         >,
     ) -> Result<Self, Self::Error> {
         // Check if the main response status indicates success
-        if item.response.status != STATUS_SUCCESS {
+        if item.response.status != "success" {
             return Ok(Self {
                 response: Err(ErrorResponse {
                     code: item.response.status.clone(),
-                    message: item.response.msg,
+                    message: item.response.msg.clone(),
                     reason: Some("Celero API error".to_string()),
                     status_code: item.http_code,
+                    connector_transaction_id: item.response.data.as_ref().map(|d| d.id.clone()),
                     ..Default::default()
                 }),
                 resource_common_data: PaymentFlowData {
@@ -341,48 +397,85 @@ impl<T: PaymentMethodDataTypes>
             .data
             .ok_or_else(|| errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        // Determine status based on card response status if available
-        let status = if let Some(ref payment_response) = transaction_data.response {
-            if let Some(ref card_response) = payment_response.card {
-                match card_response.status.as_deref() {
-                    Some("settled") => AttemptStatus::Charged,
-                    Some("authorized") => AttemptStatus::Authorized,
-                    Some("pending_settlement") => AttemptStatus::Pending,
-                    Some("declined") | Some(STATUS_FAILED) => AttemptStatus::Failure,
-                    Some("voided") => AttemptStatus::Voided,
-                    _ => {
-                        // Fallback to transaction type
-                        match transaction_data.transaction_type.as_str() {
-                            TRANSACTION_TYPE_SALE => AttemptStatus::Charged,
-                            TRANSACTION_TYPE_AUTHORIZE => AttemptStatus::Authorized,
-                            _ => AttemptStatus::Pending,
-                        }
+        // Extract card response for detailed status checking
+        let card_response = transaction_data
+            .response
+            .as_ref()
+            .and_then(|r| r.card.as_ref());
+
+        // CRITICAL: Check card status and use WHITELIST approach
+        // Only treat explicitly known success statuses as success
+        // Treat all unknown or failure statuses as failures to avoid false positives
+        let status = if let Some(card_resp) = card_response {
+            if let Some(card_status) = &card_resp.status {
+                match card_status {
+                    // Explicit success statuses
+                    CeleroCardStatus::Settled => AttemptStatus::Charged,
+                    CeleroCardStatus::Authorized | CeleroCardStatus::Approved => {
+                        AttemptStatus::Authorized
                     }
+                    CeleroCardStatus::PendingSettlement | CeleroCardStatus::Pending => {
+                        AttemptStatus::Pending
+                    }
+                    CeleroCardStatus::Voided => AttemptStatus::Voided,
+                    // Explicit failure statuses
+                    CeleroCardStatus::Declined
+                    | CeleroCardStatus::Failed
+                    | CeleroCardStatus::Error
+                    | CeleroCardStatus::Rejected
+                    | CeleroCardStatus::Blocked
+                    | CeleroCardStatus::Cancelled => {
+                        // Card transaction failed - return error response with processor details
+                        return Ok(Self {
+                            response: Err(ErrorResponse {
+                                code: card_resp
+                                    .processor_response_code
+                                    .clone()
+                                    .unwrap_or_else(|| "TRANSACTION_DECLINED".to_string()),
+                                message: card_resp
+                                    .processor_response_text
+                                    .clone()
+                                    .or_else(|| Some(item.response.msg.clone()))
+                                    .unwrap_or_else(|| "Transaction declined".to_string()),
+                                reason: card_resp.processor_response_text.clone(),
+                                status_code: item.http_code,
+                                connector_transaction_id: Some(transaction_data.id.clone()),
+                                network_decline_code: card_resp.processor_response_code.clone(),
+                                network_advice_code: card_resp.avs_response_code.clone(),
+                                network_error_message: card_resp.processor_response_text.clone(),
+                                ..Default::default()
+                            }),
+                            resource_common_data: PaymentFlowData {
+                                status: AttemptStatus::Failure,
+                                ..item.router_data.resource_common_data
+                            },
+                            ..item.router_data
+                        });
+                    }
+                    CeleroCardStatus::Refunded => AttemptStatus::Charged,
+                    CeleroCardStatus::PartiallyRefunded => AttemptStatus::PartialCharged,
                 }
             } else {
-                // No card response, use transaction type
-                match transaction_data.transaction_type.as_str() {
-                    TRANSACTION_TYPE_SALE => AttemptStatus::Charged,
-                    TRANSACTION_TYPE_AUTHORIZE => AttemptStatus::Authorized,
-                    _ => AttemptStatus::Pending,
-                }
+                // No status in card response, default to Pending
+                AttemptStatus::Pending
             }
         } else {
-            // No payment response, use transaction type
-            match transaction_data.transaction_type.as_str() {
-                TRANSACTION_TYPE_SALE => AttemptStatus::Charged,
-                TRANSACTION_TYPE_AUTHORIZE => AttemptStatus::Authorized,
+            // No card response, use transaction type as fallback
+            match &transaction_data.transaction_type {
+                CeleroTransactionType::Sale => AttemptStatus::Charged,
+                CeleroTransactionType::Authorize => AttemptStatus::Authorized,
                 _ => AttemptStatus::Pending,
             }
         };
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(transaction_data.id),
+                resource_id: ResponseId::ConnectorTransactionId(transaction_data.id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
-                network_txn_id: None,
+                // Include auth_code as network transaction ID
+                network_txn_id: card_response.and_then(|c| c.auth_code.clone()),
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
@@ -416,7 +509,7 @@ pub struct CeleroSyncResponse {
 pub struct CeleroTransactionData {
     pub id: String,
     #[serde(rename = "type")]
-    pub transaction_type: String,
+    pub transaction_type: CeleroTransactionType,
     pub amount: MinorUnit,
     pub tax_amount: Option<MinorUnit>,
     pub tax_exempt: Option<bool>,
@@ -429,7 +522,7 @@ pub struct CeleroTransactionData {
     pub email_receipt: Option<bool>,
     pub payment_method: Option<String>,
     pub response: Option<CeleroTransactionResponseDetails>,
-    pub status: String,
+    pub status: CeleroCardStatus,
     pub billing_address: Option<CeleroBillingAddressResponse>,
     pub shipping_address: Option<CeleroBillingAddressResponse>,
     pub created_at: Option<String>,
@@ -455,64 +548,6 @@ pub struct CeleroBillingAddressResponse {
     pub phone: Option<String>,
     pub fax: Option<String>,
     pub email: Option<String>,
-}
-
-// Payment status enumeration for status mapping
-#[derive(Debug, Deserialize, Clone)]
-#[serde(rename_all = "snake_case")]
-pub enum CeleroPaymentStatus {
-    #[serde(rename = "pending_settlement")]
-    PendingSettlement,
-    #[serde(rename = "settled")]
-    Settled,
-    #[serde(rename = "approved")]
-    Approved,
-    #[serde(rename = "declined")]
-    Declined,
-    #[serde(rename = "failed")]
-    Failed,
-    #[serde(rename = "voided")]
-    Voided,
-    #[serde(rename = "authorized")]
-    Authorized,
-    #[serde(rename = "refunded")]
-    Refunded,
-    #[serde(rename = "partially_refunded")]
-    PartiallyRefunded,
-    #[serde(rename = "unknown")]
-    Unknown,
-}
-
-impl From<String> for CeleroPaymentStatus {
-    fn from(status: String) -> Self {
-        match status.as_str() {
-            "pending_settlement" => Self::PendingSettlement,
-            "settled" => Self::Settled,
-            "approved" => Self::Approved,
-            "declined" => Self::Declined,
-            STATUS_FAILED => Self::Failed,
-            "voided" => Self::Voided,
-            "authorized" => Self::Authorized,
-            "refunded" => Self::Refunded,
-            "partially_refunded" => Self::PartiallyRefunded,
-            _ => Self::Unknown,
-        }
-    }
-}
-
-impl From<CeleroPaymentStatus> for AttemptStatus {
-    fn from(status: CeleroPaymentStatus) -> Self {
-        match status {
-            CeleroPaymentStatus::Approved | CeleroPaymentStatus::Settled => Self::Charged,
-            CeleroPaymentStatus::Authorized => Self::Authorized,
-            CeleroPaymentStatus::PendingSettlement => Self::Pending,
-            CeleroPaymentStatus::Declined | CeleroPaymentStatus::Failed => Self::Failure,
-            CeleroPaymentStatus::Voided => Self::Voided,
-            CeleroPaymentStatus::Refunded => Self::Charged, // Successful refund
-            CeleroPaymentStatus::PartiallyRefunded => Self::PartialCharged,
-            CeleroPaymentStatus::Unknown => Self::Pending,
-        }
-    }
 }
 
 // ===== PSYNC TRANSFORMATIONS =====
@@ -593,7 +628,7 @@ impl
         let router_data = &item.router_data;
 
         // Check if response status indicates success
-        if response.status != STATUS_SUCCESS {
+        if response.status != "success" {
             return Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status: AttemptStatus::Failure,
@@ -623,9 +658,48 @@ impl
             .first()
             .ok_or_else(|| errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        // Map transaction status to attempt status
-        let payment_status = CeleroPaymentStatus::from(transaction_data.status.clone());
-        let status = AttemptStatus::from(payment_status);
+        // Extract card response for detailed checking
+        let card_response = transaction_data
+            .response
+            .as_ref()
+            .and_then(|r| r.card.as_ref());
+
+        // Map transaction status to attempt status using the enum
+        let status = AttemptStatus::from(transaction_data.status.clone());
+
+        // CRITICAL: Check if transaction failed and return error response with processor details
+        // This ensures we capture declined/failed transactions properly in sync
+        match &transaction_data.status {
+            CeleroCardStatus::Declined | CeleroCardStatus::Failed => {
+                // Transaction failed - return error response with processor details
+                return Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status: AttemptStatus::Failure,
+                        ..router_data.resource_common_data.clone()
+                    },
+                    response: Err(ErrorResponse {
+                        code: card_response
+                            .and_then(|c| c.processor_response_code.clone())
+                            .unwrap_or_else(|| "TRANSACTION_DECLINED".to_string()),
+                        message: card_response
+                            .and_then(|c| c.processor_response_text.clone())
+                            .unwrap_or_else(|| "Transaction declined".to_string()),
+                        reason: card_response.and_then(|c| c.processor_response_text.clone()),
+                        status_code: item.http_code,
+                        connector_transaction_id: Some(transaction_data.id.clone()),
+                        network_decline_code: card_response
+                            .and_then(|c| c.processor_response_code.clone()),
+                        network_advice_code: card_response
+                            .and_then(|c| c.avs_response_code.clone()),
+                        network_error_message: card_response
+                            .and_then(|c| c.processor_response_text.clone()),
+                        ..Default::default()
+                    }),
+                    ..router_data.clone()
+                });
+            }
+            _ => {}
+        }
 
         // Build success response
         let payments_response_data = PaymentsResponseData::TransactionResponse {
@@ -633,11 +707,7 @@ impl
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
-            network_txn_id: transaction_data
-                .response
-                .as_ref()
-                .and_then(|r| r.card.as_ref())
-                .and_then(|c| c.auth_code.clone()),
+            network_txn_id: card_response.and_then(|c| c.auth_code.clone()),
             connector_response_reference_id: transaction_data.order_id.clone(),
             incremental_authorization_allowed: None,
             status_code: item.http_code,
@@ -748,8 +818,8 @@ impl
 
         // Check if response status indicates success
         let status = match response.status.as_str() {
-            STATUS_SUCCESS => AttemptStatus::Charged,
-            STATUS_ERROR | STATUS_FAILED => AttemptStatus::Failure,
+            "success" => AttemptStatus::Charged,
+            "error" | "failed" => AttemptStatus::Failure,
             _ => AttemptStatus::Pending,
         };
 
@@ -760,7 +830,7 @@ impl
             _ => "unknown".to_string(),
         };
 
-        if response.status != STATUS_SUCCESS {
+        if response.status != "success" {
             return Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status: AttemptStatus::Failure,
@@ -881,8 +951,8 @@ impl
 
         // Map response status to refund status
         let refund_status = match response.status.as_str() {
-            STATUS_SUCCESS => RefundStatus::Success,
-            STATUS_ERROR | STATUS_FAILED => RefundStatus::Failure,
+            "success" => RefundStatus::Success,
+            "error" | "failed" => RefundStatus::Failure,
             _ => RefundStatus::Pending,
         };
 
@@ -890,7 +960,7 @@ impl
         let connector_refund_id =
             format!("refund_{}", router_data.request.connector_transaction_id);
 
-        if response.status != STATUS_SUCCESS {
+        if response.status != "success" {
             return Ok(Self {
                 response: Err(domain_types::router_data::ErrorResponse {
                     code: "REFUND_ERROR".to_string(),
@@ -987,7 +1057,7 @@ impl
         let router_data = &item.router_data;
 
         // Check if response status indicates success
-        if response.status != STATUS_SUCCESS {
+        if response.status != "success" {
             return Ok(Self {
                 response: Err(domain_types::router_data::ErrorResponse {
                     code: "REFUND_SYNC_ERROR".to_string(),
@@ -1015,21 +1085,45 @@ impl
             .first()
             .ok_or_else(|| errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        // Map transaction status to refund status
-        // For refund sync, we need to determine if the transaction has been refunded
-        let refund_status = match transaction_data.status.as_str() {
-            "refunded" => RefundStatus::Success,
-            "partially_refunded" => RefundStatus::Success, // Partial refunds are considered successful
-            "pending_settlement" | "settled" | "approved" => {
-                // If transaction is still successful but we're checking refund status,
-                // the refund might be pending or failed
-                RefundStatus::Pending
+        // CRITICAL FIX: Map transaction status to refund status correctly
+        // For refund sync, we're checking if the REFUND succeeded, not the original payment
+        // The transaction status tells us the current state of the transaction
+        let refund_status = match &transaction_data.status {
+            // These statuses indicate the transaction has been successfully refunded
+            CeleroCardStatus::Refunded | CeleroCardStatus::PartiallyRefunded => {
+                RefundStatus::Success
             }
-            STATUS_FAILED | "declined" | "voided" => RefundStatus::Failure,
-            _ => {
-                // Unknown status - default to pending for safe handling
-                RefundStatus::Pending
+            // If transaction status is still in normal payment states (settled, approved, authorized),
+            // it means the refund either hasn't been processed or failed
+            // We should check the transaction_type to determine if this is actually a refund transaction
+            CeleroCardStatus::PendingSettlement
+            | CeleroCardStatus::Settled
+            | CeleroCardStatus::Approved
+            | CeleroCardStatus::Authorized => {
+                // Check if this is actually a refund transaction or the original payment
+                // If transaction_type indicates this is a refund and status is pending, it's pending
+                // Otherwise, if we're syncing a refund but transaction is in payment state, refund failed
+                match (&transaction_data.transaction_type, &transaction_data.status) {
+                    (CeleroTransactionType::Refund, CeleroCardStatus::PendingSettlement) => {
+                        RefundStatus::Pending
+                    }
+                    (CeleroTransactionType::Refund, CeleroCardStatus::Approved) => {
+                        RefundStatus::Success
+                    }
+                    // If it's not a refund type transaction, the refund hasn't been applied
+                    _ => RefundStatus::Failure,
+                }
             }
+            // Explicit failure states
+            CeleroCardStatus::Failed | CeleroCardStatus::Declined | CeleroCardStatus::Error => {
+                RefundStatus::Failure
+            }
+            // Voided transaction means refund might not be applicable
+            CeleroCardStatus::Voided => RefundStatus::Failure,
+            // Pending states
+            CeleroCardStatus::Pending => RefundStatus::Pending,
+            // Other states - default to failure for safety (don't assume success)
+            _ => RefundStatus::Failure,
         };
 
         // Generate connector refund ID based on the pattern used in refund flow
@@ -1119,15 +1213,15 @@ impl
 
         // Check if response status indicates success
         let status = match response.status.as_str() {
-            STATUS_SUCCESS => AttemptStatus::Voided,
-            STATUS_ERROR | STATUS_FAILED => AttemptStatus::VoidFailed,
+            "success" => AttemptStatus::Voided,
+            "error" | "failed" => AttemptStatus::VoidFailed,
             _ => AttemptStatus::Pending,
         };
 
         // Extract connector transaction ID from the request (should be available)
         let connector_transaction_id = router_data.request.connector_transaction_id.clone();
 
-        if response.status != STATUS_SUCCESS {
+        if response.status != "success" {
             return Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status: AttemptStatus::VoidFailed,
