@@ -55,10 +55,10 @@ pub struct SilverflowErrorDetails {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SilverflowError {
     pub code: String,
     pub message: String,
-    #[serde(rename = "traceId")]
     pub trace_id: Option<String>,
     pub details: Option<SilverflowErrorDetails>,
 }
@@ -141,39 +141,36 @@ pub enum SilverflowActionStatus {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SilverflowPaymentsRequest<T: PaymentMethodDataTypes> {
-    #[serde(rename = "merchantAcceptorResolver")]
     pub merchant_acceptor_resolver: SilverflowMerchantAcceptorResolver,
     pub card: SilverflowCard<T>,
     #[serde(rename = "type")]
     pub payment_type: SilverflowPaymentType,
     pub amount: SilverflowAmount,
-    #[serde(rename = "clearingMode")]
     pub clearing_mode: SilverflowClearingMode,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SilverflowMerchantAcceptorResolver {
-    #[serde(rename = "merchantAcceptorKey")]
     pub merchant_acceptor_key: String,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SilverflowCard<T: PaymentMethodDataTypes> {
     pub number: RawCardNumber<T>,
-    #[serde(rename = "expiryYear")]
     pub expiry_year: u16,
-    #[serde(rename = "expiryMonth")]
     pub expiry_month: u8,
     pub cvc: Secret<String>,
-    #[serde(rename = "holderName")]
     pub holder_name: Option<Secret<String>>,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SilverflowPaymentType {
     pub intent: SilverflowPaymentIntent,
-    #[serde(rename = "cardEntry")]
     pub card_entry: SilverflowCardEntry,
     pub order: SilverflowOrderType,
 }
@@ -269,23 +266,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SilverflowPaymentsResponse {
     pub key: String,
-    #[serde(rename = "merchantAcceptorRef")]
     pub merchant_acceptor_ref: Option<SilverflowMerchantAcceptorRef>,
     pub card: Option<SilverflowCardResponse>,
     pub amount: SilverflowAmountResponse,
     #[serde(rename = "type")]
     pub payment_type: SilverflowPaymentTypeResponse,
-    #[serde(rename = "clearingMode")]
     pub clearing_mode: Option<String>,
     pub status: SilverflowStatus,
     pub authentication: Option<SilverflowAuthentication>,
-    #[serde(rename = "localTransactionDateTime")]
     pub local_transaction_date_time: Option<String>,
-    #[serde(rename = "fraudLiability")]
     pub fraud_liability: Option<String>,
-    #[serde(rename = "authorizationIsoFields")]
     pub authorization_iso_fields: Option<SilverflowAuthorizationIsoFields>,
     pub created: Option<String>,
     pub version: Option<i32>,
@@ -298,8 +291,8 @@ pub struct SilverflowMerchantAcceptorRef {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SilverflowCardResponse {
-    #[serde(rename = "maskedNumber")]
     pub masked_number: Option<String>,
 }
 
@@ -310,9 +303,9 @@ pub struct SilverflowAmountResponse {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SilverflowPaymentTypeResponse {
     pub intent: String,
-    #[serde(rename = "cardEntry")]
     pub card_entry: String,
     pub order: String,
 }
@@ -332,37 +325,30 @@ pub struct SilverflowAuthentication {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SilverflowSca {
     pub compliance: String,
-    #[serde(rename = "complianceReason")]
     pub compliance_reason: String,
     pub method: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SilverflowAuthorizationIsoFields {
-    #[serde(rename = "responseCode")]
     pub response_code: String,
-    #[serde(rename = "responseCodeDescription")]
     pub response_code_description: String,
-    #[serde(rename = "authorizationCode")]
     pub authorization_code: String,
-    #[serde(rename = "networkCode")]
     pub network_code: String,
-    #[serde(rename = "systemTraceAuditNumber")]
     pub system_trace_audit_number: String,
-    #[serde(rename = "retrievalReferenceNumber")]
     pub retrieval_reference_number: String,
     pub eci: String,
-    #[serde(rename = "networkSpecificFields")]
     pub network_specific_fields: Option<SilverflowNetworkSpecificFields>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SilverflowNetworkSpecificFields {
-    #[serde(rename = "transactionIdentifier")]
     pub transaction_identifier: Option<String>,
-    #[serde(rename = "cvv2ResultCode")]
     pub cvv2_result_code: Option<String>,
 }
 
@@ -571,30 +557,27 @@ impl
 }
 // Capture flow structures
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SilverflowCaptureRequest {
     pub amount: Option<MinorUnit>,
-    #[serde(rename = "closeCharge")]
     pub close_charge: Option<bool>,
     pub reference: Option<String>,
 }
 
 // Capture response structure based on Silverflow clear API
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SilverflowCaptureResponse {
     #[serde(rename = "type")]
     pub action_type: String, // Should be "clearing"
     pub key: String, // Action key (act-...)
-    #[serde(rename = "chargeKey")]
     pub charge_key: String,
     pub status: SilverflowActionStatus,
     pub reference: Option<String>,
     pub amount: SilverflowAmountResponse,
-    #[serde(rename = "closeCharge")]
     pub close_charge: Option<bool>,
-    #[serde(rename = "clearAfter")]
     pub clear_after: Option<String>,
     pub created: Option<String>,
-    #[serde(rename = "lastModified")]
     pub last_modified: Option<String>,
     pub version: Option<i32>,
 }
@@ -687,39 +670,35 @@ impl
 
 // Refund flow structures
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SilverflowRefundRequest {
-    #[serde(rename = "refundAmount")]
     pub refund_amount: Option<MinorUnit>,
     pub reference: Option<String>,
 }
 
 // Refund response structure based on Silverflow refund API
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SilverflowRefundResponse {
     #[serde(rename = "type")]
     pub action_type: String, // Should be "refund"
     pub key: String, // Action key (act-...)
-    #[serde(rename = "chargeKey")]
     pub charge_key: String,
-    #[serde(rename = "refundChargeKey")]
     pub refund_charge_key: Option<String>,
     pub reference: Option<String>,
     pub amount: SilverflowAmountResponse,
     pub status: SilverflowActionStatus,
-    #[serde(rename = "authorizationResponse")]
     pub authorization_response: Option<SilverflowAuthorizationResponse>,
     pub created: Option<String>,
-    #[serde(rename = "lastModified")]
     pub last_modified: Option<String>,
     pub version: Option<i32>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SilverflowAuthorizationResponse {
     pub network: Option<String>,
-    #[serde(rename = "responseCode")]
     pub response_code: Option<String>,
-    #[serde(rename = "responseCodeDescription")]
     pub response_code_description: Option<String>,
 }
 
@@ -868,28 +847,25 @@ impl
     }
 } // Void flow structures
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SilverflowVoidRequest {
-    #[serde(rename = "replacementAmount")]
     pub replacement_amount: Option<MinorUnit>,
     pub reference: Option<String>,
 }
 
 // Void response structure based on Silverflow reverse API
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SilverflowVoidResponse {
     #[serde(rename = "type")]
     pub action_type: String, // Should be "reversal"
     pub key: String, // Action key (act-...)
-    #[serde(rename = "chargeKey")]
     pub charge_key: String,
     pub reference: Option<String>,
-    #[serde(rename = "replacementAmount")]
     pub replacement_amount: Option<SilverflowAmountResponse>,
     pub status: SilverflowVoidStatus, // Reversal has different status structure
-    #[serde(rename = "authorizationResponse")]
     pub authorization_response: Option<SilverflowAuthorizationResponse>,
     pub created: Option<String>,
-    #[serde(rename = "lastModified")]
     pub last_modified: Option<String>,
     pub version: Option<i32>,
 }
