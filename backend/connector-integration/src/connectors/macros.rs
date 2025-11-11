@@ -183,7 +183,7 @@ macro_rules! expand_fn_handle_response {
         fn handle_response_v2(
             &self,
             data: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            event_builder: Option<&mut ConnectorEvent>,
+            event_builder: Option<&mut events::Event>,
             res: Response,
         ) -> CustomResult<
             RouterDataV2<$flow, $resource_common_data, $request, $response>,
@@ -198,7 +198,7 @@ macro_rules! expand_fn_handle_response {
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
             let response_body = bridge.response(response_bytes)?;
-            event_builder.map(|i| i.set_response_body(&response_body));
+            event_builder.map(|i| i.set_connector_response(&response_body));
             let response_router_data = ResponseRouterData {
                 response: response_body,
                 router_data: data.clone(),
@@ -214,7 +214,7 @@ macro_rules! expand_fn_handle_response {
         fn handle_response_v2(
             &self,
             data: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            event_builder: Option<&mut ConnectorEvent>,
+            event_builder: Option<&mut events::Event>,
             res: Response,
         ) -> CustomResult<
             RouterDataV2<$flow, $resource_common_data, $request, $response>,
@@ -222,7 +222,7 @@ macro_rules! expand_fn_handle_response {
         > {
             paste::paste! {let bridge = self.[< $flow:snake >];}
             let response_body = bridge.response(res.response)?;
-            event_builder.map(|i| i.set_response_body(&response_body));
+            event_builder.map(|i| i.set_connector_response(&response_body));
             let response_router_data = ResponseRouterData {
                 response: response_body,
                 router_data: data.clone(),
@@ -274,7 +274,7 @@ macro_rules! expand_default_functions {
         fn get_error_response_v2(
             &self,
             res: Response,
-            event_builder: Option<&mut ConnectorEvent>,
+            event_builder: Option<&mut events::Event>,
         ) -> CustomResult<ErrorResponse, macro_types::ConnectorError> {
             self.build_error_response(res, event_builder)
         }
@@ -856,13 +856,12 @@ macro_rules! expand_imports {
             // pub(super) use domain_models::{
             //     AuthenticationInitiation, Confirmation, PostAuthenticationSync, PreAuthentication,
             // };
-            pub(super) use common_utils::{errors::CustomResult, request::RequestContent};
+            pub(super) use common_utils::{errors::CustomResult, events, request::RequestContent};
             pub(super) use domain_types::{
                 errors::ConnectorError, router_data::ErrorResponse, router_data_v2::RouterDataV2,
                 router_response_types::Response,
             };
             pub(super) use hyperswitch_masking::Maskable;
-            pub(super) use interfaces::events::connector_api_logs::ConnectorEvent;
 
             pub(super) use crate::types::*;
         }

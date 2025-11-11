@@ -4,6 +4,7 @@ use common_utils::{
     crypto::{self, SignMessage},
     date_time,
     errors::CustomResult,
+    events,
     ext_traits::ByteSliceExt,
     types::MinorUnit,
 };
@@ -36,7 +37,6 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
 use std::fmt::Debug;
@@ -306,7 +306,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: dlocal::DlocalErrorResponse = res
             .response

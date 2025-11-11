@@ -4,7 +4,9 @@ use std::fmt::Debug;
 
 use base64::Engine;
 use common_enums::{enums, CurrencyUnit};
-use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMajorUnit};
+use common_utils::{
+    errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMajorUnit,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
@@ -34,7 +36,6 @@ use error_stack::ResultExt;
 use hyperswitch_masking::Maskable;
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
 
@@ -406,7 +407,7 @@ macros::macro_connector_implementation!(
         fn get_error_response_v2(
             &self,
             res: Response,
-            _event_builder: Option<&mut ConnectorEvent>,
+            _event_builder: Option<&mut events::Event>,
         ) -> CustomResult<ErrorResponse, ConnectorError> {
             // PayU sync may return error responses in different formats
             let response: PayuSyncResponse = res
@@ -483,7 +484,7 @@ macros::macro_connector_implementation!(
         fn get_error_response_v2(
             &self,
             res: Response,
-            _event_builder: Option<&mut ConnectorEvent>,
+            _event_builder: Option<&mut events::Event>,
         ) -> CustomResult<ErrorResponse, ConnectorError> {
             // PayU returns error responses in the same JSON format as success responses
             // We need to parse the response and check for error fields

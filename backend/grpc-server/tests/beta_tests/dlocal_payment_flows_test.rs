@@ -4,10 +4,10 @@
 
 use grpc_server::{app, configs};
 mod common;
+mod utils;
 
 use std::{
     collections::HashMap,
-    env,
     str::FromStr,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -25,17 +25,12 @@ use grpc_api_types::{
         PaymentServiceVoidRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus,
     },
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use tokio::time::sleep;
 use tonic::{transport::Channel, Request};
 
 // Constants for dlocal connector
 const CONNECTOR_NAME: &str = "dlocal";
-
-// Environment variable names for API credentials
-const TEST_DLOCAL_API_KEY_ENV: &str = "TEST_DLOCAL_API_KEY";
-const TEST_DLOCAL_KEY1_ENV: &str = "TEST_DLOCAL_KEY1";
-const TEST_DLOCAL_API_SECRET_ENV: &str = "TEST_DLOCAL_API_SECRET";
 
 const TEST_AMOUNT: i64 = 1000;
 const TEST_CARD_NUMBER: &str = "5105105105105100";
@@ -55,13 +50,17 @@ fn get_timestamp() -> u64 {
 
 // Helper function to add dlocal metadata headers to a request
 fn add_dlocal_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables
-    let api_key = env::var(TEST_DLOCAL_API_KEY_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable TEST_DLOCAL_API_KEY_ENV must be set"));
-    let key1 = env::var(TEST_DLOCAL_KEY1_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable TEST_DLOCAL_KEY1_ENV must be set"));
-    let api_secret = env::var(TEST_DLOCAL_API_SECRET_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable TEST_DLOCAL_API_SECRET_ENV must be set"));
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load dlocal credentials");
+
+    let (api_key, key1, api_secret) = match auth {
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
+            api_key,
+            key1,
+            api_secret,
+        } => (api_key.expose(), key1.expose(), api_secret.expose()),
+        _ => panic!("Expected SignatureKey auth type for dlocal"),
+    };
 
     request.metadata_mut().append(
         "x-connector",

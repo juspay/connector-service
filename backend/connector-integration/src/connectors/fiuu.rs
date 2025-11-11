@@ -7,6 +7,7 @@ use common_enums::CurrencyUnit;
 use common_utils::{
     crypto::{self, GenerateDigest, VerifySignature},
     errors::CustomResult,
+    events,
     ext_traits::{ByteSliceExt, BytesExt},
     types::StringMajorUnit,
 };
@@ -44,7 +45,6 @@ use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{self},
-    events::connector_api_logs::ConnectorEvent,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -466,7 +466,7 @@ impl<
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: fiuu::FiuuErrorResponse = res
             .response
@@ -711,7 +711,7 @@ impl<
     fn handle_response_v2(
         &self,
         data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
         RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -759,7 +759,7 @@ impl<
     fn get_error_response_v2(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, macro_types::ConnectorError> {
         self.build_error_response(res, event_builder)
     }

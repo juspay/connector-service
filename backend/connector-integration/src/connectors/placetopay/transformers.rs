@@ -314,7 +314,7 @@ pub struct PlacetopayStatusResponse {
 pub struct PlacetopayPaymentsResponse {
     status: PlacetopayStatusResponse,
     internal_reference: u64,
-    authorization: Option<String>,
+    authorization: Option<Secret<String>>,
 }
 
 // Authorize flow uses the unified payment response handling with capture method consideration
@@ -460,7 +460,7 @@ pub struct PlacetopayRefundRequest {
     auth: PlacetopayAuth,
     internal_reference: u64,
     action: PlacetopayNextAction,
-    authorization: Option<String>,
+    authorization: Option<Secret<String>>,
 }
 
 impl<
@@ -503,7 +503,7 @@ impl<
                 auth,
                 internal_reference,
                 action,
-                authorization,
+                authorization: authorization.map(Secret::new),
             })
         } else {
             Err(errors::ConnectorError::NotSupported {

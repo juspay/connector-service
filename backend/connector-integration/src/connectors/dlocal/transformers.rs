@@ -275,7 +275,7 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
 
 #[derive(Default, Debug, Serialize, Eq, PartialEq)]
 pub struct DlocalPaymentsCaptureRequest {
-    pub authorization_id: String,
+    pub authorization_id: Secret<String>,
     pub amount: i64,
     pub currency: String,
     pub order_id: String,
@@ -314,12 +314,13 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            authorization_id: item
-                .router_data
-                .request
-                .connector_transaction_id
-                .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?,
+            authorization_id: Secret::new(
+                item.router_data
+                    .request
+                    .connector_transaction_id
+                    .get_connector_transaction_id()
+                    .change_context(errors::ConnectorError::MissingConnectorTransactionID)?,
+            ),
             amount: item.router_data.request.amount_to_capture,
             currency: item.router_data.request.currency.to_string(),
             order_id: item

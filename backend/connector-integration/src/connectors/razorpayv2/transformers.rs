@@ -186,7 +186,7 @@ pub struct RazorpayV2PaymentsRequest {
     pub currency: String,
     pub order_id: String,
     pub email: Email,
-    pub contact: String,
+    pub contact: Secret<String>,
     pub method: String,
     pub description: Option<String>,
     pub notes: Option<RazorpayV2Notes>,
@@ -212,7 +212,7 @@ pub struct RazorpayV2UpiDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub flow: Option<UpiFlow>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub vpa: Option<String>, // Only for collect flow
+    pub vpa: Option<Secret<String>>, // Only for collect flow
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expiry_time: Option<i32>, // In minutes (5 to 5760)
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
@@ -239,9 +239,9 @@ pub struct RazorpayV2PaymentsResponse {
     pub card_id: Option<String>,
     pub bank: Option<String>,
     pub wallet: Option<String>,
-    pub vpa: Option<String>,
+    pub vpa: Option<Secret<String>>,
     pub email: Email,
-    pub contact: String,
+    pub contact: Secret<String>,
     pub notes: Option<Value>,
     pub fee: Option<i64>,
     pub tax: Option<i64>,
@@ -320,7 +320,7 @@ pub struct RazorpayV2ErrorDetails {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RazorpayV2UpiResponseDetails {
     pub flow: Option<String>,
-    pub vpa: Option<String>,
+    pub vpa: Option<Secret<String>>,
     pub expiry_time: Option<i32>,
 }
 
@@ -417,7 +417,7 @@ impl<
         let upi_details = if upi_flow.is_some() {
             Some(RazorpayV2UpiDetails {
                 flow: upi_flow,
-                vpa,
+                vpa: vpa.map(Secret::new),
                 expiry_time: Some(15), // 15 minutes default
                 upi_type: None,
                 end_date: None,
@@ -442,12 +442,13 @@ impl<
                 .resource_common_data
                 .get_billing_email()
                 .unwrap_or_else(|_| Email::from_str("customer@example.com").unwrap()),
-            contact: item
-                .router_data
-                .resource_common_data
-                .get_billing_phone_number()
-                .map(|phone| phone.expose())
-                .unwrap_or_else(|_| "9999999999".to_string()),
+            contact: Secret::new(
+                item.router_data
+                    .resource_common_data
+                    .get_billing_phone_number()
+                    .map(|phone| phone.expose())
+                    .unwrap_or_else(|_| "9999999999".to_string()),
+            ),
             method: "upi".to_string(),
             description: Some("Payment via RazorpayV2".to_string()),
             notes: item.router_data.request.metadata.clone(),

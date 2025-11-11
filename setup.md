@@ -324,6 +324,69 @@ level = "DEBUG"
 log_format = "default"
 ```
 
+## Running Payment Flow Tests
+
+UCS includes comprehensive integration tests for payment processors with centralized credential management.
+
+### Test Credential Configuration
+
+UCS tests require actual payment processor credentials to run successfully. These credentials are loaded from `.github/test/creds.json`.
+
+#### Setting Up Your Credentials
+
+1. **Copy the template file**:
+   ```bash
+   cp .github/test/template_creds.json .github/test/creds.json
+   ```
+
+2. **Replace placeholder values with real credentials**:
+   
+   Edit `.github/test/creds.json` and replace the `test_*` placeholder values with your actual sandbox/test credentials from each payment processor.
+
+   **Example for Authorize.Net**:
+   ```json
+   {
+     "authorizedotnet": { //connector name
+       "connector_account_details": {
+         "auth_type": "BodyKey", // or HeaderKey, SignatureKey, etc.
+         "api_key": "your_actual_api_login_id",
+         "key1": "your_actual_transaction_key"
+       },
+      "metadata": {
+        "additional_field": "value_if_needed"
+      }
+     }
+   }
+   ```
+
+
+
+#### Supported Authentication Types
+
+- **TemporaryAuth**: Temporary authentication
+- **HeaderKey**: Simple API key in headers
+- **BodyKey**: API key + transaction key in body
+- **SignatureKey**: API key + secret + additional key
+- **MultiAuthKey**: Multiple authentication keys (api_key, key1, api_secret, key2)
+- **CurrencyAuthKey**: Complex currency-based authentication
+- **CertificateAuth**: Certificate and private key authentication
+- **NoKey**: No authentication required
+
+#### Running Tests
+
+1. Install [nextest](https://nexte.st/docs/installation/pre-built-binaries/)
+
+2. Run all tests for a connector
+    ```bash
+    cargo nextest run --test authorizedotnet_payment_flows_test
+    ```
+3. Run a specific test within the test file.
+    ```bash
+    cargo nextest run --test authorizedotnet_payment_flows_test test_payment_authorization_auto_capture
+    ```
+
+**Note**: Tests in the `beta_tests/` directories are work in progress and may not be fully functional. These tests are under development and should not be used for production validation.
+
 ## Development Commands (Optional)
 
 UCS includes a Makefile with convenient development commands:

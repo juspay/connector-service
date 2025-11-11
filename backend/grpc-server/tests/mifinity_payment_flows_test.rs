@@ -3,13 +3,11 @@
 #![allow(clippy::panic)]
 
 use grpc_server::{app, configs};
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 mod common;
+mod utils;
 
-use std::{
-    env,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
@@ -34,9 +32,6 @@ fn get_timestamp() -> u64 {
 // Constants for Mifinity connector
 const CONNECTOR_NAME: &str = "mifinity";
 
-// Environment variable names for API credentials (can be set or overridden with provided values)
-const MIFINITY_API_KEY_ENV: &str = "TEST_MIFINITY_API_KEY";
-
 // Test card data
 const TEST_AMOUNT: i64 = 1000;
 const TEST_DESTINATION_ACCOUNT_NUMBER: &str = "5001000001223369"; // Valid test destination account number for Mifinity
@@ -45,9 +40,13 @@ const TEST_DATE_OF_BIRTH: &str = "2001-10-16";
 const TEST_EMAIL: &str = "customer@example.com";
 
 fn add_mifinity_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables - throw error if not set
-    let api_key = env::var(MIFINITY_API_KEY_ENV)
-        .expect("TEST_MIFINITY_API_KEY environment variable is required");
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load mifinity credentials");
+
+    let api_key = match auth {
+        domain_types::router_data::ConnectorAuthType::HeaderKey { api_key } => api_key.expose(),
+        _ => panic!("Expected HeaderKey auth type for mifinity"),
+    };
 
     request.metadata_mut().append(
         "x-connector",

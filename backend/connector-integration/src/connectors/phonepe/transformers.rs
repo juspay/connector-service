@@ -44,7 +44,7 @@ struct PhonepePaymentRequestPayload {
     #[serde(rename = "merchantTransactionId")]
     merchant_transaction_id: String,
     #[serde(rename = "merchantUserId", skip_serializing_if = "Option::is_none")]
-    merchant_user_id: Option<String>,
+    merchant_user_id: Option<Secret<String>>,
     amount: MinorUnit,
     #[serde(rename = "callbackUrl")]
     callback_url: String,
@@ -289,7 +289,7 @@ impl<
                 .resource_common_data
                 .customer_id
                 .clone()
-                .map(|id| id.get_string_repr().to_string()),
+                .map(|id| Secret::new(id.get_string_repr().to_string())),
             amount: amount_in_minor_units,
             callback_url: router_data.request.get_webhook_url()?,
             mobile_number,
@@ -435,7 +435,7 @@ impl<
                 .resource_common_data
                 .customer_id
                 .clone()
-                .map(|id| id.get_string_repr().to_string()),
+                .map(|id| Secret::new(id.get_string_repr().to_string())),
             amount: amount_in_minor_units,
             callback_url: router_data.request.get_webhook_url()?,
             mobile_number,

@@ -4,6 +4,7 @@ use base64::Engine;
 use common_enums;
 use common_utils::{
     errors::CustomResult,
+    events,
     ext_traits::{deserialize_xml_to_struct, BytesExt},
     request::RequestContent,
     types::MinorUnit,
@@ -45,7 +46,6 @@ use interfaces::{
         PaymentVoidPostCaptureV2, PaymentVoidV2, RefundSyncV2, RefundV2, RepeatPaymentV2,
         SetupMandateV2, SubmitEvidenceV2, ValidationTrait,
     },
-    events::connector_api_logs::ConnectorEvent,
     verification::SourceVerification,
 };
 use serde::Serialize;
@@ -477,7 +477,7 @@ impl<
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response_str = std::str::from_utf8(&res.response)
             .map_err(|_| ConnectorError::ResponseDeserializationFailed)?;
@@ -700,7 +700,7 @@ impl<
     fn handle_response_v2(
         &self,
         data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
         RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -711,7 +711,7 @@ impl<
         let response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
         if let Some(i) = event_builder {
-            i.set_response_body(&response)
+            i.set_connector_response(&response)
         }
         RouterDataV2::try_from(ResponseRouterData {
             response,
@@ -723,7 +723,7 @@ impl<
     fn get_error_response_v2(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
@@ -775,7 +775,7 @@ impl<
     fn handle_response_v2(
         &self,
         data: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
         RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -786,7 +786,7 @@ impl<
         let response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
         if let Some(i) = event_builder {
-            i.set_response_body(&response)
+            i.set_connector_response(&response)
         }
         RouterDataV2::try_from(ResponseRouterData {
             response,
@@ -798,7 +798,7 @@ impl<
     fn get_error_response_v2(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
@@ -875,7 +875,7 @@ impl<
             PaymentsCancelPostCaptureData,
             PaymentsResponseData,
         >,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
         RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
@@ -886,7 +886,7 @@ impl<
         let response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
         if let Some(i) = event_builder {
-            i.set_response_body(&response)
+            i.set_connector_response(&response)
         }
         RouterDataV2::try_from(ResponseRouterData {
             response,
@@ -898,7 +898,7 @@ impl<
     fn get_error_response_v2(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
@@ -950,7 +950,7 @@ impl<
     fn handle_response_v2(
         &self,
         data: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
         RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -961,7 +961,7 @@ impl<
         let response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
         if let Some(i) = event_builder {
-            i.set_response_body(&response)
+            i.set_connector_response(&response)
         }
         RouterDataV2::try_from(ResponseRouterData {
             response,
@@ -973,7 +973,7 @@ impl<
     fn get_error_response_v2(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
@@ -1033,7 +1033,7 @@ impl<
     fn handle_response_v2(
         &self,
         data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
         RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
@@ -1044,7 +1044,7 @@ impl<
             .parse_struct("VantivSyncResponse")
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
         if let Some(i) = event_builder {
-            i.set_response_body(&response)
+            i.set_connector_response(&response)
         }
         RouterDataV2::try_from(ResponseRouterData {
             response,
@@ -1056,7 +1056,7 @@ impl<
     fn get_error_response_v2(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }

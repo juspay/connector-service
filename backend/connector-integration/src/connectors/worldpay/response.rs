@@ -345,7 +345,7 @@ pub struct PaymentsResPaymentInstrument {
     pub funding_type: Option<String>,
     pub category: Option<String>,
     pub issuer_name: Option<String>,
-    pub payment_account_reference: Option<String>,
+    pub payment_account_reference: Option<Secret<String>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]

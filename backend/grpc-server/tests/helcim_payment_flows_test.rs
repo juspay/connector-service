@@ -3,12 +3,12 @@
 #![allow(clippy::panic)]
 
 use grpc_server::{app, configs};
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 mod common;
+mod utils;
 
 use std::{
     collections::HashMap,
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -30,9 +30,6 @@ use tonic::{transport::Channel, Request};
 // Constants for Helcim connector
 const CONNECTOR_NAME: &str = "helcim";
 const AUTH_TYPE: &str = "header-key";
-
-// Environment variable names for API credentials
-const HELCIM_API_KEY_ENV: &str = "TEST_HELCIM_API_KEY";
 
 // Test card data
 const TEST_CARD_NUMBER: &str = "5413330089099130"; // Valid test card for Helcim
@@ -61,9 +58,13 @@ fn get_timestamp() -> u64 {
 
 // Helper function to add Helcim metadata headers to a request
 fn add_helcim_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables - throw error if not set
-    let api_key =
-        env::var(HELCIM_API_KEY_ENV).expect("TEST_HELCIM_API_KEY environment variable is required");
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load helcim credentials");
+
+    let api_key = match auth {
+        domain_types::router_data::ConnectorAuthType::HeaderKey { api_key } => api_key.expose(),
+        _ => panic!("Expected HeaderKey auth type for helcim"),
+    };
 
     request.metadata_mut().append(
         "x-connector",
