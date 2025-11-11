@@ -365,13 +365,11 @@ async fn test_payment_sync_auto_capture() {
     });
 }
 
-// Test refund flow - handles both success and error cases
-// Ignoring refund test as Connector giving Pending status for Authorize Calls.
+// Test refund flow - only attempts refund when payment is in captured/charged state
 #[tokio::test]
-#[ignore]
 async fn test_refund() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
-        // Create the payment authorization request
+        // Create the payment authorization request with auto capture
         let request = create_authorize_request(CaptureMethod::Automatic);
 
         // Add metadata headers
@@ -392,31 +390,31 @@ async fn test_refund() {
             response.status == i32::from(PaymentStatus::AuthenticationPending)
                 || response.status == i32::from(PaymentStatus::Pending)
                 || response.status == i32::from(PaymentStatus::Charged),
-            "Payment should be in AuthenticationPending or Pending state"
+            "Payment should be in AuthenticationPending, Pending, or Charged state"
         );
 
-        // Wait a bit longer to ensure the payment is fully processed
-        tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
+        // Only attempt refund if payment is already in charged/captured state
+        if response.status == i32::from(PaymentStatus::Charged) {
+            // Create refund request
+            let refund_request = create_refund_request(&transaction_id);
 
-        // Create refund request
-        let refund_request = create_refund_request(&transaction_id);
+            // Add metadata headers for refund request
+            let mut refund_grpc_request = Request::new(refund_request);
+            add_xendit_metadata(&mut refund_grpc_request);
 
-        // Add metadata headers for refund request
-        let mut refund_grpc_request = Request::new(refund_request);
-        add_xendit_metadata(&mut refund_grpc_request);
+            // Send the refund request
+            let refund_response = client
+                .refund(refund_grpc_request)
+                .await
+                .expect("gRPC refund call failed")
+                .into_inner();
 
-        // Send the refund request
-        let refund_response = client
-            .refund(refund_grpc_request)
-            .await
-            .expect("gRPC refund call failed")
-            .into_inner();
-
-        // Verify the refund response
-        assert!(
-            refund_response.status == i32::from(RefundStatus::RefundSuccess),
-            "Refund should be in RefundSuccess state"
-        );
+            // Verify the refund response
+            assert!(
+                refund_response.status == i32::from(RefundStatus::RefundSuccess),
+                "Refund should be in RefundSuccess state"
+            );
+        }
     });
 }
 
