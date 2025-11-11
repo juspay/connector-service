@@ -1,6 +1,6 @@
 use crate::types::ResponseRouterData;
 use base64::{engine::general_purpose::STANDARD, Engine};
-use common_enums::{AttemptStatus, RefundStatus};
+use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::MinorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
@@ -41,14 +41,6 @@ impl TryFrom<&ConnectorAuthType> for DatatransAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey {
-                api_key,
-                api_secret,
-                ..
-            } => Ok(Self {
-                merchant_id: api_key.to_owned(),
-                password: api_secret.to_owned(),
-            }),
             ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
                 merchant_id: key1.to_owned(),
                 password: api_key.to_owned(),
@@ -60,16 +52,11 @@ impl TryFrom<&ConnectorAuthType> for DatatransAuthType {
     }
 }
 
-// Error response structure - supports both nested and flat formats
-// Nested: {"error": {"code": "...", "message": "..."}}
-// Flat: {"code": "...", "message": "..."}
+// Error response structure - Datatrans API uses nested format
+// Format: {"error": {"code": "...", "message": "..."}}
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum DatatransErrorResponse {
-    // Nested format from Datatrans API
-    Nested { error: DatatransErrorDetail },
-    // Flat format (fallback)
-    Flat { code: String, message: String },
+pub struct DatatransErrorResponse {
+    pub error: DatatransErrorDetail,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -80,25 +67,21 @@ pub struct DatatransErrorDetail {
 
 impl DatatransErrorResponse {
     pub fn code(&self) -> String {
-        match self {
-            Self::Nested { error } => error.code.clone(),
-            Self::Flat { code, .. } => code.clone(),
-        }
+        self.error.code.clone()
     }
 
     pub fn message(&self) -> String {
-        match self {
-            Self::Nested { error } => error.message.clone(),
-            Self::Flat { message, .. } => message.clone(),
-        }
+        self.error.message.clone()
     }
 }
 
 impl Default for DatatransErrorResponse {
     fn default() -> Self {
-        Self::Flat {
-            code: DEFAULT_ERROR_CODE.to_string(),
-            message: DEFAULT_ERROR_MESSAGE.to_string(),
+        Self {
+            error: DatatransErrorDetail {
+                code: DEFAULT_ERROR_CODE.to_string(),
+                message: DEFAULT_ERROR_MESSAGE.to_string(),
+            },
         }
     }
 }
@@ -140,7 +123,7 @@ pub struct DatatransPaymentsRequest<
         + 'static
         + Serialize,
 > {
-    pub currency: String,
+    pub currency: Currency,
     pub refno: String,
     pub amount: MinorUnit,
     pub card: DatatransCard<T>,
@@ -218,7 +201,7 @@ impl<
         };
 
         Ok(Self {
-            currency: router_data.request.currency.to_string(),
+            currency: router_data.request.currency,
             refno: router_data
                 .resource_common_data
                 .connector_request_reference_id
@@ -405,7 +388,7 @@ pub struct DatatransSyncResponse {
     #[serde(rename = "type")]
     pub transaction_type: String,
     pub status: DatatransPaymentStatus,
-    pub currency: String,
+    pub currency: Currency,
     pub refno: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refno2: Option<String>,
@@ -500,7 +483,7 @@ impl
 #[serde(rename_all = "camelCase")]
 pub struct DatatransCaptureRequest {
     pub amount: MinorUnit,
-    pub currency: String,
+    pub currency: Currency,
     pub refno: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refno2: Option<String>,
@@ -535,7 +518,7 @@ impl<
 
         Ok(Self {
             amount,
-            currency: router_data.request.currency.to_string(),
+            currency: router_data.request.currency,
             refno: router_data
                 .resource_common_data
                 .connector_request_reference_id
@@ -611,7 +594,7 @@ impl
 #[serde(rename_all = "camelCase")]
 pub struct DatatransRefundRequest {
     pub amount: MinorUnit,
-    pub currency: String,
+    pub currency: Currency,
     pub refno: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refno2: Option<String>,
@@ -646,7 +629,7 @@ impl<
 
         Ok(Self {
             amount,
-            currency: router_data.request.currency.to_string(),
+            currency: router_data.request.currency,
             refno: router_data
                 .resource_common_data
                 .connector_request_reference_id
@@ -765,7 +748,7 @@ pub struct DatatransRefundSyncResponse {
     #[serde(rename = "type")]
     pub transaction_type: String,
     pub status: DatatransRefundStatus,
-    pub currency: String,
+    pub currency: Currency,
     pub refno: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refno2: Option<String>,
