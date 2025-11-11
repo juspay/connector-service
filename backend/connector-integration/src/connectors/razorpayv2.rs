@@ -175,7 +175,7 @@ impl<
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
-        PaymentCreateOrderData,
+        PaymentCreateOrderData<T>,
         PaymentCreateOrderResponse,
     > for RazorpayV2<T>
 {
@@ -184,7 +184,7 @@ impl<
         req: &domain_types::router_data_v2::RouterDataV2<
             CreateOrder,
             PaymentFlowData,
-            PaymentCreateOrderData,
+            PaymentCreateOrderData<T>,
             PaymentCreateOrderResponse,
         >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
@@ -202,7 +202,7 @@ impl<
         req: &domain_types::router_data_v2::RouterDataV2<
             CreateOrder,
             PaymentFlowData,
-            PaymentCreateOrderData,
+            PaymentCreateOrderData<T>,
             PaymentCreateOrderResponse,
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
@@ -215,11 +215,11 @@ impl<
         req: &domain_types::router_data_v2::RouterDataV2<
             CreateOrder,
             PaymentFlowData,
-            PaymentCreateOrderData,
+            PaymentCreateOrderData<T>,
             PaymentCreateOrderResponse,
         >,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let connector_router_data: razorpayv2::RazorpayV2RouterData<&PaymentCreateOrderData, T> =
+        let connector_router_data: razorpayv2::RazorpayV2RouterData<&PaymentCreateOrderData<T>, T> =
             razorpayv2::RazorpayV2RouterData::try_from((
                 req.request.amount,
                 &req.request,
@@ -239,7 +239,7 @@ impl<
         data: &domain_types::router_data_v2::RouterDataV2<
             CreateOrder,
             PaymentFlowData,
-            PaymentCreateOrderData,
+            PaymentCreateOrderData<T>,
             PaymentCreateOrderResponse,
         >,
         event_builder: Option<&mut events::Event>,
@@ -248,7 +248,7 @@ impl<
         domain_types::router_data_v2::RouterDataV2<
             CreateOrder,
             PaymentFlowData,
-            PaymentCreateOrderData,
+            PaymentCreateOrderData<T>,
             PaymentCreateOrderResponse,
         >,
         errors::ConnectorError,
@@ -513,7 +513,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > interfaces::connector_types::PaymentOrderCreate for RazorpayV2<T>
+    > interfaces::connector_types::PaymentOrderCreate<T> for RazorpayV2<T>
 {
 }
 impl<
@@ -1480,7 +1480,7 @@ impl<
     interfaces::verification::SourceVerification<
         CreateOrder,
         PaymentFlowData,
-        PaymentCreateOrderData,
+        PaymentCreateOrderData<T>,
         PaymentCreateOrderResponse,
     > for RazorpayV2<T>
 {

@@ -964,13 +964,13 @@ pub struct RazorpayOrderRequest {
     pub __notes_91_crm2_93_: Option<String>,
 }
 
-impl
+impl<T: domain_types::payment_method_data::PaymentMethodDataTypes>
     TryFrom<
         &RazorpayRouterData<
             &RouterDataV2<
                 CreateOrder,
                 PaymentFlowData,
-                PaymentCreateOrderData,
+                PaymentCreateOrderData<T>,
                 PaymentCreateOrderResponse,
             >,
         >,
@@ -983,7 +983,7 @@ impl
             &RouterDataV2<
                 CreateOrder,
                 PaymentFlowData,
-                PaymentCreateOrderData,
+                PaymentCreateOrderData<T>,
                 PaymentCreateOrderResponse,
             >,
         >,
@@ -1070,13 +1070,13 @@ pub struct RazorpayOrderResponse {
     pub created_at: u64,
 }
 
-impl
+impl<T: domain_types::payment_method_data::PaymentMethodDataTypes>
     ForeignTryFrom<(
         RazorpayOrderResponse,
         RouterDataV2<
             CreateOrder,
             PaymentFlowData,
-            PaymentCreateOrderData,
+            PaymentCreateOrderData<T>,
             PaymentCreateOrderResponse,
         >,
         u16,
@@ -1085,7 +1085,7 @@ impl
     for RouterDataV2<
         CreateOrder,
         PaymentFlowData,
-        PaymentCreateOrderData,
+        PaymentCreateOrderData<T>,
         PaymentCreateOrderResponse,
     >
 {
@@ -1097,7 +1097,7 @@ impl
             RouterDataV2<
                 CreateOrder,
                 PaymentFlowData,
-                PaymentCreateOrderData,
+                PaymentCreateOrderData<T>,
                 PaymentCreateOrderResponse,
             >,
             u16,

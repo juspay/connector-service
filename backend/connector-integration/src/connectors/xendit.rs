@@ -580,7 +580,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > connector_types::PaymentOrderCreate for Xendit<T>
+    > connector_types::PaymentOrderCreate<T> for Xendit<T>
 {
 }
 
@@ -595,7 +595,7 @@ impl<
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
-        PaymentCreateOrderData,
+        PaymentCreateOrderData<T>,
         PaymentCreateOrderResponse,
     > for Xendit<T>
 {
@@ -967,7 +967,7 @@ impl<
     interfaces::verification::SourceVerification<
         CreateOrder,
         PaymentFlowData,
-        PaymentCreateOrderData,
+        PaymentCreateOrderData<T>,
         PaymentCreateOrderResponse,
     > for Xendit<T>
 {

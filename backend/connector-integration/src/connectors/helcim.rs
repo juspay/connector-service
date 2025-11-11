@@ -114,7 +114,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate for Helcim<T>
+    connector_types::PaymentOrderCreate<T> for Helcim<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -541,7 +541,7 @@ impl<
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
-        PaymentCreateOrderData,
+        PaymentCreateOrderData<T>,
         PaymentCreateOrderResponse,
     > for Helcim<T>
 {
@@ -792,7 +792,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         CreateOrder,
         PaymentFlowData,
-        PaymentCreateOrderData,
+        PaymentCreateOrderData<T>,
         PaymentCreateOrderResponse,
     > for Helcim<T>
 {

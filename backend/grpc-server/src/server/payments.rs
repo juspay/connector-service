@@ -586,7 +586,7 @@ impl Payments {
             '_,
             CreateOrder,
             PaymentFlowData,
-            PaymentCreateOrderData,
+            PaymentCreateOrderData<T>,
             PaymentCreateOrderResponse,
         > = connector_data.connector.get_connector_integration_v2();
 
@@ -603,6 +603,7 @@ impl Payments {
         let order_create_data = PaymentCreateOrderData {
             amount: common_utils::types::MinorUnit::new(payload.minor_amount),
             currency,
+            payment_method_data: None,
             integrity_object: None,
             metadata: if payload.metadata.is_empty() {
                 None
@@ -615,7 +616,7 @@ impl Payments {
         let order_router_data = RouterDataV2::<
             CreateOrder,
             PaymentFlowData,
-            PaymentCreateOrderData,
+            PaymentCreateOrderData<T>,
             PaymentCreateOrderResponse,
         > {
             flow: std::marker::PhantomData,
@@ -717,7 +718,7 @@ impl Payments {
             '_,
             CreateOrder,
             PaymentFlowData,
-            PaymentCreateOrderData,
+            PaymentCreateOrderData<T>,
             PaymentCreateOrderResponse,
         > = connector_data.connector.get_connector_integration_v2();
 
@@ -727,6 +728,7 @@ impl Payments {
         let order_create_data = PaymentCreateOrderData {
             amount: common_utils::types::MinorUnit::new(0),
             currency,
+            payment_method_data: None,
             integrity_object: None,
             metadata: if payload.metadata.is_empty() {
                 None
@@ -739,7 +741,7 @@ impl Payments {
         let order_router_data = RouterDataV2::<
             CreateOrder,
             PaymentFlowData,
-            PaymentCreateOrderData,
+            PaymentCreateOrderData<T>,
             PaymentCreateOrderResponse,
         > {
             flow: std::marker::PhantomData,

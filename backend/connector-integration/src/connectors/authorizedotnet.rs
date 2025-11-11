@@ -408,7 +408,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > PaymentOrderCreate for Authorizedotnet<T>
+    > PaymentOrderCreate<T> for Authorizedotnet<T>
 {
 }
 impl<
@@ -967,7 +967,7 @@ impl<
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
-        PaymentCreateOrderData,
+        PaymentCreateOrderData<T>,
         PaymentCreateOrderResponse,
     > for Authorizedotnet<T>
 {
@@ -1226,7 +1226,7 @@ impl<
     SourceVerification<
         CreateOrder,
         PaymentFlowData,
-        PaymentCreateOrderData,
+        PaymentCreateOrderData<T>,
         PaymentCreateOrderResponse,
     > for Authorizedotnet<T>
 {

@@ -142,7 +142,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > connector_types::PaymentOrderCreate for Cashfree<T>
+    > connector_types::PaymentOrderCreate<T> for Cashfree<T>
 {
 }
 
@@ -302,7 +302,7 @@ macros::create_all_prerequisites!(
             flow: CreateOrder,
             request_body: CashfreeOrderCreateRequest,
             response_body: CashfreeOrderCreateResponse,
-            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData<T>, PaymentCreateOrderResponse>,
         ),
         (
             flow: Authorize,
@@ -343,7 +343,7 @@ macros::macro_connector_implementation!(
     curl_response: CashfreeOrderCreateResponse,
     flow_name: CreateOrder,
     resource_common_data: PaymentFlowData,
-    flow_request: PaymentCreateOrderData,
+    flow_request: PaymentCreateOrderData<T>,
     flow_response: PaymentCreateOrderResponse,
     http_method: Post,
     generic_type: T,
@@ -351,14 +351,14 @@ macros::macro_connector_implementation!(
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData<T>, PaymentCreateOrderResponse>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
-            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData<T>, PaymentCreateOrderResponse>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}pg/orders"))
@@ -753,7 +753,7 @@ impl_source_verification_stub!(
 impl_source_verification_stub!(
     CreateOrder,
     PaymentFlowData,
-    PaymentCreateOrderData,
+    PaymentCreateOrderData<T>,
     PaymentCreateOrderResponse
 );
 impl_source_verification_stub!(

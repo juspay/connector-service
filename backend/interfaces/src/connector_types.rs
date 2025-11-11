@@ -30,7 +30,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + ValidationTrait
     + PaymentAuthorizeV2<T>
     + PaymentSyncV2
-    + PaymentOrderCreate
+    + PaymentOrderCreate<T>
     + PaymentSessionToken
     + PaymentAccessToken
     + CreateConnectorCustomer
@@ -91,11 +91,11 @@ pub trait ValidationTrait {
     }
 }
 
-pub trait PaymentOrderCreate:
+pub trait PaymentOrderCreate<T: PaymentMethodDataTypes>:
     ConnectorIntegrationV2<
     connector_flow::CreateOrder,
     PaymentFlowData,
-    PaymentCreateOrderData,
+    PaymentCreateOrderData<T>,
     PaymentCreateOrderResponse,
 >
 {

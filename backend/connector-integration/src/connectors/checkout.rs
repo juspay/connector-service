@@ -211,7 +211,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > connector_types::PaymentOrderCreate for Checkout<T>
+    > connector_types::PaymentOrderCreate<T> for Checkout<T>
 {
 }
 impl<
@@ -778,7 +778,7 @@ impl<
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
-        PaymentCreateOrderData,
+        PaymentCreateOrderData<T>,
         PaymentCreateOrderResponse,
     > for Checkout<T>
 {
@@ -1034,7 +1034,7 @@ impl<
     interfaces::verification::SourceVerification<
         CreateOrder,
         PaymentFlowData,
-        PaymentCreateOrderData,
+        PaymentCreateOrderData<T>,
         PaymentCreateOrderResponse,
     > for Checkout<T>
 {

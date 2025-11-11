@@ -306,7 +306,7 @@ impl<
             RouterDataV2<
                 CreateOrder,
                 PaymentFlowData,
-                PaymentCreateOrderData,
+                PaymentCreateOrderData<T>,
                 PaymentCreateOrderResponse,
             >,
             T,
@@ -320,7 +320,7 @@ impl<
             RouterDataV2<
                 CreateOrder,
                 PaymentFlowData,
-                PaymentCreateOrderData,
+                PaymentCreateOrderData<T>,
                 PaymentCreateOrderResponse,
             >,
             T,
@@ -334,12 +334,12 @@ impl<
 }
 
 // Keep the original TryFrom for backward compatibility
-impl
+impl<U: domain_types::payment_method_data::PaymentMethodDataTypes>
     TryFrom<
         &RouterDataV2<
             CreateOrder,
             PaymentFlowData,
-            PaymentCreateOrderData,
+            PaymentCreateOrderData<U>,
             PaymentCreateOrderResponse,
         >,
     > for CashfreeOrderCreateRequest
@@ -350,7 +350,7 @@ impl
         item: &RouterDataV2<
             CreateOrder,
             PaymentFlowData,
-            PaymentCreateOrderData,
+            PaymentCreateOrderData<U>,
             PaymentCreateOrderResponse,
         >,
     ) -> Result<Self, Self::Error> {
@@ -361,13 +361,13 @@ impl
     }
 }
 
-impl
+impl<U: domain_types::payment_method_data::PaymentMethodDataTypes>
     TryFrom<(
         common_utils::types::FloatMajorUnit,
         &RouterDataV2<
             CreateOrder,
             PaymentFlowData,
-            PaymentCreateOrderData,
+            PaymentCreateOrderData<U>,
             PaymentCreateOrderResponse,
         >,
     )> for CashfreeOrderCreateRequest
@@ -380,7 +380,7 @@ impl
             &RouterDataV2<
                 CreateOrder,
                 PaymentFlowData,
-                PaymentCreateOrderData,
+                PaymentCreateOrderData<U>,
                 PaymentCreateOrderResponse,
             >,
         ),
@@ -544,14 +544,14 @@ impl TryFrom<CashfreeOrderCreateResponse> for PaymentCreateOrderResponse {
 }
 
 // Add the missing TryFrom implementation for macro compatibility
-impl
+impl<U: domain_types::payment_method_data::PaymentMethodDataTypes>
     TryFrom<
         ResponseRouterData<
             CashfreeOrderCreateResponse,
             RouterDataV2<
                 CreateOrder,
                 PaymentFlowData,
-                PaymentCreateOrderData,
+                PaymentCreateOrderData<U>,
                 PaymentCreateOrderResponse,
             >,
         >,
@@ -559,7 +559,7 @@ impl
     for RouterDataV2<
         CreateOrder,
         PaymentFlowData,
-        PaymentCreateOrderData,
+        PaymentCreateOrderData<U>,
         PaymentCreateOrderResponse,
     >
 {
@@ -571,7 +571,7 @@ impl
             RouterDataV2<
                 CreateOrder,
                 PaymentFlowData,
-                PaymentCreateOrderData,
+                PaymentCreateOrderData<U>,
                 PaymentCreateOrderResponse,
             >,
         >,

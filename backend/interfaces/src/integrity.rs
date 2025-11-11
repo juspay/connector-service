@@ -146,7 +146,7 @@ macro_rules! impl_check_integrity {
 
 // Apply the macro to all payment flow data types
 impl_check_integrity!(PaymentsAuthorizeData<S>);
-impl_check_integrity!(PaymentCreateOrderData);
+impl_check_integrity!(PaymentCreateOrderData<S>);
 impl_check_integrity!(SetupMandateRequestData<S>);
 impl_check_integrity!(PaymentsSyncData);
 impl_check_integrity!(PaymentVoidData);
@@ -185,7 +185,9 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<AuthoriseIntegrityObject>
     }
 }
 
-impl GetIntegrityObject<CreateOrderIntegrityObject> for PaymentCreateOrderData {
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<CreateOrderIntegrityObject>
+    for PaymentCreateOrderData<T>
+{
     fn get_response_integrity_object(&self) -> Option<CreateOrderIntegrityObject> {
         self.integrity_object.clone()
     }

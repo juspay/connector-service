@@ -155,7 +155,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > connector_types::PaymentOrderCreate for Razorpay<T>
+    > connector_types::PaymentOrderCreate<T> for Razorpay<T>
 {
 }
 impl<
@@ -717,7 +717,7 @@ impl<
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
-        PaymentCreateOrderData,
+        PaymentCreateOrderData<T>,
         PaymentCreateOrderResponse,
     > for Razorpay<T>
 {
@@ -726,7 +726,7 @@ impl<
         req: &RouterDataV2<
             CreateOrder,
             PaymentFlowData,
-            PaymentCreateOrderData,
+            PaymentCreateOrderData<T>,
             PaymentCreateOrderResponse,
         >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
@@ -750,7 +750,7 @@ impl<
         req: &RouterDataV2<
             CreateOrder,
             PaymentFlowData,
-            PaymentCreateOrderData,
+            PaymentCreateOrderData<T>,
             PaymentCreateOrderResponse,
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
@@ -765,7 +765,7 @@ impl<
         req: &RouterDataV2<
             CreateOrder,
             PaymentFlowData,
-            PaymentCreateOrderData,
+            PaymentCreateOrderData<T>,
             PaymentCreateOrderResponse,
         >,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
@@ -786,7 +786,7 @@ impl<
         data: &RouterDataV2<
             CreateOrder,
             PaymentFlowData,
-            PaymentCreateOrderData,
+            PaymentCreateOrderData<T>,
             PaymentCreateOrderResponse,
         >,
         event_builder: Option<&mut events::Event>,
@@ -795,7 +795,7 @@ impl<
         RouterDataV2<
             CreateOrder,
             PaymentFlowData,
-            PaymentCreateOrderData,
+            PaymentCreateOrderData<T>,
             PaymentCreateOrderResponse,
         >,
         errors::ConnectorError,
@@ -1557,7 +1557,7 @@ impl<
     interfaces::verification::SourceVerification<
         CreateOrder,
         PaymentFlowData,
-        PaymentCreateOrderData,
+        PaymentCreateOrderData<T>,
         PaymentCreateOrderResponse,
     > for Razorpay<T>
 {
