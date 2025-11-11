@@ -2,8 +2,10 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
+use crate::with_error_response_body;
+
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt};
+use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
@@ -32,7 +34,6 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
 use transformers::{
@@ -568,7 +569,7 @@ macros::create_all_prerequisites!(
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
-                "application/json".to_string().into(),
+                self.common_get_content_type().to_string().into(),
             )];
             let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
             header.append(&mut auth_header);
@@ -626,7 +627,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: celero::CeleroErrorResponse = if res.response.is_empty() {
             celero::CeleroErrorResponse::default()
@@ -636,9 +637,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?
         };
 
-        if let Some(i) = event_builder {
-            i.set_error_response_body(&response);
-        }
+        with_error_response_body!(event_builder, response);
 
         let error_code = response
             .code
