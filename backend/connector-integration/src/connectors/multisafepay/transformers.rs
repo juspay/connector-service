@@ -34,7 +34,7 @@ fn get_order_type_from_payment_method<T: PaymentMethodDataTypes>(
 fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
     payment_method_data: &domain_types::payment_method_data::PaymentMethodData<T>,
 ) -> Option<String> {
-    use domain_types::payment_method_data::PaymentMethodData;
+    use domain_types::payment_method_data::{BankRedirectData, PaymentMethodData, WalletData};
 
     match payment_method_data {
         PaymentMethodData::Card(card_data) => {
@@ -52,8 +52,16 @@ fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
                 .to_string()
             })
         }
-        PaymentMethodData::BankRedirect(_) => Some("IDEAL".to_string()), // Example for iDEAL
-        PaymentMethodData::Wallet(_) => Some("PAYPAL".to_string()),      // Example for PayPal
+        PaymentMethodData::BankRedirect(bank_redirect_data) => match bank_redirect_data {
+            BankRedirectData::Ideal { .. } => Some("IDEAL".to_string()),
+            _ => None,
+        },
+        PaymentMethodData::Wallet(wallet_data) => match wallet_data {
+            WalletData::PaypalRedirect(_) | WalletData::PaypalSdk(_) => {
+                Some("PAYPAL".to_string())
+            }
+            _ => None,
+        },
         // Add more payment methods as needed
         _ => None,
     }
@@ -183,7 +191,7 @@ pub struct GatewayInfo {
     pub card_expiry_date: i64,  // Format: YYMM as integer
     pub card_cvc: Secret<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub card_holder_name: Option<String>,
+    pub card_holder_name: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub flexible_3d: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -195,15 +203,15 @@ pub struct GatewayInfo {
 #[derive(Debug, Serialize)]
 pub struct DeliveryObject {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub first_name: Option<String>,
+    pub first_name: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_name: Option<String>,
+    pub last_name: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub address1: Option<String>,
+    pub address1: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub house_number: Option<String>,
+    pub house_number: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub zip_code: Option<String>,
+    pub zip_code: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub city: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -218,7 +226,7 @@ pub struct MultisafepayPaymentsRequest {
     pub order_type: String,
     pub order_id: String,
     pub gateway: String,
-    pub currency: String,
+    pub currency: common_enums::Currency,
     pub amount: MinorUnit,
     pub description: String,
     // Required fields for direct transactions
@@ -273,7 +281,9 @@ impl<
         let item = &wrapper.router_data;
         let order_type = get_order_type_from_payment_method(&item.request.payment_method_data);
         let gateway = get_gateway_from_payment_method(&item.request.payment_method_data)
-            .unwrap_or_else(|| "VISA".to_string());
+            .ok_or(errors::ConnectorError::NotImplemented(
+                "Payment method not supported".to_string(),
+            ))?;
 
         // Extract card data for direct transactions - requires actual PCI data, not tokens
         let card = match &item.request.payment_method_data {
@@ -312,7 +322,7 @@ impl<
             card_number: Secret::new(card_number_str),
             card_expiry_date,
             card_cvc: card.card_cvc.clone(),
-            card_holder_name: card.card_holder_name.clone().map(|s| s.expose()),
+            card_holder_name: card.card_holder_name.clone(),
             flexible_3d: None,
             moto: None,
             term_url: None,
@@ -362,11 +372,11 @@ impl<
             .ok()
             .and_then(|billing| billing.address.as_ref())
             .map(|address| DeliveryObject {
-                first_name: address.first_name.clone().map(|s| s.expose()),
-                last_name: address.last_name.clone().map(|s| s.expose()),
-                address1: address.line1.clone().map(|s| s.expose()),
-                house_number: address.line2.clone().map(|s| s.expose()),
-                zip_code: address.zip.clone().map(|s| s.expose()),
+                first_name: address.get_optional_first_name(),
+                last_name: address.get_optional_last_name(),
+                address1: address.line1.clone(),
+                house_number: address.line2.clone(),
+                zip_code: address.zip.clone(),
                 city: address.city.clone(),
                 country: address.country.map(|c| c.to_string()),
             });
@@ -378,7 +388,7 @@ impl<
                 .connector_request_reference_id
                 .clone(),
             gateway,
-            currency: item.request.currency.to_string(),
+            currency: item.request.currency,
             amount: item.request.minor_amount,
             description: item
                 .request
@@ -416,7 +426,9 @@ impl<T: PaymentMethodDataTypes>
 
         let order_type = get_order_type_from_payment_method(&item.request.payment_method_data);
         let gateway = get_gateway_from_payment_method(&item.request.payment_method_data)
-            .unwrap_or_else(|| "VISA".to_string());
+            .ok_or(errors::ConnectorError::NotImplemented(
+                "Payment method not supported".to_string(),
+            ))?;
 
         // Extract card data for direct transactions - requires actual PCI data, not tokens
         let card = match &item.request.payment_method_data {
@@ -455,7 +467,7 @@ impl<T: PaymentMethodDataTypes>
             card_number: Secret::new(card_number_str),
             card_expiry_date,
             card_cvc: card.card_cvc.clone(),
-            card_holder_name: card.card_holder_name.clone().map(|s| s.expose()),
+            card_holder_name: card.card_holder_name.clone(),
             flexible_3d: None,
             moto: None,
             term_url: None,
@@ -505,11 +517,11 @@ impl<T: PaymentMethodDataTypes>
             .ok()
             .and_then(|billing| billing.address.as_ref())
             .map(|address| DeliveryObject {
-                first_name: address.first_name.clone().map(|s| s.expose()),
-                last_name: address.last_name.clone().map(|s| s.expose()),
-                address1: address.line1.clone().map(|s| s.expose()),
-                house_number: address.line2.clone().map(|s| s.expose()),
-                zip_code: address.zip.clone().map(|s| s.expose()),
+                first_name: address.get_optional_first_name(),
+                last_name: address.get_optional_last_name(),
+                address1: address.line1.clone(),
+                house_number: address.line2.clone(),
+                zip_code: address.zip.clone(),
                 city: address.city.clone(),
                 country: address.country.map(|c| c.to_string()),
             });
@@ -521,7 +533,7 @@ impl<T: PaymentMethodDataTypes>
                 .connector_request_reference_id
                 .clone(),
             gateway,
-            currency: item.request.currency.to_string(),
+            currency: item.request.currency,
             amount: item.request.minor_amount,
             description: item
                 .request
@@ -559,7 +571,7 @@ pub struct MultisafepayResponseData {
     #[serde(default)]
     pub status: MultisafepayPaymentStatus,
     pub amount: Option<MinorUnit>,
-    pub currency: Option<String>,
+    pub currency: Option<common_enums::Currency>,
     // Additional fields that may appear in GET response - using flatten to ignore unknown fields
     #[serde(flatten)]
     pub extra: std::collections::HashMap<String, serde_json::Value>,
@@ -694,7 +706,7 @@ impl
 
 #[derive(Debug, Serialize)]
 pub struct MultisafepayRefundRequest {
-    pub currency: String,
+    pub currency: common_enums::Currency,
     pub amount: MinorUnit,
 }
 
@@ -734,7 +746,7 @@ impl<
     ) -> Result<Self, Self::Error> {
         let item = &wrapper.router_data;
         Ok(Self {
-            currency: item.request.currency.to_string(),
+            currency: item.request.currency,
             amount: item.request.minor_refund_amount,
         })
     }
@@ -750,7 +762,7 @@ impl<F> TryFrom<&RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseDat
         item: &RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            currency: item.request.currency.to_string(),
+            currency: item.request.currency,
             amount: item.request.minor_refund_amount,
         })
     }
