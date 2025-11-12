@@ -26,10 +26,10 @@ pub struct PaytmRespBody {
     pub result_info: PaytmResultInfo,
     #[serde(rename = "txnToken")]
     pub txn_token: Secret<String>, // This will be stored as session_token
-                                   // #[serde(rename = "isPromoCodeValid", skip_serializing_if = "Option::is_none")]
-                                   // pub is_promo_code_valid: Option<bool>,
-                                   // #[serde(rename = "authenticated", skip_serializing_if = "Option::is_none")]
-                                   // pub authenticated: Option<bool>,
+    // #[serde(rename = "isPromoCodeValid", skip_serializing_if = "Option::is_none")]
+    // pub is_promo_code_valid: Option<bool>,
+    // #[serde(rename = "authenticated", skip_serializing_if = "Option::is_none")]
+    // pub authenticated: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -254,7 +254,7 @@ pub struct PaytmSessionTokenErrorResponse {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PaytmSessionTokenErrorBody {
     #[serde(rename = "extraParamsMap")]
-    pub extra_params_map: Option<serde_json::Value>, // This field must be present (even if null) to distinguish from other types
+    pub extra_params_map: Option<serde_json::Value>,
     #[serde(rename = "resultInfo")]
     pub result_info: PaytmResultInfo,
 }

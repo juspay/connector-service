@@ -4,44 +4,6 @@ use std::{
 };
 
 use aes::{Aes128, Aes192, Aes256};
-
-// PayTM API Constants
-pub mod constants {
-    // PayTM API versions and identifiers
-    pub const API_VERSION: &str = "v1";
-
-    // Request types
-    pub const REQUEST_TYPE_PAYMENT: &str = "Payment";
-    pub const REQUEST_TYPE_NATIVE: &str = "NATIVE";
-
-    // UPI specific constants
-    pub const PAYMENT_MODE_UPI: &str = "UPI";
-    pub const UPI_CHANNEL_UPIPUSH: &str = "UPIPUSH";
-    pub const PAYMENT_FLOW_NONE: &str = "NONE";
-
-    // Default values
-    pub const DEFAULT_CUSTOMER_ID: &str = "guest";
-    pub const DEFAULT_CALLBACK_URL: &str = "https://default-callback.com";
-
-    // Error messages
-    pub const ERROR_INVALID_VPA: &str = "Invalid UPI VPA format";
-    pub const ERROR_SALT_GENERATION: &str = "Failed to generate random salt";
-    pub const ERROR_AES_128_ENCRYPTION: &str = "AES-128 encryption failed";
-    pub const ERROR_AES_192_ENCRYPTION: &str = "AES-192 encryption failed";
-    pub const ERROR_AES_256_ENCRYPTION: &str = "AES-256 encryption failed";
-
-    // HTTP constants
-    pub const CONTENT_TYPE_JSON: &str = "application/json";
-    pub const CONTENT_TYPE_HEADER: &str = "Content-Type";
-
-    // AES encryption constants (from PayTM Haskell implementation)
-    pub const PAYTM_IV: &[u8; 16] = b"@@@@&&&&####$$$$";
-    pub const SALT_LENGTH: usize = 3;
-    pub const AES_BUFFER_PADDING: usize = 16;
-    pub const AES_128_KEY_LENGTH: usize = 16;
-    pub const AES_192_KEY_LENGTH: usize = 24;
-    pub const AES_256_KEY_LENGTH: usize = 32;
-}
 use base64::{engine::general_purpose, Engine};
 use cbc::{
     cipher::{block_padding::Pkcs7, BlockEncryptMut, KeyIvInit},
@@ -94,6 +56,44 @@ pub use super::response::{
     PaytmTransactionStatusRespBodyTypes, PaytmTransactionStatusResponse, PaytmTxnInfo,
 };
 
+// PayTM API Constants
+pub mod constants {
+    // PayTM API versions and identifiers
+    pub const API_VERSION: &str = "v1";
+
+    // Request types
+    pub const REQUEST_TYPE_PAYMENT: &str = "Payment";
+    pub const REQUEST_TYPE_NATIVE: &str = "NATIVE";
+
+    // UPI specific constants
+    pub const PAYMENT_MODE_UPI: &str = "UPI";
+    pub const UPI_CHANNEL_UPIPUSH: &str = "UPIPUSH";
+    pub const PAYMENT_FLOW_NONE: &str = "NONE";
+
+    // Default values
+    pub const DEFAULT_CUSTOMER_ID: &str = "guest";
+    pub const DEFAULT_CALLBACK_URL: &str = "https://default-callback.com";
+
+    // Error messages
+    pub const ERROR_INVALID_VPA: &str = "Invalid UPI VPA format";
+    pub const ERROR_SALT_GENERATION: &str = "Failed to generate random salt";
+    pub const ERROR_AES_128_ENCRYPTION: &str = "AES-128 encryption failed";
+    pub const ERROR_AES_192_ENCRYPTION: &str = "AES-192 encryption failed";
+    pub const ERROR_AES_256_ENCRYPTION: &str = "AES-256 encryption failed";
+
+    // HTTP constants
+    pub const CONTENT_TYPE_JSON: &str = "application/json";
+    pub const CONTENT_TYPE_HEADER: &str = "Content-Type";
+
+    // AES encryption constants (from PayTM Haskell implementation)
+    pub const PAYTM_IV: &[u8; 16] = b"@@@@&&&&####$$$$";
+    pub const SALT_LENGTH: usize = 3;
+    pub const AES_BUFFER_PADDING: usize = 16;
+    pub const AES_128_KEY_LENGTH: usize = 16;
+    pub const AES_192_KEY_LENGTH: usize = 24;
+    pub const AES_256_KEY_LENGTH: usize = 32;
+}
+
 #[derive(Debug, Clone)]
 pub struct PaytmAuthType {
     pub merchant_id: Secret<String>,       // From api_key
@@ -143,306 +143,9 @@ pub enum UpiFlowType {
     Collect,
 }
 
-pub fn determine_upi_flow<T: domain_types::payment_method_data::PaymentMethodDataTypes>(
-    payment_method_data: &PaymentMethodData<T>,
-) -> CustomResult<UpiFlowType, errors::ConnectorError> {
-    match payment_method_data {
-        PaymentMethodData::Upi(upi_data) => {
-            match upi_data {
-                UpiData::UpiCollect(collect_data) => {
-                    // If VPA is provided, it's a collect flow
-                    if collect_data.vpa_id.is_some() {
-                        Ok(UpiFlowType::Collect)
-                    } else {
-                        Err(errors::ConnectorError::MissingRequiredField {
-                            field_name: "vpa_id",
-                        }
-                        .into())
-                    }
-                }
-                UpiData::UpiIntent(_) | UpiData::UpiQr(_) => Ok(UpiFlowType::Intent),
-            }
-        }
-        _ => Err(errors::ConnectorError::NotSupported {
-            message: "Only UPI payment methods are supported".to_string(),
-            connector: "Paytm",
-        }
-        .into()),
-    }
-}
-
-
-// Helper function for UPI VPA extraction
-pub fn extract_upi_vpa<T: domain_types::payment_method_data::PaymentMethodDataTypes>(
-    payment_method_data: &PaymentMethodData<T>,
-) -> CustomResult<Option<String>, errors::ConnectorError> {
-    match payment_method_data {
-        PaymentMethodData::Upi(UpiData::UpiCollect(collect_data)) => {
-            if let Some(vpa_id) = &collect_data.vpa_id {
-                let vpa = vpa_id.peek().to_string();
-                if vpa.contains('@') && vpa.len() > 3 {
-                    Ok(Some(vpa))
-                } else {
-                    Err(errors::ConnectorError::RequestEncodingFailedWithReason(
-                        constants::ERROR_INVALID_VPA.to_string(),
-                    )
-                    .into())
-                }
-            } else {
-                Err(errors::ConnectorError::MissingRequiredField {
-                    field_name: "vpa_id",
-                }
-                .into())
-            }
-        }
-        _ => Ok(None),
-    }
-}
-
-// Paytm signature generation algorithm implementation
-// Following exact PayTM v2 algorithm from Haskell codebase
-pub fn generate_paytm_signature(
-    payload: &str,
-    merchant_key: &str,
-) -> CustomResult<String, errors::ConnectorError> {
-    // Step 1: Generate random salt bytes using ring (same logic, different implementation)
-    let rng = SystemRandom::new();
-    let mut salt_bytes = [0u8; constants::SALT_LENGTH];
-    rng.fill(&mut salt_bytes).map_err(|_| {
-        errors::ConnectorError::RequestEncodingFailedWithReason(
-            constants::ERROR_SALT_GENERATION.to_string(),
-        )
-    })?;
-
-    // Step 2: Convert salt to Base64 (same logic)
-    let salt_b64 = general_purpose::STANDARD.encode(salt_bytes);
-
-    // Step 3: Create hash input: payload + "|" + base64_salt (same logic)
-    let hash_input = format!("{payload}|{salt_b64}");
-
-    // Step 4: SHA-256 hash using ring (same logic, different implementation)
-    let hash_digest = digest::digest(&digest::SHA256, hash_input.as_bytes());
-    let sha256_hash = hex::encode(hash_digest.as_ref());
-
-    // Step 5: Create checksum: sha256_hash + base64_salt (same logic)
-    let checksum = format!("{sha256_hash}{salt_b64}");
-
-    // Step 6: AES encrypt checksum with merchant key (same logic)
-    let signature = aes_encrypt(&checksum, merchant_key)?;
-
-    Ok(signature)
-}
-
-// AES-CBC encryption implementation for PayTM v2
-// This follows the exact PayTMv1 encrypt function used by PayTMv2:
-// - Fixed IV: "@@@@&&&&####$$$$" (16 bytes) - exact value from Haskell code
-// - Key length determines AES variant: 16→AES-128, 24→AES-192, other→AES-256
-// - Mode: CBC with PKCS7 padding (16-byte blocks)
-// - Output: Base64 encoded encrypted data
-fn aes_encrypt(data: &str, key: &str) -> CustomResult<String, errors::ConnectorError> {
-    // PayTM uses fixed IV as specified in PayTMv1 implementation
-    let iv = get_paytm_iv();
-    let key_bytes = key.as_bytes();
-    let data_bytes = data.as_bytes();
-
-    // Determine AES variant based on key length (following PayTMv1 Haskell implementation)
-    match key_bytes.len() {
-        constants::AES_128_KEY_LENGTH => {
-            // AES-128-CBC with PKCS7 padding
-            type Aes128CbcEnc = Encryptor<Aes128>;
-            let mut key_array = [0u8; constants::AES_128_KEY_LENGTH];
-            key_array.copy_from_slice(key_bytes);
-
-            let encryptor = Aes128CbcEnc::new(&key_array.into(), &iv.into());
-
-            // Encrypt with proper buffer management
-            let mut buffer = Vec::with_capacity(data_bytes.len() + constants::AES_BUFFER_PADDING);
-            buffer.extend_from_slice(data_bytes);
-            buffer.resize(buffer.len() + constants::AES_BUFFER_PADDING, 0);
-
-            let encrypted_len = encryptor
-                .encrypt_padded_mut::<Pkcs7>(&mut buffer, data_bytes.len())
-                .map_err(|_| {
-                    errors::ConnectorError::RequestEncodingFailedWithReason(
-                        constants::ERROR_AES_128_ENCRYPTION.to_string(),
-                    )
-                })?
-                .len();
-
-            buffer.truncate(encrypted_len);
-            Ok(general_purpose::STANDARD.encode(&buffer))
-        }
-        constants::AES_192_KEY_LENGTH => {
-            // AES-192-CBC with PKCS7 padding
-            type Aes192CbcEnc = Encryptor<Aes192>;
-            let mut key_array = [0u8; constants::AES_192_KEY_LENGTH];
-            key_array.copy_from_slice(key_bytes);
-
-            let encryptor = Aes192CbcEnc::new(&key_array.into(), &iv.into());
-
-            let mut buffer = Vec::with_capacity(data_bytes.len() + constants::AES_BUFFER_PADDING);
-            buffer.extend_from_slice(data_bytes);
-            buffer.resize(buffer.len() + constants::AES_BUFFER_PADDING, 0);
-
-            let encrypted_len = encryptor
-                .encrypt_padded_mut::<Pkcs7>(&mut buffer, data_bytes.len())
-                .map_err(|_| {
-                    errors::ConnectorError::RequestEncodingFailedWithReason(
-                        constants::ERROR_AES_192_ENCRYPTION.to_string(),
-                    )
-                })?
-                .len();
-
-            buffer.truncate(encrypted_len);
-            Ok(general_purpose::STANDARD.encode(&buffer))
-        }
-        _ => {
-            // Default to AES-256-CBC with PKCS7 padding (for any other key length)
-            type Aes256CbcEnc = Encryptor<Aes256>;
-
-            // For AES-256, we need exactly 32 bytes, so pad or truncate the key
-            let mut aes256_key = [0u8; constants::AES_256_KEY_LENGTH];
-            let copy_len = cmp::min(key_bytes.len(), constants::AES_256_KEY_LENGTH);
-            aes256_key[..copy_len].copy_from_slice(&key_bytes[..copy_len]);
-
-            let encryptor = Aes256CbcEnc::new(&aes256_key.into(), &iv.into());
-
-            let mut buffer = Vec::with_capacity(data_bytes.len() + constants::AES_BUFFER_PADDING);
-            buffer.extend_from_slice(data_bytes);
-            buffer.resize(buffer.len() + constants::AES_BUFFER_PADDING, 0);
-
-            let encrypted_len = encryptor
-                .encrypt_padded_mut::<Pkcs7>(&mut buffer, data_bytes.len())
-                .map_err(|_| {
-                    errors::ConnectorError::RequestEncodingFailedWithReason(
-                        constants::ERROR_AES_256_ENCRYPTION.to_string(),
-                    )
-                })?
-                .len();
-
-            buffer.truncate(encrypted_len);
-            Ok(general_purpose::STANDARD.encode(&buffer))
-        }
-    }
-}
-
-// Fixed IV for Paytm AES encryption (from PayTM v2 Haskell implementation)
-// IV value: "@@@@&&&&####$$$$" (16 characters) - exact value from Haskell codebase
-fn get_paytm_iv() -> [u8; 16] {
-    // This is the exact IV used by PayTM v2 as found in the Haskell codebase
-    *constants::PAYTM_IV
-}
-
-// Helper function to determine channel ID based on OS type
-fn get_channel_id_from_browser_info(browser_info: Option<&BrowserInformation>) -> String {
-    match browser_info {
-        Some(info) => match &info.os_type {
-            Some(os_type) => {
-                let os_lower = os_type.to_lowercase();
-                if os_lower.contains("android") || os_lower.contains("ios") {
-                    "WAP".to_string()
-                } else {
-                    "WEB".to_string()
-                }
-            }
-            None => "WEB".to_string(),
-        },
-        None => "WEB".to_string(), // Default to WEB if no browser info
-    }
-}
-
-pub fn create_paytm_header(
-    request_body: &impl serde::Serialize,
-    auth: &PaytmAuthType,
-    channel_id: Option<&str>,
-) -> CustomResult<PaytmRequestHeader, errors::ConnectorError> {
-    let _payload = serde_json::to_string(request_body)
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-    let signature = generate_paytm_signature(&_payload, auth.merchant_key.peek())?;
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
-        .to_string();
-
-    Ok(PaytmRequestHeader {
-        client_id: auth.client_id.clone(), // None
-        version: constants::API_VERSION.to_string(),
-        request_timestamp: timestamp,
-        channel_id: channel_id.map(|id| id.to_string()), // Return None if channel_id is not provided
-        signature: signature.into(),
-    })
-}
-
-
-pub fn map_paytm_authorize_status_to_attempt_status(status_code: &str) -> AttemptStatus {
-    match status_code {
-        // Success case - 0000: Success
-        "0000" => AttemptStatus::Authorized,
-
-        // 931: Incorrect Passcode
-        // 1006: Your Session has expired.
-        // 2004: Invalid User Token
-        "931" | "1006" | "2004" => AttemptStatus::AuthenticationFailed,
-
-        // RC-00018: Payment failed as merchant has crossed his daily/monthly/weekly acceptance limit
-        // 312: This card is not supported. Please use another card.
-        // 315: Invalid Year
-        "RC-00018" | "312" | "315" => AttemptStatus::AuthorizationFailed,
-
-        // 0001: FAILED
-        // 309: Invalid Order ID
-        // 1001: Request parameters are not valid
-        // 1007: Missing mandatory element
-        // 501: System Error
-        // 510: Merchant Transaction Failure
-        // 372: Retry count breached
-        // 1005: Duplicate request handling
-        "0001" | "309" | "1001" | "1007" | "501" | "510" | "372" | "1005" => AttemptStatus::Failure, // Invalid request parameters
-
-        // Unknown status codes
-        _ => AttemptStatus::Pending,
-    }
-}
-
-pub fn map_paytm_sync_status_to_attempt_status(result_code: &str) -> AttemptStatus {
-    match result_code {
-        // Success case - 01: TXN_SUCCESS
-        "01" => AttemptStatus::Charged,
-
-        // 400: Transaction status not confirmed yet
-        // 402: Payment not complete, confirming with bank
-        "400" | "402" => AttemptStatus::Pending,
-
-        // 335: Mid is invalid
-        // 843: Your transaction has been declined by the bank. Remitting account is blocked or frozen.
-        "335" | "843" => AttemptStatus::AuthorizationFailed,
-
-        // 820: Mobile number linked to bank account has changed
-        // 235: Wallet balance insufficient
-        // 295: Invalid UPI ID
-        // 334: Invalid Order ID
-        // 267: Your payment has been declined due to Mandate gap
-        // 331: No Record Found
-        // 227: Payment declined by bank
-        // 401: Payment declined by bank
-        // 501: Server Down
-        // 810: Transaction Failed
-        "235" | "295" | "334" | "267" | "331" | "820" | "227" | "401" | "501" | "810" => {
-            AttemptStatus::Failure
-        }
-
-        // Default to Pending for unknown codes to be safe
-        _ => AttemptStatus::Pending,
-    }
-}
-
-
-// TryFrom implementations required by the macro framework
-// The macro expects TryFrom implementations that work with its generated PaytmRouterData<RouterDataV2<...>>
-
-// Since the macro generates PaytmRouterData<T> but our existing PaytmRouterData is not generic,
-// we need to implement TryFrom for the exact RouterDataV2 types the macro expects
+// ================================
+// Session Token Flow
+// ================================
 
 // PaytmInitiateTxnRequest TryFrom CreateSessionToken RouterData
 // Using the macro-generated PaytmRouterData type from the paytm module
@@ -639,175 +342,6 @@ impl<
     }
 }
 
-// PaytmAuthorizeRequest TryFrom Authorize RouterData
-impl<
-        T: domain_types::payment_method_data::PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
-    TryFrom<
-        MacroPaytmRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for PaytmAuthorizeRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: MacroPaytmRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let auth = PaytmAuthType::try_from(&item.router_data.connector_auth_type)?;
-
-        let payment_id = item
-            .router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
-        let session_token = item.router_data.resource_common_data.get_session_token()?;
-        let payment_method_data = &item.router_data.request.payment_method_data;
-
-        // Determine the UPI flow type based on payment method data
-        let upi_flow = determine_upi_flow(payment_method_data)?;
-
-        match upi_flow {
-            UpiFlowType::Intent => {
-                let timestamp = SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs()
-                    .to_string();
-
-                let channel_id = get_channel_id_from_browser_info(
-                    item.router_data.request.browser_info.as_ref(),
-                );
-                let head = PaytmProcessHeadTypes {
-                    version: constants::API_VERSION.to_string(),
-                    request_timestamp: timestamp,
-                    channel_id,
-                    txn_token: Secret::new(session_token),
-                };
-
-                let body = PaytmProcessBodyTypes {
-                    mid: Secret::new(auth.merchant_id.peek().to_string()),
-                    order_id: payment_id,
-                    request_type: constants::REQUEST_TYPE_NATIVE.to_string(),
-                    payment_mode: format!("{}_{}", constants::PAYMENT_MODE_UPI, "INTENT"),
-                    payment_flow: Some(constants::PAYMENT_FLOW_NONE.to_string()),
-                    txn_note: item.router_data.resource_common_data.description.clone(),
-                    extend_info: None,
-                };
-
-                let intent_request = PaytmProcessTxnRequest { head, body };
-                Ok(PaytmAuthorizeRequest::Intent(intent_request))
-            }
-            UpiFlowType::Collect => {
-                let vpa = match extract_upi_vpa(payment_method_data)? {
-                    Some(vpa) => vpa,
-                    None => {
-                        return Err(errors::ConnectorError::MissingRequiredField {
-                            field_name: "vpa_id",
-                        }
-                        .into())
-                    }
-                };
-
-                let head = PaytmTxnTokenType {
-                    txn_token: Secret::new(session_token.clone()),
-                };
-
-                let channel_id = get_channel_id_from_browser_info(
-                    item.router_data.request.browser_info.as_ref(),
-                );
-                let body = PaytmNativeProcessRequestBody {
-                    request_type: constants::REQUEST_TYPE_NATIVE.to_string(),
-                    mid: Secret::new(auth.merchant_id.peek().to_string()),
-                    order_id: payment_id,
-                    payment_mode: constants::PAYMENT_MODE_UPI.to_string(),
-                    payer_account: Some(vpa),
-                    channel_code: Some("".to_string()), //bank code
-                    channel_id,
-                    txn_token: Secret::new(session_token),
-                    auth_mode: None, //authentication mode if any
-                };
-
-                let collect_request = PaytmNativeProcessTxnRequest { head, body };
-                Ok(PaytmAuthorizeRequest::Collect(collect_request))
-            }
-        }
-    }
-}
-
-// PaytmTransactionStatusRequest TryFrom PSync RouterData
-impl<
-        T: domain_types::payment_method_data::PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
-    TryFrom<
-        MacroPaytmRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for PaytmTransactionStatusRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: MacroPaytmRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let auth = PaytmAuthType::try_from(&item.router_data.connector_auth_type)?;
-
-        // Extract data directly from router_data
-        let payment_id = item
-            .router_data
-            .request
-            .connector_transaction_id
-            .get_connector_transaction_id()
-            .unwrap_or_else(|_| {
-                item.router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone()
-            });
-
-        let body = PaytmTransactionStatusReqBody {
-            mid: Secret::new(auth.merchant_id.peek().to_string()),
-            order_id: payment_id,
-            txn_type: None, // Can be enhanced later to support specific transaction types
-        };
-
-        // Create header with actual signature
-        let head = create_paytm_header(&body, &auth, None)?;
-
-        Ok(Self { head, body })
-    }
-}
-
-// ResponseRouterData TryFrom implementations required by the macro framework
-
 // CreateSessionToken response transformation
 impl
     TryFrom<
@@ -882,6 +416,125 @@ impl
         };
 
         Ok(router_data)
+    }
+}
+
+// ================================
+// Authorization Flow
+// ================================
+
+// PaytmAuthorizeRequest TryFrom Authorize RouterData
+impl<
+        T: domain_types::payment_method_data::PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
+    TryFrom<
+        MacroPaytmRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for PaytmAuthorizeRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: MacroPaytmRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = PaytmAuthType::try_from(&item.router_data.connector_auth_type)?;
+
+        let payment_id = item
+            .router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+        let session_token = item.router_data.resource_common_data.get_session_token()?;
+        let payment_method_data = &item.router_data.request.payment_method_data;
+
+        // Determine the UPI flow type based on payment method data
+        let upi_flow = determine_upi_flow(payment_method_data)?;
+
+        match upi_flow {
+            UpiFlowType::Intent => {
+                let timestamp = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+                    .to_string();
+
+                let channel_id = get_channel_id_from_browser_info(
+                    item.router_data.request.browser_info.as_ref(),
+                );
+                let head = PaytmProcessHeadTypes {
+                    version: constants::API_VERSION.to_string(),
+                    request_timestamp: timestamp,
+                    channel_id,
+                    txn_token: Secret::new(session_token),
+                };
+
+                let body = PaytmProcessBodyTypes {
+                    mid: auth.merchant_id.clone(),
+                    order_id: payment_id,
+                    request_type: constants::REQUEST_TYPE_NATIVE.to_string(),
+                    payment_mode: format!("{}_{}", constants::PAYMENT_MODE_UPI, "INTENT"),
+                    payment_flow: Some(constants::PAYMENT_FLOW_NONE.to_string()),
+                    txn_note: item.router_data.resource_common_data.description.clone(),
+                    extend_info: None,
+                };
+
+                let intent_request = PaytmProcessTxnRequest { head, body };
+                Ok(PaytmAuthorizeRequest::Intent(intent_request))
+            }
+            UpiFlowType::Collect => {
+                let vpa = match extract_upi_vpa(payment_method_data)? {
+                    Some(vpa) => vpa,
+                    None => {
+                        return Err(errors::ConnectorError::MissingRequiredField {
+                            field_name: "vpa_id",
+                        }
+                        .into())
+                    }
+                };
+
+                let head = PaytmTxnTokenType {
+                    txn_token: Secret::new(session_token.clone()),
+                };
+
+                let channel_id = get_channel_id_from_browser_info(
+                    item.router_data.request.browser_info.as_ref(),
+                );
+                let body = PaytmNativeProcessRequestBody {
+                    request_type: constants::REQUEST_TYPE_NATIVE.to_string(),
+                    mid: auth.merchant_id.clone(),
+                    order_id: payment_id,
+                    payment_mode: constants::PAYMENT_MODE_UPI.to_string(),
+                    payer_account: Some(vpa),
+                    channel_code: Some("".to_string()), //bank code
+                    channel_id,
+                    txn_token: Secret::new(session_token),
+                    auth_mode: None, //authentication mode if any
+                };
+
+                let collect_request = PaytmNativeProcessTxnRequest { head, body };
+                Ok(PaytmAuthorizeRequest::Collect(collect_request))
+            }
+        }
     }
 }
 
@@ -1029,6 +682,62 @@ impl<
     }
 }
 
+// ================================
+// Payment Sync Flow
+// ================================
+
+// PaytmTransactionStatusRequest TryFrom PSync RouterData
+impl<
+        T: domain_types::payment_method_data::PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
+    TryFrom<
+        MacroPaytmRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    > for PaytmTransactionStatusRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: MacroPaytmRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = PaytmAuthType::try_from(&item.router_data.connector_auth_type)?;
+
+        // Extract data directly from router_data
+        let order_id = item
+            .router_data
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id()
+            .unwrap_or_else(|_| {
+                item.router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone()
+            });
+
+        let body = PaytmTransactionStatusReqBody {
+            mid: auth.merchant_id.clone(),
+            order_id,
+            txn_type: None, // Can be enhanced later to support specific transaction types
+        };
+
+        // Create header with actual signature
+        let head = create_paytm_header(&body, &auth, None)?;
+
+        Ok(Self { head, body })
+    }
+}
+
 // PSync response transformation
 impl
     TryFrom<
@@ -1125,5 +834,297 @@ impl
         };
 
         Ok(router_data)
+    }
+}
+
+pub fn determine_upi_flow<T: domain_types::payment_method_data::PaymentMethodDataTypes>(
+    payment_method_data: &PaymentMethodData<T>,
+) -> CustomResult<UpiFlowType, errors::ConnectorError> {
+    match payment_method_data {
+        PaymentMethodData::Upi(upi_data) => {
+            match upi_data {
+                UpiData::UpiCollect(collect_data) => {
+                    // If VPA is provided, it's a collect flow
+                    if collect_data.vpa_id.is_some() {
+                        Ok(UpiFlowType::Collect)
+                    } else {
+                        Err(errors::ConnectorError::MissingRequiredField {
+                            field_name: "vpa_id",
+                        }
+                        .into())
+                    }
+                }
+                UpiData::UpiIntent(_) | UpiData::UpiQr(_) => Ok(UpiFlowType::Intent),
+            }
+        }
+        _ => Err(errors::ConnectorError::NotSupported {
+            message: "Only UPI payment methods are supported".to_string(),
+            connector: "Paytm",
+        }
+        .into()),
+    }
+}
+
+// Helper function for UPI VPA extraction
+pub fn extract_upi_vpa<T: domain_types::payment_method_data::PaymentMethodDataTypes>(
+    payment_method_data: &PaymentMethodData<T>,
+) -> CustomResult<Option<String>, errors::ConnectorError> {
+    match payment_method_data {
+        PaymentMethodData::Upi(UpiData::UpiCollect(collect_data)) => {
+            if let Some(vpa_id) = &collect_data.vpa_id {
+                let vpa = vpa_id.peek().to_string();
+                if vpa.contains('@') && vpa.len() > 3 {
+                    Ok(Some(vpa))
+                } else {
+                    Err(errors::ConnectorError::RequestEncodingFailedWithReason(
+                        constants::ERROR_INVALID_VPA.to_string(),
+                    )
+                    .into())
+                }
+            } else {
+                Err(errors::ConnectorError::MissingRequiredField {
+                    field_name: "vpa_id",
+                }
+                .into())
+            }
+        }
+        _ => Ok(None),
+    }
+}
+
+// Paytm signature generation algorithm implementation
+// Following exact PayTM v2 algorithm from Haskell codebase
+pub fn generate_paytm_signature(
+    payload: &str,
+    merchant_key: &str,
+) -> CustomResult<String, errors::ConnectorError> {
+    // Step 1: Generate random salt bytes using ring (same logic, different implementation)
+    let rng = SystemRandom::new();
+    let mut salt_bytes = [0u8; constants::SALT_LENGTH];
+    rng.fill(&mut salt_bytes).map_err(|_| {
+        errors::ConnectorError::RequestEncodingFailedWithReason(
+            constants::ERROR_SALT_GENERATION.to_string(),
+        )
+    })?;
+
+    // Step 2: Convert salt to Base64 (same logic)
+    let salt_b64 = general_purpose::STANDARD.encode(salt_bytes);
+
+    // Step 3: Create hash input: payload + "|" + base64_salt (same logic)
+    let hash_input = format!("{payload}|{salt_b64}");
+
+    // Step 4: SHA-256 hash using ring (same logic, different implementation)
+    let hash_digest = digest::digest(&digest::SHA256, hash_input.as_bytes());
+    let sha256_hash = hex::encode(hash_digest.as_ref());
+
+    // Step 5: Create checksum: sha256_hash + base64_salt (same logic)
+    let checksum = format!("{sha256_hash}{salt_b64}");
+
+    // Step 6: AES encrypt checksum with merchant key (same logic)
+    let signature = aes_encrypt(&checksum, merchant_key)?;
+
+    Ok(signature)
+}
+
+// AES-CBC encryption implementation for PayTM v2
+// This follows the exact PayTMv1 encrypt function used by PayTMv2:
+// - Fixed IV: "@@@@&&&&####$$$$" (16 bytes) - exact value from Haskell code
+// - Key length determines AES variant: 16→AES-128, 24→AES-192, other→AES-256
+// - Mode: CBC with PKCS7 padding (16-byte blocks)
+// - Output: Base64 encoded encrypted data
+fn aes_encrypt(data: &str, key: &str) -> CustomResult<String, errors::ConnectorError> {
+    // PayTM uses fixed IV as specified in PayTMv1 implementation
+    let iv = get_paytm_iv();
+    let key_bytes = key.as_bytes();
+    let data_bytes = data.as_bytes();
+
+    // Determine AES variant based on key length (following PayTMv1 Haskell implementation)
+    match key_bytes.len() {
+        constants::AES_128_KEY_LENGTH => {
+            // AES-128-CBC with PKCS7 padding
+            type Aes128CbcEnc = Encryptor<Aes128>;
+            let mut key_array = [0u8; constants::AES_128_KEY_LENGTH];
+            key_array.copy_from_slice(key_bytes);
+
+            let encryptor = Aes128CbcEnc::new(&key_array.into(), &iv.into());
+
+            // Encrypt with proper buffer management
+            let mut buffer = Vec::with_capacity(data_bytes.len() + constants::AES_BUFFER_PADDING);
+            buffer.extend_from_slice(data_bytes);
+            buffer.resize(buffer.len() + constants::AES_BUFFER_PADDING, 0);
+
+            let encrypted_len = encryptor
+                .encrypt_padded_mut::<Pkcs7>(&mut buffer, data_bytes.len())
+                .map_err(|_| {
+                    errors::ConnectorError::RequestEncodingFailedWithReason(
+                        constants::ERROR_AES_128_ENCRYPTION.to_string(),
+                    )
+                })?
+                .len();
+
+            buffer.truncate(encrypted_len);
+            Ok(general_purpose::STANDARD.encode(&buffer))
+        }
+        constants::AES_192_KEY_LENGTH => {
+            // AES-192-CBC with PKCS7 padding
+            type Aes192CbcEnc = Encryptor<Aes192>;
+            let mut key_array = [0u8; constants::AES_192_KEY_LENGTH];
+            key_array.copy_from_slice(key_bytes);
+
+            let encryptor = Aes192CbcEnc::new(&key_array.into(), &iv.into());
+
+            let mut buffer = Vec::with_capacity(data_bytes.len() + constants::AES_BUFFER_PADDING);
+            buffer.extend_from_slice(data_bytes);
+            buffer.resize(buffer.len() + constants::AES_BUFFER_PADDING, 0);
+
+            let encrypted_len = encryptor
+                .encrypt_padded_mut::<Pkcs7>(&mut buffer, data_bytes.len())
+                .map_err(|_| {
+                    errors::ConnectorError::RequestEncodingFailedWithReason(
+                        constants::ERROR_AES_192_ENCRYPTION.to_string(),
+                    )
+                })?
+                .len();
+
+            buffer.truncate(encrypted_len);
+            Ok(general_purpose::STANDARD.encode(&buffer))
+        }
+        _ => {
+            // Default to AES-256-CBC with PKCS7 padding (for any other key length)
+            type Aes256CbcEnc = Encryptor<Aes256>;
+
+            // For AES-256, we need exactly 32 bytes, so pad or truncate the key
+            let mut aes256_key = [0u8; constants::AES_256_KEY_LENGTH];
+            let copy_len = cmp::min(key_bytes.len(), constants::AES_256_KEY_LENGTH);
+            aes256_key[..copy_len].copy_from_slice(&key_bytes[..copy_len]);
+
+            let encryptor = Aes256CbcEnc::new(&aes256_key.into(), &iv.into());
+
+            let mut buffer = Vec::with_capacity(data_bytes.len() + constants::AES_BUFFER_PADDING);
+            buffer.extend_from_slice(data_bytes);
+            buffer.resize(buffer.len() + constants::AES_BUFFER_PADDING, 0);
+
+            let encrypted_len = encryptor
+                .encrypt_padded_mut::<Pkcs7>(&mut buffer, data_bytes.len())
+                .map_err(|_| {
+                    errors::ConnectorError::RequestEncodingFailedWithReason(
+                        constants::ERROR_AES_256_ENCRYPTION.to_string(),
+                    )
+                })?
+                .len();
+
+            buffer.truncate(encrypted_len);
+            Ok(general_purpose::STANDARD.encode(&buffer))
+        }
+    }
+}
+
+// Fixed IV for Paytm AES encryption (from PayTM v2 Haskell implementation)
+// IV value: "@@@@&&&&####$$$$" (16 characters) - exact value from Haskell codebase
+fn get_paytm_iv() -> [u8; 16] {
+    // This is the exact IV used by PayTM v2 as found in the Haskell codebase
+    *constants::PAYTM_IV
+}
+
+// Helper function to determine channel ID based on OS type
+fn get_channel_id_from_browser_info(browser_info: Option<&BrowserInformation>) -> String {
+    match browser_info {
+        Some(info) => match &info.os_type {
+            Some(os_type) => {
+                let os_lower = os_type.to_lowercase();
+                if os_lower.contains("android") || os_lower.contains("ios") {
+                    "WAP".to_string()
+                } else {
+                    "WEB".to_string()
+                }
+            }
+            None => "WEB".to_string(),
+        },
+        None => "WEB".to_string(), // Default to WEB if no browser info
+    }
+}
+
+pub fn create_paytm_header(
+    request_body: &impl serde::Serialize,
+    auth: &PaytmAuthType,
+    channel_id: Option<&str>,
+) -> CustomResult<PaytmRequestHeader, errors::ConnectorError> {
+    let _payload = serde_json::to_string(request_body)
+        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+    let signature = generate_paytm_signature(&_payload, auth.merchant_key.peek())?;
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+        .to_string();
+
+    Ok(PaytmRequestHeader {
+        client_id: auth.client_id.clone(),
+        version: constants::API_VERSION.to_string(),
+        request_timestamp: timestamp,
+        channel_id: channel_id.map(|id| id.to_string()),
+        signature: signature.into(),
+    })
+}
+
+pub fn map_paytm_authorize_status_to_attempt_status(status_code: &str) -> AttemptStatus {
+    match status_code {
+        // Success case - 0000: Success
+        "0000" => AttemptStatus::Authorized,
+
+        // 931: Incorrect Passcode
+        // 1006: Your Session has expired.
+        // 2004: Invalid User Token
+        "931" | "1006" | "2004" => AttemptStatus::AuthenticationFailed,
+
+        // RC-00018: Payment failed as merchant has crossed his daily/monthly/weekly acceptance limit
+        // 312: This card is not supported. Please use another card.
+        // 315: Invalid Year
+        "RC-00018" | "312" | "315" => AttemptStatus::AuthorizationFailed,
+
+        // 0001: FAILED
+        // 309: Invalid Order ID
+        // 1001: Request parameters are not valid
+        // 1007: Missing mandatory element
+        // 501: System Error
+        // 510: Merchant Transaction Failure
+        // 372: Retry count breached
+        // 1005: Duplicate request handling
+        "0001" | "309" | "1001" | "1007" | "501" | "510" | "372" | "1005" => AttemptStatus::Failure, // Invalid request parameters
+
+        // Unknown status codes
+        _ => AttemptStatus::Pending,
+    }
+}
+
+pub fn map_paytm_sync_status_to_attempt_status(result_code: &str) -> AttemptStatus {
+    match result_code {
+        // Success case - 01: TXN_SUCCESS
+        "01" => AttemptStatus::Charged,
+
+        // 400: Transaction status not confirmed yet
+        // 402: Payment not complete, confirming with bank
+        "400" | "402" => AttemptStatus::Pending,
+
+        // 335: Mid is invalid
+        // 843: Your transaction has been declined by the bank. Remitting account is blocked or frozen.
+        "335" | "843" => AttemptStatus::AuthorizationFailed,
+
+        // 820: Mobile number linked to bank account has changed
+        // 235: Wallet balance insufficient
+        // 295: Invalid UPI ID
+        // 334: Invalid Order ID
+        // 267: Your payment has been declined due to Mandate gap
+        // 331: No Record Found
+        // 227: Payment declined by bank
+        // 401: Payment declined by bank
+        // 501: Server Down
+        // 810: Transaction Failed
+        "235" | "295" | "334" | "267" | "331" | "820" | "227" | "401" | "501" | "810" => {
+            AttemptStatus::Failure
+        }
+
+        // Default to Pending for unknown codes to be safe
+        _ => AttemptStatus::Pending,
     }
 }
