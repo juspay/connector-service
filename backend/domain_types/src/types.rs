@@ -1275,17 +1275,6 @@ impl<
                 .transpose()?,
             request_extended_authorization: value.request_extended_authorization,
             merchant_account_metadata,
-            order_details: if value.order_details.is_empty() {
-                None
-            } else {
-                Some(
-                    value
-                        .order_details
-                        .into_iter()
-                        .map(OrderDetailsWithAmount::foreign_try_from)
-                        .collect::<Result<Vec<_>, _>>()?,
-                )
-            },
         })
     }
 }

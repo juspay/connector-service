@@ -19,7 +19,7 @@ use strum::{Display, EnumString};
 use crate::{
     errors::{ApiError, ApplicationErrorResponse, ConnectorError},
     mandates::{CustomerAcceptance, MandateData},
-    payment_address::{self, Address, AddressDetails, OrderDetailsWithAmount, PhoneDetails},
+    payment_address::{self, Address, AddressDetails, PhoneDetails},
     payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{self, ConnectorResponseData, PaymentMethodToken},
     router_request_types::{
@@ -938,7 +938,6 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub enable_overcapture: Option<bool>,
     pub setup_mandate_details: Option<MandateData>,
     pub merchant_account_metadata: Option<common_utils::pii::SecretSerdeValue>,
-    pub order_details: Option<Vec<payment_address::OrderDetailsWithAmount>>,
 }
 
 impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
@@ -967,12 +966,6 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
             .clone()
             .and_then(|browser_info| browser_info.language)
     }
-    pub fn get_order_details(&self) -> Result<Vec<OrderDetailsWithAmount>, Error> {
-        self.order_details
-            .clone()
-            .ok_or_else(missing_field_err("order_details"))
-    }
-
     pub fn get_card(&self) -> Result<Card<T>, Error> {
         match &self.payment_method_data {
             PaymentMethodData::Card(card) => Ok(card.clone()),
