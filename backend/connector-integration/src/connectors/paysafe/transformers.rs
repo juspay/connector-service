@@ -261,7 +261,10 @@ impl<
 
         let currency = router_data.request.currency;
         let amount = router_data.request.amount;
-        let settle_with_auth = false; // PaymentMethodToken doesn't settle, just tokenizes
+        let settle_with_auth = matches!(
+            router_data.request.capture_method,
+            Some(enums::CaptureMethod::Automatic) | None
+        );
 
         // PaymentMethodToken is for no-3DS flow only
         let account_id = metadata.account_id.get_no_three_ds_account_id(currency)?;

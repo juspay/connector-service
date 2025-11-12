@@ -78,9 +78,7 @@ pub struct PaysafeSetupMandateRequest<T: PaymentMethodDataTypes> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub return_links: Option<Vec<ReturnLink>>,
     pub account_id: Secret<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub three_ds: Option<ThreeDs>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub profile: Option<PaysafeProfile>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub billing_details: Option<PaysafeBillingDetails>,

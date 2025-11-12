@@ -1355,6 +1355,12 @@ impl Payments {
         let payment_method_tokenization_data = PaymentMethodTokenizationData {
             amount: common_utils::types::MinorUnit::new(payload.amount),
             currency,
+            capture_method: payload.capture_method.and_then(|cm| {
+                common_enums::CaptureMethod::foreign_try_from(
+                    grpc_api_types::payments::CaptureMethod::try_from(cm).ok()?,
+                )
+                .ok()
+            }),
             integrity_object: None,
             browser_info: None,
             customer_acceptance: None,

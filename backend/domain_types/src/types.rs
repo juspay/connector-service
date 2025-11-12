@@ -5390,6 +5390,14 @@ impl<
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
+            capture_method: value
+                .capture_method
+                .map(|cm| {
+                    common_enums::CaptureMethod::foreign_try_from(
+                        grpc_api_types::payments::CaptureMethod::try_from(cm).unwrap_or_default(),
+                    )
+                })
+                .transpose()?,
             customer_acceptance: customer_acceptance
                 .map(mandates::CustomerAcceptance::foreign_try_from)
                 .transpose()?,
