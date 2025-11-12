@@ -49,7 +49,7 @@ use crate::{
         VoidPC,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, ConnectorCustomerData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorMandateReferenceId, ConnectorResponseHeaders, ContinueRedirectionResponse,
         DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
         MandateReferenceId, MultipleCaptureRequestData, PaymentCreateOrderData,
@@ -1166,13 +1166,14 @@ impl<
             .map(router_request_types::AuthenticationData::try_from)
             .transpose()?;
 
-        let access_token = value.access_token.as_ref().map(|token| {
-            crate::connector_types::AccessTokenResponseData {
+        let access_token = value
+            .access_token
+            .as_ref()
+            .map(|token| AccessTokenResponseData {
                 access_token: token.token.clone(),
                 token_type: None,
                 expires_in: token.expires_in_seconds,
-            }
-        });
+            });
         Ok(Self {
             authentication_data,
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
@@ -1827,13 +1828,14 @@ impl
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
-        let access_token = value.access_token.as_ref().map(|token| {
-            crate::connector_types::AccessTokenResponseData {
+        let access_token = value
+            .access_token
+            .as_ref()
+            .map(|token| AccessTokenResponseData {
                 access_token: token.token.clone(),
                 token_type: None,
                 expires_in: token.expires_in_seconds,
-            }
-        });
+            });
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
