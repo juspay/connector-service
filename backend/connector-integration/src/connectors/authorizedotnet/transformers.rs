@@ -598,8 +598,7 @@ fn create_regular_transaction_request<
         let address = billing
             .address
             .as_ref()
-            .map(|a| get_address_line(&a.line1, &a.line2, &a.line3))
-            .flatten();
+            .and_then(|a| get_address_line(&a.line1, &a.line2, &a.line3));
 
         BillTo {
             first_name,

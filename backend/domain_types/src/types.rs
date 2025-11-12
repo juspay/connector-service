@@ -2698,11 +2698,7 @@ pub fn generate_payment_void_response(
                     incremental_authorization_allowed,
                     connector_metadata: connector_metadata
                         .and_then(|value| value.as_object().cloned())
-                        .map(|map| {
-                            map.into_iter()
-                                .map(|(k, v)| (k, v.to_string()))
-                                .collect()
-                        })
+                        .map(|map| map.into_iter().map(|(k, v)| (k, v.to_string())).collect())
                         .unwrap_or_default(),
                 })
             }
@@ -4423,11 +4419,7 @@ pub fn generate_payment_capture_response(
                         .map(|amount_captured| amount_captured.get_amount_as_i64()),
                     connector_metadata: connector_metadata
                         .and_then(|value| value.as_object().cloned())
-                        .map(|map| {
-                            map.into_iter()
-                                .map(|(k, v)| (k, v.to_string()))
-                                .collect()
-                        })
+                        .map(|map| map.into_iter().map(|(k, v)| (k, v.to_string())).collect())
                         .unwrap_or_default(),
                 })
             }
@@ -5702,11 +5694,7 @@ pub fn generate_repeat_payment_response(
                     }),
                     connector_metadata: connector_metadata
                         .and_then(|value| value.as_object().cloned())
-                        .map(|map| {
-                            map.into_iter()
-                                .map(|(k, v)| (k, v.to_string()))
-                                .collect()
-                        })
+                        .map(|map| map.into_iter().map(|(k, v)| (k, v.to_string())).collect())
                         .unwrap_or_default(),
                     mandate_reference: mandate_reference.map(|m| {
                         grpc_api_types::payments::MandateReference {
