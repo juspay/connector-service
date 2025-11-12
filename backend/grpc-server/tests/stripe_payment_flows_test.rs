@@ -174,7 +174,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         handle_response: None,
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
-        state: None,
+        access_token: None,
     }
 }
 

@@ -268,7 +268,7 @@ fn create_payment_sync_request(
         handle_response: None,
         amount,
         currency: i32::from(Currency::Usd),
-        state: None,
+        access_token: None,
     }
 }
 

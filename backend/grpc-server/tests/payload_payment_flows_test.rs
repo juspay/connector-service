@@ -167,7 +167,7 @@ fn create_payment_sync_request(transaction_id: &str, amount: i64) -> PaymentServ
         handle_response: None,
         amount,
         currency: i32::from(Currency::Usd),
-        state: None,
+        access_token: None,
     }
 }
 
@@ -268,7 +268,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         test_mode: None,
         payment_method_type: None,
         merchant_account_metadata: HashMap::new(),
-        state: None,
+        access_token: None,
         ..Default::default()
     }
 }
@@ -497,7 +497,7 @@ async fn test_authorize_capture_refund_rsync() {
             handle_response: None,
             amount,
             currency: i32::from(Currency::Usd),
-            state: None,
+            access_token: None,
         };
         let mut rsync_grpc_request = Request::new(rsync_request);
         add_payload_metadata(&mut rsync_grpc_request);

@@ -286,9 +286,8 @@ impl Payments {
 
         // Extract access token from Hyperswitch request
         let cached_access_token = payload
-            .state
+            .access_token
             .as_ref()
-            .and_then(|state| state.access_token.as_ref())
             .map(|access| (access.token.clone(), access.expires_in_seconds));
 
         // Check if connector supports access tokens
@@ -1630,9 +1629,8 @@ impl PaymentService for Payments {
 
                     // Extract access token from Hyperswitch request
                     let cached_access_token = payload
-                        .state
+                        .access_token
                         .as_ref()
-                        .and_then(|state| state.access_token.as_ref())
                         .map(|access| (access.token.clone(), access.expires_in_seconds));
 
                     // Check if connector supports access tokens

@@ -207,7 +207,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         test_mode: None,
         payment_method_type: None,
         merchant_account_metadata: HashMap::new(),
-        state: None,
+        access_token: None,
         recurring_mandate_payment_data: None,
         address: None,
         connector_customer_id: None,
@@ -402,7 +402,7 @@ fn create_payment_get_request(transaction_id: &str) -> PaymentServiceGetRequest 
         handle_response: None,
         amount: TEST_AMOUNT,
         currency: 146, // Currency value from working grpcurl
-        state: None,
+        access_token: None,
     }
 }
 
@@ -425,7 +425,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         connector_metadata: HashMap::new(),
         browser_info: None,
         capture_method: None,
-        state: None,
+        access_token: None,
     }
 }
 
@@ -491,7 +491,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         metadata: HashMap::new(),
         refund_metadata,
         browser_info: None,
-        state: None,
+        access_token: None,
     }
 }
 
@@ -512,7 +512,7 @@ fn create_refund_get_request(transaction_id: &str, refund_id: &str) -> RefundSer
         browser_info: None,
         refund_reason: None,
         refund_metadata: HashMap::new(),
-        state: None,
+        access_token: None,
     }
 }
 
