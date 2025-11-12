@@ -65,7 +65,9 @@ use crate::{
     errors::{ApiError, ApplicationErrorResponse},
     mandates::{self, MandateData},
     payment_address,
-    payment_address::{Address, AddressDetails, OrderDetailsWithAmount, PaymentAddress, PhoneDetails},
+    payment_address::{
+        Address, AddressDetails, OrderDetailsWithAmount, PaymentAddress, PhoneDetails,
+    },
     payment_method_data,
     payment_method_data::{
         DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
@@ -1642,11 +1644,13 @@ impl ForeignTryFrom<grpc_api_types::payments::OrderDetailsWithAmount> for OrderD
                     error_identifier: 400,
                     error_message: "Quantity value is out of range for u16".to_owned(),
                     error_object: None,
-                })
+                }),
             )?,
             amount: common_utils::types::MinorUnit::new(item.amount),
             tax_rate: item.tax_rate,
-            total_tax_amount: item.total_tax_amount.map(common_utils::types::MinorUnit::new),
+            total_tax_amount: item
+                .total_tax_amount
+                .map(common_utils::types::MinorUnit::new),
             requires_shipping: item.requires_shipping,
             product_img_link: item.product_img_link,
             product_id: item.product_id,

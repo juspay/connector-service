@@ -19,7 +19,7 @@ use strum::{Display, EnumString};
 use crate::{
     errors::{ApiError, ApplicationErrorResponse, ConnectorError},
     mandates::{CustomerAcceptance, MandateData},
-    payment_address::{self, Address, AddressDetails, PhoneDetails, OrderDetailsWithAmount},
+    payment_address::{self, Address, AddressDetails, OrderDetailsWithAmount, PhoneDetails},
     payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{self, ConnectorResponseData, PaymentMethodToken},
     router_request_types::{
