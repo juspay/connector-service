@@ -2471,6 +2471,16 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
 
+        // Extract access token from state if present
+        let access_token = value
+            .state
+            .and_then(|state| state.access_token)
+            .map(|token| AccessTokenResponseData {
+                access_token: token.token,
+                token_type: token.token_type,
+                expires_in: token.expires_in_seconds,
+            });
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -3803,11 +3813,16 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        // Extract access token from state if present
         let access_token = value
             .state
-            .as_ref()
-            .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
+            .and_then(|state| state.access_token)
+            .map(|token| AccessTokenResponseData {
+                access_token: token.token,
+                token_type: token.token_type,
+                expires_in: token.expires_in_seconds,
+            });
+
         Ok(RefundFlowData {
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
@@ -3816,7 +3831,7 @@ impl
             status: common_enums::RefundStatus::Pending,
             refund_id: None,
             connectors,
-            access_token: None,
+            access_token,
             raw_connector_response: None,
             raw_connector_request: None,
             connector_response_headers: None,
@@ -3876,11 +3891,16 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        // Extract access token from state if present
         let access_token = value
             .state
-            .as_ref()
-            .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
+            .and_then(|state| state.access_token)
+            .map(|token| AccessTokenResponseData {
+                access_token: token.token,
+                token_type: token.token_type,
+                expires_in: token.expires_in_seconds,
+            });
+
         Ok(RefundFlowData {
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
@@ -3889,7 +3909,7 @@ impl
             status: common_enums::RefundStatus::Pending,
             refund_id: Some(value.refund_id),
             connectors,
-            access_token: None,
+            access_token,
             raw_connector_response: None,
             raw_connector_request: None,
             connector_response_headers: None,
@@ -5037,6 +5057,16 @@ impl
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
+
+        // Extract access token from state if present
+        let access_token = value
+            .state
+            .and_then(|state| state.access_token)
+            .map(|token| AccessTokenResponseData {
+                access_token: token.token,
+                token_type: token.token_type,
+                expires_in: token.expires_in_seconds,
+            });
 
         Ok(Self {
             merchant_id: merchant_id_from_header,

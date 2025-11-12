@@ -1693,416 +1693,50 @@ impl Payments {
 }
 
 impl PaymentOperationsInternal for Payments {
-    async fn internal_void_payment(
-        &self,
-        request: RequestData<PaymentServiceVoidRequest>,
-    ) -> Result<tonic::Response<PaymentServiceVoidResponse>, tonic::Status> {
-        tracing::info!("PAYMENT_VOID_FLOW: initiated");
+    implement_connector_operation!(
+        fn_name: internal_void_payment,
+        log_prefix: "PAYMENT_VOID",
+        request_type: PaymentServiceVoidRequest,
+        response_type: PaymentServiceVoidResponse,
+        flow_marker: Void,
+        resource_common_data_type: PaymentFlowData,
+        request_data_type: PaymentVoidData,
+        response_data_type: PaymentsResponseData,
+        request_data_constructor: PaymentVoidData::foreign_try_from,
+        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
+        generate_response_fn: domain_types::types::generate_payment_void_response,
+        all_keys_required: None
+    );
 
-        let service_name = request
-            .extensions
-            .get::<String>()
-            .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
+    implement_connector_operation!(
+        fn_name: internal_refund,
+        log_prefix: "REFUND",
+        request_type: PaymentServiceRefundRequest,
+        response_type: RefundResponse,
+        flow_marker: Refund,
+        resource_common_data_type: RefundFlowData,
+        request_data_type: RefundsData,
+        response_data_type: RefundsResponseData,
+        request_data_constructor: RefundsData::foreign_try_from,
+        common_flow_data_constructor: RefundFlowData::foreign_try_from,
+        generate_response_fn: domain_types::types::generate_refund_response,
+        all_keys_required: None
+    );
 
-        let RequestData {
-            payload,
-            extracted_metadata: metadata_payload,
-            masked_metadata,
-            extensions: _,
-        } = request;
-
-        let (connector, request_id, connector_auth_details) = (
-            metadata_payload.connector,
-            &metadata_payload.request_id,
-            metadata_payload.connector_auth_type.clone(),
-        );
-
-        // Get connector data
-        let connector_data: ConnectorData<DefaultPCIHolder> =
-            ConnectorData::get_connector_by_name(&connector);
-
-        // Get connector integration
-        let connector_integration: BoxedConnectorIntegrationV2<
-            '_,
-            Void,
-            PaymentFlowData,
-            PaymentVoidData,
-            PaymentsResponseData,
-        > = connector_data.connector.get_connector_integration_v2();
-
-        // Create common request data
-        let mut payment_flow_data = PaymentFlowData::foreign_try_from((
-            payload.clone(),
-            self.config.connectors.clone(),
-            &masked_metadata,
-        ))
-        .into_grpc_status()?;
-
-        let lineage_ids = &metadata_payload.lineage_ids;
-        let reference_id = &metadata_payload.reference_id;
-
-        // Extract access token from Hyperswitch request
-        let cached_access_token = payload
-            .state
-            .as_ref()
-            .and_then(|state| state.access_token.as_ref())
-            .map(|access| (access.token.clone(), access.expires_in_seconds));
-
-        // Check if connector supports access tokens
-        let should_do_access_token = connector_data.connector.should_do_access_token();
-
-        // Void is a subsequent flow - EXPECT access token from Hyperswitch, don't create it
-        if should_do_access_token {
-            let access_token_data = match cached_access_token {
-                Some((token, expires_in)) => {
-                    // Use cached token
-                    tracing::info!("Using cached access token from Hyperswitch for Void flow");
-                    Some(AccessTokenResponseData {
-                        access_token: token,
-                        token_type: None,
-                        expires_in,
-                    })
-                }
-                None => {
-                    // Void flow should receive token from Hyperswitch (forwarded from Authorize)
-                    // Don't try to create a new one - fail fast with clear error
-                    tracing::error!(
-                        "Access token not provided by Hyperswitch for Void flow. \
-                        Connector {} requires OAuth but token was not forwarded from Authorize flow.",
-                        connector.to_string()
-                    );
-                    return Err(tonic::Status::failed_precondition(format!(
-                        "Access token required for {} Void flow but not provided by Hyperswitch. \
-                            Token should be forwarded from Authorize flow.",
-                        connector
-                    )));
-                }
-            };
-
-            // Store in flow data for connector API calls
-            payment_flow_data = payment_flow_data.set_access_token(access_token_data);
-        }
-
-        // Create connector request data
-        let payment_void_data =
-            PaymentVoidData::foreign_try_from(payload.clone()).into_grpc_status()?;
-
-        // Construct router data
-        let router_data =
-            RouterDataV2::<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> {
-                flow: std::marker::PhantomData,
-                resource_common_data: payment_flow_data,
-                connector_auth_type: connector_auth_details,
-                request: payment_void_data,
-                response: Err(ErrorResponse::default()),
-            };
-
-        // Execute connector processing
-        let event_params = EventProcessingParams {
-            connector_name: &connector.to_string(),
-            service_name: &service_name,
-            flow_name: FlowName::Void,
-            event_config: &self.config.events,
-            request_id,
-            lineage_ids,
-            reference_id,
-            shadow_mode: metadata_payload.shadow_mode,
-        };
-
-        let response_result = Box::pin(
-            external_services::service::execute_connector_processing_step(
-                &self.config.proxy,
-                connector_integration,
-                router_data,
-                None,
-                event_params,
-                None,
-                common_enums::CallConnectorAction::Trigger,
-            ),
-        )
-        .await
-        .switch()
-        .into_grpc_status()?;
-
-        // Generate response
-        let final_response = domain_types::types::generate_payment_void_response(response_result)
-            .into_grpc_status()?;
-
-        Ok(tonic::Response::new(final_response))
-    }
-
-    async fn internal_refund(
-        &self,
-        request: RequestData<PaymentServiceRefundRequest>,
-    ) -> Result<tonic::Response<RefundResponse>, tonic::Status> {
-        tracing::info!("REFUND_FLOW: initiated");
-
-        let service_name = request
-            .extensions
-            .get::<String>()
-            .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
-
-        let RequestData {
-            payload,
-            extracted_metadata: metadata_payload,
-            masked_metadata,
-            extensions: _,
-        } = request;
-
-        let (connector, request_id, connector_auth_details) = (
-            metadata_payload.connector,
-            &metadata_payload.request_id,
-            metadata_payload.connector_auth_type.clone(),
-        );
-
-        // Get connector data
-        let connector_data: ConnectorData<DefaultPCIHolder> =
-            ConnectorData::get_connector_by_name(&connector);
-
-        // Get connector integration
-        let connector_integration: BoxedConnectorIntegrationV2<
-            '_,
-            Refund,
-            RefundFlowData,
-            RefundsData,
-            RefundsResponseData,
-        > = connector_data.connector.get_connector_integration_v2();
-
-        // Create common request data
-        let mut refund_flow_data = RefundFlowData::foreign_try_from((
-            payload.clone(),
-            self.config.connectors.clone(),
-            &masked_metadata,
-        ))
-        .into_grpc_status()?;
-
-        let lineage_ids = &metadata_payload.lineage_ids;
-        let reference_id = &metadata_payload.reference_id;
-
-        // Extract access token from Hyperswitch request
-        let cached_access_token = payload
-            .state
-            .as_ref()
-            .and_then(|state| state.access_token.as_ref())
-            .map(|access| (access.token.clone(), access.expires_in_seconds));
-
-        // Check if connector supports access tokens
-        let should_do_access_token = connector_data.connector.should_do_access_token();
-
-        // For refund flows, OAuth tokens must be provided in request.state by Hyperswitch
-        if should_do_access_token {
-            let access_token_data = match cached_access_token {
-                Some((token, expires_in)) => {
-                    // Use cached token
-                    tracing::info!("Using cached access token from Hyperswitch");
-                    Some(AccessTokenResponseData {
-                        access_token: token,
-                        token_type: None,
-                        expires_in,
-                    })
-                }
-                None => {
-                    // OAuth tokens must be provided for refund flows
-                    tracing::error!(
-                        "OAuth access token required but not provided in request state"
-                    );
-                    return Err(tonic::Status::internal(
-                        "OAuth access token required but not provided for refund operation",
-                    ));
-                }
-            };
-
-            // Store in flow data for connector API calls
-            refund_flow_data = refund_flow_data.set_access_token(access_token_data);
-        }
-
-        // Create connector request data
-        let refunds_data = RefundsData::foreign_try_from(payload.clone()).into_grpc_status()?;
-
-        // Construct router data
-        let router_data = RouterDataV2::<Refund, RefundFlowData, RefundsData, RefundsResponseData> {
-            flow: std::marker::PhantomData,
-            resource_common_data: refund_flow_data,
-            connector_auth_type: connector_auth_details,
-            request: refunds_data,
-            response: Err(ErrorResponse::default()),
-        };
-
-        // Execute connector processing
-        let event_params = EventProcessingParams {
-            connector_name: &connector.to_string(),
-            service_name: &service_name,
-            flow_name: FlowName::Refund,
-            event_config: &self.config.events,
-            request_id,
-            lineage_ids,
-            reference_id,
-            shadow_mode: metadata_payload.shadow_mode,
-        };
-
-        let response_result = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            router_data,
-            None,
-            event_params,
-            None,
-            common_enums::CallConnectorAction::Trigger,
-        )
-        .await
-        .switch()
-        .into_grpc_status()?;
-
-        // Generate response
-        let final_response =
-            domain_types::types::generate_refund_response(response_result).into_grpc_status()?;
-
-        Ok(tonic::Response::new(final_response))
-    }
-
-    async fn internal_payment_capture(
-        &self,
-        request: RequestData<PaymentServiceCaptureRequest>,
-    ) -> Result<tonic::Response<PaymentServiceCaptureResponse>, tonic::Status> {
-        tracing::info!("PAYMENT_CAPTURE_FLOW: initiated");
-
-        let service_name = request
-            .extensions
-            .get::<String>()
-            .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
-
-        let RequestData {
-            payload,
-            extracted_metadata: metadata_payload,
-            masked_metadata,
-            extensions: _,
-        } = request;
-
-        let (connector, request_id, connector_auth_details) = (
-            metadata_payload.connector,
-            &metadata_payload.request_id,
-            metadata_payload.connector_auth_type.clone(),
-        );
-
-        // Get connector data
-        let connector_data: ConnectorData<DefaultPCIHolder> =
-            ConnectorData::get_connector_by_name(&connector);
-
-        // Get connector integration
-        let connector_integration: BoxedConnectorIntegrationV2<
-            '_,
-            Capture,
-            PaymentFlowData,
-            PaymentsCaptureData,
-            PaymentsResponseData,
-        > = connector_data.connector.get_connector_integration_v2();
-
-        // Create common request data
-        let mut payment_flow_data = PaymentFlowData::foreign_try_from((
-            payload.clone(),
-            self.config.connectors.clone(),
-            &masked_metadata,
-        ))
-        .into_grpc_status()?;
-
-        let lineage_ids = &metadata_payload.lineage_ids;
-        let reference_id = &metadata_payload.reference_id;
-
-        // Extract access token from Hyperswitch request
-        let cached_access_token = payload
-            .state
-            .as_ref()
-            .and_then(|state| state.access_token.as_ref())
-            .map(|access| (access.token.clone(), access.expires_in_seconds));
-
-        // Check if connector supports access tokens
-        let should_do_access_token = connector_data.connector.should_do_access_token();
-
-        // Capture is a subsequent flow - EXPECT access token from Hyperswitch, don't create it
-        if should_do_access_token {
-            let access_token_data = match cached_access_token {
-                Some((token, expires_in)) => {
-                    // Use cached token
-                    tracing::info!("Using cached access token from Hyperswitch for Capture flow");
-                    Some(AccessTokenResponseData {
-                        access_token: token,
-                        token_type: None,
-                        expires_in,
-                    })
-                }
-                None => {
-                    // Capture flow should receive token from Hyperswitch (forwarded from Authorize)
-                    // Don't try to create a new one - fail fast with clear error
-                    tracing::error!(
-                        "Access token not provided by Hyperswitch for Capture flow. \
-                        Connector {} requires OAuth but token was not forwarded from Authorize flow.",
-                        connector.to_string()
-                    );
-                    return Err(tonic::Status::failed_precondition(
-                        format!(
-                            "Access token required for {} Capture flow but not provided by Hyperswitch. \
-                            Token should be forwarded from Authorize flow.",
-                            connector
-                        )
-                    ));
-                }
-            };
-
-            // Store in flow data for connector API calls
-            payment_flow_data = payment_flow_data.set_access_token(access_token_data);
-        }
-
-        // Create connector request data
-        let payment_capture_data =
-            PaymentsCaptureData::foreign_try_from(payload.clone()).into_grpc_status()?;
-
-        // Construct router data
-        let router_data =
-            RouterDataV2::<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> {
-                flow: std::marker::PhantomData,
-                resource_common_data: payment_flow_data,
-                connector_auth_type: connector_auth_details,
-                request: payment_capture_data,
-                response: Err(ErrorResponse::default()),
-            };
-
-        // Execute connector processing
-        let event_params = EventProcessingParams {
-            connector_name: &connector.to_string(),
-            service_name: &service_name,
-            flow_name: FlowName::Capture,
-            event_config: &self.config.events,
-            request_id,
-            lineage_ids,
-            reference_id,
-            shadow_mode: metadata_payload.shadow_mode,
-        };
-
-        let response_result = Box::pin(
-            external_services::service::execute_connector_processing_step(
-                &self.config.proxy,
-                connector_integration,
-                router_data,
-                None,
-                event_params,
-                None,
-                common_enums::CallConnectorAction::Trigger,
-            ),
-        )
-        .await
-        .switch()
-        .into_grpc_status()?;
-
-        // Generate response
-        let final_response =
-            domain_types::types::generate_payment_capture_response(response_result)
-                .into_grpc_status()?;
-
-        Ok(tonic::Response::new(final_response))
-    }
+    implement_connector_operation!(
+        fn_name: internal_payment_capture,
+        log_prefix: "PAYMENT_CAPTURE",
+        request_type: PaymentServiceCaptureRequest,
+        response_type: PaymentServiceCaptureResponse,
+        flow_marker: Capture,
+        resource_common_data_type: PaymentFlowData,
+        request_data_type: PaymentsCaptureData,
+        response_data_type: PaymentsResponseData,
+        request_data_constructor: PaymentsCaptureData::foreign_try_from,
+        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
+        generate_response_fn: domain_types::types::generate_payment_capture_response,
+        all_keys_required: None
+    );
 
     implement_connector_operation!(
         fn_name: internal_pre_authenticate,
