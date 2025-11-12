@@ -121,11 +121,12 @@ fn is_three_ds(auth_type: &enums::AuthenticationType) -> bool {
 fn create_paysafe_billing_details(
     resource_common_data: &PaymentFlowData,
 ) -> Result<Option<requests::PaysafeBillingDetails>, ConnectorError> {
+    let billing_address = resource_common_data.get_billing_address()?;
     // Only send billing details if billing mandatory fields are available
     if let (Some(zip), Some(country), Some(state)) = (
         resource_common_data.get_optional_billing_zip(),
         resource_common_data.get_optional_billing_country(),
-        resource_common_data.get_optional_billing_state(),
+        billing_address.to_state_code_as_optional()?,
     ) {
         Ok(Some(requests::PaysafeBillingDetails {
             nick_name: resource_common_data.get_optional_billing_first_name(),
@@ -515,8 +516,15 @@ impl<
         // CreateOrder is for no-3DS flow
         let account_id = metadata.account_id.get_no_three_ds_account_id(currency)?;
 
-        let payment_method = match &router_data.request.payment_method_data {
-            Some(PaymentMethodData::Card(req_card)) => {
+        // Get payment method data - it's required for CreateOrder
+        let payment_method_data = router_data.request.payment_method_data.as_ref().ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "payment_method_data",
+            },
+        )?;
+
+        let payment_method = match payment_method_data {
+            PaymentMethodData::Card(req_card) => {
                 let card = requests::PaysafeCard {
                     card_num: req_card.card_number.clone(),
                     card_expiry: requests::PaysafeCardExpiry {
@@ -545,6 +553,36 @@ impl<
 
         let billing_details = create_paysafe_billing_details(&router_data.resource_common_data)?;
 
+        // Paysafe requires return_links even for no-3DS flows
+        let redirect_url = router_data.resource_common_data.get_return_url().ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "return_url",
+            },
+        )?;
+
+        let return_links = Some(vec![
+            requests::ReturnLink {
+                rel: requests::LinkType::Default,
+                href: redirect_url.clone(),
+                method: Method::Get.to_string(),
+            },
+            requests::ReturnLink {
+                rel: requests::LinkType::OnCompleted,
+                href: redirect_url.clone(),
+                method: Method::Get.to_string(),
+            },
+            requests::ReturnLink {
+                rel: requests::LinkType::OnFailed,
+                href: redirect_url.clone(),
+                method: Method::Get.to_string(),
+            },
+            requests::ReturnLink {
+                rel: requests::LinkType::OnCancelled,
+                href: redirect_url,
+                method: Method::Get.to_string(),
+            },
+        ]);
+
         Ok(Self {
             merchant_ref_num: router_data
                 .resource_common_data
@@ -556,7 +594,7 @@ impl<
             currency_code: currency,
             payment_type: requests::PaysafePaymentType::Card,
             transaction_type: requests::TransactionType::Payment,
-            return_links: None, // No redirect for no-3DS
+            return_links,
             account_id,
             three_ds: None, // No 3DS for CreateOrder
             profile: None,
@@ -903,7 +941,7 @@ impl<
         // Get payment_handle_token from connector_metadata (set during preorder/authenticate)
         let payment_handle_token = router_data
             .resource_common_data
-            .preprocessing_id
+            .reference_id
             .clone()
             .ok_or(errors::ConnectorError::MissingRequiredField {
                 field_name: "preprocessing_id (payment_handle_token)",
