@@ -1,4 +1,3 @@
-use common_enums::ProductType;
 use common_utils::{ext_traits::ConfigExt, Email, MinorUnit};
 use hyperswitch_masking::{PeekInterface, Secret, SerializableSecret};
 
@@ -159,7 +158,7 @@ impl Address {
 #[serde(deny_unknown_fields)]
 pub struct AddressDetails {
     /// The city, district, suburb, town, or village of the address.
-    pub city: Option<String>,
+    pub city: Option<Secret<String>>,
 
     /// The two-letter ISO 3166-1 alpha-2 country code (e.g., US, GB).
     pub country: Option<common_enums::CountryAlpha2>,
@@ -267,7 +266,7 @@ impl AddressDetails {
             .ok_or_else(missing_field_err("address.line1"))
     }
 
-    pub fn get_city(&self) -> Result<&String, Error> {
+    pub fn get_city(&self) -> Result<&Secret<String>, Error> {
         self.city
             .as_ref()
             .ok_or_else(missing_field_err("address.city"))
@@ -406,10 +405,10 @@ pub struct OrderDetailsWithAmount {
     pub sub_category: Option<String>,
     /// Brand of the product that is being purchased
     pub brand: Option<String>,
-    /// Type of the product that is being purchased
-    pub product_type: Option<ProductType>,
-    /// The tax code for the product
-    pub product_tax_code: Option<String>,
+    /// Description for the item
+    pub description: Option<String>,
+    /// Unit of measure used for the item quantity.
+    pub unit_of_measure: Option<String>,
 }
 
 impl hyperswitch_masking::SerializableSecret for OrderDetailsWithAmount {}

@@ -9,8 +9,7 @@ use aes::{Aes128, Aes192, Aes256};
 // PayTM API Constants
 pub mod constants {
     // PayTM API versions and identifiers
-    pub const API_VERSION: &str = "v2";
-    pub const CHANNEL_ID: &str = "WEB";
+    pub const API_VERSION: &str = "v1";//TODO: should be taken from request
 
     // Request types
     pub const REQUEST_TYPE_PAYMENT: &str = "Payment";
@@ -20,36 +19,6 @@ pub mod constants {
     pub const PAYMENT_MODE_UPI: &str = "UPI";
     pub const UPI_CHANNEL_UPIPUSH: &str = "UPIPUSH";
     pub const PAYMENT_FLOW_NONE: &str = "NONE";
-    pub const AUTH_MODE_DEBIT_PIN: &str = "DEBIT_PIN";
-    pub const AUTH_MODE_OTP: &str = "otp";
-
-    // Response codes
-    pub const SUCCESS_CODE: &str = "0000";
-    pub const DUPLICATE_CODE: &str = "0002";
-    pub const QR_SUCCESS_CODE: &str = "QR_0001";
-
-    // PSync specific constants
-    pub const TXN_SUCCESS_CODE: &str = "01";
-    pub const TXN_FAILURE_CODE: &str = "227";
-    pub const WALLET_INSUFFICIENT_CODE: &str = "235";
-    pub const INVALID_UPI_CODE: &str = "295";
-    pub const NO_RECORD_FOUND_CODE: &str = "331";
-    pub const INVALID_ORDER_ID_CODE: &str = "334";
-    pub const INVALID_MID_CODE: &str = "335";
-    pub const PENDING_CODE: &str = "400";
-    pub const BANK_DECLINED_CODE: &str = "401";
-    pub const PENDING_BANK_CONFIRM_CODE: &str = "402";
-    pub const SERVER_DOWN_CODE: &str = "501";
-    pub const TXN_FAILED_CODE: &str = "810";
-    pub const ACCOUNT_BLOCKED_CODE: &str = "843";
-    pub const MOBILE_CHANGED_CODE: &str = "820";
-    pub const MANDATE_GAP_CODE: &str = "267";
-
-    // Transaction types for PSync
-    pub const TXN_TYPE_PREAUTH: &str = "PREAUTH";
-    pub const TXN_TYPE_CAPTURE: &str = "CAPTURE";
-    pub const TXN_TYPE_RELEASE: &str = "RELEASE";
-    pub const TXN_TYPE_WITHDRAW: &str = "WITHDRAW";
 
     // Default values
     pub const DEFAULT_CUSTOMER_ID: &str = "guest";
@@ -83,7 +52,7 @@ use common_enums::{AttemptStatus, Currency};
 use common_utils::{
     errors::CustomResult,
     request::Method,
-    types::{AmountConvertor, StringMajorUnit},
+    types::StringMajorUnit,
     Email,
 };
 use domain_types::{
@@ -96,6 +65,7 @@ use domain_types::{
     payment_method_data::{PaymentMethodData, UpiData},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
+    router_request_types::BrowserInformation,
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
@@ -114,11 +84,10 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct PaytmAuthType {
-    pub merchant_id: Secret<String>,       // From api_key
-    pub merchant_key: Secret<String>,      // From key1
-    pub website: Secret<String>,           // From api_secret
-    pub channel_id: String,                // Hardcoded "WEB"
-    pub client_id: Option<Secret<String>>, // None as specified
+    pub merchant_id: Secret<String>,  // From api_key
+    pub merchant_key: Secret<String>, // From key1
+    pub website: Secret<String>,      // From api_secret
+    pub client_id: Option<Secret<String>>,    // Unique key for each merchant
 }
 
 impl TryFrom<&ConnectorAuthType> for PaytmAuthType {
@@ -126,6 +95,19 @@ impl TryFrom<&ConnectorAuthType> for PaytmAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
+            ConnectorAuthType::MultiAuthKey {
+                api_key,
+                key1,
+                api_secret,
+                key2,
+            } => {
+                Ok(Self {
+                    merchant_id: api_key.to_owned(), // merchant_id
+                    merchant_key: key1.to_owned(),   // signing key
+                    website: api_secret.to_owned(),  // website name
+                    client_id: Some(key2.to_owned()), // client_id - Unique key for each merchant
+                })
+            },
             ConnectorAuthType::SignatureKey {
                 api_key,
                 key1,
@@ -135,8 +117,7 @@ impl TryFrom<&ConnectorAuthType> for PaytmAuthType {
                     merchant_id: api_key.to_owned(), // merchant_id
                     merchant_key: key1.to_owned(),   // signing key
                     website: api_secret.to_owned(),  // website name
-                    channel_id: constants::CHANNEL_ID.to_string(),
-                    client_id: None, // None as specified
+                    client_id: None,
                 })
             }
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
@@ -161,16 +142,19 @@ pub fn determine_upi_flow<T: domain_types::payment_method_data::PaymentMethodDat
                     if collect_data.vpa_id.is_some() {
                         Ok(UpiFlowType::Collect)
                     } else {
-                        // If no VPA provided, default to Intent
-                        Ok(UpiFlowType::Intent)
+                        Err(errors::ConnectorError::MissingRequiredField {
+                            field_name: "vpa_id",
+                        }.into())
                     }
                 }
                 UpiData::UpiIntent(_) | UpiData::UpiQr(_) => Ok(UpiFlowType::Intent),
             }
         }
         _ => {
-            // Default to Intent for non-UPI specific payment methods
-            Ok(UpiFlowType::Intent)
+            Err(errors::ConnectorError::NotSupported {
+                message: "Only UPI payment methods are supported".to_string(),
+                connector: "Paytm",
+            }.into())
         }
     }
 }
@@ -186,12 +170,12 @@ pub struct PaytmInitiateTxnRequest {
 #[derive(Debug, Serialize)]
 pub struct PaytmRequestHeader {
     #[serde(rename = "clientId")]
-    pub client_id: Option<Secret<String>>, // None
-    pub version: String, // "v2"
+    pub client_id: Option<Secret<String>>,
+    pub version: String,
     #[serde(rename = "requestTimestamp")]
     pub request_timestamp: String,
-    #[serde(rename = "channelId")]
-    pub channel_id: String, // "WEB"
+    #[serde(rename = "channelId", skip_serializing_if = "Option::is_none")]
+    pub channel_id: Option<String>,
     pub signature: Secret<String>,
 }
 
@@ -201,7 +185,7 @@ pub struct PaytmInitiateReqBody {
     pub request_type: String, // "Payment"
     pub mid: Secret<String>, // Merchant ID
     #[serde(rename = "orderId")]
-    pub order_id: String, // Payment ID
+    pub order_id: String, // Merchant Reference ID
     #[serde(rename = "websiteName")]
     pub website_name: Secret<String>, // From api_secret
     #[serde(rename = "txnAmount")]
@@ -212,9 +196,29 @@ pub struct PaytmInitiateReqBody {
     pub enable_payment_mode: Vec<PaytmEnableMethod>,
     #[serde(rename = "callbackUrl")]
     pub callback_url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub goods: Option<PaytmGoodsInfo>,
+    #[serde(rename = "shippingInfo", skip_serializing_if = "Option::is_none")]
+    pub shipping_info: Option<Vec<PaytmShippingInfo>>,
+    #[serde(rename = "extendInfo", skip_serializing_if = "Option::is_none")]
+    pub extend_info: Option<PaytmExtendInfo>,
+    // #[serde(rename = "promoCode", skip_serializing_if = "Option::is_none")]
+    // pub promo_code: Option<String>, //PaytmV2MetaData
+    // #[serde(rename = "splitSettlementInfo", skip_serializing_if = "Option::is_none")]
+    // pub split_settlement_info: Option<SplitSettlementInfo>,
+    // #[serde(rename = "emiSubventionToken", skip_serializing_if = "Option::is_none")]
+    // pub emi_subvention_token: Option<String>,
+    // #[serde(rename = "payableAmount", skip_serializing_if = "Option::is_none")]
+    // pub payable_amount: Option<PaytmAmount>,
+    // #[serde(rename = "MERC_UNIQ_REF", skip_serializing_if = "Option::is_none")]
+    // pub merc_uniq_ref: Option<String>,//PaytmV2MetaData
+    // #[serde(rename = "MERC_UNQ_REF", skip_serializing_if = "Option::is_none")]
+    // pub merc_unq_ref: Option<String>,// PaytmV2MetaData
+    // #[serde(rename = "billingInfo", skip_serializing_if = "Option::is_none")]
+    // pub billing_info: Option<Vec<BillingInfoObj>>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct PaytmAmount {
     pub value: StringMajorUnit, // Decimal amount (e.g., "10.50")
     pub currency: Currency,     // INR
@@ -233,9 +237,76 @@ pub struct PaytmUserInfo {
 }
 
 #[derive(Debug, Serialize)]
+pub struct PaytmGoodsInfo {
+    #[serde(rename = "merchantGoodsId", skip_serializing_if = "Option::is_none")]
+    pub merchant_goods_id: Option<String>, // Unique id for the goods item
+    #[serde(rename = "merchantShippingId", skip_serializing_if = "Option::is_none")]
+    pub merchant_shipping_id: Option<String>, // Merchant shipping id
+    #[serde(rename = "snapshotUrl", skip_serializing_if = "Option::is_none")]
+    pub snapshot_url: Option<String>, // Product Image URL
+    pub description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub category: Option<String>, // Category of Product
+    pub quantity: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unit: Option<String>, // Unit of quantity (KG/Litre)
+    pub price: PaytmAmount,
+    #[serde(rename = "extendInfo", skip_serializing_if = "Option::is_none")]
+    pub extend_info: Option<PaytmExtendInfo>, // Extended info of goods
+}
+
+#[derive(Debug, Serialize)]
+pub struct PaytmShippingInfo {
+    #[serde(rename = "merchantShippingId", skip_serializing_if = "Option::is_none")]
+    pub merchant_shipping_id: Option<String>,
+    #[serde(rename = "trackingNo", skip_serializing_if = "Option::is_none")]
+    pub tracking_no: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub carrier: Option<String>,
+    #[serde(rename = "chargeAmount", skip_serializing_if = "Option::is_none")]
+    pub charge_amount: Option<PaytmAmount>, // reusing PaytmAmount struct
+    #[serde(rename = "countryName", skip_serializing_if = "Option::is_none")]
+    pub country_name: Option<String>,
+    #[serde(rename = "stateName", skip_serializing_if = "Option::is_none")]
+    pub state_name: Option<Secret<String>>,
+    #[serde(rename = "cityName", skip_serializing_if = "Option::is_none")]
+    pub city_name: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address1: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address2: Option<Secret<String>>,
+    #[serde(rename = "firstName", skip_serializing_if = "Option::is_none")]
+    pub first_name: Option<Secret<String>>,
+    #[serde(rename = "lastName", skip_serializing_if = "Option::is_none")]
+    pub last_name: Option<Secret<String>>,
+    #[serde(rename = "mobileNo", skip_serializing_if = "Option::is_none")]
+    pub mobile_no: Option<Secret<String>>,
+    #[serde(rename = "zipCode", skip_serializing_if = "Option::is_none")]
+    pub zip_code: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<Email>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PaytmExtendInfo {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub udf1: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub udf2: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub udf3: Option<String>,
+    #[serde(rename = "mercUnqRef", skip_serializing_if = "Option::is_none")]
+    pub merc_unq_ref: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub comments: Option<String>,
+    #[serde(rename = "subwalletAmount", skip_serializing_if = "Option::is_none")]
+    pub subwallet_amount: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
 pub struct PaytmEnableMethod {
     pub mode: String,                  // "UPI"
-    pub channels: Option<Vec<String>>, // ["UPIPUSH"] for Intent/Collect
+    pub channels: Option<Vec<String>>, // ["UPI", "UPIPUSH"] for Collect and Intent
 }
 
 // Response structures for CreateSessionToken flow
@@ -259,6 +330,10 @@ pub struct PaytmRespBody {
     pub result_info: PaytmResultInfo,
     #[serde(rename = "txnToken")]
     pub txn_token: Secret<String>, // This will be stored as session_token
+    // #[serde(rename = "isPromoCodeValid", skip_serializing_if = "Option::is_none")]
+    // pub is_promo_code_valid: Option<bool>,
+    // #[serde(rename = "authenticated", skip_serializing_if = "Option::is_none")]
+    // pub authenticated: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -386,6 +461,10 @@ pub struct PaytmProcessBodyTypes {
     pub payment_mode: String, // "UPI"
     #[serde(rename = "paymentFlow")]
     pub payment_flow: Option<String>, // "NONE"
+    #[serde(rename = "txnNote", skip_serializing_if = "Option::is_none")]
+    pub txn_note: Option<String>, //Transaction note providing a short description
+    #[serde(rename = "extendInfo", skip_serializing_if = "Option::is_none")]
+    pub extend_info: Option<PaytmExtendInfo>,
 }
 
 // UPI Collect Native Process Request
@@ -420,6 +499,27 @@ pub struct PaytmNativeProcessRequestBody {
     pub txn_token: Secret<String>, // From CreateSessionToken
     #[serde(rename = "authMode")]
     pub auth_mode: Option<String>, // "DEBIT_PIN"
+
+    // #[serde(rename = "cardInfo", skip_serializing_if = "Option::is_none")]
+    // pub card_info: Option<String>,
+    // #[serde(rename = "planId", skip_serializing_if = "Option::is_none")]
+    // pub plan_id: Option<String>,
+    // #[serde(rename = "cardTokenInfo", skip_serializing_if = "Option::is_none")]
+    // pub card_token_info: Option<CardTokenInfo>,
+    // #[serde(rename = "emiType", skip_serializing_if = "Option::is_none")]
+    // pub emi_type: Option<String>,
+    // #[serde(rename = "mandateAuthMode", skip_serializing_if = "Option::is_none")]
+    // pub mandate_auth_mode: Option<String>,
+    // #[serde(rename = "subscriptionId", skip_serializing_if = "Option::is_none")]
+    // pub subscription_id: Option<String>,
+    // #[serde(rename = "bankIfsc", skip_serializing_if = "Option::is_none")]
+    // pub bank_ifsc: Option<String>,
+    // #[serde(rename = "accountNumber", skip_serializing_if = "Option::is_none")]
+    // pub account_number: Option<String>,
+    // #[serde(rename = "userName", skip_serializing_if = "Option::is_none")]
+    // pub user_name: Option<String>,
+    // #[serde(rename = "accountType", skip_serializing_if = "Option::is_none")]
+    // pub account_type: Option<String>,
 }
 
 // Authorize flow response structures
@@ -476,6 +576,12 @@ pub struct PaytmDeepLinkInfo {
 pub struct PaytmProcessFailureResp {
     #[serde(rename = "resultInfo")]
     pub result_info: PaytmResultInfo,
+    // #[serde(rename = "txnInfo", skip_serializing_if = "Option::is_none")]
+    // pub txn_info: Option<PaytmProcessTxnResponse>,
+    // #[serde(rename = "callBackUrl")]
+    // pub callback_url: String,
+    // #[serde(rename = "deepLinkInfo", skip_serializing_if = "Option::is_none")]
+    // pub deep_link_info: Option<PaytmDeepLinkInfo>,
 }
 
 // UPI Collect Native Process Response
@@ -669,9 +775,30 @@ fn get_paytm_iv() -> [u8; 16] {
     *constants::PAYTM_IV
 }
 
+// Helper function to determine channel ID based on OS type
+fn get_channel_id_from_browser_info(
+    browser_info: Option<&BrowserInformation>
+) -> String {
+    match browser_info {
+        Some(info) => match &info.os_type {
+            Some(os_type) => {
+                let os_lower = os_type.to_lowercase();
+                if os_lower.contains("android") || os_lower.contains("ios") {
+                    "WAP".to_string()
+                } else {
+                    "WEB".to_string()
+                }
+            }
+            None => "WEB".to_string(),
+        },
+        None => "WEB".to_string(), // Default to WEB if no browser info
+    }
+}
+
 pub fn create_paytm_header(
     request_body: &impl serde::Serialize,
     auth: &PaytmAuthType,
+    channel_id: Option<&str>,
 ) -> CustomResult<PaytmRequestHeader, errors::ConnectorError> {
     let _payload = serde_json::to_string(request_body)
         .change_context(errors::ConnectorError::RequestEncodingFailed)?;
@@ -686,246 +813,16 @@ pub fn create_paytm_header(
         client_id: auth.client_id.clone(), // None
         version: constants::API_VERSION.to_string(),
         request_timestamp: timestamp,
-        channel_id: auth.channel_id.clone(), // "WEB"
-        signature: Secret::new(signature),
+        channel_id: channel_id.map(|id| id.to_string()), // Return None if channel_id is not provided
+        signature: signature.into(),
     })
-}
-
-// Helper struct for RouterData transformation
-#[derive(Debug, Clone)]
-pub struct PaytmRouterData {
-    pub amount: StringMajorUnit,
-    pub currency: Currency,
-    pub payment_id: String,
-    pub customer_id: Option<String>,
-    pub email: Option<Email>,
-    pub phone: Option<Secret<String>>,
-    pub first_name: Option<Secret<String>>,
-    pub last_name: Option<Secret<String>>,
-    pub return_url: Option<String>,
-}
-
-// Helper struct for Authorize flow RouterData transformation
-#[derive(Debug, Clone)]
-pub struct PaytmAuthorizeRouterData<T: domain_types::payment_method_data::PaymentMethodDataTypes> {
-    pub amount: StringMajorUnit,
-    pub currency: Currency,
-    pub payment_id: String,
-    pub session_token: Secret<String>,
-    pub payment_method_data: PaymentMethodData<T>,
-    pub customer_id: Option<String>,
-    pub email: Option<Email>,
-    pub phone: Option<Secret<String>>,
-    pub first_name: Option<Secret<String>>,
-    pub last_name: Option<Secret<String>>,
-    pub return_url: Option<String>,
-}
-
-// Request transformation for CreateSessionToken flow
-impl PaytmRouterData {
-    pub fn try_from_with_converter(
-        item: &RouterDataV2<
-            CreateSessionToken,
-            PaymentFlowData,
-            SessionTokenRequestData,
-            SessionTokenResponseData,
-        >,
-        amount_converter: &dyn AmountConvertor<Output = StringMajorUnit>,
-    ) -> Result<Self, error_stack::Report<errors::ConnectorError>> {
-        let amount = amount_converter
-            .convert(item.request.amount, item.request.currency)
-            .change_context(errors::ConnectorError::AmountConversionFailed)?;
-        let customer_id = item
-            .resource_common_data
-            .get_customer_id()
-            .ok()
-            .map(|id| id.get_string_repr().to_string());
-        let email = item.resource_common_data.get_optional_billing_email();
-        let phone = item
-            .resource_common_data
-            .get_optional_billing_phone_number();
-        let first_name = item.resource_common_data.get_optional_billing_first_name();
-        let last_name = item.resource_common_data.get_optional_billing_last_name();
-
-        Ok(Self {
-            amount,
-            currency: item.request.currency,
-            payment_id: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
-            customer_id,
-            email,
-            phone,
-            first_name,
-            last_name,
-            return_url: item.resource_common_data.get_return_url(),
-        })
-    }
-}
-
-// Request body transformation for PayTM initiate transaction
-impl PaytmInitiateTxnRequest {
-    pub fn try_from_with_auth(
-        item: &PaytmRouterData,
-        auth: &PaytmAuthType,
-    ) -> CustomResult<Self, errors::ConnectorError> {
-        let body = PaytmInitiateReqBody {
-            request_type: constants::REQUEST_TYPE_PAYMENT.to_string(),
-            mid: Secret::new(auth.merchant_id.peek().to_string()),
-            order_id: item.payment_id.clone(),
-            website_name: Secret::new(auth.website.peek().to_string()),
-            txn_amount: PaytmAmount {
-                value: item.amount.clone(),
-                currency: item.currency,
-            },
-            user_info: PaytmUserInfo {
-                cust_id: item
-                    .customer_id
-                    .clone()
-                    .unwrap_or_else(|| constants::DEFAULT_CUSTOMER_ID.to_string()),
-                mobile: item.phone.clone(),
-                email: item.email.clone(),
-                first_name: item.first_name.clone(),
-                last_name: item.last_name.clone(),
-            },
-            enable_payment_mode: vec![PaytmEnableMethod {
-                mode: constants::PAYMENT_MODE_UPI.to_string(),
-                channels: Some(vec![
-                    constants::UPI_CHANNEL_UPIPUSH.to_string(),
-                    constants::PAYMENT_MODE_UPI.to_string(),
-                ]),
-            }],
-            callback_url: item
-                .return_url
-                .clone()
-                .unwrap_or_else(|| constants::DEFAULT_CALLBACK_URL.to_string()),
-        };
-
-        // Create header with actual signature
-        let head = create_paytm_header(&body, auth)?;
-
-        Ok(Self { head, body })
-    }
-}
-
-// Request transformation for Authorize flow
-impl<T: domain_types::payment_method_data::PaymentMethodDataTypes> PaytmAuthorizeRouterData<T> {
-    pub fn try_from_with_converter(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-        amount_converter: &dyn AmountConvertor<Output = StringMajorUnit>,
-    ) -> Result<Self, error_stack::Report<errors::ConnectorError>> {
-        let amount = amount_converter
-            .convert(item.request.minor_amount, item.request.currency)
-            .change_context(errors::ConnectorError::AmountConversionFailed)?;
-        let customer_id = item
-            .resource_common_data
-            .get_customer_id()
-            .ok()
-            .map(|id| id.get_string_repr().to_string());
-        let email = item.resource_common_data.get_optional_billing_email();
-        let phone = item
-            .resource_common_data
-            .get_optional_billing_phone_number();
-        let first_name = item.resource_common_data.get_optional_billing_first_name();
-        let last_name = item.resource_common_data.get_optional_billing_last_name();
-
-        // Extract session token from previous session token response
-        let session_token = item.resource_common_data.get_session_token()?;
-
-        Ok(Self {
-            amount,
-            currency: item.request.currency,
-            payment_id: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
-            session_token: Secret::new(session_token),
-            payment_method_data: item.request.payment_method_data.clone(),
-            customer_id,
-            email,
-            phone,
-            first_name,
-            last_name,
-            return_url: item.resource_common_data.get_return_url(),
-        })
-    }
-}
-
-// Request transformation for PayTM UPI Intent flow (ProcessTxnRequest)
-impl PaytmProcessTxnRequest {
-    pub fn try_from_with_auth<T: domain_types::payment_method_data::PaymentMethodDataTypes>(
-        item: &PaytmAuthorizeRouterData<T>,
-        auth: &PaytmAuthType,
-    ) -> CustomResult<Self, errors::ConnectorError> {
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs()
-            .to_string();
-
-        let head = PaytmProcessHeadTypes {
-            version: constants::API_VERSION.to_string(),
-            request_timestamp: timestamp,
-            channel_id: auth.channel_id.clone(),
-            txn_token: item.session_token.clone(),
-        };
-
-        let body = PaytmProcessBodyTypes {
-            mid: Secret::new(auth.merchant_id.peek().to_string()),
-            order_id: item.payment_id.clone(),
-            request_type: constants::REQUEST_TYPE_PAYMENT.to_string(),
-            payment_mode: format!("{}_{}", constants::PAYMENT_MODE_UPI, "INTENT"), // "UPI_INTENT" for intent
-            payment_flow: Some(constants::PAYMENT_FLOW_NONE.to_string()),
-        };
-
-        Ok(Self { head, body })
-    }
-}
-
-// Request transformation for PayTM UPI Collect flow (NativeProcessTxnRequest)
-impl PaytmNativeProcessTxnRequest {
-    pub fn try_from_with_auth<T: domain_types::payment_method_data::PaymentMethodDataTypes>(
-        item: &PaytmAuthorizeRouterData<T>,
-        auth: &PaytmAuthType,
-    ) -> CustomResult<Self, errors::ConnectorError> {
-        // Extract UPI VPA for collect flow
-        let vpa = extract_upi_vpa(&item.payment_method_data)?.ok_or(
-            errors::ConnectorError::MissingRequiredField {
-                field_name: "vpa_id",
-            },
-        )?;
-
-        let head = PaytmTxnTokenType {
-            txn_token: item.session_token.clone(),
-        };
-
-        let body = PaytmNativeProcessRequestBody {
-            request_type: constants::REQUEST_TYPE_NATIVE.to_string(),
-            mid: Secret::new(auth.merchant_id.peek().to_string()),
-            order_id: item.payment_id.clone(),
-            payment_mode: constants::PAYMENT_MODE_UPI.to_string(),
-            payer_account: Some(vpa),
-            channel_code: Some("collect".to_string()), // Gateway code if needed
-            channel_id: auth.channel_id.clone(),
-            txn_token: item.session_token.clone(),
-            auth_mode: None,
-        };
-
-        Ok(Self { head, body })
-    }
 }
 
 // PSync (Payment Sync) flow request structures
 
 #[derive(Debug, Serialize)]
 pub struct PaytmTransactionStatusRequest {
-    pub head: PaytmRequestHeader,
+    pub head: PaytmRequestHeader, //only signature data PaytmV2SyncRequestHeader = PaytmV2SyncRequestHeader {signature :: Text}
     pub body: PaytmTransactionStatusReqBody,
 }
 
@@ -957,98 +854,74 @@ pub enum PaytmTransactionStatusRespBodyTypes {
 #[serde(rename_all = "camelCase")]
 pub struct PaytmTransactionStatusRespBody {
     pub result_info: PaytmResultInfo,
-    pub txn_id: Option<String>,
-    pub bank_txn_id: Option<String>,
-    pub order_id: Option<String>,
+    pub txn_id: String,
+    pub bank_txn_id: String,
+    pub order_id: String,
     pub txn_amount: Option<StringMajorUnit>,
-    pub txn_type: Option<String>,
-    pub gateway_name: Option<String>,
-    pub mid: Option<String>,
-    pub payment_mode: Option<String>,
-    pub refund_amt: Option<String>,
-    pub txn_date: Option<String>,
+    pub txn_type: String,
+    pub gateway_name: String,
+    pub mid: String,
+    pub payment_mode: String,
+    pub refund_amt: String,
+    pub txn_date: String,
 }
 
-// Helper struct for PSync RouterData transformation
-#[derive(Debug, Clone)]
-pub struct PaytmSyncRouterData {
-    pub payment_id: String,
-    pub connector_transaction_id: Option<String>,
-    pub txn_type: Option<String>,
-}
+pub fn map_paytm_authorize_status_to_attempt_status(status_code: &str) -> AttemptStatus {
+    match status_code {
+        // Success case - 0000: Success
+        "0000" => AttemptStatus::Charged,
 
-// Request transformation for PSync flow
-impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
-    for PaytmSyncRouterData
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
+        // 931: Incorrect Passcode
+        // 1006: Your Session has expired.
+        // 2004: Invalid User Token
+        "931" | "1006" | "2004" => AttemptStatus::AuthenticationFailed,
 
-    fn try_from(
-        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        // Use connector transaction ID if available, otherwise fall back to payment ID
-        let transaction_id = item
-            .request
-            .connector_transaction_id
-            .get_connector_transaction_id()
-            .unwrap_or_else(|_| {
-                item.resource_common_data
-                    .connector_request_reference_id
-                    .clone()
-            });
+        // RC-00018: Payment failed as merchant has crossed his daily/monthly/weekly acceptance limit
+        // 312: This card is not supported. Please use another card.
+        // 315: Invalid Year
+        "RC-00018" | "312" | "315" => AttemptStatus::AuthorizationFailed,
 
-        let connector_transaction_id = item
-            .request
-            .connector_transaction_id
-            .get_connector_transaction_id()
-            .map_err(|_| {
-                error_stack::Report::new(errors::ConnectorError::MissingConnectorTransactionID)
-            })?;
+        // 0001: FAILED
+        // 309: Invalid Order ID
+        // 1001: Request parameters are not valid
+        // 1007: Missing mandatory element
+        // 501: System Error
+        // 510: Merchant Transaction Failure
+        // 372: Retry count breached
+        // 1005: Duplicate request handling
+        "0001" | "309" | "1001" | "1007" | "501" | "510" | "372" | "1005" => AttemptStatus::Failure, // Invalid request parameters
 
-        Ok(Self {
-            payment_id: transaction_id,
-            connector_transaction_id: Some(connector_transaction_id),
-            txn_type: None,
-        })
+        // Unknown status codes
+        _ => AttemptStatus::Pending,
     }
 }
 
-// Request body transformation for PayTM transaction status
-impl PaytmTransactionStatusRequest {
-    pub fn try_from_with_auth(
-        item: &PaytmSyncRouterData,
-        auth: &PaytmAuthType,
-    ) -> CustomResult<Self, errors::ConnectorError> {
-        let body = PaytmTransactionStatusReqBody {
-            mid: Secret::new(auth.merchant_id.peek().to_string()),
-            order_id: item.payment_id.clone(),
-            txn_type: item.txn_type.clone(),
-        };
-
-        // Create header with actual signature
-        let head = create_paytm_header(&body, auth)?;
-
-        Ok(Self { head, body })
-    }
-}
-
-// Status mapping function for Paytm result codes
-pub fn map_paytm_status_to_attempt_status(result_code: &str) -> AttemptStatus {
+pub fn map_paytm_sync_status_to_attempt_status(result_code: &str) -> AttemptStatus {
     match result_code {
-        // Success
-        "01" => AttemptStatus::Charged,                 // TXN_SUCCESS
-        "0000" => AttemptStatus::AuthenticationPending, // Success - waiting for authentication
+        // Success case - 01: TXN_SUCCESS
+        "01" => AttemptStatus::Charged,
 
-        // Pending cases
-        "400" | "402" => AttemptStatus::Pending, // PENDING, PENDING_BANK_CONFIRM
-        "331" => AttemptStatus::Pending,         // NO_RECORD_FOUND
+        // 400: Transaction status not confirmed yet
+        // 402: Payment not complete, confirming with bank
+        "400" | "402" => AttemptStatus::Pending,
 
-        // Failure cases
-        "227" | "235" | "295" | "334" | "335" | "401" | "501" | "810" | "843" | "820" | "267" => {
-            AttemptStatus::Failure
-        }
+        // 335: Mid is invalid
+        // 843: Your transaction has been declined by the bank. Remitting account is blocked or frozen.
+        "335" | "843" => AttemptStatus::AuthorizationFailed,
 
-        // Default to failure for unknown codes (WILL NEVER HAPPEN)
+        // 820: Mobile number linked to bank account has changed
+        // 235: Wallet balance insufficient
+        // 295: Invalid UPI ID
+        // 334: Invalid Order ID
+        // 267: Your payment has been declined due to Mandate gap
+        // 331: No Record Found
+        // 227: Payment declined by bank
+        // 401: Payment declined by bank
+        // 501: Server Down
+        // 810: Transaction Failed
+        "235" | "295" | "334" | "267" | "331" | "820" | "227" | "401" | "501" | "810" => AttemptStatus::Failure,
+
+        // Default to Pending for unknown codes to be safe
         _ => AttemptStatus::Pending,
     }
 }
@@ -1158,11 +1031,95 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let auth = PaytmAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let intermediate_router_data = PaytmRouterData::try_from_with_converter(
-            &item.router_data,
-            item.connector.amount_converter,
-        )?;
-        PaytmInitiateTxnRequest::try_from_with_auth(&intermediate_router_data, &auth)
+        
+        // Extract data directly from router_data
+        let amount = item.connector.amount_converter
+            .convert(item.router_data.request.amount, item.router_data.request.currency)
+            .change_context(errors::ConnectorError::AmountConversionFailed)?;
+            
+        let paytm_amount = PaytmAmount {
+                value: amount,
+                currency: item.router_data.request.currency,
+            };
+        let customer_id = item.router_data.resource_common_data
+            .get_customer_id().ok().map(|id| id.get_string_repr().to_string());
+        let user_info = PaytmUserInfo {
+                cust_id: customer_id.unwrap_or_else(|| constants::DEFAULT_CUSTOMER_ID.to_string()),
+                mobile: item.router_data.resource_common_data.get_optional_billing_phone_number(),
+                email: item.router_data.resource_common_data.get_optional_billing_email(),
+                first_name: item.router_data.resource_common_data.get_optional_billing_first_name(),
+                last_name: item.router_data.resource_common_data.get_optional_billing_last_name(),
+            };
+        let return_url = item.router_data.resource_common_data.get_return_url();
+
+        let order_details = item.router_data.resource_common_data.order_details.clone();
+        let goods = match order_details.as_ref().and_then(|details| details.first()) {
+            Some(details) => {
+                // Convert order detail amount using amount converter
+                let order_amount = item.connector.amount_converter
+                    .convert(details.amount, item.router_data.request.currency)
+                    .change_context(errors::ConnectorError::AmountConversionFailed)?;
+                
+                Some(PaytmGoodsInfo {
+                    merchant_goods_id: details.product_id.clone(),
+                    merchant_shipping_id: None,
+                    snapshot_url: details.product_img_link.clone(),
+                    description: details.description.clone().unwrap_or_else(|| details.product_name.clone()),
+                    category: details.category.clone(),
+                    quantity: details.quantity.into(),
+                    unit: details.unit_of_measure.clone(),
+                    price: PaytmAmount {
+                        value: order_amount,
+                        currency: item.router_data.request.currency,
+                    },
+                    extend_info: None,
+                })
+            }
+            None => None,
+        };
+
+        let shipping_info = PaytmShippingInfo {
+            merchant_shipping_id: None,
+            tracking_no: Some(item.router_data.resource_common_data.connector_request_reference_id.clone()),
+            carrier: None,
+            charge_amount: Some(paytm_amount.clone()),
+            country_name: item.router_data.resource_common_data.get_optional_shipping_country().map(|country| country.to_string()),
+            state_name: item.router_data.resource_common_data.get_optional_shipping_state(),
+            city_name: item.router_data.resource_common_data.get_optional_shipping_city(),
+            address1: item.router_data.resource_common_data.get_optional_shipping_line1(),
+            address2: item.router_data.resource_common_data.get_optional_shipping_line2(),
+            first_name: item.router_data.resource_common_data.get_optional_shipping_first_name(),
+            last_name: item.router_data.resource_common_data.get_optional_shipping_last_name(),
+            mobile_no: item.router_data.resource_common_data.get_optional_shipping_phone_number(),
+            zip_code: item.router_data.resource_common_data.get_optional_shipping_zip(),
+            email: item.router_data.resource_common_data.get_optional_shipping_email()
+        };
+
+        let body = PaytmInitiateReqBody {
+            request_type: constants::REQUEST_TYPE_PAYMENT.to_string(),
+            mid: auth.merchant_id.clone(),
+            order_id: item.router_data.resource_common_data.connector_request_reference_id.clone(),
+            website_name: Secret::new(auth.website.peek().to_string()),
+            txn_amount: paytm_amount,
+            user_info,
+            enable_payment_mode: vec![PaytmEnableMethod {
+                mode: constants::PAYMENT_MODE_UPI.to_string(),
+                channels: Some(vec![
+                    constants::UPI_CHANNEL_UPIPUSH.to_string(), // UPI_INTENT
+                    constants::PAYMENT_MODE_UPI.to_string(),    // UPI_COLLECT
+                ]),
+            }],
+            callback_url: return_url.unwrap_or_else(|| constants::DEFAULT_CALLBACK_URL.to_string()),
+            goods,
+            shipping_info: Some(vec![shipping_info]),
+            extend_info: None, // from metadata
+        };
+
+        // Create header with actual signature
+        let channel_id = get_channel_id_from_browser_info(item.router_data.request.browser_info.as_ref());
+        let head = create_paytm_header(&body, &auth, Some(&channel_id))?;
+
+        Ok(Self { head, body })
     }
 }
 
@@ -1201,29 +1158,69 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let auth = PaytmAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let intermediate_authorize_router_data = PaytmAuthorizeRouterData::try_from_with_converter(
-            &item.router_data,
-            item.connector.amount_converter,
-        )?;
+        
+        let payment_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
+        let session_token = item.router_data.resource_common_data.get_session_token()?;
+        let payment_method_data = &item.router_data.request.payment_method_data;
 
         // Determine the UPI flow type based on payment method data
-        let upi_flow = determine_upi_flow(&item.router_data.request.payment_method_data)?;
+        let upi_flow = determine_upi_flow(payment_method_data)?;
 
         match upi_flow {
             UpiFlowType::Intent => {
-                // UPI Intent flow - use PaytmProcessTxnRequest
-                let intent_request = PaytmProcessTxnRequest::try_from_with_auth(
-                    &intermediate_authorize_router_data,
-                    &auth,
-                )?;
+                let timestamp = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+                    .to_string();
+
+                let channel_id = get_channel_id_from_browser_info(item.router_data.request.browser_info.as_ref());
+                let head = PaytmProcessHeadTypes {
+                    version: constants::API_VERSION.to_string(),
+                    request_timestamp: timestamp,
+                    channel_id,
+                    txn_token: Secret::new(session_token),
+                };
+
+                let body = PaytmProcessBodyTypes {
+                    mid: Secret::new(auth.merchant_id.peek().to_string()),
+                    order_id: payment_id,
+                    request_type: constants::REQUEST_TYPE_NATIVE.to_string(),
+                    payment_mode: format!("{}_{}", constants::PAYMENT_MODE_UPI, "INTENT"),
+                    payment_flow: Some(constants::PAYMENT_FLOW_NONE.to_string()),
+                    txn_note: item.router_data.resource_common_data.description.clone(),
+                    extend_info: None,
+                };
+
+                let intent_request = PaytmProcessTxnRequest { head, body };
                 Ok(PaytmAuthorizeRequest::Intent(intent_request))
             }
             UpiFlowType::Collect => {
-                // UPI Collect flow - use PaytmNativeProcessTxnRequest
-                let collect_request = PaytmNativeProcessTxnRequest::try_from_with_auth(
-                    &intermediate_authorize_router_data,
-                    &auth,
-                )?;
+                let vpa = match extract_upi_vpa(payment_method_data)? {
+                    Some(vpa) => vpa,
+                    None => return Err(errors::ConnectorError::MissingRequiredField {
+                        field_name: "vpa_id",
+                    }.into()),
+                };
+
+                let head = PaytmTxnTokenType {
+                    txn_token: Secret::new(session_token.clone()),
+                };
+
+                let channel_id = get_channel_id_from_browser_info(item.router_data.request.browser_info.as_ref());
+                let body = PaytmNativeProcessRequestBody {
+                    request_type: constants::REQUEST_TYPE_NATIVE.to_string(),
+                    mid: Secret::new(auth.merchant_id.peek().to_string()),
+                    order_id: payment_id,
+                    payment_mode: constants::PAYMENT_MODE_UPI.to_string(),
+                    payer_account: Some(vpa),
+                    channel_code: Some("".to_string()), //bank code
+                    channel_id,
+                    txn_token: Secret::new(session_token),
+                    auth_mode: None, //authentication mode if any
+                };
+
+                let collect_request = PaytmNativeProcessTxnRequest { head, body };
                 Ok(PaytmAuthorizeRequest::Collect(collect_request))
             }
         }
@@ -1255,8 +1252,29 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let auth = PaytmAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let intermediate_sync_router_data = PaytmSyncRouterData::try_from(&item.router_data)?;
-        PaytmTransactionStatusRequest::try_from_with_auth(&intermediate_sync_router_data, &auth)
+        
+        // Extract data directly from router_data
+        let payment_id = item.router_data
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id()
+            .unwrap_or_else(|_| {
+                item.router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone()
+            });
+
+        let body = PaytmTransactionStatusReqBody {
+            mid: Secret::new(auth.merchant_id.peek().to_string()),
+            order_id: payment_id,
+            txn_type: None, // Can be enhanced later to support specific transaction types
+        };
+
+        // Create header with actual signature
+        let head = create_paytm_header(&body, &auth, None)?;
+
+        Ok(Self { head, body })
     }
 }
 
@@ -1299,14 +1317,41 @@ impl
         let mut router_data = item.router_data;
 
         // Handle both success and failure cases from the enum body
-        let session_token = match &response.body {
-            PaytmResBodyTypes::SuccessBody(success_body) => Some(success_body.txn_token.clone()),
-            PaytmResBodyTypes::FailureBody(_failure_body) => None,
+        router_data.response = match &response.body {
+            PaytmResBodyTypes::SuccessBody(success_body) => {
+                // Check for idempotent/duplicate case (0002) which should be treated as error
+                if success_body.result_info.result_code == "0002" {
+                    Err(domain_types::router_data::ErrorResponse {
+                        code: success_body.result_info.result_code.clone(),
+                        message: success_body.result_info.result_msg.clone(),
+                        reason: None,
+                        status_code: item.http_code,
+                        attempt_status: None, // Duplicate Request.
+                        connector_transaction_id: None,
+                        network_decline_code: None,
+                        network_advice_code: None,
+                        network_error_message: None,
+                    })
+                } else {
+                    Ok(SessionTokenResponseData {
+                        session_token: success_body.txn_token.clone().expose(),
+                    })
+                }
+            }
+            PaytmResBodyTypes::FailureBody(failure_body) => {
+                Err(domain_types::router_data::ErrorResponse {
+                    code: failure_body.result_info.result_code.clone(),
+                    message: failure_body.result_info.result_msg.clone(),
+                    reason: None,
+                    status_code: item.http_code,
+                    attempt_status: Some(AttemptStatus::Failure),
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                })
+            }
         };
-
-        router_data.response = Ok(SessionTokenResponseData {
-            session_token: session_token.unwrap_or_default().expose(),
-        });
 
         Ok(router_data)
     }
@@ -1350,7 +1395,7 @@ impl<
         let mut router_data = item.router_data;
 
         // Handle both success and failure cases from the enum body
-        let (redirection_data, resource_id, connector_txn_id) = match &response.body {
+        let (redirection_data, connector_ref_id, connector_txn_id) = match &response.body {
             PaytmProcessRespBodyTypes::SuccessBody(success_body) => {
                 // Extract redirection URL if present
                 let redirection_data = if let Some(deep_link_info) = &success_body.deep_link_info {
@@ -1376,33 +1421,33 @@ impl<
                 };
 
                 // Extract transaction IDs from deep_link_info or use fallback
-                let (resource_id, connector_txn_id) =
+                let (connector_ref_id, connector_txn_id) =
                     if let Some(deep_link_info) = &success_body.deep_link_info {
-                        let resource_id =
-                            ResponseId::ConnectorTransactionId(deep_link_info.order_id.clone());
-                        let connector_txn_id = Some(deep_link_info.trans_id.clone());
-                        (resource_id, connector_txn_id)
+                        let connector_txn_id =
+                            ResponseId::ConnectorTransactionId(deep_link_info.trans_id.clone());
+                        let connector_ref_id = Some(deep_link_info.order_id.clone());
+                        (connector_ref_id, connector_txn_id)
                     } else {
                         // Fallback when deep_link_info is not present
-                        let resource_id = ResponseId::ConnectorTransactionId(
+                        let connector_ref_id = Some(
                             router_data
                                 .resource_common_data
                                 .connector_request_reference_id
                                 .clone(),
                         );
-                        (resource_id, None)
+                        (connector_ref_id, ResponseId::NoResponseId)
                     };
 
-                (redirection_data, resource_id, connector_txn_id)
+                (redirection_data, connector_ref_id, connector_txn_id)
             }
             PaytmProcessRespBodyTypes::FailureBody(_failure_body) => {
-                let resource_id = ResponseId::ConnectorTransactionId(
+                let connector_ref_id = Some(
                     router_data
                         .resource_common_data
                         .connector_request_reference_id
                         .clone(),
                 );
-                (None, resource_id, None)
+                (None, connector_ref_id, ResponseId::NoResponseId)
             }
         };
         // Get result code for status mapping
@@ -1416,19 +1461,39 @@ impl<
         };
 
         // Map status using the result code
-        let attempt_status = map_paytm_status_to_attempt_status(result_code);
+        let attempt_status = map_paytm_authorize_status_to_attempt_status(result_code);
         router_data.resource_common_data.set_status(attempt_status);
 
-        router_data.response = Ok(PaymentsResponseData::TransactionResponse {
-            resource_id,
+        router_data.response = match attempt_status {
+            AttemptStatus::Failure | AttemptStatus::AuthenticationFailed | AttemptStatus::AuthorizationFailed => Err(domain_types::router_data::ErrorResponse {
+                code: result_code.clone(),
+                message: match &response.body {
+                    PaytmProcessRespBodyTypes::SuccessBody(body) => {
+                        body.result_info.result_msg.clone()
+                    }
+                    PaytmProcessRespBodyTypes::FailureBody(body) => {
+                        body.result_info.result_msg.clone()
+                    }
+                },
+                reason: None,
+                status_code: item.http_code,
+                attempt_status: Some(attempt_status),
+                connector_transaction_id: connector_ref_id.clone(),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+            }),
+            _ => Ok(PaymentsResponseData::TransactionResponse {
+            resource_id: connector_txn_id,
             redirection_data,
             mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
-            connector_response_reference_id: connector_txn_id,
+            connector_response_reference_id: connector_ref_id,
             incremental_authorization_allowed: None,
             status_code: item.http_code,
-        });
+        }),
+        };
 
         Ok(router_data)
     }
@@ -1455,26 +1520,20 @@ impl
         let mut router_data = item.router_data;
 
         // Handle both success and failure cases from the enum body
-        let (resource_id, connector_txn_id) = match &response.body {
+        let (connector_ref_id, connector_txn_id) = match &response.body {
             PaytmTransactionStatusRespBodyTypes::SuccessBody(success_body) => {
-                let order_id = success_body.order_id.clone().unwrap_or_else(|| {
-                    router_data
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone()
-                });
-                let resource_id = ResponseId::ConnectorTransactionId(order_id);
-                let connector_txn_id = success_body.txn_id.clone();
-                (resource_id, connector_txn_id)
+                let connector_ref_id = Some(success_body.order_id.clone());
+                let connector_txn_id = ResponseId::ConnectorTransactionId(success_body.txn_id.clone());
+                (connector_ref_id, connector_txn_id)
             }
             PaytmTransactionStatusRespBodyTypes::FailureBody(_failure_body) => {
-                let resource_id = ResponseId::ConnectorTransactionId(
+                let connector_ref_id = Some(
                     router_data
                         .resource_common_data
                         .connector_request_reference_id
                         .clone(),
                 );
-                (resource_id, None)
+                (connector_ref_id, ResponseId::NoResponseId)
             }
         };
 
@@ -1489,13 +1548,13 @@ impl
         };
 
         // Map status and set response accordingly
-        let attempt_status = map_paytm_status_to_attempt_status(result_code);
+        let attempt_status = map_paytm_sync_status_to_attempt_status(result_code);
 
         // Update the status using the new setter function
         router_data.resource_common_data.set_status(attempt_status);
 
         router_data.response = match attempt_status {
-            AttemptStatus::Failure => Err(domain_types::router_data::ErrorResponse {
+            AttemptStatus::Failure | AttemptStatus::AuthenticationFailed | AttemptStatus::AuthorizationFailed => Err(domain_types::router_data::ErrorResponse {
                 code: result_code.clone(),
                 message: match &response.body {
                     PaytmTransactionStatusRespBodyTypes::SuccessBody(body) => {
@@ -1505,21 +1564,28 @@ impl
                         body.result_info.result_msg.clone()
                     }
                 },
-                reason: None,
+                reason: Some(match &response.body {
+                    PaytmTransactionStatusRespBodyTypes::SuccessBody(body) => {
+                        body.result_info.result_status.clone()
+                    }
+                    PaytmTransactionStatusRespBodyTypes::FailureBody(body) => {
+                        body.result_info.result_status.clone()
+                    }
+                }),
                 status_code: item.http_code,
                 attempt_status: Some(attempt_status),
-                connector_transaction_id: connector_txn_id.clone(),
+                connector_transaction_id: connector_ref_id.clone(),
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
             }),
             _ => Ok(PaymentsResponseData::TransactionResponse {
-                resource_id,
+                resource_id: connector_txn_id,
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
-                connector_response_reference_id: connector_txn_id,
+                connector_response_reference_id: connector_ref_id,
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),

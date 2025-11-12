@@ -877,6 +877,48 @@ message Address {
   optional string phone_country_code = 12;
 }
 
+// Details of a single product in an order
+message OrderDetailsWithAmount {
+  // Name of the product that is being purchased
+  string product_name = 1;
+  
+  // The quantity of the product to be purchased
+  uint32 quantity = 2;
+  
+  // The amount per quantity of product (in minor currency units)
+  int64 amount = 3;
+  
+  // Tax rate applicable to the product
+  optional double tax_rate = 4;
+  
+  // Total tax amount applicable to the product (in minor currency units)
+  optional int64 total_tax_amount = 5;
+  
+  // Does the order include shipping
+  optional bool requires_shipping = 6;
+  
+  // The image URL of the product
+  optional string product_img_link = 7;
+  
+  // ID of the product that is being purchased
+  optional string product_id = 8;
+  
+  // Category of the product that is being purchased
+  optional string category = 9;
+  
+  // Sub category of the product that is being purchased
+  optional string sub_category = 10;
+  
+  // Brand of the product that is being purchased
+  optional string brand = 11;
+  
+  // Description for the item
+  optional string description = 14;
+
+  // Unit of measure used for the item quantity.
+  optional string unit_of_measure = 15;
+}
+
 // Access token details.
 message AccessToken {
   // The token string.
@@ -1259,6 +1301,9 @@ message PaymentServiceAuthorizeRequest {
 
   // State Information
   optional ConnectorState state = 38; // State data for access token storage and other connector-specific state
+
+  // Order Details
+  repeated OrderDetailsWithAmount order_details = 39; // Details about the different products for which the payment is being made
 }
 
 // Response message for a payment authorization.

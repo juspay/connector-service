@@ -54,7 +54,7 @@ pub struct NoonSubscriptionData {
 pub struct NoonBillingAddress {
     street: Option<Secret<String>>,
     street2: Option<Secret<String>>,
-    city: Option<String>,
+    city: Option<Secret<String>>,
     state_province: Option<Secret<String>>,
     country: Option<CountryAlpha2>,
     postal_code: Option<Secret<String>>,
