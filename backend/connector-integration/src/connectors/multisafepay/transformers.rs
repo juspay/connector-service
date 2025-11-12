@@ -91,7 +91,7 @@ fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
         PaymentMethodData::BankRedirect(BankRedirectData::Ideal { .. }) => {
             Some("IDEAL".to_string())
         }
-        PaymentMethodData::Wallet(WalletData::PaypalRedirect(_) | WalletData::PaypalSdk(_)) => {
+        PaymentMethodData::Wallet(WalletData::PaypalRedirect(_)) => {
             Some("PAYPAL".to_string())
         }
         // Add more payment methods as needed
@@ -402,10 +402,10 @@ impl<
                 first_name: address.get_optional_first_name(),
                 last_name: address.get_optional_last_name(),
                 address1: address.line1.clone(),
-                house_number: address.line2.clone(),
+                house_number: address.get_optional_line2(),
                 zip_code: address.zip.clone(),
                 city: address.city.clone(),
-                country: address.country,
+                country: address.get_optional_country(),
             });
 
         Ok(Self {
@@ -543,10 +543,10 @@ impl<T: PaymentMethodDataTypes>
                 first_name: address.get_optional_first_name(),
                 last_name: address.get_optional_last_name(),
                 address1: address.line1.clone(),
-                house_number: address.line2.clone(),
+                house_number: address.get_optional_line2(),
                 zip_code: address.zip.clone(),
                 city: address.city.clone(),
-                country: address.country,
+                country: address.get_optional_country(),
             });
 
         Ok(Self {
