@@ -118,6 +118,7 @@ pub struct Connectors {
     pub worldpay: ConnectorParams,
     pub worldpayvantiv: ConnectorParams,
     pub payload: ConnectorParams,
+    pub fiservemea: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
