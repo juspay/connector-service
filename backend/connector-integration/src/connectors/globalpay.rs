@@ -53,7 +53,6 @@ pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
     pub(crate) const X_GP_VERSION: &str = "X-GP-Version";
-    pub(crate) const X_GP_IDEMPOTENCY: &str = "X-GP-Idempotency";
 }
 
 const API_VERSION: &str = "2021-03-22";
@@ -129,39 +128,6 @@ macros::create_all_prerequisites!(
             ])
         }
 
-        /// Build headers for payment flows with OAuth token (with idempotency)
-        pub fn build_payment_headers_with_idempotency<F, Req, Res>(
-            &self,
-            req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let access_token = req
-                .resource_common_data
-                .get_access_token()
-                .change_context(errors::ConnectorError::FailedToObtainAuthType)
-                .attach_printable("Failed to get OAuth access token for GlobalPay")?;
-
-            Ok(vec![
-                (
-                    headers::CONTENT_TYPE.to_string(),
-                    self.common_get_content_type().to_string().into(),
-                ),
-                (
-                    headers::X_GP_VERSION.to_string(),
-                    API_VERSION.to_string().into(),
-                ),
-                (
-                    headers::X_GP_IDEMPOTENCY.to_string(),
-                    req.resource_common_data
-                        .connector_request_reference_id
-                        .clone()
-                        .into(),
-                ),
-                (
-                    headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {}", access_token).into_masked(),
-                ),
-            ])
-        }
 
         /// Build headers for sync flows with OAuth token (no content-type, no idempotency)
         pub fn build_payment_sync_headers<F, Req, Res>(
@@ -205,13 +171,6 @@ macros::create_all_prerequisites!(
                 (
                     headers::X_GP_VERSION.to_string(),
                     API_VERSION.to_string().into(),
-                ),
-                (
-                    headers::X_GP_IDEMPOTENCY.to_string(),
-                    req.resource_common_data
-                        .connector_request_reference_id
-                        .clone()
-                        .into(),
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
@@ -408,7 +367,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_payment_headers_with_idempotency(req)
+            self.build_payment_headers(req)
         }
         fn get_url(
             &self,
@@ -469,7 +428,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_payment_headers_with_idempotency(req)
+            self.build_payment_headers(req)
         }
         fn get_url(
             &self,
@@ -510,7 +469,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_payment_headers_with_idempotency(req)
+            self.build_payment_headers(req)
         }
         fn get_url(
             &self,

@@ -111,7 +111,6 @@ pub enum GlobalpayPaymentStatus {
     Rejected,
     Pending,
     Initiated,
-    #[serde(rename = "FOR_REVIEW")]
     ForReview,
     Funded,
     Reversed,
@@ -141,7 +140,6 @@ pub enum GlobalpayRefundStatus {
     Funded,
     Pending,
     Initiated,
-    #[serde(rename = "FOR_REVIEW")]
     ForReview,
     Declined,
     Failed,
@@ -359,6 +357,13 @@ impl<
                     .get_card_expiry_year_2_digit()
                     .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
+                // Determine cvv_indicator based on whether CVV is provided
+                let cvv_indicator = if card_data.card_cvc.peek().is_empty() {
+                    Some("NOT_PRESENT".to_string())
+                } else {
+                    Some("PRESENT".to_string())
+                };
+
                 GlobalpayPaymentMethod {
                     name: item.request.customer_name.clone().map(Secret::new),
                     entry_mode: constants::ENTRY_MODE_ECOM.to_string(),
@@ -367,7 +372,7 @@ impl<
                         expiry_month: card_data.card_exp_month.clone(),
                         expiry_year: expiry_year_2digit,
                         cvv: card_data.card_cvc.clone(),
-                        cvv_indicator: None,
+                        cvv_indicator,
                     }),
                 }
             }
@@ -438,7 +443,7 @@ impl<
 // Capture Request Structure
 #[derive(Debug, Serialize)]
 pub struct GlobalpayCaptureRequest {
-    pub amount: Option<StringMinorUnit>,
+    pub amount: StringMinorUnit,
     pub capture_sequence: Option<Sequence>,
     pub reference: Option<String>,
 }
@@ -467,20 +472,13 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let item = &wrapper.router_data;
-        // Validate that we have a connector transaction ID
-        let _transaction_id = item
-            .request
-            .get_connector_transaction_id()
-            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
 
         Ok(Self {
-            amount: Some(
-                GlobalpayAmountConvertor::convert(
-                    item.request.minor_amount_to_capture,
-                    item.request.currency,
-                )
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?,
-            ),
+            amount: GlobalpayAmountConvertor::convert(
+                item.request.minor_amount_to_capture,
+                item.request.currency,
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?,
             capture_sequence: item.request.multiple_capture_data.as_ref().map(|mcd| {
                 if mcd.capture_sequence == 1 {
                     Sequence::First
@@ -504,7 +502,7 @@ pub struct GlobalpayPaymentsResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub amount: Option<StringMinorUnit>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub currency: Option<String>,
+    pub currency: Option<common_enums::Currency>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reference: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -513,15 +511,10 @@ pub struct GlobalpayPaymentsResponse {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GlobalpayPaymentMethodResponse {
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub card: Option<GlobalpayCardResponse>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub apm: Option<GlobalpayApmResponse>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<String>,
 }
 
@@ -867,7 +860,7 @@ pub struct GlobalpayRefundResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub amount: Option<StringMinorUnit>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub currency: Option<String>,
+    pub currency: Option<common_enums::Currency>,
 }
 
 impl

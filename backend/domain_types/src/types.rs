@@ -49,7 +49,7 @@ use crate::{
         VoidPC,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, ConnectorCustomerData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorMandateReferenceId, ConnectorResponseHeaders, ContinueRedirectionResponse,
         DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
         MandateReferenceId, MultipleCaptureRequestData, PaymentCreateOrderData,
@@ -1897,6 +1897,16 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
+        // Extract access token from state if present
+        let access_token = value
+            .state
+            .and_then(|state| state.access_token)
+            .map(|token| AccessTokenResponseData {
+                access_token: token.token,
+                token_type: token.token_type,
+                expires_in: token.expires_in_seconds,
+            });
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -1916,7 +1926,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
-            access_token: None,
+            access_token,
             session_token: None,
             reference_id: None,
             payment_method_token: None,
@@ -3127,6 +3137,16 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        // Extract access token from state if present
+        let access_token = value
+            .state
+            .and_then(|state| state.access_token)
+            .map(|token| AccessTokenResponseData {
+                access_token: token.token,
+                token_type: token.token_type,
+                expires_in: token.expires_in_seconds,
+            });
+
         Ok(RefundFlowData {
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
@@ -3135,7 +3155,7 @@ impl
             status: common_enums::RefundStatus::Pending,
             refund_id: None,
             connectors,
-            access_token: None,
+            access_token,
             raw_connector_response: None,
             raw_connector_request: None,
             connector_response_headers: None,
@@ -3188,6 +3208,16 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        // Extract access token from state if present
+        let access_token = value
+            .state
+            .and_then(|state| state.access_token)
+            .map(|token| AccessTokenResponseData {
+                access_token: token.token,
+                token_type: token.token_type,
+                expires_in: token.expires_in_seconds,
+            });
+
         Ok(RefundFlowData {
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
@@ -3196,7 +3226,7 @@ impl
             status: common_enums::RefundStatus::Pending,
             refund_id: Some(value.refund_id),
             connectors,
-            access_token: None,
+            access_token,
             raw_connector_response: None,
             raw_connector_request: None,
             connector_response_headers: None,
@@ -4312,6 +4342,16 @@ impl
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
+        // Extract access token from state if present
+        let access_token = value
+            .state
+            .and_then(|state| state.access_token)
+            .map(|token| AccessTokenResponseData {
+                access_token: token.token,
+                token_type: token.token_type,
+                expires_in: token.expires_in_seconds,
+            });
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "PAYMENT_ID".to_string(),
@@ -4331,7 +4371,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
-            access_token: None,
+            access_token,
             session_token: None,
             reference_id: None,
             payment_method_token: None,
