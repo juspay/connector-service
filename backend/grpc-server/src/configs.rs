@@ -113,26 +113,51 @@ impl ApiTagConfig {
     ) -> Option<String> {
         let flow_str = flow.as_str();
 
-        // Try payment-method-specific key first (case-insensitive via lowercase)
-        if let Some(pmt) = payment_method_type {
-            let composite_key = format!("{}_{:?}", flow_str, pmt).to_lowercase();
-            if let Some(tag) = self.tags.get(&composite_key) {
-                return Some(tag.clone());
-            }
-        }
+        // // Try payment-method-specific key first (case-insensitive via lowercase)
+        // if let Some(pmt) = payment_method_type {
+        //     let composite_key = format!("{}_{:?}", flow_str, pmt).to_lowercase();
+        //     if let Some(tag) = self.tags.get(&composite_key) {
+        //         return Some(tag.clone());
+        //     }
+        // }
+        //
+        // // Fall back to simple flow key (case-insensitive via lowercase)
+        // let result = self.tags.get(&flow_str.to_lowercase()).cloned();
+        //
+        // if result.is_none() {
+        //     tracing::debug!(
+        //         flow = %flow_str,
+        //         payment_method_type = ?payment_method_type,
+        //         "No API tag configured for flow"
+        //     );
+        // }
+        //
 
-        // Fall back to simple flow key (case-insensitive via lowercase)
-        let result = self.tags.get(&flow_str.to_lowercase()).cloned();
-
-        if result.is_none() {
-            tracing::debug!(
-                flow = %flow_str,
-                payment_method_type = ?payment_method_type,
-                "No API tag configured for flow"
-            );
-        }
-
-        result
+        payment_method_type.map_or_else(
+            || {
+                let result = self.tags.get(&flow_str.to_lowercase()).cloned();
+                if result.is_none() {
+                    tracing::debug!(
+                        flow = %flow_str,
+                        payment_method_type = ?payment_method_type,
+                        "No API tag configured for flow"
+                    );
+                }
+                result
+            },
+            |pmt| {
+                let composite_key = format!("{}_{:?}", flow_str, pmt).to_lowercase();
+                let result = self.tags.get(&composite_key).cloned();
+                if result.is_none() {
+                    tracing::debug!(
+                        flow = %flow_str,
+                        payment_method_type = ?payment_method_type,
+                        "No API tag configured for flow with payment method type"
+                    );
+                }
+                result
+            },
+        )
     }
 }
 
