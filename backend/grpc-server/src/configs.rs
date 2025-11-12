@@ -53,6 +53,30 @@ pub struct TestConfig {
     pub mock_server_url: Option<String>,
 }
 
+impl TestConfig {
+    /// Create test context if enabled, validating configuration
+    pub fn create_test_context(
+        &self,
+        request_id: &str,
+    ) -> Result<Option<external_services::service::TestContext>, config::ConfigError> {
+        self.enabled
+            .then(|| {
+                self.mock_server_url
+                    .as_ref()
+                    .ok_or_else(|| {
+                        config::ConfigError::Message(
+                            "Test mode enabled but mock_server_url is not set".to_string(),
+                        )
+                    })
+                    .map(|url| external_services::service::TestContext {
+                        session_id: request_id.to_string(),
+                        mock_server_url: url.clone(),
+                    })
+            })
+            .transpose()
+    }
+}
+
 /// API tag configuration for flow-based tagging with payment method type support
 ///
 /// Environment variable format (case-insensitive):
@@ -81,7 +105,7 @@ impl ApiTagConfig {
     /// 2. Fall back to "flow" (simple key)
     /// 3. Return None if not found
     ///
-    /// Note: Case-insensitive lookup because config crate lowercases env var keys
+    /// Note: Keys are lowercased for lookup because config crate lowercases env var keys
     pub fn get_tag(
         &self,
         flow: common_utils::events::FlowName,
@@ -89,25 +113,16 @@ impl ApiTagConfig {
     ) -> Option<String> {
         let flow_str = flow.as_str();
 
-        // Try payment-method-specific key first (case-insensitive)
+        // Try payment-method-specific key first (case-insensitive via lowercase)
         if let Some(pmt) = payment_method_type {
-            let composite_key = format!("{}_{:?}", flow_str, pmt);
-            if let Some(tag) = self
-                .tags
-                .iter()
-                .find(|(k, _)| k.eq_ignore_ascii_case(&composite_key))
-                .map(|(_, v)| v.clone())
-            {
-                return Some(tag);
+            let composite_key = format!("{}_{:?}", flow_str, pmt).to_lowercase();
+            if let Some(tag) = self.tags.get(&composite_key) {
+                return Some(tag.clone());
             }
         }
 
-        // Fall back to simple flow key (case-insensitive)
-        let result = self
-            .tags
-            .iter()
-            .find(|(k, _)| k.eq_ignore_ascii_case(flow_str))
-            .map(|(_, v)| v.clone());
+        // Fall back to simple flow key (case-insensitive via lowercase)
+        let result = self.tags.get(&flow_str.to_lowercase()).cloned();
 
         if result.is_none() {
             tracing::debug!(

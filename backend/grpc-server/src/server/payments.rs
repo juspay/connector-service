@@ -452,25 +452,18 @@ impl Payments {
             .get_tag(FlowName::Authorize, router_data.request.payment_method_type);
 
         // Create test context if test mode is enabled
-        let test_context = if self.config.test.enabled {
-            Some(
-                external_services::service::TestContext::new(
-                    self.config.test.enabled,
-                    self.config.test.mock_server_url.clone(),
-                    request_id.to_string(),
+        let test_context = self
+            .config
+            .test
+            .create_test_context(request_id)
+            .map_err(|e| {
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(format!("Test mode configuration error: {e}")),
+                    Some("TEST_CONFIG_ERROR".to_string()),
+                    None,
                 )
-                .map_err(|e| {
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some(format!("Test mode configuration error: {e}")),
-                        Some("TEST_CONFIG_ERROR".to_string()),
-                        None,
-                    )
-                })?,
-            )
-        } else {
-            None
-        };
+            })?;
 
         // Execute connector processing
         let event_params = EventProcessingParams {
@@ -636,25 +629,18 @@ impl Payments {
         let api_tag = self.config.api_tags.get_tag(FlowName::CreateOrder, None);
 
         // Create test context if test mode is enabled
-        let test_context = if self.config.test.enabled {
-            Some(
-                external_services::service::TestContext::new(
-                    self.config.test.enabled,
-                    self.config.test.mock_server_url.clone(),
-                    event_params.request_id.to_string(),
+        let test_context = self
+            .config
+            .test
+            .create_test_context(event_params.request_id)
+            .map_err(|e| {
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(format!("Test mode configuration error: {e}")),
+                    Some("TEST_CONFIG_ERROR".to_string()),
+                    None,
                 )
-                .map_err(|e| {
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some(format!("Test mode configuration error: {e}")),
-                        Some("TEST_CONFIG_ERROR".to_string()),
-                        None,
-                    )
-                })?,
-            )
-        } else {
-            None
-        };
+            })?;
 
         // Create event processing parameters
         let external_event_params = EventProcessingParams {
@@ -767,20 +753,11 @@ impl Payments {
         let api_tag = self.config.api_tags.get_tag(FlowName::CreateOrder, None);
 
         // Create test context if test mode is enabled
-        let test_context = if self.config.test.enabled {
-            Some(
-                external_services::service::TestContext::new(
-                    self.config.test.enabled,
-                    self.config.test.mock_server_url.clone(),
-                    event_params.request_id.to_string(),
-                )
-                .map_err(|e| {
-                    tonic::Status::internal(format!("Test mode configuration error: {e}"))
-                })?,
-            )
-        } else {
-            None
-        };
+        let test_context = self
+            .config
+            .test
+            .create_test_context(event_params.request_id)
+            .map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
 
         // Execute connector processing
         let external_event_params = EventProcessingParams {
@@ -887,25 +864,18 @@ impl Payments {
             .get_tag(FlowName::CreateSessionToken, None);
 
         // Create test context if test mode is enabled
-        let test_context = if self.config.test.enabled {
-            Some(
-                external_services::service::TestContext::new(
-                    self.config.test.enabled,
-                    self.config.test.mock_server_url.clone(),
-                    event_params.request_id.to_string(),
+        let test_context = self
+            .config
+            .test
+            .create_test_context(event_params.request_id)
+            .map_err(|e| {
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(format!("Test mode configuration error: {e}")),
+                    Some("TEST_CONFIG_ERROR".to_string()),
+                    None,
                 )
-                .map_err(|e| {
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some(format!("Test mode configuration error: {e}")),
-                        Some("TEST_CONFIG_ERROR".to_string()),
-                        None,
-                    )
-                })?,
-            )
-        } else {
-            None
-        };
+            })?;
 
         // Create event processing parameters
         let external_event_params = EventProcessingParams {
@@ -1032,25 +1002,18 @@ impl Payments {
             .get_tag(FlowName::CreateAccessToken, None);
 
         // Create test context if test mode is enabled
-        let test_context = if self.config.test.enabled {
-            Some(
-                external_services::service::TestContext::new(
-                    self.config.test.enabled,
-                    self.config.test.mock_server_url.clone(),
-                    event_params.request_id.to_string(),
+        let test_context = self
+            .config
+            .test
+            .create_test_context(event_params.request_id)
+            .map_err(|e| {
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(format!("Test mode configuration error: {e}")),
+                    Some("TEST_CONFIG_ERROR".to_string()),
+                    None,
                 )
-                .map_err(|e| {
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some(format!("Test mode configuration error: {e}")),
-                        Some("TEST_CONFIG_ERROR".to_string()),
-                        None,
-                    )
-                })?,
-            )
-        } else {
-            None
-        };
+            })?;
 
         // Execute connector processing
         let external_event_params = EventProcessingParams {
@@ -1172,25 +1135,18 @@ impl Payments {
             .get_tag(FlowName::CreateConnectorCustomer, None);
 
         // Create test context if test mode is enabled
-        let test_context = if self.config.test.enabled {
-            Some(
-                external_services::service::TestContext::new(
-                    self.config.test.enabled,
-                    self.config.test.mock_server_url.clone(),
-                    event_params.request_id.to_string(),
+        let test_context = self
+            .config
+            .test
+            .create_test_context(event_params.request_id)
+            .map_err(|e| {
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(format!("Test mode configuration error: {e}")),
+                    Some("TEST_CONFIG_ERROR".to_string()),
+                    None,
                 )
-                .map_err(|e| {
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some(format!("Test mode configuration error: {e}")),
-                        Some("TEST_CONFIG_ERROR".to_string()),
-                        None,
-                    )
-                })?,
-            )
-        } else {
-            None
-        };
+            })?;
 
         // Execute connector processing
         let external_event_params = EventProcessingParams {
@@ -1303,20 +1259,11 @@ impl Payments {
             .get_tag(FlowName::CreateConnectorCustomer, None);
 
         // Create test context if test mode is enabled
-        let test_context = if self.config.test.enabled {
-            Some(
-                external_services::service::TestContext::new(
-                    self.config.test.enabled,
-                    self.config.test.mock_server_url.clone(),
-                    event_params.request_id.to_string(),
-                )
-                .map_err(|e| {
-                    tonic::Status::internal(format!("Test mode configuration error: {e}"))
-                })?,
-            )
-        } else {
-            None
-        };
+        let test_context = self
+            .config
+            .test
+            .create_test_context(event_params.request_id)
+            .map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
 
         // Execute connector processing
         let external_event_params = EventProcessingParams {
@@ -1451,25 +1398,18 @@ impl Payments {
             .get_tag(FlowName::PaymentMethodToken, None);
 
         // Create test context if test mode is enabled
-        let test_context = if self.config.test.enabled {
-            Some(
-                external_services::service::TestContext::new(
-                    self.config.test.enabled,
-                    self.config.test.mock_server_url.clone(),
-                    event_params.request_id.to_string(),
+        let test_context = self
+            .config
+            .test
+            .create_test_context(event_params.request_id)
+            .map_err(|e| {
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(format!("Test mode configuration error: {e}")),
+                    Some("TEST_CONFIG_ERROR".to_string()),
+                    None,
                 )
-                .map_err(|e| {
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some(format!("Test mode configuration error: {e}")),
-                        Some("TEST_CONFIG_ERROR".to_string()),
-                        None,
-                    )
-                })?,
-            )
-        } else {
-            None
-        };
+            })?;
 
         // Execute connector processing
         let external_event_params = EventProcessingParams {
@@ -1936,22 +1876,13 @@ impl PaymentService for Payments {
                         .get_tag(flow_name, payments_sync_data.payment_method_type);
 
                     // Create test context if test mode is enabled
-                    let test_context = if self.config.test.enabled {
-                        Some(
-                            external_services::service::TestContext::new(
-                                self.config.test.enabled,
-                                self.config.test.mock_server_url.clone(),
-                                metadata_payload.request_id.clone(),
-                            )
-                            .map_err(|e| {
-                                tonic::Status::internal(format!(
-                                    "Test mode configuration error: {e}"
-                                ))
-                            })?,
-                        )
-                    } else {
-                        None
-                    };
+                    let test_context = self
+                        .config
+                        .test
+                        .create_test_context(&metadata_payload.request_id)
+                        .map_err(|e| {
+                            tonic::Status::internal(format!("Test mode configuration error: {e}"))
+                        })?;
 
                     let event_params = EventProcessingParams {
                         connector_name: &metadata_payload.connector.to_string(),
@@ -2523,22 +2454,15 @@ impl PaymentService for Payments {
                     );
 
                     // Create test context if test mode is enabled
-                    let test_context = if self.config.test.enabled {
-                        Some(
-                            external_services::service::TestContext::new(
-                                self.config.test.enabled,
-                                self.config.test.mock_server_url.clone(),
-                                request_id.clone(),
-                            )
+                    let test_context =
+                        self.config
+                            .test
+                            .create_test_context(&request_id)
                             .map_err(|e| {
                                 tonic::Status::internal(format!(
                                     "Test mode configuration error: {e}"
                                 ))
-                            })?,
-                        )
-                    } else {
-                        None
-                    };
+                            })?;
 
                     let event_params = EventProcessingParams {
                         connector_name: &connector.to_string(),
@@ -2670,22 +2594,15 @@ impl PaymentService for Payments {
                     );
 
                     // Create test context if test mode is enabled
-                    let test_context = if self.config.test.enabled {
-                        Some(
-                            external_services::service::TestContext::new(
-                                self.config.test.enabled,
-                                self.config.test.mock_server_url.clone(),
-                                request_id.clone(),
-                            )
+                    let test_context =
+                        self.config
+                            .test
+                            .create_test_context(&request_id)
                             .map_err(|e| {
                                 tonic::Status::internal(format!(
                                     "Test mode configuration error: {e}"
                                 ))
-                            })?,
-                        )
-                    } else {
-                        None
-                    };
+                            })?;
 
                     let event_params = EventProcessingParams {
                         connector_name: &connector.to_string(),

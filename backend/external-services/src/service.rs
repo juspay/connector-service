@@ -20,69 +20,8 @@ use injector;
 /// Test context for mock server integration
 #[derive(Debug, Clone)]
 pub struct TestContext {
-    pub mock_server_url: Option<String>,
-    pub is_test_env: bool,
     pub session_id: String,
-}
-
-impl TestContext {
-    /// Create a new TestContext (session_id is typically the request_id)
-    ///
-    /// Returns an error if test mode is enabled but mock_server_url is not configured
-    pub fn new(
-        is_test_env: bool,
-        mock_server_url: Option<String>,
-        session_id: String,
-    ) -> Result<Self, ConnectorError> {
-        // Validate that mock_server_url is provided when test mode is enabled
-        if is_test_env && mock_server_url.is_none() {
-            return Err(ConnectorError::MissingRequiredField {
-                field_name: "mock_server_url",
-            });
-        }
-
-        Ok(Self {
-            mock_server_url,
-            is_test_env,
-            session_id,
-        })
-    }
-
-    /// Get test headers to be added to connector requests
-    pub fn get_test_headers(
-        &self,
-        original_url: &str,
-        api_tag: Option<String>,
-    ) -> Vec<(String, Maskable<String>)> {
-        let mut headers = Vec::new();
-
-        if self.is_test_env {
-            // Add x-api-url header with original connector URL
-            headers.push((X_API_URL.to_string(), original_url.to_string().into()));
-
-            // Add x-api-tag header if provided
-            if let Some(tag) = api_tag {
-                headers.push((X_API_TAG.to_string(), tag.into()));
-            }
-
-            // Add x-session-id header from session_id field
-            headers.push((X_SESSION_ID.to_string(), self.session_id.clone().into()));
-        }
-
-        headers
-    }
-
-    /// Get the URL to use for the request (mock server URL if in test mode, otherwise original URL)
-    pub fn get_request_url(&self, original_url: String) -> String {
-        if self.is_test_env {
-            self.mock_server_url.clone().unwrap_or_else(|| {
-                tracing::warn!("Mock server URL is not set, using original URL instead");
-                original_url
-            })
-        } else {
-            original_url
-        }
-    }
+    pub mock_server_url: String,
 }
 
 pub trait ConnectorRequestReference {
@@ -302,26 +241,26 @@ where
             // Apply test environment modifications if test context is provided
             connector_request = connector_request.map(|mut req| {
                 if let Some(ref test_ctx) = test_context {
-                    if test_ctx.is_test_env {
-                        // Store original URL for x-api-url header
-                        let original_url = req.url.clone();
+                    // Store original URL for x-api-url header
+                    let original_url = req.url.clone();
 
-                        // Replace URL with mock server URL
-                        req.url = test_ctx.get_request_url(req.url.clone());
+                    // Replace URL with mock server URL
+                    req.url = test_ctx.mock_server_url.clone();
 
-                        // Add test headers with API tag from config
-                        let test_headers =
-                            test_ctx.get_test_headers(&original_url, api_tag.clone());
-                        for (key, value) in test_headers {
-                            req.add_header(&key, value);
-                        }
+                    // Add test headers
+                    req.add_header(X_API_URL, original_url.clone().into());
+                    req.add_header(X_SESSION_ID, test_ctx.session_id.clone().into());
 
-                        tracing::info!(
-                            "Test mode enabled: redirected {} to {}",
-                            original_url,
-                            req.url
-                        );
+                    // Add API tag if provided
+                    if let Some(ref tag) = api_tag {
+                        req.add_header(X_API_TAG, tag.clone().into());
                     }
+
+                    tracing::info!(
+                        "Test mode enabled: redirected {} to {}",
+                        original_url,
+                        test_ctx.mock_server_url
+                    );
                 }
                 req
             });
