@@ -42,10 +42,7 @@ use transformers as paytm;
 
 use self::{
     request::{PaytmAuthorizeRequest, PaytmInitiateTxnRequest, PaytmTransactionStatusRequest},
-    response::{
-        PaytmInitiateTxnResponse,
-        PaytmProcessTxnResponse, PaytmTransactionStatusResponse,
-    },
+    response::{PaytmInitiateTxnResponse, PaytmProcessTxnResponse, PaytmTransactionStatusResponse},
 };
 use crate::{connectors::macros, types::ResponseRouterData};
 

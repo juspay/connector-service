@@ -9,7 +9,7 @@ use cbc::{
     cipher::{block_padding::Pkcs7, BlockEncryptMut, KeyIvInit},
     Encryptor,
 };
-use common_enums::{AttemptStatus};
+use common_enums::AttemptStatus;
 use common_utils::{errors::CustomResult, request::Method};
 use domain_types::{
     connector_flow::{Authorize, CreateSessionToken, PSync},
@@ -50,10 +50,10 @@ pub use super::response::{
     PaytmInitiateTxnResponse, PaytmNativeProcessFailureResp, PaytmNativeProcessRespBodyTypes,
     PaytmNativeProcessSuccessResp, PaytmNativeProcessTxnResponse, PaytmProcessFailureResp,
     PaytmProcessHead, PaytmProcessRespBodyTypes, PaytmProcessSuccessResp, PaytmProcessTxnResponse,
-    PaytmResBodyTypes, PaytmRespBody, PaytmRespHead, PaytmResultInfo,
-    PaytmSessionTokenErrorBody, PaytmSessionTokenErrorResponse, PaytmSuccessTransactionBody,
-    PaytmSuccessTransactionResponse, PaytmTransactionStatusRespBody,
-    PaytmTransactionStatusRespBodyTypes, PaytmTransactionStatusResponse, PaytmTxnInfo,
+    PaytmResBodyTypes, PaytmRespBody, PaytmRespHead, PaytmResultInfo, PaytmSessionTokenErrorBody,
+    PaytmSessionTokenErrorResponse, PaytmSuccessTransactionBody, PaytmSuccessTransactionResponse,
+    PaytmTransactionStatusRespBody, PaytmTransactionStatusRespBodyTypes,
+    PaytmTransactionStatusResponse, PaytmTxnInfo,
 };
 
 // PayTM API Constants
@@ -715,15 +715,9 @@ impl<
         // Extract data directly from router_data
         let order_id = item
             .router_data
-            .request
-            .connector_transaction_id
-            .get_connector_transaction_id()
-            .unwrap_or_else(|_| {
-                item.router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone()
-            });
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
 
         let body = PaytmTransactionStatusReqBody {
             mid: auth.merchant_id.clone(),

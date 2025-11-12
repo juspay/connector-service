@@ -1105,7 +1105,7 @@ impl<
         value: PaymentServiceAuthorizeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         println!("DEBUG: Starting PaymentsAuthorizeData::foreign_try_from conversion");
-        
+
         let email: Option<Email> = match value.email {
             Some(ref email_str) => {
                 println!("DEBUG: Converting email: {:?}", email_str);
@@ -1125,9 +1125,17 @@ impl<
                 None
             }
         };
-        println!("DEBUG: Converting merchant_config_currency: {:?}", value.currency());
-        let merchant_config_currency = common_enums::Currency::foreign_try_from(value.currency()).map_err(|e| {
-            println!("ERROR: Failed to convert currency: {:?}, error: {:?}", value.currency(), e);
+        println!(
+            "DEBUG: Converting merchant_config_currency: {:?}",
+            value.currency()
+        );
+        let merchant_config_currency = common_enums::Currency::foreign_try_from(value.currency())
+            .map_err(|e| {
+            println!(
+                "ERROR: Failed to convert currency: {:?}, error: {:?}",
+                value.currency(),
+                e
+            );
             e
         })?;
 
@@ -1193,9 +1201,12 @@ impl<
                 value.capture_method(),
             )?),
             payment_method_data: {
-                println!("DEBUG: Converting payment_method_data: {:?}", value.payment_method);
-                PaymentMethodData::<T>::foreign_try_from(
-                    value.payment_method.clone().ok_or_else(|| {
+                println!(
+                    "DEBUG: Converting payment_method_data: {:?}",
+                    value.payment_method
+                );
+                PaymentMethodData::<T>::foreign_try_from(value.payment_method.clone().ok_or_else(
+                    || {
                         println!("ERROR: Payment method data is missing");
                         ApplicationErrorResponse::BadRequest(ApiError {
                             sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -1203,8 +1214,8 @@ impl<
                             error_message: "Payment method data is required".to_owned(),
                             error_object: None,
                         })
-                    })?,
-                )
+                    },
+                )?)
                 .map_err(|e| {
                     println!("ERROR: Failed to convert payment_method_data: {:?}", e);
                     e
@@ -1220,7 +1231,11 @@ impl<
             currency: {
                 println!("DEBUG: Converting main currency: {:?}", value.currency());
                 common_enums::Currency::foreign_try_from(value.currency()).map_err(|e| {
-                    println!("ERROR: Failed to convert main currency: {:?}, error: {:?}", value.currency(), e);
+                    println!(
+                        "ERROR: Failed to convert main currency: {:?}, error: {:?}",
+                        value.currency(),
+                        e
+                    );
                     e
                 })?
             },

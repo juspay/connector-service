@@ -230,26 +230,26 @@ pub struct PaytmNativeProcessRequestBody {
     #[serde(rename = "authMode")]
     pub auth_mode: Option<String>, // "DEBIT_PIN"
 
-    // #[serde(rename = "cardInfo", skip_serializing_if = "Option::is_none")]
-    // pub card_info: Option<String>,
-    // #[serde(rename = "planId", skip_serializing_if = "Option::is_none")]
-    // pub plan_id: Option<String>,
-    // #[serde(rename = "cardTokenInfo", skip_serializing_if = "Option::is_none")]
-    // pub card_token_info: Option<CardTokenInfo>,
-    // #[serde(rename = "emiType", skip_serializing_if = "Option::is_none")]
-    // pub emi_type: Option<String>,
-    // #[serde(rename = "mandateAuthMode", skip_serializing_if = "Option::is_none")]
-    // pub mandate_auth_mode: Option<String>,
-    // #[serde(rename = "subscriptionId", skip_serializing_if = "Option::is_none")]
-    // pub subscription_id: Option<String>,
-    // #[serde(rename = "bankIfsc", skip_serializing_if = "Option::is_none")]
-    // pub bank_ifsc: Option<String>,
-    // #[serde(rename = "accountNumber", skip_serializing_if = "Option::is_none")]
-    // pub account_number: Option<String>,
-    // #[serde(rename = "userName", skip_serializing_if = "Option::is_none")]
-    // pub user_name: Option<String>,
-    // #[serde(rename = "accountType", skip_serializing_if = "Option::is_none")]
-    // pub account_type: Option<String>,
+                                   // #[serde(rename = "cardInfo", skip_serializing_if = "Option::is_none")]
+                                   // pub card_info: Option<String>,
+                                   // #[serde(rename = "planId", skip_serializing_if = "Option::is_none")]
+                                   // pub plan_id: Option<String>,
+                                   // #[serde(rename = "cardTokenInfo", skip_serializing_if = "Option::is_none")]
+                                   // pub card_token_info: Option<CardTokenInfo>,
+                                   // #[serde(rename = "emiType", skip_serializing_if = "Option::is_none")]
+                                   // pub emi_type: Option<String>,
+                                   // #[serde(rename = "mandateAuthMode", skip_serializing_if = "Option::is_none")]
+                                   // pub mandate_auth_mode: Option<String>,
+                                   // #[serde(rename = "subscriptionId", skip_serializing_if = "Option::is_none")]
+                                   // pub subscription_id: Option<String>,
+                                   // #[serde(rename = "bankIfsc", skip_serializing_if = "Option::is_none")]
+                                   // pub bank_ifsc: Option<String>,
+                                   // #[serde(rename = "accountNumber", skip_serializing_if = "Option::is_none")]
+                                   // pub account_number: Option<String>,
+                                   // #[serde(rename = "userName", skip_serializing_if = "Option::is_none")]
+                                   // pub user_name: Option<String>,
+                                   // #[serde(rename = "accountType", skip_serializing_if = "Option::is_none")]
+                                   // pub account_type: Option<String>,
 }
 
 // PSync (Payment Sync) flow request structures

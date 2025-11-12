@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use common_enums::{Currency};
+use common_enums::Currency;
 use common_utils::types::StringMajorUnit;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
@@ -26,10 +26,10 @@ pub struct PaytmRespBody {
     pub result_info: PaytmResultInfo,
     #[serde(rename = "txnToken")]
     pub txn_token: Secret<String>, // This will be stored as session_token
-    // #[serde(rename = "isPromoCodeValid", skip_serializing_if = "Option::is_none")]
-    // pub is_promo_code_valid: Option<bool>,
-    // #[serde(rename = "authenticated", skip_serializing_if = "Option::is_none")]
-    // pub authenticated: Option<bool>,
+                                   // #[serde(rename = "isPromoCodeValid", skip_serializing_if = "Option::is_none")]
+                                   // pub is_promo_code_valid: Option<bool>,
+                                   // #[serde(rename = "authenticated", skip_serializing_if = "Option::is_none")]
+                                   // pub authenticated: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
