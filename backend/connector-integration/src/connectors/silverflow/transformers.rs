@@ -1,10 +1,6 @@
 use crate::types::ResponseRouterData;
-use common_enums::{AttemptStatus, CaptureMethod};
+use common_enums::{enums::Currency, AttemptStatus, CaptureMethod};
 use common_utils::types::MinorUnit;
-
-// TODO: This should be configurable via connector metadata
-const DEFAULT_MERCHANT_ACCEPTOR_KEY: &str = "mac-default";
-
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -25,6 +21,7 @@ use serde::{Deserialize, Serialize};
 pub struct SilverflowAuthType {
     pub api_key: Secret<String>,
     pub api_secret: Secret<String>,
+    pub merchant_acceptor_key: Secret<String>,
 }
 
 impl TryFrom<&ConnectorAuthType> for SilverflowAuthType {
@@ -35,10 +32,11 @@ impl TryFrom<&ConnectorAuthType> for SilverflowAuthType {
             ConnectorAuthType::SignatureKey {
                 api_key,
                 api_secret,
-                key1: _,
+                key1,
             } => Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
+                merchant_acceptor_key: key1.to_owned(),
             }),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType
@@ -161,8 +159,8 @@ pub struct SilverflowMerchantAcceptorResolver {
 #[serde(rename_all = "camelCase")]
 pub struct SilverflowCard<T: PaymentMethodDataTypes> {
     pub number: RawCardNumber<T>,
-    pub expiry_year: u16,
-    pub expiry_month: u8,
+    pub expiry_year: Secret<String>,
+    pub expiry_month: Secret<String>,
     pub cvc: Secret<String>,
     pub holder_name: Option<Secret<String>>,
 }
@@ -178,7 +176,7 @@ pub struct SilverflowPaymentType {
 #[derive(Debug, Serialize)]
 pub struct SilverflowAmount {
     pub value: MinorUnit,
-    pub currency: String,
+    pub currency: Currency,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -209,6 +207,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
+        // Extract auth credentials
+        let auth = SilverflowAuthType::try_from(&router_data.connector_auth_type)?;
+
         // Extract card data from payment method
         let card_data = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => card,
@@ -220,29 +221,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
         };
 
-        // Parse expiry year and month
-        let expiry_year = card_data
-            .card_exp_year
-            .clone()
-            .expose()
-            .parse::<u16>()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-
-        let expiry_month = card_data
-            .card_exp_month
-            .clone()
-            .expose()
-            .parse::<u8>()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-
         Ok(Self {
             merchant_acceptor_resolver: SilverflowMerchantAcceptorResolver {
-                merchant_acceptor_key: DEFAULT_MERCHANT_ACCEPTOR_KEY.to_string(),
+                merchant_acceptor_key: auth.merchant_acceptor_key.expose(),
             },
             card: SilverflowCard {
                 number: card_data.card_number.clone(),
-                expiry_year,
-                expiry_month,
+                expiry_year: card_data.card_exp_year.clone(),
+                expiry_month: card_data.card_exp_month.clone(),
                 cvc: card_data.card_cvc.clone(),
                 holder_name: router_data.request.customer_name.clone().map(Secret::new),
             },
@@ -253,7 +239,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             },
             amount: SilverflowAmount {
                 value: router_data.request.minor_amount,
-                currency: router_data.request.currency.to_string(),
+                currency: router_data.request.currency,
             },
             clearing_mode: match router_data.request.capture_method {
                 Some(CaptureMethod::Manual) | Some(CaptureMethod::ManualMultiple) => {
@@ -445,33 +431,8 @@ impl<T: PaymentMethodDataTypes>
 }
 
 // PSync flow structures
-#[derive(Debug, Serialize)]
-pub struct SilverflowSyncRequest;
-
 // Reuse SilverflowPaymentsResponse for sync response since GET /charges/{chargeKey} returns the same structure
 pub type SilverflowSyncResponse = SilverflowPaymentsResponse;
-
-// PSync Request Transformation (empty for GET-based connector)
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        super::SilverflowRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for SilverflowSyncRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        _item: super::SilverflowRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        // Empty request for GET-based sync
-        Ok(Self)
-    }
-}
 
 // PSync Response Transformation
 impl
@@ -681,7 +642,7 @@ pub struct SilverflowRefundRequest {
 #[serde(rename_all = "camelCase")]
 pub struct SilverflowRefundResponse {
     #[serde(rename = "type")]
-    pub action_type: String, // Should be "refund"
+    pub action_type: String,
     pub key: String, // Action key (act-...)
     pub charge_key: String,
     pub refund_charge_key: Option<String>,
