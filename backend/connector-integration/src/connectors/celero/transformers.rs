@@ -1,6 +1,6 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
-use common_utils::MinorUnit;
+use common_utils::{pii::Email, MinorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -27,16 +27,15 @@ pub enum CeleroApiStatus {
     Failed,
 }
 
-/// Celero transaction type
+/// Celero transaction type - matches hyperswitch implementation
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum CeleroTransactionType {
     Sale,
     Authorize,
-    Refund,
 }
 
-/// Celero card status
+/// Celero card status - matches hyperswitch implementation
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum CeleroCardStatus {
@@ -52,8 +51,7 @@ pub enum CeleroCardStatus {
     Rejected,
     Blocked,
     Cancelled,
-    Refunded,
-    PartiallyRefunded,
+    Reversed,
 }
 
 impl From<CeleroCardStatus> for AttemptStatus {
@@ -62,15 +60,13 @@ impl From<CeleroCardStatus> for AttemptStatus {
             CeleroCardStatus::Settled => Self::Charged,
             CeleroCardStatus::Authorized | CeleroCardStatus::Approved => Self::Authorized,
             CeleroCardStatus::PendingSettlement | CeleroCardStatus::Pending => Self::Pending,
-            CeleroCardStatus::Voided => Self::Voided,
+            CeleroCardStatus::Voided | CeleroCardStatus::Reversed => Self::Voided,
             CeleroCardStatus::Declined
             | CeleroCardStatus::Failed
             | CeleroCardStatus::Error
             | CeleroCardStatus::Rejected
             | CeleroCardStatus::Blocked
             | CeleroCardStatus::Cancelled => Self::Failure,
-            CeleroCardStatus::Refunded => Self::Charged,
-            CeleroCardStatus::PartiallyRefunded => Self::PartialCharged,
         }
     }
 }
@@ -131,7 +127,7 @@ pub struct CeleroPaymentsRequest<T: PaymentMethodDataTypes> {
     #[serde(rename = "type")]
     pub transaction_type: CeleroTransactionType,
     pub amount: MinorUnit,
-    pub currency: String,
+    pub currency: common_enums::Currency,
     pub order_id: String,
     pub payment_method: CeleroPaymentMethod<T>,
     #[serde(skip)]
@@ -166,12 +162,13 @@ pub struct CeleroBillingAddress {
     pub first_name: Option<Secret<String>>,
     pub last_name: Option<Secret<String>>,
     pub address_line_1: Option<Secret<String>>,
+    pub address_line_2: Option<Secret<String>>,
     pub city: Option<String>,
     pub state: Option<Secret<String>>,
     pub postal_code: Option<Secret<String>>,
     pub country: Option<common_enums::CountryAlpha2>,
-    pub email: Option<Secret<String>>,
     pub phone: Option<Secret<String>>,
+    pub email: Option<Email>,
 }
 
 // Bridge implementation for macro compatibility (CeleroRouterData is created by the macro in celero.rs)
@@ -296,7 +293,7 @@ impl<T: PaymentMethodDataTypes>
                 CeleroTransactionType::Authorize
             },
             amount: item.request.minor_amount,
-            currency: item.request.currency.to_string(),
+            currency: item.request.currency,
             order_id: reference_id.clone(),
             payment_method,
             _phantom: std::marker::PhantomData,
@@ -307,7 +304,7 @@ impl<T: PaymentMethodDataTypes>
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub struct CeleroPaymentsResponse {
-    pub status: String,
+    pub status: CeleroApiStatus,
     pub msg: String,
     pub data: Option<CeleroTransactionResponseData>,
 }
@@ -319,7 +316,7 @@ pub struct CeleroTransactionResponseData {
     #[serde(rename = "type")]
     pub transaction_type: CeleroTransactionType,
     pub amount: MinorUnit,
-    pub currency: String,
+    pub currency: common_enums::Currency,
     pub response: Option<CeleroPaymentResponse>,
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
@@ -373,10 +370,10 @@ impl<T: PaymentMethodDataTypes>
         >,
     ) -> Result<Self, Self::Error> {
         // Check if the main response status indicates success
-        if item.response.status != "success" {
+        if item.response.status != CeleroApiStatus::Success {
             return Ok(Self {
                 response: Err(ErrorResponse {
-                    code: item.response.status.clone(),
+                    code: format!("{:?}", item.response.status),
                     message: item.response.msg.clone(),
                     reason: Some("Celero API error".to_string()),
                     status_code: item.http_code,
@@ -403,13 +400,10 @@ impl<T: PaymentMethodDataTypes>
             .as_ref()
             .and_then(|r| r.card.as_ref());
 
-        // CRITICAL: Check card status and use WHITELIST approach
-        // Only treat explicitly known success statuses as success
-        // Treat all unknown or failure statuses as failures to avoid false positives
+        // Check card status to determine payment status
         let status = if let Some(card_resp) = card_response {
             if let Some(card_status) = &card_resp.status {
                 match card_status {
-                    // Explicit success statuses
                     CeleroCardStatus::Settled => AttemptStatus::Charged,
                     CeleroCardStatus::Authorized | CeleroCardStatus::Approved => {
                         AttemptStatus::Authorized
@@ -417,15 +411,13 @@ impl<T: PaymentMethodDataTypes>
                     CeleroCardStatus::PendingSettlement | CeleroCardStatus::Pending => {
                         AttemptStatus::Pending
                     }
-                    CeleroCardStatus::Voided => AttemptStatus::Voided,
-                    // Explicit failure statuses
+                    CeleroCardStatus::Voided | CeleroCardStatus::Reversed => AttemptStatus::Voided,
                     CeleroCardStatus::Declined
                     | CeleroCardStatus::Failed
                     | CeleroCardStatus::Error
                     | CeleroCardStatus::Rejected
                     | CeleroCardStatus::Blocked
                     | CeleroCardStatus::Cancelled => {
-                        // Card transaction failed - return error response with processor details
                         return Ok(Self {
                             response: Err(ErrorResponse {
                                 code: card_resp
@@ -452,19 +444,14 @@ impl<T: PaymentMethodDataTypes>
                             ..item.router_data
                         });
                     }
-                    CeleroCardStatus::Refunded => AttemptStatus::Charged,
-                    CeleroCardStatus::PartiallyRefunded => AttemptStatus::PartialCharged,
                 }
             } else {
-                // No status in card response, default to Pending
                 AttemptStatus::Pending
             }
         } else {
-            // No card response, use transaction type as fallback
             match &transaction_data.transaction_type {
                 CeleroTransactionType::Sale => AttemptStatus::Charged,
                 CeleroTransactionType::Authorize => AttemptStatus::Authorized,
-                _ => AttemptStatus::Pending,
             }
         };
 
@@ -499,7 +486,7 @@ pub struct CeleroSyncRequest {}
 // Response structure based on Celero API spec for GET /api/transaction/{id}
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CeleroSyncResponse {
-    pub status: String,
+    pub status: CeleroApiStatus,
     pub msg: String,
     pub data: Vec<CeleroTransactionData>,
     pub total_count: Option<i32>,
@@ -514,7 +501,7 @@ pub struct CeleroTransactionData {
     pub tax_amount: Option<MinorUnit>,
     pub tax_exempt: Option<bool>,
     pub shipping_amount: Option<MinorUnit>,
-    pub currency: String,
+    pub currency: common_enums::Currency,
     pub description: Option<String>,
     pub order_id: Option<String>,
     pub po_number: Option<String>,
@@ -536,18 +523,16 @@ pub struct CeleroTransactionResponseDetails {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CeleroBillingAddressResponse {
-    pub first_name: Option<String>,
-    pub last_name: Option<String>,
-    pub company: Option<String>,
-    pub address_line_1: Option<String>,
-    pub address_line_2: Option<String>,
+    pub first_name: Option<Secret<String>>,
+    pub last_name: Option<Secret<String>>,
+    pub address_line_1: Option<Secret<String>>,
+    pub address_line_2: Option<Secret<String>>,
     pub city: Option<String>,
-    pub state: Option<String>,
-    pub postal_code: Option<String>,
-    pub country: Option<String>,
-    pub phone: Option<String>,
-    pub fax: Option<String>,
-    pub email: Option<String>,
+    pub state: Option<Secret<String>>,
+    pub postal_code: Option<Secret<String>>,
+    pub country: Option<common_enums::CountryAlpha2>,
+    pub phone: Option<Secret<String>>,
+    pub email: Option<Secret<String>>,
 }
 
 // ===== PSYNC TRANSFORMATIONS =====
@@ -571,38 +556,11 @@ impl<
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::CeleroRouterData<
+        _item: super::CeleroRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        Self::try_from(&item.router_data)
-    }
-}
-
-// Owned implementation for macro compatibility
-impl TryFrom<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
-    for CeleroSyncRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        Self::try_from(&item)
-    }
-}
-
-// Reference implementation for GET-based lookup
-impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
-    for CeleroSyncRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        _item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        // Empty request for GET-based sync - transaction ID is passed in URL
         Ok(Self {})
     }
 }
@@ -628,7 +586,7 @@ impl
         let router_data = &item.router_data;
 
         // Check if response status indicates success
-        if response.status != "success" {
+        if response.status != CeleroApiStatus::Success {
             return Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status: AttemptStatus::Failure,
@@ -638,7 +596,7 @@ impl
                     code: "SYNC_ERROR".to_string(),
                     message: response.msg.clone(),
                     reason: Some(format!(
-                        "Sync request failed with status: {}",
+                        "Sync request failed with status: {:?}",
                         response.status
                     )),
                     status_code: item.http_code,
@@ -755,7 +713,7 @@ pub struct CeleroCaptureRequest {
 // Capture response structure (uses same format as payment response)
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CeleroCaptureResponse {
-    pub status: String,
+    pub status: CeleroApiStatus,
     pub msg: String,
     pub data: Option<serde_json::Value>, // Celero capture returns null data on success
 }
@@ -817,10 +775,9 @@ impl
         let router_data = &item.router_data;
 
         // Check if response status indicates success
-        let status = match response.status.as_str() {
-            "success" => AttemptStatus::Charged,
-            "error" | "failed" => AttemptStatus::Failure,
-            _ => AttemptStatus::Pending,
+        let status = match response.status {
+            CeleroApiStatus::Success => AttemptStatus::Charged,
+            CeleroApiStatus::Error | CeleroApiStatus::Failed => AttemptStatus::Failure,
         };
 
         // Extract connector transaction ID from the request (should be available)
@@ -830,7 +787,7 @@ impl
             _ => "unknown".to_string(),
         };
 
-        if response.status != "success" {
+        if response.status != CeleroApiStatus::Success {
             return Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status: AttemptStatus::Failure,
@@ -840,7 +797,7 @@ impl
                     code: "CAPTURE_ERROR".to_string(),
                     message: response.msg.clone(),
                     reason: Some(format!(
-                        "Capture request failed with status: {}",
+                        "Capture request failed with status: {:?}",
                         response.status
                     )),
                     status_code: item.http_code,
@@ -893,7 +850,7 @@ pub struct CeleroRefundRequest {
 // Refund response structure - simplified based on Celero API pattern
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CeleroRefundResponse {
-    pub status: String,
+    pub status: CeleroApiStatus,
     pub msg: String,
     pub data: Option<serde_json::Value>, // Celero refund returns null data on success
 }
@@ -950,23 +907,22 @@ impl
         let router_data = &item.router_data;
 
         // Map response status to refund status
-        let refund_status = match response.status.as_str() {
-            "success" => RefundStatus::Success,
-            "error" | "failed" => RefundStatus::Failure,
-            _ => RefundStatus::Pending,
+        let refund_status = match response.status {
+            CeleroApiStatus::Success => RefundStatus::Success,
+            CeleroApiStatus::Error | CeleroApiStatus::Failed => RefundStatus::Failure,
         };
 
         // Extract connector transaction ID from request
         let connector_refund_id =
             format!("refund_{}", router_data.request.connector_transaction_id);
 
-        if response.status != "success" {
+        if response.status != CeleroApiStatus::Success {
             return Ok(Self {
                 response: Err(domain_types::router_data::ErrorResponse {
                     code: "REFUND_ERROR".to_string(),
                     message: response.msg.clone(),
                     reason: Some(format!(
-                        "Refund request failed with status: {}",
+                        "Refund request failed with status: {:?}",
                         response.status
                     )),
                     status_code: item.http_code,
@@ -1003,40 +959,41 @@ impl
 #[derive(Debug, Serialize)]
 pub struct CeleroRefundSyncRequest {}
 
-// Refund sync uses the same response structure as PSync since it calls the same endpoint
-// Create a type alias to avoid macro conflicts when both flows use the same response type
-pub type CeleroRefundSyncResponse = CeleroSyncResponse;
+// Refund sync uses the same response structure as refund execute
+// Both just check top-level API status, not transaction details
+pub type CeleroRefundSyncResponse = CeleroRefundResponse;
 
 // ===== REFUND SYNC TRANSFORMATIONS =====
 
-// Owned implementation for macro compatibility
-impl TryFrom<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>
-    for CeleroRefundSyncRequest
+// Bridge implementation for macro compatibility
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
+    TryFrom<
+        super::CeleroRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    > for CeleroRefundSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        _item: super::CeleroRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
-        Self::try_from(&item)
-    }
-}
-
-// Reference implementation for GET-based lookup
-impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>
-    for CeleroRefundSyncRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        _item: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        // Empty request for GET-based sync - refund ID is passed in URL
         Ok(Self {})
     }
 }
 
-// Response transformation for RSync - uses type alias
+// Response transformation for RSync - matches hyperswitch implementation
 impl
     TryFrom<
         ResponseRouterData<
@@ -1056,18 +1013,30 @@ impl
         let response = &item.response;
         let router_data = &item.router_data;
 
-        // Check if response status indicates success
-        if response.status != "success" {
-            return Ok(Self {
+        match response.status {
+            CeleroApiStatus::Success => {
+                let connector_refund_id = if router_data.request.connector_refund_id.is_empty() {
+                    router_data.request.connector_transaction_id.clone()
+                } else {
+                    router_data.request.connector_refund_id.clone()
+                };
+
+                Ok(Self {
+                    response: Ok(RefundsResponseData {
+                        connector_refund_id,
+                        refund_status: RefundStatus::Success,
+                        status_code: item.http_code,
+                    }),
+                    ..router_data.clone()
+                })
+            }
+            CeleroApiStatus::Error | CeleroApiStatus::Failed => Ok(Self {
                 response: Err(domain_types::router_data::ErrorResponse {
-                    code: "REFUND_SYNC_ERROR".to_string(),
+                    code: "REFUND_SYNC_FAILED".to_string(),
                     message: response.msg.clone(),
-                    reason: Some(format!(
-                        "Refund sync request failed with status: {}",
-                        response.status
-                    )),
+                    reason: Some(response.msg.clone()),
                     status_code: item.http_code,
-                    attempt_status: Some(AttemptStatus::Failure),
+                    attempt_status: None,
                     connector_transaction_id: Some(
                         router_data.request.connector_transaction_id.clone(),
                     ),
@@ -1076,74 +1045,8 @@ impl
                     network_error_message: None,
                 }),
                 ..router_data.clone()
-            });
+            }),
         }
-
-        // Extract first transaction data (API returns array but we expect single transaction)
-        let transaction_data = response
-            .data
-            .first()
-            .ok_or_else(|| errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        // CRITICAL FIX: Map transaction status to refund status correctly
-        // For refund sync, we're checking if the REFUND succeeded, not the original payment
-        // The transaction status tells us the current state of the transaction
-        let refund_status = match &transaction_data.status {
-            // These statuses indicate the transaction has been successfully refunded
-            CeleroCardStatus::Refunded | CeleroCardStatus::PartiallyRefunded => {
-                RefundStatus::Success
-            }
-            // If transaction status is still in normal payment states (settled, approved, authorized),
-            // it means the refund either hasn't been processed or failed
-            // We should check the transaction_type to determine if this is actually a refund transaction
-            CeleroCardStatus::PendingSettlement
-            | CeleroCardStatus::Settled
-            | CeleroCardStatus::Approved
-            | CeleroCardStatus::Authorized => {
-                // Check if this is actually a refund transaction or the original payment
-                // If transaction_type indicates this is a refund and status is pending, it's pending
-                // Otherwise, if we're syncing a refund but transaction is in payment state, refund failed
-                match (&transaction_data.transaction_type, &transaction_data.status) {
-                    (CeleroTransactionType::Refund, CeleroCardStatus::PendingSettlement) => {
-                        RefundStatus::Pending
-                    }
-                    (CeleroTransactionType::Refund, CeleroCardStatus::Approved) => {
-                        RefundStatus::Success
-                    }
-                    // If it's not a refund type transaction, the refund hasn't been applied
-                    _ => RefundStatus::Failure,
-                }
-            }
-            // Explicit failure states
-            CeleroCardStatus::Failed | CeleroCardStatus::Declined | CeleroCardStatus::Error => {
-                RefundStatus::Failure
-            }
-            // Voided transaction means refund might not be applicable
-            CeleroCardStatus::Voided => RefundStatus::Failure,
-            // Pending states
-            CeleroCardStatus::Pending => RefundStatus::Pending,
-            // Other states - default to failure for safety (don't assume success)
-            _ => RefundStatus::Failure,
-        };
-
-        // Generate connector refund ID based on the pattern used in refund flow
-        let connector_refund_id = if router_data.request.connector_refund_id.is_empty() {
-            format!("refund_{}", transaction_data.id)
-        } else {
-            router_data.request.connector_refund_id.clone()
-        };
-
-        // Build success response
-        let refunds_response_data = RefundsResponseData {
-            connector_refund_id,
-            refund_status,
-            status_code: item.http_code,
-        };
-
-        Ok(Self {
-            response: Ok(refunds_response_data),
-            ..router_data.clone()
-        })
     }
 }
 
@@ -1157,7 +1060,7 @@ pub struct CeleroVoidRequest {}
 // Void response structure based on Celero API spec for POST /api/transaction/{id}/void
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CeleroVoidResponse {
-    pub status: String,
+    pub status: CeleroApiStatus,
     pub msg: String,
     pub data: Option<serde_json::Value>, // Celero void returns null data on success
 }
@@ -1212,16 +1115,15 @@ impl
         let router_data = &item.router_data;
 
         // Check if response status indicates success
-        let status = match response.status.as_str() {
-            "success" => AttemptStatus::Voided,
-            "error" | "failed" => AttemptStatus::VoidFailed,
-            _ => AttemptStatus::Pending,
+        let status = match response.status {
+            CeleroApiStatus::Success => AttemptStatus::Voided,
+            CeleroApiStatus::Error | CeleroApiStatus::Failed => AttemptStatus::VoidFailed,
         };
 
         // Extract connector transaction ID from the request (should be available)
         let connector_transaction_id = router_data.request.connector_transaction_id.clone();
 
-        if response.status != "success" {
+        if response.status != CeleroApiStatus::Success {
             return Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status: AttemptStatus::VoidFailed,
@@ -1231,7 +1133,7 @@ impl
                     code: "VOID_ERROR".to_string(),
                     message: response.msg.clone(),
                     reason: Some(format!(
-                        "Void request failed with status: {}",
+                        "Void request failed with status: {:?}",
                         response.status
                     )),
                     status_code: item.http_code,
@@ -1347,34 +1249,6 @@ impl<
     fn try_from(
         item: super::CeleroRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        Self::try_from(&item.router_data)
-    }
-}
-
-// RSync bridge
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
-    TryFrom<
-        super::CeleroRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    > for CeleroRefundSyncRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: super::CeleroRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
