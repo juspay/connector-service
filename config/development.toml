@@ -7,7 +7,7 @@ level = "TRACE"
 log_format = "default"
 
 [log.kafka]
-enabled = true
+enabled = false
 level = "info"
 filtering_directive = "info"
 brokers = ["localhost:9092"]
@@ -15,12 +15,12 @@ topic = "connector-service-logs"
 buffer_limit = 100000
 
 [server]
-host = "127.0.0.1"
+host = "0.0.0.0"
 port = 8000
 type = "grpc"
 
 [metrics]
-host = "127.0.0.1"
+host = "0.0.0.0"
 port = 8080
 
 [proxy]
@@ -41,6 +41,7 @@ authorizedotnet.base_url = "https://apitest.authorize.net/xml/v1/request.api"
 phonepe.base_url = "https://api-preprod.phonepe.com/apis/hermes/"
 cashfree.base_url = "https://sandbox.cashfree.com/"
 fiuu.base_url = "https://sandbox.merchant.razer.com/"
+payload.base_url = "https://api.payload.com"
 payu.base_url = "https://test.payu.in/"
 paytm.base_url = "https://securegw-stage.paytm.in/"
 cashtocode.base_url = "https://cluster05.api-test.cashtocode.com"
@@ -67,7 +68,7 @@ worldpayvantiv.secondary_base_url = "https://onlinessr.vantivprelive.com"
 
 # Generic Events Configuration
 [events]
-enabled = true
+enabled = false
 brokers = ["localhost:9092"]
 topic = "audit-trail-events"
 partition_key_field = "request_id"

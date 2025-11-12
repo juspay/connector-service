@@ -3,7 +3,7 @@ use common_utils::{types::MinorUnit, CustomResult};
 use domain_types::{
     connector_types::{
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsSyncData,
-        SetupMandateRequestData,
+        RepeatPaymentData, SetupMandateRequestData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 macro_rules! with_error_response_body {
     ($event_builder:ident, $response:ident) => {
         if let Some(body) = $event_builder {
-            body.set_error_response_body(&$response);
+            body.set_connector_response(&$response);
         }
     };
 }
@@ -33,7 +33,7 @@ macro_rules! with_error_response_body {
 macro_rules! with_response_body {
     ($event_builder:ident, $response:ident) => {
         if let Some(body) = $event_builder {
-            body.set_response_body(&$response);
+            body.set_connector_response(&$response);
         }
     };
 }
@@ -170,6 +170,14 @@ impl SplitPaymentData for PaymentsCaptureData {
 }
 
 impl<T: PaymentMethodDataTypes> SplitPaymentData for PaymentsAuthorizeData<T> {
+    fn get_split_payment_data(
+        &self,
+    ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
+        self.split_payments.clone()
+    }
+}
+
+impl SplitPaymentData for RepeatPaymentData {
     fn get_split_payment_data(
         &self,
     ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {

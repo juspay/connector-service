@@ -125,7 +125,7 @@ pub struct CardDetails<
         + Serialize,
 > {
     pub number: RawCardNumber<T>,
-    pub name: Option<String>,
+    pub name: Option<Secret<String>>,
     pub expiry_month: Option<Secret<String>>,
     pub expiry_year: Secret<String>,
     pub cvv: Option<Secret<String>>,
@@ -315,7 +315,7 @@ fn extract_payment_method_and_data<
 
             let card = PaymentMethodSpecificData::Card(CardDetails {
                 number: card_data.card_number.clone(),
-                name: card_holder_name,
+                name: card_holder_name.map(Secret::new),
                 expiry_month: Some(card_data.card_exp_month.clone()),
                 expiry_year: card_data.card_exp_year.clone(),
                 cvv: Some(card_data.card_cvc.clone()),
@@ -568,8 +568,8 @@ pub struct RazorpayPsyncResponse {
     pub refund_status: Option<String>,
     pub amount_refunded: i64,
     pub captured: bool,
-    pub email: String,
-    pub contact: String,
+    pub email: Email,
+    pub contact: Secret<String>,
     pub fee: Option<i64>,
     pub tax: Option<i64>,
     pub error_code: Option<String>,
@@ -652,7 +652,7 @@ pub struct SyncCardDetails {
 #[serde(rename_all = "snake_case")]
 pub struct SyncUPIDetails {
     pub payer_account_type: String,
-    pub vpa: String,
+    pub vpa: Secret<String>,
     pub flow: String,
     pub bank: String,
 }
@@ -662,8 +662,8 @@ pub struct SyncUPIDetails {
 #[serde(rename_all = "snake_case")]
 pub struct AcquirerData {
     pub auth_code: Option<String>,
-    pub rrn: Option<String>,
-    pub authentication_reference_number: Option<String>,
+    pub rrn: Option<Secret<String>>,
+    pub authentication_reference_number: Option<Secret<String>>,
     pub bank_transaction_id: Option<String>,
 }
 
@@ -953,7 +953,7 @@ pub struct RazorpayOrderRequest {
     )]
     pub __bank_account_91_account_number_93_: Option<String>,
     #[serde(rename = "bank_account[ifsc]", skip_serializing_if = "Option::is_none")]
-    pub __bank_account_91_ifsc_93_: Option<String>,
+    pub __bank_account_91_ifsc_93_: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub account_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1034,7 +1034,10 @@ impl
             __bank_account_91_account_number_93_: metadata_map
                 .get("__bank_account_91_account_number_93_")
                 .cloned(),
-            __bank_account_91_ifsc_93_: metadata_map.get("__bank_account_91_ifsc_93_").cloned(),
+            __bank_account_91_ifsc_93_: metadata_map
+                .get("__bank_account_91_ifsc_93_")
+                .cloned()
+                .map(Secret::new),
             account_id: metadata_map.get("account_id").cloned(),
             phonepe_switch_context: metadata_map.get("phonepe_switch_context").cloned(),
             __notes_91_crm1_93_: metadata_map.get("__notes_91_crm1_93_").cloned(),
@@ -1160,9 +1163,9 @@ pub struct PaymentEntity {
     pub card_id: Option<String>,
     pub bank: Option<String>,
     pub wallet: Option<String>,
-    pub vpa: Option<String>,
-    pub email: Option<String>,
-    pub contact: Option<String>,
+    pub vpa: Option<Secret<String>>,
+    pub email: Option<Email>,
+    pub contact: Option<Secret<String>>,
     pub notes: Vec<String>,
     pub fee: Option<i64>,
     pub tax: Option<i64>,
@@ -1292,9 +1295,9 @@ pub struct RazorpayCaptureResponse {
     pub card_id: Option<String>,
     pub bank: Option<String>,
     pub wallet: Option<String>,
-    pub vpa: Option<String>,
-    pub email: Option<String>,
-    pub contact: Option<String>,
+    pub vpa: Option<Secret<String>>,
+    pub email: Option<Email>,
+    pub contact: Option<Secret<String>>,
     pub customer_id: Option<String>,
     pub token_id: Option<String>,
     pub notes: Vec<String>,
@@ -1384,7 +1387,7 @@ pub struct RazorpayWebCollectRequest {
     pub contact: Option<Secret<String>>,
     pub method: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub vpa: Option<String>,
+    pub vpa: Option<Secret<String>>,
     #[serde(rename = "notes[txn_uuid]", skip_serializing_if = "Option::is_none")]
     pub __notes_91_txn_uuid_93_: Option<String>,
     #[serde(
@@ -1498,11 +1501,11 @@ impl<
                     })?
                     .peek()
                     .to_string();
-                ("collect", Some(vpa))
+                (None, Some(vpa))
             }
             PaymentMethodData::Upi(UpiData::UpiIntent(_))
-            | PaymentMethodData::Upi(UpiData::UpiQr(_)) => ("intent", None),
-            _ => ("collect", None), // Default fallback
+            | PaymentMethodData::Upi(UpiData::UpiQr(_)) => (Some("intent"), None),
+            _ => (None, None), // Default fallback
         };
 
         // Get order_id from the CreateOrder response (stored in reference_id)
@@ -1549,7 +1552,7 @@ impl<
                 PaymentMethodData::Card(_) => "card".to_string(),
                 _ => "card".to_string(), // Default to card
             },
-            vpa: vpa.clone(),
+            vpa: vpa.clone().map(Secret::new),
             __notes_91_txn_uuid_93_: metadata_map.get("__notes_91_txn_uuid_93_").cloned(),
             __notes_91_transaction_id_93_: metadata_map
                 .get("__notes_91_transaction_id_93_")
@@ -1576,8 +1579,8 @@ impl<
                 .as_ref()
                 .and_then(|info| info.get_user_agent().ok())
                 .unwrap_or_else(|| "Mozilla/5.0".to_string()),
-            description: Some("Payment via Razorpay".to_string()),
-            flow: Some(flow_type.to_string()),
+            description: Some("".to_string()),
+            flow: flow_type.map(|s| s.to_string()),
             __notes_91_cust_id_93_: metadata_map.get("__notes_91_cust_id_93_").cloned(),
             __notes_91_cust_name_93_: metadata_map.get("__notes_91_cust_name_93_").cloned(),
             __upi_91_flow_93_: metadata_map.get("__upi_91_flow_93_").cloned(),

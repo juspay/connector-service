@@ -4,6 +4,81 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.11.12.0
+
+### Bug Fixes
+
+- Fixed xendit tests for pending cases ([#261](https://github.com/juspay/connector-service/pull/261)) ([`2ee9d08`](https://github.com/juspay/connector-service/commit/2ee9d085afed5b9986e25808e0ecfe61384447a8))
+
+**Full Changelog:** [`2025.11.11.0...2025.11.12.0`](https://github.com/juspay/connector-service/compare/2025.11.11.0...2025.11.12.0)
+
+- - -
+
+
+## 2025.11.10.0
+
+### Features
+
+- **connector:** [payload] implement core flows, card payment method and webhooks ([#249](https://github.com/juspay/connector-service/pull/249)) ([`aacf887`](https://github.com/juspay/connector-service/commit/aacf8878e790af265bab32c2653bd78956044951))
+
+### Refactors
+
+- Use typed connector response with masking for events ([#256](https://github.com/juspay/connector-service/pull/256)) ([`58e4b93`](https://github.com/juspay/connector-service/commit/58e4b93c3ea3d68fa8d3bed332eae98ec6e61afd))
+
+**Full Changelog:** [`2025.11.05.0...2025.11.10.0`](https://github.com/juspay/connector-service/compare/2025.11.05.0...2025.11.10.0)
+
+- - -
+
+## 2025.11.05.0
+
+### Documentation
+
+- **setup.md:** Toml always prod.toml issue fix for docker ([#242](https://github.com/juspay/connector-service/pull/242)) ([`6e1d41a`](https://github.com/juspay/connector-service/commit/6e1d41ae90f04e820f6fc372c1add2138337d42b))
+
+### Build System / Dependencies
+
+- Skip git commit hashes from typo check ([#243](https://github.com/juspay/connector-service/pull/243)) ([`88b7f9e`](https://github.com/juspay/connector-service/commit/88b7f9ecf72a304b4a5128183cb679c1be1eb914))
+
+**Full Changelog:** [`2025.11.04.1...2025.11.05.0`](https://github.com/juspay/connector-service/compare/2025.11.04.1...2025.11.05.0)
+
+- - -
+
+## 2025.11.04.1
+
+### Refactors
+
+- **connector:** [RAZORPAY] update Razorpay connector diffs ([#237](https://github.com/juspay/connector-service/pull/237)) ([`4ddb48d`](https://github.com/juspay/connector-service/commit/4ddb48dfc8d0f1b806bf106b10d9840df5133ad3))
+
+**Full Changelog:** [`2025.11.04.0...2025.11.04.1`](https://github.com/juspay/connector-service/compare/2025.11.04.0...2025.11.04.1)
+
+- - -
+
+## 2025.11.04.0
+
+### Bug Fixes
+
+- Authentication flow request and response handling fix ([#233](https://github.com/juspay/connector-service/pull/233)) ([`77eaaa6`](https://github.com/juspay/connector-service/commit/77eaaa6344de9657c83a65ed0d619f48dff0c4a5))
+
+### Documentation
+
+- **setup.md:** Add setup instructions for local development setup ([#239](https://github.com/juspay/connector-service/pull/239)) ([`e945aff`](https://github.com/juspay/connector-service/commit/e945aff95c71d7f9bf7701deddb7ea793a2f3fe3))
+
+**Full Changelog:** [`2025.10.31.0...2025.11.04.0`](https://github.com/juspay/connector-service/compare/2025.10.31.0...2025.11.04.0)
+
+- - -
+
+## 2025.10.31.0
+
+### Features
+
+- **connector:**
+  - Added SetupMandate, RepeatPayment and CreateConnectorCustomer flows for stripe ([#230](https://github.com/juspay/connector-service/pull/230)) ([`3ded301`](https://github.com/juspay/connector-service/commit/3ded3017f7fe1a722b694fab294b729d54be9f46))
+  - Added RepeatPayment flow for cybersource ([#235](https://github.com/juspay/connector-service/pull/235)) ([`33633b1`](https://github.com/juspay/connector-service/commit/33633b15e588fd2724cf30456a5bba46056169e9))
+
+**Full Changelog:** [`2025.10.30.0...2025.10.31.0`](https://github.com/juspay/connector-service/compare/2025.10.30.0...2025.10.31.0)
+
+- - -
+
 ## 2025.10.30.0
 
 ### Bug Fixes

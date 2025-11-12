@@ -5,13 +5,13 @@
 #![allow(dead_code)]
 
 use grpc_server::{app, configs};
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 mod common;
+mod utils;
 
 use std::{
     any::Any,
     collections::HashMap,
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -46,12 +46,6 @@ fn random_name() -> String {
 
 // Constants for AuthorizeDotNet connector
 const CONNECTOR_NAME: &str = "authorizedotnet";
-
-// Environment variable names for API credentials (can be set or overridden with provided values)
-const AUTHORIZENET_API_KEY_ENV: &str = "AUTHORIZENET_API_KEY";
-const AUTHORIZENET_KEY1_ENV: &str = "AUTHORIZENET_KEY1";
-
-// No default values - environment variables are required
 
 // Test card data matching working grpcurl payload
 const TEST_AMOUNT: i64 = 102; // Amount from working grpcurl
@@ -91,11 +85,16 @@ fn generate_unique_request_ref_id(prefix: &str) -> String {
 
 // Helper function to add AuthorizeDotNet metadata headers to a request
 fn add_authorizenet_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables (required)
-    let api_key = env::var(AUTHORIZENET_API_KEY_ENV)
-        .expect("AUTHORIZENET_API_KEY environment variable must be set to run tests");
-    let key1 = env::var(AUTHORIZENET_KEY1_ENV)
-        .expect("AUTHORIZENET_KEY1 environment variable must be set to run tests");
+    // Get API credentials using the common credential loading utility
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load Authorize.Net credentials");
+
+    let (api_key, key1) = match auth {
+        domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
+            (api_key.expose(), key1.expose())
+        }
+        _ => panic!("Expected BodyKey auth type for Authorize.Net"),
+    };
 
     request.metadata_mut().append(
         "x-connector",
@@ -209,6 +208,11 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         payment_method_type: None,
         merchant_account_metadata: HashMap::new(),
         state: None,
+        recurring_mandate_payment_data: None,
+        address: None,
+        connector_customer_id: None,
+        description: None,
+        ..Default::default()
     }
 }
 

@@ -73,12 +73,14 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
                     key1: Secret::new(key1),
                 },
                 request: PaymentsAuthorizeData {
+                    authentication_data: None,
                     payment_method_data: PaymentMethodData::Card(
                         domain_types::payment_method_data::Card {
                             card_number: RawCardNumber(cards::CardNumber::from_str(
@@ -253,12 +255,14 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
                     key1: Secret::new(key1),
                 },
                 request: PaymentsAuthorizeData {
+                    authentication_data: None,
                     payment_method_data: PaymentMethodData::Card(Default::default()),
                     amount: 0,
                     order_tax_amount: None,

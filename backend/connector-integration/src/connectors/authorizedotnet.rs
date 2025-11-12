@@ -2,7 +2,7 @@ pub mod transformers;
 
 use common_enums;
 use common_utils::{
-    consts, errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent,
+    consts, errors::CustomResult, events, ext_traits::ByteSliceExt, request::RequestContent,
     types::FloatMajorUnit,
 };
 use domain_types::{
@@ -44,7 +44,6 @@ use interfaces::{
         PaymentVoidV2, RefundSyncV2, RefundV2, RepeatPaymentV2, SetupMandateV2, SubmitEvidenceV2,
         ValidationTrait,
     },
-    events::connector_api_logs::ConnectorEvent,
     verification::SourceVerification,
 };
 use serde::Serialize;
@@ -531,7 +530,7 @@ impl<
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: transformers::ResponseMessages = res
             .response
