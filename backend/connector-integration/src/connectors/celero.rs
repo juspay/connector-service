@@ -629,32 +629,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: celero::CeleroErrorResponse = if res.response.is_empty() {
-            celero::CeleroErrorResponse::default()
-        } else {
-            res.response
-                .parse_struct("CeleroErrorResponse")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?
-        };
+        let response: celero::CeleroErrorResponse = res
+            .response
+            .parse_struct("CeleroErrorResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_error_response_body!(event_builder, response);
 
-        let error_code = response
-            .code
-            .or_else(|| response.error.as_ref().and_then(|e| e.code.clone()))
-            .unwrap_or_else(|| "UNKNOWN_ERROR".to_string());
-
-        let error_message = response
-            .message
-            .or_else(|| response.msg.clone())
-            .or_else(|| response.error.as_ref().and_then(|e| e.message.clone()))
-            .unwrap_or_else(|| "Unknown error occurred".to_string());
+        let error_details = celero::CeleroErrorDetails::from(response);
 
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: error_code,
-            message: error_message,
-            reason: response.error.as_ref().and_then(|e| e.description.clone()),
+            code: error_details
+                .error_code
+                .unwrap_or_else(|| "UNKNOWN_ERROR".to_string()),
+            message: error_details.error_message,
+            reason: error_details.decline_reason,
             attempt_status: None,
             connector_transaction_id: None,
             network_decline_code: None,
