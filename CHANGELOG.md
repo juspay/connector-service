@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.11.12.0
+
+### Bug Fixes
+
+- Fixed xendit tests for pending cases ([#261](https://github.com/juspay/connector-service/pull/261)) ([`2ee9d08`](https://github.com/juspay/connector-service/commit/2ee9d085afed5b9986e25808e0ecfe61384447a8))
+
+**Full Changelog:** [`2025.11.11.0...2025.11.12.0`](https://github.com/juspay/connector-service/compare/2025.11.11.0...2025.11.12.0)
+
+- - -
+
 
 ## 2025.11.10.0
 
