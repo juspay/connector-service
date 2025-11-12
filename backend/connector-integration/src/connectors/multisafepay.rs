@@ -180,7 +180,7 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: Authorize,
-            request_body: MultisafepayPaymentsRequest,
+            request_body: MultisafepayPaymentsRequest<T>,
             response_body: MultisafepayPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
@@ -235,7 +235,7 @@ macros::create_all_prerequisites!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Multisafepay,
-    curl_request: Json(MultisafepayPaymentsRequest),
+    curl_request: Json(MultisafepayPaymentsRequest<T>),
     curl_response: MultisafepayPaymentsResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,

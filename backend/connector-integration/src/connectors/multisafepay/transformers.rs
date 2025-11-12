@@ -8,7 +8,7 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::PaymentMethodDataTypes,
+    payment_method_data::{PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
@@ -217,8 +217,8 @@ pub struct CustomerInfo {
 }
 
 #[derive(Debug, Serialize)]
-pub struct GatewayInfo {
-    pub card_number: Secret<String>,
+pub struct GatewayInfo<T: PaymentMethodDataTypes> {
+    pub card_number: RawCardNumber<T>,
     pub card_expiry_date: i64, // Format: YYMM as integer
     pub card_cvc: Secret<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -252,7 +252,7 @@ pub struct DeliveryObject {
 // ===== PAYMENT REQUEST STRUCTURES =====
 
 #[derive(Debug, Serialize)]
-pub struct MultisafepayPaymentsRequest {
+pub struct MultisafepayPaymentsRequest<T: PaymentMethodDataTypes> {
     #[serde(rename = "type")]
     pub order_type: String,
     pub order_id: String,
@@ -263,7 +263,7 @@ pub struct MultisafepayPaymentsRequest {
     // Required fields for direct transactions
     pub payment_options: PaymentOptions,
     pub customer: CustomerInfo,
-    pub gateway_info: GatewayInfo,
+    pub gateway_info: GatewayInfo<T>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delivery: Option<DeliveryObject>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -291,7 +291,7 @@ impl<
             >,
             T,
         >,
-    > for MultisafepayPaymentsRequest
+    > for MultisafepayPaymentsRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -341,11 +341,8 @@ impl<
             .change_context(errors::ConnectorError::RequestEncodingFailed)
             .attach_printable("Failed to parse card expiry date as integer")?;
 
-        // Get card number as string - for direct transactions we need PCI data
-        let card_number_str = get_card_number_string(&card.card_number)?;
-
         let gateway_info = GatewayInfo {
-            card_number: Secret::new(card_number_str),
+            card_number: card.card_number.clone(),
             card_expiry_date,
             card_cvc: card.card_cvc.clone(),
             card_holder_name: card.card_holder_name.clone(),
@@ -439,7 +436,7 @@ impl<
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    > for MultisafepayPaymentsRequest
+    > for MultisafepayPaymentsRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -485,11 +482,8 @@ impl<T: PaymentMethodDataTypes>
             .change_context(errors::ConnectorError::RequestEncodingFailed)
             .attach_printable("Failed to parse card expiry date as integer")?;
 
-        // Get card number as string - for direct transactions we need PCI data
-        let card_number_str = get_card_number_string(&card.card_number)?;
-
         let gateway_info = GatewayInfo {
-            card_number: Secret::new(card_number_str),
+            card_number: card.card_number.clone(),
             card_expiry_date,
             card_cvc: card.card_cvc.clone(),
             card_holder_name: card.card_holder_name.clone(),
