@@ -102,7 +102,6 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     authentication_data: None,
-                    access_token: None,
                     payment_method_data: PaymentMethodData::Wallet(WalletData::BluecodeRedirect {}),
                     amount: 1000,
                     order_tax_amount: None,
@@ -249,7 +248,6 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     authentication_data: None,
-                    access_token: None,
                     payment_method_data: PaymentMethodData::Wallet(WalletData::BluecodeRedirect {}),
                     amount: 0,
                     order_tax_amount: None,

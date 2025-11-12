@@ -1220,7 +1220,6 @@ impl<
             off_session: value.off_session,
             order_category: value.order_category,
             session_token: None,
-            access_token: None,
             customer_acceptance: customer_acceptance
                 .map(mandates::CustomerAcceptance::foreign_try_from)
                 .transpose()?,
