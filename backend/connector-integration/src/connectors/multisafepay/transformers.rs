@@ -246,7 +246,7 @@ pub struct DeliveryObject {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub city: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub country: Option<String>,
+    pub country: Option<common_enums::CountryAlpha2>,
 }
 
 // ===== PAYMENT REQUEST STRUCTURES =====
@@ -405,7 +405,7 @@ impl<
                 house_number: address.line2.clone(),
                 zip_code: address.zip.clone(),
                 city: address.city.clone(),
-                country: address.country.map(|c| c.to_string()),
+                country: address.country,
             });
 
         Ok(Self {
@@ -546,7 +546,7 @@ impl<T: PaymentMethodDataTypes>
                 house_number: address.line2.clone(),
                 zip_code: address.zip.clone(),
                 city: address.city.clone(),
-                country: address.country.map(|c| c.to_string()),
+                country: address.country,
             });
 
         Ok(Self {
