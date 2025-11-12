@@ -1166,14 +1166,6 @@ impl<
             .map(router_request_types::AuthenticationData::try_from)
             .transpose()?;
 
-        let access_token = value
-            .access_token
-            .as_ref()
-            .map(|token| AccessTokenResponseData {
-                access_token: token.token.clone(),
-                token_type: None,
-                expires_in: token.expires_in_seconds,
-            });
         Ok(Self {
             authentication_data,
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
@@ -1228,7 +1220,7 @@ impl<
             off_session: value.off_session,
             order_category: value.order_category,
             session_token: None,
-            access_token,
+            access_token: None,
             customer_acceptance: customer_acceptance
                 .map(mandates::CustomerAcceptance::foreign_try_from)
                 .transpose()?,
