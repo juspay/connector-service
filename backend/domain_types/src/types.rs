@@ -2588,7 +2588,7 @@ pub fn generate_payment_void_response(
             PaymentsResponseData::TransactionResponse {
                 resource_id,
                 redirection_data: _,
-                connector_metadata: _,
+                connector_metadata,
                 network_txn_id: _,
                 connector_response_reference_id,
                 incremental_authorization_allowed,
@@ -2625,6 +2625,14 @@ pub fn generate_payment_void_response(
                     state,
                     mandate_reference: mandate_reference_grpc,
                     incremental_authorization_allowed,
+                    connector_metadata: connector_metadata
+                        .and_then(|value| value.as_object().cloned())
+                        .map(|map| {
+                            map.into_iter()
+                                .map(|(k, v)| (k, v.to_string()))
+                                .collect()
+                        })
+                        .unwrap_or_default(),
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -2663,6 +2671,7 @@ pub fn generate_payment_void_response(
                 raw_connector_request,
                 mandate_reference: None,
                 incremental_authorization_allowed: None,
+                connector_metadata: std::collections::HashMap::new(),
             })
         }
     }
@@ -4295,7 +4304,7 @@ pub fn generate_payment_capture_response(
             PaymentsResponseData::TransactionResponse {
                 resource_id,
                 redirection_data: _,
-                connector_metadata: _,
+                connector_metadata,
                 network_txn_id: _,
                 connector_response_reference_id,
                 incremental_authorization_allowed,
@@ -4336,6 +4345,14 @@ pub fn generate_payment_capture_response(
                         .resource_common_data
                         .minor_amount_captured
                         .map(|amount_captured| amount_captured.get_amount_as_i64()),
+                    connector_metadata: connector_metadata
+                        .and_then(|value| value.as_object().cloned())
+                        .map(|map| {
+                            map.into_iter()
+                                .map(|(k, v)| (k, v.to_string()))
+                                .collect()
+                        })
+                        .unwrap_or_default(),
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -4376,6 +4393,7 @@ pub fn generate_payment_capture_response(
                 mandate_reference: None,
                 captured_amount: None,
                 minor_captured_amount: None,
+                connector_metadata: std::collections::HashMap::new(),
             })
         }
     }
