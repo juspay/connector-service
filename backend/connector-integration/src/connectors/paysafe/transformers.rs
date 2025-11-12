@@ -304,15 +304,6 @@ impl<
             },
         )?;
 
-        let redirect_url = if redirect_url.contains("http://localhost") {
-            redirect_url.replace(
-                "http://localhost:8080",
-                "https://pix-mbp.orthrus-monster.ts.net",
-            )
-        } else {
-            "https://pix-mbp.orthrus-monster.ts.net".to_string()
-        };
-
         let return_links = Some(vec![
             requests::ReturnLink {
                 rel: requests::LinkType::Default,
