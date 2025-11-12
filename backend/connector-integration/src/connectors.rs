@@ -94,3 +94,6 @@ pub use self::worldpayvantiv::Worldpayvantiv;
 
 pub mod payload;
 pub use self::payload::Payload;
+
+pub mod celero;
+pub use self::celero::Celero;

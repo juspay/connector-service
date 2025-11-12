@@ -817,14 +817,16 @@ impl Payments {
         };
 
         // Execute connector processing
-        let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            session_token_router_data,
-            None,
-            external_event_params,
-            None,
-            common_enums::CallConnectorAction::Trigger,
+        let response = Box::pin(
+            external_services::service::execute_connector_processing_step(
+                &self.config.proxy,
+                connector_integration,
+                session_token_router_data,
+                None,
+                external_event_params,
+                None,
+                common_enums::CallConnectorAction::Trigger,
+            ),
         )
         .await
         .switch()
@@ -932,14 +934,16 @@ impl Payments {
             shadow_mode: event_params.shadow_mode,
         };
 
-        let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            access_token_router_data,
-            None,
-            external_event_params,
-            None,
-            common_enums::CallConnectorAction::Trigger,
+        let response = Box::pin(
+            external_services::service::execute_connector_processing_step(
+                &self.config.proxy,
+                connector_integration,
+                access_token_router_data,
+                None,
+                external_event_params,
+                None,
+                common_enums::CallConnectorAction::Trigger,
+            ),
         )
         .await
         .switch()
