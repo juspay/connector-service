@@ -1,6 +1,5 @@
 use std::{
     cmp,
-    collections::HashMap,
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -9,7 +8,7 @@ use aes::{Aes128, Aes192, Aes256};
 // PayTM API Constants
 pub mod constants {
     // PayTM API versions and identifiers
-    pub const API_VERSION: &str = "v1"; //TODO: should be taken from request
+    pub const API_VERSION: &str = "v1";
 
     // Request types
     pub const REQUEST_TYPE_PAYMENT: &str = "Payment";
@@ -48,8 +47,8 @@ use cbc::{
     cipher::{block_padding::Pkcs7, BlockEncryptMut, KeyIvInit},
     Encryptor,
 };
-use common_enums::{AttemptStatus, Currency};
-use common_utils::{errors::CustomResult, request::Method, types::StringMajorUnit, Email};
+use common_enums::{AttemptStatus};
+use common_utils::{errors::CustomResult, request::Method};
 use domain_types::{
     connector_flow::{Authorize, CreateSessionToken, PSync},
     connector_types::{
@@ -69,12 +68,30 @@ use ring::{
     digest,
     rand::{SecureRandom, SystemRandom},
 };
-use serde::{Deserialize, Serialize};
 use serde_json;
 use url::Url;
 
 use crate::{
     connectors::paytm::PaytmRouterData as MacroPaytmRouterData, types::ResponseRouterData,
+};
+
+pub use super::request::{
+    PaytmAmount, PaytmAuthorizeRequest, PaytmEnableMethod, PaytmExtendInfo, PaytmGoodsInfo,
+    PaytmInitiateReqBody, PaytmInitiateTxnRequest, PaytmNativeProcessRequestBody,
+    PaytmNativeProcessTxnRequest, PaytmProcessBodyTypes, PaytmProcessHeadTypes,
+    PaytmProcessTxnRequest, PaytmRequestHeader, PaytmShippingInfo, PaytmTransactionStatusReqBody,
+    PaytmTransactionStatusRequest, PaytmTxnTokenType, PaytmUserInfo,
+};
+pub use super::response::{
+    PaytmBankForm, PaytmBankFormBody, PaytmBankFormResponse, PaytmCallbackErrorBody,
+    PaytmCallbackErrorResponse, PaytmDeepLinkInfo, PaytmErrorBody, PaytmErrorResponse,
+    PaytmInitiateTxnResponse, PaytmNativeProcessFailureResp, PaytmNativeProcessRespBodyTypes,
+    PaytmNativeProcessSuccessResp, PaytmNativeProcessTxnResponse, PaytmProcessFailureResp,
+    PaytmProcessHead, PaytmProcessRespBodyTypes, PaytmProcessSuccessResp, PaytmProcessTxnResponse,
+    PaytmResBodyTypes, PaytmRespBody, PaytmRespHead, PaytmResultInfo,
+    PaytmSessionTokenErrorBody, PaytmSessionTokenErrorResponse, PaytmSuccessTransactionBody,
+    PaytmSuccessTransactionResponse, PaytmTransactionStatusRespBody,
+    PaytmTransactionStatusRespBodyTypes, PaytmTransactionStatusResponse, PaytmTxnInfo,
 };
 
 #[derive(Debug, Clone)]
@@ -154,460 +171,6 @@ pub fn determine_upi_flow<T: domain_types::payment_method_data::PaymentMethodDat
     }
 }
 
-// Request structures for CreateSessionToken flow (Paytm initiate)
-
-#[derive(Debug, Serialize)]
-pub struct PaytmInitiateTxnRequest {
-    pub head: PaytmRequestHeader,
-    pub body: PaytmInitiateReqBody,
-}
-
-#[derive(Debug, Serialize)]
-pub struct PaytmRequestHeader {
-    #[serde(rename = "clientId")]
-    pub client_id: Option<Secret<String>>,
-    pub version: String,
-    #[serde(rename = "requestTimestamp")]
-    pub request_timestamp: String,
-    #[serde(rename = "channelId", skip_serializing_if = "Option::is_none")]
-    pub channel_id: Option<String>,
-    pub signature: Secret<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct PaytmInitiateReqBody {
-    #[serde(rename = "requestType")]
-    pub request_type: String, // "Payment"
-    pub mid: Secret<String>, // Merchant ID
-    #[serde(rename = "orderId")]
-    pub order_id: String, // Merchant Reference ID
-    #[serde(rename = "websiteName")]
-    pub website_name: Secret<String>, // From api_secret
-    #[serde(rename = "txnAmount")]
-    pub txn_amount: PaytmAmount,
-    #[serde(rename = "userInfo")]
-    pub user_info: PaytmUserInfo,
-    #[serde(rename = "enablePaymentMode")]
-    pub enable_payment_mode: Vec<PaytmEnableMethod>,
-    #[serde(rename = "callbackUrl")]
-    pub callback_url: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub goods: Option<PaytmGoodsInfo>,
-    #[serde(rename = "shippingInfo", skip_serializing_if = "Option::is_none")]
-    pub shipping_info: Option<Vec<PaytmShippingInfo>>,
-    #[serde(rename = "extendInfo", skip_serializing_if = "Option::is_none")]
-    pub extend_info: Option<PaytmExtendInfo>,
-    // #[serde(rename = "promoCode", skip_serializing_if = "Option::is_none")]
-    // pub promo_code: Option<String>, //PaytmV2MetaData
-    // #[serde(rename = "splitSettlementInfo", skip_serializing_if = "Option::is_none")]
-    // pub split_settlement_info: Option<SplitSettlementInfo>,
-    // #[serde(rename = "emiSubventionToken", skip_serializing_if = "Option::is_none")]
-    // pub emi_subvention_token: Option<String>,
-    // #[serde(rename = "payableAmount", skip_serializing_if = "Option::is_none")]
-    // pub payable_amount: Option<PaytmAmount>,
-    // #[serde(rename = "MERC_UNIQ_REF", skip_serializing_if = "Option::is_none")]
-    // pub merc_uniq_ref: Option<String>,//PaytmV2MetaData
-    // #[serde(rename = "MERC_UNQ_REF", skip_serializing_if = "Option::is_none")]
-    // pub merc_unq_ref: Option<String>,// PaytmV2MetaData
-    // #[serde(rename = "billingInfo", skip_serializing_if = "Option::is_none")]
-    // pub billing_info: Option<Vec<BillingInfoObj>>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct PaytmAmount {
-    pub value: StringMajorUnit, // Decimal amount (e.g., "10.50")
-    pub currency: Currency,     // INR
-}
-
-#[derive(Debug, Serialize)]
-pub struct PaytmUserInfo {
-    #[serde(rename = "custId")]
-    pub cust_id: String,
-    pub mobile: Option<Secret<String>>,
-    pub email: Option<Email>,
-    #[serde(rename = "firstName")]
-    pub first_name: Option<Secret<String>>,
-    #[serde(rename = "lastName")]
-    pub last_name: Option<Secret<String>>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct PaytmGoodsInfo {
-    #[serde(rename = "merchantGoodsId", skip_serializing_if = "Option::is_none")]
-    pub merchant_goods_id: Option<String>, // Unique id for the goods item
-    #[serde(rename = "merchantShippingId", skip_serializing_if = "Option::is_none")]
-    pub merchant_shipping_id: Option<String>, // Merchant shipping id
-    #[serde(rename = "snapshotUrl", skip_serializing_if = "Option::is_none")]
-    pub snapshot_url: Option<String>, // Product Image URL
-    pub description: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub category: Option<String>, // Category of Product
-    pub quantity: i32,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub unit: Option<String>, // Unit of quantity (KG/Litre)
-    pub price: PaytmAmount,
-    #[serde(rename = "extendInfo", skip_serializing_if = "Option::is_none")]
-    pub extend_info: Option<PaytmExtendInfo>, // Extended info of goods
-}
-
-#[derive(Debug, Serialize)]
-pub struct PaytmShippingInfo {
-    #[serde(rename = "merchantShippingId", skip_serializing_if = "Option::is_none")]
-    pub merchant_shipping_id: Option<String>,
-    #[serde(rename = "trackingNo", skip_serializing_if = "Option::is_none")]
-    pub tracking_no: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub carrier: Option<String>,
-    #[serde(rename = "chargeAmount", skip_serializing_if = "Option::is_none")]
-    pub charge_amount: Option<PaytmAmount>, // reusing PaytmAmount struct
-    #[serde(rename = "countryName", skip_serializing_if = "Option::is_none")]
-    pub country_name: Option<String>,
-    #[serde(rename = "stateName", skip_serializing_if = "Option::is_none")]
-    pub state_name: Option<Secret<String>>,
-    #[serde(rename = "cityName", skip_serializing_if = "Option::is_none")]
-    pub city_name: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub address1: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub address2: Option<Secret<String>>,
-    #[serde(rename = "firstName", skip_serializing_if = "Option::is_none")]
-    pub first_name: Option<Secret<String>>,
-    #[serde(rename = "lastName", skip_serializing_if = "Option::is_none")]
-    pub last_name: Option<Secret<String>>,
-    #[serde(rename = "mobileNo", skip_serializing_if = "Option::is_none")]
-    pub mobile_no: Option<Secret<String>>,
-    #[serde(rename = "zipCode", skip_serializing_if = "Option::is_none")]
-    pub zip_code: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub email: Option<Email>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct PaytmExtendInfo {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub udf1: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub udf2: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub udf3: Option<String>,
-    #[serde(rename = "mercUnqRef", skip_serializing_if = "Option::is_none")]
-    pub merc_unq_ref: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub comments: Option<String>,
-    #[serde(rename = "subwalletAmount", skip_serializing_if = "Option::is_none")]
-    pub subwallet_amount: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct PaytmEnableMethod {
-    pub mode: String,                  // "UPI"
-    pub channels: Option<Vec<String>>, // ["UPI", "UPIPUSH"] for Collect and Intent
-}
-
-// Response structures for CreateSessionToken flow
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmInitiateTxnResponse {
-    pub head: PaytmRespHead,
-    pub body: PaytmResBodyTypes,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(untagged)]
-pub enum PaytmResBodyTypes {
-    SuccessBody(PaytmRespBody),
-    FailureBody(PaytmErrorBody),
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmRespBody {
-    #[serde(rename = "resultInfo")]
-    pub result_info: PaytmResultInfo,
-    #[serde(rename = "txnToken")]
-    pub txn_token: Secret<String>, // This will be stored as session_token
-                                   // #[serde(rename = "isPromoCodeValid", skip_serializing_if = "Option::is_none")]
-                                   // pub is_promo_code_valid: Option<bool>,
-                                   // #[serde(rename = "authenticated", skip_serializing_if = "Option::is_none")]
-                                   // pub authenticated: Option<bool>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmResultInfo {
-    #[serde(rename = "resultStatus")]
-    pub result_status: String,
-    #[serde(rename = "resultCode")]
-    pub result_code: String, // "0000" for success, "0002" for duplicate
-    #[serde(rename = "resultMsg")]
-    pub result_msg: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmRespHead {
-    #[serde(rename = "responseTimestamp")]
-    pub response_timestamp: Option<String>,
-    pub version: String,
-    #[serde(rename = "clientId")]
-    pub client_id: Option<Secret<String>>,
-    pub signature: Option<Secret<String>>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmErrorBody {
-    #[serde(rename = "resultInfo")]
-    pub result_info: PaytmResultInfo,
-}
-
-// Error response structure
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmErrorResponse {
-    #[serde(rename = "errorCode")]
-    pub error_code: Option<String>,
-    #[serde(rename = "errorMessage")]
-    pub error_message: Option<String>,
-    #[serde(rename = "errorDescription")]
-    pub error_description: Option<String>,
-    #[serde(rename = "transactionId")]
-    pub transaction_id: Option<String>,
-}
-
-// Transaction info structure used in multiple response types
-// Supports both lowercase (txnId) and uppercase (TXNID) field name variants
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmTxnInfo {
-    #[serde(rename = "txnId", alias = "TXNID")]
-    pub txn_id: Option<String>,
-    #[serde(rename = "orderId", alias = "ORDERID")]
-    pub order_id: Option<String>,
-    #[serde(rename = "bankTxnId", alias = "BANKTXNID")]
-    pub bank_txn_id: Option<String>,
-    #[serde(alias = "STATUS")]
-    pub status: Option<String>,
-    #[serde(rename = "respCode", alias = "RESPCODE")]
-    pub resp_code: Option<String>,
-    #[serde(rename = "respMsg", alias = "RESPMSG")]
-    pub resp_msg: Option<String>,
-    // Additional callback-specific fields
-    #[serde(alias = "CHECKSUMHASH")]
-    pub checksum_hash: Option<String>,
-    #[serde(alias = "CURRENCY")]
-    pub currency: Option<Currency>,
-    #[serde(alias = "GATEWAYNAME")]
-    pub gateway_name: Option<String>,
-    #[serde(alias = "MID")]
-    pub mid: Option<String>,
-    #[serde(alias = "PAYMENTMODE")]
-    pub payment_mode: Option<String>,
-    #[serde(alias = "TXNAMOUNT")]
-    pub txn_amount: Option<StringMajorUnit>,
-    #[serde(alias = "TXNDATE")]
-    pub txn_date: Option<String>,
-}
-
-// Alternative error response structure for callback URL format
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmCallbackErrorResponse {
-    pub head: PaytmRespHead,
-    pub body: PaytmCallbackErrorBody,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmCallbackErrorBody {
-    #[serde(rename = "resultInfo")]
-    pub result_info: PaytmResultInfo,
-    #[serde(rename = "txnInfo")]
-    pub txn_info: PaytmTxnInfo,
-}
-
-// Authorize flow request structures
-
-// Enum to handle both UPI Intent and UPI Collect request types
-#[derive(Debug, Serialize)]
-#[serde(untagged)]
-pub enum PaytmAuthorizeRequest {
-    Intent(PaytmProcessTxnRequest),
-    Collect(PaytmNativeProcessTxnRequest),
-}
-
-#[derive(Debug, Serialize)]
-pub struct PaytmProcessTxnRequest {
-    pub head: PaytmProcessHeadTypes,
-    pub body: PaytmProcessBodyTypes,
-}
-
-#[derive(Debug, Serialize)]
-pub struct PaytmProcessHeadTypes {
-    pub version: String, // "v2"
-    #[serde(rename = "requestTimestamp")]
-    pub request_timestamp: String,
-    #[serde(rename = "channelId")]
-    pub channel_id: String, // "WEB"
-    #[serde(rename = "txnToken")]
-    pub txn_token: Secret<String>, // From CreateSessionToken
-}
-
-#[derive(Debug, Serialize)]
-pub struct PaytmProcessBodyTypes {
-    pub mid: Secret<String>,
-    #[serde(rename = "orderId")]
-    pub order_id: String,
-    #[serde(rename = "requestType")]
-    pub request_type: String, // "Payment"
-    #[serde(rename = "paymentMode")]
-    pub payment_mode: String, // "UPI"
-    #[serde(rename = "paymentFlow")]
-    pub payment_flow: Option<String>, // "NONE"
-    #[serde(rename = "txnNote", skip_serializing_if = "Option::is_none")]
-    pub txn_note: Option<String>, //Transaction note providing a short description
-    #[serde(rename = "extendInfo", skip_serializing_if = "Option::is_none")]
-    pub extend_info: Option<PaytmExtendInfo>,
-}
-
-// UPI Collect Native Process Request
-#[derive(Debug, Serialize)]
-pub struct PaytmNativeProcessTxnRequest {
-    pub head: PaytmTxnTokenType,
-    pub body: PaytmNativeProcessRequestBody,
-}
-
-#[derive(Debug, Serialize)]
-pub struct PaytmTxnTokenType {
-    #[serde(rename = "txnToken")]
-    pub txn_token: Secret<String>, // From CreateSessionToken
-}
-
-#[derive(Debug, Serialize)]
-pub struct PaytmNativeProcessRequestBody {
-    #[serde(rename = "requestType")]
-    pub request_type: String, // "NATIVE"
-    pub mid: Secret<String>,
-    #[serde(rename = "orderId")]
-    pub order_id: String,
-    #[serde(rename = "paymentMode")]
-    pub payment_mode: String, // "UPI"
-    #[serde(rename = "payerAccount")]
-    pub payer_account: Option<String>, // UPI VPA for collect
-    #[serde(rename = "channelCode")]
-    pub channel_code: Option<String>, // Gateway code
-    #[serde(rename = "channelId")]
-    pub channel_id: String, // "WEB"
-    #[serde(rename = "txnToken")]
-    pub txn_token: Secret<String>, // From CreateSessionToken
-    #[serde(rename = "authMode")]
-    pub auth_mode: Option<String>, // "DEBIT_PIN"
-
-                                   // #[serde(rename = "cardInfo", skip_serializing_if = "Option::is_none")]
-                                   // pub card_info: Option<String>,
-                                   // #[serde(rename = "planId", skip_serializing_if = "Option::is_none")]
-                                   // pub plan_id: Option<String>,
-                                   // #[serde(rename = "cardTokenInfo", skip_serializing_if = "Option::is_none")]
-                                   // pub card_token_info: Option<CardTokenInfo>,
-                                   // #[serde(rename = "emiType", skip_serializing_if = "Option::is_none")]
-                                   // pub emi_type: Option<String>,
-                                   // #[serde(rename = "mandateAuthMode", skip_serializing_if = "Option::is_none")]
-                                   // pub mandate_auth_mode: Option<String>,
-                                   // #[serde(rename = "subscriptionId", skip_serializing_if = "Option::is_none")]
-                                   // pub subscription_id: Option<String>,
-                                   // #[serde(rename = "bankIfsc", skip_serializing_if = "Option::is_none")]
-                                   // pub bank_ifsc: Option<String>,
-                                   // #[serde(rename = "accountNumber", skip_serializing_if = "Option::is_none")]
-                                   // pub account_number: Option<String>,
-                                   // #[serde(rename = "userName", skip_serializing_if = "Option::is_none")]
-                                   // pub user_name: Option<String>,
-                                   // #[serde(rename = "accountType", skip_serializing_if = "Option::is_none")]
-                                   // pub account_type: Option<String>,
-}
-
-// Authorize flow response structures
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmProcessTxnResponse {
-    pub head: PaytmProcessHead,
-    pub body: PaytmProcessRespBodyTypes,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmProcessHead {
-    pub version: Option<String>,
-    #[serde(rename = "responseTimestamp")]
-    pub response_timestamp: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(untagged)]
-pub enum PaytmProcessRespBodyTypes {
-    SuccessBody(Box<PaytmProcessSuccessResp>),
-    FailureBody(PaytmProcessFailureResp),
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmProcessSuccessResp {
-    #[serde(rename = "resultInfo")]
-    pub result_info: PaytmResultInfo,
-    #[serde(rename = "deepLinkInfo", skip_serializing_if = "Option::is_none")]
-    pub deep_link_info: Option<PaytmDeepLinkInfo>,
-    #[serde(rename = "bankForm", skip_serializing_if = "Option::is_none")]
-    pub bank_form: Option<serde_json::Value>,
-    #[serde(rename = "upiDirectForm", skip_serializing_if = "Option::is_none")]
-    pub upi_direct_form: Option<serde_json::Value>,
-    #[serde(rename = "displayField", skip_serializing_if = "Option::is_none")]
-    pub display_field: Option<serde_json::Value>,
-    #[serde(rename = "riskContent", skip_serializing_if = "Option::is_none")]
-    pub risk_content: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmDeepLinkInfo {
-    #[serde(rename = "deepLink")]
-    pub deep_link: String, // UPI intent URL
-    #[serde(rename = "orderId")]
-    pub order_id: String,
-    #[serde(rename = "cashierRequestId")]
-    pub cashier_request_id: String,
-    #[serde(rename = "transId")]
-    pub trans_id: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmProcessFailureResp {
-    #[serde(rename = "resultInfo")]
-    pub result_info: PaytmResultInfo,
-    // #[serde(rename = "txnInfo", skip_serializing_if = "Option::is_none")]
-    // pub txn_info: Option<PaytmProcessTxnResponse>,
-    // #[serde(rename = "callBackUrl")]
-    // pub callback_url: String,
-    // #[serde(rename = "deepLinkInfo", skip_serializing_if = "Option::is_none")]
-    // pub deep_link_info: Option<PaytmDeepLinkInfo>,
-}
-
-// UPI Collect Native Process Response
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmNativeProcessTxnResponse {
-    pub head: PaytmProcessHead,
-    pub body: PaytmNativeProcessRespBodyTypes,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(untagged)]
-pub enum PaytmNativeProcessRespBodyTypes {
-    SuccessBody(PaytmNativeProcessSuccessResp),
-    FailureBody(PaytmNativeProcessFailureResp),
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmNativeProcessSuccessResp {
-    #[serde(rename = "resultInfo")]
-    pub result_info: PaytmResultInfo,
-    #[serde(rename = "transId")]
-    pub trans_id: String,
-    #[serde(rename = "orderId")]
-    pub order_id: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmNativeProcessFailureResp {
-    #[serde(rename = "resultInfo")]
-    pub result_info: PaytmResultInfo,
-}
 
 // Helper function for UPI VPA extraction
 pub fn extract_upi_vpa<T: domain_types::payment_method_data::PaymentMethodDataTypes>(
@@ -811,58 +374,11 @@ pub fn create_paytm_header(
     })
 }
 
-// PSync (Payment Sync) flow request structures
-
-#[derive(Debug, Serialize)]
-pub struct PaytmTransactionStatusRequest {
-    pub head: PaytmRequestHeader, //only signature data PaytmV2SyncRequestHeader = PaytmV2SyncRequestHeader {signature :: Text}
-    pub body: PaytmTransactionStatusReqBody,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PaytmTransactionStatusReqBody {
-    pub mid: Secret<String>, // Merchant ID
-    pub order_id: String,    // Order ID
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub txn_type: Option<String>, // PREAUTH, CAPTURE, RELEASE, WITHDRAW
-}
-
-// PSync (Payment Sync) flow response structures
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmTransactionStatusResponse {
-    pub head: PaytmRespHead,
-    pub body: PaytmTransactionStatusRespBodyTypes,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(untagged)]
-pub enum PaytmTransactionStatusRespBodyTypes {
-    SuccessBody(Box<PaytmTransactionStatusRespBody>),
-    FailureBody(PaytmErrorBody),
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PaytmTransactionStatusRespBody {
-    pub result_info: PaytmResultInfo,
-    pub txn_id: String,
-    pub bank_txn_id: String,
-    pub order_id: String,
-    pub txn_amount: Option<StringMajorUnit>,
-    pub txn_type: String,
-    pub gateway_name: String,
-    pub mid: String,
-    pub payment_mode: String,
-    pub refund_amt: String,
-    pub txn_date: String,
-}
 
 pub fn map_paytm_authorize_status_to_attempt_status(status_code: &str) -> AttemptStatus {
     match status_code {
         // Success case - 0000: Success
-        "0000" => AttemptStatus::Charged,
+        "0000" => AttemptStatus::Authorized,
 
         // 931: Incorrect Passcode
         // 1006: Your Session has expired.
@@ -921,68 +437,6 @@ pub fn map_paytm_sync_status_to_attempt_status(result_code: &str) -> AttemptStat
     }
 }
 
-// Additional response structures needed for compilation
-
-// Session token error response structure
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmSessionTokenErrorResponse {
-    pub head: PaytmRespHead,
-    pub body: PaytmSessionTokenErrorBody,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmSessionTokenErrorBody {
-    #[serde(rename = "extraParamsMap")]
-    pub extra_params_map: Option<serde_json::Value>, // This field must be present (even if null) to distinguish from other types
-    #[serde(rename = "resultInfo")]
-    pub result_info: PaytmResultInfo,
-}
-
-// Success transaction response structure (handles both callback and standard formats)
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmSuccessTransactionResponse {
-    pub head: PaytmRespHead,
-    pub body: PaytmSuccessTransactionBody,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmSuccessTransactionBody {
-    #[serde(rename = "resultInfo")]
-    pub result_info: PaytmResultInfo,
-    #[serde(rename = "txnInfo")]
-    pub txn_info: PaytmTxnInfo,
-    #[serde(rename = "callBackUrl")]
-    pub callback_url: Option<String>,
-}
-
-// Bank form response structure
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmBankFormResponse {
-    pub head: PaytmRespHead,
-    pub body: PaytmBankFormBody,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmBankFormBody {
-    #[serde(rename = "resultInfo")]
-    pub result_info: PaytmResultInfo,
-    #[serde(rename = "bankForm")]
-    pub bank_form: PaytmBankForm,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmBankForm {
-    #[serde(rename = "redirectForm")]
-    pub redirect_form: PaytmRedirectForm,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PaytmRedirectForm {
-    #[serde(rename = "actionUrl")]
-    pub action_url: String,
-    pub method: String,
-    pub content: HashMap<String, String>,
-}
 
 // TryFrom implementations required by the macro framework
 // The macro expects TryFrom implementations that work with its generated PaytmRouterData<RouterDataV2<...>>

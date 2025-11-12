@@ -1104,9 +1104,13 @@ impl<
     fn foreign_try_from(
         value: PaymentServiceAuthorizeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        println!("DEBUG: Starting PaymentsAuthorizeData::foreign_try_from conversion");
+        
         let email: Option<Email> = match value.email {
             Some(ref email_str) => {
+                println!("DEBUG: Converting email: {:?}", email_str);
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
+                    println!("ERROR: Failed to convert email: {:?}", email_str);
                     error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                         sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
                         error_identifier: 400,
@@ -1116,9 +1120,16 @@ impl<
                     }))
                 })?)
             }
-            None => None,
+            None => {
+                println!("DEBUG: No email provided");
+                None
+            }
         };
-        let merchant_config_currency = common_enums::Currency::foreign_try_from(value.currency())?;
+        println!("DEBUG: Converting merchant_config_currency: {:?}", value.currency());
+        let merchant_config_currency = common_enums::Currency::foreign_try_from(value.currency()).map_err(|e| {
+            println!("ERROR: Failed to convert currency: {:?}, error: {:?}", value.currency(), e);
+            e
+        })?;
 
         // Extract merchant_account_id from metadata before moving it
         let merchant_account_id = value.metadata.get("merchant_account_id").cloned();
@@ -1181,24 +1192,38 @@ impl<
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
                 value.capture_method(),
             )?),
-            payment_method_data: PaymentMethodData::<T>::foreign_try_from(
-                value.payment_method.clone().ok_or_else(|| {
-                    ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Payment method data is required".to_owned(),
-                        error_object: None,
-                    })
-                })?,
-            )
-            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                error_identifier: 400,
-                error_message: "Payment method data construction failed".to_owned(),
-                error_object: None,
-            }))?,
+            payment_method_data: {
+                println!("DEBUG: Converting payment_method_data: {:?}", value.payment_method);
+                PaymentMethodData::<T>::foreign_try_from(
+                    value.payment_method.clone().ok_or_else(|| {
+                        println!("ERROR: Payment method data is missing");
+                        ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Payment method data is required".to_owned(),
+                            error_object: None,
+                        })
+                    })?,
+                )
+                .map_err(|e| {
+                    println!("ERROR: Failed to convert payment_method_data: {:?}", e);
+                    e
+                })
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Payment method data construction failed".to_owned(),
+                    error_object: None,
+                }))?
+            },
             amount: value.amount,
-            currency: common_enums::Currency::foreign_try_from(value.currency())?,
+            currency: {
+                println!("DEBUG: Converting main currency: {:?}", value.currency());
+                common_enums::Currency::foreign_try_from(value.currency()).map_err(|e| {
+                    println!("ERROR: Failed to convert main currency: {:?}, error: {:?}", value.currency(), e);
+                    e
+                })?
+            },
             confirm: true,
             webhook_url: value.webhook_url.clone(),
             browser_info: value
@@ -1237,17 +1262,24 @@ impl<
             enrolled_for_3ds: false,
             related_transaction_id: None,
             payment_experience: None,
-            customer_id: value
-                .customer_id
-                .clone()
-                .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
-                .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_CUSTOMER_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Failed to parse Customer Id".to_owned(),
-                    error_object: None,
-                }))?,
+            customer_id: {
+                println!("DEBUG: Converting customer_id: {:?}", value.customer_id);
+                value
+                    .customer_id
+                    .clone()
+                    .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
+                    .transpose()
+                    .map_err(|e| {
+                        println!("ERROR: Failed to convert customer_id: {:?}", e);
+                        e
+                    })
+                    .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_CUSTOMER_ID".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Failed to parse Customer Id".to_owned(),
+                        error_object: None,
+                    }))?
+            },
             request_incremental_authorization: false,
             metadata: if value.metadata.is_empty() {
                 None
