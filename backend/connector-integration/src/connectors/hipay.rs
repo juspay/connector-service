@@ -3,6 +3,34 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
+
+// Helper function to recursively flatten $text fields in JSON values
+fn flatten_text_fields(value: serde_json::Value) -> serde_json::Value {
+    match value {
+        serde_json::Value::Object(map) => {
+            // If empty object, convert to empty string
+            if map.is_empty() {
+                return serde_json::Value::String(String::new());
+            }
+
+            // If this object has a single "$text" field, extract it
+            if map.len() == 1 && map.contains_key("$text") {
+                return flatten_text_fields(map.get("$text").unwrap().clone());
+            }
+
+            // Otherwise, recursively flatten all fields
+            let flattened_map: serde_json::Map<String, serde_json::Value> = map
+                .into_iter()
+                .map(|(k, v)| (k, flatten_text_fields(v)))
+                .collect();
+            serde_json::Value::Object(flattened_map)
+        }
+        serde_json::Value::Array(arr) => {
+            serde_json::Value::Array(arr.into_iter().map(flatten_text_fields).collect())
+        }
+        other => other,
+    }
+}
 use common_utils::{
     errors::CustomResult,
     events,
@@ -736,7 +764,7 @@ impl<
             .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
 
         Ok(format!(
-            "{}/v3/transaction/{}",
+            "{}/v1/transaction/{}",
             req.resource_common_data
                 .connectors
                 .hipay
@@ -764,8 +792,19 @@ impl<
         let json_bytes = preprocess_xml_response_bytes(response_bytes.into())
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
+        // PSync responses have a "transaction" wrapper, extract it
+        let json_value: serde_json::Value = serde_json::from_slice(&json_bytes)
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        let transaction_value = json_value
+            .get("transaction")
+            .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        // Flatten $text fields recursively
+        let flattened_value = flatten_text_fields(transaction_value.clone());
+
         // Parse as HipayPSyncResponse
-        let response: HipayPSyncResponse = serde_json::from_slice(&json_bytes)
+        let response: HipayPSyncResponse = serde_json::from_value(flattened_value)
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_response_body!(event_builder, response);
@@ -1137,7 +1176,7 @@ impl<
         let transaction_reference = req.request.connector_refund_id.clone();
 
         Ok(format!(
-            "{}/v3/transaction/{}",
+            "{}/v1/transaction/{}",
             req.resource_common_data
                 .connectors
                 .hipay
@@ -1165,8 +1204,19 @@ impl<
         let json_bytes = preprocess_xml_response_bytes(response_bytes.into())
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
+        // RSync responses have a "transaction" wrapper, extract it
+        let json_value: serde_json::Value = serde_json::from_slice(&json_bytes)
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        let transaction_value = json_value
+            .get("transaction")
+            .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        // Flatten $text fields recursively
+        let flattened_value = flatten_text_fields(transaction_value.clone());
+
         // Parse as HipayRSyncResponse
-        let response: HipayRSyncResponse = serde_json::from_slice(&json_bytes)
+        let response: HipayRSyncResponse = serde_json::from_value(flattened_value)
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_response_body!(event_builder, response);
