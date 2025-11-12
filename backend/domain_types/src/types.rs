@@ -41,6 +41,18 @@ fn extract_headers_from_metadata(
     }
 }
 
+/// Convert merchant_account_metadata HashMap to JSON Value, deserializing string values that contain JSON
+fn convert_merchant_metadata_to_json(metadata: &HashMap<String, String>) -> serde_json::Value {
+    let mut metadata_map = serde_json::Map::new();
+    for (key, value) in metadata {
+        // Try to parse the value as JSON first, if it fails, treat it as a plain string
+        let json_value = serde_json::from_str::<serde_json::Value>(value)
+            .unwrap_or_else(|_| serde_json::Value::String(value.clone()));
+        metadata_map.insert(key.clone(), json_value);
+    }
+    serde_json::Value::Object(metadata_map)
+}
+
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use crate::{
     connector_flow::{
@@ -1124,23 +1136,11 @@ impl<
         let merchant_account_id = value.metadata.get("merchant_account_id").cloned();
 
         // Store merchant_account_metadata for connector use
-        let merchant_account_metadata = (!value.merchant_account_metadata.is_empty())
-            .then(|| {
-                serde_json::to_value(&value.merchant_account_metadata)
-                    .map(common_utils::pii::SecretSerdeValue::new)
-                    .map_err(|_| {
-                        error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
-                            crate::errors::ApiError {
-                                sub_code: "SERDE_JSON_ERROR".to_owned(),
-                                error_identifier: 500,
-                                error_message: "Failed to serialize merchant_account_metadata"
-                                    .to_owned(),
-                                error_object: None,
-                            },
-                        ))
-                    })
-            })
-            .transpose()?;
+        let merchant_account_metadata = (!value.merchant_account_metadata.is_empty()).then(|| {
+            common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
+                &value.merchant_account_metadata,
+            ))
+        });
 
         let setup_future_usage = value
             .setup_future_usage
@@ -1656,18 +1656,9 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
         // Extract specific headers for vault and other integrations
         let vault_headers = extract_headers_from_metadata(metadata);
 
-        let connector_meta_data = serde_json::to_value(&value.merchant_account_metadata)
-            .map(common_utils::pii::SecretSerdeValue::new)
-            .map_err(|_| {
-                error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
-                    crate::errors::ApiError {
-                        sub_code: "SERDE_JSON_ERROR".to_owned(),
-                        error_identifier: 500,
-                        error_message: "Failed to serialize merchant_account_metadata".to_owned(),
-                        error_object: None,
-                    },
-                ))
-            })?;
+        let connector_meta_data = common_utils::pii::SecretSerdeValue::new(
+            convert_merchant_metadata_to_json(&value.merchant_account_metadata),
+        );
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -4645,23 +4636,11 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
                 }))?,
             statement_descriptor: None,
             merchant_order_reference_id: None,
-            merchant_account_metadata: (!value.merchant_account_metadata.is_empty())
-                .then(|| {
-                    serde_json::to_value(&value.merchant_account_metadata)
-                        .map(common_utils::pii::SecretSerdeValue::new)
-                        .map_err(|_| {
-                            error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
-                                crate::errors::ApiError {
-                                    sub_code: "SERDE_JSON_ERROR".to_owned(),
-                                    error_identifier: 500,
-                                    error_message: "Failed to serialize merchant_account_metadata"
-                                        .to_owned(),
-                                    error_object: None,
-                                },
-                            ))
-                        })
-                })
-                .transpose()?,
+            merchant_account_metadata: (!value.merchant_account_metadata.is_empty()).then(|| {
+                common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
+                    &value.merchant_account_metadata,
+                ))
+            }),
         })
     }
 }
@@ -5518,23 +5497,11 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             payment_method_type,
-            merchant_account_metadata: (!value.merchant_account_metadata.is_empty())
-                .then(|| {
-                    serde_json::to_value(&value.merchant_account_metadata)
-                        .map(common_utils::pii::SecretSerdeValue::new)
-                        .map_err(|_| {
-                            error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
-                                crate::errors::ApiError {
-                                    sub_code: "SERDE_JSON_ERROR".to_owned(),
-                                    error_identifier: 500,
-                                    error_message: "Failed to serialize merchant_account_metadata"
-                                        .to_owned(),
-                                    error_object: None,
-                                },
-                            ))
-                        })
-                })
-                .transpose()?,
+            merchant_account_metadata: (!value.merchant_account_metadata.is_empty()).then(|| {
+                common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
+                    &value.merchant_account_metadata,
+                ))
+            }),
             off_session: value.off_session,
             split_payments: None,
             recurring_mandate_payment_data: value.recurring_mandate_payment_data.map(|v| {
@@ -6351,26 +6318,11 @@ impl
             description: None,
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                (!value.merchant_account_metadata.is_empty())
-                    .then(|| {
-                        serde_json::to_value(&value.merchant_account_metadata)
-                            .map(common_utils::pii::SecretSerdeValue::new)
-                            .map_err(|_| {
-                                error_stack::Report::new(
-                                    ApplicationErrorResponse::InternalServerError(
-                                        crate::errors::ApiError {
-                                            sub_code: "SERDE_JSON_ERROR".to_owned(),
-                                            error_identifier: 500,
-                                            error_message:
-                                                "Failed to serialize merchant_account_metadata"
-                                                    .to_owned(),
-                                            error_object: None,
-                                        },
-                                    ),
-                                )
-                            })
-                    })
-                    .transpose()?
+                (!value.merchant_account_metadata.is_empty()).then(|| {
+                    common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
+                        &value.merchant_account_metadata,
+                    ))
+                })
             },
             amount_captured: None,
             minor_amount_captured: None,
@@ -6446,26 +6398,11 @@ impl
             description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                (!value.merchant_account_metadata.is_empty())
-                    .then(|| {
-                        serde_json::to_value(&value.merchant_account_metadata)
-                            .map(common_utils::pii::SecretSerdeValue::new)
-                            .map_err(|_| {
-                                error_stack::Report::new(
-                                    ApplicationErrorResponse::InternalServerError(
-                                        crate::errors::ApiError {
-                                            sub_code: "SERDE_JSON_ERROR".to_owned(),
-                                            error_identifier: 500,
-                                            error_message:
-                                                "Failed to serialize merchant_account_metadata"
-                                                    .to_owned(),
-                                            error_object: None,
-                                        },
-                                    ),
-                                )
-                            })
-                    })
-                    .transpose()?
+                (!value.merchant_account_metadata.is_empty()).then(|| {
+                    common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
+                        &value.merchant_account_metadata,
+                    ))
+                })
             },
             amount_captured: None,
             minor_amount_captured: None,
@@ -6541,26 +6478,11 @@ impl
             description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
             connector_meta_data: {
-                (!value.merchant_account_metadata.is_empty())
-                    .then(|| {
-                        serde_json::to_value(&value.merchant_account_metadata)
-                            .map(common_utils::pii::SecretSerdeValue::new)
-                            .map_err(|_| {
-                                error_stack::Report::new(
-                                    ApplicationErrorResponse::InternalServerError(
-                                        crate::errors::ApiError {
-                                            sub_code: "SERDE_JSON_ERROR".to_owned(),
-                                            error_identifier: 500,
-                                            error_message:
-                                                "Failed to serialize merchant_account_metadata"
-                                                    .to_owned(),
-                                            error_object: None,
-                                        },
-                                    ),
-                                )
-                            })
-                    })
-                    .transpose()?
+                (!value.merchant_account_metadata.is_empty()).then(|| {
+                    common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
+                        &value.merchant_account_metadata,
+                    ))
+                })
             },
             amount_captured: None,
             minor_amount_captured: None,

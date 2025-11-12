@@ -39,12 +39,11 @@ use interfaces::{
 use serde::Serialize;
 use std::fmt::Debug;
 use transformers::{
-    self as paysafe, PaysafeAuthenticateRequest, PaysafeAuthenticateResponse,
-    PaysafeAuthorizeResponse, PaysafeCaptureRequest, PaysafeCaptureResponse,
-    PaysafeCreateOrderRequest, PaysafeCreateOrderResponse, PaysafeErrorResponse,
+    self as paysafe, PaysafeAuthorizeResponse, PaysafeCaptureRequest, PaysafeCaptureResponse,
+    PaysafeErrorResponse, PaysafePaymentMethodTokenRequest, PaysafePaymentMethodTokenResponse,
     PaysafePaymentsRequest, PaysafeRSyncResponse, PaysafeRefundRequest, PaysafeRefundResponse,
-    PaysafeRepeatPaymentRequest, PaysafeRepeatPaymentResponse, PaysafeSetupMandateRequest,
-    PaysafeSetupMandateResponse, PaysafeSyncResponse, PaysafeVoidRequest, PaysafeVoidResponse,
+    PaysafeRepeatPaymentRequest, PaysafeRepeatPaymentResponse, PaysafeSyncResponse,
+    PaysafeVoidRequest, PaysafeVoidResponse,
 };
 
 use super::macros;
@@ -84,9 +83,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Paysafe<T>
 {
+    fn should_do_payment_method_token(&self) -> bool {
+        true
+    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate<T> for Paysafe<T>
+    connector_types::PaymentOrderCreate for Paysafe<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -156,22 +158,10 @@ macros::create_all_prerequisites!(
     generic_type: T,
     api: [
         (
-            flow: CreateOrder,
-            request_body: PaysafeCreateOrderRequest<T>,
-            response_body: PaysafeCreateOrderResponse,
-            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData<T>, PaymentCreateOrderResponse>,
-        ),
-        (
-            flow: Authenticate,
-            request_body: PaysafeAuthenticateRequest<T>,
-            response_body: PaysafeAuthenticateResponse,
-            router_data: RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: SetupMandate,
-            request_body: PaysafeSetupMandateRequest<T>,
-            response_body: PaysafeSetupMandateResponse,
-            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+            flow: PaymentMethodToken,
+            request_body: PaysafePaymentMethodTokenRequest<T>,
+            response_body: PaysafePaymentMethodTokenResponse,
+            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         ),
         (
             flow: Authorize,
@@ -325,84 +315,38 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 }
 
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Paysafe,
-    curl_request: Json(PaysafeCreateOrderRequest<T>),
-    curl_response: PaysafeCreateOrderResponse,
-    flow_name: CreateOrder,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentCreateOrderData<T>,
-    flow_response: PaymentCreateOrderResponse,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData<T>, PaymentCreateOrderResponse>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData<T>, PaymentCreateOrderResponse>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}v1/paymenthandles", self.connector_base_url_payments(req)))
-        }
-    }
-);
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Paysafe<T>
+{
+}
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Paysafe,
-    curl_request: Json(PaysafeAuthenticateRequest<T>),
-    curl_response: PaysafeAuthenticateResponse,
-    flow_name: Authenticate,
+    curl_request: Json(PaysafePaymentMethodTokenRequest<T>),
+    curl_response: PaysafePaymentMethodTokenResponse,
+    flow_name: PaymentMethodToken,
     resource_common_data: PaymentFlowData,
-    flow_request: PaymentsAuthenticateData<T>,
-    flow_response: PaymentsResponseData,
+    flow_request: PaymentMethodTokenizationData<T>,
+    flow_response: PaymentMethodTokenResponse,
     http_method: Post,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+            req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
-            req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}v1/paymenthandles", self.connector_base_url_payments(req)))
-        }
-    }
-);
-
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Paysafe,
-    curl_request: Json(PaysafeSetupMandateRequest<T>),
-    curl_response: PaysafeSetupMandateResponse,
-    flow_name: SetupMandate,
-    resource_common_data: PaymentFlowData,
-    flow_request: SetupMandateRequestData<T>,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+            req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}v1/paymenthandles", self.connector_base_url_payments(req)))
         }
@@ -606,7 +550,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Paysafe,
@@ -698,36 +641,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData<T>,
-        PaymentCreateOrderResponse,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
         Accept,
         DisputeFlowData,
         AcceptDisputeData,
@@ -799,9 +712,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        PreAuthenticate,
+        Authenticate,
         PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
+        PaymentsAuthenticateData<T>,
         PaymentsResponseData,
     > for Paysafe<T>
 {
@@ -809,10 +722,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        PaymentMethodToken,
+        CreateOrder,
         PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Paysafe<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
     > for Paysafe<T>
 {
 }
@@ -865,6 +788,27 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+// SourceVerification implementations for PaymentMethodToken and PreAuthenticate
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Paysafe<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Paysafe<T>
+{
+}
+
 // SourceVerification implementations for unsupported flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -872,16 +816,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         AccessTokenRequestData,
         AccessTokenResponseData,
-    > for Paysafe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
     > for Paysafe<T>
 {
 }
@@ -898,9 +832,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
-        PreAuthenticate,
+        PostAuthenticate,
         PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
+        PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
     > for Paysafe<T>
 {
@@ -908,9 +842,29 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
-        PostAuthenticate,
+        Authenticate,
         PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Paysafe<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Paysafe<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
         PaymentsResponseData,
     > for Paysafe<T>
 {

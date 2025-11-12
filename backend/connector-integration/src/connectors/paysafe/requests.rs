@@ -3,10 +3,6 @@ use domain_types::payment_method_data::{PaymentMethodDataTypes, RawCardNumber};
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-// ============================================
-// Authorize Flow Requests
-// ============================================
-
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaysafePaymentsRequest {
@@ -47,20 +43,12 @@ pub enum PaysafeStoredCredentialType {
     Topup,
 }
 
-// ============================================
-// Capture Flow Request
-// ============================================
-
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaysafeCaptureRequest {
     pub merchant_ref_num: String,
     pub amount: MinorUnit,
 }
-
-// ============================================
-// Void Flow Request
-// ============================================
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -69,20 +57,12 @@ pub struct PaysafeVoidRequest {
     pub amount: MinorUnit,
 }
 
-// ============================================
-// Refund Flow Request
-// ============================================
-
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaysafeRefundRequest {
     pub merchant_ref_num: String,
     pub amount: MinorUnit,
 }
-
-// ============================================
-// SetupMandate (Preorder) Flow Request
-// ============================================
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -220,8 +200,6 @@ pub struct PaysafeBillingDetails {
     pub country: common_enums::CountryAlpha2,
 }
 
-// Type aliases for flows that reuse request structures
+// Type aliases for flows
+pub type PaysafePaymentMethodTokenRequest<T> = PaysafeSetupMandateRequest<T>;
 pub type PaysafeRepeatPaymentRequest = PaysafePaymentsRequest;
-pub type PaysafePaymentHandleRequest<T> = PaysafeSetupMandateRequest<T>;
-pub type PaysafeCreateOrderRequest<T> = PaysafeSetupMandateRequest<T>;
-pub type PaysafeAuthenticateRequest<T> = PaysafeSetupMandateRequest<T>;

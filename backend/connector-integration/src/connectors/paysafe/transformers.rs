@@ -3,21 +3,17 @@ use std::collections::HashMap;
 use common_enums::enums;
 use common_utils::{ext_traits::ValueExt, request::Method};
 use domain_types::{
-    connector_flow::{
-        Authenticate, Authorize, Capture, CreateOrder, RSync, Refund, RepeatPayment, SetupMandate,
-        Void,
-    },
+    connector_flow::{Authorize, Capture, PaymentMethodToken, RSync, Refund, RepeatPayment, Void},
     connector_types::{
-        MandateReference, MandateReferenceId, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        MandateReference, MandateReferenceId, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
-    router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
@@ -216,8 +212,6 @@ impl From<responses::PaysafeRefundStatus> for enums::RefundStatus {
     }
 }
 
-// SetupMandate (Preorder) Flow - Request
-
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -229,24 +223,24 @@ impl<
     TryFrom<
         PaysafeRouterData<
             RouterDataV2<
-                SetupMandate,
+                PaymentMethodToken,
                 PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
             >,
             T,
         >,
-    > for requests::PaysafeSetupMandateRequest<T>
+    > for requests::PaysafePaymentMethodTokenRequest<T>
 {
     type Error = ConnectorError;
 
     fn try_from(
         item: PaysafeRouterData<
             RouterDataV2<
-                SetupMandate,
+                PaymentMethodToken,
                 PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
             >,
             T,
         >,
@@ -266,20 +260,11 @@ impl<
             })?;
 
         let currency = router_data.request.currency;
-        let amount = router_data.request.minor_amount.ok_or(
-            errors::ConnectorError::MissingRequiredField {
-                field_name: "amount",
-            },
-        )?;
-        let settle_with_auth = false; // Setup mandate doesn't settle
+        let amount = router_data.request.amount;
+        let settle_with_auth = false; // PaymentMethodToken doesn't settle, just tokenizes
 
-        // For 3DS cards
-        let is_three_ds = is_three_ds(&router_data.resource_common_data.auth_type);
-        let account_id = if is_three_ds {
-            metadata.account_id.get_three_ds_account_id(currency)?
-        } else {
-            metadata.account_id.get_no_three_ds_account_id(currency)?
-        };
+        // PaymentMethodToken is for no-3DS flow only
+        let account_id = metadata.account_id.get_no_three_ds_account_id(currency)?;
 
         let payment_method = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(req_card) => {
@@ -302,249 +287,8 @@ impl<
             }
             _ => {
                 return Err(errors::ConnectorError::NotSupported {
-                    message: "Only card payment methods are supported for SetupMandate".to_string(),
-                    connector: "Paysafe",
-                }
-                .into())
-            }
-        };
-
-        let billing_details = create_paysafe_billing_details(&router_data.resource_common_data)?;
-
-        // For 3DS, add redirect URLs and 3DS configuration
-        let (return_links, three_ds) = if is_three_ds {
-            let redirect_url = router_data.resource_common_data.get_return_url().ok_or(
-                errors::ConnectorError::MissingRequiredField {
-                    field_name: "return_url",
-                },
-            )?;
-
-            let redirect_url = if redirect_url.contains("http://localhost") {
-                redirect_url.replace(
-                    "http://localhost:8080",
-                    "https://pix-mbp.orthrus-monster.ts.net/",
-                )
-            } else {
-                "https://pix-mbp.orthrus-monster.ts.net/".to_string()
-            };
-
-            let return_links = Some(vec![
-                requests::ReturnLink {
-                    rel: requests::LinkType::Default,
-                    href: redirect_url.clone(),
-                    method: Method::Get.to_string(),
-                },
-                requests::ReturnLink {
-                    rel: requests::LinkType::OnCompleted,
-                    href: redirect_url.clone(),
-                    method: Method::Get.to_string(),
-                },
-                requests::ReturnLink {
-                    rel: requests::LinkType::OnFailed,
-                    href: redirect_url.clone(),
-                    method: Method::Get.to_string(),
-                },
-                requests::ReturnLink {
-                    rel: requests::LinkType::OnCancelled,
-                    href: redirect_url.clone(),
-                    method: Method::Get.to_string(),
-                },
-            ]);
-
-            let three_ds_config = Some(requests::ThreeDs {
-                merchant_url: redirect_url,
-                device_channel: requests::DeviceChannel::Browser,
-                message_category: requests::ThreeDsMessageCategory::Payment,
-                authentication_purpose: requests::ThreeDsAuthenticationPurpose::PaymentTransaction,
-                requestor_challenge_preference: requests::ThreeDsChallengePreference::NoPreference,
-            });
-
-            (return_links, three_ds_config)
-        } else {
-            (None, None)
-        };
-
-        Ok(Self {
-            merchant_ref_num: router_data
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
-            amount,
-            settle_with_auth,
-            payment_method,
-            currency_code: currency,
-            payment_type: requests::PaysafePaymentType::Card,
-            transaction_type: requests::TransactionType::Payment,
-            return_links,
-            account_id,
-            three_ds,
-            profile: None,
-            billing_details,
-        })
-    }
-}
-
-// SetupMandate (Preorder) Flow - Response
-
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            responses::PaysafeSetupMandateResponse,
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    >
-    for RouterDataV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    >
-{
-    type Error = ConnectorError;
-
-    fn try_from(
-        item: ResponseRouterData<
-            responses::PaysafeSetupMandateResponse,
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let status = enums::AttemptStatus::try_from(item.response.status)?;
-
-        let redirection_data = item
-            .response
-            .links
-            .as_ref()
-            .and_then(|links| links.first())
-            .map(|link| RedirectForm::Form {
-                endpoint: link.href.clone(),
-                method: Method::Get,
-                form_fields: Default::default(),
-            });
-
-        let connector_metadata = serde_json::json!(PaysafeMeta {
-            payment_handle_token: item.response.payment_handle_token.clone(),
-        });
-
-        // Store the payment_handle_token as mandate reference
-        let mandate_reference = MandateReference {
-            connector_mandate_id: Some(item.response.payment_handle_token.peek().to_string()),
-            payment_method_id: None,
-        };
-
-        let mut router_data = item.router_data;
-        router_data.resource_common_data.status = status;
-
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::NoResponseId,
-                redirection_data: redirection_data.map(Box::new),
-                mandate_reference: Some(Box::new(mandate_reference)),
-                connector_metadata: Some(connector_metadata),
-                network_txn_id: None,
-                connector_response_reference_id: Some(item.response.merchant_ref_num),
-                incremental_authorization_allowed: None,
-                status_code: item.http_code,
-            }),
-            ..router_data
-        })
-    }
-}
-
-// CreateOrder (no-3DS) Flow - Request
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        PaysafeRouterData<
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData<T>,
-                PaymentCreateOrderResponse,
-            >,
-            T,
-        >,
-    > for requests::PaysafeCreateOrderRequest<T>
-{
-    type Error = ConnectorError;
-
-    fn try_from(
-        item: PaysafeRouterData<
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData<T>,
-                PaymentCreateOrderResponse,
-            >,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let router_data = &item.router_data;
-
-        let metadata: PaysafeConnectorMetadataObject = router_data
-            .resource_common_data
-            .connector_meta_data
-            .clone()
-            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
-                config: "connector_meta_data",
-            })?
-            .parse_value("PaysafeConnectorMetadataObject")
-            .change_context(errors::ConnectorError::InvalidConnectorConfig {
-                config: "connector_meta_data",
-            })?;
-
-        let currency = router_data.request.currency;
-        let amount = router_data.request.amount;
-        let settle_with_auth = false; // CreateOrder doesn't settle, just creates payment handle
-
-        // CreateOrder is for no-3DS flow
-        let account_id = metadata.account_id.get_no_three_ds_account_id(currency)?;
-
-        // Get payment method data - it's required for CreateOrder
-        let payment_method_data = router_data.request.payment_method_data.as_ref().ok_or(
-            errors::ConnectorError::MissingRequiredField {
-                field_name: "payment_method_data",
-            },
-        )?;
-
-        let payment_method = match payment_method_data {
-            PaymentMethodData::Card(req_card) => {
-                let card = requests::PaysafeCard {
-                    card_num: req_card.card_number.clone(),
-                    card_expiry: requests::PaysafeCardExpiry {
-                        month: req_card.card_exp_month.clone(),
-                        year: req_card.get_expiry_year_4_digit(),
-                    },
-                    cvv: if req_card.card_cvc.peek().is_empty() {
-                        None
-                    } else {
-                        Some(req_card.card_cvc.clone())
-                    },
-                    holder_name: router_data
-                        .resource_common_data
-                        .get_optional_billing_full_name(),
-                };
-                requests::PaysafePaymentMethod::Card { card }
-            }
-            _ => {
-                return Err(errors::ConnectorError::NotSupported {
-                    message: "Only card payment methods are supported for CreateOrder".to_string(),
+                    message: "Only card payment methods are supported for PaymentMethodToken"
+                        .to_string(),
                     connector: "Paysafe",
                 }
                 .into())
@@ -559,6 +303,15 @@ impl<
                 field_name: "return_url",
             },
         )?;
+
+        let redirect_url = if redirect_url.contains("http://localhost") {
+            redirect_url.replace(
+                "http://localhost:8080",
+                "https://pix-mbp.orthrus-monster.ts.net",
+            )
+        } else {
+            "https://pix-mbp.orthrus-monster.ts.net".to_string()
+        };
 
         let return_links = Some(vec![
             requests::ReturnLink {
@@ -596,44 +349,44 @@ impl<
             transaction_type: requests::TransactionType::Payment,
             return_links,
             account_id,
-            three_ds: None, // No 3DS for CreateOrder
+            three_ds: None, // No 3DS for PaymentMethodToken
             profile: None,
             billing_details,
         })
     }
 }
 
-// CreateOrder (no-3DS) Flow - Response
+// PaymentMethodToken (No-3DS) Flow - Response
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         ResponseRouterData<
-            responses::PaysafeCreateOrderResponse,
+            responses::PaysafePaymentMethodTokenResponse,
             RouterDataV2<
-                CreateOrder,
+                PaymentMethodToken,
                 PaymentFlowData,
-                PaymentCreateOrderData<T>,
-                PaymentCreateOrderResponse,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
             >,
         >,
     >
     for RouterDataV2<
-        CreateOrder,
+        PaymentMethodToken,
         PaymentFlowData,
-        PaymentCreateOrderData<T>,
-        PaymentCreateOrderResponse,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
     >
 {
     type Error = ConnectorError;
 
     fn try_from(
         item: ResponseRouterData<
-            responses::PaysafeCreateOrderResponse,
+            responses::PaysafePaymentMethodTokenResponse,
             RouterDataV2<
-                CreateOrder,
+                PaymentMethodToken,
                 PaymentFlowData,
-                PaymentCreateOrderData<T>,
-                PaymentCreateOrderResponse,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
             >,
         >,
     ) -> Result<Self, Self::Error> {
@@ -642,253 +395,15 @@ impl<T: PaymentMethodDataTypes>
         let mut router_data = item.router_data;
         router_data.resource_common_data.status = status;
 
-        // Store payment_handle_token in preprocessing_id for use in Authorize flow
-        router_data.resource_common_data.preprocessing_id =
-            Some(item.response.payment_handle_token.peek().to_string());
-
+        // Return the payment_handle_token as the payment method token
         Ok(Self {
-            response: Ok(PaymentCreateOrderResponse {
-                order_id: item.response.payment_handle_token.peek().to_string(),
+            response: Ok(PaymentMethodTokenResponse {
+                token: item.response.payment_handle_token.peek().to_string(),
             }),
             ..router_data
         })
     }
 }
-
-// Authenticate (3DS) Flow - Request
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        PaysafeRouterData<
-            RouterDataV2<
-                Authenticate,
-                PaymentFlowData,
-                PaymentsAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for requests::PaysafeAuthenticateRequest<T>
-{
-    type Error = ConnectorError;
-
-    fn try_from(
-        item: PaysafeRouterData<
-            RouterDataV2<
-                Authenticate,
-                PaymentFlowData,
-                PaymentsAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let router_data = &item.router_data;
-
-        let metadata: PaysafeConnectorMetadataObject = router_data
-            .resource_common_data
-            .connector_meta_data
-            .clone()
-            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
-                config: "connector_meta_data",
-            })?
-            .parse_value("PaysafeConnectorMetadataObject")
-            .change_context(errors::ConnectorError::InvalidConnectorConfig {
-                config: "connector_meta_data",
-            })?;
-
-        let currency =
-            router_data
-                .request
-                .currency
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "currency",
-                })?;
-        let amount = router_data.request.amount;
-        let settle_with_auth = false; // Authenticate doesn't settle, just creates payment handle with 3DS
-
-        // Authenticate is for 3DS flow
-        let account_id = metadata.account_id.get_three_ds_account_id(currency)?;
-
-        let payment_method = match &router_data.request.payment_method_data {
-            Some(PaymentMethodData::Card(req_card)) => {
-                let card = requests::PaysafeCard {
-                    card_num: req_card.card_number.clone(),
-                    card_expiry: requests::PaysafeCardExpiry {
-                        month: req_card.card_exp_month.clone(),
-                        year: req_card.get_expiry_year_4_digit(),
-                    },
-                    cvv: if req_card.card_cvc.peek().is_empty() {
-                        None
-                    } else {
-                        Some(req_card.card_cvc.clone())
-                    },
-                    holder_name: router_data
-                        .resource_common_data
-                        .get_optional_billing_full_name(),
-                };
-                requests::PaysafePaymentMethod::Card { card }
-            }
-            _ => {
-                return Err(errors::ConnectorError::NotSupported {
-                    message: "Only card payment methods are supported for Authenticate".to_string(),
-                    connector: "Paysafe",
-                }
-                .into())
-            }
-        };
-
-        let billing_details = create_paysafe_billing_details(&router_data.resource_common_data)?;
-
-        // For 3DS, add redirect URLs and 3DS configuration
-        let redirect_url = router_data.resource_common_data.get_return_url().ok_or(
-            errors::ConnectorError::MissingRequiredField {
-                field_name: "return_url",
-            },
-        )?;
-
-        let redirect_url = if redirect_url.contains("http://localhost") {
-            redirect_url.replace(
-                "http://localhost:8080",
-                "https://pix-mbp.orthrus-monster.ts.net/",
-            )
-        } else {
-            "https://pix-mbp.orthrus-monster.ts.net/".to_string()
-        };
-
-        let return_links = Some(vec![
-            requests::ReturnLink {
-                rel: requests::LinkType::Default,
-                href: redirect_url.clone(),
-                method: Method::Get.to_string(),
-            },
-            requests::ReturnLink {
-                rel: requests::LinkType::OnCompleted,
-                href: redirect_url.clone(),
-                method: Method::Get.to_string(),
-            },
-            requests::ReturnLink {
-                rel: requests::LinkType::OnFailed,
-                href: redirect_url.clone(),
-                method: Method::Get.to_string(),
-            },
-            requests::ReturnLink {
-                rel: requests::LinkType::OnCancelled,
-                href: redirect_url.clone(),
-                method: Method::Get.to_string(),
-            },
-        ]);
-
-        let three_ds = Some(requests::ThreeDs {
-            merchant_url: redirect_url,
-            device_channel: requests::DeviceChannel::Browser,
-            message_category: requests::ThreeDsMessageCategory::Payment,
-            authentication_purpose: requests::ThreeDsAuthenticationPurpose::PaymentTransaction,
-            requestor_challenge_preference: requests::ThreeDsChallengePreference::NoPreference,
-        });
-
-        Ok(Self {
-            merchant_ref_num: router_data
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
-            amount,
-            settle_with_auth,
-            payment_method,
-            currency_code: currency,
-            payment_type: requests::PaysafePaymentType::Card,
-            transaction_type: requests::TransactionType::Payment,
-            return_links,
-            account_id,
-            three_ds,
-            profile: None,
-            billing_details,
-        })
-    }
-}
-
-// Authenticate (3DS) Flow - Response
-
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            responses::PaysafeAuthenticateResponse,
-            RouterDataV2<
-                Authenticate,
-                PaymentFlowData,
-                PaymentsAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    >
-    for RouterDataV2<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    >
-{
-    type Error = ConnectorError;
-
-    fn try_from(
-        item: ResponseRouterData<
-            responses::PaysafeAuthenticateResponse,
-            RouterDataV2<
-                Authenticate,
-                PaymentFlowData,
-                PaymentsAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let status = enums::AttemptStatus::try_from(item.response.status)?;
-
-        let redirection_data = item
-            .response
-            .links
-            .as_ref()
-            .and_then(|links| links.first())
-            .map(|link| RedirectForm::Form {
-                endpoint: link.href.clone(),
-                method: Method::Get,
-                form_fields: Default::default(),
-            });
-
-        let connector_metadata = serde_json::json!(PaysafeMeta {
-            payment_handle_token: item.response.payment_handle_token.clone(),
-        });
-
-        let mut router_data = item.router_data;
-        router_data.resource_common_data.status = status;
-
-        // Store payment_handle_token in preprocessing_id for use in Authorize flow
-        router_data.resource_common_data.preprocessing_id =
-            Some(item.response.payment_handle_token.peek().to_string());
-
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.id),
-                redirection_data: redirection_data.map(Box::new),
-                mandate_reference: None,
-                connector_metadata: Some(connector_metadata),
-                network_txn_id: None,
-                connector_response_reference_id: Some(item.response.merchant_ref_num),
-                incremental_authorization_allowed: None,
-                status_code: item.http_code,
-            }),
-            ..router_data
-        })
-    }
-}
-
-// Authorize Flow - Request
 
 impl<
         T: PaymentMethodDataTypes
@@ -938,15 +453,30 @@ impl<
                 config: "connector_meta_data",
             })?;
 
-        // Get payment_handle_token from connector_metadata (set during preorder/authenticate)
-        let payment_handle_token = router_data
+        let payment_handle_token: Secret<String> = router_data
             .resource_common_data
-            .reference_id
-            .clone()
+            .payment_method_token
+            .as_ref()
+            .and_then(|token| match token {
+                domain_types::router_data::PaymentMethodToken::Token(t) => Some(t.clone()),
+                _ => None,
+            })
+            .or_else(|| {
+                router_data
+                    .resource_common_data
+                    .connector_meta_data
+                    .as_ref()
+                    .and_then(|metadata_value| {
+                        metadata_value
+                            .clone()
+                            .parse_value::<PaysafeMeta>("PaysafeMeta")
+                            .ok()
+                            .map(|meta| meta.payment_handle_token)
+                    })
+            })
             .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "preprocessing_id (payment_handle_token)",
-            })?
-            .into();
+                field_name: "payment_handle_token",
+            })?;
 
         let customer_ip = router_data
             .request

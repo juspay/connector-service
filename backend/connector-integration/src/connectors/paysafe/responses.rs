@@ -2,10 +2,6 @@ use common_utils::types::MinorUnit;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-// ============================================
-// Payment Responses
-// ============================================
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaysafePaymentsResponse {
@@ -33,10 +29,6 @@ pub enum PaysafePaymentStatus {
     Cancelled,
     Pending,
 }
-
-// ============================================
-// Payment Handle Response (for 3DS flows)
-// ============================================
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -79,10 +71,6 @@ pub struct PaymentLink {
     pub href: String,
 }
 
-// ============================================
-// Sync Responses
-// ============================================
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum PaysafeSyncResponse {
@@ -101,10 +89,6 @@ pub struct PaysafePaymentsSyncData {
 pub struct PaysafePaymentHandleSyncData {
     pub payment_handles: Vec<PaysafePaymentHandleResponse>,
 }
-
-// ============================================
-// Capture/Settlement Response
-// ============================================
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -128,10 +112,6 @@ pub enum PaysafeSettlementStatus {
     Cancelled,
 }
 
-// ============================================
-// Void Response
-// ============================================
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaysafeVoidResponse {
@@ -153,10 +133,6 @@ pub enum PaysafeVoidStatus {
     Failed,
     Cancelled,
 }
-
-// ============================================
-// Refund Response
-// ============================================
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -185,10 +161,6 @@ pub enum PaysafeRefundStatus {
 // RSync uses the same response structure as Refund
 pub type PaysafeRSyncResponse = PaysafeRefundResponse;
 
-// ============================================
-// Error Response
-// ============================================
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Error {
     pub code: String,
@@ -210,13 +182,8 @@ pub struct PaysafeErrorResponse {
     pub error: Error,
 }
 
-// ============================================
-// Type Aliases
-// ============================================
-
+// Type aliases for flows
+pub type PaysafePaymentMethodTokenResponse = PaysafePaymentHandleResponse;
 pub type PaysafeAuthorizeResponse = PaysafePaymentsResponse;
 pub type PaysafeCaptureResponse = PaysafeSettlementResponse;
 pub type PaysafeRepeatPaymentResponse = PaysafePaymentsResponse;
-pub type PaysafeSetupMandateResponse = PaysafePaymentHandleResponse;
-pub type PaysafeCreateOrderResponse = PaysafePaymentHandleResponse;
-pub type PaysafeAuthenticateResponse = PaysafePaymentHandleResponse;
