@@ -240,7 +240,7 @@ where
 
             // Apply test environment modifications if test context is provided
             connector_request = connector_request.map(|mut req| {
-                if let Some(ref test_ctx) = test_context {
+                test_context.as_ref().map(|test_ctx| {
                     // Store original URL for x-api-url header
                     let original_url = req.url.clone();
 
@@ -252,16 +252,16 @@ where
                     req.add_header(X_SESSION_ID, test_ctx.session_id.clone().into());
 
                     // Add API tag if provided
-                    if let Some(ref tag) = api_tag {
+                    api_tag.as_ref().map(|tag| {
                         req.add_header(X_API_TAG, tag.clone().into());
-                    }
+                    });
 
                     tracing::info!(
                         "Test mode enabled: redirected {} to {}",
                         original_url,
                         test_ctx.mock_server_url
                     );
-                }
+                });
                 req
             });
 
