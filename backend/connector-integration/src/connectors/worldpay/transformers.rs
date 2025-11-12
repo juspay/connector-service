@@ -1035,27 +1035,19 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        if item.router_data.request.is_multiple_capture() {
-            // Partial capture - include both reference and value
-            Ok(Self {
-                reference: Some(
-                    item.router_data
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone(),
-                ),
-                value: Some(PaymentValue {
-                    amount: item.router_data.request.minor_amount_to_capture,
-                    currency: item.router_data.request.currency,
-                }),
-            })
-        } else {
-            // Full capture - send empty body
-            Ok(Self {
-                reference: None,
-                value: None,
-            })
-        }
+        // Always include both reference and value for both full and partial captures
+        Ok(Self {
+            reference: Some(
+                item.router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
+            value: Some(PaymentValue {
+                amount: item.router_data.request.minor_amount_to_capture,
+                currency: item.router_data.request.currency,
+            }),
+        })
     }
 }
 
