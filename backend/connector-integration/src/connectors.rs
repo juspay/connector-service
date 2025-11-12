@@ -88,3 +88,6 @@ pub use self::cybersource::Cybersource;
 
 pub mod worldpay;
 pub use self::worldpay::Worldpay;
+
+pub mod archipel;
+pub use self::archipel::Archipel;

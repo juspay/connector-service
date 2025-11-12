@@ -677,6 +677,7 @@ pub async fn call_connector_api(
         should_bypass_proxy,
         request.certificate,
         request.certificate_key,
+        request.ca_certificate,
     )?;
 
     let headers = request.headers.construct_header_map()?;
@@ -726,41 +727,50 @@ pub async fn call_connector_api(
 pub fn create_client(
     proxy_config: &Proxy,
     should_bypass_proxy: bool,
-    _client_certificate: Option<Secret<String>>,
-    _client_certificate_key: Option<Secret<String>>,
+    client_certificate: Option<Secret<String>>,
+    client_certificate_key: Option<Secret<String>>,
+    ca_certificate: Option<Secret<String>>,
 ) -> CustomResult<Client, ApiClientError> {
-    get_base_client(proxy_config, should_bypass_proxy)
-    // match (client_certificate, client_certificate_key) {
-    //     (Some(encoded_certificate), Some(encoded_certificate_key)) => {
-    //         let client_builder = get_client_builder(proxy_config, should_bypass_proxy)?;
 
-    //         let identity = create_identity_from_certificate_and_key(
-    //             encoded_certificate.clone(),
-    //             encoded_certificate_key,
-    //         )?;
-    //         let certificate_list = create_certificate(encoded_certificate)?;
-    //         let client_builder = certificate_list
-    //             .into_iter()
-    //             .fold(client_builder, |client_builder, certificate| {
-    //                 client_builder.add_root_certificate(certificate)
-    //             });
-    //         client_builder
-    //             .identity(identity)
-    //             .use_rustls_tls()
-    //             .build()
-    //             .change_context(ApiClientError::ClientConstructionFailed)
-    //             .inspect_err(|err| {
-    //                 info_log(
-    //                     "ERROR",
-    //                     &json!(format!(
-    //                         "Failed to construct client with certificate and certificate key. Error: {:?}",
-    //                         err
-    //                     )),
-    //                 );
-    //             })
-    //     }
-    //     _ => ,
-    // }
+    if let (Some(_encoded_certificate), Some(_encoded_certificate_key)) =
+        (client_certificate.clone(), client_certificate_key.clone())
+    {
+        if ca_certificate.is_some() {
+            tracing::warn!("All of client certificate, client key, and CA certificate are provided. CA certificate will be ignored in mutual TLS setup.");
+        }
+
+        // Mutual TLS implementation would go here (currently commented out)
+        // For now, fall back to base client
+        return get_base_client(proxy_config, should_bypass_proxy);
+    }
+
+    // Case 2: Use provided CA certificate for server authentication only (one-way TLS)
+    if let Some(ca_pem) = ca_certificate {
+        tracing::debug!("Creating HTTP client with one-way TLS (CA certificate)");
+        let pem = ca_pem.expose().replace("\\r\\n", "\n"); // Fix escaped newlines
+        let cert = reqwest::Certificate::from_pem(pem.as_bytes())
+            .change_context(ApiClientError::ClientConstructionFailed)
+            .attach_printable("Failed to parse CA certificate PEM block")?;
+        let client_builder = get_client_builder(proxy_config, should_bypass_proxy)?
+            .add_root_certificate(cert);
+        return client_builder
+            .use_rustls_tls()
+            .build()
+            .change_context(ApiClientError::ClientConstructionFailed)
+            .inspect_err(|err| {
+                info_log(
+                    "ERROR",
+                    &json!(format!(
+                        "Failed to construct client with CA certificate. Error: {:?}",
+                        err
+                    )),
+                );
+            });
+    }
+
+    // Case 3: Default client (no certs)
+    tracing::debug!("Creating default HTTP client (no client or CA certificates)");
+    get_base_client(proxy_config, should_bypass_proxy)
 }
 
 static NON_PROXIED_CLIENT: OnceCell<Client> = OnceCell::new();
