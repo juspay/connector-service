@@ -336,13 +336,12 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > TryFrom<&RazorpayV2RouterData<&PaymentCreateOrderData<U>, U>>
-    for RazorpayV2CreateOrderRequest
+    > TryFrom<&RazorpayV2RouterData<&PaymentCreateOrderData, U>> for RazorpayV2CreateOrderRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RazorpayV2RouterData<&PaymentCreateOrderData<U>, U>,
+        item: &RazorpayV2RouterData<&PaymentCreateOrderData, U>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             amount: item.amount,

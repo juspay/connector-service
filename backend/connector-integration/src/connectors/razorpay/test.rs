@@ -1276,7 +1276,6 @@ mod tests {
                 request: PaymentCreateOrderData {
                     amount: MinorUnit::new(1000),
                     currency: Currency::USD,
-                    payment_method_data: None,
                     integrity_object: None,
                     metadata: None,
                     webhook_url: None,
@@ -1390,7 +1389,6 @@ mod tests {
                 request: PaymentCreateOrderData {
                     amount: MinorUnit::new(0),
                     currency: Currency::default(),
-                    payment_method_data: None,
                     integrity_object: None,
                     metadata: None,
                     webhook_url: None,
@@ -1659,7 +1657,6 @@ mod tests {
             request: PaymentCreateOrderData {
                 amount: MinorUnit::new(1000),
                 currency: Currency::USD,
-                payment_method_data: None,
                 integrity_object: None,
                 metadata: None,
                 webhook_url: None,
@@ -1785,7 +1782,6 @@ mod tests {
             request: PaymentCreateOrderData {
                 amount: MinorUnit::new(1000),
                 currency: Currency::USD,
-                payment_method_data: None,
                 integrity_object: None,
                 metadata: None,
                 webhook_url: None,
@@ -1900,7 +1896,6 @@ mod tests {
             request: PaymentCreateOrderData {
                 amount: MinorUnit::new(1000),
                 currency: Currency::USD,
-                payment_method_data: None,
                 integrity_object: None,
                 metadata: None,
                 webhook_url: None,
@@ -1964,7 +1959,7 @@ mod tests {
             <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
                 domain_types::connector_flow::CreateOrder,
                 domain_types::connector_types::PaymentFlowData,
-                domain_types::connector_types::PaymentCreateOrderData<DefaultPCIHolder>,
+                domain_types::connector_types::PaymentCreateOrderData,
                 domain_types::connector_types::PaymentCreateOrderResponse,
             >>::get_error_response_v2(&**connector, http_response, None)
             .unwrap();
@@ -1998,7 +1993,7 @@ mod tests {
             <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
                 domain_types::connector_flow::CreateOrder,
                 domain_types::connector_types::PaymentFlowData,
-                domain_types::connector_types::PaymentCreateOrderData<DefaultPCIHolder>,
+                domain_types::connector_types::PaymentCreateOrderData,
                 domain_types::connector_types::PaymentCreateOrderResponse,
             >>::get_error_response_v2(&**connector, http_response, None);
 
@@ -2023,7 +2018,7 @@ mod tests {
             <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
                 domain_types::connector_flow::CreateOrder,
                 domain_types::connector_types::PaymentFlowData,
-                domain_types::connector_types::PaymentCreateOrderData<DefaultPCIHolder>,
+                domain_types::connector_types::PaymentCreateOrderData,
                 domain_types::connector_types::PaymentCreateOrderResponse,
             >>::get_error_response_v2(&**connector, http_response, None)
             .unwrap();

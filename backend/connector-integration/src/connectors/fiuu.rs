@@ -175,7 +175,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > connector_types::PaymentOrderCreate<T> for Fiuu<T>
+    > connector_types::PaymentOrderCreate for Fiuu<T>
 {
 }
 impl<
@@ -1045,7 +1045,7 @@ impl<
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
-        PaymentCreateOrderData<T>,
+        PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     > for Fiuu<T>
 {
@@ -1375,7 +1375,7 @@ impl<
     interfaces::verification::SourceVerification<
         CreateOrder,
         PaymentFlowData,
-        PaymentCreateOrderData<T>,
+        PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     > for Fiuu<T>
 {

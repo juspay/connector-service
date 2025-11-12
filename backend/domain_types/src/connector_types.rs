@@ -1214,10 +1214,9 @@ pub struct MandateReference {
 }
 
 #[derive(Debug, Clone)]
-pub struct PaymentCreateOrderData<T: PaymentMethodDataTypes> {
+pub struct PaymentCreateOrderData {
     pub amount: MinorUnit,
     pub currency: Currency,
-    pub payment_method_data: Option<payment_method_data::PaymentMethodData<T>>,
     pub integrity_object: Option<CreateOrderIntegrityObject>,
     pub metadata: Option<serde_json::Value>,
     pub webhook_url: Option<String>,

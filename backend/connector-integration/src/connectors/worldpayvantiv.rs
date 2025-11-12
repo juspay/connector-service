@@ -360,7 +360,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > PaymentOrderCreate<T> for Worldpayvantiv<T>
+    > PaymentOrderCreate for Worldpayvantiv<T>
 {
 }
 
@@ -1146,7 +1146,7 @@ impl<
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
-        PaymentCreateOrderData<T>,
+        PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     > for Worldpayvantiv<T>
 {
@@ -1303,7 +1303,7 @@ impl<
     SourceVerification<
         CreateOrder,
         PaymentFlowData,
-        PaymentCreateOrderData<T>,
+        PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     > for Worldpayvantiv<T>
 {
