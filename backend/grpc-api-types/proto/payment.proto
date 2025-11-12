@@ -39,6 +39,7 @@ enum PaymentStatus {
   AUTHORIZING = 9;
   AUTHORIZED = 6;
   AUTHORIZATION_FAILED = 7;
+  PARTIALLY_AUTHORIZED = 25;
 
   // Charging flow
   CHARGED = 8;
@@ -58,6 +59,7 @@ enum PaymentStatus {
 
   // Other payment flows
   COD_INITIATED = 10; // Cash on Delivery initiated
+  EXPIRED = 26; // Payment expired before it could be captured
 
   // Terminal/fallback states
   ROUTER_DECLINED = 3;

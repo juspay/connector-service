@@ -219,6 +219,7 @@ pub fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
         | common_enums::AttemptStatus::AuthorizationFailed
         | common_enums::AttemptStatus::CaptureFailed
         | common_enums::AttemptStatus::VoidFailed
+        | common_enums::AttemptStatus::Expired
         | common_enums::AttemptStatus::Failure => true,
         common_enums::AttemptStatus::Started
         | common_enums::AttemptStatus::RouterDeclined
@@ -232,6 +233,7 @@ pub fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
         | common_enums::AttemptStatus::VoidedPostCapture
         | common_enums::AttemptStatus::VoidInitiated
         | common_enums::AttemptStatus::VoidPostCaptureInitiated
+        | common_enums::AttemptStatus::PartiallyAuthorized
         | common_enums::AttemptStatus::CaptureInitiated
         | common_enums::AttemptStatus::AutoRefunded
         | common_enums::AttemptStatus::PartialCharged

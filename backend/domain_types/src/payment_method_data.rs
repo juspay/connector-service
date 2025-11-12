@@ -112,12 +112,7 @@ impl<T: PaymentMethodDataTypes> Card<T> {
             .change_context(crate::errors::ConnectorError::ResponseDeserializationFailed)
             .map(Secret::new)
     }
-}
 
-impl Card<DefaultPCIHolder> {
-    pub fn get_card_issuer(&self) -> Result<CardIssuer, Error> {
-        get_card_issuer(self.card_number.peek())
-    }
     pub fn get_expiry_date_as_yyyymm(&self, delimiter: &str) -> Secret<String> {
         let year = self.get_expiry_year_4_digit();
         Secret::new(format!(
@@ -126,6 +121,12 @@ impl Card<DefaultPCIHolder> {
             delimiter,
             self.card_exp_month.peek()
         ))
+    }
+}
+
+impl Card<DefaultPCIHolder> {
+    pub fn get_card_issuer(&self) -> Result<CardIssuer, Error> {
+        get_card_issuer(self.card_number.peek())
     }
     pub fn get_expiry_date_as_mmyyyy(&self, delimiter: &str) -> Secret<String> {
         let year = self.get_expiry_year_4_digit();
