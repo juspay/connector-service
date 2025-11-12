@@ -47,15 +47,6 @@ mod constants {
     /// Entry mode for e-commerce transactions
     pub(super) const ENTRY_MODE_ECOM: &str = "ECOM";
 
-    /// Capture mode for manual/delayed capture
-    pub(super) const CAPTURE_MODE_LATER: &str = "LATER";
-
-    /// Capture mode for automatic/immediate capture
-    pub(super) const CAPTURE_MODE_AUTO: &str = "AUTO";
-
-    /// Default country code when billing country is not provided
-    pub(super) const DEFAULT_COUNTRY: &str = "US";
-
     /// Account name for transaction processing
     pub(super) const ACCOUNT_NAME: &str = "transaction_processing";
 
@@ -85,18 +76,11 @@ impl TryFrom<&ConnectorAuthType> for GlobalpayAuthType {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct GlobalpayErrorResponse {
-    #[serde(alias = "error_code", alias = "code", alias = "detailed_error_code")]
-    pub code: Option<String>,
-    #[serde(
-        alias = "error_message",
-        alias = "message",
-        alias = "detailed_error_description"
-    )]
-    pub message: Option<String>,
-    #[serde(flatten)]
-    pub extra: Option<serde_json::Value>,
+    pub error_code: String,
+    pub detailed_error_code: String,
+    pub detailed_error_description: String,
 }
 
 // ===== STATUS ENUMS =====
@@ -166,6 +150,13 @@ pub enum Sequence {
     First,
     Last,
     Subsequent,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum GlobalpayCaptureMode {
+    Auto,
+    Later,
 }
 
 // ===== OAUTH / ACCESS TOKEN FLOW STRUCTURES =====
@@ -281,19 +272,60 @@ pub struct GlobalpayNotifications {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum InitiatorType {
+    Merchant,
+    Payer,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Initiator {
+    #[serde(rename = "type")]
+    pub initiator_type: Option<InitiatorType>,
+    pub id: Option<String>,
+    pub stored_credential: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum StoredCredentialType {
+    Installment,
+    Recurring,
+    Unscheduled,
+    Subscription,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum StoredCredentialSequence {
+    First,
+    Subsequent,
+}
+
+#[derive(Debug, Serialize)]
+pub struct StoredCredential {
+    #[serde(rename = "type")]
+    pub credential_type: Option<StoredCredentialType>,
+    pub sequence: Option<StoredCredentialSequence>,
+    pub initiator: Option<InitiatorType>,
+}
+
+#[derive(Debug, Serialize)]
 pub struct GlobalpayPaymentsRequest<T: PaymentMethodDataTypes> {
     pub account_name: String,
     pub channel: String,
     pub amount: StringMinorUnit,
-    pub currency: String,
+    pub currency: common_enums::Currency,
     pub reference: String,
-    pub country: String,
+    pub country: common_enums::CountryAlpha2,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub capture_mode: Option<String>,
-    pub initiator: Option<serde_json::Value>,
+    pub capture_mode: Option<GlobalpayCaptureMode>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub initiator: Option<Initiator>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub notifications: Option<GlobalpayNotifications>,
-    pub stored_credential: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stored_credential: Option<StoredCredential>,
     pub payment_method: GlobalpayPaymentMethod<T>,
 }
 
@@ -387,21 +419,15 @@ impl<
 
         // Determine capture_mode based on capture_method
         let capture_mode = match item.request.capture_method {
-            Some(common_enums::CaptureMethod::Manual) => {
-                Some(constants::CAPTURE_MODE_LATER.to_string())
-            }
-            _ => Some(constants::CAPTURE_MODE_AUTO.to_string()),
+            Some(common_enums::CaptureMethod::Manual) => Some(GlobalpayCaptureMode::Later),
+            _ => Some(GlobalpayCaptureMode::Auto),
         };
 
         // Get country from billing address or use default
         let country = item
             .resource_common_data
-            .address
-            .get_payment_billing()
-            .and_then(|billing| billing.address.as_ref())
-            .and_then(|addr| addr.country.as_ref())
-            .map(|c| c.to_string())
-            .unwrap_or_else(|| constants::DEFAULT_COUNTRY.to_string());
+            .get_billing_country()
+            .unwrap_or(common_enums::CountryAlpha2::US);
 
         // Build notifications object from router data
         let notifications = if let (Some(return_url), Some(webhook_url)) = (
@@ -425,7 +451,7 @@ impl<
                 item.request.currency,
             )
             .change_context(errors::ConnectorError::RequestEncodingFailed)?,
-            currency: item.request.currency.to_string(),
+            currency: item.request.currency,
             reference: item
                 .resource_common_data
                 .connector_request_reference_id

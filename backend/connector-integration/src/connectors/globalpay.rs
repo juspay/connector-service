@@ -1023,46 +1023,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        // Try to parse as structured error first
-        let error_response = match res
+        let response: globalpay::GlobalpayErrorResponse = res
             .response
-            .parse_struct::<globalpay::GlobalpayErrorResponse>("GlobalpayErrorResponse")
-        {
-            Ok(response) => {
-                with_error_response_body!(event_builder, response);
-                ErrorResponse {
-                    status_code: res.status_code,
-                    code: response.code.unwrap_or_else(|| "UNKNOWN_ERROR".to_string()),
-                    message: response
-                        .message
-                        .unwrap_or_else(|| "Unknown error from GlobalPay".to_string()),
-                    reason: None,
-                    attempt_status: None,
-                    connector_transaction_id: None,
-                    network_decline_code: None,
-                    network_advice_code: None,
-                    network_error_message: None,
-                }
-            }
-            Err(_) => {
-                // If structured parsing fails, use the raw response as the error message
-                let raw_response = String::from_utf8(res.response.to_vec())
-                    .unwrap_or_else(|_| "Non-UTF8 response".to_string());
+            .parse_struct("GlobalpayErrorResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-                ErrorResponse {
-                    status_code: res.status_code,
-                    code: format!("HTTP_{}", res.status_code),
-                    message: format!("GlobalPay API error: {}", raw_response),
-                    reason: None,
-                    attempt_status: None,
-                    connector_transaction_id: None,
-                    network_decline_code: None,
-                    network_advice_code: None,
-                    network_error_message: None,
-                }
-            }
-        };
+        with_error_response_body!(event_builder, response);
 
-        Ok(error_response)
+        Ok(ErrorResponse {
+            status_code: res.status_code,
+            code: response.error_code,
+            message: response.detailed_error_description,
+            reason: None,
+            attempt_status: None,
+            connector_transaction_id: None,
+            network_decline_code: None,
+            network_advice_code: None,
+            network_error_message: None,
+        })
     }
 }
