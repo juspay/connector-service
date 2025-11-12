@@ -159,8 +159,8 @@ pub struct SilverflowMerchantAcceptorResolver {
 #[serde(rename_all = "camelCase")]
 pub struct SilverflowCard<T: PaymentMethodDataTypes> {
     pub number: RawCardNumber<T>,
-    pub expiry_year: Secret<String>,
-    pub expiry_month: Secret<String>,
+    pub expiry_year: Secret<u16>,
+    pub expiry_month: Secret<u8>,
     pub cvc: Secret<String>,
     pub holder_name: Option<Secret<String>>,
 }
@@ -221,14 +221,29 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
         };
 
+        // Parse expiry year and month
+        let expiry_year = card_data
+            .card_exp_year
+            .clone()
+            .expose()
+            .parse::<u16>()
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        let expiry_month = card_data
+            .card_exp_month
+            .clone()
+            .expose()
+            .parse::<u8>()
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
         Ok(Self {
             merchant_acceptor_resolver: SilverflowMerchantAcceptorResolver {
                 merchant_acceptor_key: auth.merchant_acceptor_key.expose(),
             },
             card: SilverflowCard {
                 number: card_data.card_number.clone(),
-                expiry_year: card_data.card_exp_year.clone(),
-                expiry_month: card_data.card_exp_month.clone(),
+                expiry_year: Secret::new(expiry_year),
+                expiry_month: Secret::new(expiry_month),
                 cvc: card_data.card_cvc.clone(),
                 holder_name: router_data.request.customer_name.clone().map(Secret::new),
             },
