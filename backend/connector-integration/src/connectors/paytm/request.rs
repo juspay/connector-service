@@ -1,5 +1,5 @@
 use common_enums::Currency;
-use common_utils::{types::StringMajorUnit, Email, CustomerId};
+use common_utils::{types::StringMajorUnit, CustomerId, Email};
 use hyperswitch_masking::Secret;
 use serde::Serialize;
 
@@ -96,7 +96,7 @@ pub struct PaytmShippingInfo {
     #[serde(rename = "chargeAmount", skip_serializing_if = "Option::is_none")]
     pub charge_amount: Option<PaytmAmount>, // reusing PaytmAmount struct
     #[serde(rename = "countryName", skip_serializing_if = "Option::is_none")]
-    pub country_name: Option<String>,
+    pub country_name: Option<common_enums::CountryAlpha2>,
     #[serde(rename = "stateName", skip_serializing_if = "Option::is_none")]
     pub state_name: Option<Secret<String>>,
     #[serde(rename = "cityName", skip_serializing_if = "Option::is_none")]

@@ -817,7 +817,7 @@ impl Payments {
         };
 
         // Execute connector processing
-        let response = external_services::service::execute_connector_processing_step(
+        let response = Box::pin(external_services::service::execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             session_token_router_data,
@@ -825,7 +825,7 @@ impl Payments {
             external_event_params,
             None,
             common_enums::CallConnectorAction::Trigger,
-        )
+        ))
         .await
         .switch()
         .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {

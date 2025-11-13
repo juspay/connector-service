@@ -270,8 +270,7 @@ impl<
             country_name: item
                 .router_data
                 .resource_common_data
-                .get_optional_shipping_country()
-                .map(|country| country.to_string()),
+                .get_optional_shipping_country(),
             state_name: item
                 .router_data
                 .resource_common_data
@@ -1132,8 +1131,8 @@ pub fn map_paytm_sync_status_to_attempt_status(result_code: &str) -> AttemptStat
 fn is_failure_status(status: AttemptStatus) -> bool {
     matches!(
         status,
-        AttemptStatus::Failure 
-        | AttemptStatus::AuthenticationFailed 
-        | AttemptStatus::AuthorizationFailed
+        AttemptStatus::Failure
+            | AttemptStatus::AuthenticationFailed
+            | AttemptStatus::AuthorizationFailed
     )
 }
