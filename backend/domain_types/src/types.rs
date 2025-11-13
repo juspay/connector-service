@@ -43,13 +43,15 @@ fn extract_headers_from_metadata(
 
 /// Convert merchant_account_metadata HashMap to JSON Value, deserializing string values that contain JSON
 fn convert_merchant_metadata_to_json(metadata: &HashMap<String, String>) -> serde_json::Value {
-    let mut metadata_map = serde_json::Map::new();
-    for (key, value) in metadata {
-        // Try to parse the value as JSON first, if it fails, treat it as a plain string
-        let json_value = serde_json::from_str::<serde_json::Value>(value)
-            .unwrap_or_else(|_| serde_json::Value::String(value.clone()));
-        metadata_map.insert(key.clone(), json_value);
-    }
+    let metadata_map = metadata
+        .iter()
+        .fold(serde_json::Map::new(), |mut map, (key, value)| {
+            // Try to parse the value as JSON first, if it fails, treat it as a plain string
+            let json_value = serde_json::from_str::<serde_json::Value>(value)
+                .unwrap_or_else(|_| serde_json::Value::String(value.clone()));
+            map.insert(key.clone(), json_value);
+            map
+        });
     serde_json::Value::Object(metadata_map)
 }
 

@@ -1357,7 +1357,7 @@ impl Payments {
             currency,
             capture_method: payload.capture_method.and_then(|cm| {
                 common_enums::CaptureMethod::foreign_try_from(
-                    grpc_api_types::payments::CaptureMethod::try_from(cm).ok()?,
+                    grpc_api_types::payments::CaptureMethod::try_from(cm)?,
                 )
                 .ok()
             }),
