@@ -87,6 +87,13 @@ fn get_refund_credit_card_payment(
 
     // Parse the JSON string to get card details
     let credit_card: serde_json::Value = serde_json::from_str(credit_card_str)
+        .inspect_err(|e| {
+            tracing::error!(
+                error = %e,
+                credit_card_str = %credit_card_str,
+                "Failed to parse credit card JSON"
+            );
+        })
         .change_context(HsInterfacesConnectorError::RequestEncodingFailed)?;
 
     let card_number = credit_card
@@ -1365,8 +1372,13 @@ impl<
             .request
             .connector_metadata
             .as_ref()
-            .map(|v| Secret::new(v.clone()));
-        let payment = get_refund_credit_card_payment(&connector_metadata_secret)?;
+            .map(|v| Secret::new(v.clone()))
+            .ok_or_else(|| {
+                error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
+                    field_name: "connector_metadata"
+                })
+            })?;
+        let payment = get_refund_credit_card_payment(&Some(connector_metadata_secret))?;
 
         // Build the refund transaction request
         let transaction_request = AuthorizedotnetRefundTransactionDetails {
@@ -2321,7 +2333,14 @@ fn build_connector_metadata(
         },
     };
 
-    serde_json::to_value(payment).ok()
+    serde_json::to_value(payment)
+        .inspect_err(|e| {
+            tracing::warn!(
+                error = %e,
+                "Failed to serialize connector_metadata payment"
+            );
+        })
+        .ok()
 }
 
 type PaymentConversionResult = Result<
