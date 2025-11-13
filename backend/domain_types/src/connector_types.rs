@@ -12,7 +12,7 @@ use common_utils::{
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
@@ -952,6 +952,26 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub merchant_account_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
 
+// Testing data support (same pattern as Hyperswitch)
+#[derive(Debug, serde::Deserialize)]
+pub struct AdyenTestingData {
+    pub holder_name: Option<hyperswitch_masking::Secret<String>>,
+}
+
+impl TryFrom<SecretSerdeValue> for AdyenTestingData {
+    type Error = error_stack::Report<crate::errors::ConnectorError>;
+
+    fn try_from(testing_data: SecretSerdeValue) -> Result<Self, Self::Error> {
+        let testing_data = testing_data
+            .expose()
+            .parse_value::<Self>("AdyenTestingData")
+            .change_context(crate::errors::ConnectorError::InvalidDataFormat {
+                field_name: "connector_metadata.adyen.testing",
+            })?;
+        Ok(testing_data)
+    }
+}
+
 impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     pub fn is_auto_capture(&self) -> Result<bool, Error> {
         match self.capture_method {
@@ -1149,6 +1169,16 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
         self.access_token
             .as_ref()
             .map(|token_data| &token_data.access_token)
+    }
+
+    pub fn get_connector_testing_data(&self) -> Option<SecretSerdeValue> {
+        self.metadata
+            .as_ref()
+            .and_then(|metadata| metadata.as_object())
+            .and_then(|meta_obj| meta_obj.get("adyen"))
+            .and_then(|adyen_meta| adyen_meta.get("testing"))
+            .cloned()
+            .map(|value| value.into())
     }
 }
 
