@@ -818,7 +818,6 @@ impl
                         }
                         "PAYMENT_ERROR"
                         | "PAYMENT_DECLINED"
-                        | "TIMED_OUT"
                         | "BAD_REQUEST"
                         | "AUTHORIZATION_FAILED"
                         | "TRANSACTION_NOT_FOUND" => common_enums::AttemptStatus::Failure,
