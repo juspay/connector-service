@@ -110,10 +110,6 @@ pub struct PaysafeMeta {
 
 // Helper Functions
 
-fn is_three_ds(auth_type: &enums::AuthenticationType) -> bool {
-    matches!(auth_type, enums::AuthenticationType::ThreeDs)
-}
-
 fn create_paysafe_billing_details(
     resource_common_data: &PaymentFlowData,
 ) -> Result<Option<requests::PaysafeBillingDetails>, ConnectorError> {
@@ -282,9 +278,11 @@ impl<
                     } else {
                         Some(req_card.card_cvc.clone())
                     },
-                    holder_name: router_data
-                        .resource_common_data
-                        .get_optional_billing_full_name(),
+                    holder_name: req_card.card_holder_name.clone().or_else(|| {
+                        router_data
+                            .resource_common_data
+                            .get_optional_billing_full_name()
+                    }),
                 };
                 requests::PaysafePaymentMethod::Card { card }
             }
@@ -484,8 +482,7 @@ impl<
             Some(enums::CaptureMethod::Automatic) | None
         );
 
-        let is_three_ds = is_three_ds(&router_data.resource_common_data.auth_type);
-        let account_id = Some(if is_three_ds {
+        let account_id = Some(if router_data.resource_common_data.is_three_ds() {
             metadata
                 .account_id
                 .get_three_ds_account_id(router_data.request.currency)?
@@ -740,32 +737,36 @@ impl
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        let status = match &item.response {
+        let (status, connector_transaction_id) = match &item.response {
+            responses::PaysafeSyncResponse::SinglePayment(payment_response) => {
+                let status = get_paysafe_payment_status(
+                    payment_response.status,
+                    item.router_data.request.capture_method,
+                );
+                (status, Some(payment_response.id.clone()))
+            }
             responses::PaysafeSyncResponse::Payments(sync_response) => {
                 let payment_response = sync_response
                     .payments
                     .first()
                     .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
-                get_paysafe_payment_status(
+                let status = get_paysafe_payment_status(
                     payment_response.status,
                     item.router_data.request.capture_method,
-                )
+                );
+                (status, Some(payment_response.id.clone()))
+            }
+            responses::PaysafeSyncResponse::SinglePaymentHandle(payment_handle_response) => {
+                let status = enums::AttemptStatus::try_from(payment_handle_response.status)?;
+                (status, Some(payment_handle_response.id.clone()))
             }
             responses::PaysafeSyncResponse::PaymentHandle(sync_response) => {
                 let payment_handle_response = sync_response
                     .payment_handles
                     .first()
                     .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
-                enums::AttemptStatus::try_from(payment_handle_response.status)?
-            }
-        };
-
-        let connector_transaction_id = match &item.response {
-            responses::PaysafeSyncResponse::Payments(sync_response) => {
-                sync_response.payments.first().map(|p| p.id.clone())
-            }
-            responses::PaysafeSyncResponse::PaymentHandle(sync_response) => {
-                sync_response.payment_handles.first().map(|p| p.id.clone())
+                let status = enums::AttemptStatus::try_from(payment_handle_response.status)?;
+                (status, Some(payment_handle_response.id.clone()))
             }
         };
 

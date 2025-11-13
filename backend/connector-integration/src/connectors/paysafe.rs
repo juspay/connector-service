@@ -402,13 +402,18 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let connector_payment_id = req.resource_common_data.connector_request_reference_id.clone();
             let base_url = self.connector_base_url_payments(req);
 
-            // Try to get connector transaction ID to determine which endpoint to use
             let url = match req.request.connector_transaction_id.get_connector_transaction_id() {
-                Ok(_) => format!("{base_url}v1/payments?merchantRefNum={connector_payment_id}"),
-                Err(_) => format!("{base_url}v1/paymenthandles?merchantRefNum={connector_payment_id}"),
+                Ok(connector_txn_id) => {
+                    // After authorization, sync using the payment ID directly
+                    format!("{base_url}v1/payments/{connector_txn_id}")
+                }
+                Err(_) => {
+                    // For paymenthandle sync (before authorization), use merchantRefNum
+                    let connector_payment_id = req.resource_common_data.connector_request_reference_id.clone();
+                    format!("{base_url}v1/paymenthandles?merchantRefNum={connector_payment_id}")
+                }
             };
 
             Ok(url)

@@ -74,7 +74,13 @@ pub struct PaymentLink {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum PaysafeSyncResponse {
+    // Single payment response (GET /v1/payments/{id})
+    SinglePayment(PaysafePaymentsResponse),
+    // Multiple payments response (GET /v1/payments?merchantRefNum={})
     Payments(PaysafePaymentsSyncData),
+    // Single payment handle response (GET /v1/paymenthandles/{id})
+    SinglePaymentHandle(PaysafePaymentHandleResponse),
+    // Multiple payment handles response (GET /v1/paymenthandles?merchantRefNum={})
     PaymentHandle(PaysafePaymentHandleSyncData),
 }
 
