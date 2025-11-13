@@ -2441,7 +2441,11 @@ struct ConnectorMetadataPayment {
 fn build_connector_metadata(
     transaction_response: &AuthorizedotnetTransactionResponse,
 ) -> Option<serde_json::Value> {
-    let card_number = transaction_response.account_number.as_ref()?.peek().to_string();
+    let card_number = transaction_response
+        .account_number
+        .as_ref()?
+        .peek()
+        .to_string();
 
     let payment = ConnectorMetadataPayment {
         credit_card: ConnectorMetadataCreditCard {
