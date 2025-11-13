@@ -36,6 +36,9 @@ pub struct Card<T: PaymentMethodDataTypes> {
 
 pub trait PaymentMethodDataTypes: Clone {
     type Inner: Default + Debug + Send + Eq + PartialEq + Serialize + DeserializeOwned + Clone;
+
+    fn peek_inner(inner: &Self::Inner) -> &str;
+    fn is_cobadged_inner(inner: &Self::Inner) -> Result<bool, crate::errors::ConnectorError>;
 }
 
 /// PCI holder implementation for handling raw PCI data
@@ -49,24 +52,41 @@ pub struct VaultTokenHolder;
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct RawCardNumber<T: PaymentMethodDataTypes>(pub T::Inner);
 
-impl RawCardNumber<DefaultPCIHolder> {
+impl<T: PaymentMethodDataTypes> RawCardNumber<T> {
     pub fn peek(&self) -> &str {
-        self.0.peek()
+        T::peek_inner(&self.0)
     }
-}
 
-impl RawCardNumber<VaultTokenHolder> {
-    pub fn peek(&self) -> &str {
-        &self.0
+    pub fn is_cobadged_card(&self) -> Result<bool, crate::errors::ConnectorError> {
+        T::is_cobadged_inner(&self.0)
     }
 }
 
 impl PaymentMethodDataTypes for DefaultPCIHolder {
     type Inner = cards::CardNumber;
+
+    fn peek_inner(inner: &Self::Inner) -> &str {
+        inner.peek()
+    }
+
+    fn is_cobadged_inner(inner: &Self::Inner) -> Result<bool, crate::errors::ConnectorError> {
+        inner
+            .is_cobadged_card()
+            .map_err(|_| crate::errors::ConnectorError::RequestEncodingFailed)
+    }
 }
 
 impl PaymentMethodDataTypes for VaultTokenHolder {
     type Inner = String; //Token
+
+    fn peek_inner(inner: &Self::Inner) -> &str {
+        inner
+    }
+
+    fn is_cobadged_inner(_inner: &Self::Inner) -> Result<bool, crate::errors::ConnectorError> {
+        // Vault tokens don't have cobadged concept - always return false
+        Ok(false)
+    }
 }
 
 // Generic implementation for all Card<T> types

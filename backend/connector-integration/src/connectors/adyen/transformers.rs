@@ -53,7 +53,24 @@ type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum CardBrand {
+    #[serde(rename = "visa")]
     Visa,
+    #[serde(rename = "mc")]
+    Mc,
+    #[serde(rename = "amex")]
+    Amex,
+    #[serde(rename = "jcb")]
+    Jcb,
+    #[serde(rename = "diners")]
+    DinersClub,
+    #[serde(rename = "discover")]
+    Discover,
+    #[serde(rename = "cartebancaire")]
+    CartesBancaires,
+    #[serde(rename = "cup")]
+    CupSecurePlus,
+    #[serde(rename = "maestro")]
+    Maestro,
 }
 
 #[derive(Debug, Serialize, PartialEq)]
@@ -519,6 +536,7 @@ pub struct AdyenPaymentRequest<
     splits: Option<Vec<AdyenSplitData>>,
     store: Option<String>,
     device_fingerprint: Option<Secret<String>>,
+    metadata: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize)]
@@ -604,6 +622,21 @@ impl TryFrom<&ConnectorAuthType> for AdyenAuthType {
     }
 }
 
+fn get_adyen_card_network(card_network: common_enums::CardNetwork) -> Option<CardBrand> {
+    match card_network {
+        common_enums::CardNetwork::Visa => Some(CardBrand::Visa),
+        common_enums::CardNetwork::Mastercard => Some(CardBrand::Mc),
+        common_enums::CardNetwork::AmericanExpress => Some(CardBrand::Amex),
+        common_enums::CardNetwork::JCB => Some(CardBrand::Jcb),
+        common_enums::CardNetwork::DinersClub => Some(CardBrand::DinersClub),
+        common_enums::CardNetwork::Discover => Some(CardBrand::Discover),
+        common_enums::CardNetwork::CartesBancaires => Some(CardBrand::CartesBancaires),
+        common_enums::CardNetwork::UnionPay => Some(CardBrand::CupSecurePlus),
+        common_enums::CardNetwork::Maestro => Some(CardBrand::Maestro),
+        _ => None,
+    }
+}
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -611,17 +644,27 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > TryFrom<(&Card<T>, Option<String>)> for AdyenPaymentMethod<T>
+    > TryFrom<(&Card<T>, Option<Secret<String>>)> for AdyenPaymentMethod<T>
 {
     type Error = domain_types::errors::ConnectorError;
-    fn try_from((card, card_holder_name): (&Card<T>, Option<String>)) -> Result<Self, Self::Error> {
+    fn try_from(
+        (card, card_holder_name): (&Card<T>, Option<Secret<String>>),
+    ) -> Result<Self, Self::Error> {
+        // Only set brand for cobadged cards (exactly matching Hyperswitch logic)
+        let brand = if card.card_number.is_cobadged_card().unwrap_or(false) {
+            // Use the detected card network from the card data
+            card.card_network.clone().and_then(get_adyen_card_network)
+        } else {
+            None
+        };
+
         let adyen_card = AdyenCard {
             number: card.card_number.clone(),
             expiry_month: card.card_exp_month.clone(),
             expiry_year: card.card_exp_year.clone(),
             cvc: Some(card.card_cvc.clone()),
-            holder_name: card_holder_name.map(Secret::new),
-            brand: Some(CardBrand::Visa),
+            holder_name: card_holder_name,
+            brand,
             network_payment_reference: None,
         };
         Ok(AdyenPaymentMethod::AdyenCard(Box::new(adyen_card)))
@@ -773,7 +816,18 @@ impl<
         )
         .and_then(Result::ok);
 
-        let card_holder_name = item.router_data.request.customer_name.clone();
+        // Extract testing data for cardholder name (exact same pattern as Hyperswitch)
+        let testing_data = item
+            .router_data
+            .request
+            .get_connector_testing_data()
+            .map(domain_types::connector_types::AdyenTestingData::try_from)
+            .transpose()?;
+        let test_holder_name = testing_data.and_then(|test_data| test_data.holder_name);
+        let card_holder_name = test_holder_name.or(item
+            .router_data
+            .resource_common_data
+            .get_optional_billing_full_name());
 
         let additional_data = get_additional_data(&item.router_data);
 
@@ -793,27 +847,41 @@ impl<
             return_url,
             shopper_interaction,
             recurring_processing_model,
-            browser_info: None,
+            browser_info: get_browser_info(&item.router_data)?,
             additional_data,
             mpi_data: None,
             telephone_number: None,
-            shopper_name: None,
-            shopper_email: None,
-            shopper_locale: None,
+            shopper_name: get_shopper_name(
+                item.router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_billing(),
+            ),
+            shopper_email: item.router_data.request.email.clone(),
+            shopper_locale: item
+                .router_data
+                .request
+                .get_optional_language_from_browser_info(),
             social_security_number: None,
             billing_address,
             delivery_address: None,
-            country_code: None,
+            country_code: get_country_code(
+                item.router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_billing(),
+            ),
             line_items: None,
             shopper_reference,
             store_payment_method,
             channel: None,
             shopper_statement: item.router_data.request.statement_descriptor.clone(),
-            shopper_ip: None,
+            shopper_ip: item.router_data.request.get_ip_address_as_optional(),
             merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
             store: None,
             splits: None,
             device_fingerprint: None,
+            metadata: item.router_data.request.metadata.clone(),
         })
     }
 }
@@ -878,27 +946,47 @@ impl<
             return_url,
             shopper_interaction,
             recurring_processing_model,
-            browser_info: None,
+            browser_info: get_browser_info(&item.router_data)?,
             additional_data,
             mpi_data: None,
             telephone_number: None,
-            shopper_name: None,
-            shopper_email: None,
-            shopper_locale: None,
+            shopper_name: get_shopper_name(
+                item.router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_billing(),
+            ),
+            shopper_email: item.router_data.request.email.clone(),
+            shopper_locale: item
+                .router_data
+                .request
+                .get_optional_language_from_browser_info(),
             social_security_number: None,
-            billing_address: None,
+            billing_address: get_address_info(
+                item.router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_billing(),
+            )
+            .and_then(Result::ok),
             delivery_address: None,
-            country_code: None,
+            country_code: get_country_code(
+                item.router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_billing(),
+            ),
             line_items: None,
             shopper_reference,
             store_payment_method,
             channel: None,
             shopper_statement: item.router_data.request.statement_descriptor.clone(),
-            shopper_ip: None,
+            shopper_ip: item.router_data.request.get_ip_address_as_optional(),
             merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
             store: None,
             splits: None,
             device_fingerprint: None,
+            metadata: item.router_data.request.metadata.clone(),
         })
     }
 }
@@ -1059,7 +1147,11 @@ impl<
         let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
         Ok(Self {
             merchant_account: auth_type.merchant_account,
-            reference: item.router_data.request.connector_transaction_id.clone(),
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
         })
     }
 }
@@ -1845,30 +1937,20 @@ fn get_additional_data<
     ) {
         Some("true".to_string())
     } else {
-        None
+        Some("false".to_string())
     };
 
-    if authorisation_type.is_none()
-        && manual_capture.is_none()
-        && execute_three_d.is_none()
-        && riskdata.is_none()
-    {
-        //without this if-condition when the above 3 values are None, additionalData will be serialized to JSON like this -> additionalData: {}
-        //returning None, ensures that additionalData key will not be present in the serialized JSON
-        None
-    } else {
-        Some(AdditionalData {
-            authorisation_type,
-            manual_capture,
-            execute_three_d,
-            network_tx_reference: None,
-            recurring_detail_reference: None,
-            recurring_shopper_reference: None,
-            recurring_processing_model: None,
-            riskdata,
-            ..AdditionalData::default()
-        })
-    }
+    Some(AdditionalData {
+        authorisation_type,
+        manual_capture,
+        execute_three_d,
+        network_tx_reference: None,
+        recurring_detail_reference: None,
+        recurring_shopper_reference: None,
+        recurring_processing_model: None,
+        riskdata,
+        ..AdditionalData::default()
+    })
 }
 
 pub fn get_risk_data(metadata: serde_json::Value) -> Option<RiskData> {
@@ -2265,7 +2347,7 @@ impl<
         let additional_data = get_additional_data_for_setup_mandate(&item.router_data);
 
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
-            AdyenPaymentMethod::try_from((card_data, card_holder_name))?,
+            AdyenPaymentMethod::try_from((card_data, card_holder_name.map(Secret::new)))?,
         ));
 
         Ok(SetupMandateRequest(AdyenPaymentRequest {
@@ -2301,6 +2383,7 @@ impl<
             store: None,
             splits: None,
             device_fingerprint: None,
+            metadata: item.router_data.request.metadata.clone(),
         }))
     }
 }
@@ -3097,4 +3180,59 @@ pub(crate) fn get_dispute_stage_and_status(
         }
         _ => (DisputeStage::Dispute, HSDisputeStatus::DisputeOpened),
     }
+}
+
+fn get_browser_info<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
+    router_data: &RouterDataV2<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    >,
+) -> Result<Option<AdyenBrowserInfo>, Error> {
+    if router_data.resource_common_data.auth_type == common_enums::AuthenticationType::ThreeDs
+        || router_data.resource_common_data.payment_method == common_enums::PaymentMethod::Card
+        || router_data.resource_common_data.payment_method
+            == common_enums::PaymentMethod::BankRedirect
+        || router_data.request.payment_method_type == Some(common_enums::PaymentMethodType::GoPay)
+        || router_data.request.payment_method_type
+            == Some(common_enums::PaymentMethodType::GooglePay)
+    {
+        let info = router_data.request.get_browser_info()?;
+        Ok(Some(AdyenBrowserInfo {
+            accept_header: info.get_accept_header()?,
+            language: info.get_language()?,
+            screen_height: info.get_screen_height()?,
+            screen_width: info.get_screen_width()?,
+            color_depth: info.get_color_depth()?,
+            user_agent: info.get_user_agent()?,
+            time_zone_offset: info.get_time_zone()?,
+            java_enabled: info.get_java_enabled()?,
+        }))
+    } else {
+        Ok(None)
+    }
+}
+
+fn get_shopper_name(
+    address: Option<&domain_types::payment_address::Address>,
+) -> Option<ShopperName> {
+    let billing = address.and_then(|billing| billing.address.as_ref());
+    Some(ShopperName {
+        first_name: billing.and_then(|a| a.first_name.clone()),
+        last_name: billing.and_then(|a| a.last_name.clone()),
+    })
+}
+
+fn get_country_code(
+    address: Option<&domain_types::payment_address::Address>,
+) -> Option<common_enums::CountryAlpha2> {
+    address.and_then(|billing| billing.address.as_ref().and_then(|address| address.country))
 }
