@@ -3898,17 +3898,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
             reason: value.reason.clone(),
             webhook_url: value.webhook_url,
             refund_amount: value.refund_amount,
-            connector_metadata: {
-                value
-                    .metadata
-                    .get("connector_metadata")
-                    .map(|json_string| {
-                        Ok::<serde_json::Value, error_stack::Report<ApplicationErrorResponse>>(
-                            serde_json::Value::String(json_string.clone()),
-                        )
-                    })
-                    .transpose()? // Should be Option<serde_json::Value>, not Secret
-            },
+            connector_metadata: serde_json::to_value(&value.metadata).ok(),
             refund_connector_metadata: {
                 value.refund_metadata.get("refund_metadata").map(|json_string| {
                     Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
