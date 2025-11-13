@@ -2049,6 +2049,56 @@ message PaymentServicePostAuthenticateResponse {
   optional SecretString raw_connector_response = 14; // Raw response from the connector for debugging
 }
 
+// Request message for creating a session token
+message PaymentServiceCreateSessionTokenRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+  
+  // Amount Information (required by SessionTokenRequestData)
+  int64 amount = 2; // The amount for the payment in major currency units
+  Currency currency = 3; // The currency for the payment, in ISO 4217 three-letter code
+  int64 minor_amount = 4; // The minor amount for the payment (e.g., cents)
+  
+  // Optional metadata for the connector
+  map<string, string> metadata = 5; // Additional metadata for the connector
+  
+  // State Information
+  optional ConnectorState state = 6; // State data for access token storage and other connector-specific state
+}
+
+// Response message for creating a session token
+message PaymentServiceCreateSessionTokenResponse {
+  // Identification
+  Identifier transaction_id = 1; // Identifier for the session token created
+
+  // Status Information
+  PaymentStatus status = 2; // Status of the session token creation
+  optional string error_code = 3; // Error code if the session token creation failed
+  optional string error_message = 4; // Error message if the session token creation failed
+  uint32 status_code = 10; // HTTP status code from the connector
+  map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
+
+  // Session Token Details
+  string session_token = 5; // The created session token
+  optional string network_txn_id = 6; // Transaction ID from the payment network
+  optional Identifier response_ref_id = 7; // Response reference ID for tracking
+
+  // Redirection Data (if applicable)
+  optional RedirectForm redirection_data = 8; // Data for redirecting the customer's browser
+
+  // Metadata
+  map<string, string> connector_metadata = 12; // Connector-specific metadata for the transaction
+
+  // State Information
+  optional ConnectorState state = 13; // State data for access token storage and other connector-specific state
+
+  // Raw Response
+  optional SecretString raw_connector_response = 9; // Raw response from the connector for debugging
+
+  // Raw Request
+  optional SecretString raw_connector_request = 14; // Raw request to the connector for debugging
+}
+
 // Request message for PaymentService.Transform RPC
 message PaymentServiceTransformRequest {
   // Identification
