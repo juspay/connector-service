@@ -396,7 +396,7 @@ pub struct AuthipayPaymentMethodDetails {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AmountDetails {
-    pub total: Option<f64>,
+    pub total: Option<FloatMajorUnit>,
     pub currency: Option<common_enums::Currency>,
 }
 

@@ -370,10 +370,7 @@ macros::macro_connector_implementation!(
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             // For GET requests, use empty body for HMAC signature
-            let headers = self.build_headers_for_get(&auth)?;
-
-            // GET requests don't need Content-Type header, so remove it
-            Ok(headers.into_iter().filter(|(k, _)| k != headers::CONTENT_TYPE).collect())
+            self.build_headers_for_get(&auth)
         }
 
         fn get_url(
@@ -570,10 +567,7 @@ macros::macro_connector_implementation!(
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             // For GET requests, use empty body for HMAC signature
-            let headers = self.build_headers_for_get(&auth)?;
-
-            // GET requests don't need Content-Type header, so remove it
-            Ok(headers.into_iter().filter(|(k, _)| k != headers::CONTENT_TYPE).collect())
+            self.build_headers_for_get(&auth)
         }
 
         fn get_url(
@@ -931,7 +925,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn get_currency_unit(&self) -> CurrencyUnit {
-        CurrencyUnit::Minor
+        CurrencyUnit::Base
     }
 
     fn common_get_content_type(&self) -> &'static str {
