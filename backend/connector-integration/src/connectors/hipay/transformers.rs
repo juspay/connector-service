@@ -15,8 +15,7 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
-use serde::{Deserialize, Deserializer, Serialize};
-use serde_json::Value;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub struct HipayAuthType {
@@ -59,6 +58,169 @@ impl TryFrom<&ConnectorAuthType> for HipayAuthType {
 pub struct HipayErrorResponse {
     pub code: String,
     pub message: String,
+}
+
+// HiPay Payment Status Enum - Type-safe status codes from HiPay API
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum HipayPaymentStatus {
+    #[serde(rename = "109")]
+    AuthenticationFailed,
+    #[serde(rename = "110")]
+    Blocked,
+    #[serde(rename = "111")]
+    Denied,
+    #[serde(rename = "112")]
+    AuthorizedAndPending,
+    #[serde(rename = "113")]
+    Refused,
+    #[serde(rename = "114")]
+    Expired,
+    #[serde(rename = "115")]
+    Cancelled,
+    #[serde(rename = "116")]
+    Authorized,
+    #[serde(rename = "117")]
+    CaptureRequested,
+    #[serde(rename = "118")]
+    Captured,
+    #[serde(rename = "119")]
+    PartiallyCaptured,
+    #[serde(rename = "129")]
+    ChargedBack,
+    #[serde(rename = "173")]
+    CaptureRefused,
+    #[serde(rename = "174")]
+    AwaitingTerminal,
+    #[serde(rename = "175")]
+    AuthorizationCancellationRequested,
+    #[serde(rename = "177")]
+    ChallengeRequested,
+    #[serde(rename = "178")]
+    SoftDeclined,
+    #[serde(rename = "200")]
+    PendingPayment,
+    #[serde(rename = "101")]
+    Created,
+    #[serde(rename = "105")]
+    UnableToAuthenticate,
+    #[serde(rename = "106")]
+    CardholderAuthenticated,
+    #[serde(rename = "107")]
+    AuthenticationAttempted,
+    #[serde(rename = "108")]
+    CouldNotAuthenticate,
+    #[serde(rename = "120")]
+    Collected,
+    #[serde(rename = "121")]
+    PartiallyCollected,
+    #[serde(rename = "122")]
+    Settled,
+    #[serde(rename = "123")]
+    PartiallySettled,
+    #[serde(rename = "140")]
+    AuthenticationRequested,
+    #[serde(rename = "141")]
+    Authenticated,
+    #[serde(rename = "151")]
+    AcquirerNotFound,
+    #[serde(rename = "161")]
+    RiskAccepted,
+    #[serde(rename = "163")]
+    AuthorizationRefused,
+}
+
+impl From<HipayPaymentStatus> for AttemptStatus {
+    fn from(status: HipayPaymentStatus) -> Self {
+        match status {
+            HipayPaymentStatus::AuthenticationFailed => Self::AuthenticationFailed,
+            HipayPaymentStatus::Blocked
+            | HipayPaymentStatus::Refused
+            | HipayPaymentStatus::Expired
+            | HipayPaymentStatus::Denied => Self::Failure,
+            HipayPaymentStatus::AuthorizedAndPending => Self::Pending,
+            HipayPaymentStatus::Cancelled => Self::Voided,
+            HipayPaymentStatus::Authorized => Self::Authorized,
+            HipayPaymentStatus::CaptureRequested => Self::CaptureInitiated,
+            HipayPaymentStatus::Captured => Self::Charged,
+            HipayPaymentStatus::PartiallyCaptured => Self::PartialCharged,
+            HipayPaymentStatus::CaptureRefused => Self::CaptureFailed,
+            HipayPaymentStatus::AwaitingTerminal => Self::Pending,
+            HipayPaymentStatus::AuthorizationCancellationRequested => Self::VoidInitiated,
+            HipayPaymentStatus::ChallengeRequested => Self::AuthenticationPending,
+            HipayPaymentStatus::SoftDeclined => Self::Failure,
+            HipayPaymentStatus::PendingPayment => Self::Pending,
+            HipayPaymentStatus::ChargedBack => Self::Failure,
+            HipayPaymentStatus::Created => Self::Started,
+            HipayPaymentStatus::UnableToAuthenticate
+            | HipayPaymentStatus::CouldNotAuthenticate => Self::AuthenticationFailed,
+            HipayPaymentStatus::CardholderAuthenticated => Self::Pending,
+            HipayPaymentStatus::AuthenticationAttempted => Self::AuthenticationPending,
+            HipayPaymentStatus::Collected
+            | HipayPaymentStatus::PartiallySettled
+            | HipayPaymentStatus::PartiallyCollected
+            | HipayPaymentStatus::Settled => Self::Charged,
+            HipayPaymentStatus::AuthenticationRequested => Self::AuthenticationPending,
+            HipayPaymentStatus::Authenticated => Self::AuthenticationSuccessful,
+            HipayPaymentStatus::AcquirerNotFound => Self::Failure,
+            HipayPaymentStatus::RiskAccepted => Self::Pending,
+            HipayPaymentStatus::AuthorizationRefused => Self::Failure,
+        }
+    }
+}
+
+// HiPay Refund Status Enum - Type-safe refund status codes
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum HipayRefundStatus {
+    #[serde(rename = "124")]
+    RefundRequested,
+    #[serde(rename = "125")]
+    Refunded,
+    #[serde(rename = "126")]
+    PartiallyRefunded,
+    #[serde(rename = "165")]
+    RefundRefused,
+}
+
+impl From<HipayRefundStatus> for RefundStatus {
+    fn from(item: HipayRefundStatus) -> Self {
+        match item {
+            HipayRefundStatus::RefundRequested => Self::Pending,
+            HipayRefundStatus::Refunded | HipayRefundStatus::PartiallyRefunded => Self::Success,
+            HipayRefundStatus::RefundRefused => Self::Failure,
+        }
+    }
+}
+
+// Sync Response Types
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum HipaySyncResponse {
+    Response {
+        status: HipayPaymentStatus,  // Use HipayPaymentStatus enum for type-safe deserialization
+        #[serde(flatten)]
+        extra: std::collections::HashMap<String, serde_json::Value>,
+    },
+    Error {
+        message: String,
+        code: u32
+    },
+}
+
+// Refund Sync Response - Untagged enum to handle both success and error responses
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum HipayRefundSyncResponse {
+    Response {
+        id: u64,
+        status: u16,
+        #[serde(flatten)]
+        extra: std::collections::HashMap<String, serde_json::Value>,
+    },
+    Error {
+        message: String,
+        code: String,
+    },
 }
 
 #[derive(Debug, Serialize)]
@@ -239,66 +401,38 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+// Response Structures aligned with Hyperswitch
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaymentOrder {
+    id: String,
+}
+
+// Authorize Response - matches HiPay's order API response (snake_case from XML conversion)
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HipayPaymentsResponse {
-    pub transaction_reference: String,
-    pub state: String,
-    #[serde(deserialize_with = "deserialize_status")]
-    pub status: i32,
-    pub authorized_amount: Option<String>,
-    pub captured_amount: Option<String>,
-    pub decimals: Option<String>,
-    pub currency: Option<String>,
-    pub payment_product: Option<String>,
-    pub forward_url: Option<String>,
-    pub message: Option<String>,
-    // Additional fields that may be present in HiPay responses (including order, reason, etc.)
-    #[serde(flatten)]
-    pub additional_fields: std::collections::HashMap<String, Value>,
+    status: HipayPaymentStatus,
+    message: String,
+    order: PaymentOrder,
+    #[serde(default)]
+    forward_url: String,
+    transaction_reference: String,
 }
 
-// Custom deserializer for status field that can handle both string and integer
-fn deserialize_status<'de, D>(deserializer: D) -> Result<i32, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let value: Value = Deserialize::deserialize(deserializer)?;
-
-    match value {
-        Value::Number(n) => n
-            .as_i64()
-            .and_then(|i| i32::try_from(i).ok())
-            .ok_or_else(|| serde::de::Error::custom("Invalid number for status")),
-        Value::String(s) => s
-            .parse::<i32>()
-            .map_err(|_| serde::de::Error::custom("Invalid string for status")),
-        _ => Err(serde::de::Error::custom("Expected number or string for status")),
-    }
+// Generic Maintenance Response for Capture/Void/Refund operations (snake_case from XML conversion)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HipayMaintenanceResponse<S> {
+    status: S,
+    message: String,
+    transaction_reference: String,
 }
 
-// Helper function to extract order ID from Value (handles both structured and $text wrapped)
-fn extract_order_id(order: &Value) -> Option<String> {
-    order
-        .as_object()
-        .and_then(|obj| obj.get("id"))
-        .and_then(|id_val| {
-            // Handle {"$text": "value"} case
-            if let Some(text_obj) = id_val.as_object() {
-                text_obj.get("$text").and_then(|v| v.as_str()).map(|s| s.to_string())
-            } else {
-                // Handle direct string case
-                id_val.as_str().map(|s| s.to_string())
-            }
-        })
-}
-
-// Type aliases for different flows to avoid macro templating conflicts
+// Type aliases for different flows - operation-specific types
 pub type HipayAuthorizeResponse = HipayPaymentsResponse;
-pub type HipayPSyncResponse = HipayPaymentsResponse;
-pub type HipayCaptureResponse = HipayPaymentsResponse;
-pub type HipayVoidResponse = HipayPaymentsResponse;
-pub type HipayRefundResponse = HipayPaymentsResponse;
-pub type HipayRSyncResponse = HipayPaymentsResponse;
+pub type HipayCaptureResponse = HipayMaintenanceResponse<HipayPaymentStatus>;
+pub type HipayVoidResponse = HipayMaintenanceResponse<HipayPaymentStatus>;
+pub type HipayRefundResponse = HipayMaintenanceResponse<HipayRefundStatus>;
+pub type HipayPSyncResponse = HipaySyncResponse;
+pub type HipayRSyncResponse = HipayRefundSyncResponse;
 
 
 impl<T: PaymentMethodDataTypes>
@@ -327,41 +461,35 @@ impl<T: PaymentMethodDataTypes>
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        // Map HiPay state to AttemptStatus
-        let status = match item.response.state.as_str() {
-            "completed" => {
-                // Check if it's authorized or charged based on capture status
-                if item.response.captured_amount.is_some()
-                    && item.response.captured_amount.as_ref().unwrap() != "0.00"
-                {
-                    AttemptStatus::Charged
-                } else {
-                    AttemptStatus::Authorized
-                }
-            }
-            "forwarding" => AttemptStatus::AuthenticationPending,
-            "pending" => AttemptStatus::Pending,
-            "declined" => AttemptStatus::Failure,
-            "error" => AttemptStatus::Failure,
-            _ => {
-                // Additional status code checks
-                match item.response.status {
-                    116 => AttemptStatus::Charged,    // Captured
-                    117 => AttemptStatus::Authorized, // Authorized
-                    118 => AttemptStatus::Voided,     // Cancelled
-                    119 => AttemptStatus::Voided,     // Refund Requested
-                    _ => AttemptStatus::Pending,
-                }
-            }
-        };
+        // Convert HipayPaymentStatus enum directly to AttemptStatus using From trait
+        let status = AttemptStatus::from(item.response.status.clone());
 
-        // Handle redirection if forward_url is present
-        let redirection_data = item.response.forward_url.as_ref().map(|url| {
-            Box::new(domain_types::router_response_types::RedirectForm::Uri { uri: url.clone() })
-        });
+        // Check if status is failure to return error response
+        let response = if status == AttemptStatus::Failure {
+            Err(domain_types::router_data::ErrorResponse {
+                code: "DECLINED".to_string(),
+                message: item.response.message.clone(),
+                reason: Some(item.response.message.clone()),
+                status_code: item.http_code,
+                attempt_status: None,
+                connector_transaction_id: Some(item.response.transaction_reference.clone()),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+            })
+        } else {
+            // Check if redirection is needed (for 3DS flows)
+            let redirection_data = if !item.response.forward_url.is_empty() {
+                Some(Box::new(
+                    domain_types::router_response_types::RedirectForm::Uri {
+                        uri: item.response.forward_url.clone(),
+                    },
+                ))
+            } else {
+                None
+            };
 
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
+            Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(
                     item.response.transaction_reference.clone(),
                 ),
@@ -369,14 +497,14 @@ impl<T: PaymentMethodDataTypes>
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
-                connector_response_reference_id: item
-                    .response
-                    .additional_fields
-                    .get("order")
-                    .and_then(extract_order_id),
+                connector_response_reference_id: Some(item.response.order.id.clone()),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
-            }),
+            })
+        };
+
+        Ok(Self {
+            response,
             resource_common_data: PaymentFlowData {
                 status,
                 ..item.router_data.resource_common_data
@@ -613,7 +741,7 @@ impl<T: PaymentMethodDataTypes>
 }
 
 // Payment Sync Response Implementation
-// Reuses HipayPaymentsResponse structure as the sync endpoint returns the same format
+// Uses HipaySyncResponse enum with get_sync_status helper
 impl
     TryFrom<
         ResponseRouterData<
@@ -630,62 +758,53 @@ impl
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Map HiPay state to AttemptStatus (same mapping logic as authorize)
-        let status = match item.response.state.as_str() {
-            "completed" => {
-                // Check if it's authorized or charged based on capture status
-                if item.response.captured_amount.is_some()
-                    && item.response.captured_amount.as_ref().unwrap() != "0.00"
-                {
-                    AttemptStatus::Charged
-                } else {
-                    AttemptStatus::Authorized
-                }
-            }
-            "forwarding" => AttemptStatus::AuthenticationPending,
-            "pending" => AttemptStatus::Pending,
-            "declined" => AttemptStatus::Failure,
-            "error" => AttemptStatus::Failure,
-            _ => {
-                // Additional status code checks
-                match item.response.status {
-                    116 => AttemptStatus::Charged,    // Captured
-                    117 => AttemptStatus::Authorized, // Authorized
-                    118 => AttemptStatus::Voided,     // Cancelled
-                    119 => AttemptStatus::Voided,     // Refund Requested
-                    _ => AttemptStatus::Pending,
-                }
-            }
-        };
+        // Handle sync response - could be Response or Error variant
+        match item.response {
+            HipaySyncResponse::Response { status, .. } => {
+                // Convert HipayPaymentStatus enum directly to AttemptStatus using From trait
+                let attempt_status = AttemptStatus::from(status);
 
-        // Handle redirection if forward_url is present
-        let redirection_data = item.response.forward_url.as_ref().map(|url| {
-            Box::new(domain_types::router_response_types::RedirectForm::Uri { uri: url.clone() })
-        });
-
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    item.response.transaction_reference.clone(),
-                ),
-                redirection_data,
-                mandate_reference: None,
-                connector_metadata: None,
-                network_txn_id: None,
-                connector_response_reference_id: item
-                    .response
-                    .additional_fields
-                    .get("order")
-                    .and_then(extract_order_id),
-                incremental_authorization_allowed: None,
-                status_code: item.http_code,
-            }),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
-            ..item.router_data
-        })
+                Ok(Self {
+                    response: Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(
+                            item.router_data.request.connector_transaction_id.get_connector_transaction_id().unwrap_or_default(),
+                        ),
+                        redirection_data: None,
+                        mandate_reference: None,
+                        connector_metadata: None,
+                        network_txn_id: None,
+                        connector_response_reference_id: None,
+                        incremental_authorization_allowed: None,
+                        status_code: item.http_code,
+                    }),
+                    resource_common_data: PaymentFlowData {
+                        status: attempt_status,
+                        ..item.router_data.resource_common_data
+                    },
+                    ..item.router_data
+                })
+            }
+            HipaySyncResponse::Error { message, code } => {
+                Ok(Self {
+                    response: Err(domain_types::router_data::ErrorResponse {
+                        code: code.to_string(),
+                        message: message.clone(),
+                        reason: Some(message),
+                        status_code: item.http_code,
+                        attempt_status: None,
+                        connector_transaction_id: item.router_data.request.connector_transaction_id.get_connector_transaction_id().ok(),
+                        network_decline_code: None,
+                        network_advice_code: None,
+                        network_error_message: None,
+                    }),
+                    resource_common_data: PaymentFlowData {
+                        status: AttemptStatus::Failure,
+                        ..item.router_data.resource_common_data
+                    },
+                    ..item.router_data
+                })
+            }
+        }
     }
 }
 
@@ -731,7 +850,7 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
 }
 
 // Capture Response Implementation
-// Reuses HipayPaymentsResponse structure as the capture endpoint returns the same format
+// Uses HipayMaintenanceResponse<HipayPaymentStatus> with direct enum conversion
 impl
     TryFrom<
         ResponseRouterData<
@@ -748,33 +867,24 @@ impl
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Map HiPay state to AttemptStatus for capture
-        let status = match item.response.state.as_str() {
-            "completed" => {
-                // For capture flow, completed should map to Charged
-                if item.response.captured_amount.is_some()
-                    && item.response.captured_amount.as_ref().unwrap() != "0.00"
-                {
-                    AttemptStatus::Charged
-                } else {
-                    AttemptStatus::Pending
-                }
-            }
-            "pending" => AttemptStatus::Pending,
-            "declined" => AttemptStatus::Failure,
-            "error" => AttemptStatus::Failure,
-            _ => {
-                // Additional status code checks specific to capture
-                match item.response.status {
-                    116 => AttemptStatus::Charged,        // Captured
-                    117 => AttemptStatus::PartialCharged, // Partial capture
-                    _ => AttemptStatus::Pending,
-                }
-            }
-        };
+        // Convert HipayPaymentStatus enum directly to AttemptStatus using From trait
+        let status = AttemptStatus::from(item.response.status.clone());
 
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
+        // Check if status indicates failure
+        let response = if status == AttemptStatus::Failure || status == AttemptStatus::CaptureFailed {
+            Err(domain_types::router_data::ErrorResponse {
+                code: "CAPTURE_FAILED".to_string(),
+                message: item.response.message.clone(),
+                reason: Some(item.response.message.clone()),
+                status_code: item.http_code,
+                attempt_status: None,
+                connector_transaction_id: Some(item.response.transaction_reference.clone()),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+            })
+        } else {
+            Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(
                     item.response.transaction_reference.clone(),
                 ),
@@ -782,14 +892,14 @@ impl
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
-                connector_response_reference_id: item
-                    .response
-                    .additional_fields
-                    .get("order")
-                    .and_then(extract_order_id),
+                connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
-            }),
+            })
+        };
+
+        Ok(Self {
+            response,
             resource_common_data: PaymentFlowData {
                 status,
                 ..item.router_data.resource_common_data
@@ -837,7 +947,7 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
 }
 
 // Refund Response Implementation
-// Reuses HipayPaymentsResponse structure as the maintenance/refund endpoint returns the same format
+// Uses HipayMaintenanceResponse<HipayRefundStatus> with From trait conversion
 impl
     TryFrom<
         ResponseRouterData<
@@ -854,20 +964,8 @@ impl
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Map HiPay state to RefundStatus
-        let refund_status = match item.response.state.as_str() {
-            "completed" => RefundStatus::Success,
-            "pending" => RefundStatus::Pending,
-            "declined" | "error" => RefundStatus::Failure,
-            _ => {
-                // Additional status code checks specific to refund
-                match item.response.status {
-                    124 => RefundStatus::Success, // Refund
-                    125 => RefundStatus::Pending, // Refund Requested
-                    _ => RefundStatus::Pending,
-                }
-            }
-        };
+        // Convert HipayRefundStatus enum directly to RefundStatus using From trait
+        let refund_status = RefundStatus::from(item.response.status.clone());
 
         Ok(Self {
             response: Ok(RefundsResponseData {
@@ -881,7 +979,7 @@ impl
 }
 
 // Refund Sync Response Implementation
-// Reuses HipayPaymentsResponse structure for refund sync
+// Uses HipayRefundSyncResponse enum to handle both success and error responses
 impl
     TryFrom<
         ResponseRouterData<
@@ -898,29 +996,47 @@ impl
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Map HiPay state to RefundStatus (same mapping logic as refund)
-        let refund_status = match item.response.state.as_str() {
-            "completed" => RefundStatus::Success,
-            "pending" => RefundStatus::Pending,
-            "declined" | "error" => RefundStatus::Failure,
-            _ => {
-                // Additional status code checks specific to refund
-                match item.response.status {
-                    124 => RefundStatus::Success, // Refund
-                    125 => RefundStatus::Pending, // Refund Requested
+        // Handle refund sync response - could be Response or Error variant
+        match item.response {
+            HipayRefundSyncResponse::Response { id, status, .. } => {
+                // Map refund sync status codes to RefundStatus
+                // 124 = RefundRequested -> Pending
+                // 125 = Refunded -> Success
+                // 126 = PartiallyRefunded -> Success
+                // 165 = RefundRefused -> Failure
+                let refund_status = match status {
+                    124 => RefundStatus::Pending,
+                    125 | 126 => RefundStatus::Success,
+                    165 => RefundStatus::Failure,
                     _ => RefundStatus::Pending,
-                }
-            }
-        };
+                };
 
-        Ok(Self {
-            response: Ok(RefundsResponseData {
-                connector_refund_id: item.response.transaction_reference.clone(),
-                refund_status,
-                status_code: item.http_code,
-            }),
-            ..item.router_data
-        })
+                Ok(Self {
+                    response: Ok(RefundsResponseData {
+                        connector_refund_id: id.to_string(),
+                        refund_status,
+                        status_code: item.http_code,
+                    }),
+                    ..item.router_data
+                })
+            }
+            HipayRefundSyncResponse::Error { message, code } => {
+                Ok(Self {
+                    response: Err(domain_types::router_data::ErrorResponse {
+                        code,
+                        message: message.clone(),
+                        reason: Some(message),
+                        status_code: item.http_code,
+                        attempt_status: None,
+                        connector_transaction_id: None,
+                        network_decline_code: None,
+                        network_advice_code: None,
+                        network_error_message: None,
+                    }),
+                    ..item.router_data
+                })
+            }
+        }
     }
 }
 
@@ -955,7 +1071,7 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
 }
 
 // Void Response Implementation
-// Reuses HipayPaymentsResponse structure as the maintenance/void endpoint returns the same format
+// Uses HipayMaintenanceResponse<HipayPaymentStatus> with direct enum conversion
 impl
     TryFrom<
         ResponseRouterData<
@@ -972,29 +1088,24 @@ impl
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Map HiPay state to AttemptStatus for void
-        let status = match item.response.state.as_str() {
-            "completed" => {
-                // Status 118 indicates cancellation
-                if item.response.status == 118 {
-                    AttemptStatus::Voided
-                } else {
-                    AttemptStatus::VoidFailed
-                }
-            }
-            "pending" => AttemptStatus::Pending,
-            "declined" | "error" => AttemptStatus::VoidFailed,
-            _ => {
-                // Check status code for void-specific statuses
-                match item.response.status {
-                    118 => AttemptStatus::Voided, // Cancelled
-                    _ => AttemptStatus::VoidFailed,
-                }
-            }
-        };
+        // Convert HipayPaymentStatus enum directly to AttemptStatus using From trait
+        let status = AttemptStatus::from(item.response.status.clone());
 
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
+        // Check if status indicates void failure
+        let response = if status == AttemptStatus::Failure || status == AttemptStatus::VoidFailed {
+            Err(domain_types::router_data::ErrorResponse {
+                code: "VOID_FAILED".to_string(),
+                message: item.response.message.clone(),
+                reason: Some(item.response.message.clone()),
+                status_code: item.http_code,
+                attempt_status: None,
+                connector_transaction_id: Some(item.response.transaction_reference.clone()),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+            })
+        } else {
+            Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(
                     item.response.transaction_reference.clone(),
                 ),
@@ -1002,14 +1113,14 @@ impl
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
-                connector_response_reference_id: item
-                    .response
-                    .additional_fields
-                    .get("order")
-                    .and_then(extract_order_id),
+                connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
-            }),
+            })
+        };
+
+        Ok(Self {
+            response,
             resource_common_data: PaymentFlowData {
                 status,
                 ..item.router_data.resource_common_data
