@@ -14,7 +14,7 @@ bytes = "1"
 prost = "0.13"
 
 # First party crates
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", rev = "e692c3b8e", package = "masking" }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.09.24.0", package = "masking" }
 common_utils = { path = "../common_utils", package = "ucs_common_utils" }
 
 

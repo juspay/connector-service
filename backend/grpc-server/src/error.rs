@@ -107,7 +107,8 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | Self::RoutingRulesParsingError
             | Self::FailedAtConnector { .. }
             | Self::AmountConversionFailed
-            | Self::GenericError { .. } => {
+            | Self::GenericError { .. }
+            | Self::MandatePaymentDataMismatch { .. } => {
                 ApplicationErrorResponse::InternalServerError(ApiError {
                     sub_code: "INTERNAL_SERVER_ERROR".to_string(),
                     error_identifier: 500,
@@ -313,6 +314,13 @@ impl From<PaymentAuthorizationError> for PaymentServiceAuthorizeResponse {
             response_headers: std::collections::HashMap::new(),
             connector_metadata: std::collections::HashMap::new(),
             raw_connector_response: None,
+            raw_connector_request: None,
+            state: None,
+            mandate_reference: None,
+            minor_amount_capturable: None,
+            minor_captured_amount: None,
+            captured_amount: None,
+            connector_response: None,
         }
     }
 }

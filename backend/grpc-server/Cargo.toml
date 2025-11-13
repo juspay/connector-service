@@ -13,8 +13,8 @@ interfaces = { path = "../interfaces" }
 cards = { path = "../cards", package = "ucs_cards" }
 common_enums = { path = "../common_enums", package = "ucs_common_enums" }
 common_utils = { path = "../common_utils", package = "ucs_common_utils" }
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", rev = "e692c3b8e", package = "masking" }
-injector = { git = "https://github.com/juspay/hyperswitch", rev = "e692c3b8e" }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.09.24.0", package = "masking" }
+injector = { git = "https://github.com/juspay/hyperswitch", tag = "2025.09.24.0" }
 tracing-kafka = { path = "../tracing-kafka", optional = true }
 
 # Third-party dependencies
@@ -59,6 +59,7 @@ build_info = { git = "https://github.com/juspay/framework-libs-rs", rev = "24356
     "framework-libs-members-env",
 ] }
 uuid = "1.0"
+chrono = "0.4.31"
 
 [build-dependencies]
 build_info = { git = "https://github.com/juspay/framework-libs-rs", rev = "243562041252fe5897ce888d20b715ffdc3767ce", package = "build_info", features = [

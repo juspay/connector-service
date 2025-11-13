@@ -19,10 +19,6 @@ on:
     types:
       - checks_requested
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 env:
   # Allow more retries for network requests in cargo (downloading crates) and
   # rustup (installing toolchains). This should help to reduce flaky CI failures

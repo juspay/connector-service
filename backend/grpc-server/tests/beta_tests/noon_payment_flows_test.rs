@@ -4,10 +4,10 @@
 
 use grpc_server::{app, configs};
 mod common;
+mod utils;
 
 use std::{
     collections::HashMap,
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -24,17 +24,12 @@ use grpc_api_types::{
         PaymentServiceVoidRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus,
     },
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use tonic::{transport::Channel, Request};
 
 // Constants for Noon connector
 const CONNECTOR_NAME: &str = "noon";
 const AUTH_TYPE: &str = "signature-key";
-
-// Environment variable names for API credentials (can be set or overridden with provided values)
-const NOON_API_KEY_ENV: &str = "TEST_NOON_API_KEY";
-const NOON_KEY1_ENV: &str = "TEST_NOON_KEY1";
-const NOON_API_SECRET_ENV: &str = "TEST_NOON_API_SECRET";
 
 // Test card data
 const TEST_AMOUNT: i64 = 1000;
@@ -55,12 +50,17 @@ fn get_timestamp() -> u64 {
 
 // Helper function to add Noon metadata headers to a request
 fn add_noon_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables - throw error if not set
-    let api_key =
-        env::var(NOON_API_KEY_ENV).expect("TEST_NOON_API_KEY environment variable is required");
-    let key1 = env::var(NOON_KEY1_ENV).expect("TEST_NOON_KEY1 environment variable is required");
-    let api_secret = env::var(NOON_API_SECRET_ENV)
-        .expect("TEST_NOON_API_SECRET environment variable is required");
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load noon credentials");
+
+    let (api_key, key1, api_secret) = match auth {
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
+            api_key,
+            key1,
+            api_secret,
+        } => (api_key.expose(), key1.expose(), api_secret.expose()),
+        _ => panic!("Expected SignatureKey auth type for noon"),
+    };
 
     request.metadata_mut().append(
         "x-connector",
@@ -184,6 +184,11 @@ fn create_payment_sync_request(
             id_type: Some(IdType::Id(request_ref_id.to_string())),
         }),
         // all_keys_required: None,
+        capture_method: None,
+        handle_response: None,
+        amount: TEST_AMOUNT,
+        currency: i32::from(Currency::Aed),
+        state: None,
     }
 }
 
@@ -215,6 +220,9 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         }),
         all_keys_required: None,
         browser_info: None,
+        amount: None,
+        currency: None,
+        ..Default::default()
     }
 }
 
@@ -252,6 +260,8 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
             id_type: Some(IdType::Id(format!("rsync_ref_{}", get_timestamp()))),
         }),
         browser_info: None,
+        refund_metadata: HashMap::new(),
+        state: None,
     }
 }
 

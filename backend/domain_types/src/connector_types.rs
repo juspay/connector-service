@@ -21,13 +21,14 @@ use crate::{
     mandates::{CustomerAcceptance, MandateData},
     payment_address::{self, Address, AddressDetails, PhoneDetails},
     payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::PaymentMethodToken,
+    router_data::{self, ConnectorResponseData, PaymentMethodToken},
     router_request_types::{
-        AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
+        self, AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
         CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
-        PaymentSynIntegrityObject, PaymentVoidIntegrityObject, RefundIntegrityObject,
-        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject, SyncRequestType,
+        PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
+        PaymentVoidPostCaptureIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
+        RepeatPaymentIntegrityObject, SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
+        SyncRequestType,
     },
     router_response_types::RedirectForm,
     types::{
@@ -36,6 +37,7 @@ use crate::{
     },
     utils::{missing_field_err, Error, ForeignTryFrom},
 };
+use url::Url;
 
 // snake case for enum variants
 #[derive(Clone, Copy, Debug, Display, EnumString)]
@@ -59,6 +61,23 @@ pub enum ConnectorEnum {
     Novalnet,
     Nexinets,
     Noon,
+    Braintree,
+    Volt,
+    Bluecode,
+    Cryptopay,
+    Helcim,
+    Dlocal,
+    Placetopay,
+    Rapyd,
+    Aci,
+    Trustpay,
+    Stripe,
+    Cybersource,
+    Worldpay,
+    Worldpayvantiv,
+    Payload,
+    Fiservemea,
+    Datatrans,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -85,6 +104,22 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Nexinets => Ok(Self::Nexinets),
             grpc_api_types::payments::Connector::Noon => Ok(Self::Noon),
             grpc_api_types::payments::Connector::Mifinity => Ok(Self::Mifinity),
+            grpc_api_types::payments::Connector::Braintree => Ok(Self::Braintree),
+            grpc_api_types::payments::Connector::Volt => Ok(Self::Volt),
+            grpc_api_types::payments::Connector::Bluecode => Ok(Self::Bluecode),
+            grpc_api_types::payments::Connector::Cryptopay => Ok(Self::Cryptopay),
+            grpc_api_types::payments::Connector::Helcim => Ok(Self::Helcim),
+            grpc_api_types::payments::Connector::Dlocal => Ok(Self::Dlocal),
+            grpc_api_types::payments::Connector::Placetopay => Ok(Self::Placetopay),
+            grpc_api_types::payments::Connector::Rapyd => Ok(Self::Rapyd),
+            grpc_api_types::payments::Connector::Aci => Ok(Self::Aci),
+            grpc_api_types::payments::Connector::Trustpay => Ok(Self::Trustpay),
+            grpc_api_types::payments::Connector::Stripe => Ok(Self::Stripe),
+            grpc_api_types::payments::Connector::Cybersource => Ok(Self::Cybersource),
+            grpc_api_types::payments::Connector::Worldpay => Ok(Self::Worldpayvantiv),
+            grpc_api_types::payments::Connector::Payload => Ok(Self::Payload),
+            grpc_api_types::payments::Connector::Fiservemea => Ok(Self::Fiservemea),
+            grpc_api_types::payments::Connector::Datatrans => Ok(Self::Datatrans),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -120,6 +155,7 @@ pub struct ConnectorMandateReferenceId {
     connector_mandate_id: Option<String>,
     payment_method_id: Option<String>,
     update_history: Option<Vec<UpdateHistory>>,
+    mandate_metadata: Option<SecretSerdeValue>,
 }
 
 impl ConnectorMandateReferenceId {
@@ -127,11 +163,13 @@ impl ConnectorMandateReferenceId {
         connector_mandate_id: Option<String>,
         payment_method_id: Option<String>,
         update_history: Option<Vec<UpdateHistory>>,
+        mandate_metadata: Option<SecretSerdeValue>,
     ) -> Self {
         Self {
             connector_mandate_id,
             payment_method_id,
             update_history,
+            mandate_metadata,
         }
     }
 
@@ -146,11 +184,17 @@ impl ConnectorMandateReferenceId {
     pub fn get_update_history(&self) -> Option<&Vec<UpdateHistory>> {
         self.update_history.as_ref()
     }
+
+    pub fn get_mandate_metadata(&self) -> Option<SecretSerdeValue> {
+        self.mandate_metadata.clone()
+    }
 }
 
-pub trait RawConnectorResponse {
-    fn set_raw_connector_response(&mut self, response: Option<String>);
-    fn get_raw_connector_response(&self) -> Option<String>;
+pub trait RawConnectorRequestResponse {
+    fn set_raw_connector_response(&mut self, response: Option<Secret<String>>);
+    fn get_raw_connector_response(&self) -> Option<Secret<String>>;
+    fn set_raw_connector_request(&mut self, request: Option<Secret<String>>);
+    fn get_raw_connector_request(&self) -> Option<Secret<String>>;
 }
 
 pub trait ConnectorResponseHeaders {
@@ -223,6 +267,7 @@ pub struct PaymentsSyncData {
     pub amount: MinorUnit,
     pub all_keys_required: Option<bool>,
     pub integrity_object: Option<PaymentSynIntegrityObject>,
+    pub split_payments: Option<SplitPaymentsRequest>,
 }
 
 impl PaymentsSyncData {
@@ -264,7 +309,8 @@ pub struct PaymentFlowData {
     pub amount_captured: Option<i64>,
     // minor amount for amount frameworka
     pub minor_amount_captured: Option<MinorUnit>,
-    pub access_token: Option<String>,
+    pub minor_amount_capturable: Option<MinorUnit>,
+    pub access_token: Option<AccessTokenResponseData>,
     pub session_token: Option<String>,
     pub reference_id: Option<String>,
     pub payment_method_token: Option<PaymentMethodToken>,
@@ -278,8 +324,12 @@ pub struct PaymentFlowData {
     pub connector_response_headers: Option<http::HeaderMap>,
     pub external_latency: Option<u128>,
     pub connectors: Connectors,
-    pub raw_connector_response: Option<String>,
+    pub raw_connector_response: Option<Secret<String>>,
+    pub raw_connector_request: Option<Secret<String>>,
     pub vault_headers: Option<std::collections::HashMap<String, Secret<String>>>,
+    /// This field is used to store various data regarding the response from connector
+    pub connector_response: Option<ConnectorResponseData>,
+    pub recurring_mandate_payment_data: Option<RecurringMandatePaymentData>,
 }
 
 impl PaymentFlowData {
@@ -372,6 +422,12 @@ impl PaymentFlowData {
         })
     }
 
+    pub fn get_optional_shipping_full_name(&self) -> Option<Secret<String>> {
+        self.get_optional_shipping()
+            .and_then(|shipping_details| shipping_details.address.as_ref())
+            .and_then(|shipping_address| shipping_address.get_optional_full_name())
+    }
+
     pub fn get_optional_shipping_country(&self) -> Option<common_enums::CountryAlpha2> {
         self.address.get_shipping().and_then(|shipping_address| {
             shipping_address
@@ -426,6 +482,24 @@ impl PaymentFlowData {
         self.session_token
             .clone()
             .ok_or_else(missing_field_err("session_token"))
+    }
+
+    pub fn get_access_token(&self) -> Result<String, Error> {
+        self.access_token
+            .as_ref()
+            .map(|token_data| token_data.access_token.clone())
+            .ok_or_else(missing_field_err("access_token"))
+    }
+
+    pub fn get_access_token_data(&self) -> Result<AccessTokenResponseData, Error> {
+        self.access_token
+            .clone()
+            .ok_or_else(missing_field_err("access_token"))
+    }
+
+    pub fn set_access_token(mut self, access_token: Option<AccessTokenResponseData>) -> Self {
+        self.access_token = access_token;
+        self
     }
 
     pub fn get_billing_first_name(&self) -> Result<Secret<String>, Error> {
@@ -677,6 +751,30 @@ impl PaymentFlowData {
         }
         self
     }
+    pub fn set_payment_method_token(mut self, payment_method_token: Option<String>) -> Self {
+        if payment_method_token.is_some() && self.payment_method_token.is_none() {
+            self.payment_method_token =
+                payment_method_token.map(|token| PaymentMethodToken::Token(Secret::new(token)));
+        }
+        self
+    }
+    pub fn set_connector_customer_id(mut self, connector_customer_id: Option<String>) -> Self {
+        if connector_customer_id.is_some() && self.connector_customer.is_none() {
+            self.connector_customer = connector_customer_id;
+        }
+        self
+    }
+
+    pub fn set_access_token_id(mut self, access_token_id: Option<String>) -> Self {
+        if let (Some(token_id), None) = (access_token_id, &self.access_token) {
+            self.access_token = Some(AccessTokenResponseData {
+                access_token: token_id,
+                token_type: None,
+                expires_in: None,
+            });
+        }
+        self
+    }
 
     pub fn get_return_url(&self) -> Option<String> {
         self.return_url.clone()
@@ -688,13 +786,21 @@ impl PaymentFlowData {
     }
 }
 
-impl RawConnectorResponse for PaymentFlowData {
-    fn set_raw_connector_response(&mut self, response: Option<String>) {
+impl RawConnectorRequestResponse for PaymentFlowData {
+    fn set_raw_connector_response(&mut self, response: Option<Secret<String>>) {
         self.raw_connector_response = response;
     }
 
-    fn get_raw_connector_response(&self) -> Option<String> {
+    fn get_raw_connector_response(&self) -> Option<Secret<String>> {
         self.raw_connector_response.clone()
+    }
+
+    fn get_raw_connector_request(&self) -> Option<Secret<String>> {
+        self.raw_connector_request.clone()
+    }
+
+    fn set_raw_connector_request(&mut self, request: Option<Secret<String>>) {
+        self.raw_connector_request = request;
     }
 }
 
@@ -715,6 +821,9 @@ pub struct PaymentVoidData {
     pub integrity_object: Option<PaymentVoidIntegrityObject>,
     pub raw_connector_response: Option<String>,
     pub browser_info: Option<BrowserInformation>,
+    pub amount: Option<MinorUnit>,
+    pub currency: Option<Currency>,
+    pub connector_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
 
 impl PaymentVoidData {
@@ -739,9 +848,44 @@ impl PaymentVoidData {
             .clone()
             .and_then(|browser_info| browser_info.language)
     }
+    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
+        self.browser_info.clone().and_then(|browser_info| {
+            browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
+        })
+    }
+
+    pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
+        self.get_ip_address_as_optional()
+            .ok_or_else(missing_field_err("browser_info.ip_address"))
+    }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone)]
+pub struct PaymentsCancelPostCaptureData {
+    pub connector_transaction_id: String,
+    pub cancellation_reason: Option<String>,
+    pub integrity_object: Option<PaymentVoidPostCaptureIntegrityObject>,
+    pub raw_connector_response: Option<String>,
+    pub browser_info: Option<BrowserInformation>,
+}
+
+impl PaymentsCancelPostCaptureData {
+    pub fn get_cancellation_reason(&self) -> Result<String, Error> {
+        self.cancellation_reason
+            .clone()
+            .ok_or_else(missing_field_err("cancellation_reason"))
+    }
+
+    pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub payment_method_data: payment_method_data::PaymentMethodData<T>,
     /// total amount (original_amount + surcharge_amount + tax_on_surcharge_amount)
@@ -771,6 +915,8 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub browser_info: Option<BrowserInformation>,
     pub order_category: Option<String>,
     pub session_token: Option<String>,
+    pub access_token: Option<AccessTokenResponseData>,
+    pub customer_acceptance: Option<CustomerAcceptance>,
     pub enrolled_for_3ds: bool,
     pub related_transaction_id: Option<String>,
     pub payment_experience: Option<common_enums::PaymentExperience>,
@@ -778,6 +924,8 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub customer_id: Option<common_utils::id_type::CustomerId>,
     pub request_incremental_authorization: bool,
     pub metadata: Option<serde_json::Value>,
+    pub authentication_data: Option<router_request_types::AuthenticationData>,
+    pub split_payments: Option<SplitPaymentsRequest>,
     // New amount for amount frame work
     pub minor_amount: MinorUnit,
     /// Merchant's identifier for the payment/invoice. This will be sent to the connector
@@ -789,6 +937,10 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub integrity_object: Option<AuthoriseIntegrityObject>,
     pub merchant_config_currency: Option<common_enums::Currency>,
     pub all_keys_required: Option<bool>,
+    pub request_extended_authorization: Option<bool>,
+    pub enable_overcapture: Option<bool>,
+    pub setup_mandate_details: Option<MandateData>,
+    pub merchant_account_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
 
 impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
@@ -863,7 +1015,8 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     }
 
     pub fn is_mandate_payment(&self) -> bool {
-        (self.setup_future_usage == Some(common_enums::FutureUsage::OffSession))
+        ((self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
+            && self.setup_future_usage == Some(common_enums::FutureUsage::OffSession))
             || self
                 .mandate_id
                 .as_ref()
@@ -908,6 +1061,11 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
                 .map(|ip| Secret::new(ip.to_string()))
         })
     }
+
+    pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
+        self.get_ip_address_as_optional()
+            .ok_or_else(missing_field_err("browser_info.ip_address"))
+    }
     // fn get_original_amount(&self) -> i64 {
     //     self.surcharge_details
     //         .as_ref()
@@ -934,10 +1092,10 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     //     })
     // }
 
-    // fn is_customer_initiated_mandate_payment(&self) -> bool {
-    //     (self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
-    //         && self.setup_future_usage == Some(storage_enums::FutureUsage::OffSession)
-    // }
+    pub fn is_customer_initiated_mandate_payment(&self) -> bool {
+        (self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
+            && self.setup_future_usage == Some(common_enums::FutureUsage::OffSession)
+    }
 
     pub fn get_metadata_as_object(&self) -> Option<SecretSerdeValue> {
         self.metadata.clone().and_then(|meta_data| match meta_data {
@@ -973,6 +1131,21 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     pub fn set_session_token(mut self, session_token: Option<String>) -> Self {
         self.session_token = session_token;
         self
+    }
+
+    pub fn set_access_token(mut self, access_token: Option<String>) -> Self {
+        self.access_token = access_token.map(|token| AccessTokenResponseData {
+            access_token: token,
+            token_type: None,
+            expires_in: None,
+        });
+        self
+    }
+
+    pub fn get_access_token_optional(&self) -> Option<&String> {
+        self.access_token
+            .as_ref()
+            .map(|token_data| &token_data.access_token)
     }
 }
 
@@ -1013,6 +1186,25 @@ pub enum PaymentsResponseData {
         session_token: String,
         status_code: u16,
     },
+    PreAuthenticateResponse {
+        /// For Device Data Collection
+        redirection_data: Option<Box<RedirectForm>>,
+        connector_response_reference_id: Option<String>,
+        status_code: u16,
+    },
+    AuthenticateResponse {
+        /// For friction flow
+        redirection_data: Option<Box<RedirectForm>>,
+        /// For frictionles flow
+        authentication_data: Option<router_request_types::AuthenticationData>,
+        connector_response_reference_id: Option<String>,
+        status_code: u16,
+    },
+    PostAuthenticateResponse {
+        authentication_data: Option<router_request_types::AuthenticationData>,
+        connector_response_reference_id: Option<String>,
+        status_code: u16,
+    },
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
@@ -1036,6 +1228,73 @@ pub struct PaymentCreateOrderResponse {
 }
 
 #[derive(Debug, Clone)]
+pub struct PaymentMethodTokenizationData<T: PaymentMethodDataTypes> {
+    pub payment_method_data: payment_method_data::PaymentMethodData<T>,
+    pub browser_info: Option<BrowserInformation>,
+    pub currency: Currency,
+    pub amount: MinorUnit,
+    pub customer_acceptance: Option<CustomerAcceptance>,
+    pub setup_future_usage: Option<common_enums::FutureUsage>,
+    pub setup_mandate_details: Option<MandateData>,
+    pub mandate_id: Option<MandateIds>,
+    pub integrity_object: Option<PaymentMethodTokenIntegrityObject>,
+    // pub split_payments: Option<SplitPaymentsRequest>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PaymentMethodTokenResponse {
+    pub token: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct PaymentsPreAuthenticateData<T: PaymentMethodDataTypes> {
+    pub payment_method_data: Option<payment_method_data::PaymentMethodData<T>>,
+    pub amount: MinorUnit,
+    pub email: Option<Email>,
+    pub currency: Option<Currency>,
+    pub payment_method_type: Option<PaymentMethodType>,
+    pub router_return_url: Option<Url>,
+    pub continue_redirection_url: Option<Url>,
+    pub browser_info: Option<BrowserInformation>,
+    pub enrolled_for_3ds: bool,
+    pub redirect_response: Option<ContinueRedirectionResponse>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
+    pub payment_method_data: Option<payment_method_data::PaymentMethodData<T>>,
+    pub amount: MinorUnit,
+    pub email: Option<Email>,
+    pub currency: Option<Currency>,
+    pub payment_method_type: Option<PaymentMethodType>,
+    pub router_return_url: Option<Url>,
+    pub continue_redirection_url: Option<Url>,
+    pub browser_info: Option<BrowserInformation>,
+    pub enrolled_for_3ds: bool,
+    pub redirect_response: Option<ContinueRedirectionResponse>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PaymentsPostAuthenticateData<T: PaymentMethodDataTypes> {
+    pub payment_method_data: Option<payment_method_data::PaymentMethodData<T>>,
+    pub amount: MinorUnit,
+    pub email: Option<Email>,
+    pub currency: Option<Currency>,
+    pub payment_method_type: Option<PaymentMethodType>,
+    pub router_return_url: Option<Url>,
+    pub continue_redirection_url: Option<Url>,
+    pub browser_info: Option<BrowserInformation>,
+    pub enrolled_for_3ds: bool,
+    pub redirect_response: Option<ContinueRedirectionResponse>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ContinueRedirectionResponse {
+    pub params: Option<Secret<String>>,
+    pub payload: Option<SecretSerdeValue>,
+}
+
+#[derive(Debug, Clone)]
 pub struct SessionTokenRequestData {
     pub amount: MinorUnit,
     pub currency: Currency,
@@ -1044,6 +1303,34 @@ pub struct SessionTokenRequestData {
 #[derive(Debug, Clone)]
 pub struct SessionTokenResponseData {
     pub session_token: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct AccessTokenRequestData {
+    pub grant_type: String,
+}
+
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct AccessTokenResponseData {
+    pub access_token: String,
+    pub token_type: Option<String>,
+    pub expires_in: Option<i64>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConnectorCustomerData {
+    pub customer_id: Option<Secret<String>>,
+    pub email: Option<Secret<Email>>,
+    pub name: Option<Secret<String>>,
+    pub description: Option<String>,
+    pub phone: Option<Secret<String>>,
+    pub preprocessing_id: Option<String>,
+    pub split_payments: Option<SplitPaymentsRequest>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConnectorCustomerResponse {
+    pub connector_customer_id: String,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -1056,6 +1343,8 @@ pub struct RefundSyncData {
     pub all_keys_required: Option<bool>,
     pub integrity_object: Option<RefundSyncIntegrityObject>,
     pub browser_info: Option<BrowserInformation>,
+    /// Charges associated with the payment
+    pub split_refunds: Option<SplitRefundsRequest>,
 }
 
 impl RefundSyncData {
@@ -1079,17 +1368,26 @@ pub struct RefundFlowData {
     pub refund_id: Option<String>,
     pub connectors: Connectors,
     pub connector_request_reference_id: String,
-    pub raw_connector_response: Option<String>,
+    pub raw_connector_response: Option<Secret<String>>,
     pub connector_response_headers: Option<http::HeaderMap>,
+    pub raw_connector_request: Option<Secret<String>>,
 }
 
-impl RawConnectorResponse for RefundFlowData {
-    fn set_raw_connector_response(&mut self, response: Option<String>) {
+impl RawConnectorRequestResponse for RefundFlowData {
+    fn set_raw_connector_response(&mut self, response: Option<Secret<String>>) {
         self.raw_connector_response = response;
     }
 
-    fn get_raw_connector_response(&self) -> Option<String> {
+    fn get_raw_connector_response(&self) -> Option<Secret<String>> {
         self.raw_connector_response.clone()
+    }
+
+    fn get_raw_connector_request(&self) -> Option<Secret<String>> {
+        self.raw_connector_request.clone()
+    }
+
+    fn set_raw_connector_request(&mut self, request: Option<Secret<String>>) {
+        self.raw_connector_request = request;
     }
 }
 
@@ -1111,9 +1409,15 @@ pub struct WebhookDetailsResponse {
     pub mandate_reference: Option<Box<MandateReference>>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
+    pub error_reason: Option<String>,
     pub raw_connector_response: Option<String>,
     pub status_code: u16,
     pub response_headers: Option<http::HeaderMap>,
+    pub transformation_status: common_enums::WebhookTransformationStatus,
+    pub amount_captured: Option<i64>,
+    // minor amount for amount framework
+    pub minor_amount_captured: Option<MinorUnit>,
+    pub network_txn_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -1563,6 +1867,8 @@ pub struct RefundsData {
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub integrity_object: Option<RefundIntegrityObject>,
     pub browser_info: Option<BrowserInformation>,
+    /// Charges associated with the payment
+    pub split_refunds: Option<SplitRefundsRequest>,
 }
 
 impl RefundsData {
@@ -1588,6 +1894,18 @@ impl RefundsData {
             .clone()
             .and_then(|browser_info| browser_info.language)
     }
+    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
+        self.browser_info.clone().and_then(|browser_info| {
+            browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
+        })
+    }
+
+    pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
+        self.get_ip_address_as_optional()
+            .ok_or_else(missing_field_err("browser_info.ip_address"))
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -1606,6 +1924,7 @@ pub struct PaymentsCaptureData {
     pub connector_metadata: Option<serde_json::Value>,
     pub integrity_object: Option<CaptureIntegrityObject>,
     pub browser_info: Option<BrowserInformation>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
 }
 
 impl PaymentsCaptureData {
@@ -1626,6 +1945,18 @@ impl PaymentsCaptureData {
         self.browser_info
             .clone()
             .and_then(|browser_info| browser_info.language)
+    }
+    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
+        self.browser_info.clone().and_then(|browser_info| {
+            browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
+        })
+    }
+
+    pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
+        self.get_ip_address_as_optional()
+            .ok_or_else(missing_field_err("browser_info.ip_address"))
     }
 }
 
@@ -1658,6 +1989,7 @@ pub struct SetupMandateRequestData<T: PaymentMethodDataTypes> {
     pub shipping_cost: Option<MinorUnit>,
     pub customer_id: Option<common_utils::id_type::CustomerId>,
     pub integrity_object: Option<SetupMandateIntegrityObject>,
+    pub merchant_account_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
 
 impl<T: PaymentMethodDataTypes> SetupMandateRequestData<T> {
@@ -1687,6 +2019,18 @@ impl<T: PaymentMethodDataTypes> SetupMandateRequestData<T> {
             .clone()
             .ok_or_else(missing_field_err("return_url"))
     }
+    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
+        self.browser_info.clone().and_then(|browser_info| {
+            browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
+        })
+    }
+
+    pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
+        self.get_ip_address_as_optional()
+            .ok_or_else(missing_field_err("browser_info.ip_address"))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1696,13 +2040,18 @@ pub struct RepeatPaymentData {
     pub minor_amount: MinorUnit,
     pub currency: Currency,
     pub merchant_order_reference_id: Option<String>,
-    pub metadata: Option<HashMap<String, String>>,
+    pub metadata: Option<SecretSerdeValue>,
     pub webhook_url: Option<String>,
     pub integrity_object: Option<RepeatPaymentIntegrityObject>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub browser_info: Option<BrowserInformation>,
     pub email: Option<common_utils::pii::Email>,
     pub payment_method_type: Option<common_enums::PaymentMethodType>,
+    pub merchant_account_metadata: Option<common_utils::pii::SecretSerdeValue>,
+    pub off_session: Option<bool>,
+    pub router_return_url: Option<String>,
+    pub split_payments: Option<SplitPaymentsRequest>,
+    pub recurring_mandate_payment_data: Option<router_data::RecurringMandatePaymentData>,
 }
 
 impl RepeatPaymentData {
@@ -1731,6 +2080,13 @@ impl RepeatPaymentData {
     pub fn get_email(&self) -> Result<Email, Error> {
         self.email.clone().ok_or_else(missing_field_err("email"))
     }
+    pub fn get_recurring_mandate_payment_data(
+        &self,
+    ) -> Result<router_data::RecurringMandatePaymentData, Error> {
+        self.recurring_mandate_payment_data
+            .to_owned()
+            .ok_or_else(missing_field_err("recurring_mandate_payment_data"))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1746,17 +2102,26 @@ pub struct DisputeFlowData {
     pub connectors: Connectors,
     pub defense_reason_code: Option<String>,
     pub connector_request_reference_id: String,
-    pub raw_connector_response: Option<String>,
+    pub raw_connector_response: Option<Secret<String>>,
+    pub raw_connector_request: Option<Secret<String>>,
     pub connector_response_headers: Option<http::HeaderMap>,
 }
 
-impl RawConnectorResponse for DisputeFlowData {
-    fn set_raw_connector_response(&mut self, response: Option<String>) {
+impl RawConnectorRequestResponse for DisputeFlowData {
+    fn set_raw_connector_response(&mut self, response: Option<Secret<String>>) {
         self.raw_connector_response = response;
     }
 
-    fn get_raw_connector_response(&self) -> Option<String> {
+    fn get_raw_connector_response(&self) -> Option<Secret<String>> {
         self.raw_connector_response.clone()
+    }
+
+    fn set_raw_connector_request(&mut self, request: Option<Secret<String>>) {
+        self.raw_connector_request = request;
+    }
+
+    fn get_raw_connector_request(&self) -> Option<Secret<String>> {
+        self.raw_connector_request.clone()
     }
 }
 
@@ -1903,6 +2268,7 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 payment_method_data::CardRedirectData::CardRedirect {} => Self::CardRedirect,
             },
             PaymentMethodData::Wallet(wallet_data) => match wallet_data {
+                payment_method_data::WalletData::BluecodeRedirect { .. } => Self::Bluecode,
                 payment_method_data::WalletData::AliPayQr(_) => Self::AliPayQr,
                 payment_method_data::WalletData::AliPayRedirect(_) => Self::AliPayRedirect,
                 payment_method_data::WalletData::AliPayHkRedirect(_) => Self::AliPayHkRedirect,
@@ -2124,4 +2490,90 @@ impl SupportedPaymentMethodsExt for SupportedPaymentMethods {
             self.insert(payment_method, payment_method_type_metadata);
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields)]
+/// Fee information for Split Payments to be charged on the payment being collected
+pub enum SplitPaymentsRequest {
+    /// StripeSplitPayment
+    StripeSplitPayment(StripeSplitPaymentRequest),
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+/// Fee information for Split Payments to be charged on the payment being collected for Stripe
+pub struct StripeSplitPaymentRequest {
+    /// Stripe's charge type
+    pub charge_type: common_enums::PaymentChargeType,
+
+    /// Platform fees to be collected on the payment
+    pub application_fees: Option<MinorUnit>,
+
+    /// Identifier for the reseller's account where the funds were transferred
+    pub transfer_account_id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields)]
+pub enum ConnectorChargeResponseData {
+    /// StripeChargeResponseData
+    StripeSplitPayment(StripeChargeResponseData),
+}
+
+/// Fee information to be charged on the payment being collected via Stripe
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct StripeChargeResponseData {
+    /// Identifier for charge created for the payment
+    pub charge_id: Option<String>,
+
+    /// Type of charge (connector specific)
+    pub charge_type: common_enums::PaymentChargeType,
+
+    /// Platform fees collected on the payment
+    pub application_fees: Option<MinorUnit>,
+
+    /// Identifier for the reseller's account where the funds were transferred
+    pub transfer_account_id: String,
+}
+
+#[derive(Debug, serde::Deserialize, Clone)]
+pub enum SplitRefundsRequest {
+    StripeSplitRefund(StripeSplitRefund),
+}
+
+#[derive(Debug, serde::Deserialize, Clone)]
+pub struct StripeSplitRefund {
+    pub charge_id: String,
+    pub transfer_account_id: String,
+    pub charge_type: common_enums::PaymentChargeType,
+    pub options: ChargeRefundsOptions,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub enum ChargeRefundsOptions {
+    Destination(DestinationChargeRefund),
+    Direct(DirectChargeRefund),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct DirectChargeRefund {
+    pub revert_platform_fee: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct DestinationChargeRefund {
+    pub revert_platform_fee: bool,
+    pub revert_transfer: bool,
+}
+
+#[derive(Debug, Default, Clone, Serialize)]
+pub struct RecurringMandatePaymentData {
+    pub payment_method_type: Option<common_enums::PaymentMethodType>, //required for making recurring payment using saved payment method through stripe
+    pub original_payment_authorized_amount: Option<MinorUnit>,
+    pub original_payment_authorized_currency: Option<common_enums::Currency>,
+    pub mandate_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }

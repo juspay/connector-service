@@ -15,7 +15,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use time::Date;
 
@@ -205,6 +205,7 @@ impl<
                     })
                 }
                 WalletData::AliPayQr(_)
+                | WalletData::BluecodeRedirect {}
                 | WalletData::AliPayRedirect(_)
                 | WalletData::AliPayHkRedirect(_)
                 | WalletData::AmazonPayRedirect(_)
@@ -290,7 +291,7 @@ pub struct MifinityPaymentsResponse {
 #[serde(rename_all = "camelCase")]
 pub struct MifinityPayload {
     trace_id: String,
-    initialization_token: String,
+    initialization_token: Secret<String>,
 }
 
 impl<
@@ -317,7 +318,7 @@ impl<
                     response: Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::ConnectorTransactionId(trace_id.clone()),
                         redirection_data: Some(Box::new(RedirectForm::Mifinity {
-                            initialization_token,
+                            initialization_token: initialization_token.expose(),
                         })),
                         mandate_reference: None,
                         connector_metadata: None,

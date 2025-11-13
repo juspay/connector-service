@@ -62,6 +62,7 @@ mod tests {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
                             dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -69,12 +70,17 @@ mod tests {
                     connector_response_headers: None,
                     raw_connector_response: None,
                     vault_headers: None,
+                    raw_connector_request: None,
+                    minor_amount_capturable: None,
+                    connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
                     key1: Secret::new(key1),
                 },
                 request: PaymentsAuthorizeData {
+                    authentication_data: None,
                     payment_method_data: PaymentMethodData::Card(
                         domain_types::payment_method_data::Card {
                             card_number: RawCardNumber(cards::CardNumber::from_str(
@@ -122,6 +128,7 @@ mod tests {
                             java_script_enabled: Some(false),
                             language: Some("en-US".to_string()),
                             time_zone: None,
+                            referer: None,
                             ip_address: None,
                             os_type: None,
                             os_version: None,
@@ -149,6 +156,13 @@ mod tests {
                     merchant_account_id: None,
                     merchant_config_currency: None,
                     all_keys_required: None,
+                    access_token: None,
+                    customer_acceptance: None,
+                    split_payments: None,
+                    request_extended_authorization: None,
+                    setup_mandate_details: None,
+                    enable_overcapture: None,
+                    merchant_account_metadata: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -230,6 +244,7 @@ mod tests {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
                             dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -237,12 +252,17 @@ mod tests {
                     connector_response_headers: None,
                     raw_connector_response: None,
                     vault_headers: None,
+                    raw_connector_request: None,
+                    minor_amount_capturable: None,
+                    connector_response: None,
+                    recurring_mandate_payment_data: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
                     key1: Secret::new(key1),
                 },
                 request: PaymentsAuthorizeData {
+                    authentication_data: None,
                     payment_method_data: PaymentMethodData::Card(Default::default()),
                     amount: 0,
                     order_tax_amount: None,
@@ -276,6 +296,13 @@ mod tests {
                     merchant_account_id: None,
                     merchant_config_currency: None,
                     all_keys_required: None,
+                    access_token: None,
+                    customer_acceptance: None,
+                    split_payments: None,
+                    request_extended_authorization: None,
+                    setup_mandate_details: None,
+                    enable_overcapture: None,
+                    merchant_account_metadata: None,
                 },
                 response: Err(ErrorResponse::default()),
             };

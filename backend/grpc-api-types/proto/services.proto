@@ -21,6 +21,9 @@ service PaymentService {
   // Voids an authorized payment.
   rpc Void(PaymentServiceVoidRequest) returns (PaymentServiceVoidResponse);
   
+  // Voids a captured payment (post-capture void).
+  rpc VoidPostCapture(PaymentServiceVoidPostCaptureRequest) returns (PaymentServiceVoidPostCaptureResponse);
+  
   // Captures a previously authorized payment.
   rpc Capture(PaymentServiceCaptureRequest) returns (PaymentServiceCaptureResponse);
 
@@ -39,6 +42,16 @@ service PaymentService {
   // Handles incoming webhooks from connectors.
   // This will delegate to the appropriate service transform based on the event type.
   rpc Transform(PaymentServiceTransformRequest) returns (PaymentServiceTransformResponse);
+
+  // 3DS Authentication flows
+  // Pre-authentication step - always used when 3DS is possible
+  rpc PreAuthenticate(PaymentServicePreAuthenticateRequest) returns (PaymentServicePreAuthenticateResponse);
+  
+  // Authentication step - used for any challenge/verification step
+  rpc Authenticate(PaymentServiceAuthenticateRequest) returns (PaymentServiceAuthenticateResponse);
+  
+  // Post-authentication step - used when authentication results need validation
+  rpc PostAuthenticate(PaymentServicePostAuthenticateRequest) returns (PaymentServicePostAuthenticateResponse);
 }
 
 // Service for refund-specific operations.

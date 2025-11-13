@@ -331,3 +331,63 @@ impl RecurringMandatePaymentData {
             .ok_or_else(missing_field_err("original_payment_authorized_currency"))
     }
 }
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ConnectorResponseData {
+    pub additional_payment_method_data: Option<AdditionalPaymentMethodConnectorResponse>,
+    extended_authorization_response_data: Option<ExtendedAuthorizationResponseData>,
+    is_overcapture_enabled: Option<bool>,
+}
+
+impl ConnectorResponseData {
+    pub fn with_additional_payment_method_data(
+        additional_payment_method_data: AdditionalPaymentMethodConnectorResponse,
+    ) -> Self {
+        Self {
+            additional_payment_method_data: Some(additional_payment_method_data),
+            extended_authorization_response_data: None,
+            is_overcapture_enabled: None,
+        }
+    }
+    pub fn new(
+        additional_payment_method_data: Option<AdditionalPaymentMethodConnectorResponse>,
+        is_overcapture_enabled: Option<bool>,
+        extended_authorization_response_data: Option<ExtendedAuthorizationResponseData>,
+    ) -> Self {
+        Self {
+            additional_payment_method_data,
+            extended_authorization_response_data,
+            is_overcapture_enabled,
+        }
+    }
+
+    pub fn get_extended_authorization_response_data(
+        &self,
+    ) -> Option<&ExtendedAuthorizationResponseData> {
+        self.extended_authorization_response_data.as_ref()
+    }
+
+    pub fn is_overcapture_enabled(&self) -> Option<bool> {
+        self.is_overcapture_enabled
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub enum AdditionalPaymentMethodConnectorResponse {
+    Card {
+        /// Details regarding the authentication details of the connector, if this is a 3ds payment.
+        authentication_data: Option<serde_json::Value>,
+        /// Various payment checks that are done for a payment
+        payment_checks: Option<serde_json::Value>,
+        /// Card Network returned by the processor
+        card_network: Option<String>,
+        /// Domestic(Co-Branded) Card network returned by the processor
+        domestic_network: Option<String>,
+    },
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ExtendedAuthorizationResponseData {
+    pub extended_authentication_applied: Option<bool>,
+    pub capture_before: Option<time::PrimitiveDateTime>,
+}

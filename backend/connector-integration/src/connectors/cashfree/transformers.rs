@@ -102,7 +102,7 @@ pub struct CashfreeOrderSplitsType {
 pub struct CashfreeCustomerDetails {
     pub customer_id: String,
     pub customer_email: Option<String>,
-    pub customer_phone: String,
+    pub customer_phone: Secret<String>,
     pub customer_name: Option<String>,
 }
 
@@ -173,11 +173,15 @@ pub struct CashfreePaymentMethod {
     pub cardless_emi: Option<()>, // CashFreeCardlessEmiType - None for UPI-only
 }
 
+fn secret_is_empty(secret: &Secret<String>) -> bool {
+    secret.peek().is_empty()
+}
+
 #[derive(Debug, Serialize)]
 pub struct CashfreeUpiDetails {
     pub channel: String, // "link" for Intent, "collect" for Collect
-    #[serde(skip_serializing_if = "String::is_empty")]
-    pub upi_id: String, // VPA for collect, empty for intent
+    #[serde(skip_serializing_if = "secret_is_empty")]
+    pub upi_id: Secret<String>, // VPA for collect, empty for intent
 }
 
 #[derive(Debug, Serialize)]
@@ -247,7 +251,7 @@ fn get_cashfree_payment_method_data<
                     Ok(CashfreePaymentMethod {
                         upi: Some(CashfreeUpiDetails {
                             channel: "collect".to_string(),
-                            upi_id: vpa,
+                            upi_id: Secret::new(vpa),
                         }),
                         app: None,
                         netbanking: None,
@@ -258,12 +262,13 @@ fn get_cashfree_payment_method_data<
                         cardless_emi: None,
                     })
                 }
-                domain_types::payment_method_data::UpiData::UpiIntent(_) => {
+                domain_types::payment_method_data::UpiData::UpiIntent(_)
+                | domain_types::payment_method_data::UpiData::UpiQr(_) => {
                     // Intent flow: channel = "link", no UPI ID needed
                     Ok(CashfreePaymentMethod {
                         upi: Some(CashfreeUpiDetails {
                             channel: "link".to_string(),
-                            upi_id: "".to_string(),
+                            upi_id: Secret::new("".to_string()),
                         }),
                         app: None,
                         netbanking: None,
@@ -397,12 +402,14 @@ impl
                 .map(|id| id.get_string_repr().to_string())
                 .unwrap_or_else(|| "guest".to_string()),
             customer_email: billing.email.as_ref().map(|e| e.peek().to_string()),
-            customer_phone: billing
-                .phone
-                .as_ref()
-                .and_then(|phone| phone.number.as_ref())
-                .map(|number| number.peek().to_string())
-                .unwrap_or_else(|| "9999999999".to_string()),
+            customer_phone: Secret::new(
+                billing
+                    .phone
+                    .as_ref()
+                    .and_then(|phone| phone.number.as_ref())
+                    .map(|number| number.peek().to_string())
+                    .unwrap_or_else(|| "9999999999".to_string()),
+            ),
             customer_name: billing.get_optional_full_name().map(|name| name.expose()),
         };
 

@@ -2,7 +2,7 @@ use common_enums::ProductType;
 use common_utils::{ext_traits::ConfigExt, Email, MinorUnit};
 use hyperswitch_masking::{PeekInterface, Secret, SerializableSecret};
 
-use crate::utils::{missing_field_err, Error};
+use crate::utils::{convert_us_state_to_code, missing_field_err, Error};
 
 #[derive(Clone, Default, Debug)]
 pub struct PaymentAddress {
@@ -310,6 +310,30 @@ impl AddressDetails {
     }
     pub fn get_optional_country(&self) -> Option<common_enums::CountryAlpha2> {
         self.country
+    }
+
+    pub fn to_state_code(&self) -> Result<Secret<String>, Error> {
+        let country = self.get_country()?;
+        let state = self.get_state()?;
+        match country {
+            common_enums::CountryAlpha2::US => Ok(Secret::new(
+                convert_us_state_to_code(&state.peek().to_string()).to_string(),
+            )),
+            _ => Ok(state.clone()),
+        }
+    }
+
+    pub fn to_state_code_as_optional(&self) -> Result<Option<Secret<String>>, Error> {
+        self.state
+            .as_ref()
+            .map(|state| {
+                if state.peek().len() == 2 {
+                    Ok(state.to_owned())
+                } else {
+                    self.to_state_code()
+                }
+            })
+            .transpose()
     }
 }
 

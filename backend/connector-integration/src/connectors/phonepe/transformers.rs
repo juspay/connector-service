@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use base64::Engine;
 use common_enums;
 use common_utils::{
@@ -46,7 +44,7 @@ struct PhonepePaymentRequestPayload {
     #[serde(rename = "merchantTransactionId")]
     merchant_transaction_id: String,
     #[serde(rename = "merchantUserId", skip_serializing_if = "Option::is_none")]
-    merchant_user_id: Option<String>,
+    merchant_user_id: Option<Secret<String>>,
     amount: MinorUnit,
     #[serde(rename = "callbackUrl")]
     callback_url: String,
@@ -106,13 +104,17 @@ pub struct PhonepePaymentsResponse {
 pub struct PhonepeSyncResponse {
     pub success: bool,
     pub code: String,
-    #[serde(default = "default_error_message")]
+    #[serde(default = "default_sync_error_message")]
     pub message: String,
     #[serde(default)]
     pub data: Option<PhonepeSyncResponseData>,
 }
 
 fn default_error_message() -> String {
+    "Payment processing failed".to_string()
+}
+
+fn default_sync_error_message() -> String {
     "Payment sync failed".to_string()
 }
 
@@ -203,16 +205,7 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &wrapper.router_data;
-        let auth = PhonepeAuthType::from_auth_type_and_merchant_id(
-            &router_data.connector_auth_type,
-            Secret::new(
-                router_data
-                    .resource_common_data
-                    .merchant_id
-                    .get_string_repr()
-                    .to_string(),
-            ),
-        )?;
+        let auth = PhonepeAuthType::try_from(&router_data.connector_auth_type)?;
 
         // Use amount converter to get proper amount in minor units
         let amount_in_minor_units = wrapper
@@ -236,6 +229,11 @@ impl<
                 UpiData::UpiIntent(_) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_INTENT.to_string(),
                     target_app: None, // Could be extracted from payment method details if needed
+                    vpa: None,
+                },
+                UpiData::UpiQr(_) => PhonepePaymentInstrument {
+                    instrument_type: constants::UPI_QR.to_string(),
+                    target_app: None,
                     vpa: None,
                 },
                 UpiData::UpiCollect(collect_data) => PhonepePaymentInstrument {
@@ -291,7 +289,7 @@ impl<
                 .resource_common_data
                 .customer_id
                 .clone()
-                .map(|id| id.get_string_repr().to_string()),
+                .map(|id| Secret::new(id.get_string_repr().to_string())),
             amount: amount_in_minor_units,
             callback_url: router_data.request.get_webhook_url()?,
             mobile_number,
@@ -353,16 +351,7 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
-        let auth = PhonepeAuthType::from_auth_type_and_merchant_id(
-            &router_data.connector_auth_type,
-            Secret::new(
-                router_data
-                    .resource_common_data
-                    .merchant_id
-                    .get_string_repr()
-                    .to_string(),
-            ),
-        )?;
+        let auth = PhonepeAuthType::try_from(&router_data.connector_auth_type)?;
 
         // Use amount converter to get proper amount in minor units
         let amount_in_minor_units = item
@@ -386,6 +375,11 @@ impl<
                 UpiData::UpiIntent(_) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_INTENT.to_string(),
                     target_app: None, // Could be extracted from payment method details if needed
+                    vpa: None,
+                },
+                UpiData::UpiQr(_) => PhonepePaymentInstrument {
+                    instrument_type: constants::UPI_QR.to_string(),
+                    target_app: None,
                     vpa: None,
                 },
                 UpiData::UpiCollect(collect_data) => PhonepePaymentInstrument {
@@ -441,7 +435,7 @@ impl<
                 .resource_common_data
                 .customer_id
                 .clone()
-                .map(|id| id.get_string_repr().to_string()),
+                .map(|id| Secret::new(id.get_string_repr().to_string())),
             amount: amount_in_minor_units,
             callback_url: router_data.request.get_webhook_url()?,
             mobile_number,
@@ -512,45 +506,35 @@ impl<
                     let (redirect_form, connector_metadata) =
                         match instrument_response.instrument_type.as_str() {
                             instrument_type if instrument_type == constants::UPI_INTENT => {
-                                if let Some(intent_url) = &instrument_response.intent_url {
-                                    (
-                                        Some(RedirectForm::Uri {
-                                            uri: intent_url.clone(),
-                                        }),
-                                        None,
-                                    )
-                                } else {
-                                    (None, None)
-                                }
+                                let redirect_form = instrument_response
+                                    .intent_url
+                                    .as_ref()
+                                    .map(|url| RedirectForm::Uri { uri: url.clone() });
+                                (redirect_form, None)
                             }
                             instrument_type if instrument_type == constants::UPI_QR => {
-                                if let Some(qr_data) = &instrument_response.qr_data {
-                                    // For QR, return the QR data in metadata
-                                    let mut metadata = HashMap::new();
-                                    metadata.insert(
-                                        "qr_data".to_string(),
-                                        serde_json::Value::String(qr_data.clone()),
-                                    );
-                                    (
-                                        None,
-                                        Some(serde_json::Value::Object(
-                                            serde_json::Map::from_iter(metadata),
-                                        )),
-                                    )
-                                } else {
-                                    (None, None)
-                                }
+                                let redirect_form = instrument_response
+                                    .intent_url
+                                    .as_ref()
+                                    .map(|url| RedirectForm::Uri { uri: url.clone() });
+
+                                let connector_metadata =
+                                    instrument_response.qr_data.as_ref().map(|qr| {
+                                        serde_json::json!({
+                                            "qr_data": qr
+                                        })
+                                    });
+                                (redirect_form, connector_metadata)
                             }
                             _ => (None, None),
                         };
 
                     Ok(Self {
                         response: Ok(PaymentsResponseData::TransactionResponse {
-                            resource_id: ResponseId::ConnectorTransactionId(
-                                data.transaction_id
-                                    .clone()
-                                    .unwrap_or(data.merchant_transaction_id.clone()),
-                            ),
+                            resource_id: match &data.transaction_id {
+                                Some(txn_id) => ResponseId::ConnectorTransactionId(txn_id.clone()),
+                                None => ResponseId::NoResponseId,
+                            },
                             redirection_data: redirect_form.map(Box::new),
                             mandate_reference: None,
                             connector_metadata,
@@ -571,9 +555,10 @@ impl<
                     // Success but no instrument response
                     Ok(Self {
                         response: Ok(PaymentsResponseData::TransactionResponse {
-                            resource_id: ResponseId::ConnectorTransactionId(
-                                data.merchant_transaction_id.clone(),
-                            ),
+                            resource_id: match &data.transaction_id {
+                                Some(txn_id) => ResponseId::ConnectorTransactionId(txn_id.clone()),
+                                None => ResponseId::NoResponseId,
+                            },
                             redirection_data: None,
                             mandate_reference: None,
                             connector_metadata: None,
@@ -653,26 +638,6 @@ pub struct PhonepeAuthType {
     pub key_index: String,
 }
 
-impl PhonepeAuthType {
-    pub fn from_auth_type_and_merchant_id(
-        auth_type: &ConnectorAuthType,
-        merchant_id: Secret<String>,
-    ) -> Result<Self, Error> {
-        match auth_type {
-            ConnectorAuthType::SignatureKey {
-                api_key: _,
-                key1,
-                api_secret,
-            } => Ok(Self {
-                merchant_id,
-                salt_key: key1.clone(),
-                key_index: api_secret.peek().clone(), // Use api_secret for key index
-            }),
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
-        }
-    }
-}
-
 impl TryFrom<&ConnectorAuthType> for PhonepeAuthType {
     type Error = Error;
 
@@ -749,22 +714,11 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &wrapper.router_data;
-        let auth = PhonepeAuthType::from_auth_type_and_merchant_id(
-            &router_data.connector_auth_type,
-            Secret::new(
-                router_data
-                    .resource_common_data
-                    .merchant_id
-                    .get_string_repr()
-                    .to_string(),
-            ),
-        )?;
+        let auth = PhonepeAuthType::try_from(&router_data.connector_auth_type)?;
 
-        let merchant_transaction_id = router_data
-            .request
-            .connector_transaction_id
-            .get_connector_transaction_id()
-            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+        let merchant_transaction_id = &router_data
+            .resource_common_data
+            .connector_request_reference_id;
 
         // Generate checksum for status API
         let api_path = format!(
@@ -776,7 +730,7 @@ impl<
         let checksum = generate_phonepe_sync_checksum(&api_path, &auth.salt_key, &auth.key_index)?;
 
         Ok(Self {
-            merchant_transaction_id,
+            merchant_transaction_id: merchant_transaction_id.clone(),
             checksum,
         })
     }
@@ -807,22 +761,11 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
-        let auth = PhonepeAuthType::from_auth_type_and_merchant_id(
-            &router_data.connector_auth_type,
-            Secret::new(
-                router_data
-                    .resource_common_data
-                    .merchant_id
-                    .get_string_repr()
-                    .to_string(),
-            ),
-        )?;
+        let auth = PhonepeAuthType::try_from(&router_data.connector_auth_type)?;
 
-        let merchant_transaction_id = router_data
-            .request
-            .connector_transaction_id
-            .get_connector_transaction_id()
-            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+        let merchant_transaction_id = &router_data
+            .resource_common_data
+            .connector_request_reference_id;
 
         // Generate checksum for status API
         let api_path = format!(
@@ -834,7 +777,7 @@ impl<
         let checksum = generate_phonepe_sync_checksum(&api_path, &auth.salt_key, &auth.key_index)?;
 
         Ok(Self {
-            merchant_transaction_id,
+            merchant_transaction_id: merchant_transaction_id.clone(),
             checksum,
         })
     }
@@ -882,13 +825,11 @@ impl
 
                     Ok(Self {
                         response: Ok(PaymentsResponseData::TransactionResponse {
-                            resource_id: ResponseId::ConnectorTransactionId(
-                                merchant_transaction_id.clone(),
-                            ),
+                            resource_id: ResponseId::ConnectorTransactionId(transaction_id.clone()),
                             redirection_data: None,
                             mandate_reference: None,
                             connector_metadata: None,
-                            network_txn_id: Some(transaction_id.clone()),
+                            network_txn_id: None,
                             connector_response_reference_id: Some(merchant_transaction_id.clone()),
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
@@ -908,7 +849,7 @@ impl
                             reason: None,
                             status_code: item.http_code,
                             attempt_status: Some(common_enums::AttemptStatus::Failure),
-                            connector_transaction_id: None,
+                            connector_transaction_id: data.transaction_id.clone(),
                             network_decline_code: None,
                             network_advice_code: None,
                             network_error_message: None,
@@ -934,7 +875,10 @@ impl
                     reason: None,
                     status_code: item.http_code,
                     attempt_status,
-                    connector_transaction_id: None,
+                    connector_transaction_id: response
+                        .data
+                        .as_ref()
+                        .and_then(|data| data.transaction_id.clone()),
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,

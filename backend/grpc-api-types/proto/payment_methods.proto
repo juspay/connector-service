@@ -39,10 +39,10 @@ message PaymentMethod {
     UpiQr upi_qr = 6;                                    // UPI QR payment method - SUPPORTED
     TokenPaymentMethodType token = 5;                    // Tokenized payment methods - SUPPORTED
     // BankTransferPaymentMethodType bank_transfer = 6;     // Bank transfer payment methods - TODO: Not yet supported
-    // OnlineBankingPaymentMethodType online_banking = 7;   // Online banking payment methods - TODO: Not yet supported
+    OnlineBankingPaymentMethodType online_banking = 7;   // Online banking payment methods - SUPPORTED
     // BNPLPaymentMethodType bnpl = 8;                      // Buy now, pay later payment methods - TODO: Not yet supported
-    // MobilePaymentMethodType mobile_payment = 9;          // Mobile payment methods - TODO: Not yet supported
-    // CryptoCurrencyPaymentMethodType crypto = 10;         // Cryptocurrency payment methods - TODO: Not yet supported
+    MobilePaymentMethodType mobile_payment = 9;          // Mobile payment methods - SUPPORTED
+    CryptoCurrencyPaymentMethodType crypto = 10;         // Cryptocurrency payment methods - SUPPORTED
     // CashVoucherPaymentMethodType cash_voucher = 11;      // Cash and voucher payment methods - TODO: Not yet supported
     // DirectDebitPaymentMethodType direct_debit = 12;      // Direct debit payment methods - TODO: Not yet supported
     // OtherPaymentMethodType other = 13;                   // Other payment methods - TODO: Not yet supported
@@ -75,19 +75,20 @@ message WalletPaymentMethodType {
   oneof wallet_type {
     AppleWallet apple_pay = 1;                          // Apple Pay
     GoogleWallet google_pay = 2;                        // Google Pay
-    // SamsungWallet samsung_pay = 3;                      // Samsung Pay
-    // AliPayWallet ali_pay = 4;                           // Alipay
-    // AliPayHKWallet ali_pay_hk = 5;                      // Alipay Hong Kong
-    // WeChatPayWallet we_chat_pay = 6;                    // WeChat Pay
-    // VenmoWallet venmo = 7;                              // Venmo
+    // SamsungWallet samsung_pay = 3;                   // Samsung Pay
+    // AliPayWallet ali_pay = 4;                        // Alipay
+    // AliPayHKWallet ali_pay_hk = 5;                   // Alipay Hong Kong
+    // WeChatPayWallet we_chat_pay = 6;                 // WeChat Pay
+    // VenmoWallet venmo = 7;                           // Venmo
     CashappQrWallet cashapp_qr = 8;                     // Cash App
     AmazonPayRedirectWallet amazon_pay_redirect = 9;    // Amazon Pay  
-    // PazeWallet paze = 10;                               // Paze
+    // PazeWallet paze = 10;                            // Paze
     PaypalRedirectWallet paypal_redirect = 11;          // Paypal Redirect
     WeChatPayQrWallet we_chat_pay_qr = 12;              // WeChat Pay Qr
     AliPayRedirectWallet ali_pay_redirect = 13;         // AliPay Redirect
     RevolutPayWallet revolut_pay = 14;                  // Revolut Pay
     MifinityWallet mifinity = 15;                       // Mifinity
+    Bluecode bluecode = 16;                             // Bluecode 
   }
 }
 
@@ -124,9 +125,9 @@ message BankTransferPaymentMethodType {
 }
 */
 
-// Online banking payment methods category - TODO: Not yet supported
+// Online banking payment methods category
 // Includes online banking systems and open banking initiatives
-/*
+
 message OnlineBankingPaymentMethodType {
   oneof online_banking_type {
     OnlineBankingThailand online_banking_thailand = 1;       // Thai online banking
@@ -142,12 +143,11 @@ message OnlineBankingPaymentMethodType {
     Sofort sofort = 11;                                      // Sofort - German online banking payment method
     Trustly trustly = 12;                                    // Trustly - European online banking payment method
     Giropay giropay = 13;                                    // Giropay - German bank transfer payment method
-    EPS eps = 14;                                            // EPS - Austrian bank transfer system
+    Eps eps = 14;                                            // EPS - Austrian bank transfer system
     Przelewy24 przelewy24 = 15;                              // Przelewy24 - Polish payment system
-    PSE pse = 16;                                            // PSE - Pagos Seguros en Línea - Colombian online banking
+    Pse pse = 16;                                            // PSE - Pagos Seguros en Línea - Colombian online banking
   }
 }
-*/
 
 // Buy now, pay later payment methods category - TODO: Not yet supported
 // Includes installment payment services
@@ -164,15 +164,16 @@ message BNPLPaymentMethodType {
 }
 */
 
-// Mobile payment methods category - TODO: Not yet supported
+// Mobile payment methods category
 // Includes mobile-specific payment solutions
-/*
+
 message MobilePaymentMethodType {
   oneof mobile_payment_type {
-    Blik blik = 1;                                           // BLIK - Polish mobile payment system
-    Bizum bizum = 2;                                         // Bizum - Spanish mobile payment solution
-    Dana dana = 3;                                           // DANA - Indonesian digital wallet
+    // Blik blik = 1;                                           // BLIK - Polish mobile payment system
+    // Bizum bizum = 2;                                         // Bizum - Spanish mobile payment solution
+    // Dana dana = 3;                                           // DANA - Indonesian digital wallet
     DuitNow duit_now = 4;                                    // DuitNow - Malaysian real-time payment platform
+    /*
     GoPay go_pay = 5;                                        // GoPay - Indonesian digital wallet by Gojek
     GCash gcash = 6;                                         // GCash - Filipino mobile wallet
     KakaoPay kakao_pay = 7;                                  // KakaoPay - South Korean mobile payment service
@@ -184,18 +185,14 @@ message MobilePaymentMethodType {
     TouchNGo touch_n_go = 13;                                // Touch 'n Go - Malaysian e-wallet
     Twint twint = 14;                                        // TWINT - Swiss mobile payment app
     Vipps vipps = 15;                                        // Vipps - Norwegian mobile payment application
+    */
   }
 }
-*/
 
-// Cryptocurrency payment methods category - TODO: Not yet supported
-/*
+// Cryptocurrency payment methods category
 message CryptoCurrencyPaymentMethodType {
-  oneof crypto_type {
-    CryptoCurrency crypto_currency = 1;                      // Generic cryptocurrency payment
-  }
+  CryptoCurrency crypto_currency = 1;                      // Generic cryptocurrency payment
 }
-*/
 
 // Cash and voucher payment methods category - TODO: Not yet supported
 // Includes convenience store payments and voucher systems
@@ -522,6 +519,9 @@ message CashappQrWallet {
 message RevolutPayWallet {
 }
 
+message Bluecode {
+}
+
 // ============================================================================
 // REAL-TIME PAYMENT METHODS
 // ============================================================================
@@ -628,10 +628,8 @@ message PermataBankTransfer {
 */
 
 // ============================================================================
-// ONLINE BANKING PAYMENT METHODS - TODO: Not yet supported
+// ONLINE BANKING PAYMENT METHODS
 // ============================================================================
-
-/*
 
 // Thai online banking systems
 message OnlineBankingThailand {
@@ -650,7 +648,7 @@ message OnlineBankingFinland {
 
 // FPX (Financial Process Exchange) - Malaysian online banking
 message OnlineBankingFPX {
-  // Fields will be added as needed for FPX integration
+  BankNames issuer = 1;
 }
 
 // Polish online banking systems
@@ -665,7 +663,10 @@ message OnlineBankingSlovakia {
 
 // UK Open Banking - Open Banking implementation in the UK
 message OpenBankingUK {
-  // Fields will be added as needed for UK Open Banking integration
+  // Country code for UK Open Banking
+  optional string country = 1;
+  // Bank issuer for UK Open Banking
+  optional string issuer = 2;
 }
 
 // Open Banking Payment Initiation Service
@@ -699,7 +700,7 @@ message Giropay {
 }
 
 // EPS (Electronic Payment Standard) - Austrian bank transfer system
-message EPS {
+message Eps {
   // Fields will be added as needed for EPS integration
 }
 
@@ -709,10 +710,9 @@ message Przelewy24 {
 }
 
 // PSE (Pagos Seguros en Línea) - Colombian online banking
-message PSE {
+message Pse {
   // Fields will be added as needed for PSE integration
 }
-*/
 
 // ============================================================================
 // BUY NOW, PAY LATER PAYMENT METHODS - TODO: Not yet supported
@@ -771,11 +771,14 @@ message Bizum {
 message Dana {
   // Fields will be added as needed for DANA integration
 }
+*/
 
 // DuitNow - Malaysian real-time payment platform
 message DuitNow {
   // Fields will be added as needed for DuitNow integration
 }
+
+/*
 
 // GoPay - Indonesian digital wallet by Gojek
 message GoPay {
@@ -834,10 +837,8 @@ message Vipps {
 */
 
 // ============================================================================
-// CRYPTOCURRENCY PAYMENT METHODS - TODO: Not yet supported
+// CRYPTOCURRENCY PAYMENT METHODS
 // ============================================================================
-
-/*
 
 // Generic cryptocurrency payment
 message CryptoCurrency {
@@ -847,7 +848,6 @@ message CryptoCurrency {
   // Blockchain network
   optional string network = 2;
 }
-*/
 
 // ============================================================================
 // CASH/VOUCHER PAYMENT METHODS - TODO: Not yet supported
@@ -1041,4 +1041,152 @@ enum RewardType {
 
 message SecretString {
   string value = 1;
+}
+
+enum BankNames {
+  BANK_NAMES_UNSPECIFIED = 0; // Default value must be first
+  AmericanExpress = 1;
+  AffinBank = 2;
+  AgroBank = 3;
+  AllianceBank = 4;
+  AmBank = 5;
+  BankOfAmerica = 6;
+  BankOfChina = 7;
+  BankIslam = 8;
+  BankMuamalat = 9;
+  BankRakyat = 10;
+  BankSimpananNasional = 11;
+  Barclays = 12;
+  BlikPSP = 13;
+  CapitalOne = 14;
+  Chase = 15;
+  Citi = 16;
+  CimbBank = 17;
+  Discover = 18;
+  NavyFederalCreditUnion = 19;
+  PentagonFederalCreditUnion = 20;
+  SynchronyBank = 21;
+  WellsFargo = 22;
+  AbnAmro = 23;
+  AsnBank = 24;
+  Bunq = 25;
+  Handelsbanken = 26;
+  HongLeongBank = 27;
+  HsbcBank = 28;
+  Ing = 29;
+  Knab = 30;
+  KuwaitFinanceHouse = 31;
+  Moneyou = 32;
+  Rabobank = 33;
+  Regiobank = 34;
+  Revolut = 35;
+  SnsBank = 36;
+  TriodosBank = 37;
+  VanLanschot = 38;
+  ArzteUndApothekerBank = 39;
+  AustrianAnadiBankAg = 40;
+  BankAustria = 41;
+  Bank99Ag = 42;
+  BankhausCarlSpangler = 43;
+  BankhausSchelhammerUndSchatteraAg = 44;
+  BankMillennium = 45;
+  BawagPskAg = 47;
+  BksBankAg = 48;
+  BrullKallmusBankAg = 49;
+  BtvVierLanderBank = 50;
+  CapitalBankGraweGruppeAg = 51;
+  CeskaSporitelna = 52;
+  Dolomitenbank = 53;
+  EasybankAg = 54;
+  EPlatbyVUB = 55;
+  ErsteBankUndSparkassen = 56;
+  FrieslandBank = 57;
+  HypoAlpeadriabankInternationalAg = 58;
+  HypoNoeLbFurNiederosterreichUWien = 59;
+  HypoOberosterreichSalzburgSteiermark = 60;
+  HypoTirolBankAg = 61;
+  HypoVorarlbergBankAg = 62;
+  HypoBankBurgenlandAktiengesellschaft = 63;
+  KomercniBanka = 64;
+  MBank = 65;
+  MarchfelderBank = 66;
+  Maybank = 67;
+  OberbankAg = 68;
+  OsterreichischeArzteUndApothekerbank = 69;
+  OcbcBank = 70;
+  PayWithING = 71;
+  PlaceZIPKO = 72;
+  PlatnoscOnlineKartaPlatnicza = 73;
+  PosojilnicaBankEGen = 74;
+  PostovaBanka = 75;
+  PublicBank = 76;
+  RaiffeisenBankengruppeOsterreich = 77;
+  RhbBank = 78;
+  SchelhammerCapitalBankAg = 79;
+  StandardCharteredBank = 80;
+  SchoellerbankAg = 81;
+  SpardaBankWien = 82;
+  SporoPay = 83;
+  SantanderPrzelew24 = 84;
+  TatraPay = 85;
+  Viamo = 86;
+  VolksbankGruppe = 87;
+  VolkskreditbankAg = 88;
+  VrBankBraunau = 89;
+  UobBank = 90;
+  PayWithAliorBank = 91;
+  BankiSpoldzielcze = 92;
+  PayWithInteligo = 93;
+  BNPParibasPoland = 94;
+  BankNowySA = 95;
+  CreditAgricole = 96;
+  PayWithBOS = 97;
+  PayWithCitiHandlowy = 98;
+  PayWithPlusBank = 99;
+  ToyotaBank = 100;
+  VeloBank = 101;
+  ETransferPocztowy24 = 102;
+  PlusBank = 103;
+  BankiSpbdzielcze = 105;
+  BankNowyBfgSa = 106;
+  GetinBank = 107;
+  BlikPoland = 108;
+  NoblePay = 109;
+  IdeaBank = 110;
+  EnveloBank = 111;
+  NestPrzelew = 112;
+  MbankMtransfer = 113;
+  Inteligo = 114;
+  PbacZIpko = 115;
+  BnpParibas = 116;
+  BankPekaoSa = 117;
+  VolkswagenBank = 118;
+  AliorBank = 119;
+  Boz = 120;
+  BangkokBank = 121;
+  KrungsriBank = 122;
+  KrungThaiBank = 123;
+  TheSiamCommercialBank = 124;
+  KasikornBank = 125;
+  OpenBankSuccess = 126;
+  OpenBankFailure = 127;
+  OpenBankCancelled = 128;
+  Aib = 129;
+  BankOfScotland = 130;
+  DanskeBank = 131;
+  FirstDirect = 132;
+  FirstTrust = 133;
+  Halifax = 134;
+  Lloyds = 135;
+  Monzo = 136;
+  NatWest = 137;
+  NationwideBank = 138;
+  RoyalBankOfScotland = 139;
+  Starling = 140;
+  TsbBank = 141;
+  TescoBank = 142;
+  UlsterBank = 143;
+  Yoursafe = 144;
+  N26 = 145;
+  NationaleNederlanden = 146;
 }

@@ -4,11 +4,11 @@
 
 use cards::CardNumber;
 use grpc_server::{app, configs};
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 mod common;
+mod utils;
 
 use std::{
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -30,11 +30,6 @@ use tonic::{transport::Channel, Request};
 const CONNECTOR_NAME: &str = "checkout";
 const AUTH_TYPE: &str = "signature-key";
 
-// Environment variable names for API credentials
-const CHECKOUT_API_KEY_ENV: &str = "TEST_CHECKOUT_API_KEY";
-const CHECKOUT_KEY1_ENV: &str = "TEST_CHECKOUT_KEY1"; // processing_channel_id
-const CHECKOUT_API_SECRET_ENV: &str = "TEST_CHECKOUT_API_SECRET";
-
 // Test card data
 const TEST_AMOUNT: i64 = 1000;
 const AUTO_CAPTURE_CARD_NUMBER: &str = "4000020000000000"; // Card number from checkout_grpcurl_test.sh for auto capture
@@ -55,13 +50,17 @@ fn get_timestamp() -> u64 {
 
 // Helper function to add checkout metadata headers to a request
 fn add_checkout_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables - throw error if not present
-    let api_key = env::var(CHECKOUT_API_KEY_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable {CHECKOUT_API_KEY_ENV} must be set"));
-    let key1 = env::var(CHECKOUT_KEY1_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable {CHECKOUT_KEY1_ENV} must be set"));
-    let api_secret = env::var(CHECKOUT_API_SECRET_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable {CHECKOUT_API_SECRET_ENV} must be set"));
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load checkout credentials");
+
+    let (api_key, key1, api_secret) = match auth {
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
+            api_key,
+            key1,
+            api_secret,
+        } => (api_key.expose(), key1.expose(), api_secret.expose()),
+        _ => panic!("Expected SignatureKey auth type for checkout"),
+    };
 
     request.metadata_mut().append(
         "x-connector",
@@ -80,6 +79,32 @@ fn add_checkout_metadata<T>(request: &mut Request<T>) {
     request.metadata_mut().append(
         "x-api-secret",
         api_secret.parse().expect("Failed to parse x-api-secret"),
+    );
+
+    request.metadata_mut().append(
+        "x-merchant-id",
+        "test_merchant"
+            .parse()
+            .expect("Failed to parse x-merchant-id"),
+    );
+
+    request.metadata_mut().append(
+        "x-tenant-id",
+        "default".parse().expect("Failed to parse x-tenant-id"),
+    );
+
+    request.metadata_mut().append(
+        "x-request-id",
+        format!("test_request_{}", get_timestamp())
+            .parse()
+            .expect("Failed to parse x-request-id"),
+    );
+
+    request.metadata_mut().append(
+        "x-connector-request-reference-id",
+        format!("conn_ref_{}", get_timestamp())
+            .parse()
+            .expect("Failed to parse x-connector-request-reference-id"),
     );
 }
 
@@ -152,6 +177,11 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("checkout_sync_{}", get_timestamp()))),
         }),
+        capture_method: None,
+        handle_response: None,
+        amount: TEST_AMOUNT,
+        currency: i32::from(Currency::Usd),
+        state: None,
     }
 }
 
@@ -164,9 +194,11 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         amount_to_capture: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
-        metadata: std::collections::HashMap::new(),
+        connector_metadata: std::collections::HashMap::new(),
         request_ref_id: None,
         browser_info: None,
+        capture_method: None,
+        state: None,
     }
 }
 
@@ -190,6 +222,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         merchant_account_id: None,
         capture_method: None,
         request_ref_id: None,
+        state: None,
     }
 }
 
@@ -203,6 +236,8 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_reason: None,
         request_ref_id: None,
         browser_info: None,
+        refund_metadata: std::collections::HashMap::new(),
+        state: None,
     }
 }
 
@@ -223,6 +258,9 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         }),
         all_keys_required: None,
         browser_info: None,
+        amount: None,
+        currency: None,
+        ..Default::default()
     }
 }
 

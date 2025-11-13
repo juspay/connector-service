@@ -9,7 +9,7 @@ ifeq ($(CI),true)
 	CLIPPY_EXTRA := -- -D warnings
 endif
 
-.PHONY: all fmt check clippy test ci help proto-format proto-generate proto-build proto-lint proto-clean
+.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean
 
 ## Run all checks: fmt → check → clippy → test
 all: fmt check clippy test
@@ -33,6 +33,11 @@ clippy:
 test:
 	@echo "▶ cargo-hack test…"
 	cargo hack test --each-feature
+
+## Run tests with nextest (faster test runner)
+nextest:
+	@echo "▶ cargo nextest…"
+	cargo nextest run --config-file .nextest.toml
 
 ## CI-friendly invocation:
 ##    make ci
@@ -78,6 +83,7 @@ help:
 	@echo "  check    Run cargo-hack check (no dev-deps)"
 	@echo "  clippy   Run cargo-hack clippy (no dev-deps)"
 	@echo "  test     Run cargo-hack test"
+	@echo "  nextest  Run tests with nextest (faster test runner)"
 	@echo "  ci       Same as '''all''' but with CI=true (treat warnings as errors)"
 	@echo
 	@echo "Proto Targets:"

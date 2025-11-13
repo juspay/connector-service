@@ -1,14 +1,17 @@
 use crate::{configs, error::ResultExtGrpc};
 use common_utils::{
-    consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},
+    consts::{
+        self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2, X_SHADOW_MODE,
+    },
     errors::CustomResult,
-    events::FlowName,
+    events::{Event, EventStage, FlowName, MaskedSerdeValue},
     lineage::LineageIds,
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
-        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute,
+        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
+        SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types,
     errors::{ApiError, ApplicationErrorResponse},
@@ -20,6 +23,10 @@ use hyperswitch_masking;
 use serde_json::Value;
 use std::{str::FromStr, sync::Arc};
 use tonic::metadata;
+
+use crate::{configs, error::ResultExtGrpc, request::RequestData};
+use std::collections::HashMap;
+
 
 // Helper function to map flow markers to flow names
 pub fn flow_marker_to_flow_name<F>() -> FlowName
@@ -36,6 +43,8 @@ where
         FlowName::Rsync
     } else if type_id == std::any::TypeId::of::<Void>() {
         FlowName::Void
+    } else if type_id == std::any::TypeId::of::<VoidPC>() {
+        FlowName::VoidPostCapture
     } else if type_id == std::any::TypeId::of::<Refund>() {
         FlowName::Refund
     } else if type_id == std::any::TypeId::of::<Capture>() {
@@ -54,6 +63,14 @@ where
         FlowName::DefendDispute
     } else if type_id == std::any::TypeId::of::<SubmitEvidence>() {
         FlowName::SubmitEvidence
+    } else if type_id == std::any::TypeId::of::<PaymentMethodToken>() {
+        FlowName::PaymentMethodToken
+    } else if type_id == std::any::TypeId::of::<PreAuthenticate>() {
+        FlowName::PreAuthenticate
+    } else if type_id == std::any::TypeId::of::<Authenticate>() {
+        FlowName::Authenticate
+    } else if type_id == std::any::TypeId::of::<PostAuthenticate>() {
+        FlowName::PostAuthenticate
     } else {
         tracing::warn!("Unknown flow marker type: {}", std::any::type_name::<F>());
         FlowName::Unknown
@@ -118,6 +135,13 @@ pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> 
 }
 
 /// Struct to hold extracted metadata payload
+///
+/// SECURITY WARNING: This struct should only contain non-sensitive business metadata.
+/// For any sensitive data (API keys, tokens, credentials, etc.), always:
+/// 1. Wrap in hyperswitch_masking::Secret<T>
+/// 2. Extract via MaskedMetadata methods instead of adding here
+///
+#[derive(Clone, Debug)]
 pub struct MetadataPayload {
     pub tenant_id: String,
     pub request_id: String,
@@ -126,6 +150,7 @@ pub struct MetadataPayload {
     pub lineage_ids: LineageIds<'static>,
     pub connector_auth_type: ConnectorAuthType,
     pub reference_id: Option<String>,
+    pub shadow_mode: bool,
 }
 
 pub fn get_metadata_payload(
@@ -139,6 +164,7 @@ pub fn get_metadata_payload(
     let lineage_ids = extract_lineage_fields_from_metadata(metadata, &server_config.lineage);
     let connector_auth_type = auth_from_metadata(metadata)?;
     let reference_id = reference_id_from_metadata(metadata)?;
+    let shadow_mode = shadow_mode_from_metadata(metadata);
     Ok(MetadataPayload {
         tenant_id,
         request_id,
@@ -147,13 +173,14 @@ pub fn get_metadata_payload(
         lineage_ids,
         connector_auth_type,
         reference_id,
+        shadow_mode,
     })
 }
 
 pub fn connector_from_metadata(
     metadata: &metadata::MetadataMap,
 ) -> CustomResult<connector_types::ConnectorEnum, ApplicationErrorResponse> {
-    parse_metadata(metadata, consts::X_CONNECTOR).and_then(|inner| {
+    parse_metadata(metadata, consts::X_CONNECTOR_NAME).and_then(|inner| {
         connector_types::ConnectorEnum::from_str(inner).map_err(|e| {
             Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CONNECTOR".to_string(),
@@ -209,6 +236,14 @@ pub fn reference_id_from_metadata(
     parse_optional_metadata(metadata, consts::X_REFERENCE_ID).map(|s| s.map(|s| s.to_string()))
 }
 
+pub fn shadow_mode_from_metadata(metadata: &metadata::MetadataMap) -> bool {
+    parse_optional_metadata(metadata, X_SHADOW_MODE)
+        .ok()
+        .flatten()
+        .map(|value| value.to_lowercase() == "true")
+        .unwrap_or(false)
+}
+
 pub fn auth_from_metadata(
     metadata: &metadata::MetadataMap,
 ) -> CustomResult<ConnectorAuthType, ApplicationErrorResponse> {
@@ -238,7 +273,7 @@ pub fn auth_from_metadata(
         "temporary-auth" => Ok(ConnectorAuthType::TemporaryAuth),
         "currency-auth-key" => {
             let auth_key_map_str = parse_metadata(metadata, X_AUTH_KEY_MAP)?;
-            let auth_key_map: std::collections::HashMap<
+            let auth_key_map: HashMap<
                 common_enums::enums::Currency,
                 common_utils::pii::SecretSerdeValue,
             > = serde_json::from_str(auth_key_map_str).change_context(
@@ -387,13 +422,13 @@ fn parse_optional_metadata<'a>(
 }
 
 pub fn log_before_initialization<T>(
-    request: &tonic::Request<T>,
+    request_data: &RequestData<T>,
     service_name: &str,
-    metadata_payload: &MetadataPayload,
 ) -> CustomResult<(), ApplicationErrorResponse>
 where
     T: serde::Serialize,
 {
+    let metadata_payload = &request_data.extracted_metadata;
     let MetadataPayload {
         connector,
         merchant_id,
@@ -402,8 +437,7 @@ where
         ..
     } = metadata_payload;
     let current_span = tracing::Span::current();
-    let req_body = request.get_ref();
-    let req_body_json = match hyperswitch_masking::masked_serialize(req_body) {
+    let req_body_json = match hyperswitch_masking::masked_serialize(&request_data.payload) {
         Ok(masked_value) => masked_value.to_string(),
         Err(e) => {
             tracing::error!("Masked serialization error: {:?}", e);
@@ -464,24 +498,91 @@ pub async fn grpc_logging_wrapper<T, F, Fut, R>(
     request: tonic::Request<T>,
     service_name: &str,
     config: Arc<configs::Config>,
+    flow_name: FlowName,
     handler: F,
 ) -> Result<tonic::Response<R>, tonic::Status>
 where
-    T: serde::Serialize + std::fmt::Debug + Send + 'static,
-    F: FnOnce(tonic::Request<T>, MetadataPayload) -> Fut + Send,
+    T: serde::Serialize
+        + std::fmt::Debug
+        + Send
+        + 'static
+        + hyperswitch_masking::ErasedMaskSerialize,
+    F: FnOnce(RequestData<T>) -> Fut + Send,
     Fut: std::future::Future<Output = Result<tonic::Response<R>, tonic::Status>> + Send,
-    R: serde::Serialize + std::fmt::Debug,
+    R: serde::Serialize + std::fmt::Debug + hyperswitch_masking::ErasedMaskSerialize,
 {
     let current_span = tracing::Span::current();
-    let header_payload =
-        get_metadata_payload(request.metadata(), config.clone()).into_grpc_status()?;
-    log_before_initialization(&request, service_name, &header_payload).into_grpc_status()?;
     let start_time = tokio::time::Instant::now();
-    let result = handler(request, header_payload).await;
-    let duration = start_time.elapsed().as_millis();
-    current_span.record("response_time", duration);
-    log_after_initialization(&result);
-    result
+    let masked_request_data =
+        MaskedSerdeValue::from_masked_optional(request.get_ref(), "grpc_request");
+    let mut event_metadata_payload = None;
+    let mut event_headers = HashMap::new();
+
+    let grpc_response = async {
+        let request_data = RequestData::from_grpc_request(request, config.clone())?;
+        log_before_initialization(&request_data, service_name).into_grpc_status()?;
+        event_headers = request_data.masked_metadata.get_all_masked();
+        event_metadata_payload = Some(request_data.extracted_metadata.clone());
+
+        let result = handler(request_data).await;
+
+        let duration = start_time.elapsed().as_millis();
+        current_span.record("response_time", duration);
+        log_after_initialization(&result);
+        result
+    }
+    .await;
+
+    create_and_emit_grpc_event(
+        masked_request_data,
+        &grpc_response,
+        start_time,
+        flow_name,
+        &config,
+        event_metadata_payload.as_ref(),
+        event_headers,
+    );
+
+    grpc_response
+}
+
+fn create_and_emit_grpc_event<R>(
+    masked_request_data: Option<MaskedSerdeValue>,
+    grpc_response: &Result<tonic::Response<R>, tonic::Status>,
+    start_time: tokio::time::Instant,
+    flow_name: FlowName,
+    config: &configs::Config,
+    metadata_payload: Option<&MetadataPayload>,
+    masked_headers: HashMap<String, String>,
+) where
+    R: serde::Serialize,
+{
+    let mut grpc_event = Event {
+        request_id: metadata_payload.map_or("unknown".to_string(), |md| md.request_id.clone()),
+        timestamp: chrono::Utc::now().timestamp().into(),
+        flow_type: flow_name,
+        connector: metadata_payload.map_or("unknown".to_string(), |md| md.connector.to_string()),
+        url: None,
+        stage: EventStage::GrpcRequest,
+        latency_ms: Some(u64::try_from(start_time.elapsed().as_millis()).unwrap_or(u64::MAX)),
+        status_code: None,
+        request_data: masked_request_data,
+        response_data: None,
+        headers: masked_headers,
+        additional_fields: HashMap::new(),
+        lineage_ids: metadata_payload
+            .map_or_else(|| LineageIds::empty(""), |md| md.lineage_ids.clone()),
+    };
+
+    grpc_event
+        .add_reference_id(metadata_payload.and_then(|metadata| metadata.reference_id.as_deref()));
+
+    match grpc_response {
+        Ok(response) => grpc_event.set_grpc_success_response(response.get_ref()),
+        Err(error) => grpc_event.set_grpc_error_response(error),
+    }
+
+    common_utils::emit_event_with_config(grpc_event, &config.events);
 }
 
 pub fn get_config_from_request<T>(
@@ -522,24 +623,26 @@ macro_rules! implement_connector_operation {
     ) => {
         async fn $fn_name(
             &self,
-            request: tonic::Request<$request_type>,
+            request: $crate::request::RequestData<$request_type>,
         ) -> Result<tonic::Response<$response_type>, tonic::Status> {
             tracing::info!(concat!($log_prefix, "_FLOW: initiated"));
             let config = $crate::utils::get_config_from_request(&request)
                     .map_err(|e| e.into_grpc_status())?;
             let service_name = request
-            .extensions()
-            .get::<String>()
-            .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
-            let current_span = tracing::Span::current();
-            let metadata_payload = $crate::utils::get_metadata_payload(request.metadata(), config.clone()).into_grpc_status()?;
-            $crate::utils::log_before_initialization(&request, service_name.as_str(), &metadata_payload).into_grpc_status()?;
-            let start_time = tokio::time::Instant::now();
+                .extensions
+                .get::<String>()
+                .cloned()
+                .unwrap_or_else(|| "unknown_service".to_string());
             let result = Box::pin(async{
+            let $crate::request::RequestData {
+                payload,
+                extracted_metadata: metadata_payload,
+                masked_metadata,
+                extensions: _  // unused in macro
+            } = request;
+
             let (connector, request_id, connector_auth_details) = (metadata_payload.connector, metadata_payload.request_id, metadata_payload.connector_auth_type);
-            let metadata = request.metadata().clone();
-            let payload = request.into_inner();
+
 
             // Get connector data
             let connector_data: ConnectorData<domain_types::payment_method_data::DefaultPCIHolder> = connector_integration::types::ConnectorData::get_connector_by_name(&connector);
@@ -558,7 +661,7 @@ macro_rules! implement_connector_operation {
                 .into_grpc_status()?;
 
             // Create common request data
-            let common_flow_data = $common_flow_data_constructor((payload.clone(), config.connectors.clone(), &metadata))
+            let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone(), &masked_metadata))
                 .into_grpc_status()?;
 
             // Create router data
@@ -575,17 +678,31 @@ macro_rules! implement_connector_operation {
                 response: Err(domain_types::router_data::ErrorResponse::default()),
             };
 
-            // Execute connector processing
+            // Calculate flow name for dynamic flow-specific configurations
             let flow_name = $crate::utils::flow_marker_to_flow_name::<$flow_marker>();
+
+            // Get API tag for the current flow
+            // Note: Flows with payment_method_type should implement manually (e.g., authorize, psync)
+            let api_tag = self
+                .config
+                .api_tags
+                .get_tag(flow_name, None);
+
+            // Create test context if test mode is enabled
+            let test_context = self.config.test.create_test_context(&request_id).map_err(|e| {
+                tonic::Status::internal(format!("Test mode configuration error: {e}"))
+            })?;
+
+            // Execute connector processing
             let event_params = external_services::service::EventProcessingParams {
                 connector_name: &connector.to_string(),
                 service_name: &service_name,
                 flow_name,
-                event_config: &config.events,
-                raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(payload.masked_serialize().unwrap_or_default())),
+                event_config: &self.config.events,
                 request_id: &request_id,
                 lineage_ids: &metadata_payload.lineage_ids,
                 reference_id: &metadata_payload.reference_id,
+                shadow_mode: metadata_payload.shadow_mode,
             };
             let response_result = external_services::service::execute_connector_processing_step(
                 &config.proxy,
@@ -594,6 +711,9 @@ macro_rules! implement_connector_operation {
                 $all_keys_required,
                 event_params,
                 None,
+                common_enums::CallConnectorAction::Trigger,
+                test_context,
+                api_tag,
             )
             .await
             .switch()
@@ -602,11 +722,9 @@ macro_rules! implement_connector_operation {
             // Generate response
             let final_response = $generate_response_fn(response_result)
                 .into_grpc_status()?;
+
             Ok(tonic::Response::new(final_response))
         }).await;
-        let duration = start_time.elapsed().as_millis();
-        current_span.record("response_time", duration);
-        $crate::utils::log_after_initialization(&result);
         result
     }
 }

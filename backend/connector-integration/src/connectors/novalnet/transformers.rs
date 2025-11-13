@@ -450,6 +450,7 @@ impl<
                     })
                 }
                 WalletDataPaymentMethod::AliPayQr(_)
+                | WalletDataPaymentMethod::BluecodeRedirect {}
                 | WalletDataPaymentMethod::AliPayRedirect(_)
                 | WalletDataPaymentMethod::AliPayHkRedirect(_)
                 | WalletDataPaymentMethod::AmazonPayRedirect(_)
@@ -704,7 +705,15 @@ impl<
                             })
                             .map(Box::new),
                         connector_metadata: None,
-                        network_txn_id: None,
+                        network_txn_id: item.response.transaction.and_then(|data| {
+                            data.payment_data
+                                .and_then(|payment_data| match payment_data {
+                                    NovalnetResponsePaymentData::Card(card) => {
+                                        card.scheme_tid.map(|tid| tid.expose())
+                                    }
+                                    NovalnetResponsePaymentData::Paypal(_) => None,
+                                })
+                        }),
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
@@ -816,7 +825,15 @@ impl<
                             })
                             .map(Box::new),
                         connector_metadata: None,
-                        network_txn_id: None,
+                        network_txn_id: item.response.transaction.and_then(|data| {
+                            data.payment_data
+                                .and_then(|payment_data| match payment_data {
+                                    NovalnetResponsePaymentData::Card(card) => {
+                                        card.scheme_tid.map(|tid| tid.expose())
+                                    }
+                                    NovalnetResponsePaymentData::Paypal(_) => None,
+                                })
+                        }),
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
@@ -905,7 +922,15 @@ impl
                             })
                             .map(Box::new),
                         connector_metadata: None,
-                        network_txn_id: None,
+                        network_txn_id: item.response.transaction.and_then(|data| {
+                            data.payment_data
+                                .and_then(|payment_data| match payment_data {
+                                    NovalnetResponsePaymentData::Card(card) => {
+                                        card.scheme_tid.map(|tid| tid.expose())
+                                    }
+                                    NovalnetResponsePaymentData::Paypal(_) => None,
+                                })
+                        }),
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
@@ -996,6 +1021,7 @@ pub struct NovalnetResponseCard {
     pub cc_3d: Option<Secret<u8>>,
     pub last_four: Option<Secret<String>>,
     pub token: Option<Secret<String>>,
+    pub scheme_tid: Option<Secret<String>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -1401,7 +1427,15 @@ impl<F> TryFrom<ResponseRouterData<NovalnetPSyncResponse, Self>>
                             })
                             .map(Box::new),
                         connector_metadata: None,
-                        network_txn_id: None,
+                        network_txn_id: item.response.transaction.and_then(|data| {
+                            data.payment_data
+                                .and_then(|payment_data| match payment_data {
+                                    NovalnetResponsePaymentData::Card(card) => {
+                                        card.scheme_tid.map(|tid| tid.expose())
+                                    }
+                                    NovalnetResponsePaymentData::Paypal(_) => None,
+                                })
+                        }),
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
@@ -2012,6 +2046,7 @@ impl<
                     })
                 }
                 WalletDataPaymentMethod::AliPayQr(_)
+                | WalletDataPaymentMethod::BluecodeRedirect { .. }
                 | WalletDataPaymentMethod::AliPayRedirect(_)
                 | WalletDataPaymentMethod::AliPayHkRedirect(_)
                 | WalletDataPaymentMethod::AmazonPayRedirect(_)
@@ -2300,6 +2335,19 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                             error_message: None,
                             raw_connector_response: None,
                             response_headers: None,
+                            minor_amount_captured: None,
+                            amount_captured: None,
+                            error_reason: None,
+                            network_txn_id: response.payment_data.and_then(|payment_data| {
+                                match payment_data {
+                                    NovalnetResponsePaymentData::Card(card) => {
+                                        card.scheme_tid.map(|tid| tid.expose())
+                                    }
+                                    NovalnetResponsePaymentData::Paypal(_) => None,
+                                }
+                            }),
+                            transformation_status:
+                                common_enums::WebhookTransformationStatus::Complete,
                         })
                     }
                     NovalnetAPIStatus::Failure => Ok(Self {
@@ -2312,6 +2360,11 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                         error_message: Some(notif.result.status_text),
                         raw_connector_response: None,
                         response_headers: None,
+                        minor_amount_captured: None,
+                        amount_captured: None,
+                        error_reason: None,
+                        network_txn_id: None,
+                        transformation_status: common_enums::WebhookTransformationStatus::Complete,
                     }),
                 }
             }

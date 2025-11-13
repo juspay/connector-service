@@ -952,6 +952,7 @@ pub enum PaymentMethodType {
     AmazonPay,
     ApplePay,
     Atome,
+    Bluecode,
     Bacs,
     BancontactCard,
     Becs,
@@ -1136,7 +1137,9 @@ pub enum AttemptStatus {
     Authorizing,
     CodInitiated,
     Voided,
+    VoidedPostCapture,
     VoidInitiated,
+    VoidPostCaptureInitiated,
     CaptureInitiated,
     CaptureFailed,
     VoidFailed,
@@ -1170,19 +1173,21 @@ impl TryFrom<u32> for AttemptStatus {
             9 => AttemptStatus::Authorizing,
             10 => AttemptStatus::CodInitiated,
             11 => AttemptStatus::Voided,
-            12 => AttemptStatus::VoidInitiated,
-            13 => AttemptStatus::CaptureInitiated,
-            14 => AttemptStatus::CaptureFailed,
-            15 => AttemptStatus::VoidFailed,
-            16 => AttemptStatus::AutoRefunded,
-            17 => AttemptStatus::PartialCharged,
-            18 => AttemptStatus::PartialChargedAndChargeable,
-            19 => AttemptStatus::Unresolved,
-            20 => AttemptStatus::Pending,
-            21 => AttemptStatus::Failure,
-            22 => AttemptStatus::PaymentMethodAwaited,
-            23 => AttemptStatus::ConfirmationAwaited,
-            24 => AttemptStatus::DeviceDataCollectionPending,
+            12 => AttemptStatus::VoidedPostCapture,
+            13 => AttemptStatus::VoidInitiated,
+            14 => AttemptStatus::VoidPostCaptureInitiated,
+            15 => AttemptStatus::CaptureInitiated,
+            16 => AttemptStatus::CaptureFailed,
+            17 => AttemptStatus::VoidFailed,
+            18 => AttemptStatus::AutoRefunded,
+            19 => AttemptStatus::PartialCharged,
+            20 => AttemptStatus::PartialChargedAndChargeable,
+            21 => AttemptStatus::Unresolved,
+            22 => AttemptStatus::Pending,
+            23 => AttemptStatus::Failure,
+            24 => AttemptStatus::PaymentMethodAwaited,
+            25 => AttemptStatus::ConfirmationAwaited,
+            26 => AttemptStatus::DeviceDataCollectionPending,
             _ => AttemptStatus::Unknown,
         })
     }
@@ -1195,6 +1200,7 @@ impl AttemptStatus {
             Self::Charged
                 | Self::AutoRefunded
                 | Self::Voided
+                | Self::VoidedPostCapture
                 | Self::PartialCharged
                 | Self::AuthenticationFailed
                 | Self::AuthorizationFailed
@@ -1556,6 +1562,7 @@ pub enum RoutableConnectors {
     // Amazonpay,
     Archipel,
     Authorizedotnet,
+    Bluecode,
     Bankofamerica,
     Barclaycard,
     Billwerk,
@@ -1714,4 +1721,87 @@ pub enum ProductType {
     Ride,
     Event,
     Accommodation,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WebhookTransformationStatus {
+    /// Transformation completed successfully, no further action needed
+    Complete,
+    /// Transformation incomplete, requires second call for final status
+    Incomplete,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum CallConnectorAction {
+    Trigger,
+    HandleResponse(Vec<u8>),
+}
+
+#[derive(
+    Clone,
+    Debug,
+    Eq,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    strum::Display,
+    strum::EnumString,
+    Hash,
+)]
+pub enum PaymentChargeType {
+    #[serde(untagged)]
+    Stripe(StripeChargeType),
+}
+
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    Hash,
+    Eq,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    strum::Display,
+    strum::EnumString,
+)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
+pub enum StripeChargeType {
+    #[default]
+    Direct,
+    Destination,
+}
+
+#[derive(
+    Default,
+    Clone,
+    Debug,
+    Eq,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    strum::Display,
+    strum::EnumString,
+    ToSchema,
+    Hash,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum AuthorizationStatus {
+    Success,
+    Failure,
+    // Processing state is before calling connector
+    #[default]
+    Processing,
+    // Requires merchant action
+    Unresolved,
+}
+
+#[derive(Debug, Default, Eq, PartialEq, serde::Deserialize, serde::Serialize, Clone, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum DecoupledAuthenticationType {
+    #[default]
+    Challenge,
+    Frictionless,
 }

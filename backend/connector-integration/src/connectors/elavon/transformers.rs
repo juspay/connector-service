@@ -22,7 +22,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::{report, ResultExt};
-use hyperswitch_masking::{PeekInterface, Secret, WithoutType};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret, WithoutType};
 use serde::{
     de::{self, Deserializer},
     Deserialize, Serialize,
@@ -448,7 +448,7 @@ pub struct PaymentResponse {
     pub ssl_token: Option<Secret<String>>,
     pub ssl_approval_code: Option<String>,
     pub ssl_transaction_type: Option<String>,
-    pub ssl_cvv2_response: Option<String>,
+    pub ssl_cvv2_response: Option<Secret<String>>,
     pub ssl_avs_response: Option<String>,
     pub ssl_token_response: Option<String>,
 }
@@ -506,15 +506,15 @@ impl<'de> Deserialize<'de> for ElavonPaymentsResponse {
             #[serde(default)]
             ssl_result_message: Option<String>,
             #[serde(default)]
-            ssl_token: Option<String>,
+            ssl_token: Option<Secret<String>>,
             #[serde(default)]
-            ssl_token_response: Option<String>,
+            ssl_token_response: Option<Secret<String>>,
             #[serde(default)]
             ssl_approval_code: Option<String>,
             #[serde(default)]
             ssl_transaction_type: Option<String>,
             #[serde(default)]
-            ssl_cvv2_response: Option<String>,
+            ssl_cvv2_response: Option<Secret<String>>,
             #[serde(default)]
             ssl_avs_response: Option<String>,
         }
@@ -536,12 +536,12 @@ impl<'de> Deserialize<'de> for ElavonPaymentsResponse {
                     ssl_result_message: flat_res
                         .ssl_result_message
                         .ok_or_else(|| de::Error::missing_field("ssl_result_message"))?,
-                    ssl_token: flat_res.ssl_token.map(Secret::new),
+                    ssl_token: flat_res.ssl_token,
                     ssl_approval_code: flat_res.ssl_approval_code,
                     ssl_transaction_type: flat_res.ssl_transaction_type.clone(),
                     ssl_cvv2_response: flat_res.ssl_cvv2_response,
                     ssl_avs_response: flat_res.ssl_avs_response,
-                    ssl_token_response: flat_res.ssl_token_response,
+                    ssl_token_response: flat_res.ssl_token_response.map(|s| s.expose()),
                 })
             } else if flat_res.error_message.is_some() {
                 ElavonResult::Error(ElavonErrorResponse {
@@ -590,15 +590,15 @@ impl<'de> Deserialize<'de> for ElavonCaptureResponse {
             #[serde(default)]
             ssl_result_message: Option<String>,
             #[serde(default)]
-            ssl_token: Option<String>,
+            ssl_token: Option<Secret<String>>,
             #[serde(default)]
-            ssl_token_response: Option<String>,
+            ssl_token_response: Option<Secret<String>>,
             #[serde(default)]
             ssl_approval_code: Option<String>,
             #[serde(default)]
             ssl_transaction_type: Option<String>,
             #[serde(default)]
-            ssl_cvv2_response: Option<String>,
+            ssl_cvv2_response: Option<Secret<String>>,
             #[serde(default)]
             ssl_avs_response: Option<String>,
         }
@@ -620,12 +620,12 @@ impl<'de> Deserialize<'de> for ElavonCaptureResponse {
                     ssl_result_message: flat_res
                         .ssl_result_message
                         .ok_or_else(|| de::Error::missing_field("ssl_result_message"))?,
-                    ssl_token: flat_res.ssl_token.map(Secret::new),
+                    ssl_token: flat_res.ssl_token,
                     ssl_approval_code: flat_res.ssl_approval_code,
                     ssl_transaction_type: flat_res.ssl_transaction_type.clone(),
                     ssl_cvv2_response: flat_res.ssl_cvv2_response,
                     ssl_avs_response: flat_res.ssl_avs_response,
-                    ssl_token_response: flat_res.ssl_token_response,
+                    ssl_token_response: flat_res.ssl_token_response.map(|s| s.expose()),
                 })
             } else if flat_res.error_message.is_some() {
                 ElavonResult::Error(ElavonErrorResponse {
@@ -674,15 +674,15 @@ impl<'de> Deserialize<'de> for ElavonRefundResponse {
             #[serde(default)]
             ssl_result_message: Option<String>,
             #[serde(default)]
-            ssl_token: Option<String>,
+            ssl_token: Option<Secret<String>>,
             #[serde(default)]
-            ssl_token_response: Option<String>,
+            ssl_token_response: Option<Secret<String>>,
             #[serde(default)]
             ssl_approval_code: Option<String>,
             #[serde(default)]
             ssl_transaction_type: Option<String>,
             #[serde(default)]
-            ssl_cvv2_response: Option<String>,
+            ssl_cvv2_response: Option<Secret<String>>,
             #[serde(default)]
             ssl_avs_response: Option<String>,
         }
@@ -704,12 +704,12 @@ impl<'de> Deserialize<'de> for ElavonRefundResponse {
                     ssl_result_message: flat_res
                         .ssl_result_message
                         .ok_or_else(|| de::Error::missing_field("ssl_result_message"))?,
-                    ssl_token: flat_res.ssl_token.map(Secret::new),
+                    ssl_token: flat_res.ssl_token,
                     ssl_approval_code: flat_res.ssl_approval_code,
                     ssl_transaction_type: flat_res.ssl_transaction_type.clone(),
                     ssl_cvv2_response: flat_res.ssl_cvv2_response,
                     ssl_avs_response: flat_res.ssl_avs_response,
-                    ssl_token_response: flat_res.ssl_token_response,
+                    ssl_token_response: flat_res.ssl_token_response.map(|s| s.expose()),
                 })
             } else if flat_res.error_message.is_some() {
                 ElavonResult::Error(ElavonErrorResponse {

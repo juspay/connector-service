@@ -115,7 +115,7 @@ pub struct PayuPaymentRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bankcode: Option<String>, // Bank code (TEZ, INTENT, TEZOMNI)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub vpa: Option<String>, // UPI VPA (for collect)
+    pub vpa: Option<Secret<String>>, // UPI VPA (for collect)
 
     // UPI specific fields
     pub txn_s2s_flow: String, // S2S flow type ("2" for UPI)
@@ -184,7 +184,7 @@ pub struct PayuPaymentResponse {
     #[serde(alias = "merchantName")]
     pub merchant_name: Option<String>, // Merchant display name
     #[serde(alias = "merchantVpa")]
-    pub merchant_vpa: Option<String>, // Merchant UPI VPA
+    pub merchant_vpa: Option<Secret<String>>, // Merchant UPI VPA
     pub amount: Option<String>, // Transaction amount
     #[serde(alias = "txnId")]
     pub txn_id: Option<String>, // Transaction ID
@@ -342,7 +342,7 @@ impl<
             // Payment method specific
             pg,
             bankcode,
-            vpa,
+            vpa: vpa.map(Secret::new),
 
             // UPI specific - corrected based on PayU docs
             txn_s2s_flow: s2s_flow,
@@ -420,8 +420,8 @@ pub struct PayuTransactionDetail {
     pub status: String, // Transaction status: "success", "failure", "pending", "cancel"
     pub firstname: Option<String>, // Customer first name
     pub lastname: Option<String>, // Customer last name
-    pub email: Option<String>, // Customer email
-    pub phone: Option<String>, // Customer phone
+    pub email: Option<Secret<String>>, // Customer email
+    pub phone: Option<Secret<String>>, // Customer phone
     pub productinfo: Option<String>, // Product description
     pub hash: Option<String>, // Response hash for verification
     pub field1: Option<String>, // UPI transaction ID
@@ -620,8 +620,8 @@ fn determine_upi_app_name<
     match &request.payment_method_data {
         PaymentMethodData::Upi(upi_data) => {
             match upi_data {
-                UpiData::UpiIntent(_) => {
-                    // For UPI Intent, return generic intent as fallback
+                UpiData::UpiIntent(_) | UpiData::UpiQr(_) => {
+                    // For UPI Intent and UPI QR, return generic intent as fallback
                     // TODO: Extract bank code from metadata if available
                     Ok(None)
                 }
@@ -672,7 +672,7 @@ fn determine_upi_flow<
                         })
                     }
                 }
-                UpiData::UpiIntent(_) => {
+                UpiData::UpiIntent(_) | UpiData::UpiQr(_) => {
                     // UPI Intent flow - uses S2S flow "2" for intent-based transactions
                     // pg=UPI, bankcode=INTENT for intent flows
                     Ok((

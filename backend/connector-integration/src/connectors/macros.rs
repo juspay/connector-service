@@ -183,7 +183,7 @@ macro_rules! expand_fn_handle_response {
         fn handle_response_v2(
             &self,
             data: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            event_builder: Option<&mut ConnectorEvent>,
+            event_builder: Option<&mut events::Event>,
             res: Response,
         ) -> CustomResult<
             RouterDataV2<$flow, $resource_common_data, $request, $response>,
@@ -198,7 +198,7 @@ macro_rules! expand_fn_handle_response {
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
             let response_body = bridge.response(response_bytes)?;
-            event_builder.map(|i| i.set_response_body(&response_body));
+            event_builder.map(|i| i.set_connector_response(&response_body));
             let response_router_data = ResponseRouterData {
                 response: response_body,
                 router_data: data.clone(),
@@ -214,7 +214,7 @@ macro_rules! expand_fn_handle_response {
         fn handle_response_v2(
             &self,
             data: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            event_builder: Option<&mut ConnectorEvent>,
+            event_builder: Option<&mut events::Event>,
             res: Response,
         ) -> CustomResult<
             RouterDataV2<$flow, $resource_common_data, $request, $response>,
@@ -222,7 +222,7 @@ macro_rules! expand_fn_handle_response {
         > {
             paste::paste! {let bridge = self.[< $flow:snake >];}
             let response_body = bridge.response(res.response)?;
-            event_builder.map(|i| i.set_response_body(&response_body));
+            event_builder.map(|i| i.set_connector_response(&response_body));
             let response_router_data = ResponseRouterData {
                 response: response_body,
                 router_data: data.clone(),
@@ -274,7 +274,7 @@ macro_rules! expand_default_functions {
         fn get_error_response_v2(
             &self,
             res: Response,
-            event_builder: Option<&mut ConnectorEvent>,
+            event_builder: Option<&mut events::Event>,
         ) -> CustomResult<ErrorResponse, macro_types::ConnectorError> {
             self.build_error_response(res, event_builder)
         }
@@ -732,11 +732,11 @@ macro_rules! create_all_prerequisites {
                     pub $converter_name: &'static (dyn common_utils::types::AmountConvertor<Output = $amount_unit> + Sync),
                 )*
                 $(
-                    [<$flow_name:snake>]: &'static (dyn BridgeRequestResponse<
+                    [<$flow_name:snake>]: &'static dyn BridgeRequestResponse<
                         RequestBody = crate::connectors::macros::create_all_prerequisites_resolve_request_body_type!($(request_body: $flow_request $(<$generic_param>)?,)? generic_type: $generic_type),
                         ResponseBody = $flow_response,
                         ConnectorInputData = [<$connector RouterData>]<$router_data_type, $generic_type>,
-                    >),
+                    >,
                 )*
             }
 
@@ -856,16 +856,49 @@ macro_rules! expand_imports {
             // pub(super) use domain_models::{
             //     AuthenticationInitiation, Confirmation, PostAuthenticationSync, PreAuthentication,
             // };
-            pub(super) use common_utils::{errors::CustomResult, request::RequestContent};
+            pub(super) use common_utils::{errors::CustomResult, events, request::RequestContent};
             pub(super) use domain_types::{
                 errors::ConnectorError, router_data::ErrorResponse, router_data_v2::RouterDataV2,
                 router_response_types::Response,
             };
             pub(super) use hyperswitch_masking::Maskable;
-            pub(super) use interfaces::events::connector_api_logs::ConnectorEvent;
 
             pub(super) use crate::types::*;
         }
     };
 }
 pub(crate) use expand_imports;
+
+macro_rules! create_amount_converter_wrapper {
+    (connector_name: $connector_name:ident, amount_type: $amount_type:ty) => {
+        paste::paste! {
+            #[derive(Default, Debug, Clone, Copy, PartialEq)]
+            pub struct [<$connector_name AmountConvertor>];
+
+            impl [<$connector_name AmountConvertor>] {
+                pub fn convert(
+                    amount: common_utils::types::MinorUnit,
+                    currency: common_enums::Currency,
+                ) -> Result<common_utils::types::$amount_type, error_stack::Report<errors::ConnectorError>> {
+                    domain_types::utils::convert_amount(
+                        &common_utils::types::[<$amount_type ForConnector>],
+                        amount,
+                        currency,
+                    )
+                }
+
+                pub fn convert_back(
+                    amount: common_utils::types::$amount_type,
+                    currency: common_enums::Currency,
+                ) -> Result<common_utils::types::MinorUnit, error_stack::Report<errors::ConnectorError>> {
+                    domain_types::utils::convert_back_amount_to_minor_units(
+                        &common_utils::types::[<$amount_type ForConnector>],
+                        amount,
+                        currency,
+                    )
+                }
+            }
+        }
+    };
+}
+pub(crate) use create_amount_converter_wrapper;

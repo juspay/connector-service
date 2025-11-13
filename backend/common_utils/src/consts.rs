@@ -4,6 +4,8 @@
 // ID Generation and Length Constants
 // =============================================================================
 
+use serde::{de::IntoDeserializer, Deserialize};
+
 pub const ID_LENGTH: usize = 20;
 
 /// Characters to use for generating NanoID
@@ -34,11 +36,30 @@ pub const X_TENANT_ID: &str = "x-tenant-id";
 /// Header key for request ID
 pub const X_REQUEST_ID: &str = "x-request-id";
 /// Header key for connector identification
-pub const X_CONNECTOR: &str = "x-connector";
+pub const X_CONNECTOR_NAME: &str = "x-connector";
 /// Header key for merchant identification
 pub const X_MERCHANT_ID: &str = "x-merchant-id";
 /// Header key for reference identification
 pub const X_REFERENCE_ID: &str = "x-reference-id";
+
+pub const X_SOURCE_NAME: &str = "x-source";
+
+pub const X_CONNECTOR_SERVICE: &str = "connector-service";
+
+pub const X_FLOW_NAME: &str = "x-flow";
+/// Header key for shadow mode
+pub const X_SHADOW_MODE: &str = "x-shadow-mode";
+
+// =============================================================================
+// Test Environment Headers
+// =============================================================================
+
+/// Header key for session ID (test mode)
+pub const X_SESSION_ID: &str = "x-session-id";
+/// Header key for API URL (test mode)
+pub const X_API_URL: &str = "x-api-url";
+/// Header key for API tag (test mode)
+pub const X_API_TAG: &str = "x-api-tag";
 
 // =============================================================================
 // Authentication Headers (Internal)
@@ -125,25 +146,44 @@ pub const CONST_PRODUCTION: &str = "production";
 // Environment and Configuration
 // =============================================================================
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub const ENV_PREFIX: &str = "CS";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Env {
     Development,
-    Release,
+    Production,
+    Sandbox,
 }
 
 impl Env {
-    pub const fn current_env() -> Self {
-        if cfg!(debug_assertions) {
-            Self::Development
-        } else {
-            Self::Release
-        }
+    /// Returns the current environment based on the `CS__COMMON__ENVIRONMENT` environment variable.
+    ///
+    /// If the environment variable is not set, it defaults to `Development` in debug builds
+    /// and `Production` in release builds.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the `CS__COMMON__ENVIRONMENT` environment variable contains an invalid value
+    /// that cannot be deserialized into one of the valid environment variants.
+    #[allow(clippy::panic)]
+    pub fn current_env() -> Self {
+        let env_key = format!("{ENV_PREFIX}__COMMON__ENVIRONMENT");
+        std::env::var(&env_key).map_or_else(
+            |_| Self::Development,
+            |v| {
+                Self::deserialize(v.into_deserializer()).unwrap_or_else(|err: serde_json::Error| {
+                    panic!("Invalid value found in environment variable {env_key}: {err}")
+                })
+            },
+        )
     }
 
     pub const fn config_path(self) -> &'static str {
         match self {
             Self::Development => "development.toml",
-            Self::Release => "production.toml",
+            Self::Production => "production.toml",
+            Self::Sandbox => "sandbox.toml",
         }
     }
 }
@@ -152,7 +192,8 @@ impl std::fmt::Display for Env {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Development => write!(f, "development"),
-            Self::Release => write!(f, "release"),
+            Self::Production => write!(f, "production"),
+            Self::Sandbox => write!(f, "sandbox"),
         }
     }
 }

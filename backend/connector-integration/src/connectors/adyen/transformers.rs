@@ -272,7 +272,7 @@ pub struct RiskData {
     #[serde(rename = "riskdata.promotionName")]
     promotion_name: Option<String>,
     #[serde(rename = "riskdata.secondaryPhoneNumber")]
-    secondary_phone_number: Option<String>,
+    secondary_phone_number: Option<Secret<String>>,
     #[serde(rename = "riskdata.timefromLogintoOrder")]
     timefrom_loginto_order: Option<String>,
     #[serde(rename = "riskdata.totalSessionTime")]
@@ -708,7 +708,8 @@ impl<
             | WalletData::PaypalSdk(_)
             | WalletData::WeChatPayQr(_)
             | WalletData::CashappQr(_)
-            | WalletData::Mifinity(_) => Err(errors::ConnectorError::NotImplemented(
+            | WalletData::Mifinity(_)
+            | WalletData::BluecodeRedirect { .. } => Err(errors::ConnectorError::NotImplemented(
                 "payment_method".into(),
             ))?,
         }
@@ -1934,7 +1935,7 @@ pub fn get_risk_data(metadata: serde_json::Value) -> Option<RiskData> {
         merchant_reference,
         payment_method,
         promotion_name,
-        secondary_phone_number,
+        secondary_phone_number: secondary_phone_number.map(Secret::new),
         timefrom_loginto_order,
         total_session_time,
         total_authorized_amount_in_last30_days,
