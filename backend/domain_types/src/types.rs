@@ -1649,6 +1649,8 @@ impl ForeignTryFrom<grpc_api_types::payments::OrderDetailsWithAmount> for OrderD
             brand: item.brand,
             description: item.description,
             unit_of_measure: item.unit_of_measure,
+            product_type: None,
+            product_tax_code: None,
         })
     }
 }

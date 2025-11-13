@@ -1,3 +1,4 @@
+use common_enums::ProductType;
 use common_utils::{ext_traits::ConfigExt, Email, MinorUnit};
 use hyperswitch_masking::{PeekInterface, Secret, SerializableSecret};
 
@@ -409,6 +410,10 @@ pub struct OrderDetailsWithAmount {
     pub description: Option<String>,
     /// Unit of measure used for the item quantity.
     pub unit_of_measure: Option<String>,
+    /// Type of the product that is being purchased
+    pub product_type: Option<ProductType>,
+    /// The tax code for the product
+    pub product_tax_code: Option<String>,
 }
 
 impl hyperswitch_masking::SerializableSecret for OrderDetailsWithAmount {}

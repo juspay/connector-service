@@ -71,7 +71,6 @@ pub mod constants {
     pub const PAYMENT_FLOW_NONE: &str = "NONE";
 
     // Default values
-    pub const DEFAULT_CUSTOMER_ID: &str = "guest";
     pub const DEFAULT_CALLBACK_URL: &str = "https://default-callback.com";
 
     // Error messages
@@ -84,6 +83,10 @@ pub mod constants {
     // HTTP constants
     pub const CONTENT_TYPE_JSON: &str = "application/json";
     pub const CONTENT_TYPE_HEADER: &str = "Content-Type";
+
+    // Channel IDs
+    pub const CHANNEL_ID_WAP: &str = "WAP";
+    pub const CHANNEL_ID_WEB: &str = "WEB";
 
     // AES encryption constants (from PayTM Haskell implementation)
     pub const PAYTM_IV: &[u8; 16] = b"@@@@&&&&####$$$$";
@@ -198,14 +201,12 @@ impl<
             value: amount,
             currency: item.router_data.request.currency,
         };
-        let customer_id = item
-            .router_data
-            .resource_common_data
-            .get_customer_id()
-            .ok()
-            .map(|id| id.get_string_repr().to_string());
         let user_info = PaytmUserInfo {
-            cust_id: customer_id.unwrap_or_else(|| constants::DEFAULT_CUSTOMER_ID.to_string()),
+            cust_id: item
+                .router_data
+                .resource_common_data
+                .get_customer_id()
+                .unwrap_or_default(),
             mobile: item
                 .router_data
                 .resource_common_data
@@ -336,7 +337,7 @@ impl<
         // Create header with actual signature
         let channel_id =
             get_channel_id_from_browser_info(item.router_data.request.browser_info.as_ref());
-        let head = create_paytm_header(&body, &auth, Some(&channel_id))?;
+        let head = create_paytm_header(&body, &auth, channel_id.as_deref())?;
 
         Ok(Self { head, body })
     }
@@ -386,7 +387,7 @@ impl
                     Err(domain_types::router_data::ErrorResponse {
                         code: success_body.result_info.result_code.clone(),
                         message: success_body.result_info.result_msg.clone(),
-                        reason: None,
+                        reason: Some(success_body.result_info.result_msg.clone()),
                         status_code: item.http_code,
                         attempt_status: None, // Duplicate Request.
                         connector_transaction_id: None,
@@ -404,7 +405,7 @@ impl
                 Err(domain_types::router_data::ErrorResponse {
                     code: failure_body.result_info.result_code.clone(),
                     message: failure_body.result_info.result_msg.clone(),
-                    reason: None,
+                    reason: Some(failure_body.result_info.result_msg.clone()),
                     status_code: item.http_code,
                     attempt_status: Some(AttemptStatus::Failure),
                     connector_transaction_id: None,
@@ -525,8 +526,8 @@ impl<
                     order_id: payment_id,
                     payment_mode: constants::PAYMENT_MODE_UPI.to_string(),
                     payer_account: Some(vpa),
-                    channel_code: Some("".to_string()), //bank code
-                    channel_id,
+                    channel_code: Some("".to_string()), //BankCode (only in NET_BANKING)
+                    channel_id: channel_id.unwrap_or_else(|| constants::CHANNEL_ID_WEB.to_string()),
                     txn_token: Secret::new(session_token),
                     auth_mode: None, //authentication mode if any
                 };
@@ -645,10 +646,8 @@ impl<
         let attempt_status = map_paytm_authorize_status_to_attempt_status(result_code);
         router_data.resource_common_data.set_status(attempt_status);
 
-        router_data.response = match attempt_status {
-            AttemptStatus::Failure
-            | AttemptStatus::AuthenticationFailed
-            | AttemptStatus::AuthorizationFailed => Err(domain_types::router_data::ErrorResponse {
+        router_data.response = if is_failure_status(attempt_status) {
+            Err(domain_types::router_data::ErrorResponse {
                 code: result_code.clone(),
                 message: match &response.body {
                     PaytmProcessRespBodyTypes::SuccessBody(body) => {
@@ -658,15 +657,23 @@ impl<
                         body.result_info.result_msg.clone()
                     }
                 },
-                reason: None,
+                reason: match &response.body {
+                    PaytmProcessRespBodyTypes::SuccessBody(body) => {
+                        Some(body.result_info.result_msg.clone())
+                    }
+                    PaytmProcessRespBodyTypes::FailureBody(body) => {
+                        Some(body.result_info.result_msg.clone())
+                    }
+                },
                 status_code: item.http_code,
                 attempt_status: Some(attempt_status),
                 connector_transaction_id: connector_ref_id.clone(),
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-            }),
-            _ => Ok(PaymentsResponseData::TransactionResponse {
+            })
+        } else {
+            Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: connector_txn_id,
                 redirection_data,
                 mandate_reference: None,
@@ -675,7 +682,7 @@ impl<
                 connector_response_reference_id: connector_ref_id,
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
-            }),
+            })
         };
 
         Ok(router_data)
@@ -787,10 +794,8 @@ impl
         // Update the status using the new setter function
         router_data.resource_common_data.set_status(attempt_status);
 
-        router_data.response = match attempt_status {
-            AttemptStatus::Failure
-            | AttemptStatus::AuthenticationFailed
-            | AttemptStatus::AuthorizationFailed => Err(domain_types::router_data::ErrorResponse {
+        router_data.response = if is_failure_status(attempt_status) {
+            Err(domain_types::router_data::ErrorResponse {
                 code: result_code.clone(),
                 message: match &response.body {
                     PaytmTransactionStatusRespBodyTypes::SuccessBody(body) => {
@@ -814,8 +819,9 @@ impl
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-            }),
-            _ => Ok(PaymentsResponseData::TransactionResponse {
+            })
+        } else {
+            Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: connector_txn_id,
                 redirection_data: None,
                 mandate_reference: None,
@@ -824,7 +830,7 @@ impl
                 connector_response_reference_id: connector_ref_id,
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
-            }),
+            })
         };
 
         Ok(router_data)
@@ -1021,20 +1027,20 @@ fn get_paytm_iv() -> [u8; 16] {
 }
 
 // Helper function to determine channel ID based on OS type
-fn get_channel_id_from_browser_info(browser_info: Option<&BrowserInformation>) -> String {
+fn get_channel_id_from_browser_info(browser_info: Option<&BrowserInformation>) -> Option<String> {
     match browser_info {
         Some(info) => match &info.os_type {
             Some(os_type) => {
                 let os_lower = os_type.to_lowercase();
                 if os_lower.contains("android") || os_lower.contains("ios") {
-                    "WAP".to_string()
+                    Some(constants::CHANNEL_ID_WAP.to_string())
                 } else {
-                    "WEB".to_string()
+                    Some(constants::CHANNEL_ID_WEB.to_string())
                 }
             }
-            None => "WEB".to_string(),
+            None => None,
         },
-        None => "WEB".to_string(), // Default to WEB if no browser info
+        None => None,
     }
 }
 
@@ -1121,4 +1127,13 @@ pub fn map_paytm_sync_status_to_attempt_status(result_code: &str) -> AttemptStat
         // Default to Pending for unknown codes to be safe
         _ => AttemptStatus::Pending,
     }
+}
+
+fn is_failure_status(status: AttemptStatus) -> bool {
+    matches!(
+        status,
+        AttemptStatus::Failure 
+        | AttemptStatus::AuthenticationFailed 
+        | AttemptStatus::AuthorizationFailed
+    )
 }

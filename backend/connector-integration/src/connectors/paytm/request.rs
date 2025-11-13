@@ -1,5 +1,5 @@
 use common_enums::Currency;
-use common_utils::{types::StringMajorUnit, Email};
+use common_utils::{types::StringMajorUnit, Email, CustomerId};
 use hyperswitch_masking::Secret;
 use serde::Serialize;
 
@@ -46,20 +46,6 @@ pub struct PaytmInitiateReqBody {
     pub shipping_info: Option<Vec<PaytmShippingInfo>>,
     #[serde(rename = "extendInfo", skip_serializing_if = "Option::is_none")]
     pub extend_info: Option<PaytmExtendInfo>,
-    // #[serde(rename = "promoCode", skip_serializing_if = "Option::is_none")]
-    // pub promo_code: Option<String>, //PaytmV2MetaData
-    // #[serde(rename = "splitSettlementInfo", skip_serializing_if = "Option::is_none")]
-    // pub split_settlement_info: Option<SplitSettlementInfo>,
-    // #[serde(rename = "emiSubventionToken", skip_serializing_if = "Option::is_none")]
-    // pub emi_subvention_token: Option<String>,
-    // #[serde(rename = "payableAmount", skip_serializing_if = "Option::is_none")]
-    // pub payable_amount: Option<PaytmAmount>,
-    // #[serde(rename = "MERC_UNIQ_REF", skip_serializing_if = "Option::is_none")]
-    // pub merc_uniq_ref: Option<String>,//PaytmV2MetaData
-    // #[serde(rename = "MERC_UNQ_REF", skip_serializing_if = "Option::is_none")]
-    // pub merc_unq_ref: Option<String>,// PaytmV2MetaData
-    // #[serde(rename = "billingInfo", skip_serializing_if = "Option::is_none")]
-    // pub billing_info: Option<Vec<BillingInfoObj>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -71,7 +57,7 @@ pub struct PaytmAmount {
 #[derive(Debug, Serialize)]
 pub struct PaytmUserInfo {
     #[serde(rename = "custId")]
-    pub cust_id: String,
+    pub cust_id: CustomerId,
     pub mobile: Option<Secret<String>>,
     pub email: Option<Email>,
     #[serde(rename = "firstName")]
@@ -175,7 +161,7 @@ pub struct PaytmProcessHeadTypes {
     #[serde(rename = "requestTimestamp")]
     pub request_timestamp: String,
     #[serde(rename = "channelId")]
-    pub channel_id: String, // "WEB"
+    pub channel_id: Option<String>,
     #[serde(rename = "txnToken")]
     pub txn_token: Secret<String>, // From CreateSessionToken
 }
@@ -229,27 +215,6 @@ pub struct PaytmNativeProcessRequestBody {
     pub txn_token: Secret<String>, // From CreateSessionToken
     #[serde(rename = "authMode")]
     pub auth_mode: Option<String>, // "DEBIT_PIN"
-
-                                   // #[serde(rename = "cardInfo", skip_serializing_if = "Option::is_none")]
-                                   // pub card_info: Option<String>,
-                                   // #[serde(rename = "planId", skip_serializing_if = "Option::is_none")]
-                                   // pub plan_id: Option<String>,
-                                   // #[serde(rename = "cardTokenInfo", skip_serializing_if = "Option::is_none")]
-                                   // pub card_token_info: Option<CardTokenInfo>,
-                                   // #[serde(rename = "emiType", skip_serializing_if = "Option::is_none")]
-                                   // pub emi_type: Option<String>,
-                                   // #[serde(rename = "mandateAuthMode", skip_serializing_if = "Option::is_none")]
-                                   // pub mandate_auth_mode: Option<String>,
-                                   // #[serde(rename = "subscriptionId", skip_serializing_if = "Option::is_none")]
-                                   // pub subscription_id: Option<String>,
-                                   // #[serde(rename = "bankIfsc", skip_serializing_if = "Option::is_none")]
-                                   // pub bank_ifsc: Option<String>,
-                                   // #[serde(rename = "accountNumber", skip_serializing_if = "Option::is_none")]
-                                   // pub account_number: Option<String>,
-                                   // #[serde(rename = "userName", skip_serializing_if = "Option::is_none")]
-                                   // pub user_name: Option<String>,
-                                   // #[serde(rename = "accountType", skip_serializing_if = "Option::is_none")]
-                                   // pub account_type: Option<String>,
 }
 
 // PSync (Payment Sync) flow request structures

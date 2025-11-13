@@ -26,10 +26,6 @@ pub struct PaytmRespBody {
     pub result_info: PaytmResultInfo,
     #[serde(rename = "txnToken")]
     pub txn_token: Secret<String>, // This will be stored as session_token
-                                   // #[serde(rename = "isPromoCodeValid", skip_serializing_if = "Option::is_none")]
-                                   // pub is_promo_code_valid: Option<bool>,
-                                   // #[serde(rename = "authenticated", skip_serializing_if = "Option::is_none")]
-                                   // pub authenticated: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -173,12 +169,6 @@ pub struct PaytmDeepLinkInfo {
 pub struct PaytmProcessFailureResp {
     #[serde(rename = "resultInfo")]
     pub result_info: PaytmResultInfo,
-    // #[serde(rename = "txnInfo", skip_serializing_if = "Option::is_none")]
-    // pub txn_info: Option<PaytmProcessTxnResponse>,
-    // #[serde(rename = "callBackUrl")]
-    // pub callback_url: String,
-    // #[serde(rename = "deepLinkInfo", skip_serializing_if = "Option::is_none")]
-    // pub deep_link_info: Option<PaytmDeepLinkInfo>,
 }
 
 // UPI Collect Native Process Response
@@ -231,15 +221,15 @@ pub enum PaytmTransactionStatusRespBodyTypes {
 pub struct PaytmTransactionStatusRespBody {
     pub result_info: PaytmResultInfo,
     pub txn_id: String,
-    pub bank_txn_id: String,
+    pub bank_txn_id: Option<String>,
     pub order_id: String,
     pub txn_amount: Option<StringMajorUnit>,
-    pub txn_type: String,
-    pub gateway_name: String,
-    pub mid: String,
-    pub payment_mode: String,
-    pub refund_amt: String,
-    pub txn_date: String,
+    pub txn_type: Option<String>,
+    pub gateway_name: Option<String>,
+    pub mid: Option<String>,
+    pub payment_mode: Option<String>,
+    pub refund_amt: Option<String>,
+    pub txn_date: Option<String>,
 }
 
 // Additional response structures needed for compilation
