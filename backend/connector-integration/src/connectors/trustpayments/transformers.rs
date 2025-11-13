@@ -4,7 +4,11 @@ use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, CaptureMethod, Currency};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, PaymentVoidData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId},
+    connector_types::{
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
+    },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
@@ -61,7 +65,7 @@ impl TrustpaymentsSettleStatus {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn from_code(s: &str) -> Option<Self> {
         match s {
             "0" => Some(Self::AutomaticCapture),
             "1" | "100" => Some(Self::Settled),
@@ -79,18 +83,14 @@ impl TrustpaymentsSettleStatus {
 // 3. site_reference - for "sitereference" in request body
 #[derive(Debug, Clone)]
 pub struct TrustpaymentsAuthType {
-    pub username: Secret<String>,      // api_key → username/alias
-    pub password: Secret<String>,      // key1 → password
+    pub username: Secret<String>,       // api_key → username/alias
+    pub password: Secret<String>,       // key1 → password
     pub site_reference: Secret<String>, // api_secret → sitereference
 }
 
 impl TrustpaymentsAuthType {
     pub fn generate_basic_auth(&self) -> Secret<String> {
-        let credentials = format!(
-            "{}:{}",
-            self.username.peek(),
-            self.password.peek()
-        );
+        let credentials = format!("{}:{}", self.username.peek(), self.password.peek());
         let encoded = base64::Engine::encode(
             &base64::engine::general_purpose::STANDARD,
             credentials.as_bytes(),
@@ -105,9 +105,9 @@ impl TryFrom<&ConnectorAuthType> for TrustpaymentsAuthType {
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::SignatureKey {
-                api_key,      // username
-                key1,         // password
-                api_secret,   // site_reference
+                api_key,    // username
+                key1,       // password
+                api_secret, // site_reference
                 ..
             } => Ok(Self {
                 username: api_key.to_owned(),
@@ -144,7 +144,9 @@ pub struct TrustpaymentsErrorResponseItem {
 
 // ===== AUTHORIZE REQUEST =====
 #[derive(Debug, Serialize)]
-pub struct TrustpaymentsAuthorizeRequest<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
+pub struct TrustpaymentsAuthorizeRequest<
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
+> {
     pub alias: String,
     pub version: String,
     pub request: Vec<TrustpaymentsAuthRequest<T>>,
@@ -153,7 +155,9 @@ pub struct TrustpaymentsAuthorizeRequest<T: PaymentMethodDataTypes + Debug + Syn
 }
 
 #[derive(Debug, Serialize)]
-pub struct TrustpaymentsAuthRequest<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
+pub struct TrustpaymentsAuthRequest<
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
+> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub accounttypedescription: Option<String>,
     pub baseamount: String,
@@ -193,7 +197,9 @@ where
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
-pub enum TrustpaymentsPaymentMethod<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
+pub enum TrustpaymentsPaymentMethod<
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
+> {
     Card(TrustpaymentsCardData<T>),
     #[serde(skip)]
     _Phantom(PhantomData<T>),
@@ -236,7 +242,12 @@ pub struct TrustpaymentsAuthResponse {
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::TrustpaymentsRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for TrustpaymentsAuthorizeRequest<T>
@@ -245,7 +256,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     fn try_from(
         item: super::TrustpaymentsRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -260,7 +276,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 // Serialize to get the string representation (needed due to generic type constraints)
                 let card_number_json = serde_json::to_value(&card_data.card_number.0)
                     .map_err(|_| ConnectorError::RequestEncodingFailed)?;
-                let card_number_string = card_number_json.as_str()
+                let card_number_string = card_number_json
+                    .as_str()
                     .ok_or(ConnectorError::RequestEncodingFailed)?
                     .to_string();
 
@@ -271,11 +288,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 } else {
                     year_str
                 };
-                let expiry_date = format!(
-                    "{}/{}",
-                    card_data.card_exp_month.peek(),
-                    year_2digit
-                );
+                let expiry_date = format!("{}/{}", card_data.card_exp_month.peek(), year_2digit);
                 TrustpaymentsPaymentMethod::Card(TrustpaymentsCardData {
                     pan: Secret::new(card_number_string),
                     expirydate: Secret::new(expiry_date),
@@ -300,8 +313,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .get_optional_billing_last_name();
 
         // Get amount from connector's amount_converter
-        let amount = item.connector.amount_converter
-            .convert(router_data.request.minor_amount, router_data.request.currency)
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                router_data.request.minor_amount,
+                router_data.request.currency,
+            )
             .map_err(|_| ConnectorError::RequestEncodingFailed)?;
 
         // Determine settlestatus based on capture method
@@ -343,7 +361,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ResponseRouterData<
             TrustpaymentsAuthorizeResponse,
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         >,
     > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
@@ -352,7 +375,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn try_from(
         item: ResponseRouterData<
             TrustpaymentsAuthorizeResponse,
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -478,14 +506,7 @@ pub struct TrustpaymentsTransactionRecord {
 }
 
 // ===== PSYNC REQUEST TRANSFORMER =====
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::TrustpaymentsRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -535,7 +556,10 @@ impl<
 }
 
 // ===== STATUS MAPPING HELPER =====
-fn get_status_from_settlestatus(settlestatus: Option<&str>, authcode: Option<&str>) -> AttemptStatus {
+fn get_status_from_settlestatus(
+    settlestatus: Option<&str>,
+    authcode: Option<&str>,
+) -> AttemptStatus {
     match settlestatus {
         Some("0") => {
             // Automatic capture - pending settlement, will be auto-settled
@@ -707,14 +731,7 @@ pub struct TrustpaymentsCaptureResponseItem {
 }
 
 // ===== CAPTURE REQUEST TRANSFORMER =====
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::TrustpaymentsRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -754,7 +771,9 @@ impl<
         // Do NOT send baseamount - it causes "Invalid updates specified" error
         // The full authorized amount will be captured automatically
         let updates = TrustpaymentsCaptureUpdates {
-            settlestatus: TrustpaymentsSettleStatus::AutomaticCapture.as_str().to_string(),
+            settlestatus: TrustpaymentsSettleStatus::AutomaticCapture
+                .as_str()
+                .to_string(),
             baseamount: None, // Never send amount for Trust Payments captures
         };
 
@@ -773,7 +792,8 @@ impl<
 }
 
 // ===== CAPTURE RESPONSE TRANSFORMER =====
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             TrustpaymentsCaptureResponse,
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -875,14 +895,7 @@ pub struct TrustpaymentsVoidUpdates {
 pub type TrustpaymentsVoidResponse = TrustpaymentsCaptureResponse;
 
 // ===== VOID REQUEST TRANSFORMER =====
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::TrustpaymentsRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -935,7 +948,8 @@ impl<
 }
 
 // ===== VOID RESPONSE TRANSFORMER =====
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             TrustpaymentsVoidResponse,
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -1051,14 +1065,7 @@ pub struct TrustpaymentsRefundResponseItem {
 }
 
 // ===== REFUND REQUEST TRANSFORMER =====
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::TrustpaymentsRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -1080,17 +1087,19 @@ impl<
         let auth = TrustpaymentsAuthType::try_from(&router_data.connector_auth_type)?;
 
         // Extract parent transaction reference from connector_transaction_id
-        let parent_transaction_reference = router_data
-            .request
-            .connector_transaction_id
-            .clone();
+        let parent_transaction_reference = router_data.request.connector_transaction_id.clone();
 
         // Check if this is a partial refund
         // For partial refunds, include baseamount; for full refunds, omit it
         let base_amount = if router_data.request.minor_refund_amount.get_amount_as_i64() > 0 {
             // Partial refund - include the amount
-            let amount = item.connector.amount_converter
-                .convert(router_data.request.minor_refund_amount, router_data.request.currency)
+            let amount = item
+                .connector
+                .amount_converter
+                .convert(
+                    router_data.request.minor_refund_amount,
+                    router_data.request.currency,
+                )
                 .map_err(|_| ConnectorError::RequestEncodingFailed)?;
             Some(amount.get_amount_as_i64().to_string())
         } else {
@@ -1128,10 +1137,10 @@ fn get_refund_status_from_settlestatus(
 
     // Map settlestatus to refund status
     match settlestatus.map(|s| s.as_str()) {
-        Some("100") => RefundStatus::Success,       // Settled
+        Some("100") => RefundStatus::Success,           // Settled
         Some("0") | Some("1") => RefundStatus::Pending, // Pending settlement or updated
-        Some("2") => RefundStatus::ManualReview,    // Suspended
-        Some("3") => RefundStatus::Failure,         // Cancelled/Reversed
+        Some("2") => RefundStatus::ManualReview,        // Suspended
+        Some("3") => RefundStatus::Failure,             // Cancelled/Reversed
         _ => RefundStatus::Pending,
     }
 }
@@ -1142,14 +1151,7 @@ pub type TrustpaymentsRSyncRequest = TrustpaymentsPSyncRequest;
 pub type TrustpaymentsRSyncResponse = TrustpaymentsPSyncResponse;
 
 // ===== RSYNC REQUEST TRANSFORMER =====
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::TrustpaymentsRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
@@ -1265,10 +1267,8 @@ impl
         }
 
         // Map refund status using the shared helper function
-        let refund_status = get_refund_status_from_settlestatus(
-            record.settlestatus.as_ref(),
-            &record.errorcode,
-        );
+        let refund_status =
+            get_refund_status_from_settlestatus(record.settlestatus.as_ref(), &record.errorcode);
 
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: record.transactionreference.clone(),

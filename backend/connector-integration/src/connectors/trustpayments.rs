@@ -320,7 +320,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     )
                 })
             })
-            .unwrap_or_else(|| ("UNKNOWN_ERROR".to_string(), "Unknown error occurred".to_string(), None));
+            .unwrap_or_else(|| {
+                (
+                    "UNKNOWN_ERROR".to_string(),
+                    "Unknown error occurred".to_string(),
+                    None,
+                )
+            });
 
         Ok(ErrorResponse {
             status_code: res.status_code,
