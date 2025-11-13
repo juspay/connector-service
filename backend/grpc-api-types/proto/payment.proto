@@ -592,7 +592,15 @@ enum PaymentMethodType {
   REVOLUT_PAY = 99;
 }
 
-
+// Product type enumeration.
+enum ProductType {
+  PHYSICAL = 0;
+  DIGITAL = 1;
+  TRAVEL = 2;
+  RIDE = 3;
+  EVENT = 4;
+  ACCOMMODATION = 5;
+}
 
 // Dispute stage enumeration.
 enum DisputeStage {
@@ -917,6 +925,12 @@ message OrderDetailsWithAmount {
 
   // Unit of measure used for the item quantity.
   optional string unit_of_measure = 15;
+
+  // Type of the product that is being purchased
+  optional ProductType product_type = 16;
+  
+  // The tax code for the product
+  optional string product_tax_code = 17;
 }
 
 // Access token details.
