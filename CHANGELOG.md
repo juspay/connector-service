@@ -4,6 +4,18 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.11.13.0
+
+### Features
+
+- **connector:** [FISERVEMEA] Connector Integration ([#254](https://github.com/juspay/connector-service/pull/254)) ([`38fe2f7`](https://github.com/juspay/connector-service/commit/38fe2f7037b7f18465a96dbe4eabbe4d9586511a))
+- Unmask x-shadow-mode header in logs ([#236](https://github.com/juspay/connector-service/pull/236)) ([`7c07363`](https://github.com/juspay/connector-service/commit/7c0736359401266a9f33d90e6c977f32f07696e3))
+- Add test mode and mock PG API integration ([#257](https://github.com/juspay/connector-service/pull/257)) ([`faad595`](https://github.com/juspay/connector-service/commit/faad5954c7e2b893ace70290fa32693f6098537a))
+
+**Full Changelog:** [`2025.11.12.0...2025.11.13.0`](https://github.com/juspay/connector-service/compare/2025.11.12.0...2025.11.13.0)
+
+- - -
+
 ## 2025.11.12.0
 
 ### Bug Fixes

@@ -100,3 +100,6 @@ pub use self::fiservemea::Fiservemea;
 
 pub mod paysafe;
 pub use self::paysafe::Paysafe;
+
+pub mod datatrans;
+pub use self::datatrans::Datatrans;

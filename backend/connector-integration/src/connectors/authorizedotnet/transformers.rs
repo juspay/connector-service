@@ -36,6 +36,31 @@ type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
 // Constants
 const MAX_ID_LENGTH: usize = 20;
+const ADDRESS_MAX_LENGTH: usize = 60; // Authorize.Net address field max length
+
+// Helper function for concatenating address lines with length constraints
+fn get_address_line(
+    address_line1: &Option<Secret<String>>,
+    address_line2: &Option<Secret<String>>,
+    address_line3: &Option<Secret<String>>,
+) -> Option<Secret<String>> {
+    for lines in [
+        vec![address_line1, address_line2, address_line3],
+        vec![address_line1, address_line2],
+    ] {
+        let combined: String = lines
+            .into_iter()
+            .flatten()
+            .map(|s| s.clone().expose())
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        if !combined.is_empty() && combined.len() <= ADDRESS_MAX_LENGTH {
+            return Some(Secret::new(combined));
+        }
+    }
+    address_line1.clone()
+}
 
 // Helper functions for creating RawCardNumber from string
 fn create_raw_card_number_for_default_pci(
@@ -569,10 +594,16 @@ fn create_regular_transaction_request<
         let first_name = billing.address.as_ref().and_then(|a| a.first_name.clone());
         let last_name = billing.address.as_ref().and_then(|a| a.last_name.clone());
 
+        // Concatenate line1, line2, and line3 to form the complete street address
+        let address = billing
+            .address
+            .as_ref()
+            .and_then(|a| get_address_line(&a.line1, &a.line2, &a.line3));
+
         BillTo {
             first_name,
             last_name,
-            address: billing.address.as_ref().and_then(|a| a.line1.clone()),
+            address,
             city: billing.address.as_ref().and_then(|a| a.city.clone()),
             state: billing.address.as_ref().and_then(|a| a.state.clone()),
             zip: billing.address.as_ref().and_then(|a| a.zip.clone()),
@@ -1062,15 +1093,12 @@ impl<
         };
 
         let ref_id = Some(
-            &item
-                .router_data
+            item.router_data
                 .resource_common_data
-                .connector_request_reference_id,
+                .connector_request_reference_id
+                .clone(),
         )
-        .filter(|id| !id.is_empty())
-        .cloned();
-
-        let ref_id = get_the_truncate_id(ref_id, MAX_ID_LENGTH);
+        .filter(|id| id.len() <= MAX_ID_LENGTH);
 
         let transaction_void_details = AuthorizedotnetTransactionVoidDetails {
             transaction_type: TransactionType::VoidTransaction,
@@ -2394,50 +2422,39 @@ fn get_hs_status(
     }
 }
 
+// Simple structs for connector_metadata (no validation, accepts masked cards like "XXXX2346")
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ConnectorMetadataCreditCard {
+    card_number: Secret<String>,
+    expiration_date: Secret<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct ConnectorMetadataPayment {
+    #[serde(rename = "creditCard")]
+    credit_card: ConnectorMetadataCreditCard,
+}
+
+// Build connector_metadata from transaction response
+// Uses simple structs without validation to handle masked card numbers like "XXXX2346"
 fn build_connector_metadata(
     transaction_response: &AuthorizedotnetTransactionResponse,
 ) -> Option<serde_json::Value> {
-    // Check if accountNumber is available
-    // Note: accountType contains card brand (e.g., "MasterCard"), not expiration date
-    // Authorize.net does not return the expiration date in authorization response
+    let card_number = transaction_response
+        .account_number
+        .as_ref()?
+        .peek()
+        .to_string();
 
-    // Debug logging to understand what we're receiving
-    tracing::info!(
-        "build_connector_metadata: account_number={:?}, account_type={:?}",
-        transaction_response
-            .account_number
-            .as_ref()
-            .map(|n| n.peek()),
-        transaction_response.account_type.as_ref().map(|t| t.peek())
-    );
+    let payment = ConnectorMetadataPayment {
+        credit_card: ConnectorMetadataCreditCard {
+            card_number: Secret::new(card_number),
+            expiration_date: Secret::new("XXXX".to_string()),
+        },
+    };
 
-    if let Some(card_number) = &transaction_response.account_number {
-        let card_number_value = card_number.peek();
-
-        // Create nested credit card structure
-        let credit_card_data = serde_json::json!({
-            "cardNumber": card_number_value,
-            "expirationDate": "XXXX"  // Hardcoded since Auth.net doesn't return it
-        });
-
-        // Serialize to JSON string for proto compatibility (proto expects map<string, string>)
-        let credit_card_json =
-            serde_json::to_string(&credit_card_data).unwrap_or_else(|_| "{}".to_string());
-
-        // Create flat metadata map with JSON string value
-        let metadata = serde_json::json!({
-            "creditCard": credit_card_json
-        });
-
-        tracing::info!(
-            "build_connector_metadata: Successfully built metadata: {:?}",
-            metadata
-        );
-        return Some(metadata);
-    }
-
-    tracing::warn!("build_connector_metadata: account_number is None, returning empty metadata");
-    None
+    serde_json::to_value(payment).ok()
 }
 
 type PaymentConversionResult = Result<
@@ -2794,7 +2811,7 @@ impl<
             .map(|address| BillTo {
                 first_name: address.first_name.clone(),
                 last_name: address.last_name.clone(),
-                address: address.line1.clone(),
+                address: get_address_line(&address.line1, &address.line2, &address.line3),
                 city: address.city.clone(),
                 state: address.state.clone(),
                 zip: address.zip.clone(),
@@ -3240,7 +3257,7 @@ impl<
                     vec![ShipToList {
                         first_name: address.first_name.clone(),
                         last_name: address.last_name.clone(),
-                        address: address.line1.clone(),
+                        address: get_address_line(&address.line1, &address.line2, &address.line3),
                         city: address.city.clone(),
                         state: address.state.clone(),
                         zip: address.zip.clone(),
