@@ -130,6 +130,8 @@ pub struct ConnectorParams {
     pub dispute_base_url: Option<String>,
     #[serde(default)]
     pub secondary_base_url: Option<String>,
+    #[serde(default)]
+    pub third_base_url: Option<String>,
 }
 
 impl ConnectorParams {
@@ -138,6 +140,7 @@ impl ConnectorParams {
             base_url,
             dispute_base_url,
             secondary_base_url: None,
+            third_base_url: None,
         }
     }
 }
