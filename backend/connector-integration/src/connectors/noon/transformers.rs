@@ -1114,7 +1114,7 @@ impl<
                         name_on_card: item.resource_common_data.get_optional_billing_full_name(),
                         number_plain: req_card.card_number.clone(),
                         expiry_month: req_card.card_exp_month.clone(),
-                        expiry_year: req_card.card_exp_year.clone(),
+                        expiry_year: req_card.get_expiry_year_4_digit(),
                         cvv: req_card.card_cvc,
                     })),
                     PaymentMethodData::Wallet(wallet_data) => match wallet_data.clone() {
