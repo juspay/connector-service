@@ -1,7 +1,8 @@
-use std::{fmt::Debug, marker::PhantomData};
+use std::fmt::Debug;
 
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, CaptureMethod, Currency};
+use common_utils::types::StringMinorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -150,8 +151,6 @@ pub struct TrustpaymentsAuthorizeRequest<
     pub alias: String,
     pub version: String,
     pub request: Vec<TrustpaymentsAuthRequest<T>>,
-    #[serde(skip)]
-    _phantom: PhantomData<T>,
 }
 
 #[derive(Debug, Serialize)]
@@ -160,7 +159,7 @@ pub struct TrustpaymentsAuthRequest<
 > {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub accounttypedescription: Option<String>,
-    pub baseamount: String,
+    pub baseamount: StringMinorUnit,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub billingfirstname: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -169,30 +168,11 @@ pub struct TrustpaymentsAuthRequest<
     pub credentialsonfile: Option<String>,
     pub currencyiso3a: Currency,
     pub orderreference: String,
-    #[serde(serialize_with = "serialize_request_types")]
     pub requesttypedescriptions: Vec<TrustpaymentsRequestType>,
     pub sitereference: Secret<String>,
     pub settlestatus: String,
     #[serde(flatten)]
     pub payment_method: TrustpaymentsPaymentMethod<T>,
-    #[serde(skip)]
-    _phantom: PhantomData<T>,
-}
-
-// Custom serializer for request types
-fn serialize_request_types<S>(
-    types: &[TrustpaymentsRequestType],
-    serializer: S,
-) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    use serde::ser::SerializeSeq;
-    let mut seq = serializer.serialize_seq(Some(types.len()))?;
-    for t in types {
-        seq.serialize_element(t.as_str())?;
-    }
-    seq.end()
 }
 
 #[derive(Debug, Serialize)]
@@ -201,8 +181,6 @@ pub enum TrustpaymentsPaymentMethod<
     T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
 > {
     Card(TrustpaymentsCardData<T>),
-    #[serde(skip)]
-    _Phantom(PhantomData<T>),
 }
 
 #[derive(Debug, Serialize)]
@@ -210,8 +188,6 @@ pub struct TrustpaymentsCardData<T: PaymentMethodDataTypes> {
     pub pan: Secret<String>,
     pub expirydate: Secret<String>,
     pub securitycode: Secret<String>,
-    #[serde(skip)]
-    _phantom: PhantomData<T>,
 }
 
 // ===== AUTHORIZE RESPONSE =====
@@ -230,7 +206,7 @@ pub struct TrustpaymentsAuthResponse {
     pub errormessage: String,
     pub transactionreference: Option<String>,
     pub authcode: Option<String>,
-    pub baseamount: Option<String>,
+    pub baseamount: Option<StringMinorUnit>,
     pub currencyiso3a: Option<Currency>,
     pub settlestatus: Option<String>,
     pub requesttypedescription: String,
@@ -282,18 +258,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     .to_string();
 
                 // Format expiry date as MM/YY (Trust Payments requires 2-digit year)
-                let year_str = card_data.card_exp_year.peek();
-                let year_2digit = if year_str.len() >= 2 {
-                    &year_str[year_str.len() - 2..]
-                } else {
-                    year_str
-                };
-                let expiry_date = format!("{}/{}", card_data.card_exp_month.peek(), year_2digit);
+                let expiry_date = card_data.get_card_expiry_month_year_2_digit_with_delimiter("/".to_string())?;
                 TrustpaymentsPaymentMethod::Card(TrustpaymentsCardData {
                     pan: Secret::new(card_number_string),
-                    expirydate: Secret::new(expiry_date),
+                    expirydate: expiry_date,
                     securitycode: card_data.card_cvc.clone(),
-                    _phantom: PhantomData,
                 })
             }
             _ => {
@@ -331,7 +300,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let auth_request = TrustpaymentsAuthRequest {
             accounttypedescription: Some(TRUSTPAYMENTS_ACCOUNT_TYPE_ECOM.to_string()),
-            baseamount: amount.get_amount_as_i64().to_string(),
+            baseamount: amount,
             billingfirstname: first_name,
             billinglastname: last_name,
             credentialsonfile: Some(TRUSTPAYMENTS_CREDENTIALS_ON_FILE.to_string()),
@@ -344,14 +313,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             sitereference: auth.site_reference.clone(),
             settlestatus: settlestatus.as_str().to_string(),
             payment_method,
-            _phantom: PhantomData,
         };
 
         Ok(Self {
             alias: auth.username.expose(),
             version: TRUSTPAYMENTS_API_VERSION.to_string(),
             request: vec![auth_request],
-            _phantom: PhantomData,
         })
     }
 }
@@ -457,7 +424,6 @@ pub struct TrustpaymentsPSyncRequest {
 
 #[derive(Debug, Serialize)]
 pub struct TrustpaymentsPSyncRequestItem {
-    #[serde(serialize_with = "serialize_request_types")]
     pub requesttypedescriptions: Vec<TrustpaymentsRequestType>,
     pub filter: TrustpaymentsFilter,
 }
@@ -497,7 +463,7 @@ pub struct TrustpaymentsTransactionRecord {
     pub errormessage: String,
     pub transactionreference: String,
     pub authcode: Option<String>,
-    pub baseamount: Option<String>,
+    pub baseamount: Option<StringMinorUnit>,
     pub currencyiso3a: Option<Currency>,
     pub settlestatus: Option<String>,
     pub requesttypedescription: String,
@@ -698,7 +664,6 @@ pub struct TrustpaymentsCaptureRequest {
 
 #[derive(Debug, Serialize)]
 pub struct TrustpaymentsCaptureRequestItem {
-    #[serde(serialize_with = "serialize_request_types")]
     pub requesttypedescriptions: Vec<TrustpaymentsRequestType>,
     pub filter: TrustpaymentsFilter,
     pub updates: TrustpaymentsCaptureUpdates,
@@ -708,7 +673,7 @@ pub struct TrustpaymentsCaptureRequestItem {
 pub struct TrustpaymentsCaptureUpdates {
     pub settlestatus: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub baseamount: Option<String>,
+    pub baseamount: Option<StringMinorUnit>,
 }
 
 // ===== CAPTURE RESPONSE =====
@@ -879,7 +844,6 @@ pub struct TrustpaymentsVoidRequest {
 
 #[derive(Debug, Serialize)]
 pub struct TrustpaymentsVoidRequestItem {
-    #[serde(serialize_with = "serialize_request_types")]
     pub requesttypedescriptions: Vec<TrustpaymentsRequestType>,
     pub filter: TrustpaymentsFilter,
     pub updates: TrustpaymentsVoidUpdates,
@@ -1031,10 +995,9 @@ pub struct TrustpaymentsRefundRequest {
 
 #[derive(Debug, Serialize)]
 pub struct TrustpaymentsRefundRequestItem {
-    #[serde(serialize_with = "serialize_request_types")]
     pub requesttypedescriptions: Vec<TrustpaymentsRequestType>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub baseamount: Option<String>,
+    pub baseamount: Option<StringMinorUnit>,
     pub currencyiso3a: Currency,
     pub parenttransactionreference: String,
     pub sitereference: Secret<String>,
@@ -1056,7 +1019,7 @@ pub struct TrustpaymentsRefundResponseItem {
     pub errormessage: String,
     pub transactionreference: Option<String>,
     pub authcode: Option<String>,
-    pub baseamount: Option<String>,
+    pub baseamount: Option<StringMinorUnit>,
     pub currencyiso3a: Option<Currency>,
     pub settlestatus: Option<String>,
     pub requesttypedescription: String,
@@ -1101,7 +1064,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     router_data.request.currency,
                 )
                 .map_err(|_| ConnectorError::RequestEncodingFailed)?;
-            Some(amount.get_amount_as_i64().to_string())
+            Some(amount)
         } else {
             // Full refund - no amount needed
             None
