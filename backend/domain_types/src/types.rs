@@ -120,6 +120,7 @@ pub struct Connectors {
     pub payload: ConnectorParams,
     pub fiservemea: ConnectorParams,
     pub datatrans: ConnectorParams,
+    pub authipay: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
