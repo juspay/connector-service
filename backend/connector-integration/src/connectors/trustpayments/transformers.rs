@@ -145,18 +145,14 @@ pub struct TrustpaymentsErrorResponseItem {
 
 // ===== AUTHORIZE REQUEST =====
 #[derive(Debug, Serialize)]
-pub struct TrustpaymentsAuthorizeRequest<
-    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
-> {
+pub struct TrustpaymentsAuthorizeRequest {
     pub alias: String,
     pub version: String,
-    pub request: Vec<TrustpaymentsAuthRequest<T>>,
+    pub request: Vec<TrustpaymentsAuthRequest>,
 }
 
 #[derive(Debug, Serialize)]
-pub struct TrustpaymentsAuthRequest<
-    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
-> {
+pub struct TrustpaymentsAuthRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub accounttypedescription: Option<String>,
     pub baseamount: StringMinorUnit,
@@ -172,19 +168,17 @@ pub struct TrustpaymentsAuthRequest<
     pub sitereference: Secret<String>,
     pub settlestatus: String,
     #[serde(flatten)]
-    pub payment_method: TrustpaymentsPaymentMethod<T>,
+    pub payment_method: TrustpaymentsPaymentMethod,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
-pub enum TrustpaymentsPaymentMethod<
-    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
-> {
-    Card(TrustpaymentsCardData<T>),
+pub enum TrustpaymentsPaymentMethod {
+    Card(TrustpaymentsCardData),
 }
 
 #[derive(Debug, Serialize)]
-pub struct TrustpaymentsCardData<T: PaymentMethodDataTypes> {
+pub struct TrustpaymentsCardData {
     pub pan: Secret<String>,
     pub expirydate: Secret<String>,
     pub securitycode: Secret<String>,
@@ -226,7 +220,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             >,
             T,
         >,
-    > for TrustpaymentsAuthorizeRequest<T>
+    > for TrustpaymentsAuthorizeRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
@@ -258,7 +252,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     .to_string();
 
                 // Format expiry date as MM/YY (Trust Payments requires 2-digit year)
-                let expiry_date = card_data.get_card_expiry_month_year_2_digit_with_delimiter("/".to_string())?;
+                let expiry_date =
+                    card_data.get_card_expiry_month_year_2_digit_with_delimiter("/".to_string())?;
                 TrustpaymentsPaymentMethod::Card(TrustpaymentsCardData {
                     pan: Secret::new(card_number_string),
                     expirydate: expiry_date,
