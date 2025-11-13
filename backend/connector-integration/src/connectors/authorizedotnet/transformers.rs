@@ -2422,43 +2422,35 @@ fn get_hs_status(
     }
 }
 
+// Simple structs for connector_metadata (no validation, accepts masked cards like "XXXX2346")
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ConnectorMetadataCreditCard {
+    card_number: String,
+    expiration_date: String,
+}
+
+#[derive(Debug, Serialize)]
+struct ConnectorMetadataPayment {
+    #[serde(rename = "creditCard")]
+    credit_card: ConnectorMetadataCreditCard,
+}
+
+// Build connector_metadata from transaction response
+// Uses simple structs without validation to handle masked card numbers like "XXXX2346"
 fn build_connector_metadata(
     transaction_response: &AuthorizedotnetTransactionResponse,
 ) -> Option<serde_json::Value> {
-    // Check if accountNumber is available
-    // Note: accountType contains card brand (e.g., "MasterCard"), not expiration date
-    // Authorize.net does not return the expiration date in authorization response
+    let card_number = transaction_response.account_number.as_ref()?.peek().to_string();
 
-    // Debug logging to understand what we're receiving
-    tracing::info!(
-        "build_connector_metadata: account_number={:?}, account_type={:?}",
-        transaction_response
-            .account_number
-            .as_ref()
-            .map(|n| n.peek()),
-        transaction_response.account_type.as_ref().map(|t| t.peek())
-    );
+    let payment = ConnectorMetadataPayment {
+        credit_card: ConnectorMetadataCreditCard {
+            card_number,
+            expiration_date: "XXXX".to_string(),
+        },
+    };
 
-    if let Some(card_number) = &transaction_response.account_number {
-        let card_number_value = card_number.peek();
-
-        // Create nested credit card structure as a JSON object
-        let metadata = serde_json::json!({
-            "creditCard": {
-                "cardNumber": card_number_value,
-                "expirationDate": "XXXX"  // Hardcoded since Auth.net doesn't return it
-            }
-        });
-
-        tracing::info!(
-            "build_connector_metadata: Successfully built metadata: {:?}",
-            metadata
-        );
-        return Some(metadata);
-    }
-
-    tracing::warn!("build_connector_metadata: account_number is None, returning empty metadata");
-    None
+    serde_json::to_value(payment).ok()
 }
 
 type PaymentConversionResult = Result<
