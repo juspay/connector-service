@@ -2426,8 +2426,8 @@ fn get_hs_status(
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ConnectorMetadataCreditCard {
-    card_number: String,
-    expiration_date: String,
+    card_number: Secret<String>,
+    expiration_date: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -2449,8 +2449,8 @@ fn build_connector_metadata(
 
     let payment = ConnectorMetadataPayment {
         credit_card: ConnectorMetadataCreditCard {
-            card_number,
-            expiration_date: "XXXX".to_string(),
+            card_number: Secret::new(card_number),
+            expiration_date: Secret::new("XXXX".to_string()),
         },
     };
 
