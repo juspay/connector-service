@@ -65,9 +65,9 @@ impl TryFrom<&ConnectorAuthType> for GlobalpayAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                app_id: api_key.to_owned(),
-                app_key: key1.to_owned(),
+            ConnectorAuthType::BodyKey { key1, api_key } => Ok(Self {
+                app_id: key1.to_owned(),
+                app_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType
@@ -173,7 +173,7 @@ impl TryFrom<&ConnectorAuthType> for GlobalpayAccessTokenRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        if let ConnectorAuthType::BodyKey { api_key, key1 } = auth_type {
+        if let ConnectorAuthType::BodyKey { key1, api_key } = auth_type {
             use sha2::{Digest, Sha512};
 
             // Generate random alphanumeric nonce (matching Hyperswitch implementation)
@@ -181,7 +181,7 @@ impl TryFrom<&ConnectorAuthType> for GlobalpayAccessTokenRequest {
                 rand::distributions::Alphanumeric.sample_string(&mut rand::thread_rng(), 12);
 
             // Create secret: SHA512(nonce + app_key)
-            let secret_input = format!("{}{}", nonce, key1.peek());
+            let secret_input = format!("{}{}", nonce, api_key.peek());
 
             // Generate SHA-512 hash
             let mut hasher = Sha512::new();
@@ -190,7 +190,7 @@ impl TryFrom<&ConnectorAuthType> for GlobalpayAccessTokenRequest {
             let secret_hex = hex::encode(result);
 
             Ok(Self {
-                app_id: api_key.clone(),
+                app_id: key1.clone(),
                 nonce: Secret::new(nonce),
                 secret: Secret::new(secret_hex),
                 grant_type: constants::GRANT_TYPE.to_string(),
@@ -1057,3 +1057,4 @@ impl
         })
     }
 }
+
