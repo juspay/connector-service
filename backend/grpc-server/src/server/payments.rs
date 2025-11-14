@@ -2084,7 +2084,9 @@ impl PaymentService for Payments {
                     let metadata_payload = request_data.extracted_metadata;
                     let utils::MetadataPayload {
                         connector,
-
+                        ref request_id,
+                        ref lineage_ids,
+                        ref reference_id,
                         ..
                     } = metadata_payload;
                     let payload = request_data.payload;
