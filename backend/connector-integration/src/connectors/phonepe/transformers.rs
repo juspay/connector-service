@@ -20,7 +20,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-const NEXT_ACTION_DATA: &str = "nextActionData";
+pub const NEXT_ACTION_DATA: &str = "nextActionData";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NextActionData {

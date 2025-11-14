@@ -36,6 +36,7 @@ use url::Url;
 use crate::{
     connectors::paytm::PaytmRouterData as MacroPaytmRouterData, types::ResponseRouterData,
 };
+use serde::{Deserialize, Serialize};
 
 pub use super::request::{
     PaytmAmount, PaytmAuthorizeRequest, PaytmEnableMethod, PaytmExtendInfo, PaytmGoodsInfo,
@@ -95,8 +96,10 @@ pub mod constants {
     pub const AES_128_KEY_LENGTH: usize = 16;
     pub const AES_192_KEY_LENGTH: usize = 24;
     pub const AES_256_KEY_LENGTH: usize = 32;
-    const NEXT_ACTION_DATA: &str = "nextActionData";
 }
+
+pub const NEXT_ACTION_DATA: &str = "nextActionData";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NextActionData {
     WaitScreenInstructions,

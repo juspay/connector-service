@@ -21,7 +21,7 @@ use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
-const NEXT_ACTION_DATA: &str = "nextActionData";
+pub const NEXT_ACTION_DATA: &str = "nextActionData";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NextActionData {
