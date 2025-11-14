@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{self, AttemptStatus, CardNetwork};
 use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit,
+    ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, RSync, Refund},
@@ -1709,7 +1709,7 @@ impl<F, Req>
             }
         };
 
-        let connector_metadata = get_wait_screen_metadata().ok().flatten();
+        let connector_metadata = get_wait_screen_metadata();
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: transaction_id,
@@ -1733,9 +1733,11 @@ impl<F, Req>
     }
 }
 
-pub fn get_wait_screen_metadata() -> CustomResult<Option<serde_json::Value>, errors::ConnectorError>
-{
-    Ok(Some(serde_json::json!({
+pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
+    serde_json::to_value(serde_json::json!({
         NEXT_ACTION_DATA: NextActionData::WaitScreenInstructions
-    })))
+    })).map_err(|e| {
+        tracing::error!("Failed to serialize wait screen metadata: {}", e);
+        e
+    }).ok()
 }

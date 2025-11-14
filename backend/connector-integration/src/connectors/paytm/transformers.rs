@@ -1426,7 +1426,7 @@ impl<
         let attempt_status = map_paytm_status_to_attempt_status(result_code);
         router_data.resource_common_data.set_status(attempt_status);
 
-        let connector_metadata = get_wait_screen_metadata().ok().flatten();
+        let connector_metadata = get_wait_screen_metadata();
 
         router_data.response = Ok(PaymentsResponseData::TransactionResponse {
             resource_id,
@@ -1523,7 +1523,7 @@ impl
                 network_error_message: None,
             }),
             _ => {
-                let connector_metadata = get_wait_screen_metadata().ok().flatten();
+                let connector_metadata = get_wait_screen_metadata();
                 Ok(PaymentsResponseData::TransactionResponse {
                     resource_id,
                     redirection_data: None,
@@ -1541,9 +1541,11 @@ impl
     }
 }
 
-pub fn get_wait_screen_metadata() -> CustomResult<Option<serde_json::Value>, errors::ConnectorError>
-{
-    Ok(Some(serde_json::json!({
+pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
+    serde_json::to_value(serde_json::json!({
         NEXT_ACTION_DATA: NextActionData::WaitScreenInstructions
-    })))
+    })).map_err(|e| {
+        tracing::error!("Failed to serialize wait screen metadata: {}", e);
+        e
+    }).ok()
 }

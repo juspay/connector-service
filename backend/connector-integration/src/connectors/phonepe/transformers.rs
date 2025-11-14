@@ -2,7 +2,6 @@ use base64::Engine;
 use common_enums;
 use common_utils::{
     crypto::{self, GenerateDigest},
-    errors::CustomResult,
     ext_traits::Encode,
     types::MinorUnit,
 };
@@ -569,7 +568,7 @@ impl<
                             },
                             redirection_data: None,
                             mandate_reference: None,
-                            connector_metadata: get_wait_screen_metadata().ok().flatten(),
+                            connector_metadata: get_wait_screen_metadata(),
                             network_txn_id: None,
                             connector_response_reference_id: Some(
                                 data.merchant_transaction_id.clone(),
@@ -837,7 +836,7 @@ impl
                             resource_id: ResponseId::ConnectorTransactionId(transaction_id.clone()),
                             redirection_data: None,
                             mandate_reference: None,
-                            connector_metadata: get_wait_screen_metadata().ok().flatten(),
+                            connector_metadata: get_wait_screen_metadata(),
                             network_txn_id: None,
                             connector_response_reference_id: Some(merchant_transaction_id.clone()),
                             incremental_authorization_allowed: None,
@@ -938,9 +937,11 @@ pub fn get_phonepe_error_status(error_code: &str) -> Option<common_enums::Attemp
     }
 }
 
-pub fn get_wait_screen_metadata() -> CustomResult<Option<serde_json::Value>, errors::ConnectorError>
-{
-    Ok(Some(serde_json::json!({
+pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
+    serde_json::to_value(serde_json::json!({
         NEXT_ACTION_DATA: NextActionData::WaitScreenInstructions
-    })))
+    })).map_err(|e| {
+        tracing::error!("Failed to serialize wait screen metadata: {}", e);
+        e
+    }).ok()
 }
