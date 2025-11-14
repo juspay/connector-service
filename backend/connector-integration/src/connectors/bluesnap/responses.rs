@@ -137,3 +137,72 @@ pub enum BluesnapRefundStatus {
 
 // Refund sync response - uses same structure as refund response
 pub type BluesnapRefundSyncResponse = BluesnapRefundResponse;
+
+// ===== 3DS AUTHENTICATION RESPONSES =====
+
+// 3DS redirect response after authentication
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BluesnapRedirectionResponse {
+    pub authentication_response: String, // JSON string containing 3DS result
+}
+
+// 3DS result structure (parsed from authentication_response)
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BluesnapThreeDsResult {
+    pub three_d_secure: Option<BluesnapThreeDsReference>,
+    pub status: String, // "Success" or error
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub info: Option<RedirectErrorMessage>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BluesnapThreeDsReference {
+    pub three_d_secure_reference_id: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RedirectErrorMessage {
+    pub errors: Option<Vec<String>>,
+}
+
+// ===== WEBHOOK STRUCTURES =====
+
+// Webhook event types
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum BluesnapWebhookEvent {
+    Decline,
+    CcChargeFailed,
+    Charge,
+    Refund,
+    Chargeback,
+    ChargebackStatusChanged,
+    #[serde(other)]
+    Unknown,
+}
+
+// Webhook payload body (URL-encoded)
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BluesnapWebhookBody {
+    pub merchant_transaction_id: String,
+    pub reference_number: String,
+    pub transaction_type: BluesnapWebhookEvent,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reversal_ref_num: Option<String>, // For refunds
+}
+
+// Webhook object resource for payment status
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BluesnapWebhookObjectResource {
+    pub reference_number: String,
+    pub transaction_type: BluesnapWebhookEvent,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reversal_ref_num: Option<String>,
+}

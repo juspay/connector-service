@@ -150,3 +150,40 @@ pub struct BluesnapRefundRequest {
 // Refund sync request - empty for GET endpoint
 #[derive(Debug, Serialize, Default)]
 pub struct BluesnapRefundSyncRequest {}
+
+// ===== 3DS AUTHENTICATION STRUCTURES =====
+
+// 3D Secure information for complete authorize
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BluesnapThreeDSecureInfo {
+    pub three_d_secure_reference_id: String,
+}
+
+// Token request for 3DS flow (prefill)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BluesnapPaymentsTokenRequest {
+    pub cc_number: Secret<String>,
+    pub exp_date: Secret<String>, // Format: MM/YYYY
+}
+
+// Complete payment request after 3DS authentication
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BluesnapCompletePaymentsRequest {
+    pub amount: StringMajorUnit,
+    pub currency: String,
+    pub card_transaction_type: BluesnapTxnType,
+    pub pf_token: Secret<String>, // Payment fields token from prefill step
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub three_d_secure: Option<BluesnapThreeDSecureInfo>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transaction_fraud_info: Option<TransactionFraudInfo>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_holder_info: Option<BluesnapCardHolderInfo>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub merchant_transaction_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transaction_meta_data: Option<BluesnapMetadata>,
+}

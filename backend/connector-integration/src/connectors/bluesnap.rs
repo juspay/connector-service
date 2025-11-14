@@ -161,6 +161,161 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Bluesnap<T>
 {
+    fn verify_webhook_source(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> CustomResult<bool, errors::ConnectorError> {
+        let connector_webhook_secret = connector_webhook_secret
+            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+        let signature =
+            self.get_webhook_source_verification_signature(&request, &connector_webhook_secret)?;
+        let message =
+            self.get_webhook_source_verification_message(&request, &connector_webhook_secret)?;
+
+        // Compute HMAC-SHA256
+        use common_utils::crypto::{HmacSha256, SignMessage};
+        let expected_signature = HmacSha256
+            .sign_message(&connector_webhook_secret.secret, &message)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+        // Compare signatures (constant-time comparison)
+        Ok(expected_signature.eq(&signature))
+    }
+
+    fn get_webhook_source_verification_signature(
+        &self,
+        request: &domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: &domain_types::connector_types::ConnectorWebhookSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        // Extract signature from bls-signature header (hex-encoded)
+        let signature_str = request
+            .headers
+            .get("bls-signature")
+            .ok_or(errors::ConnectorError::WebhookSignatureNotFound)?;
+
+        // Decode hex string to bytes
+        hex::decode(signature_str).change_context(errors::ConnectorError::WebhookSignatureNotFound)
+    }
+
+    fn get_webhook_source_verification_message(
+        &self,
+        request: &domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: &domain_types::connector_types::ConnectorWebhookSecrets,
+    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+        // Message format: {timestamp}{body}
+        let timestamp = request
+            .headers
+            .get("bls-ipn-timestamp")
+            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+        let body_str = std::str::from_utf8(&request.body)
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        Ok(format!("{}{}", timestamp, body_str).into_bytes())
+    }
+
+    fn get_event_type(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> CustomResult<domain_types::connector_types::EventType, errors::ConnectorError> {
+        // Parse URL-encoded webhook body
+        let webhook_body: transformers::BluesnapWebhookBody =
+            serde_urlencoded::from_bytes(&request.body)
+                .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        // Map webhook event to Hyperswitch event type
+        Ok(transformers::map_webhook_event_to_incoming_webhook_event(
+            &webhook_body.transaction_type,
+        ))
+    }
+
+    fn process_payment_webhook(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> CustomResult<domain_types::connector_types::WebhookDetailsResponse, errors::ConnectorError>
+    {
+        // Parse URL-encoded webhook body
+        let webhook_body: transformers::BluesnapWebhookBody =
+            serde_urlencoded::from_bytes(&request.body)
+                .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        // Map status based on event type
+        let status = match webhook_body.transaction_type {
+            transformers::BluesnapWebhookEvent::Decline
+            | transformers::BluesnapWebhookEvent::CcChargeFailed => {
+                common_enums::AttemptStatus::Failure
+            }
+            transformers::BluesnapWebhookEvent::Charge => common_enums::AttemptStatus::Charged,
+            _ => common_enums::AttemptStatus::Pending,
+        };
+
+        // Use connector transaction ID as resource_id
+        let resource_id = if !webhook_body.reference_number.is_empty() {
+            Some(
+                domain_types::connector_types::ResponseId::ConnectorTransactionId(
+                    webhook_body.reference_number,
+                ),
+            )
+        } else {
+            None
+        };
+
+        Ok(domain_types::connector_types::WebhookDetailsResponse {
+            resource_id,
+            status,
+            connector_response_reference_id: None,
+            mandate_reference: None,
+            error_code: None,
+            error_message: None,
+            error_reason: None,
+            raw_connector_response: None,
+            status_code: 200,
+            response_headers: None,
+            transformation_status: common_enums::WebhookTransformationStatus::Complete,
+            amount_captured: None,
+            minor_amount_captured: None,
+            network_txn_id: None,
+        })
+    }
+
+    fn process_refund_webhook(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> CustomResult<
+        domain_types::connector_types::RefundWebhookDetailsResponse,
+        errors::ConnectorError,
+    > {
+        // Parse URL-encoded webhook body
+        let webhook_body: transformers::BluesnapWebhookBody =
+            serde_urlencoded::from_bytes(&request.body)
+                .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        let connector_refund_id = webhook_body
+            .reversal_ref_num
+            .ok_or(errors::ConnectorError::WebhookReferenceIdNotFound)?;
+
+        Ok(
+            domain_types::connector_types::RefundWebhookDetailsResponse {
+                connector_refund_id: Some(connector_refund_id),
+                status: common_enums::RefundStatus::Success,
+                connector_response_reference_id: None,
+                error_code: None,
+                error_message: None,
+                raw_connector_response: None,
+                status_code: 200,
+                response_headers: None,
+            },
+        )
+    }
 }
 
 // ===== VALIDATION TRAIT IMPLEMENTATIONS =====

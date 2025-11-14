@@ -26,9 +26,10 @@ use crate::types::ResponseRouterData;
 
 // Re-export request types
 pub use requests::{
-    BluesnapCaptureRequest, BluesnapCardHolderInfo, BluesnapCreditCard, BluesnapMetadata,
-    BluesnapPaymentMethodDetails, BluesnapPaymentsRequest, BluesnapRefundRequest,
-    BluesnapRefundSyncRequest, BluesnapSyncRequest, BluesnapTxnType, BluesnapVoidRequest,
+    BluesnapCaptureRequest, BluesnapCardHolderInfo, BluesnapCompletePaymentsRequest,
+    BluesnapCreditCard, BluesnapMetadata, BluesnapPaymentMethodDetails, BluesnapPaymentsRequest,
+    BluesnapPaymentsTokenRequest, BluesnapRefundRequest, BluesnapRefundSyncRequest,
+    BluesnapSyncRequest, BluesnapThreeDSecureInfo, BluesnapTxnType, BluesnapVoidRequest,
     BluesnapWallet, RequestMetadata, TransactionFraudInfo,
 };
 
@@ -36,8 +37,10 @@ pub use requests::{
 pub use responses::{
     BluesnapAuthorizeResponse, BluesnapCaptureResponse, BluesnapCreditCardResponse,
     BluesnapErrorResponse, BluesnapPSyncResponse, BluesnapPaymentsResponse, BluesnapProcessingInfo,
-    BluesnapProcessingStatus, BluesnapRefundResponse, BluesnapRefundStatus,
-    BluesnapRefundSyncResponse, BluesnapVoidResponse,
+    BluesnapProcessingStatus, BluesnapRedirectionResponse, BluesnapRefundResponse,
+    BluesnapRefundStatus, BluesnapRefundSyncResponse, BluesnapThreeDsReference,
+    BluesnapThreeDsResult, BluesnapVoidResponse, BluesnapWebhookBody, BluesnapWebhookEvent,
+    BluesnapWebhookObjectResource, RedirectErrorMessage,
 };
 
 // Helper function to convert MinorUnit to StringMajorUnit
@@ -650,6 +653,27 @@ impl
             }),
             ..item.router_data
         })
+    }
+}
+
+// ===== WEBHOOK HELPERS =====
+
+/// Map BlueSnap webhook events to Hyperswitch event type
+pub fn map_webhook_event_to_incoming_webhook_event(
+    webhook_event: &BluesnapWebhookEvent,
+) -> domain_types::connector_types::EventType {
+    use domain_types::connector_types::EventType;
+
+    match webhook_event {
+        BluesnapWebhookEvent::Decline | BluesnapWebhookEvent::CcChargeFailed => {
+            EventType::PaymentIntentFailure
+        }
+        BluesnapWebhookEvent::Charge => EventType::PaymentIntentSuccess,
+        BluesnapWebhookEvent::Refund => EventType::RefundSuccess,
+        BluesnapWebhookEvent::Chargeback | BluesnapWebhookEvent::ChargebackStatusChanged => {
+            EventType::DisputeOpened
+        }
+        BluesnapWebhookEvent::Unknown => EventType::PaymentIntentFailure,
     }
 }
 
