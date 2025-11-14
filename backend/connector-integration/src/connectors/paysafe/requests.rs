@@ -192,7 +192,7 @@ pub struct PaysafeBillingDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub street2: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub city: Option<String>,
+    pub city: Option<Secret<String>>,
     pub state: Secret<String>,
     pub zip: Secret<String>,
     pub country: common_enums::CountryAlpha2,
