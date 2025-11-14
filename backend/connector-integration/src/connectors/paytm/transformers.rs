@@ -112,6 +112,13 @@ use crate::{
     connectors::paytm::PaytmRouterData as MacroPaytmRouterData, types::ResponseRouterData,
 };
 
+const NEXT_ACTION_DATA: &str = "nextActionData";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum NextActionData {
+    WaitScreenInstructions,
+}
+
 #[derive(Debug, Clone)]
 pub struct PaytmAuthType {
     pub merchant_id: Secret<String>,       // From api_key
@@ -1419,11 +1426,13 @@ impl<
         let attempt_status = map_paytm_status_to_attempt_status(result_code);
         router_data.resource_common_data.set_status(attempt_status);
 
+        let connector_metadata = get_wait_screen_metadata().ok().flatten();
+
         router_data.response = Ok(PaymentsResponseData::TransactionResponse {
             resource_id,
             redirection_data,
             mandate_reference: None,
-            connector_metadata: None,
+            connector_metadata,
             network_txn_id: None,
             connector_response_reference_id: connector_txn_id,
             incremental_authorization_allowed: None,
@@ -1513,18 +1522,28 @@ impl
                 network_advice_code: None,
                 network_error_message: None,
             }),
-            _ => Ok(PaymentsResponseData::TransactionResponse {
-                resource_id,
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata: None,
-                network_txn_id: None,
-                connector_response_reference_id: connector_txn_id,
-                incremental_authorization_allowed: None,
-                status_code: item.http_code,
-            }),
+            _ => {
+                let connector_metadata = get_wait_screen_metadata().ok().flatten();
+                Ok(PaymentsResponseData::TransactionResponse {
+                    resource_id,
+                    redirection_data: None,
+                    mandate_reference: None,
+                    connector_metadata,
+                    network_txn_id: None,
+                    connector_response_reference_id: connector_txn_id,
+                    incremental_authorization_allowed: None,
+                    status_code: item.http_code,
+                })
+            }
         };
 
         Ok(router_data)
     }
+}
+
+pub fn get_wait_screen_metadata() -> CustomResult<Option<serde_json::Value>, errors::ConnectorError>
+{
+    Ok(Some(serde_json::json!({
+        NEXT_ACTION_DATA: NextActionData::WaitScreenInstructions
+    })))
 }

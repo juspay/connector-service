@@ -2,6 +2,7 @@ use base64::Engine;
 use common_enums;
 use common_utils::{
     crypto::{self, GenerateDigest},
+    errors::CustomResult,
     ext_traits::Encode,
     types::MinorUnit,
 };
@@ -19,6 +20,13 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
+
+const NEXT_ACTION_DATA: &str = "nextActionData";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum NextActionData {
+    WaitScreenInstructions,
+}
 
 use super::constants;
 use crate::{connectors::phonepe::PhonepeRouterData, types::ResponseRouterData};
@@ -561,7 +569,7 @@ impl<
                             },
                             redirection_data: None,
                             mandate_reference: None,
-                            connector_metadata: None,
+                            connector_metadata: get_wait_screen_metadata().ok().flatten(),
                             network_txn_id: None,
                             connector_response_reference_id: Some(
                                 data.merchant_transaction_id.clone(),
@@ -829,7 +837,7 @@ impl
                             resource_id: ResponseId::ConnectorTransactionId(transaction_id.clone()),
                             redirection_data: None,
                             mandate_reference: None,
-                            connector_metadata: None,
+                            connector_metadata: get_wait_screen_metadata().ok().flatten(),
                             network_txn_id: None,
                             connector_response_reference_id: Some(merchant_transaction_id.clone()),
                             incremental_authorization_allowed: None,
@@ -928,4 +936,11 @@ pub fn get_phonepe_error_status(error_code: &str) -> Option<common_enums::Attemp
         "AUTHORIZATION_FAILED" => Some(common_enums::AttemptStatus::AuthenticationFailed),
         _ => None,
     }
+}
+
+pub fn get_wait_screen_metadata() -> CustomResult<Option<serde_json::Value>, errors::ConnectorError>
+{
+    Ok(Some(serde_json::json!({
+        NEXT_ACTION_DATA: NextActionData::WaitScreenInstructions
+    })))
 }

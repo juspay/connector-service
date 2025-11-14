@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{self, AttemptStatus, CardNetwork};
-use common_utils::{ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit};
+use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, RSync, Refund},
     connector_types::{
@@ -20,6 +20,13 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use tracing::info;
+
+const NEXT_ACTION_DATA: &str = "nextActionData";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum NextActionData {
+    WaitScreenInstructions,
+}
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub enum Currency {
@@ -1700,10 +1707,12 @@ impl<F, Req>
             }
         };
 
+        let connector_metadata = get_wait_screen_metadata().ok().flatten();
+        
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: transaction_id,
             redirection_data: redirection_data.map(Box::new),
-            connector_metadata: None,
+            connector_metadata,
             mandate_reference: None,
             network_txn_id: None,
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
@@ -1720,4 +1729,11 @@ impl<F, Req>
             ..data
         })
     }
+}
+
+pub fn get_wait_screen_metadata() -> CustomResult<Option<serde_json::Value>, errors::ConnectorError>
+{
+    Ok(Some(serde_json::json!({
+        NEXT_ACTION_DATA: NextActionData::WaitScreenInstructions
+    })))
 }
