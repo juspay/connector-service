@@ -276,6 +276,10 @@ impl<
                             let x = payment_method_data::Card::<T>::foreign_try_from(card)?;
                             Ok(PaymentMethodData::Card(x))
                         },
+                        Some(grpc_api_types::payments::card_payment_method_type::CardType::UnspecifiedCardType(card)) => {
+                            let card = payment_method_data::Card::<T>::foreign_try_from(card)?;
+                            Ok(PaymentMethodData::Card(card))
+                        },
                         None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                             sub_code: "INVALID_PAYMENT_METHOD".to_owned(),
                             error_identifier: 400,
@@ -667,6 +671,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         },
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::DebitProxy(_)) => {
                             Ok(Some(PaymentMethodType::Debit))
+                        },
+                        Some(grpc_api_types::payments::card_payment_method_type::CardType::UnspecifiedCardType(_)) => {
+                            Ok(Some(PaymentMethodType::UnspecifiedCardType))
                         },
                         None =>
                             Err(report!(ApplicationErrorResponse::BadRequest(ApiError {

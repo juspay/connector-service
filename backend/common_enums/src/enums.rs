@@ -1025,6 +1025,7 @@ pub enum PaymentMethodType {
     TouchNGo,
     Trustly,
     Twint,
+    UnspecifiedCardType,
     UpiCollect,
     UpiIntent,
     Vipps,
