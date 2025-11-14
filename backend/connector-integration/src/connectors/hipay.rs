@@ -4,33 +4,6 @@ use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
 
-// Helper function to recursively flatten $text fields in JSON values
-fn flatten_text_fields(value: serde_json::Value) -> serde_json::Value {
-    match value {
-        serde_json::Value::Object(map) => {
-            // If empty object, convert to empty string
-            if map.is_empty() {
-                return serde_json::Value::String(String::new());
-            }
-
-            // If this object has a single "$text" field, extract it
-            if map.len() == 1 && map.contains_key("$text") {
-                return flatten_text_fields(map.get("$text").unwrap().clone());
-            }
-
-            // Otherwise, recursively flatten all fields
-            let flattened_map: serde_json::Map<String, serde_json::Value> = map
-                .into_iter()
-                .map(|(k, v)| (k, flatten_text_fields(v)))
-                .collect();
-            serde_json::Value::Object(flattened_map)
-        }
-        serde_json::Value::Array(arr) => {
-            serde_json::Value::Array(arr.into_iter().map(flatten_text_fields).collect())
-        }
-        other => other,
-    }
-}
 use common_utils::{
     errors::CustomResult,
     events,
@@ -80,10 +53,12 @@ use crate::{types::ResponseRouterData, with_error_response_body, with_response_b
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
+    pub(crate) const ACCEPT: &str = "Accept";
 }
 
 pub(crate) mod constants {
     pub(crate) const FORM_CONTENT_TYPE: &str = "application/x-www-form-urlencoded";
+    pub(crate) const JSON_CONTENT_TYPE: &str = "application/json";
 }
 
 #[derive(Clone)]
@@ -345,6 +320,40 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
+    >
+    ConnectorIntegrationV2<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Hipay<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Hipay<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     > connector_types::PaymentPreAuthenticateV2<T> for Hipay<T>
 {
 }
@@ -448,33 +457,24 @@ impl<
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        use crate::utils::preprocess_xml_response_bytes;
-
-        let response_bytes = res.response.clone();
-
-        // Check if response is XML
-        let error_response: hipay::HipayErrorResponse =
-            if let Ok(response_str) = std::str::from_utf8(&response_bytes) {
-                if response_str.trim().starts_with("<?xml") {
-                    // Convert XML to JSON
-                    let json_bytes = preprocess_xml_response_bytes(response_bytes.into())
-                        .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-                    // Parse as HipayErrorResponse
-                    serde_json::from_slice(&json_bytes)
-                        .change_context(errors::ConnectorError::ResponseDeserializationFailed)?
+        let error_response: hipay::HipayErrorResponse = res
+            .response
+            .parse_struct("HipayErrorResponse")
+            .unwrap_or_else(|_| {
+                let raw_response = String::from_utf8_lossy(&res.response);
+                let message = if raw_response.trim().is_empty() {
+                    "Unknown error from HiPay".to_string()
+                } else if raw_response.len() > 200 {
+                    format!("{}...", &raw_response[..200])
                 } else {
-                    // Parse as JSON directly
-                    res.response
-                        .parse_struct("HipayErrorResponse")
-                        .change_context(errors::ConnectorError::ResponseDeserializationFailed)?
+                    raw_response.to_string()
+                };
+
+                hipay::HipayErrorResponse {
+                    code: res.status_code.to_string(),
+                    message,
                 }
-            } else {
-                // Fallback to JSON parsing
-                res.response
-                    .parse_struct("HipayErrorResponse")
-                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?
-            };
+            });
 
         with_error_response_body!(event_builder, error_response);
 
@@ -520,7 +520,6 @@ impl<
         let auth = hipay::HipayAuthType::try_from(&req.connector_auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
-        // HTTP Basic Auth for tokenization API
         let auth_value = if let Some(api_secret) = auth.api_secret {
             use base64::Engine;
             let credentials = format!("{}:{}", auth.api_key.expose(), api_secret.expose());
@@ -534,6 +533,10 @@ impl<
             (
                 headers::CONTENT_TYPE.to_string(),
                 constants::FORM_CONTENT_TYPE.to_string().into(),
+            ),
+            (
+                headers::ACCEPT.to_string(),
+                constants::JSON_CONTENT_TYPE.to_string().into(),
             ),
             (headers::AUTHORIZATION.to_string(), auth_value.into()),
         ])
@@ -586,17 +589,9 @@ impl<
         >,
         errors::ConnectorError,
     > {
-        // HiPay tokenization API returns XML responses
-        use crate::utils::preprocess_xml_response_bytes;
-
-        let response_bytes = res.response.clone();
-
-        // Convert XML to JSON
-        let json_bytes = preprocess_xml_response_bytes(response_bytes.into())
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        // Parse as HipayTokenResponse
-        let response: HipayTokenResponse = serde_json::from_slice(&json_bytes)
+        let response: HipayTokenResponse = res
+            .response
+            .parse_struct("HipayTokenResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_response_body!(event_builder, response);
@@ -651,10 +646,16 @@ impl<
             PaymentsResponseData,
         >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            constants::FORM_CONTENT_TYPE.to_string().into(),
-        )];
+        let mut header = vec![
+            (
+                headers::CONTENT_TYPE.to_string(),
+                constants::FORM_CONTENT_TYPE.to_string().into(),
+            ),
+            (
+                headers::ACCEPT.to_string(),
+                constants::JSON_CONTENT_TYPE.to_string().into(),
+            ),
+        ];
         let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
         header.append(&mut auth_header);
         Ok(header)
@@ -708,28 +709,9 @@ impl<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         errors::ConnectorError,
     > {
-        // HiPay gateway API returns XML responses
-        use crate::utils::preprocess_xml_response_bytes;
-
-        let response_bytes = res.response.clone();
-
-        // Convert XML to JSON
-        let json_bytes = preprocess_xml_response_bytes(response_bytes.into())
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        // Parse JSON and flatten $text fields
-        let json_value: serde_json::Value = serde_json::from_slice(&json_bytes)
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        // Flatten $text fields recursively
-        let flattened_value = flatten_text_fields(json_value);
-
-        // Parse as HipayAuthorizeResponse
-        let response: HipayAuthorizeResponse = serde_json::from_value(flattened_value)
-            .map_err(|e| {
-                tracing::error!(error=?e, json=?std::str::from_utf8(&json_bytes), "Failed to deserialize HipayAuthorizeResponse");
-                e
-            })
+        let response: HipayAuthorizeResponse = res
+            .response
+            .parse_struct("HipayAuthorizeResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_response_body!(event_builder, response);
@@ -778,10 +760,16 @@ impl<
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            self.common_get_content_type().to_string().into(),
-        )];
+        let mut header = vec![
+            (
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            ),
+            (
+                headers::ACCEPT.to_string(),
+                constants::JSON_CONTENT_TYPE.to_string().into(),
+            ),
+        ];
         let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
         header.append(&mut auth_header);
         Ok(header)
@@ -815,28 +803,9 @@ impl<
         RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         errors::ConnectorError,
     > {
-        // HiPay gateway API returns XML responses
-        use crate::utils::preprocess_xml_response_bytes;
-
-        let response_bytes = res.response.clone();
-
-        // Convert XML to JSON
-        let json_bytes = preprocess_xml_response_bytes(response_bytes.into())
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        // PSync responses have a "transaction" wrapper, extract it
-        let json_value: serde_json::Value = serde_json::from_slice(&json_bytes)
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        let transaction_value = json_value
-            .get("transaction")
-            .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        // Flatten $text fields recursively
-        let flattened_value = flatten_text_fields(transaction_value.clone());
-
-        // Parse as HipayPSyncResponse
-        let response: HipayPSyncResponse = serde_json::from_value(flattened_value)
+        let response: HipayPSyncResponse = res
+            .response
+            .parse_struct("HipayPSyncResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_response_body!(event_builder, response);
@@ -881,10 +850,16 @@ impl<
         &self,
         req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            constants::FORM_CONTENT_TYPE.to_string().into(),
-        )];
+        let mut header = vec![
+            (
+                headers::CONTENT_TYPE.to_string(),
+                constants::FORM_CONTENT_TYPE.to_string().into(),
+            ),
+            (
+                headers::ACCEPT.to_string(),
+                constants::JSON_CONTENT_TYPE.to_string().into(),
+            ),
+        ];
         let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
         header.append(&mut auth_header);
         Ok(header)
@@ -930,24 +905,10 @@ impl<
         RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         errors::ConnectorError,
     > {
-        // HiPay gateway API returns XML responses
-        use crate::utils::preprocess_xml_response_bytes;
 
-        let response_bytes = res.response.clone();
-
-        // Convert XML to JSON
-        let json_bytes = preprocess_xml_response_bytes(response_bytes.into())
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        // Parse JSON and flatten $text fields
-        let json_value: serde_json::Value = serde_json::from_slice(&json_bytes)
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        // Flatten $text fields recursively
-        let flattened_value = flatten_text_fields(json_value);
-
-        // Parse as HipayCaptureResponse
-        let response: HipayCaptureResponse = serde_json::from_value(flattened_value)
+        let response: HipayCaptureResponse = res
+            .response
+            .parse_struct("HipayCaptureResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_response_body!(event_builder, response);
@@ -992,10 +953,16 @@ impl<
         &self,
         req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            constants::FORM_CONTENT_TYPE.to_string().into(),
-        )];
+        let mut header = vec![
+            (
+                headers::CONTENT_TYPE.to_string(),
+                constants::FORM_CONTENT_TYPE.to_string().into(),
+            ),
+            (
+                headers::ACCEPT.to_string(),
+                constants::JSON_CONTENT_TYPE.to_string().into(),
+            ),
+        ];
         let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
         header.append(&mut auth_header);
         Ok(header)
@@ -1038,24 +1005,10 @@ impl<
         RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         errors::ConnectorError,
     > {
-        // HiPay gateway API returns XML responses
-        use crate::utils::preprocess_xml_response_bytes;
 
-        let response_bytes = res.response.clone();
-
-        // Convert XML to JSON
-        let json_bytes = preprocess_xml_response_bytes(response_bytes.into())
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        // Parse JSON and flatten $text fields
-        let json_value: serde_json::Value = serde_json::from_slice(&json_bytes)
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        // Flatten $text fields recursively
-        let flattened_value = flatten_text_fields(json_value);
-
-        // Parse as HipayVoidResponse
-        let response: HipayVoidResponse = serde_json::from_value(flattened_value)
+        let response: HipayVoidResponse = res
+            .response
+            .parse_struct("HipayVoidResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_response_body!(event_builder, response);
@@ -1100,10 +1053,16 @@ impl<
         &self,
         req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            constants::FORM_CONTENT_TYPE.to_string().into(),
-        )];
+        let mut header = vec![
+            (
+                headers::CONTENT_TYPE.to_string(),
+                constants::FORM_CONTENT_TYPE.to_string().into(),
+            ),
+            (
+                headers::ACCEPT.to_string(),
+                constants::JSON_CONTENT_TYPE.to_string().into(),
+            ),
+        ];
         let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
         header.append(&mut auth_header);
         Ok(header)
@@ -1146,24 +1105,10 @@ impl<
         RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         errors::ConnectorError,
     > {
-        // HiPay gateway API returns XML responses
-        use crate::utils::preprocess_xml_response_bytes;
 
-        let response_bytes = res.response.clone();
-
-        // Convert XML to JSON
-        let json_bytes = preprocess_xml_response_bytes(response_bytes.into())
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        // Parse JSON and flatten $text fields
-        let json_value: serde_json::Value = serde_json::from_slice(&json_bytes)
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        // Flatten $text fields recursively
-        let flattened_value = flatten_text_fields(json_value);
-
-        // Parse as HipayRefundResponse
-        let response: HipayRefundResponse = serde_json::from_value(flattened_value)
+        let response: HipayRefundResponse = res
+            .response
+            .parse_struct("HipayRefundResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_response_body!(event_builder, response);
@@ -1245,30 +1190,9 @@ impl<
         RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         errors::ConnectorError,
     > {
-        // HiPay gateway API returns XML responses
-        use crate::utils::preprocess_xml_response_bytes;
-
-        let response_bytes = res.response.clone();
-
-        // Convert XML to JSON
-        let json_bytes = preprocess_xml_response_bytes(response_bytes.into())
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        // RSync responses may have a "transaction" wrapper (success) or be error responses (no wrapper)
-        let json_value: serde_json::Value = serde_json::from_slice(&json_bytes)
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        // Check if response has "transaction" wrapper (success case) or is error response
-        let value_to_deserialize = if let Some(transaction_value) = json_value.get("transaction") {
-            // Success response - flatten $text fields recursively
-            flatten_text_fields(transaction_value.clone())
-        } else {
-            // Error response - use whole JSON (no transaction wrapper)
-            flatten_text_fields(json_value)
-        };
-
-        // Parse as HipayRSyncResponse (enum handles both Response and Error variants)
-        let response: HipayRSyncResponse = serde_json::from_value(value_to_deserialize)
+        let response: HipayRSyncResponse = res
+            .response
+            .parse_struct("HipayRSyncResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_response_body!(event_builder, response);
@@ -1418,164 +1342,6 @@ impl<
 }
 
 // Authentication flow implementations
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        PreAuthenticate,
-        PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Hipay<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<
-            PreAuthenticate,
-            PaymentFlowData,
-            PaymentsPreAuthenticateData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let auth = hipay::HipayAuthType::try_from(&req.connector_auth_type)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-
-        // HTTP Basic Auth for tokenization API
-        let auth_value = if let Some(api_secret) = auth.api_secret {
-            use base64::Engine;
-            let credentials = format!("{}:{}", auth.api_key.expose(), api_secret.expose());
-            let base64_credentials = base64::engine::general_purpose::STANDARD.encode(credentials);
-            format!("Basic {}", base64_credentials)
-        } else {
-            return Err(errors::ConnectorError::FailedToObtainAuthType.into());
-        };
-
-        Ok(vec![
-            (
-                headers::CONTENT_TYPE.to_string(),
-                constants::FORM_CONTENT_TYPE.to_string().into(),
-            ),
-            (headers::AUTHORIZATION.to_string(), auth_value.into()),
-        ])
-    }
-
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<
-            PreAuthenticate,
-            PaymentFlowData,
-            PaymentsPreAuthenticateData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        let base_url = self.get_tokenization_base_url(req);
-        Ok(format!("{}/create", base_url.trim_end_matches('/')))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<
-            PreAuthenticate,
-            PaymentFlowData,
-            PaymentsPreAuthenticateData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let connector_req = HipayTokenRequest::try_from(req)?;
-        Ok(Some(RequestContent::FormUrlEncoded(Box::new(
-            connector_req,
-        ))))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<
-            PreAuthenticate,
-            PaymentFlowData,
-            PaymentsPreAuthenticateData<T>,
-            PaymentsResponseData,
-        >,
-        event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<
-            PreAuthenticate,
-            PaymentFlowData,
-            PaymentsPreAuthenticateData<T>,
-            PaymentsResponseData,
-        >,
-        errors::ConnectorError,
-    > {
-        // HiPay tokenization API returns XML responses
-        use crate::utils::preprocess_xml_response_bytes;
-
-        let response_bytes = res.response.clone();
-
-        // Convert XML to JSON
-        let json_bytes = preprocess_xml_response_bytes(response_bytes.into())
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        // Parse as HipayTokenResponse
-        let response: HipayTokenResponse = serde_json::from_slice(&json_bytes)
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        with_response_body!(event_builder, response);
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-        .change_context(errors::ConnectorError::ResponseHandlingFailed)
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        // HiPay tokenization API returns XML errors
-        use crate::utils::preprocess_xml_response_bytes;
-
-        let response_bytes = res.response.clone();
-
-        // Check if response is XML
-        if let Ok(response_str) = std::str::from_utf8(&response_bytes) {
-            if response_str.trim().starts_with("<?xml") {
-                // Convert XML to JSON
-                let json_bytes = preprocess_xml_response_bytes(response_bytes.into())
-                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-                // Parse as HipayErrorResponse
-                let error_response: hipay::HipayErrorResponse = serde_json::from_slice(&json_bytes)
-                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-                with_error_response_body!(event_builder, error_response);
-
-                return Ok(ErrorResponse {
-                    status_code: res.status_code,
-                    code: error_response.code,
-                    message: error_response.message,
-                    reason: None,
-                    attempt_status: None,
-                    connector_transaction_id: None,
-                    network_decline_code: None,
-                    network_advice_code: None,
-                    network_error_message: None,
-                });
-            }
-        }
-
-        // Fallback to regular JSON error parsing
-        self.build_error_response(res, event_builder)
-    }
-}
 
 impl<
         T: PaymentMethodDataTypes
@@ -1884,22 +1650,6 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    interfaces::verification::SourceVerification<
-        PreAuthenticate,
-        PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Hipay<T>
-{
-}
 
 impl<
         T: PaymentMethodDataTypes
