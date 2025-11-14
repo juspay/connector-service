@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{self, AttemptStatus, CardNetwork};
-use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit};
+use common_utils::{
+    errors::CustomResult, ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit,
+};
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, RSync, Refund},
     connector_types::{
@@ -1708,7 +1710,7 @@ impl<F, Req>
         };
 
         let connector_metadata = get_wait_screen_metadata().ok().flatten();
-        
+
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: transaction_id,
             redirection_data: redirection_data.map(Box::new),
