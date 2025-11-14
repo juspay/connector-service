@@ -223,7 +223,7 @@ pub enum HipayRefundSyncResponse {
     },
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct HipayPaymentsRequest<T: PaymentMethodDataTypes> {
     pub payment_product: String,
     pub orderid: String,
@@ -351,7 +351,7 @@ impl<T: PaymentMethodDataTypes>
             .get_amount_as_string();
 
         // Extract card token from payment_method_token if present,
-        // or from connector_customer as fallback (when token is passed from PreAuthenticate via gRPC)
+        // or from connector_customer as fallback (when token is passed via gRPC)
         let cardtoken = item
             .resource_common_data
             .payment_method_token
@@ -515,7 +515,7 @@ impl<T: PaymentMethodDataTypes>
 }
 
 // Tokenization Structures
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct HipayTokenRequest<T: PaymentMethodDataTypes> {
     pub card_number: domain_types::payment_method_data::RawCardNumber<T>,
     pub card_expiry_month: Secret<String>,
@@ -588,48 +588,6 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-// PreAuthenticate transformer (same as PaymentMethodToken for HiPay tokenization)
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        &RouterDataV2<
-            domain_types::connector_flow::PreAuthenticate,
-            PaymentFlowData,
-            domain_types::connector_types::PaymentsPreAuthenticateData<T>,
-            PaymentsResponseData,
-        >,
-    > for HipayTokenRequest<T>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: &RouterDataV2<
-            domain_types::connector_flow::PreAuthenticate,
-            PaymentFlowData,
-            domain_types::connector_types::PaymentsPreAuthenticateData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> Result<Self, Self::Error> {
-        match &item.request.payment_method_data {
-            Some(PaymentMethodData::Card(card_data)) => Ok(Self {
-                card_number: card_data.card_number.clone(),
-                card_expiry_month: card_data.card_exp_month.clone(),
-                card_expiry_year: card_data.card_exp_year.clone(),
-                card_holder: item
-                    .resource_common_data
-                    .get_optional_billing_full_name()
-                    .unwrap_or(Secret::new("".to_string())),
-                cvc: Some(card_data.card_cvc.clone()),
-                multi_use: Some("1".to_string()), // 1 for multi-use token
-            }),
-            _ => Err(errors::ConnectorError::NotImplemented(
-                "Payment method not supported for PreAuthenticate tokenization".to_string(),
-            ))
-            .change_context(errors::ConnectorError::NotImplemented(
-                "Payment method".to_string(),
-            )),
-        }
-    }
-}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct HipayTokenResponse {
@@ -687,58 +645,6 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-// PreAuthenticate response transformer - stores token in payment_method_token
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            HipayTokenResponse,
-            RouterDataV2<
-                domain_types::connector_flow::PreAuthenticate,
-                PaymentFlowData,
-                domain_types::connector_types::PaymentsPreAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    >
-    for RouterDataV2<
-        domain_types::connector_flow::PreAuthenticate,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    >
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: ResponseRouterData<
-            HipayTokenResponse,
-            RouterDataV2<
-                domain_types::connector_flow::PreAuthenticate,
-                PaymentFlowData,
-                domain_types::connector_types::PaymentsPreAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    ) -> Result<Self, Self::Error> {
-        // Store token in payment_method_token so Authorize can use it
-        let payment_method_token = Some(PaymentMethodTokenType::Token(
-            Secret::new(item.response.token.clone()),
-        ));
-
-        Ok(Self {
-            response: Ok(PaymentsResponseData::PreAuthenticateResponse {
-                redirection_data: None,
-                connector_response_reference_id: Some(item.response.request_id),
-                status_code: item.http_code,
-            }),
-            resource_common_data: PaymentFlowData {
-                payment_method_token,
-                ..item.router_data.resource_common_data
-            },
-            ..item.router_data
-        })
-    }
-}
 
 // Payment Sync Response Implementation
 // Uses HipaySyncResponse enum with get_sync_status helper
@@ -809,7 +715,7 @@ impl
 }
 
 // Capture Request Structure
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct HipayCaptureRequest {
     pub operation: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -910,7 +816,7 @@ impl
 }
 
 // Refund Request Structure
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct HipayRefundRequest {
     pub operation: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1041,7 +947,7 @@ impl
 }
 
 // Void Request Structure
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct HipayVoidRequest {
     pub operation: String,
     #[serde(skip_serializing_if = "Option::is_none")]
