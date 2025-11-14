@@ -117,6 +117,9 @@ pub struct Connectors {
     pub cybersource: ConnectorParams,
     pub worldpay: ConnectorParams,
     pub worldpayvantiv: ConnectorParams,
+    pub payload: ConnectorParams,
+    pub fiservemea: ConnectorParams,
+    pub datatrans: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -2144,6 +2147,29 @@ pub fn generate_create_order_response(
     Ok(response)
 }
 
+/// Helper function to convert connector_metadata from serde_json::Value to HashMap<String, String>
+/// Properly handles different JSON value types (String, Number, Bool)
+fn convert_connector_metadata_to_hashmap(
+    connector_metadata: Option<serde_json::Value>,
+) -> std::collections::HashMap<String, String> {
+    connector_metadata
+        .and_then(|value| value.as_object().cloned())
+        .map(|map| {
+            map.into_iter()
+                .map(|(k, v)| {
+                    let value_str = match v {
+                        serde_json::Value::String(s) => s,
+                        serde_json::Value::Number(n) => n.to_string(),
+                        serde_json::Value::Bool(b) => b.to_string(),
+                        _ => v.to_string(),
+                    };
+                    (k, value_str)
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
     router_data_v2: RouterDataV2<
         Authorize,
@@ -2275,11 +2301,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                             }
                         }
                     ).transpose()?,
-                    connector_metadata: connector_metadata
-                        .and_then(|value| value.as_object().cloned())
-                        .map(|map| {map.into_iter().filter_map(|(k, v)| v.as_str()
-                            .map(|s| (k, s.to_string())))
-                            .collect::<HashMap<_, _>>()}).unwrap_or_default(),
+                    connector_metadata: convert_connector_metadata_to_hashmap(connector_metadata),
                     network_txn_id,
                     response_ref_id: connector_response_reference_id.map(|id| grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
@@ -2655,7 +2677,7 @@ pub fn generate_payment_void_response(
             PaymentsResponseData::TransactionResponse {
                 resource_id,
                 redirection_data: _,
-                connector_metadata: _,
+                connector_metadata,
                 network_txn_id: _,
                 connector_response_reference_id,
                 incremental_authorization_allowed,
@@ -2692,6 +2714,7 @@ pub fn generate_payment_void_response(
                     state,
                     mandate_reference: mandate_reference_grpc,
                     incremental_authorization_allowed,
+                    connector_metadata: convert_connector_metadata_to_hashmap(connector_metadata),
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -2730,6 +2753,7 @@ pub fn generate_payment_void_response(
                 raw_connector_request,
                 mandate_reference: None,
                 incremental_authorization_allowed: None,
+                connector_metadata: std::collections::HashMap::new(),
             })
         }
     }
@@ -3606,7 +3630,12 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
         value: PaymentServiceVoidRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let amount = Some(common_utils::types::MinorUnit::new(value.amount()));
-        let currency = Some(common_enums::Currency::foreign_try_from(value.currency())?);
+        // If currency is unspecified, send None, otherwise try to convert it
+        let currency = if value.currency() == grpc_api_types::payments::Currency::Unspecified {
+            None
+        } else {
+            Some(common_enums::Currency::foreign_try_from(value.currency())?)
+        };
         Ok(Self {
             browser_info: value
                 .browser_info
@@ -4362,7 +4391,7 @@ pub fn generate_payment_capture_response(
             PaymentsResponseData::TransactionResponse {
                 resource_id,
                 redirection_data: _,
-                connector_metadata: _,
+                connector_metadata,
                 network_txn_id: _,
                 connector_response_reference_id,
                 incremental_authorization_allowed,
@@ -4403,6 +4432,7 @@ pub fn generate_payment_capture_response(
                         .resource_common_data
                         .minor_amount_captured
                         .map(|amount_captured| amount_captured.get_amount_as_i64()),
+                    connector_metadata: convert_connector_metadata_to_hashmap(connector_metadata),
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -4443,6 +4473,7 @@ pub fn generate_payment_capture_response(
                 mandate_reference: None,
                 captured_amount: None,
                 minor_captured_amount: None,
+                connector_metadata: std::collections::HashMap::new(),
             })
         }
     }
@@ -5781,14 +5812,7 @@ pub fn generate_repeat_payment_response(
                             id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                         }
                     }),
-                    connector_metadata: connector_metadata
-                        .and_then(|value| value.as_object().cloned())
-                        .map(|map| {
-                            map.into_iter()
-                                .filter_map(|(k, v)| v.as_str().map(|s| (k, s.to_string())))
-                                .collect::<HashMap<_, _>>()
-                        })
-                        .unwrap_or_default(),
+                    connector_metadata: convert_connector_metadata_to_hashmap(connector_metadata),
                     mandate_reference: mandate_reference.map(|m| {
                         grpc_api_types::payments::MandateReference {
                             mandate_id: m.connector_mandate_id,

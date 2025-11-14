@@ -21,6 +21,8 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+fiservemea.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
+datatrans.base_url = "https://api.sandbox.datatrans.com"
 adyen.base_url = "https://checkout-test.adyen.com/"
 adyen.dispute_base_url = "https://ca-test.adyen.com/"
 razorpay.base_url = "https://api.razorpay.com/"
@@ -33,6 +35,7 @@ authorizedotnet.base_url = "https://apitest.authorize.net/xml/v1/request.api"
 phonepe.base_url = "https://api-preprod.phonepe.com/apis/hermes/"
 cashfree.base_url = "https://sandbox.cashfree.com/"
 fiuu.base_url = "https://sandbox.merchant.razer.com/"
+payload.base_url = "https://api.payload.com"
 payu.base_url = "https://test.payu.in/"
 paytm.base_url = "https://securegw-stage.paytm.in/"
 cashtocode.base_url = "https://cluster05.api-test.cashtocode.com"
@@ -65,4 +68,4 @@ topic = "audit-trail-events"
 partition_key_field = "request_id"
 
 [unmasked_headers]
-keys = ["x-request-id","x-merchant-id","x-lineage-ids","x-reference-id","x-connector","x-tenant-id"]
+keys = ["x-request-id","x-merchant-id","x-lineage-ids","x-reference-id","x-connector","x-tenant-id","x-shadow-mode"]

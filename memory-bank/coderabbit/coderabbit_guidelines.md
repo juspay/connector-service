@@ -117,7 +117,7 @@ impl ConnectorCommon for MyConnector {
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         // 1. Deserialize the raw response into your connector's error struct
         let response: my_connector::transformers::MyConnectorErrorResponse = res

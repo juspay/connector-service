@@ -485,6 +485,7 @@ enum Connector {
   CASHFREE = 93;
   PAYTM = 94;
   BLUECODE = 95;
+  PAYLOAD = 96;
 }
 
 // Payment method types.
@@ -1424,6 +1425,9 @@ message PaymentServiceVoidResponse {
 
   // Authorization Details
   optional bool incremental_authorization_allowed = 11; // Indicates if incremental authorization is allowed
+
+  // Metadata
+  map<string, string> connector_metadata = 12; // Connector-specific metadata for the transaction
 }
 
 // Request message for voiding a payment post-capture.
@@ -1512,6 +1516,9 @@ message PaymentServiceCaptureResponse {
 
   // Authorization Details
   optional bool incremental_authorization_allowed = 13; // Indicates if incremental authorization is allowed
+
+  // Metadata
+  map<string, string> connector_metadata = 14; // Connector-specific metadata for the transaction
 }
 
 // Request message for creating an order.
