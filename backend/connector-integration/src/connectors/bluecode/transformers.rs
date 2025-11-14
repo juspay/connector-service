@@ -51,7 +51,7 @@ pub struct BluecodePaymentsRequest {
     pub first_name: Secret<String>,
     pub last_name: Secret<String>,
     pub billing_address_country_code_iso: enums::CountryAlpha2,
-    pub billing_address_city: String,
+    pub billing_address_city: Secret<String>,
     pub billing_address_line1: Secret<String>,
     pub billing_address_postal_code: Option<Secret<String>>,
     pub webhook_url: url::Url,

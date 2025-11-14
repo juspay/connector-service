@@ -42,6 +42,7 @@ mod tests {
                     payment_method: common_enums::PaymentMethod::Card,
                     description: Some("Payment for order #12345".to_string()),
                     return_url: Some("www.google.com".to_string()),
+                    order_details: None,
                     address: domain_types::payment_address::PaymentAddress::new(
                         None, None, None, None,
                     ),
@@ -224,6 +225,7 @@ mod tests {
                     payment_method: common_enums::PaymentMethod::Card,
                     description: None,
                     return_url: None,
+                    order_details: None,
                     address: domain_types::payment_address::PaymentAddress::new(
                         None, None, None, None,
                     ),

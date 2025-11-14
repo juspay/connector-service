@@ -54,7 +54,7 @@ pub struct NoonSubscriptionData {
 pub struct NoonBillingAddress {
     street: Option<Secret<String>>,
     street2: Option<Secret<String>>,
-    city: Option<String>,
+    city: Option<Secret<String>>,
     state_province: Option<Secret<String>>,
     country: Option<CountryAlpha2>,
     postal_code: Option<Secret<String>>,
@@ -872,7 +872,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
             Err(ErrorResponse {
                 status_code: item.http_code,
                 code: response.result_code.to_string(),
-                message: response.class_description.clone(),
+                message: response.message.clone(),
                 reason: Some(response.message.clone()),
                 attempt_status: None,
                 connector_transaction_id: Some(response.result.transaction.id.clone()),
@@ -937,7 +937,7 @@ impl<F> TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
             Err(ErrorResponse {
                 status_code: item.http_code,
                 code: response.result_code.to_string(),
-                message: response.class_description.clone(),
+                message: response.message.clone(),
                 reason: Some(response.message.clone()),
                 attempt_status: None,
                 connector_transaction_id: Some(noon_transaction.id.clone()),
