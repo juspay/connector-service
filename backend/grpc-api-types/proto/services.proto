@@ -27,6 +27,9 @@ service PaymentService {
   // Captures a previously authorized payment.
   rpc Capture(PaymentServiceCaptureRequest) returns (PaymentServiceCaptureResponse);
 
+  // Creates an order before authorize.
+  rpc CreateOrder(PaymentServiceCreateOrderRequest) returns (PaymentServiceCreateOrderResponse);
+
   // Processes a refund request.
   rpc Refund(PaymentServiceRefundRequest) returns (RefundResponse);
 
