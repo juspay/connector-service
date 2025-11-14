@@ -65,7 +65,9 @@ use crate::{
     errors::{ApiError, ApplicationErrorResponse},
     mandates::{self, MandateData},
     payment_address,
-    payment_address::{Address, AddressDetails, PaymentAddress, PhoneDetails},
+    payment_address::{
+        Address, AddressDetails, OrderDetailsWithAmount, PaymentAddress, PhoneDetails,
+    },
     payment_method_data,
     payment_method_data::{
         DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
@@ -121,6 +123,7 @@ pub struct Connectors {
     pub fiservemea: ConnectorParams,
     pub datatrans: ConnectorParams,
     pub bluesnap: ConnectorParams,
+    pub authipay: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -1605,10 +1608,10 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
         value: grpc_api_types::payments::Address,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
-            city: value.city.clone().map(|city| city.expose()),
             country: Some(common_enums::CountryAlpha2::foreign_try_from(
                 value.country_alpha2_code(),
             )?),
+            city: value.city,
             line1: value.line1,
             line2: value.line2,
             line3: value.line3,
@@ -1616,6 +1619,46 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
             state: value.state,
             first_name: value.first_name,
             last_name: value.last_name,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::OrderDetailsWithAmount> for OrderDetailsWithAmount {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        item: grpc_api_types::payments::OrderDetailsWithAmount,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            product_name: item.product_name,
+            quantity: u16::try_from(item.quantity).change_context(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_QUANTITY".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Quantity value is out of range for u16".to_owned(),
+                    error_object: None,
+                }),
+            )?,
+            amount: common_utils::types::MinorUnit::new(item.amount),
+            tax_rate: item.tax_rate,
+            total_tax_amount: item
+                .total_tax_amount
+                .map(common_utils::types::MinorUnit::new),
+            requires_shipping: item.requires_shipping,
+            product_img_link: item.product_img_link,
+            product_id: item.product_id,
+            category: item.category,
+            sub_category: item.sub_category,
+            brand: item.brand,
+            description: item.description,
+            unit_of_measure: item.unit_of_measure,
+            product_type: item
+                .product_type
+                .and_then(|pt| grpc_api_types::payments::ProductType::try_from(pt).ok())
+                .map(|grpc_product_type| {
+                    common_enums::ProductType::foreign_from(grpc_product_type)
+                }),
+            product_tax_code: item.product_tax_code,
         })
     }
 }
@@ -1669,6 +1712,16 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
                     },
                 ))
             })?;
+
+        let order_details = (!value.order_details.is_empty())
+            .then(|| {
+                value
+                    .order_details
+                    .into_iter()
+                    .map(OrderDetailsWithAmount::foreign_try_from)
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .transpose()?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -1725,6 +1778,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             connector_response: None,
             vault_headers,
             recurring_mandate_payment_data: None,
+            order_details,
         })
     }
 }
@@ -1801,6 +1855,7 @@ impl
             connector_response: None,
             vault_headers: None,
             recurring_mandate_payment_data: None,
+            order_details: None,
         })
     }
 }
@@ -1876,6 +1931,7 @@ impl
             vault_headers: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
+            order_details: None,
         })
     }
 }
@@ -1932,6 +1988,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             vault_headers: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
+            order_details: None,
         })
     }
 }
@@ -2528,6 +2585,7 @@ impl
             vault_headers: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
+            order_details: None,
         })
     }
 }
@@ -2864,6 +2922,19 @@ impl ForeignFrom<common_enums::DisputeStage> for grpc_api_types::payments::Dispu
             common_enums::DisputeStage::PreDispute => Self::PreDispute,
             common_enums::DisputeStage::Dispute => Self::ActiveDispute,
             common_enums::DisputeStage::PreArbitration => Self::PreArbitration,
+        }
+    }
+}
+
+impl ForeignFrom<grpc_api_types::payments::ProductType> for common_enums::ProductType {
+    fn foreign_from(value: grpc_api_types::payments::ProductType) -> Self {
+        match value {
+            grpc_api_types::payments::ProductType::Physical => Self::Physical,
+            grpc_api_types::payments::ProductType::Digital => Self::Digital,
+            grpc_api_types::payments::ProductType::Travel => Self::Travel,
+            grpc_api_types::payments::ProductType::Ride => Self::Ride,
+            grpc_api_types::payments::ProductType::Event => Self::Event,
+            grpc_api_types::payments::ProductType::Accommodation => Self::Accommodation,
         }
     }
 }
@@ -3758,6 +3829,7 @@ impl
             minor_amount_capturable: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
+            order_details: None,
         })
     }
 }
@@ -4286,6 +4358,7 @@ impl
             vault_headers: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
+            order_details: None,
         })
     }
 }
@@ -4343,6 +4416,7 @@ impl
             vault_headers: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
+            order_details: None,
         })
     }
 }
@@ -4562,6 +4636,7 @@ impl
             vault_headers: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
+            order_details: None,
         })
     }
 }
@@ -5315,6 +5390,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
         Ok(Self {
             amount: common_utils::types::MinorUnit::new(value.minor_amount),
             currency,
+            browser_info: value
+                .browser_info
+                .map(BrowserInformation::foreign_try_from)
+                .transpose()?,
         })
     }
 }
@@ -5629,6 +5708,7 @@ impl
             vault_headers: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
+            order_details: None,
         })
     }
 }
@@ -6408,6 +6488,7 @@ impl
             raw_connector_request: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
+            order_details: None,
         })
     }
 }
@@ -6503,6 +6584,7 @@ impl
             minor_amount_capturable: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
+            order_details: None,
         })
     }
 }
@@ -6598,6 +6680,7 @@ impl
             minor_amount_capturable: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
+            order_details: None,
         })
     }
 }

@@ -79,6 +79,7 @@ pub enum ConnectorEnum {
     Fiservemea,
     Datatrans,
     Bluesnap,
+    Authipay,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -122,6 +123,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Fiservemea => Ok(Self::Fiservemea),
             grpc_api_types::payments::Connector::Datatrans => Ok(Self::Datatrans),
             grpc_api_types::payments::Connector::Bluesnap => Ok(Self::Bluesnap),
+            grpc_api_types::payments::Connector::Authipay => Ok(Self::Authipay),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -332,6 +334,7 @@ pub struct PaymentFlowData {
     /// This field is used to store various data regarding the response from connector
     pub connector_response: Option<ConnectorResponseData>,
     pub recurring_mandate_payment_data: Option<RecurringMandatePaymentData>,
+    pub order_details: Option<Vec<payment_address::OrderDetailsWithAmount>>,
 }
 
 impl PaymentFlowData {
@@ -406,7 +409,7 @@ impl PaymentFlowData {
         })
     }
 
-    pub fn get_optional_shipping_city(&self) -> Option<String> {
+    pub fn get_optional_shipping_city(&self) -> Option<Secret<String>> {
         self.address.get_shipping().and_then(|shipping_address| {
             shipping_address
                 .clone()
@@ -554,7 +557,7 @@ impl PaymentFlowData {
                 "payment_method_data.billing.address.line1",
             ))
     }
-    pub fn get_billing_city(&self) -> Result<String, Error> {
+    pub fn get_billing_city(&self) -> Result<Secret<String>, Error> {
         self.address
             .get_payment_method_billing()
             .and_then(|billing_address| {
@@ -606,7 +609,7 @@ impl PaymentFlowData {
             })
     }
 
-    pub fn get_optional_billing_city(&self) -> Option<String> {
+    pub fn get_optional_billing_city(&self) -> Option<Secret<String>> {
         self.address
             .get_payment_method_billing()
             .and_then(|billing_address| {
@@ -971,12 +974,6 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
             .clone()
             .and_then(|browser_info| browser_info.language)
     }
-    // pub fn get_order_details(&self) -> Result<Vec<OrderDetailsWithAmount>, Error> {
-    //     self.order_details
-    //         .clone()
-    //         .ok_or_else(missing_field_err("order_details"))
-    // }
-
     pub fn get_card(&self) -> Result<Card<T>, Error> {
         match &self.payment_method_data {
             PaymentMethodData::Card(card) => Ok(card.clone()),
@@ -1300,6 +1297,15 @@ pub struct ContinueRedirectionResponse {
 pub struct SessionTokenRequestData {
     pub amount: MinorUnit,
     pub currency: Currency,
+    pub browser_info: Option<BrowserInformation>,
+}
+
+impl SessionTokenRequestData {
+    pub fn get_browser_info(&self) -> Result<BrowserInformation, Error> {
+        self.browser_info
+            .clone()
+            .ok_or_else(missing_field_err("browser_info"))
+    }
 }
 
 #[derive(Debug, Clone)]
