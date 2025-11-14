@@ -44,6 +44,8 @@ pub use responses::{
     BluesnapWebhookObjectResource, RedirectErrorMessage,
 };
 
+const DISPLAY_METADATA: &str = "Y";
+
 // Helper function to convert MinorUnit to StringMajorUnit
 fn convert_minor_to_major_unit(
     minor_amount: MinorUnit,
@@ -52,6 +54,34 @@ fn convert_minor_to_major_unit(
     StringMajorUnitForConnector
         .convert(minor_amount, currency)
         .change_context(errors::ConnectorError::RequestEncodingFailed)
+}
+
+fn convert_metadata_to_request_metadata(metadata: serde_json::Value) -> Vec<RequestMetadata> {
+    let hashmap: std::collections::HashMap<Option<String>, Option<serde_json::Value>> =
+        serde_json::from_str(&metadata.to_string()).unwrap_or_default();
+
+    hashmap
+        .into_iter()
+        .map(|(key, value)| RequestMetadata {
+            meta_key: key,
+            meta_value: value.map(|v| v.to_string()),
+            is_visible: Some(DISPLAY_METADATA.to_string()),
+        })
+        .collect()
+}
+
+fn get_card_holder_info(
+    address: &domain_types::payment_address::AddressDetails,
+    email: common_utils::pii::Email,
+) -> CustomResult<Option<BluesnapCardHolderInfo>, errors::ConnectorError> {
+    let first_name = address.get_first_name()?.clone();
+    let last_name = address.get_last_name().unwrap_or(&first_name).clone();
+
+    Ok(Some(BluesnapCardHolderInfo {
+        first_name,
+        last_name,
+        email,
+    }))
 }
 
 // Auth Type
@@ -105,10 +135,12 @@ fn get_attempt_status_from_bluesnap_status(
 }
 
 // Status mapping for refunds
-fn map_bluesnap_refund_status(status: &BluesnapRefundStatus) -> common_enums::RefundStatus {
-    match status {
-        BluesnapRefundStatus::Success => common_enums::RefundStatus::Success,
-        BluesnapRefundStatus::Pending => common_enums::RefundStatus::Pending,
+impl From<BluesnapRefundStatus> for common_enums::RefundStatus {
+    fn from(status: BluesnapRefundStatus) -> Self {
+        match status {
+            BluesnapRefundStatus::Success => Self::Success,
+            BluesnapRefundStatus::Pending => Self::Pending,
+        }
     }
 }
 
@@ -155,19 +187,20 @@ impl<
             _ => BluesnapTxnType::AuthCapture,
         };
 
-        // Extract billing address from resource_common_data
         let billing_address = router_data
             .resource_common_data
             .address
             .get_payment_method_billing();
 
-        let card_holder_info = billing_address.as_ref().and_then(|addr| {
-            addr.address.as_ref().map(|details| BluesnapCardHolderInfo {
-                first_name: details.first_name.clone(),
-                last_name: details.last_name.clone(),
-                zip: details.zip.clone(),
-            })
-        });
+        let card_holder_info = billing_address
+            .and_then(|addr| addr.address.as_ref())
+            .and_then(|details| {
+                router_data
+                    .request
+                    .email
+                    .clone()
+                    .and_then(|email| get_card_holder_info(details, email).ok().flatten())
+            });
 
         // Build payment method details based on payment method type
         let payment_method_details = match &router_data.request.payment_method_data {
@@ -234,15 +267,26 @@ impl<
             router_data.request.currency,
         )?;
 
+        let transaction_meta_data =
+            router_data
+                .request
+                .metadata
+                .as_ref()
+                .map(|metadata| BluesnapMetadata {
+                    meta_data: convert_metadata_to_request_metadata(metadata.clone()),
+                });
+
         Ok(Self {
             amount,
             currency: router_data.request.currency.to_string(),
             card_transaction_type,
             payment_method_details,
             card_holder_info,
-            transaction_fraud_info: None,
-            merchant_transaction_id: None,
-            transaction_meta_data: None,
+            transaction_fraud_info: Some(TransactionFraudInfo {
+                fraud_session_id: router_data.resource_common_data.payment_id.clone(),
+            }),
+            merchant_transaction_id: Some(router_data.resource_common_data.attempt_id.clone()),
+            transaction_meta_data,
             _phantom: std::marker::PhantomData,
         })
     }
@@ -644,7 +688,7 @@ impl
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let refund_status = map_bluesnap_refund_status(&item.response.refund_status);
+        let refund_status = item.response.refund_status.clone().into();
 
         Ok(Self {
             response: Ok(RefundsResponseData {
@@ -711,11 +755,17 @@ impl
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let refund_status = map_bluesnap_refund_status(&item.response.refund_status);
+        let refund_status = match item.response.processing_info.processing_status {
+            BluesnapProcessingStatus::Success => common_enums::RefundStatus::Success,
+            BluesnapProcessingStatus::Pending | BluesnapProcessingStatus::PendingMerchantReview => {
+                common_enums::RefundStatus::Pending
+            }
+            BluesnapProcessingStatus::Fail => common_enums::RefundStatus::Failure,
+        };
 
         Ok(Self {
             response: Ok(RefundsResponseData {
-                connector_refund_id: item.response.refund_transaction_id.to_string(),
+                connector_refund_id: item.response.transaction_id.clone(),
                 refund_status,
                 status_code: item.http_code,
             }),
