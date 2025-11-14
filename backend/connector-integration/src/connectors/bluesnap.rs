@@ -563,7 +563,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let refund_id = &req.request.connector_refund_id;
             Ok(format!(
-                "{}/services/2/transactions/refund/{}",
+                "{}/services/2/transactions/{}",
                 self.connector_base_url_refunds(req),
                 refund_id
             ))

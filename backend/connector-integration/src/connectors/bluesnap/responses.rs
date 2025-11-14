@@ -127,7 +127,7 @@ pub struct BluesnapRefundResponse {
     pub refund_status: BluesnapRefundStatus,
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum BluesnapRefundStatus {
     Success,
@@ -135,8 +135,7 @@ pub enum BluesnapRefundStatus {
     Pending,
 }
 
-// Refund sync response - uses same structure as refund response
-pub type BluesnapRefundSyncResponse = BluesnapRefundResponse;
+pub type BluesnapRefundSyncResponse = BluesnapPSyncResponse;
 
 // ===== 3DS AUTHENTICATION RESPONSES =====
 

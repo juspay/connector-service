@@ -18,12 +18,9 @@ pub enum BluesnapTxnType {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BluesnapCardHolderInfo {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub first_name: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_name: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub zip: Option<Secret<String>>,
+    pub first_name: Secret<String>,
+    pub last_name: Secret<String>,
+    pub email: common_utils::pii::Email,
 }
 
 // Credit card details for BlueSnap API
@@ -77,21 +74,21 @@ pub enum BluesnapPaymentMethodDetails {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TransactionFraudInfo {
-    fraud_session_id: String,
+    pub fraud_session_id: String,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BluesnapMetadata {
-    meta_data: Vec<RequestMetadata>,
+    pub meta_data: Vec<RequestMetadata>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RequestMetadata {
-    meta_key: Option<String>,
-    meta_value: Option<String>,
-    is_visible: Option<String>,
+    pub meta_key: Option<String>,
+    pub meta_value: Option<String>,
+    pub is_visible: Option<String>,
 }
 
 // Main authorize request structure based on tech spec
