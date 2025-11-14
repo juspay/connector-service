@@ -1164,6 +1164,8 @@ impl Payments {
                 external_event_params,
                 None,
                 common_enums::CallConnectorAction::Trigger,
+                test_context,
+                api_tag,
             ),
         )
         .await
@@ -1301,6 +1303,8 @@ impl Payments {
                 external_event_params,
                 None,
                 common_enums::CallConnectorAction::Trigger,
+                test_context,
+                api_tag,
             ),
         )
         .await
