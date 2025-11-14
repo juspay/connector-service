@@ -28,10 +28,8 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types,
     types::{
-        generate_payment_capture_response, generate_payment_sync_response,
-        generate_payment_void_post_capture_response, generate_payment_void_response,
-        generate_refund_response, generate_repeat_payment_response,
-        generate_setup_mandate_response,
+        generate_payment_sync_response, generate_payment_void_post_capture_response,
+        generate_repeat_payment_response, generate_setup_mandate_response,
     },
     utils::{ForeignFrom, ForeignTryFrom},
 };
@@ -1479,7 +1477,7 @@ impl PaymentOperationsInternal for Payments {
         response_data_type: PaymentsResponseData,
         request_data_constructor: PaymentVoidData::foreign_try_from,
         common_flow_data_constructor: PaymentFlowData::foreign_try_from,
-        generate_response_fn: generate_payment_void_response,
+        generate_response_fn: domain_types::types::generate_payment_void_response,
         all_keys_required: None
     );
 
@@ -1494,7 +1492,7 @@ impl PaymentOperationsInternal for Payments {
         response_data_type: RefundsResponseData,
         request_data_constructor: RefundsData::foreign_try_from,
         common_flow_data_constructor: RefundFlowData::foreign_try_from,
-        generate_response_fn: generate_refund_response,
+        generate_response_fn: domain_types::types::generate_refund_response,
         all_keys_required: None
     );
 
@@ -1509,7 +1507,7 @@ impl PaymentOperationsInternal for Payments {
         response_data_type: PaymentsResponseData,
         request_data_constructor: PaymentsCaptureData::foreign_try_from,
         common_flow_data_constructor: PaymentFlowData::foreign_try_from,
-        generate_response_fn: generate_payment_capture_response,
+        generate_response_fn: domain_types::types::generate_payment_capture_response,
         all_keys_required: None
     );
 
@@ -1963,13 +1961,13 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        grpc_logging_wrapper(
+        Box::pin(grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
             FlowName::Void,
-            |request_data| async move { self.internal_void_payment(request_data).await },
-        )
+            |request_data| async move { Box::pin(self.internal_void_payment(request_data)).await },
+        ))
         .await
     }
 
@@ -2197,13 +2195,13 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        grpc_logging_wrapper(
+        Box::pin(grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
             FlowName::Refund,
             |request_data| async move { self.internal_refund(request_data).await },
-        )
+        ))
         .await
     }
 
@@ -2282,13 +2280,13 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        grpc_logging_wrapper(
+        Box::pin(grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
             FlowName::Capture,
-            |request_data| async move { self.internal_payment_capture(request_data).await },
-        )
+            |request_data| async move { Box::pin(self.internal_payment_capture(request_data)).await },
+        ))
         .await
     }
 
