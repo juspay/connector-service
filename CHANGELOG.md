@@ -4,6 +4,40 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.11.14.0
+
+### Features
+
+- **connector:** [DATATRANS] Connector Integration ([#250](https://github.com/juspay/connector-service/pull/250)) ([`3be2ccf`](https://github.com/juspay/connector-service/commit/3be2ccf99e0efdeae8258f545aa97a75e60ee30f))
+
+### Bug Fixes
+
+- Noon expiry year and fiuu three ds ([#274](https://github.com/juspay/connector-service/pull/274)) ([`dc5812d`](https://github.com/juspay/connector-service/commit/dc5812dfe927ece085501814d4ddfb6a0cd4a347))
+
+### Refactors
+
+- **connector:** [PHONEPE] refactor status mapping ([#278](https://github.com/juspay/connector-service/pull/278)) ([`5ff7d1f`](https://github.com/juspay/connector-service/commit/5ff7d1f2b97f32bf35d4502cce8a43539c48e00c))
+
+### Miscellaneous Tasks
+
+- Fixed Void and Capture flow as per diff checker ([#265](https://github.com/juspay/connector-service/pull/265)) ([`ec91d1b`](https://github.com/juspay/connector-service/commit/ec91d1b92127e29d3be4fa0f3ec5e74a723ea0e6))
+
+**Full Changelog:** [`2025.11.13.0...2025.11.14.0`](https://github.com/juspay/connector-service/compare/2025.11.13.0...2025.11.14.0)
+
+- - -
+
+## 2025.11.13.0
+
+### Features
+
+- **connector:** [FISERVEMEA] Connector Integration ([#254](https://github.com/juspay/connector-service/pull/254)) ([`38fe2f7`](https://github.com/juspay/connector-service/commit/38fe2f7037b7f18465a96dbe4eabbe4d9586511a))
+- Unmask x-shadow-mode header in logs ([#236](https://github.com/juspay/connector-service/pull/236)) ([`7c07363`](https://github.com/juspay/connector-service/commit/7c0736359401266a9f33d90e6c977f32f07696e3))
+- Add test mode and mock PG API integration ([#257](https://github.com/juspay/connector-service/pull/257)) ([`faad595`](https://github.com/juspay/connector-service/commit/faad5954c7e2b893ace70290fa32693f6098537a))
+
+**Full Changelog:** [`2025.11.12.0...2025.11.13.0`](https://github.com/juspay/connector-service/compare/2025.11.12.0...2025.11.13.0)
+
+- - -
+
 ## 2025.11.12.0
 
 ### Bug Fixes

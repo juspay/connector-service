@@ -21,6 +21,8 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+fiservemea.base_url = "https://prod.emea.api.fiservapps.com/ipp/payments-gateway/v2/payments"
+datatrans.base_url = "https://api.datatrans.com"
 adyen.base_url = "https://{{merchant_endpoint_prefix}}-checkout-live.adyenpayments.com/checkout/"
 adyen.dispute_base_url = "https://{{merchant_endpoint_prefix}}-ca-live.adyen.com/"
 razorpay.base_url = "https://api.razorpay.com/"

@@ -445,6 +445,26 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
 
+        // Get API tag for the current flow with payment method type from domain layer
+        let api_tag = self
+            .config
+            .api_tags
+            .get_tag(FlowName::Authorize, router_data.request.payment_method_type);
+
+        // Create test context if test mode is enabled
+        let test_context = self
+            .config
+            .test
+            .create_test_context(request_id)
+            .map_err(|e| {
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(format!("Test mode configuration error: {e}")),
+                    Some("TEST_CONFIG_ERROR".to_string()),
+                    None,
+                )
+            })?;
+
         // Execute connector processing
         let event_params = EventProcessingParams {
             connector_name: &connector.to_string(),
@@ -466,6 +486,8 @@ impl Payments {
             event_params,
             token_data,
             common_enums::CallConnectorAction::Trigger,
+            test_context,
+            api_tag,
         )
         .await;
 
@@ -603,6 +625,23 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
 
+        // Get API tag for CreateOrder flow
+        let api_tag = self.config.api_tags.get_tag(FlowName::CreateOrder, None);
+
+        // Create test context if test mode is enabled
+        let test_context = self
+            .config
+            .test
+            .create_test_context(event_params.request_id)
+            .map_err(|e| {
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(format!("Test mode configuration error: {e}")),
+                    Some("TEST_CONFIG_ERROR".to_string()),
+                    None,
+                )
+            })?;
+
         // Create event processing parameters
         let external_event_params = EventProcessingParams {
             connector_name,
@@ -625,6 +664,8 @@ impl Payments {
                 external_event_params,
                 None,
                 common_enums::CallConnectorAction::Trigger,
+                test_context,
+                api_tag,
             ),
         )
         .await
@@ -708,6 +749,16 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
 
+        // Get API tag for CreateOrder flow
+        let api_tag = self.config.api_tags.get_tag(FlowName::CreateOrder, None);
+
+        // Create test context if test mode is enabled
+        let test_context = self
+            .config
+            .test
+            .create_test_context(event_params.request_id)
+            .map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
+
         // Execute connector processing
         let external_event_params = EventProcessingParams {
             connector_name,
@@ -730,6 +781,8 @@ impl Payments {
                 external_event_params,
                 None,
                 common_enums::CallConnectorAction::Trigger,
+                test_context,
+                api_tag,
             ),
         )
         .await
@@ -804,6 +857,26 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
 
+        // Get API tag for CreateSessionToken flow with payment method type if available
+        let api_tag = self
+            .config
+            .api_tags
+            .get_tag(FlowName::CreateSessionToken, None);
+
+        // Create test context if test mode is enabled
+        let test_context = self
+            .config
+            .test
+            .create_test_context(event_params.request_id)
+            .map_err(|e| {
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(format!("Test mode configuration error: {e}")),
+                    Some("TEST_CONFIG_ERROR".to_string()),
+                    None,
+                )
+            })?;
+
         // Create event processing parameters
         let external_event_params = EventProcessingParams {
             connector_name,
@@ -817,14 +890,18 @@ impl Payments {
         };
 
         // Execute connector processing
-        let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            session_token_router_data,
-            None,
-            external_event_params,
-            None,
-            common_enums::CallConnectorAction::Trigger,
+        let response = Box::pin(
+            external_services::service::execute_connector_processing_step(
+                &self.config.proxy,
+                connector_integration,
+                session_token_router_data,
+                None,
+                external_event_params,
+                None,
+                common_enums::CallConnectorAction::Trigger,
+                test_context,
+                api_tag,
+            ),
         )
         .await
         .switch()
@@ -920,6 +997,26 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
 
+        // Get API tag for CreateAccessToken flow with payment method type if available
+        let api_tag = self
+            .config
+            .api_tags
+            .get_tag(FlowName::CreateAccessToken, None);
+
+        // Create test context if test mode is enabled
+        let test_context = self
+            .config
+            .test
+            .create_test_context(event_params.request_id)
+            .map_err(|e| {
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(format!("Test mode configuration error: {e}")),
+                    Some("TEST_CONFIG_ERROR".to_string()),
+                    None,
+                )
+            })?;
+
         // Execute connector processing
         let external_event_params = EventProcessingParams {
             connector_name,
@@ -932,14 +1029,18 @@ impl Payments {
             shadow_mode: event_params.shadow_mode,
         };
 
-        let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            access_token_router_data,
-            None,
-            external_event_params,
-            None,
-            common_enums::CallConnectorAction::Trigger,
+        let response = Box::pin(
+            external_services::service::execute_connector_processing_step(
+                &self.config.proxy,
+                connector_integration,
+                access_token_router_data,
+                None,
+                external_event_params,
+                None,
+                common_enums::CallConnectorAction::Trigger,
+                test_context,
+                api_tag,
+            ),
         )
         .await
         .switch()
@@ -1031,6 +1132,26 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
 
+        // Get API tag for CreateConnectorCustomer flow
+        let api_tag = self
+            .config
+            .api_tags
+            .get_tag(FlowName::CreateConnectorCustomer, None);
+
+        // Create test context if test mode is enabled
+        let test_context = self
+            .config
+            .test
+            .create_test_context(event_params.request_id)
+            .map_err(|e| {
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(format!("Test mode configuration error: {e}")),
+                    Some("TEST_CONFIG_ERROR".to_string()),
+                    None,
+                )
+            })?;
+
         // Execute connector processing
         let external_event_params = EventProcessingParams {
             connector_name,
@@ -1052,6 +1173,8 @@ impl Payments {
                 external_event_params,
                 None,
                 common_enums::CallConnectorAction::Trigger,
+                test_context,
+                api_tag,
             ),
         )
         .await
@@ -1133,6 +1256,19 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
 
+        // Get API tag for CreateConnectorCustomer flow
+        let api_tag = self
+            .config
+            .api_tags
+            .get_tag(FlowName::CreateConnectorCustomer, None);
+
+        // Create test context if test mode is enabled
+        let test_context = self
+            .config
+            .test
+            .create_test_context(event_params.request_id)
+            .map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
+
         // Execute connector processing
         let external_event_params = EventProcessingParams {
             connector_name,
@@ -1154,6 +1290,8 @@ impl Payments {
                 external_event_params,
                 None,
                 common_enums::CallConnectorAction::Trigger,
+                test_context,
+                api_tag,
             ),
         )
         .await
@@ -1257,6 +1395,26 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
 
+        // Get API tag for PaymentMethodToken flow
+        let api_tag = self
+            .config
+            .api_tags
+            .get_tag(FlowName::PaymentMethodToken, None);
+
+        // Create test context if test mode is enabled
+        let test_context = self
+            .config
+            .test
+            .create_test_context(event_params.request_id)
+            .map_err(|e| {
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(format!("Test mode configuration error: {e}")),
+                    Some("TEST_CONFIG_ERROR".to_string()),
+                    None,
+                )
+            })?;
+
         // Execute connector processing
         let external_event_params = EventProcessingParams {
             connector_name,
@@ -1276,6 +1434,8 @@ impl Payments {
             external_event_params,
             None,
             common_enums::CallConnectorAction::Trigger,
+            test_context,
+            api_tag,
         )
         .await
         .switch()
@@ -1706,12 +1866,28 @@ impl PaymentService for Payments {
                         flow: std::marker::PhantomData,
                         resource_common_data: payment_flow_data,
                         connector_auth_type: metadata_payload.connector_auth_type.clone(),
-                        request: payments_sync_data,
+                        request: payments_sync_data.clone(),
                         response: Err(ErrorResponse::default()),
                     };
 
                     // Execute connector processing
                     let flow_name = utils::flow_marker_to_flow_name::<PSync>();
+
+                    // Get API tag for the current flow with payment method type
+                    let api_tag = self
+                        .config
+                        .api_tags
+                        .get_tag(flow_name, payments_sync_data.payment_method_type);
+
+                    // Create test context if test mode is enabled
+                    let test_context = self
+                        .config
+                        .test
+                        .create_test_context(&metadata_payload.request_id)
+                        .map_err(|e| {
+                            tonic::Status::internal(format!("Test mode configuration error: {e}"))
+                        })?;
+
                     let event_params = EventProcessingParams {
                         connector_name: &metadata_payload.connector.to_string(),
                         service_name: &service_name,
@@ -1739,6 +1915,8 @@ impl PaymentService for Payments {
                             event_params,
                             None,
                             consume_or_trigger_flow,
+                            test_context,
+                            api_tag,
                         ),
                     )
                     .await
@@ -2269,9 +2447,26 @@ impl PaymentService for Payments {
                         flow: std::marker::PhantomData,
                         resource_common_data: payment_flow_data,
                         connector_auth_type: connector_auth_details.clone(),
-                        request: setup_mandate_request_data,
+                        request: setup_mandate_request_data.clone(),
                         response: Err(ErrorResponse::default()),
                     };
+
+                    // Get API tag for SetupMandate flow
+                    let api_tag = self.config.api_tags.get_tag(
+                        FlowName::SetupMandate,
+                        setup_mandate_request_data.payment_method_type,
+                    );
+
+                    // Create test context if test mode is enabled
+                    let test_context =
+                        self.config
+                            .test
+                            .create_test_context(&request_id)
+                            .map_err(|e| {
+                                tonic::Status::internal(format!(
+                                    "Test mode configuration error: {e}"
+                                ))
+                            })?;
 
                     let event_params = EventProcessingParams {
                         connector_name: &connector.to_string(),
@@ -2293,6 +2488,8 @@ impl PaymentService for Payments {
                             event_params,
                             None, // token_data - None for non-proxy payments
                             common_enums::CallConnectorAction::Trigger,
+                            test_context,
+                            api_tag,
                         ),
                     )
                     .await
@@ -2391,9 +2588,26 @@ impl PaymentService for Payments {
                         flow: std::marker::PhantomData,
                         resource_common_data: payment_flow_data,
                         connector_auth_type: connector_auth_details.clone(),
-                        request: repeat_payment_data,
+                        request: repeat_payment_data.clone(),
                         response: Err(ErrorResponse::default()),
                     };
+                    // Get API tag for RepeatPayment flow
+                    let api_tag = self.config.api_tags.get_tag(
+                        FlowName::RepeatPayment,
+                        repeat_payment_data.payment_method_type,
+                    );
+
+                    // Create test context if test mode is enabled
+                    let test_context =
+                        self.config
+                            .test
+                            .create_test_context(&request_id)
+                            .map_err(|e| {
+                                tonic::Status::internal(format!(
+                                    "Test mode configuration error: {e}"
+                                ))
+                            })?;
+
                     let event_params = EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
@@ -2414,6 +2628,8 @@ impl PaymentService for Payments {
                             event_params,
                             None, // token_data - None for non-proxy payments
                             common_enums::CallConnectorAction::Trigger,
+                            test_context,
+                            api_tag,
                         ),
                     )
                     .await
