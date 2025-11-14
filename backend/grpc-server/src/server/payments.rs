@@ -1352,9 +1352,33 @@ impl Payments {
                     None,
                 )
             })?;
+        let capture_method = payload
+            .capture_method
+            .map(|cm| {
+                common_enums::CaptureMethod::foreign_try_from(
+                    grpc_api_types::payments::CaptureMethod::try_from(cm).map_err(|e| {
+                        PaymentAuthorizationError::new(
+                            grpc_api_types::payments::PaymentStatus::Pending,
+                            Some(format!("Capture method conversion failed: {e}")),
+                            Some("CAPTURE_METHOD_ERROR".to_string()),
+                            None,
+                        )
+                    })?,
+                )
+                .map_err(|e| {
+                    PaymentAuthorizationError::new(
+                        grpc_api_types::payments::PaymentStatus::Pending,
+                        Some(format!("Capture method conversion failed: {e}")),
+                        Some("CAPTURE_METHOD_ERROR".to_string()),
+                        None,
+                    )
+                })
+            })
+            .transpose()?;
         let payment_method_tokenization_data = PaymentMethodTokenizationData {
             amount: common_utils::types::MinorUnit::new(payload.amount),
             currency,
+            capture_method,
             integrity_object: None,
             browser_info: None,
             customer_acceptance: None,
