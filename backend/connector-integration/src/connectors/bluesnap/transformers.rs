@@ -35,8 +35,9 @@ pub use requests::{
 
 // Re-export response types
 pub use responses::{
-    BluesnapAuthorizeResponse, BluesnapCaptureResponse, BluesnapCreditCardResponse,
-    BluesnapErrorResponse, BluesnapPSyncResponse, BluesnapPaymentsResponse, BluesnapProcessingInfo,
+    BluesnapAuthorizeResponse, BluesnapCaptureResponse, BluesnapChargebackStatus,
+    BluesnapCreditCardResponse, BluesnapDisputeWebhookBody, BluesnapErrorResponse,
+    BluesnapPSyncResponse, BluesnapPaymentsResponse, BluesnapProcessingInfo,
     BluesnapProcessingStatus, BluesnapRedirectionResponse, BluesnapRefundResponse,
     BluesnapRefundStatus, BluesnapRefundSyncResponse, BluesnapThreeDsReference,
     BluesnapThreeDsResult, BluesnapVoidResponse, BluesnapWebhookBody, BluesnapWebhookEvent,
@@ -656,9 +657,26 @@ impl
     }
 }
 
-// ===== WEBHOOK HELPERS =====
+pub fn map_chargeback_status_to_event_type(
+    cb_status: &str,
+) -> CustomResult<domain_types::connector_types::EventType, errors::ConnectorError> {
+    use domain_types::connector_types::EventType;
 
-/// Map BlueSnap webhook events to Hyperswitch event type
+    let status: BluesnapChargebackStatus =
+        serde_json::from_value(serde_json::Value::String(cb_status.to_string()))
+            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
+
+    Ok(match status {
+        BluesnapChargebackStatus::New | BluesnapChargebackStatus::Working => {
+            EventType::DisputeOpened
+        }
+        BluesnapChargebackStatus::Closed => EventType::DisputeExpired,
+        BluesnapChargebackStatus::CompletedLost => EventType::DisputeLost,
+        BluesnapChargebackStatus::CompletedPending => EventType::DisputeChallenged,
+        BluesnapChargebackStatus::CompletedWon => EventType::DisputeWon,
+    })
+}
+
 pub fn map_webhook_event_to_incoming_webhook_event(
     webhook_event: &BluesnapWebhookEvent,
 ) -> domain_types::connector_types::EventType {

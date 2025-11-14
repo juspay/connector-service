@@ -170,9 +170,6 @@ pub struct RedirectErrorMessage {
     pub errors: Option<Vec<String>>,
 }
 
-// ===== WEBHOOK STRUCTURES =====
-
-// Webhook event types
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum BluesnapWebhookEvent {
@@ -186,7 +183,6 @@ pub enum BluesnapWebhookEvent {
     Unknown,
 }
 
-// Webhook payload body (URL-encoded)
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BluesnapWebhookBody {
@@ -194,10 +190,9 @@ pub struct BluesnapWebhookBody {
     pub reference_number: String,
     pub transaction_type: BluesnapWebhookEvent,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub reversal_ref_num: Option<String>, // For refunds
+    pub reversal_ref_num: Option<String>,
 }
 
-// Webhook object resource for payment status
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BluesnapWebhookObjectResource {
@@ -205,4 +200,32 @@ pub struct BluesnapWebhookObjectResource {
     pub transaction_type: BluesnapWebhookEvent,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reversal_ref_num: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum BluesnapChargebackStatus {
+    #[serde(alias = "New")]
+    New,
+    #[serde(alias = "Working")]
+    Working,
+    #[serde(alias = "Closed")]
+    Closed,
+    #[serde(alias = "Completed_Lost")]
+    CompletedLost,
+    #[serde(alias = "Completed_Pending")]
+    CompletedPending,
+    #[serde(alias = "Completed_Won")]
+    CompletedWon,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BluesnapDisputeWebhookBody {
+    pub invoice_charge_amount: f64,
+    pub currency: common_enums::Currency,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reversal_reason: Option<String>,
+    pub reversal_ref_num: String,
+    pub cb_status: String,
 }
