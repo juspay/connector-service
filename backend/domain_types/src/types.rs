@@ -41,6 +41,32 @@ fn extract_headers_from_metadata(
     }
 }
 
+/// Extract access token from connector state by borrowing
+fn extract_access_token_from_state_ref(
+    state: Option<&ConnectorState>,
+) -> Option<AccessTokenResponseData> {
+    state.and_then(|s| s.access_token.as_ref()).map(|token| {
+        AccessTokenResponseData {
+            access_token: token.token.clone(),
+            token_type: token.token_type.clone(),
+            expires_in: token.expires_in_seconds,
+        }
+    })
+}
+
+/// Extract access token from connector state by consuming
+fn extract_access_token_from_state(
+    state: Option<ConnectorState>,
+) -> Option<AccessTokenResponseData> {
+    state.and_then(|s| s.access_token).map(|token| {
+        AccessTokenResponseData {
+            access_token: token.token,
+            token_type: token.token_type,
+            expires_in: token.expires_in_seconds,
+        }
+    })
+}
+
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use crate::{
     connector_flow::{
@@ -1302,16 +1328,7 @@ impl<
             .map(router_request_types::AuthenticationData::try_from)
             .transpose()?;
 
-        let access_token = value
-            .state
-            .as_ref()
-            .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
-        let shipping_cost = Some(common_utils::types::MinorUnit::new(value.shipping_cost()));
-        // Connector testing data should be sent as a separate field (for adyen) (to be implemented)
-        // For now, set to None as Hyperswitch needs to be updated to send this data properly
-        let connector_testing_data: Option<Secret<serde_json::Value>> = None;
-
+        let access_token = extract_access_token_from_state_ref(value.state.as_ref());
         Ok(Self {
             authentication_data,
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
@@ -2403,11 +2420,7 @@ impl
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
-        let access_token = value
-            .state
-            .as_ref()
-            .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
+        let access_token = extract_access_token_from_state_ref(value.state.as_ref());
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -2472,14 +2485,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             .map(AccessTokenResponseData::from);
 
         // Extract access token from state if present
-        let access_token = value
-            .state
-            .and_then(|state| state.access_token)
-            .map(|token| AccessTokenResponseData {
-                access_token: token.token,
-                token_type: token.token_type,
-                expires_in: token.expires_in_seconds,
-            });
+        let access_token = extract_access_token_from_state(value.state);
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -3814,14 +3820,7 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Extract access token from state if present
-        let access_token = value
-            .state
-            .and_then(|state| state.access_token)
-            .map(|token| AccessTokenResponseData {
-                access_token: token.token,
-                token_type: token.token_type,
-                expires_in: token.expires_in_seconds,
-            });
+        let access_token = extract_access_token_from_state(value.state);
 
         Ok(RefundFlowData {
             connector_request_reference_id: extract_connector_request_reference_id(
@@ -3892,14 +3891,7 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Extract access token from state if present
-        let access_token = value
-            .state
-            .and_then(|state| state.access_token)
-            .map(|token| AccessTokenResponseData {
-                access_token: token.token,
-                token_type: token.token_type,
-                expires_in: token.expires_in_seconds,
-            });
+        let access_token = extract_access_token_from_state(value.state);
 
         Ok(RefundFlowData {
             connector_request_reference_id: extract_connector_request_reference_id(
@@ -5059,14 +5051,7 @@ impl
             .map(AccessTokenResponseData::from);
 
         // Extract access token from state if present
-        let access_token = value
-            .state
-            .and_then(|state| state.access_token)
-            .map(|token| AccessTokenResponseData {
-                access_token: token.token,
-                token_type: token.token_type,
-                expires_in: token.expires_in_seconds,
-            });
+        let access_token = extract_access_token_from_state(value.state);
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
