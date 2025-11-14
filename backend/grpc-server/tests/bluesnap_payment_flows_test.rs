@@ -259,7 +259,6 @@ async fn test_health() {
             .await
             .expect("Health check failed");
         let health_response = response.into_inner();
-        println!("Health check response: {:?}", health_response);
         assert_eq!(health_response.status, 1);
     });
 }
@@ -276,8 +275,6 @@ async fn test_payment_authorization_auto_capture() {
             .await
             .expect("Payment authorization failed");
         let authorize_response = response.into_inner();
-
-        println!("Authorization response: {:?}", authorize_response);
 
         assert!(authorize_response.transaction_id.is_some());
         let status = PaymentStatus::try_from(authorize_response.status).unwrap();
@@ -303,8 +300,6 @@ async fn test_payment_authorization_manual_capture() {
             .expect("Payment authorization failed");
         let authorize_response = response.into_inner();
 
-        println!("Authorization response: {:?}", authorize_response);
-
         assert!(authorize_response.transaction_id.is_some());
         let transaction_id = authorize_response
             .transaction_id
@@ -323,11 +318,6 @@ async fn test_payment_authorization_manual_capture() {
             status
         );
 
-        println!(
-            "Proceeding with capture for transaction ID: {}",
-            transaction_id
-        );
-
         let capture_request = create_payment_capture_request(&transaction_id, amount);
         let mut capture_req = Request::new(capture_request);
         add_bluesnap_metadata(&mut capture_req);
@@ -337,8 +327,6 @@ async fn test_payment_authorization_manual_capture() {
             .await
             .expect("Payment capture failed");
         let capture_result = capture_response.into_inner();
-
-        println!("Capture response: {:?}", capture_result);
 
         let capture_status = PaymentStatus::try_from(capture_result.status).unwrap();
         assert!(
@@ -376,16 +364,12 @@ async fn test_payment_sync() {
             })
             .expect("Failed to extract transaction ID");
 
-        println!("Created payment with transaction ID: {}", transaction_id);
-
         let sync_request = create_payment_sync_request(&transaction_id, amount);
         let mut sync_req = Request::new(sync_request);
         add_bluesnap_metadata(&mut sync_req);
 
         let sync_response = client.get(sync_req).await.expect("Payment sync failed");
         let sync_result = sync_response.into_inner();
-
-        println!("Sync response: {:?}", sync_result);
 
         assert_eq!(
             sync_result
@@ -425,8 +409,6 @@ async fn test_refund() {
             })
             .expect("Failed to extract transaction ID");
 
-        println!("Created payment with transaction ID: {}", transaction_id);
-
         let refund_amount = amount / 2;
         let refund_request = create_refund_request(&transaction_id, amount, refund_amount);
         let mut refund_req = Request::new(refund_request);
@@ -434,8 +416,6 @@ async fn test_refund() {
 
         let refund_response = client.refund(refund_req).await.expect("Refund failed");
         let refund_result = refund_response.into_inner();
-
-        println!("Refund response: {:?}", refund_result);
 
         assert!(!refund_result.refund_id.is_empty());
         let refund_status = RefundStatus::try_from(refund_result.status).unwrap();
@@ -472,8 +452,6 @@ async fn test_refund_sync() {
                 })
                 .expect("Failed to extract transaction ID");
 
-            println!("Created payment with transaction ID: {}", transaction_id);
-
             let refund_amount = amount / 2;
             let refund_request = create_refund_request(&transaction_id, amount, refund_amount);
             let mut refund_req = Request::new(refund_request);
@@ -484,8 +462,6 @@ async fn test_refund_sync() {
 
             let refund_id = &refund_result.refund_id;
 
-            println!("Created refund with refund ID: {}", refund_id);
-
             let refund_sync_request = create_refund_sync_request(&transaction_id, refund_id);
             let mut refund_sync_req = Request::new(refund_sync_request);
             add_bluesnap_metadata(&mut refund_sync_req);
@@ -495,8 +471,6 @@ async fn test_refund_sync() {
                 .await
                 .expect("Refund sync failed");
             let refund_sync_result = refund_sync_response.into_inner();
-
-            println!("Refund sync response: {:?}", refund_sync_result);
 
             assert_eq!(&refund_sync_result.refund_id, refund_id);
         });
@@ -527,16 +501,12 @@ async fn test_payment_void() {
             })
             .expect("Failed to extract transaction ID");
 
-        println!("Created payment with transaction ID: {}", transaction_id);
-
         let void_request = create_payment_void_request(&transaction_id, amount);
         let mut void_req = Request::new(void_request);
         add_bluesnap_metadata(&mut void_req);
 
         let void_response = client.void(void_req).await.expect("Payment void failed");
         let void_result = void_response.into_inner();
-
-        println!("Void response: {:?}", void_result);
 
         let void_status = PaymentStatus::try_from(void_result.status).unwrap();
         assert!(
