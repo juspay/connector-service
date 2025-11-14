@@ -1339,6 +1339,17 @@ pub struct ConnectorCustomerResponse {
     pub connector_customer_id: String,
 }
 
+#[derive(Debug, Clone)]
+pub struct MandateRevokeRequestData {
+    pub mandate_id: Secret<String>,
+    pub connector_mandate_id: Option<Secret<String>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MandateRevokeResponseData {
+    pub mandate_status: common_enums::MandateStatus,
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct RefundSyncData {
     pub connector_transaction_id: String,
