@@ -810,6 +810,7 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
         match value {
             common_enums::PaymentMethodType::Credit => Ok(Self::Card),
             common_enums::PaymentMethodType::Debit => Ok(Self::Card),
+            common_enums::PaymentMethodType::UnspecifiedCardType => Ok(Self::Card),
             common_enums::PaymentMethodType::Klarna => Ok(Self::Klarna),
             common_enums::PaymentMethodType::Affirm => Ok(Self::Affirm),
             common_enums::PaymentMethodType::AfterpayClearpay => Ok(Self::AfterpayClearpay),
