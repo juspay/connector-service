@@ -256,7 +256,7 @@ impl<
             _ => None,
         };
         Ok(Self {
-            initial_amount: item.router_data.request.amount,
+            initial_amount: item.router_data.request.amount.get_amount_as_i64(),
             currency: item.router_data.request.currency,
             channel: NexinetsChannel::Ecom,
             product,

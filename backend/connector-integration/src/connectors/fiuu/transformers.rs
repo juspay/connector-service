@@ -436,7 +436,7 @@ pub struct FiuuApplePayData {
     txn_channel: TxnChannel,
     cc_month: Secret<String>,
     cc_year: Secret<String>,
-    cc_token: Secret<String>,
+    cc_token: CardNumber,
     eci: Option<String>,
     token_cryptogram: Secret<String>,
     token_type: FiuuTokenType,
@@ -862,8 +862,12 @@ impl<
     fn try_from(decrypt_data: Box<ApplePayPredecryptData>) -> Result<Self, Self::Error> {
         Ok(Self::FiuuApplePayData(Box::new(FiuuApplePayData {
             txn_channel: TxnChannel::Creditan,
-            cc_month: decrypt_data.get_expiry_month()?,
-            cc_year: decrypt_data.get_four_digit_expiry_year()?,
+            cc_month: decrypt_data.get_expiry_month().change_context(
+                errors::ConnectorError::InvalidDataFormat {
+                    field_name: "expiration_month",
+                },
+            )?,
+            cc_year: decrypt_data.get_four_digit_expiry_year(),
             cc_token: decrypt_data.application_primary_account_number,
             eci: decrypt_data.payment_data.eci_indicator,
             token_cryptogram: decrypt_data.payment_data.online_payment_cryptogram,
