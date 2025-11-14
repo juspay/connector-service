@@ -940,8 +940,10 @@ pub fn get_phonepe_error_status(error_code: &str) -> Option<common_enums::Attemp
 pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
     serde_json::to_value(serde_json::json!({
         NEXT_ACTION_DATA: NextActionData::WaitScreenInstructions
-    })).map_err(|e| {
+    }))
+    .map_err(|e| {
         tracing::error!("Failed to serialize wait screen metadata: {}", e);
         e
-    }).ok()
+    })
+    .ok()
 }
