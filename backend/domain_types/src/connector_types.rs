@@ -78,6 +78,7 @@ pub enum ConnectorEnum {
     Payload,
     Fiservemea,
     Datatrans,
+    Bluesnap,
     Authipay,
 }
 
@@ -121,6 +122,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Payload => Ok(Self::Payload),
             grpc_api_types::payments::Connector::Fiservemea => Ok(Self::Fiservemea),
             grpc_api_types::payments::Connector::Datatrans => Ok(Self::Datatrans),
+            grpc_api_types::payments::Connector::Bluesnap => Ok(Self::Bluesnap),
             grpc_api_types::payments::Connector::Authipay => Ok(Self::Authipay),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {

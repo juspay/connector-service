@@ -101,5 +101,8 @@ pub use self::fiservemea::Fiservemea;
 pub mod datatrans;
 pub use self::datatrans::Datatrans;
 
+pub mod bluesnap;
+pub use self::bluesnap::Bluesnap;
+
 pub mod authipay;
 pub use self::authipay::Authipay;

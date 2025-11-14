@@ -43,6 +43,8 @@ mock_server_url = "http://localhost:3000/mockGateway"
 psync = "GW_TXN_SYNC"
 
 [connectors]
+bluesnap.base_url = "https://sandbox.bluesnap.com"
+bluesnap.secondary_base_url = "https://sandpay.bluesnap.com"
 authipay.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
 fiservemea.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
 datatrans.base_url = "https://api.sandbox.datatrans.com"
