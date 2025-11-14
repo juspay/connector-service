@@ -2124,12 +2124,12 @@ impl PaymentService for Payments {
                     // Check if connector supports access tokens
                     let should_do_access_token = connector_data.connector.should_do_access_token();
 
-                    // PSync is a subsequent flow - EXPECT access token from Hyperswitch, don't create it
+                    // Conditional token generation - ONLY if not provided in request
                     let payment_flow_data = if should_do_access_token {
                         let access_token_data = match cached_access_token {
                             Some((token, expires_in)) => {
-                                // Use cached token
-                                tracing::info!("Using cached access token from Hyperswitch for PSync flow");
+                                // If provided cached token - use it, don't generate new one
+                                tracing::info!("Using cached access token from Hyperswitch");
                                 Some(AccessTokenResponseData {
                                     access_token: token,
                                     token_type: None,
@@ -2137,20 +2137,41 @@ impl PaymentService for Payments {
                                 })
                             }
                             None => {
-                                // PSync flow should receive token from Hyperswitch (forwarded from Authorize)
-                                // Don't try to create a new one - fail fast with clear error
-                                tracing::error!(
-                                    "Access token not provided by Hyperswitch for PSync flow. \
-                                    Connector {} requires OAuth but token was not forwarded from Authorize flow.",
-                                    connector.to_string()
+                                // No cached token - generate fresh one
+                                tracing::info!(
+                                    "No cached access token found, generating new token"
                                 );
-                                return Err(tonic::Status::failed_precondition(
-                                    format!(
-                                        "Access token required for {} PSync flow but not provided by Hyperswitch. \
-                                        Token should be forwarded from Authorize flow.",
-                                        connector
-                                    )
-                                ));
+                                let event_params = EventParams {
+                                    _connector_name: &connector.to_string(),
+                                    _service_name: &service_name,
+                                    request_id,
+                                    lineage_ids,
+                                    reference_id,
+                                    shadow_mode: metadata_payload.shadow_mode,
+                                };
+
+                                let access_token_data = Box::pin(self.handle_access_token(
+                                    connector_data.clone(),
+                                    &payment_flow_data,
+                                    metadata_payload.connector_auth_type.clone(),
+                                    &metadata_payload.connector.to_string(),
+                                    &service_name,
+                                    event_params,
+                                ))
+                                .await
+                                .map_err(|e| {
+                                    let message = e.error_message.unwrap_or_else(|| {
+                                        "Access token creation failed".to_string()
+                                    });
+                                    tonic::Status::internal(message)
+                                })?;
+
+                                tracing::info!(
+                                    "Access token created successfully with expiry: {:?}",
+                                    access_token_data.expires_in
+                                );
+
+                                Some(access_token_data)
                             }
                         };
 
