@@ -82,7 +82,7 @@ pub struct MifinityClient {
 pub struct MifinityAddress {
     address_line1: Secret<String>,
     country_code: enums::CountryAlpha2,
-    city: String,
+    city: Secret<String>,
 }
 
 impl<
