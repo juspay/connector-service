@@ -551,7 +551,7 @@ impl<
             false => TxnType::Auts,
         };
         let return_url = item.router_data.request.router_return_url.clone();
-        let non_3ds = match item.router_data.request.enrolled_for_3ds {
+        let non_3ds = match item.router_data.resource_common_data.is_three_ds() {
             false => 1,
             true => 0,
         };
@@ -757,7 +757,7 @@ impl<
         ),
     ) -> Result<Self, Self::Error> {
         let (mps_token_status, customer_email) = (Some(3), None);
-        let non_3ds = match item.request.enrolled_for_3ds {
+        let non_3ds = match item.resource_common_data.is_three_ds() {
             false => 1,
             true => 0,
         };

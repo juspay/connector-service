@@ -124,7 +124,7 @@ pub enum AuthType {
 #[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Address {
-    city: String,
+    city: Secret<String>,
     country: common_enums::CountryAlpha2,
     house_number_or_name: Secret<String>,
     postal_code: Secret<String>,

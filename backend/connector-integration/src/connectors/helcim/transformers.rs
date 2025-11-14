@@ -80,7 +80,7 @@ pub struct HelcimBillingAddress {
     #[serde(skip_serializing_if = "Option::is_none")]
     street2: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    city: Option<String>,
+    city: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     email: Option<common_utils::pii::Email>,
 }

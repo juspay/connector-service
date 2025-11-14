@@ -103,3 +103,6 @@ pub use self::paysafe::Paysafe;
 
 pub mod datatrans;
 pub use self::datatrans::Datatrans;
+
+pub mod authipay;
+pub use self::authipay::Authipay;

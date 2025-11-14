@@ -436,8 +436,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.result_code.to_string(),
-            message: response.class_description.clone(),
-            reason: Some(response.message.clone()),
+            message: response.message.clone(),
+            reason: Some(response.message),
             attempt_status,
             connector_transaction_id: None,
             network_advice_code: None,

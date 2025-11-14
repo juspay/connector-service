@@ -3363,7 +3363,7 @@ pub struct ErrorResponse {
 #[derive(Debug, Default, Eq, PartialEq, Serialize)]
 pub struct StripeShippingAddress {
     #[serde(rename = "shipping[address][city]")]
-    pub city: Option<String>,
+    pub city: Option<Secret<String>>,
     #[serde(rename = "shipping[address][country]")]
     pub country: Option<common_enums::CountryAlpha2>,
     #[serde(rename = "shipping[address][line1]")]
@@ -3389,7 +3389,7 @@ pub struct StripeBillingAddress {
     #[serde(rename = "payment_method_data[billing_details][name]")]
     pub name: Option<Secret<String>>,
     #[serde(rename = "payment_method_data[billing_details][address][city]")]
-    pub city: Option<String>,
+    pub city: Option<Secret<String>>,
     #[serde(rename = "payment_method_data[billing_details][address][line1]")]
     pub address_line1: Option<Secret<String>>,
     #[serde(rename = "payment_method_data[billing_details][address][line2]")]

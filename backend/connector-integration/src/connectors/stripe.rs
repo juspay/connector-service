@@ -319,11 +319,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             code: response
                 .error
                 .code
-                .clone()
                 .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
             message: response
                 .error
-                .code
+                .message
+                .clone()
                 .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
             reason: response.error.message.map(|message| {
                 response
