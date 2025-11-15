@@ -359,12 +359,9 @@ pub struct SubMerchant {
 }
 
 #[derive(Default, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct WorldpayPartialRequest {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub value: Option<PaymentValue>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reference: Option<String>,
+    pub value: PaymentValue,
+    pub reference: String,
 }
 
 // Type aliases to avoid duplicate template structs in macro generation
