@@ -100,3 +100,6 @@ pub use self::fiservemea::Fiservemea;
 
 pub mod datatrans;
 pub use self::datatrans::Datatrans;
+
+pub mod ebanx;
+pub use self::ebanx::Ebanx;

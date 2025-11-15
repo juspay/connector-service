@@ -21,6 +21,7 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+ebanx.base_url = "https://api.ebanx.com"
 fiservemea.base_url = "https://prod.emea.api.fiservapps.com/ipp/payments-gateway/v2/payments"
 datatrans.base_url = "https://api.datatrans.com"
 adyen.base_url = "https://{{merchant_endpoint_prefix}}-checkout-live.adyenpayments.com/checkout/"
