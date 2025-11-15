@@ -496,7 +496,7 @@ impl<
                 .router_data
                 .resource_common_data
                 .connector_request_reference_id
-                .clone(),
+                .replace('_', "-"),
             customer: None,
         })
     }
@@ -618,7 +618,7 @@ impl<
                 .router_data
                 .resource_common_data
                 .connector_request_reference_id
-                .clone(),
+                .replace('_', "-"),
             customer: None,
         })
     }
@@ -824,7 +824,7 @@ impl<F, T>
             MinorUnit,
         ),
     ) -> Result<Self, Self::Error> {
-        let (router_data, optional_correlation_id, amount) = item;
+        let (router_data, optional_correlation_id, _amount) = item;
         let (description, redirection_data, mandate_reference, network_txn_id, error) = router_data
             .response
             .other_fields
@@ -911,12 +911,7 @@ impl<F, T>
             PaymentOutcome::FraudHighRisk => Some("Transaction marked as high risk".to_string()),
             _ => None,
         };
-        let status = if amount == MinorUnit::zero() && worldpay_status == PaymentOutcome::Authorized
-        {
-            enums::AttemptStatus::Charged
-        } else {
-            enums::AttemptStatus::from(worldpay_status.clone())
-        };
+        let status = enums::AttemptStatus::from(worldpay_status.clone());
 
         // Extract linkData for 3DS flows and store in metadata with stage indicator
         let connector_metadata = match &router_data.response.other_fields {
@@ -1035,18 +1030,19 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        // Always include both reference and value for both full and partial captures
+        // Always include value field for both full and partial captures (same as Hyperswitch)
+        // Worldpay's /partialSettlements endpoint requires the value field
+        // Replace underscores with hyphens as Worldpay only accepts alphanumeric and hyphens
         Ok(Self {
-            reference: Some(
-                item.router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
-            ),
-            value: Some(PaymentValue {
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .replace('_', "-"),
+            value: PaymentValue {
                 amount: item.router_data.request.minor_amount_to_capture,
                 currency: item.router_data.request.currency,
-            }),
+            },
         })
     }
 }
@@ -1104,11 +1100,11 @@ impl<F>
     ) -> Result<Self, Self::Error> {
         let (item, amount) = req;
         Ok(Self {
-            reference: Some(item.request.refund_id.clone()),
-            value: Some(PaymentValue {
+            reference: item.request.refund_id.replace('_', "-"),
+            value: PaymentValue {
                 amount,
                 currency: item.request.currency,
-            }),
+            },
         })
     }
 }
@@ -1181,11 +1177,11 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            reference: Some(item.router_data.request.refund_id.clone()),
-            value: Some(PaymentValue {
+            reference: item.router_data.request.refund_id.replace('_', "-"),
+            value: PaymentValue {
                 amount: item.router_data.request.minor_refund_amount,
                 currency: item.router_data.request.currency,
-            }),
+            },
         })
     }
 }
