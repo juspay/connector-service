@@ -496,7 +496,7 @@ impl<
                 .router_data
                 .resource_common_data
                 .connector_request_reference_id
-                .replace('_', "-"),
+                .clone(),
             customer: None,
         })
     }
@@ -618,7 +618,7 @@ impl<
                 .router_data
                 .resource_common_data
                 .connector_request_reference_id
-                .replace('_', "-"),
+                .clone(),
             customer: None,
         })
     }
