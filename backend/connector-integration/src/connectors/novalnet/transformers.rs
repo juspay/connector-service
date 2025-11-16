@@ -80,6 +80,7 @@ pub struct NovalnetPaymentsRequestCustomer {
     mobile: Option<Secret<String>>,
     billing: Option<NovalnetPaymentsRequestBilling>,
     no_nc: i64,
+    birth_date: Option<String>, // Mandatory for SEPA Guarentee Payment
 }
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct NovalnetCard<
@@ -168,7 +169,6 @@ pub struct NovalnetPaymentsRequestTransaction<
     error_return_url: Option<String>,
     enforce_3d: Option<i8>, //NOTE: Needed for CREDITCARD, GOOGLEPAY
     create_token: Option<i8>,
-    scheme_tid: Option<Secret<String>>, // Card network's transaction ID
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -292,6 +292,7 @@ impl<
             billing: Some(billing),
             // no_nc is used to indicate if minimal customer data is passed or not
             no_nc: MINIMAL_CUSTOMER_DATA_PASSED,
+            birth_date: Some(String::from("1992-06-10")),
         };
 
         let lang = item
@@ -342,7 +343,6 @@ impl<
                     payment_data: Some(novalnet_card),
                     enforce_3d,
                     create_token,
-                    scheme_tid: None,
                 };
 
                 Ok(Self {
@@ -383,7 +383,6 @@ impl<
                         payment_data: Some(novalnet_google_pay),
                         enforce_3d,
                         create_token,
-                        scheme_tid: None,
                     };
 
                     Ok(Self {
@@ -412,7 +411,6 @@ impl<
                         })),
                         enforce_3d: None,
                         create_token,
-                        scheme_tid: None,
                     };
 
                     Ok(Self {
@@ -439,7 +437,6 @@ impl<
                         payment_data: None,
                         enforce_3d: None,
                         create_token,
-                        scheme_tid: None,
                     };
                     Ok(Self {
                         merchant,
@@ -1919,6 +1916,7 @@ impl<
             billing: Some(billing),
             // no_nc is used to indicate if minimal customer data is passed or not
             no_nc: MINIMAL_CUSTOMER_DATA_PASSED,
+            birth_date: Some(String::from("1992-06-10")),
         };
 
         let lang = item
@@ -1962,7 +1960,6 @@ impl<
                     payment_data: Some(novalnet_card),
                     enforce_3d,
                     create_token,
-                    scheme_tid: None,
                 };
 
                 Ok(Self {
@@ -2004,7 +2001,6 @@ impl<
                         payment_data: Some(novalnet_google_pay),
                         enforce_3d,
                         create_token,
-                        scheme_tid: None,
                     };
 
                     Ok(Self {
@@ -2033,7 +2029,6 @@ impl<
                         })),
                         enforce_3d: None,
                         create_token,
-                        scheme_tid: None,
                     };
 
                     Ok(Self {
@@ -2081,7 +2076,6 @@ impl<
                         payment_data: None,
                         enforce_3d: None,
                         create_token,
-                        scheme_tid: None,
                     };
 
                     Ok(Self {
@@ -2193,6 +2187,7 @@ impl<
             billing: Some(billing),
             // no_nc is used to indicate if minimal customer data is passed or not
             no_nc: MINIMAL_CUSTOMER_DATA_PASSED,
+            birth_date: Some(String::from("1992-06-10")),
         };
 
         let lang = item
@@ -2245,7 +2240,6 @@ impl<
                     payment_data: Some(novalnet_mandate_data),
                     enforce_3d,
                     create_token: None,
-                    scheme_tid: None,
                 };
 
                 Ok(Self {
