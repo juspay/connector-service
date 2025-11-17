@@ -5,9 +5,9 @@
 use cards::CardNumber;
 use grpc_server::{app, configs};
 mod common;
+mod utils;
 use std::{
     collections::HashMap,
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -24,19 +24,13 @@ use grpc_api_types::{
         RefundStatus,
     },
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use tonic::{transport::Channel, Request};
 
 // Constants for Braintree connector
 const CONNECTOR_NAME: &str = "braintree";
 const AUTH_TYPE: &str = "signature-key";
 const MERCHANT_ID: &str = "merchant_17555143863";
-
-// Environment variable names for API credentials (can be set or overridden with
-// provided values)
-const BRAINTREE_API_KEY_ENV: &str = "TEST_BRAINTREE_API_KEY";
-const BRAINTREE_KEY1_ENV: &str = "TEST_BRAINTREE_KEY1";
-const BRAINTREE_API_SECRET_ENV: &str = "TEST_BRAINTREE_API_SECRET";
 
 // Test card data
 const TEST_AMOUNT: i64 = 1000;
@@ -57,13 +51,17 @@ fn get_timestamp() -> u64 {
 
 // Helper function to add Braintree metadata headers to a request
 fn add_braintree_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables - throw error if not set
-    let api_key = env::var(BRAINTREE_API_KEY_ENV)
-        .expect("TEST_BRAINTREE_API_KEY environment variable is required");
-    let key1 =
-        env::var(BRAINTREE_KEY1_ENV).expect("TEST_BRAINTREE_KEY1 environment variable is required");
-    let api_secret = env::var(BRAINTREE_API_SECRET_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable {BRAINTREE_API_SECRET_ENV} must be set"));
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load braintree credentials");
+
+    let (api_key, key1, api_secret) = match auth {
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
+            api_key,
+            key1,
+            api_secret,
+        } => (api_key.expose(), key1.expose(), api_secret.expose()),
+        _ => panic!("Expected SignatureKey auth type for braintree"),
+    };
 
     request.metadata_mut().append(
         "x-connector",
@@ -93,6 +91,18 @@ fn add_braintree_metadata<T>(request: &mut Request<T>) {
         format!("test_request_{}", get_timestamp())
             .parse()
             .expect("Failed to parse x-request-id"),
+    );
+
+    request.metadata_mut().append(
+        "x-tenant-id",
+        "default".parse().expect("Failed to parse x-tenant-id"),
+    );
+
+    request.metadata_mut().append(
+        "x-connector-request-reference-id",
+        format!("conn_ref_{}", get_timestamp())
+            .parse()
+            .expect("Failed to parse x-connector-request-reference-id"),
     );
 }
 
@@ -163,12 +173,12 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
         request_ref_id: None,
-        access_token: None,
         // all_keys_required: None,
         capture_method: None,
         handle_response: None,
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
+        state: None,
     }
 }
 
@@ -198,9 +208,9 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         }),
         all_keys_required: None,
         browser_info: None,
-        access_token: None,
         amount: None,
         currency: None,
+        ..Default::default()
     }
 }
 
@@ -244,7 +254,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         }),
         browser_info: None,
         refund_metadata,
-        access_token: None,
+        state: None,
     }
 }
 
@@ -466,7 +476,9 @@ async fn test_payment_void() {
 }
 
 // Test refund flow - handles both success and error cases
+// Ignored as refund status in Settling or Settled state may take time in Braintree sandbox.
 #[tokio::test]
+#[ignore]
 async fn test_refund() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // Add delay of 16 seconds
@@ -517,7 +529,9 @@ async fn test_refund() {
 }
 
 // Test refund sync flow - runs as a separate test since refund + sync is complex
+// Ignored as refund status in Settling or Settled state may take time in Braintree sandbox.
 #[tokio::test]
+#[ignore]
 async fn test_refund_sync() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         grpc_test!(refund_client, RefundServiceClient<Channel>, {

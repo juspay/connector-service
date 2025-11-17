@@ -1,5 +1,8 @@
 [default]
 check-filename = true
+extend-ignore-re = [
+    "[0-9a-f]{7,40}", # ignore git commit hashes
+]
 
 [default.extend-identifiers]
 ACI = "ACI" # Name of a connector
@@ -11,3 +14,4 @@ iin = "iin" # iin
 PN = "PN" # Pitcairn Islands
 jus = "jus" # Juspay
 FPR = "FPR" # Fraud Prevention Rules
+

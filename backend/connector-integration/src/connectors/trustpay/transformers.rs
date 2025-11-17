@@ -1286,7 +1286,7 @@ fn get_mandatory_fields<
         .as_ref()
         .ok_or_else(utils::missing_field_err("billing.address"))?;
     Ok(TrustpayMandatoryParams {
-        billing_city: billing_address.get_city()?.to_owned(),
+        billing_city: billing_address.get_city()?.peek().to_owned(),
         billing_country: billing_address.get_country()?.to_owned(),
         billing_street1: billing_address.get_line1()?.to_owned(),
         billing_postcode: billing_address.get_zip()?.to_owned(),

@@ -80,6 +80,7 @@ pub struct NovalnetPaymentsRequestCustomer {
     mobile: Option<Secret<String>>,
     billing: Option<NovalnetPaymentsRequestBilling>,
     no_nc: i64,
+    birth_date: Option<String>, // Mandatory for SEPA Guarantee Payment
 }
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct NovalnetCard<
@@ -168,7 +169,6 @@ pub struct NovalnetPaymentsRequestTransaction<
     error_return_url: Option<String>,
     enforce_3d: Option<i8>, //NOTE: Needed for CREDITCARD, GOOGLEPAY
     create_token: Option<i8>,
-    scheme_tid: Option<Secret<String>>, // Card network's transaction ID
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -260,8 +260,7 @@ impl<
             city: item
                 .router_data
                 .resource_common_data
-                .get_optional_billing_city()
-                .map(Secret::new),
+                .get_optional_billing_city(),
             zip: item
                 .router_data
                 .resource_common_data
@@ -293,6 +292,7 @@ impl<
             billing: Some(billing),
             // no_nc is used to indicate if minimal customer data is passed or not
             no_nc: MINIMAL_CUSTOMER_DATA_PASSED,
+            birth_date: Some(String::from("1992-06-10")),
         };
 
         let lang = item
@@ -303,7 +303,11 @@ impl<
         let custom = NovalnetCustom { lang };
         let hook_url = item.router_data.request.get_webhook_url()?;
         let return_url = item.router_data.request.get_router_return_url()?;
-        let create_token = None;
+        let create_token = if item.router_data.request.is_mandate_payment() {
+            Some(CREATE_TOKEN_REQUIRED)
+        } else {
+            None
+        };
 
         let amount = item
             .connector
@@ -343,7 +347,6 @@ impl<
                     payment_data: Some(novalnet_card),
                     enforce_3d,
                     create_token,
-                    scheme_tid: None,
                 };
 
                 Ok(Self {
@@ -384,7 +387,6 @@ impl<
                         payment_data: Some(novalnet_google_pay),
                         enforce_3d,
                         create_token,
-                        scheme_tid: None,
                     };
 
                     Ok(Self {
@@ -413,7 +415,6 @@ impl<
                         })),
                         enforce_3d: None,
                         create_token,
-                        scheme_tid: None,
                     };
 
                     Ok(Self {
@@ -440,7 +441,6 @@ impl<
                         payment_data: None,
                         enforce_3d: None,
                         create_token,
-                        scheme_tid: None,
                     };
                     Ok(Self {
                         merchant,
@@ -705,7 +705,15 @@ impl<
                             })
                             .map(Box::new),
                         connector_metadata: None,
-                        network_txn_id: None,
+                        network_txn_id: item.response.transaction.and_then(|data| {
+                            data.payment_data
+                                .and_then(|payment_data| match payment_data {
+                                    NovalnetResponsePaymentData::Card(card) => {
+                                        card.scheme_tid.map(|tid| tid.expose())
+                                    }
+                                    NovalnetResponsePaymentData::Paypal(_) => None,
+                                })
+                        }),
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
@@ -817,7 +825,15 @@ impl<
                             })
                             .map(Box::new),
                         connector_metadata: None,
-                        network_txn_id: None,
+                        network_txn_id: item.response.transaction.and_then(|data| {
+                            data.payment_data
+                                .and_then(|payment_data| match payment_data {
+                                    NovalnetResponsePaymentData::Card(card) => {
+                                        card.scheme_tid.map(|tid| tid.expose())
+                                    }
+                                    NovalnetResponsePaymentData::Paypal(_) => None,
+                                })
+                        }),
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
@@ -906,7 +922,15 @@ impl
                             })
                             .map(Box::new),
                         connector_metadata: None,
-                        network_txn_id: None,
+                        network_txn_id: item.response.transaction.and_then(|data| {
+                            data.payment_data
+                                .and_then(|payment_data| match payment_data {
+                                    NovalnetResponsePaymentData::Card(card) => {
+                                        card.scheme_tid.map(|tid| tid.expose())
+                                    }
+                                    NovalnetResponsePaymentData::Paypal(_) => None,
+                                })
+                        }),
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
@@ -997,6 +1021,7 @@ pub struct NovalnetResponseCard {
     pub cc_3d: Option<Secret<u8>>,
     pub last_four: Option<Secret<String>>,
     pub token: Option<Secret<String>>,
+    pub scheme_tid: Option<Secret<String>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -1402,7 +1427,15 @@ impl<F> TryFrom<ResponseRouterData<NovalnetPSyncResponse, Self>>
                             })
                             .map(Box::new),
                         connector_metadata: None,
-                        network_txn_id: None,
+                        network_txn_id: item.response.transaction.and_then(|data| {
+                            data.payment_data
+                                .and_then(|payment_data| match payment_data {
+                                    NovalnetResponsePaymentData::Card(card) => {
+                                        card.scheme_tid.map(|tid| tid.expose())
+                                    }
+                                    NovalnetResponsePaymentData::Paypal(_) => None,
+                                })
+                        }),
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
@@ -1859,8 +1892,7 @@ impl<
             city: item
                 .router_data
                 .resource_common_data
-                .get_optional_billing_city()
-                .map(Secret::new),
+                .get_optional_billing_city(),
             zip: item
                 .router_data
                 .resource_common_data
@@ -1888,6 +1920,7 @@ impl<
             billing: Some(billing),
             // no_nc is used to indicate if minimal customer data is passed or not
             no_nc: MINIMAL_CUSTOMER_DATA_PASSED,
+            birth_date: Some(String::from("1992-06-10")),
         };
 
         let lang = item
@@ -1931,7 +1964,6 @@ impl<
                     payment_data: Some(novalnet_card),
                     enforce_3d,
                     create_token,
-                    scheme_tid: None,
                 };
 
                 Ok(Self {
@@ -1973,7 +2005,6 @@ impl<
                         payment_data: Some(novalnet_google_pay),
                         enforce_3d,
                         create_token,
-                        scheme_tid: None,
                     };
 
                     Ok(Self {
@@ -2002,7 +2033,6 @@ impl<
                         })),
                         enforce_3d: None,
                         create_token,
-                        scheme_tid: None,
                     };
 
                     Ok(Self {
@@ -2050,7 +2080,6 @@ impl<
                         payment_data: None,
                         enforce_3d: None,
                         create_token,
-                        scheme_tid: None,
                     };
 
                     Ok(Self {
@@ -2130,8 +2159,7 @@ impl<
             city: item
                 .router_data
                 .resource_common_data
-                .get_optional_billing_city()
-                .map(Secret::new),
+                .get_optional_billing_city(),
             zip: item
                 .router_data
                 .resource_common_data
@@ -2163,6 +2191,7 @@ impl<
             billing: Some(billing),
             // no_nc is used to indicate if minimal customer data is passed or not
             no_nc: MINIMAL_CUSTOMER_DATA_PASSED,
+            birth_date: Some(String::from("1992-06-10")),
         };
 
         let lang = item
@@ -2215,7 +2244,6 @@ impl<
                     payment_data: Some(novalnet_mandate_data),
                     enforce_3d,
                     create_token: None,
-                    scheme_tid: None,
                 };
 
                 Ok(Self {
@@ -2305,6 +2333,14 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                             minor_amount_captured: None,
                             amount_captured: None,
                             error_reason: None,
+                            network_txn_id: response.payment_data.and_then(|payment_data| {
+                                match payment_data {
+                                    NovalnetResponsePaymentData::Card(card) => {
+                                        card.scheme_tid.map(|tid| tid.expose())
+                                    }
+                                    NovalnetResponsePaymentData::Paypal(_) => None,
+                                }
+                            }),
                             transformation_status:
                                 common_enums::WebhookTransformationStatus::Complete,
                         })
@@ -2322,6 +2358,7 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                         minor_amount_captured: None,
                         amount_captured: None,
                         error_reason: None,
+                        network_txn_id: None,
                         transformation_status: common_enums::WebhookTransformationStatus::Complete,
                     }),
                 }

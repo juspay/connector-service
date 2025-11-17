@@ -4,9 +4,10 @@ use domain_types::{connector_types::ConnectorEnum, payment_method_data::PaymentM
 use interfaces::connector_types::BoxedConnector;
 
 use crate::connectors::{
-    Aci, Adyen, Authorizedotnet, Bluecode, Braintree, Cashfree, Cashtocode, Checkout, Cryptopay,
-    Cybersource, Dlocal, Elavon, Fiserv, Fiuu, Helcim, Mifinity, Nexinets, Noon, Novalnet, Paytm,
-    Payu, Phonepe, Placetopay, Rapyd, Razorpay, RazorpayV2, Stripe, Trustpay, Volt, Xendit,
+    Aci, Adyen, Authipay, Authorizedotnet, Bluecode, Braintree, Cashfree, Cashtocode, Celero,
+    Checkout, Cryptopay, Cybersource, Datatrans, Dlocal, Elavon, Fiserv, Fiservemea, Fiuu, Helcim,
+    Mifinity, Nexinets, Noon, Novalnet, Payload, Paytm, Payu, Phonepe, Placetopay, Rapyd, Razorpay,
+    RazorpayV2, Silverflow, Stripe, Trustpay, Volt, Worldpay, Worldpayvantiv, Xendit,
 };
 
 #[derive(Clone)]
@@ -51,6 +52,11 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Bluecode => Box::new(Bluecode::new()),
             ConnectorEnum::Cryptopay => Box::new(Cryptopay::new()),
             ConnectorEnum::Helcim => Box::new(Helcim::new()),
+            ConnectorEnum::Authipay => Box::new(Authipay::new()),
+            ConnectorEnum::Fiservemea => Box::new(Fiservemea::new()),
+            ConnectorEnum::Datatrans => Box::new(Datatrans::new()),
+            ConnectorEnum::Silverflow => Box::new(Silverflow::new()),
+            ConnectorEnum::Celero => Box::new(Celero::new()),
             ConnectorEnum::Dlocal => Box::new(Dlocal::new()),
             ConnectorEnum::Placetopay => Box::new(Placetopay::new()),
             ConnectorEnum::Rapyd => Box::new(Rapyd::new()),
@@ -58,6 +64,9 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Trustpay => Box::new(Trustpay::new()),
             ConnectorEnum::Stripe => Box::new(Stripe::new()),
             ConnectorEnum::Cybersource => Box::new(Cybersource::new()),
+            ConnectorEnum::Worldpay => Box::new(Worldpay::new()),
+            ConnectorEnum::Worldpayvantiv => Box::new(Worldpayvantiv::new()),
+            ConnectorEnum::Payload => Box::new(Payload::new()),
         }
     }
 }

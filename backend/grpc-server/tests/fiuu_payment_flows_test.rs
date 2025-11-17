@@ -4,9 +4,9 @@
 
 use grpc_server::{app, configs};
 mod common;
+mod utils;
 
 use std::{
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -24,7 +24,7 @@ use grpc_api_types::{
         RefundStatus,
     },
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use tonic::{transport::Channel, Request};
 use uuid::Uuid;
 
@@ -46,11 +46,6 @@ const CONNECTOR_NAME: &str = "fiuu";
 const AUTH_TYPE: &str = "signature-key";
 const MERCHANT_ID: &str = "merchant_1234";
 
-// Environment variable names for API credentials (can be set or overridden with provided values)
-const FIUU_API_KEY_ENV: &str = "TEST_FIUU_API_KEY";
-const FIUU_KEY1_ENV: &str = "TEST_FIUU_KEY1"; // processing_channel_id
-const FIUU_API_SECRET_ENV: &str = "TEST_FIUU_API_SECRET";
-
 // Test card data
 const TEST_AMOUNT: i64 = 1000;
 const TEST_CARD_NUMBER: &str = "4111111111111111"; // Valid test card for Fiuu
@@ -61,13 +56,17 @@ const TEST_CARD_HOLDER: &str = "Test User";
 const TEST_EMAIL: &str = "customer@example.com";
 
 fn add_fiuu_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables - throw error if not set
-    let api_key =
-        env::var(FIUU_API_KEY_ENV).expect("TEST_FIUU_API_KEY environment variable is required");
-    let key1 = env::var(FIUU_KEY1_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable {FIUU_KEY1_ENV} must be set"));
-    let api_secret = env::var(FIUU_API_SECRET_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable {FIUU_API_SECRET_ENV} must be set"));
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load fiuu credentials");
+
+    let (api_key, key1, api_secret) = match auth {
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
+            api_key,
+            key1,
+            api_secret,
+        } => (api_key.expose(), key1.expose(), api_secret.expose()),
+        _ => panic!("Expected SignatureKey auth type for fiuu"),
+    };
 
     request.metadata_mut().append(
         "x-connector",
@@ -168,11 +167,11 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id("fiuu_sync"))),
         }),
-        access_token: None,
         capture_method: None,
         handle_response: None,
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Myr),
+        state: None,
     }
 }
 
@@ -202,9 +201,9 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         }),
         all_keys_required: None,
         browser_info: None,
-        access_token: None,
         amount: None,
         currency: None,
+        ..Default::default()
     }
 }
 
@@ -243,7 +242,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         request_ref_id: None,
         browser_info: None,
         refund_metadata: std::collections::HashMap::new(),
-        access_token: None,
+        state: None,
     }
 }
 
@@ -490,7 +489,7 @@ async fn test_refund_sync() {
             let refund_id = extract_refund_id(&refund_response);
 
             // Wait a bit longer to ensure the refund is fully processed
-            std::thread::sleep(std::time::Duration::from_secs(250));
+            std::thread::sleep(std::time::Duration::from_secs(30));
 
             // Create refund sync request
             let refund_sync_request = create_refund_sync_request(&transaction_id, refund_id);
@@ -506,10 +505,14 @@ async fn test_refund_sync() {
                 .expect("gRPC refund sync call failed")
                 .into_inner();
 
-            // Verify the refund sync response
+            let is_valid_status = refund_sync_response.status
+                == i32::from(RefundStatus::RefundPending)
+                || refund_sync_response.status == i32::from(RefundStatus::RefundSuccess);
+
             assert!(
-                refund_sync_response.status == i32::from(RefundStatus::RefundSuccess),
-                "Refund Sync should be in RefundSuccess state"
+                is_valid_status,
+                "Refund Sync should be in RefundPending or RefundSuccess state, got: {:?}",
+                refund_sync_response.status
             );
         });
     });

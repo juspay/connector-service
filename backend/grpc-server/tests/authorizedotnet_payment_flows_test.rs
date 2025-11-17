@@ -5,13 +5,13 @@
 #![allow(dead_code)]
 
 use grpc_server::{app, configs};
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 mod common;
+mod utils;
 
 use std::{
     any::Any,
     collections::HashMap,
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -46,12 +46,6 @@ fn random_name() -> String {
 
 // Constants for AuthorizeDotNet connector
 const CONNECTOR_NAME: &str = "authorizedotnet";
-
-// Environment variable names for API credentials (can be set or overridden with provided values)
-const AUTHORIZENET_API_KEY_ENV: &str = "AUTHORIZENET_API_KEY";
-const AUTHORIZENET_KEY1_ENV: &str = "AUTHORIZENET_KEY1";
-
-// No default values - environment variables are required
 
 // Test card data matching working grpcurl payload
 const TEST_AMOUNT: i64 = 102; // Amount from working grpcurl
@@ -91,11 +85,16 @@ fn generate_unique_request_ref_id(prefix: &str) -> String {
 
 // Helper function to add AuthorizeDotNet metadata headers to a request
 fn add_authorizenet_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables (required)
-    let api_key = env::var(AUTHORIZENET_API_KEY_ENV)
-        .expect("AUTHORIZENET_API_KEY environment variable must be set to run tests");
-    let key1 = env::var(AUTHORIZENET_KEY1_ENV)
-        .expect("AUTHORIZENET_KEY1 environment variable must be set to run tests");
+    // Get API credentials using the common credential loading utility
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load Authorize.Net credentials");
+
+    let (api_key, key1) = match auth {
+        domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
+            (api_key.expose(), key1.expose())
+        }
+        _ => panic!("Expected BodyKey auth type for Authorize.Net"),
+    };
 
     request.metadata_mut().append(
         "x-connector",
@@ -201,13 +200,19 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         minor_amount: REPEAT_AMOUNT,
         merchant_order_reference_id: Some(format!("repeat_order_{}", get_timestamp())),
         metadata,
-        access_token: None,
         webhook_url: Some("https://your-webhook-url.com/payments/webhook".to_string()),
         capture_method: None,
         email: None,
         browser_info: None,
         test_mode: None,
         payment_method_type: None,
+        merchant_account_metadata: HashMap::new(),
+        state: None,
+        recurring_mandate_payment_data: None,
+        address: None,
+        connector_customer_id: None,
+        description: None,
+        ..Default::default()
     }
 }
 
@@ -393,11 +398,11 @@ fn create_payment_get_request(transaction_id: &str) -> PaymentServiceGetRequest 
     PaymentServiceGetRequest {
         transaction_id: Some(transaction_id_obj),
         request_ref_id: Some(request_ref_id),
-        access_token: None,
         capture_method: None,
         handle_response: None,
         amount: TEST_AMOUNT,
         currency: 146, // Currency value from working grpcurl
+        state: None,
     }
 }
 
@@ -417,10 +422,10 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         amount_to_capture: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
-        metadata: HashMap::new(),
+        connector_metadata: HashMap::new(),
         browser_info: None,
-        access_token: None,
         capture_method: None,
+        state: None,
     }
 }
 
@@ -440,9 +445,9 @@ fn create_void_request(transaction_id: &str) -> PaymentServiceVoidRequest {
         cancellation_reason: None,
         all_keys_required: None,
         browser_info: None,
-        access_token: None,
         amount: None,
         currency: None,
+        ..Default::default()
     }
 }
 
@@ -486,7 +491,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         metadata: HashMap::new(),
         refund_metadata,
         browser_info: None,
-        access_token: None,
+        state: None,
     }
 }
 
@@ -507,7 +512,7 @@ fn create_refund_get_request(transaction_id: &str, refund_id: &str) -> RefundSer
         browser_info: None,
         refund_reason: None,
         refund_metadata: HashMap::new(),
-        access_token: None,
+        state: None,
     }
 }
 

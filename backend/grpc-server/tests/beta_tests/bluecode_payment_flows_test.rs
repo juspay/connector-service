@@ -4,10 +4,10 @@
 
 use grpc_server::{app, configs};
 mod common;
+mod utils;
 
 use std::{
     collections::HashMap,
-    env,
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -21,16 +21,12 @@ use grpc_api_types::{
         PaymentStatus, WalletPaymentMethodType,
     },
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use rand::{distributions::Alphanumeric, Rng};
 use tonic::{transport::Channel, Request};
 
-// Constants for Fiserv connector
+// Constants for Bluecode connector
 const CONNECTOR_NAME: &str = "bluecode";
-
-// Environment variable names for API credentials (can be set or overridden with provided values)
-const BLUECODE_API_KEY_ENV: &str = "TEST_BLUECODE_API_KEY_ENV";
-const BLUECODE_SHOP_NAME_ENV: &str = "TEST_BLUECODE_SHOP_NAME_ENV";
 
 // Test card data
 const TEST_AMOUNT: i64 = 1000;
@@ -43,13 +39,23 @@ fn get_timestamp() -> u64 {
         .as_secs()
 }
 
-// Helper function to add Fiserv metadata headers to a request
+// Helper function to add Bluecode metadata headers to a request
 fn add_bluecode_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables - throw error if not set
-    let api_key = env::var(BLUECODE_API_KEY_ENV)
-        .expect("TEST_BLUECODE_API_KEY_ENV environment variable is required");
-    let shop_name = env::var(BLUECODE_SHOP_NAME_ENV)
-        .expect("TEST_BLUECODE_SHOP_NAME_ENV environment variable is required");
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load bluecode credentials");
+
+    let api_key = match auth {
+        domain_types::router_data::ConnectorAuthType::HeaderKey { api_key } => api_key.expose(),
+        _ => panic!("Expected HeaderKey auth type for bluecode"),
+    };
+
+    // Get the shop_name from metadata
+    let metadata = utils::credential_utils::load_connector_metadata(CONNECTOR_NAME)
+        .expect("Failed to load bluecode metadata");
+    let shop_name = metadata
+        .get("shop_name")
+        .expect("shop_name not found in bluecode metadata")
+        .clone();
 
     request.metadata_mut().append(
         "x-connector",
@@ -221,9 +227,13 @@ fn create_payment_authorize_request(
     // Set capture method
     // request.capture_method = Some(i32::from(CaptureMethod::from(capture_method)));
 
-    // Get terminal_id for metadata
-    let shop_name = env::var(BLUECODE_SHOP_NAME_ENV)
-        .expect("BLUECODE_SHOP_NAME environment variable is required");
+    // Get shop_name for metadata
+    let metadata = utils::credential_utils::load_connector_metadata(CONNECTOR_NAME)
+        .expect("Failed to load bluecode metadata");
+    let shop_name = metadata
+        .get("shop_name")
+        .expect("shop_name not found in bluecode metadata")
+        .clone();
 
     // Create connector metadata as a proper JSON object
     let mut connector_metadata = HashMap::new();
@@ -243,7 +253,6 @@ fn create_payment_authorize_request(
 // Helper function to create a payment sync request
 fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
-        access_token: None,
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
@@ -255,6 +264,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         // all_keys_required: None,
         amount: TEST_AMOUNT,
         currency: 146, // Currency value from working grpcurl
+        state: None,
     }
 }
 

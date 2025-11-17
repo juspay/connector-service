@@ -240,6 +240,26 @@ impl Event {
                     .insert("reference_id".to_string(), masked_ref);
             });
     }
+
+    pub fn set_grpc_error_response(&mut self, tonic_error: &tonic::Status) {
+        self.status_code = Some(tonic_error.code().into());
+        let error_body = serde_json::json!({
+            "grpc_code": i32::from(tonic_error.code()),
+            "grpc_code_name": format!("{:?}", tonic_error.code())
+        });
+        self.response_data =
+            MaskedSerdeValue::from_masked_optional(&error_body, "grpc_error_response");
+    }
+
+    pub fn set_grpc_success_response<R: Serialize>(&mut self, response: &R) {
+        self.status_code = Some(0);
+        self.response_data =
+            MaskedSerdeValue::from_masked_optional(response, "grpc_success_response");
+    }
+
+    pub fn set_connector_response<R: Serialize>(&mut self, response: &R) {
+        self.response_data = MaskedSerdeValue::from_masked_optional(response, "connector_response");
+    }
 }
 
 #[derive(strum::Display)]
@@ -250,6 +270,7 @@ pub enum FlowName {
     Refund,
     Capture,
     Void,
+    VoidPostCapture,
     Psync,
     Rsync,
     AcceptDispute,
@@ -277,6 +298,7 @@ impl FlowName {
             Self::Refund => "Refund",
             Self::Capture => "Capture",
             Self::Void => "Void",
+            Self::VoidPostCapture => "VoidPostCapture",
             Self::Psync => "Psync",
             Self::Rsync => "Rsync",
             Self::AcceptDispute => "AcceptDispute",

@@ -1,7 +1,9 @@
 #![allow(clippy::expect_used)]
-
+#![allow(clippy::panic)]
 use grpc_server::{app, configs};
+use hyperswitch_masking::ExposeInterface;
 mod common;
+mod utils;
 use grpc_api_types::payments::{
     payment_service_client::PaymentServiceClient,
     webhook_response_content::Content as GrpcWebhookContent, DisputeStage as GrpcDisputeStage,
@@ -78,14 +80,20 @@ async fn process_webhook_and_get_response(
             body: request_body_bytes,
         }),
         webhook_secrets: None,
-        access_token: None,
+        state: None,
     });
 
-    let api_key = std::env::var("API_KEY").unwrap_or_else(|_| "test_adyen_api_key".to_string());
-    let key1 =
-        std::env::var("ADYEN_MERCHANT_ACCOUNT").unwrap_or_else(|_| "test_merchant_acc".to_string());
-    let api_secret =
-        std::env::var("ADYEN_WEBHOOK_HMAC_KEY").unwrap_or_else(|_| "test_hmac_key".to_string());
+    let auth = utils::credential_utils::load_connector_auth("adyen")
+        .expect("Failed to load adyen credentials");
+
+    let (api_key, key1, api_secret) = match auth {
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
+            api_key,
+            key1,
+            api_secret,
+        } => (api_key.expose(), key1.expose(), api_secret.expose()),
+        _ => panic!("Expected SignatureKey auth type for adyen"),
+    };
 
     request.metadata_mut().append(
         "x-connector",

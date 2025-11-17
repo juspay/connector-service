@@ -5,14 +5,14 @@ use common_utils::{
         self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2, X_SHADOW_MODE,
     },
     errors::CustomResult,
-    events::{Event, FlowName, MaskedSerdeValue},
+    events::{Event, EventStage, FlowName, MaskedSerdeValue},
     lineage::LineageIds,
 };
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute,
         PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SetupMandate, SubmitEvidence, Void,
+        SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types,
     errors::{ApiError, ApplicationErrorResponse},
@@ -24,6 +24,7 @@ use hyperswitch_masking;
 use tonic::metadata;
 
 use crate::{configs, error::ResultExtGrpc, request::RequestData};
+use std::collections::HashMap;
 
 // Helper function to map flow markers to flow names
 pub fn flow_marker_to_flow_name<F>() -> FlowName
@@ -40,6 +41,8 @@ where
         FlowName::Rsync
     } else if type_id == std::any::TypeId::of::<Void>() {
         FlowName::Void
+    } else if type_id == std::any::TypeId::of::<VoidPC>() {
+        FlowName::VoidPostCapture
     } else if type_id == std::any::TypeId::of::<Refund>() {
         FlowName::Refund
     } else if type_id == std::any::TypeId::of::<Capture>() {
@@ -268,7 +271,7 @@ pub fn auth_from_metadata(
         "temporary-auth" => Ok(ConnectorAuthType::TemporaryAuth),
         "currency-auth-key" => {
             let auth_key_map_str = parse_metadata(metadata, X_AUTH_KEY_MAP)?;
-            let auth_key_map: std::collections::HashMap<
+            let auth_key_map: HashMap<
                 common_enums::enums::Currency,
                 common_utils::pii::SecretSerdeValue,
             > = serde_json::from_str(auth_key_map_str).change_context(
@@ -429,60 +432,77 @@ where
     R: serde::Serialize + std::fmt::Debug + hyperswitch_masking::ErasedMaskSerialize,
 {
     let current_span = tracing::Span::current();
-
-    // Create RequestData from grpc request
-    let request_data = RequestData::from_grpc_request(request, config.clone())?;
-
-    let masked_headers = request_data.masked_metadata.get_all_masked();
-    tracing::debug!("Request headers: {:?}", masked_headers);
-
-    log_before_initialization(&request_data, service_name).into_grpc_status()?;
     let start_time = tokio::time::Instant::now();
-
     let masked_request_data =
-        MaskedSerdeValue::from_masked_optional(&request_data.payload, "grpc_request");
+        MaskedSerdeValue::from_masked_optional(request.get_ref(), "grpc_request");
+    let mut event_metadata_payload = None;
+    let mut event_headers = HashMap::new();
 
-    // Extract metadata_payload before moving request_data
-    let metadata_payload = request_data.extracted_metadata.clone();
+    let grpc_response = async {
+        let request_data = RequestData::from_grpc_request(request, config.clone())?;
+        log_before_initialization(&request_data, service_name).into_grpc_status()?;
+        event_headers = request_data.masked_metadata.get_all_masked();
+        event_metadata_payload = Some(request_data.extracted_metadata.clone());
 
-    let result = handler(request_data).await;
-    let duration = start_time.elapsed().as_millis();
-    current_span.record("response_time", duration);
-    log_after_initialization(&result);
+        let result = handler(request_data).await;
 
-    let (grpc_status_code, masked_response_data) = match &result {
-        Ok(response) => (
-            Some(0i32),
-            MaskedSerdeValue::from_masked_optional(response.get_ref(), "grpc_response"),
-        ),
-        Err(status) => {
-            let error_data = serde_json::json!({ "grpc_code": format!("{:?}", status.code()) });
-            (
-                Some(status.code().into()),
-                MaskedSerdeValue::from_masked_optional(&error_data, "grpc_error"),
-            )
-        }
-    };
+        let duration = start_time.elapsed().as_millis();
+        current_span.record("response_time", duration);
+        log_after_initialization(&result);
+        result
+    }
+    .await;
 
+    create_and_emit_grpc_event(
+        masked_request_data,
+        &grpc_response,
+        start_time,
+        flow_name,
+        &config,
+        event_metadata_payload.as_ref(),
+        event_headers,
+    );
+
+    grpc_response
+}
+
+fn create_and_emit_grpc_event<R>(
+    masked_request_data: Option<MaskedSerdeValue>,
+    grpc_response: &Result<tonic::Response<R>, tonic::Status>,
+    start_time: tokio::time::Instant,
+    flow_name: FlowName,
+    config: &configs::Config,
+    metadata_payload: Option<&MetadataPayload>,
+    masked_headers: HashMap<String, String>,
+) where
+    R: serde::Serialize,
+{
     let mut grpc_event = Event {
-        request_id: metadata_payload.request_id.clone(),
+        request_id: metadata_payload.map_or("unknown".to_string(), |md| md.request_id.clone()),
         timestamp: chrono::Utc::now().timestamp().into(),
         flow_type: flow_name,
-        connector: metadata_payload.connector.to_string(),
+        connector: metadata_payload.map_or("unknown".to_string(), |md| md.connector.to_string()),
         url: None,
-        stage: common_utils::events::EventStage::GrpcRequest,
-        latency_ms: Some(u64::try_from(duration).unwrap_or(u64::MAX)),
-        status_code: grpc_status_code,
+        stage: EventStage::GrpcRequest,
+        latency_ms: Some(u64::try_from(start_time.elapsed().as_millis()).unwrap_or(u64::MAX)),
+        status_code: None,
         request_data: masked_request_data,
-        response_data: masked_response_data,
+        response_data: None,
         headers: masked_headers,
-        additional_fields: std::collections::HashMap::new(),
-        lineage_ids: metadata_payload.lineage_ids.clone(),
+        additional_fields: HashMap::new(),
+        lineage_ids: metadata_payload
+            .map_or_else(|| LineageIds::empty(""), |md| md.lineage_ids.clone()),
     };
-    grpc_event.add_reference_id(metadata_payload.reference_id.as_deref());
-    common_utils::emit_event_with_config(grpc_event, &config.events);
 
-    result
+    grpc_event
+        .add_reference_id(metadata_payload.and_then(|metadata| metadata.reference_id.as_deref()));
+
+    match grpc_response {
+        Ok(response) => grpc_event.set_grpc_success_response(response.get_ref()),
+        Err(error) => grpc_event.set_grpc_error_response(error),
+    }
+
+    common_utils::emit_event_with_config(grpc_event, &config.events);
 }
 
 #[macro_export]
@@ -556,8 +576,22 @@ macro_rules! implement_connector_operation {
                 response: Err(domain_types::router_data::ErrorResponse::default()),
             };
 
-            // Execute connector processing
+            // Calculate flow name for dynamic flow-specific configurations
             let flow_name = $crate::utils::flow_marker_to_flow_name::<$flow_marker>();
+
+            // Get API tag for the current flow
+            // Note: Flows with payment_method_type should implement manually (e.g., authorize, psync)
+            let api_tag = self
+                .config
+                .api_tags
+                .get_tag(flow_name, None);
+
+            // Create test context if test mode is enabled
+            let test_context = self.config.test.create_test_context(&request_id).map_err(|e| {
+                tonic::Status::internal(format!("Test mode configuration error: {e}"))
+            })?;
+
+            // Execute connector processing
             let event_params = external_services::service::EventProcessingParams {
                 connector_name: &connector.to_string(),
                 service_name: &service_name,
@@ -576,6 +610,8 @@ macro_rules! implement_connector_operation {
                 event_params,
                 None,
                 common_enums::CallConnectorAction::Trigger,
+                test_context,
+                api_tag,
             )
             .await
             .switch()

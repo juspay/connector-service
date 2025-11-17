@@ -3,7 +3,7 @@ use common_utils::{types::MinorUnit, CustomResult};
 use domain_types::{
     connector_types::{
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsSyncData,
-        SetupMandateRequestData,
+        RepeatPaymentData, SetupMandateRequestData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -18,13 +18,13 @@ pub use xml_utils::preprocess_xml_response_bytes;
 
 type Error = error_stack::Report<errors::ConnectorError>;
 use common_enums::enums;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[macro_export]
 macro_rules! with_error_response_body {
     ($event_builder:ident, $response:ident) => {
         if let Some(body) = $event_builder {
-            body.set_error_response_body(&$response);
+            body.set_connector_response(&$response);
         }
     };
 }
@@ -33,7 +33,7 @@ macro_rules! with_error_response_body {
 macro_rules! with_response_body {
     ($event_builder:ident, $response:ident) => {
         if let Some(body) = $event_builder {
-            body.set_response_body(&$response);
+            body.set_connector_response(&$response);
         }
     };
 }
@@ -177,6 +177,14 @@ impl<T: PaymentMethodDataTypes> SplitPaymentData for PaymentsAuthorizeData<T> {
     }
 }
 
+impl SplitPaymentData for RepeatPaymentData {
+    fn get_split_payment_data(
+        &self,
+    ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
+        self.split_payments.clone()
+    }
+}
+
 impl SplitPaymentData for PaymentsSyncData {
     fn get_split_payment_data(
         &self,
@@ -199,6 +207,18 @@ impl<T: PaymentMethodDataTypes> SplitPaymentData for SetupMandateRequestData<T> 
     ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
         None
     }
+}
+
+pub fn serialize_to_xml_string_with_root<T: Serialize>(
+    root_name: &str,
+    data: &T,
+) -> Result<String, Error> {
+    let xml_content = quick_xml::se::to_string_with_root(root_name, data)
+        .change_context(errors::ConnectorError::RequestEncodingFailed)
+        .attach_printable("Failed to serialize XML with root")?;
+
+    let full_xml = format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>{}", xml_content);
+    Ok(full_xml)
 }
 
 pub fn get_token_expiry_month_year_2_digit_with_delimiter(

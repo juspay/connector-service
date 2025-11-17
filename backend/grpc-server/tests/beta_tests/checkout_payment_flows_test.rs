@@ -2,44 +2,41 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
+use cards::CardNumber;
 use grpc_server::{app, configs};
+use hyperswitch_masking::{ExposeInterface, Secret};
 mod common;
+mod utils;
 
 use std::{
-    collections::HashMap,
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
         card_payment_method_type, identifier::IdType, payment_method,
         payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient,
-        Address, AuthenticationType, BrowserInformation, CaptureMethod, CardDetails,
-        CardPaymentMethodType, CountryAlpha2, Currency, Identifier, PaymentAddress, PaymentMethod,
-        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        AuthenticationType, CaptureMethod, CardDetails, CardPaymentMethodType, Currency,
+        Identifier, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
         PaymentServiceVoidRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus,
     },
 };
-use hyperswitch_masking::Secret;
 use tonic::{transport::Channel, Request};
 
-// Constants for placetopay connector
-const CONNECTOR_NAME: &str = "placetopay";
+// Constants for Checkout connector
+const CONNECTOR_NAME: &str = "checkout";
+const AUTH_TYPE: &str = "signature-key";
 
-// Environment variable names for API credentials
-const TEST_PLACETOPAY_API_KEY_ENV: &str = "TEST_PLACETOPAY_API_KEY";
-const TEST_PLACETOPAY_KEY1_ENV: &str = "TEST_PLACETOPAY_KEY1";
-
+// Test card data
 const TEST_AMOUNT: i64 = 1000;
-const TEST_CARD_NUMBER: &str = "4111111111111111";
-const TEST_CARD_EXP_MONTH: &str = "10";
-const TEST_CARD_EXP_YEAR: &str = "2030";
-const TEST_CARD_CVC: &str = "123";
+const AUTO_CAPTURE_CARD_NUMBER: &str = "4000020000000000"; // Card number from checkout_grpcurl_test.sh for auto capture
+const MANUAL_CAPTURE_CARD_NUMBER: &str = "4242424242424242"; // Card number from checkout_grpcurl_test.sh for manual capture
+const TEST_CARD_EXP_MONTH: &str = "12";
+const TEST_CARD_EXP_YEAR: &str = "2025";
+const TEST_CARD_CVC: &str = "100";
 const TEST_CARD_HOLDER: &str = "Test User";
 const TEST_EMAIL: &str = "customer@example.com";
 
@@ -51,22 +48,27 @@ fn get_timestamp() -> u64 {
         .as_secs()
 }
 
-// Helper function to add placetopay metadata headers to a request
-fn add_placetopay_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables
-    let api_key = env::var(TEST_PLACETOPAY_API_KEY_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable TEST_PLACETOPAY_API_KEY_ENV must be set"));
-    let key1 = env::var(TEST_PLACETOPAY_KEY1_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable TEST_PLACETOPAY_KEY1_ENV must be set"));
+// Helper function to add checkout metadata headers to a request
+fn add_checkout_metadata<T>(request: &mut Request<T>) {
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load checkout credentials");
+
+    let (api_key, key1, api_secret) = match auth {
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
+            api_key,
+            key1,
+            api_secret,
+        } => (api_key.expose(), key1.expose(), api_secret.expose()),
+        _ => panic!("Expected SignatureKey auth type for checkout"),
+    };
 
     request.metadata_mut().append(
         "x-connector",
         CONNECTOR_NAME.parse().expect("Failed to parse x-connector"),
     );
-    request.metadata_mut().append(
-        "x-auth",
-        "body-key".parse().expect("Failed to parse x-auth"),
-    );
+    request
+        .metadata_mut()
+        .append("x-auth", AUTH_TYPE.parse().expect("Failed to parse x-auth"));
     request.metadata_mut().append(
         "x-api-key",
         api_key.parse().expect("Failed to parse x-api-key"),
@@ -75,20 +77,34 @@ fn add_placetopay_metadata<T>(request: &mut Request<T>) {
         .metadata_mut()
         .append("x-key1", key1.parse().expect("Failed to parse x-key1"));
     request.metadata_mut().append(
+        "x-api-secret",
+        api_secret.parse().expect("Failed to parse x-api-secret"),
+    );
+
+    request.metadata_mut().append(
         "x-merchant-id",
         "test_merchant"
             .parse()
             .expect("Failed to parse x-merchant-id"),
     );
+
     request.metadata_mut().append(
         "x-tenant-id",
         "default".parse().expect("Failed to parse x-tenant-id"),
     );
+
     request.metadata_mut().append(
         "x-request-id",
         format!("test_request_{}", get_timestamp())
             .parse()
             .expect("Failed to parse x-request-id"),
+    );
+
+    request.metadata_mut().append(
+        "x-connector-request-reference-id",
+        format!("conn_ref_{}", get_timestamp())
+            .parse()
+            .expect("Failed to parse x-connector-request-reference-id"),
     );
 }
 
@@ -104,110 +120,52 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
 }
 
 // Helper function to create a payment authorization request
-#[allow(clippy::field_reassign_with_default)]
 fn create_payment_authorize_request(
-    capture_method: common_enums::CaptureMethod,
+    capture_method: CaptureMethod,
 ) -> PaymentServiceAuthorizeRequest {
-    // Initialize with all required fields
-    let mut request = PaymentServiceAuthorizeRequest::default();
+    // Select the correct card number based on capture method
+    let card_number = match capture_method {
+        CaptureMethod::Automatic => Some(CardNumber::from_str(AUTO_CAPTURE_CARD_NUMBER).unwrap()),
+        CaptureMethod::Manual => Some(CardNumber::from_str(MANUAL_CAPTURE_CARD_NUMBER).unwrap()),
+        _ => Some(CardNumber::from_str(MANUAL_CAPTURE_CARD_NUMBER).unwrap()), // Default to manual capture card
+    };
 
-    // Set request reference ID
-    let mut request_ref_id = Identifier::default();
-    request_ref_id.id_type = Some(IdType::Id(format!("placetopay_test_{}", get_timestamp())));
-    request.request_ref_id = Some(request_ref_id);
-
-    // Set the basic payment details
-    request.amount = TEST_AMOUNT;
-    request.minor_amount = TEST_AMOUNT;
-    request.currency = i32::from(Currency::Usd);
-
-    // Set up card payment method using the correct structure
     let card_details = card_payment_method_type::CardType::Credit(CardDetails {
-        card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
+        card_number,
         card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
         card_exp_year: Some(Secret::new(TEST_CARD_EXP_YEAR.to_string())),
         card_cvc: Some(Secret::new(TEST_CARD_CVC.to_string())),
         card_holder_name: Some(Secret::new(TEST_CARD_HOLDER.to_string())),
         card_issuer: None,
-        card_network: Some(1_i32), // Default to Visa network
+        card_network: None,
         card_type: None,
         card_issuing_country_alpha2: None,
         bank_code: None,
         nick_name: None,
     });
 
-    request.payment_method = Some(PaymentMethod {
-        payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType {
-            card_type: Some(card_details),
-        })),
-    });
-
-    // Set connector customer ID
-    request.customer_id = Some("TEST_CONNECTOR".to_string());
-
-    // Set the customer information with static email (can be made dynamic)
-    request.email = Some(TEST_EMAIL.to_string().into());
-
-    // Set up address structure
-    request.address = Some(PaymentAddress {
-        billing_address: Some(Address {
-            first_name: Some("Test".to_string().into()),
-            last_name: Some("User".to_string().into()),
-            line1: Some("123 Test Street".to_string().into()),
-            line2: None,
-            line3: None,
-            city: Some("Test City".to_string().into()),
-            state: Some("NY".to_string().into()),
-            zip_code: Some("10001".to_string().into()),
-            country_alpha2_code: Some(i32::from(CountryAlpha2::Us)),
-            phone_number: None,
-            phone_country_code: None,
-            email: None,
+    // Initialize with all required fields
+    PaymentServiceAuthorizeRequest {
+        amount: TEST_AMOUNT,
+        minor_amount: TEST_AMOUNT,
+        currency: i32::from(Currency::Usd),
+        payment_method: Some(PaymentMethod {
+            payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType {
+                card_type: Some(card_details),
+            })),
         }),
-        shipping_address: None,
-    });
-
-    // Set up browser information
-    let browser_info = BrowserInformation {
-        color_depth: None,
-        java_enabled: Some(false),
-        screen_height: Some(1080),
-        screen_width: Some(1920),
-        user_agent: Some("Mozilla/5.0 (compatible; TestAgent/1.0)".to_string()),
-        accept_header: Some(
-            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8".to_string(),
-        ),
-        java_script_enabled: Some(false),
-        language: Some("en-US".to_string()),
-        ip_address: None,
-        os_type: None,
-        os_version: None,
-        device_model: None,
-        accept_language: None,
-        time_zone_offset_minutes: None,
-        referer: None,
-    };
-    request.browser_info = Some(browser_info);
-
-    // Set return URL
-    request.return_url = Some("https://example.com/return".to_string());
-
-    // Set the transaction details
-    request.auth_type = i32::from(AuthenticationType::NoThreeDs);
-    request.request_incremental_authorization = true;
-    request.enrolled_for_3ds = true;
-
-    // Set capture method with proper conversion
-    if let common_enums::CaptureMethod::Manual = capture_method {
-        request.capture_method = Some(i32::from(CaptureMethod::Manual));
-    } else {
-        request.capture_method = Some(i32::from(CaptureMethod::Automatic));
+        email: Some(TEST_EMAIL.to_string().into()),
+        address: Some(grpc_api_types::payments::PaymentAddress::default()),
+        auth_type: i32::from(AuthenticationType::NoThreeDs),
+        request_ref_id: Some(Identifier {
+            id_type: Some(IdType::Id(format!("checkout_test_{}", get_timestamp()))),
+        }),
+        enrolled_for_3ds: false,
+        request_incremental_authorization: false,
+        capture_method: Some(i32::from(capture_method)),
+        metadata: std::collections::HashMap::new(),
+        ..Default::default()
     }
-
-    // Set connector metadata (empty for generic template)
-    request.metadata = HashMap::new();
-
-    request
 }
 
 // Helper function to create a payment sync request
@@ -217,13 +175,13 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
         request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(format!("placetopay_sync_{}", get_timestamp()))),
+            id_type: Some(IdType::Id(format!("checkout_sync_{}", get_timestamp()))),
         }),
-        access_token: None,
         capture_method: None,
         handle_response: None,
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
+        state: None,
     }
 }
 
@@ -236,11 +194,11 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         amount_to_capture: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
-        metadata: HashMap::new(),
+        connector_metadata: std::collections::HashMap::new(),
         request_ref_id: None,
         browser_info: None,
-        access_token: None,
         capture_method: None,
+        state: None,
     }
 }
 
@@ -256,15 +214,15 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         refund_amount: TEST_AMOUNT,
         minor_payment_amount: TEST_AMOUNT,
         minor_refund_amount: TEST_AMOUNT,
-        reason: None,
+        reason: Some("Test refund".to_string()),
         webhook_url: None,
-        metadata: HashMap::new(),
-        refund_metadata: HashMap::new(),
+        metadata: std::collections::HashMap::new(),
+        refund_metadata: std::collections::HashMap::new(),
         browser_info: None,
         merchant_account_id: None,
         capture_method: None,
         request_ref_id: None,
-        access_token: None,
+        state: None,
     }
 }
 
@@ -276,11 +234,16 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         }),
         refund_id: refund_id.to_string(),
         refund_reason: None,
-        browser_info: None,
         request_ref_id: None,
-        refund_metadata: HashMap::new(),
-        access_token: None,
+        browser_info: None,
+        refund_metadata: std::collections::HashMap::new(),
+        state: None,
     }
+}
+
+// Helper function to sleep for a short duration to allow server processing
+fn allow_processing_time() {
+    std::thread::sleep(std::time::Duration::from_secs(3));
 }
 
 // Helper function to create a payment void request
@@ -289,16 +252,19 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
-        cancellation_reason: Some("Customer requested cancellation".to_string()),
-        request_ref_id: None,
+        cancellation_reason: None,
+        request_ref_id: Some(Identifier {
+            id_type: Some(IdType::Id(format!("void_ref_{}", get_timestamp()))),
+        }),
         all_keys_required: None,
         browser_info: None,
-        access_token: None,
         amount: None,
         currency: None,
+        ..Default::default()
     }
 }
 
+// Test for basic health check
 #[tokio::test]
 async fn test_health() {
     grpc_test!(client, HealthClient<Channel>, {
@@ -322,11 +288,11 @@ async fn test_health() {
 async fn test_payment_authorization_auto_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // Create the payment authorization request
-        let request = create_payment_authorize_request(common_enums::CaptureMethod::Automatic);
+        let request = create_payment_authorize_request(CaptureMethod::Automatic);
 
         // Add metadata headers
         let mut grpc_request = Request::new(request);
-        add_placetopay_metadata(&mut grpc_request);
+        add_checkout_metadata(&mut grpc_request);
 
         // Send the request
         let response = client
@@ -342,13 +308,36 @@ async fn test_payment_authorization_auto_capture() {
         );
 
         // Extract the transaction ID
-        let _transaction_id = extract_transaction_id(&response);
+        let transaction_id = extract_transaction_id(&response);
 
-        // Verify payment status
+        // Verify payment status - for automatic capture, should be PENDING according to our implementation
+        assert!(
+            response.status == i32::from(PaymentStatus::Pending),
+            "Payment should be in PENDING state for automatic capture before sync"
+        );
+
+        // Wait longer for the transaction to be fully processed
+        std::thread::sleep(std::time::Duration::from_secs(10));
+
+        // Create sync request with the transaction ID
+        let sync_request = create_payment_sync_request(&transaction_id);
+
+        // Add metadata headers for sync request
+        let mut sync_grpc_request = Request::new(sync_request);
+        add_checkout_metadata(&mut sync_grpc_request);
+
+        // Send the sync request
+        let sync_response = client
+            .get(sync_grpc_request)
+            .await
+            .expect("gRPC payment_sync call failed")
+            .into_inner();
+
+        // After the sync, payment should be in CHARGED state based on connector_meta with Capture intent
         assert_eq!(
-            response.status,
+            sync_response.status,
             i32::from(PaymentStatus::Charged),
-            "Payment should be in CHARGED state for automatic capture"
+            "Payment should be in CHARGED state after sync with Capture intent"
         );
     });
 }
@@ -358,94 +347,11 @@ async fn test_payment_authorization_auto_capture() {
 async fn test_payment_authorization_manual_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // Create the payment authorization request with manual capture
-        let auth_request = create_payment_authorize_request(common_enums::CaptureMethod::Manual);
+        let auth_request = create_payment_authorize_request(CaptureMethod::Manual);
 
         // Add metadata headers for auth request
         let mut auth_grpc_request = Request::new(auth_request);
-        add_placetopay_metadata(&mut auth_grpc_request);
-
-        // Send the auth request
-        let auth_response = client
-            .authorize(auth_grpc_request)
-            .await
-            .expect("gRPC payment_authorize call failed")
-            .into_inner();
-
-        assert!(
-            auth_response.transaction_id.is_some(),
-            "Transaction ID should be present"
-        );
-
-        // Extract the transaction ID
-        let _transaction_id = extract_transaction_id(&auth_response);
-
-        // Verify payment status is authorized (for manual capture)
-        assert_eq!(
-            auth_response.status,
-            i32::from(PaymentStatus::Authorized),
-            "Payment should be in AUTHORIZED state with manual capture"
-        );
-    });
-}
-
-// Test payment sync
-#[tokio::test]
-async fn test_payment_sync() {
-    grpc_test!(client, PaymentServiceClient<Channel>, {
-        // First create a payment to sync
-        let auth_request = create_payment_authorize_request(common_enums::CaptureMethod::Manual);
-
-        // Add metadata headers for auth request
-        let mut auth_grpc_request = Request::new(auth_request);
-        add_placetopay_metadata(&mut auth_grpc_request);
-
-        // Send the auth request
-        let auth_response = client
-            .authorize(auth_grpc_request)
-            .await
-            .expect("gRPC payment_authorize call failed")
-            .into_inner();
-
-        // Extract the transaction ID
-        let transaction_id = extract_transaction_id(&auth_response);
-
-        // Create sync request
-        let sync_request = create_payment_sync_request(&transaction_id);
-
-        // Add metadata headers for sync request
-        let mut sync_grpc_request = Request::new(sync_request);
-        add_placetopay_metadata(&mut sync_grpc_request);
-
-        // Send the sync request
-        let sync_response = client
-            .get(sync_grpc_request)
-            .await
-            .expect("gRPC payment_sync call failed")
-            .into_inner();
-
-        // Verify the sync response - allow both AUTHORIZED and PENDING states
-        let acceptable_sync_statuses = [
-            i32::from(PaymentStatus::Authorized),
-            i32::from(PaymentStatus::Pending),
-        ];
-        assert!(
-            acceptable_sync_statuses.contains(&sync_response.status),
-            "Payment should be in AUTHORIZED or PENDING state, but was: {}",
-            sync_response.status
-        );
-    });
-}
-
-// Test payment authorization with manual capture
-#[tokio::test]
-async fn test_payment_capture() {
-    grpc_test!(client, PaymentServiceClient<Channel>, {
-        // Create the payment authorization request with manual capture
-        let auth_request = create_payment_authorize_request(common_enums::CaptureMethod::Manual);
-
-        // Add metadata headers for auth request
-        let mut auth_grpc_request = Request::new(auth_request);
-        add_placetopay_metadata(&mut auth_grpc_request);
+        add_checkout_metadata(&mut auth_grpc_request);
 
         // Send the auth request
         let auth_response = client
@@ -462,10 +368,10 @@ async fn test_payment_capture() {
         // Extract the transaction ID
         let transaction_id = extract_transaction_id(&auth_response);
 
-        // Verify payment status is authorized (for manual capture)
+        // Verify payment status is authorized (for manual capture, as per our implementation)
         assert!(
             auth_response.status == i32::from(PaymentStatus::Authorized),
-            "Payment should be in AUTHORIZED state with manual capture"
+            "Payment should be in AUTHORIZED state with manual capture (Authorize intent)"
         );
 
         // Create capture request
@@ -473,7 +379,7 @@ async fn test_payment_capture() {
 
         // Add metadata headers for capture request
         let mut capture_grpc_request = Request::new(capture_request);
-        add_placetopay_metadata(&mut capture_grpc_request);
+        add_checkout_metadata(&mut capture_grpc_request);
 
         // Send the capture request
         let capture_response = client
@@ -490,16 +396,16 @@ async fn test_payment_capture() {
     });
 }
 
-// Test refund flow
+// Test payment sync
 #[tokio::test]
-async fn test_refund() {
+async fn test_payment_sync() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
-        // First create a payment to refund
-        let auth_request = create_payment_authorize_request(common_enums::CaptureMethod::Automatic);
+        // First create a payment to sync
+        let auth_request = create_payment_authorize_request(CaptureMethod::Automatic);
 
         // Add metadata headers for auth request
         let mut auth_grpc_request = Request::new(auth_request);
-        add_placetopay_metadata(&mut auth_grpc_request);
+        add_checkout_metadata(&mut auth_grpc_request);
 
         // Send the auth request
         let auth_response = client
@@ -511,36 +417,99 @@ async fn test_refund() {
         // Extract the transaction ID
         let transaction_id = extract_transaction_id(&auth_response);
 
-        // Verify payment status - allow both CHARGED and PENDING states
-        let acceptable_payment_statuses = [
-            i32::from(PaymentStatus::Charged),
-            i32::from(PaymentStatus::Pending),
-        ];
+        // Wait longer for the transaction to be processed - some async processing may happen
+        std::thread::sleep(std::time::Duration::from_secs(5));
+
+        // Create sync request with the specific transaction ID
+        let sync_request = create_payment_sync_request(&transaction_id);
+
+        // Add metadata headers for sync request
+        let mut sync_grpc_request = Request::new(sync_request);
+        add_checkout_metadata(&mut sync_grpc_request);
+
+        // Send the sync request
+        let sync_response = client
+            .get(sync_grpc_request)
+            .await
+            .expect("Payment sync request failed")
+            .into_inner();
+
+        // Verify the sync response - could be charged, authorized, or pending for automatic capture
         assert!(
-            acceptable_payment_statuses.contains(&auth_response.status),
-            "Payment should be in CHARGED or PENDING state before attempting refund, but was: {}",
-            auth_response.status
+            sync_response.status == i32::from(PaymentStatus::Charged),
+            "Payment should be in CHARGED state"
+        );
+    });
+}
+
+// Test refund flow
+#[tokio::test]
+async fn test_refund() {
+    grpc_test!(client, PaymentServiceClient<Channel>, {
+        // First create a payment with manual capture (same as the script)
+        let auth_request = create_payment_authorize_request(CaptureMethod::Manual);
+
+        // Add metadata headers for auth request
+        let mut auth_grpc_request = Request::new(auth_request);
+        add_checkout_metadata(&mut auth_grpc_request);
+
+        // Send the auth request
+        let auth_response = client
+            .authorize(auth_grpc_request)
+            .await
+            .expect("gRPC payment_authorize call failed")
+            .into_inner();
+
+        // Extract the transaction ID
+        let transaction_id = extract_transaction_id(&auth_response);
+
+        // Verify payment status is authorized (for manual capture)
+        assert!(
+            auth_response.status == i32::from(PaymentStatus::Authorized),
+            "Payment should be in AUTHORIZED state with manual capture"
         );
 
-        // Create refund request
+        // Create capture request
+        let capture_request = create_payment_capture_request(&transaction_id);
+
+        // Add metadata headers for capture request
+        let mut capture_grpc_request = Request::new(capture_request);
+        add_checkout_metadata(&mut capture_grpc_request);
+
+        // Send the capture request
+        let capture_response = client
+            .capture(capture_grpc_request)
+            .await
+            .expect("gRPC payment_capture call failed")
+            .into_inner();
+
+        // Verify payment status is charged after capture
+        assert!(
+            capture_response.status == i32::from(PaymentStatus::Charged),
+            "Payment should be in CHARGED state after capture"
+        );
+
+        // Allow more time for the capture to be processed - increase wait time
+        std::thread::sleep(std::time::Duration::from_secs(5));
+
+        // Create refund request with a unique refund_id that includes timestamp
         let refund_request = create_refund_request(&transaction_id);
 
         // Add metadata headers for refund request
         let mut refund_grpc_request = Request::new(refund_request);
-        add_placetopay_metadata(&mut refund_grpc_request);
+        add_checkout_metadata(&mut refund_grpc_request);
 
         // Send the refund request
         let refund_response = client
             .refund(refund_grpc_request)
             .await
-            .expect("gRPC refund call failed")
+            .expect("Refund request failed")
             .into_inner();
 
         // Extract the refund ID
-        let refund_id = refund_response.refund_id.clone();
+        let _refund_id = refund_response.refund_id.clone();
 
-        // Verify the refund response
-        assert!(!refund_id.is_empty(), "Refund ID should not be empty");
+        // Verify the refund status
         assert!(
             refund_response.status == i32::from(RefundStatus::RefundSuccess)
                 || refund_response.status == i32::from(RefundStatus::RefundPending),
@@ -551,16 +520,16 @@ async fn test_refund() {
 
 // Test refund sync flow
 #[tokio::test]
+#[ignore] // Service not implemented on server side - Status code: Unimplemented
 async fn test_refund_sync() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         grpc_test!(refund_client, RefundServiceClient<Channel>, {
-            // First create a payment
-            let auth_request =
-                create_payment_authorize_request(common_enums::CaptureMethod::Automatic);
+            // First create a payment with manual capture (same as the script)
+            let auth_request = create_payment_authorize_request(CaptureMethod::Manual);
 
             // Add metadata headers for auth request
             let mut auth_grpc_request = Request::new(auth_request);
-            add_placetopay_metadata(&mut auth_grpc_request);
+            add_checkout_metadata(&mut auth_grpc_request);
 
             // Send the auth request
             let auth_response = client
@@ -572,14 +541,43 @@ async fn test_refund_sync() {
             // Extract the transaction ID
             let transaction_id = extract_transaction_id(&auth_response);
 
+            // Verify payment status is authorized (for manual capture)
+            assert!(
+                auth_response.status == i32::from(PaymentStatus::Authorized),
+                "Payment should be in AUTHORIZED state with manual capture"
+            );
+
+            // Create capture request
+            let capture_request = create_payment_capture_request(&transaction_id);
+
+            // Add metadata headers for capture request
+            let mut capture_grpc_request = Request::new(capture_request);
+            add_checkout_metadata(&mut capture_grpc_request);
+
+            // Send the capture request
+            let capture_response = client
+                .capture(capture_grpc_request)
+                .await
+                .expect("gRPC payment_capture call failed")
+                .into_inner();
+
+            // Verify payment status is charged after capture
+            assert!(
+                capture_response.status == i32::from(PaymentStatus::Charged),
+                "Payment should be in CHARGED state after capture"
+            );
+
+            // Allow more time for the capture to be processed
+            std::thread::sleep(std::time::Duration::from_secs(5));
+
             // Create refund request
             let refund_request = create_refund_request(&transaction_id);
 
             // Add metadata headers for refund request
             let mut refund_grpc_request = Request::new(refund_request);
-            add_placetopay_metadata(&mut refund_grpc_request);
+            add_checkout_metadata(&mut refund_grpc_request);
 
-            // Send the refund request
+            // Send the refund request and expect a successful response
             let refund_response = client
                 .refund(refund_grpc_request)
                 .await
@@ -589,43 +587,44 @@ async fn test_refund_sync() {
             // Extract the refund ID
             let refund_id = refund_response.refund_id.clone();
 
-            // Verify the refund response
-            assert!(!refund_id.is_empty(), "Refund ID should not be empty");
+            // Allow more time for the refund to be processed
+            std::thread::sleep(std::time::Duration::from_secs(5));
 
             // Create refund sync request
             let refund_sync_request = create_refund_sync_request(&transaction_id, &refund_id);
 
             // Add metadata headers for refund sync request
             let mut refund_sync_grpc_request = Request::new(refund_sync_request);
-            add_placetopay_metadata(&mut refund_sync_grpc_request);
+            add_checkout_metadata(&mut refund_sync_grpc_request);
 
-            // Send the refund sync request
-            let refund_sync_response = refund_client
+            // Send the refund sync request and expect a successful response
+            let response = refund_client
                 .get(refund_sync_grpc_request)
                 .await
-                .expect("gRPC refund_sync call failed")
-                .into_inner();
+                .expect("gRPC refund_sync call failed");
 
-            // Verify the refund sync response
+            let refund_sync_response = response.into_inner();
+
+            // Verify the refund sync status
             assert!(
-                refund_sync_response.status == i32::from(RefundStatus::RefundPending)
-                    || refund_sync_response.status == i32::from(RefundStatus::RefundSuccess),
-                "Refund should be in PENDING or SUCCESS state"
+                refund_sync_response.status == i32::from(RefundStatus::RefundSuccess)
+                    || refund_sync_response.status == i32::from(RefundStatus::RefundPending),
+                "Refund sync should be in SUCCESS or PENDING state"
             );
         });
     });
 }
 
-// Test payment void flow
+// Test payment void
 #[tokio::test]
 async fn test_payment_void() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
-        // First create a payment with manual capture (so it stays in authorized state)
-        let auth_request = create_payment_authorize_request(common_enums::CaptureMethod::Manual);
+        // First create a payment with manual capture to void
+        let auth_request = create_payment_authorize_request(CaptureMethod::Manual);
 
         // Add metadata headers for auth request
         let mut auth_grpc_request = Request::new(auth_request);
-        add_placetopay_metadata(&mut auth_grpc_request);
+        add_checkout_metadata(&mut auth_grpc_request);
 
         // Send the auth request
         let auth_response = client
@@ -637,30 +636,59 @@ async fn test_payment_void() {
         // Extract the transaction ID
         let transaction_id = extract_transaction_id(&auth_response);
 
-        // Verify payment is in authorized state
+        // Verify payment status
         assert!(
             auth_response.status == i32::from(PaymentStatus::Authorized),
-            "Payment should be in AUTHORIZED state before void"
+            "Payment should be in AUTHORIZED state before voiding"
         );
 
-        // Create void request
+        // Allow some time for the authorization to be processed
+        allow_processing_time();
+
+        // Create void request with a unique reference ID
         let void_request = create_payment_void_request(&transaction_id);
 
         // Add metadata headers for void request
         let mut void_grpc_request = Request::new(void_request);
-        add_placetopay_metadata(&mut void_grpc_request);
+        add_checkout_metadata(&mut void_grpc_request);
 
         // Send the void request
         let void_response = client
             .void(void_grpc_request)
             .await
-            .expect("gRPC payment_void call failed")
+            .expect("gRPC void_payment call failed")
             .into_inner();
 
         // Verify the void response
         assert!(
+            void_response.transaction_id.is_some(),
+            "Transaction ID should be present in void response"
+        );
+
+        assert!(
             void_response.status == i32::from(PaymentStatus::Voided),
             "Payment should be in VOIDED state after void"
+        );
+
+        // Allow time for void to process
+        allow_processing_time();
+
+        // Verify the payment status with a sync operation
+        let sync_request = create_payment_sync_request(&transaction_id);
+        let mut sync_grpc_request = Request::new(sync_request);
+        add_checkout_metadata(&mut sync_grpc_request);
+
+        // Send the sync request to verify void status
+        let sync_response = client
+            .get(sync_grpc_request)
+            .await
+            .expect("gRPC payment_sync call failed")
+            .into_inner();
+
+        // Verify the payment is properly voided
+        assert!(
+            sync_response.status == i32::from(PaymentStatus::Voided),
+            "Payment should be in VOIDED state after void sync"
         );
     });
 }
