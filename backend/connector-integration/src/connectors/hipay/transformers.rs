@@ -1,4 +1,4 @@
-use crate::types::ResponseRouterData;
+use crate::{connectors::hipay::HipayRouterData, types::ResponseRouterData};
 use common_enums::{AttemptStatus, RefundStatus};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
@@ -273,25 +273,31 @@ pub struct HipayPaymentsRequest<T: PaymentMethodDataTypes> {
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T: PaymentMethodDataTypes>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        HipayRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T,
+        >,
     > for HipayPaymentsRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
+        item: HipayRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         use hyperswitch_masking::PeekInterface;
 
         // Get payment method - determine payment_product
-        let payment_product = match &item.request.payment_method_data {
+        let payment_product = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(_) => {
                 // Use "visa" as default for cards - could be enhanced based on card type
                 "visa".to_string()
@@ -308,13 +314,14 @@ impl<T: PaymentMethodDataTypes>
         };
 
         // Determine operation based on capture method
-        let operation = match item.request.capture_method {
+        let operation = match item.router_data.request.capture_method {
             Some(common_enums::CaptureMethod::Manual) => "Authorization".to_string(),
             _ => "Sale".to_string(), // Automatic capture or default
         };
 
         // Extract customer information
         let (firstname, lastname) = item
+            .router_data
             .resource_common_data
             .get_optional_billing_full_name()
             .map(|name| {
@@ -334,13 +341,14 @@ impl<T: PaymentMethodDataTypes>
             .unwrap_or((None, None));
 
         // Get email - convert Email type to Secret<String>
-        let email = item.request.email.as_ref().map(|e| {
+        let email = item.router_data.request.email.as_ref().map(|e| {
             use hyperswitch_masking::PeekInterface;
             Secret::new(e.peek().to_string())
         });
 
         // Get IP address
         let ipaddr = item
+            .router_data
             .request
             .browser_info
             .as_ref()
@@ -348,23 +356,24 @@ impl<T: PaymentMethodDataTypes>
             .map(|ip| ip.to_string());
 
         // Get return URLs from router data
-        let accept_url = item.request.complete_authorize_url.clone();
+        let accept_url = item.router_data.request.complete_authorize_url.clone();
         let decline_url = accept_url.clone();
         let pending_url = accept_url.clone();
         let cancel_url = accept_url.clone();
         let exception_url = accept_url.clone();
 
         // Convert amount to string (HiPay expects string with decimals)
-        use common_utils::types::AmountConvertor;
-        let amount_converter = common_utils::types::StringMajorUnitForConnector;
-        let amount = amount_converter
-            .convert(item.request.minor_amount, item.request.currency)
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
             .change_context(errors::ConnectorError::AmountConversionFailed)?
             .get_amount_as_string();
 
         // Extract card token from payment_method_token if present,
         // or from connector_customer as fallback (when token is passed via gRPC)
         let cardtoken = item
+            .router_data
             .resource_common_data
             .payment_method_token
             .as_ref()
@@ -372,10 +381,10 @@ impl<T: PaymentMethodDataTypes>
                 PaymentMethodTokenType::Token(token) => Some(token.peek().to_string()),
                 _ => None,
             })
-            .or_else(|| item.resource_common_data.connector_customer.clone());
+            .or_else(|| item.router_data.resource_common_data.connector_customer.clone());
 
         // Extract CVC for tokenized payments (HiPay requires CVC with token)
-        let card_security_code = match &item.request.payment_method_data {
+        let card_security_code = match &item.router_data.request.payment_method_data {
             PaymentMethodData::CardToken(token_data) => token_data.card_cvc.clone(),
             PaymentMethodData::Card(card_data) => Some(card_data.card_cvc.clone()),
             _ => None,
@@ -384,16 +393,18 @@ impl<T: PaymentMethodDataTypes>
         Ok(Self {
             payment_product,
             orderid: item
+                .router_data
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
             operation,
             description: item
+                .router_data
                 .request
                 .statement_descriptor
                 .clone()
                 .unwrap_or_else(|| "Payment".to_string()),
-            currency: item.request.currency.to_string(),
+            currency: item.router_data.request.currency.to_string(),
             amount,
             cardtoken,
             card_security_code,
@@ -542,32 +553,39 @@ pub struct HipayTokenRequest<T: PaymentMethodDataTypes> {
     pub multi_use: Option<String>,
 }
 
-impl<T: PaymentMethodDataTypes>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<
-        &RouterDataV2<
-            PaymentMethodToken,
-            PaymentFlowData,
-            PaymentMethodTokenizationData<T>,
-            PaymentMethodTokenResponse,
+        HipayRouterData<
+            RouterDataV2<
+                PaymentMethodToken,
+                PaymentFlowData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
+            >,
+            T,
         >,
     > for HipayTokenRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<
-            PaymentMethodToken,
-            PaymentFlowData,
-            PaymentMethodTokenizationData<T>,
-            PaymentMethodTokenResponse,
+        item: HipayRouterData<
+            RouterDataV2<
+                PaymentMethodToken,
+                PaymentFlowData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
-        match &item.request.payment_method_data {
+        match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card_data) => Ok(Self {
                 card_number: card_data.card_number.clone(),
                 card_expiry_month: card_data.card_exp_month.clone(),
                 card_expiry_year: card_data.card_exp_year.clone(),
                 card_holder: item
+                    .router_data
                     .resource_common_data
                     .get_optional_billing_full_name()
                     .unwrap_or(Secret::new("".to_string())),
@@ -741,28 +759,37 @@ pub struct HipayCaptureRequest {
     pub operation_id: Option<String>,
 }
 
-impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>
-    for HipayCaptureRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<
+        HipayRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for HipayCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        item: HipayRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         // Convert amount to string with decimals (HiPay expects decimal format)
-        use common_utils::types::AmountConvertor;
-        let amount_converter = common_utils::types::StringMajorUnitForConnector;
-        let amount = amount_converter
-            .convert(item.request.minor_amount_to_capture, item.request.currency)
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(item.router_data.request.minor_amount_to_capture, item.router_data.request.currency)
             .change_context(errors::ConnectorError::AmountConversionFailed)?
             .get_amount_as_string();
 
         Ok(Self {
             operation: "capture".to_string(),
             amount: Some(amount),
-            currency: Some(item.request.currency.to_string()),
+            currency: Some(item.router_data.request.currency.to_string()),
             operation_id: Some(
-                item.resource_common_data
+                item.router_data
+                    .resource_common_data
                     .connector_request_reference_id
                     .clone(),
             ),
@@ -842,27 +869,35 @@ pub struct HipayRefundRequest {
     pub operation_id: Option<String>,
 }
 
-impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
-    for HipayRefundRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<
+        HipayRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for HipayRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        item: HipayRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         // Convert minor unit amount to decimal format (HiPay expects decimal format)
-        use common_utils::types::AmountConvertor;
-        let amount_converter = common_utils::types::StringMajorUnitForConnector;
-        let amount = amount_converter
-            .convert(item.request.minor_refund_amount, item.request.currency)
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(item.router_data.request.minor_refund_amount, item.router_data.request.currency)
             .change_context(errors::ConnectorError::AmountConversionFailed)?
             .get_amount_as_string();
 
         Ok(Self {
             operation: "refund".to_string(),
             amount: Some(amount),
-            currency: Some(item.request.currency.to_string()),
-            operation_id: Some(item.request.refund_id.clone()),
+            currency: Some(item.router_data.request.currency.to_string()),
+            operation_id: Some(item.router_data.request.refund_id.clone()),
         })
     }
 }
@@ -944,18 +979,27 @@ pub struct HipayVoidRequest {
     pub source: Option<String>,
 }
 
-impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>
-    for HipayVoidRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<
+        HipayRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for HipayVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        item: HipayRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             operation: "cancel".to_string(),
             operation_id: Some(
-                item.resource_common_data
+                item.router_data
+                    .resource_common_data
                     .connector_request_reference_id
                     .clone(),
             ),
