@@ -44,37 +44,24 @@ impl TrustpaymentsRequestType {
     }
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum TrustpaymentsSettleStatus {
-    /// Automatic capture - will be settled automatically (value: "0")
+    /// Automatic capture - will be settled automatically
+    #[serde(rename = "0")]
     AutomaticCapture,
-    /// Settled (value: "1" or "100")
-    Settled,
-    /// Manual capture - suspended, requires manual capture (value: "2")
+    /// Settled and being processed
+    #[serde(rename = "1")]
+    SettledPending,
+    /// Fully settled and completed
+    #[serde(rename = "100")]
+    SettledComplete,
+    /// Manual capture - suspended, requires manual capture
+    #[serde(rename = "2")]
     ManualCapture,
-    /// Cancelled/Reversed (value: "3")
+    /// Cancelled/Reversed
+    #[serde(rename = "3")]
     Cancelled,
-}
-
-impl TrustpaymentsSettleStatus {
-    pub fn as_str(&self) -> &str {
-        match self {
-            Self::AutomaticCapture => "0",
-            Self::Settled => "1",
-            Self::ManualCapture => "2",
-            Self::Cancelled => "3",
-        }
-    }
-
-    pub fn from_code(s: &str) -> Option<Self> {
-        match s {
-            "0" => Some(Self::AutomaticCapture),
-            "1" | "100" => Some(Self::Settled),
-            "2" => Some(Self::ManualCapture),
-            "3" => Some(Self::Cancelled),
-            _ => None,
-        }
-    }
 }
 
 // ===== AUTHENTICATION =====
@@ -202,7 +189,7 @@ pub struct TrustpaymentsAuthResponse {
     pub authcode: Option<String>,
     pub baseamount: Option<StringMinorUnit>,
     pub currencyiso3a: Option<Currency>,
-    pub settlestatus: Option<String>,
+    pub settlestatus: Option<TrustpaymentsSettleStatus>,
     pub requesttypedescription: String,
     pub paymenttypedescription: Option<String>,
     pub maskedpan: Option<Secret<String>>,
@@ -306,7 +293,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .clone(),
             requesttypedescriptions: vec![TrustpaymentsRequestType::Auth],
             sitereference: auth.site_reference.clone(),
-            settlestatus: settlestatus.as_str().to_string(),
+            settlestatus: serde_json::to_value(&settlestatus)
+                .ok()
+                .and_then(|v| v.as_str().map(String::from))
+                .unwrap_or_else(|| "0".to_string()),
             payment_method,
         };
 
@@ -378,7 +368,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         // Map status based on settlestatus using helper function
         let status = get_status_from_settlestatus(
-            response.settlestatus.as_deref(),
+            response.settlestatus.as_ref(),
             response.authcode.as_deref(),
         );
 
@@ -460,7 +450,7 @@ pub struct TrustpaymentsTransactionRecord {
     pub authcode: Option<String>,
     pub baseamount: Option<StringMinorUnit>,
     pub currencyiso3a: Option<Currency>,
-    pub settlestatus: Option<String>,
+    pub settlestatus: Option<TrustpaymentsSettleStatus>,
     pub requesttypedescription: String,
     pub paymenttypedescription: Option<String>,
     pub maskedpan: Option<Secret<String>>,
@@ -518,11 +508,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // ===== STATUS MAPPING HELPER =====
 fn get_status_from_settlestatus(
-    settlestatus: Option<&str>,
+    settlestatus: Option<&TrustpaymentsSettleStatus>,
     authcode: Option<&str>,
 ) -> AttemptStatus {
     match settlestatus {
-        Some("0") => {
+        Some(TrustpaymentsSettleStatus::AutomaticCapture) => {
             // Automatic capture - pending settlement, will be auto-settled
             if authcode.is_some() {
                 AttemptStatus::Charged // Authorized and will be captured automatically
@@ -530,8 +520,9 @@ fn get_status_from_settlestatus(
                 AttemptStatus::Pending
             }
         }
-        Some("1") | Some("100") => AttemptStatus::Charged, // Settled
-        Some("2") => {
+        Some(TrustpaymentsSettleStatus::SettledPending) => AttemptStatus::Charged, // Settled but being processed
+        Some(TrustpaymentsSettleStatus::SettledComplete) => AttemptStatus::Charged, // Fully settled
+        Some(TrustpaymentsSettleStatus::ManualCapture) => {
             // Manual capture - suspended, requires manual capture
             if authcode.is_some() {
                 AttemptStatus::Authorized // Authorized but needs manual capture
@@ -539,8 +530,8 @@ fn get_status_from_settlestatus(
                 AttemptStatus::Pending
             }
         }
-        Some("3") => AttemptStatus::Voided, // Cancelled/Reversed
-        _ => AttemptStatus::Pending,
+        Some(TrustpaymentsSettleStatus::Cancelled) => AttemptStatus::Voided, // Cancelled/Reversed
+        None => AttemptStatus::Pending,
     }
 }
 
@@ -623,7 +614,7 @@ impl
 
         // Map status based on settlestatus
         let status = get_status_from_settlestatus(
-            record.settlestatus.as_deref(),
+            record.settlestatus.as_ref(),
             record.authcode.as_deref(),
         );
 
@@ -730,10 +721,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Trust Payments TRANSACTIONUPDATE for capture only needs settlestatus change
         // Do NOT send baseamount - it causes "Invalid updates specified" error
         // The full authorized amount will be captured automatically
+        let settlestatus = TrustpaymentsSettleStatus::AutomaticCapture;
         let updates = TrustpaymentsCaptureUpdates {
-            settlestatus: TrustpaymentsSettleStatus::AutomaticCapture
-                .as_str()
-                .to_string(),
+            settlestatus: serde_json::to_value(&settlestatus)
+                .ok()
+                .and_then(|v| v.as_str().map(String::from))
+                .unwrap_or_else(|| "0".to_string()),
             baseamount: None, // Never send amount for Trust Payments captures
         };
 
@@ -888,8 +881,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         // settlestatus="3" means Cancelled/Reversed (Void)
+        let settlestatus = TrustpaymentsSettleStatus::Cancelled;
         let updates = TrustpaymentsVoidUpdates {
-            settlestatus: TrustpaymentsSettleStatus::Cancelled.as_str().to_string(),
+            settlestatus: serde_json::to_value(&settlestatus)
+                .ok()
+                .and_then(|v| v.as_str().map(String::from))
+                .unwrap_or_else(|| "3".to_string()),
         };
 
         let request_item = TrustpaymentsVoidRequestItem {
@@ -1016,7 +1013,7 @@ pub struct TrustpaymentsRefundResponseItem {
     pub authcode: Option<String>,
     pub baseamount: Option<StringMinorUnit>,
     pub currencyiso3a: Option<Currency>,
-    pub settlestatus: Option<String>,
+    pub settlestatus: Option<TrustpaymentsSettleStatus>,
     pub requesttypedescription: String,
     pub paymenttypedescription: Option<String>,
     pub parenttransactionreference: Option<String>,
@@ -1083,7 +1080,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // ===== REFUND STATUS MAPPING HELPER =====
 fn get_refund_status_from_settlestatus(
-    settlestatus: Option<&String>,
+    settlestatus: Option<&TrustpaymentsSettleStatus>,
     errorcode: &str,
 ) -> common_enums::RefundStatus {
     use common_enums::RefundStatus;
@@ -1094,12 +1091,13 @@ fn get_refund_status_from_settlestatus(
     }
 
     // Map settlestatus to refund status
-    match settlestatus.map(|s| s.as_str()) {
-        Some("100") => RefundStatus::Success,           // Settled
-        Some("0") | Some("1") => RefundStatus::Pending, // Pending settlement or updated
-        Some("2") => RefundStatus::ManualReview,        // Suspended
-        Some("3") => RefundStatus::Failure,             // Cancelled/Reversed
-        _ => RefundStatus::Pending,
+    match settlestatus {
+        Some(TrustpaymentsSettleStatus::SettledComplete) => RefundStatus::Success, // Fully settled
+        Some(TrustpaymentsSettleStatus::AutomaticCapture) => RefundStatus::Pending, // Pending settlement
+        Some(TrustpaymentsSettleStatus::SettledPending) => RefundStatus::Pending, // Being processed
+        Some(TrustpaymentsSettleStatus::ManualCapture) => RefundStatus::ManualReview, // Suspended
+        Some(TrustpaymentsSettleStatus::Cancelled) => RefundStatus::Failure, // Cancelled/Reversed
+        None => RefundStatus::Pending,
     }
 }
 
