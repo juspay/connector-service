@@ -86,6 +86,7 @@ pub enum ConnectorEnum {
     Celero,
     Paypal,
     Stax,
+    Billwerk,
     Hipay,
     Trustpayments,
     Globalpay,
@@ -139,6 +140,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Celero => Ok(Self::Celero),
             grpc_api_types::payments::Connector::Paypal => Ok(Self::Paypal),
             grpc_api_types::payments::Connector::Stax => Ok(Self::Stax),
+            grpc_api_types::payments::Connector::Billwerk => Ok(Self::Billwerk),
             grpc_api_types::payments::Connector::Hipay => Ok(Self::Hipay),
             grpc_api_types::payments::Connector::Trustpayments => Ok(Self::Trustpayments),
             grpc_api_types::payments::Connector::Globalpay => Ok(Self::Globalpay),
@@ -1233,6 +1235,9 @@ pub enum PaymentsResponseData {
         authentication_data: Option<router_request_types::AuthenticationData>,
         connector_response_reference_id: Option<String>,
         status_code: u16,
+    },
+    TokenizationResponse {
+        token: String,
     },
 }
 
