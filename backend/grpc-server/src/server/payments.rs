@@ -2807,9 +2807,9 @@ impl PaymentService for Payments {
                             amount: 0,
                             minor_amount: 0,
                             currency: grpc_api_types::payments::Currency::Usd.into(),
-                            capture_method: Some(
-                                grpc_api_types::payments::CaptureMethod::Automatic as i32,
-                            ),
+                            capture_method: Some(i32::from(
+                                grpc_api_types::payments::CaptureMethod::Automatic,
+                            )),
                             test_mode: Some(false),
                             ..Default::default()
                         },
@@ -2855,7 +2855,7 @@ impl PaymentService for Payments {
                         access_token: access_token_data.access_token,
                         token_type: access_token_data.token_type,
                         expires_in_seconds: access_token_data.expires_in,
-                        status: grpc_api_types::payments::OperationStatus::Success as i32,
+                        status: i32::from(grpc_api_types::payments::OperationStatus::Success),
                         error_code: None,
                         error_message: None,
                         status_code: 200,
