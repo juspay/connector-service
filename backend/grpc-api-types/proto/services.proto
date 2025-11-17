@@ -52,6 +52,10 @@ service PaymentService {
   
   // Post-authentication step - used when authentication results need validation
   rpc PostAuthenticate(PaymentServicePostAuthenticateRequest) returns (PaymentServicePostAuthenticateResponse);
+
+
+  // Creates a payment method token for future payment processing.
+  rpc CreatePaymentMethodToken(PaymentServiceCreatePaymentMethodTokenRequest) returns (PaymentServiceCreatePaymentMethodTokenResponse);
 }
 
 // Service for refund-specific operations.
