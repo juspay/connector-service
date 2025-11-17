@@ -1,5 +1,5 @@
 use common_enums::{self, enums, AttemptStatus, RefundStatus};
-use common_utils::{consts, ext_traits::OptionExt, pii::Email, types::FloatMajorUnit};
+use common_utils::{consts, pii::Email, types::FloatMajorUnit};
 use domain_types::{
     connector_flow::{
         Authorize, CreateConnectorCustomer, PSync, RSync, Refund, RepeatPayment, SetupMandate,
@@ -62,17 +62,62 @@ fn get_address_line(
     address_line1.clone()
 }
 
-// Helper functions for creating RawCardNumber from string
-fn create_raw_card_number_for_default_pci(
-    card_string: String,
-) -> Result<RawCardNumber<DefaultPCIHolder>, Error> {
-    let card_number = cards::CardNumber::from_str(&card_string)
-        .change_context(ConnectorError::RequestEncodingFailed)?;
-    Ok(RawCardNumber(card_number))
-}
+// Extract credit card payment details from refund metadata
+fn get_refund_credit_card_payment(
+    connector_metadata: &Option<Secret<serde_json::Value>>,
+) -> Result<RefundPaymentDetails, Error> {
+    let metadata = connector_metadata
+        .as_ref()
+        .ok_or_else(|| {
+            error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
+                field_name: "connector_metadata",
+            })
+        })?
+        .peek();
 
-fn create_raw_card_number_for_vault_token(card_string: String) -> RawCardNumber<VaultTokenHolder> {
-    RawCardNumber(card_string)
+    // Extract creditCard field (which might be a JSON string)
+    let credit_card_str = metadata
+        .get("creditCard")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| {
+            error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
+                field_name: "creditCard"
+            })
+        })?;
+
+    // Parse the JSON string to get card details
+    let credit_card: serde_json::Value = serde_json::from_str(credit_card_str)
+        .inspect_err(|e| {
+            tracing::error!(
+                error = %e,
+                credit_card_str = %credit_card_str,
+                "Failed to parse credit card JSON"
+            );
+        })
+        .change_context(HsInterfacesConnectorError::RequestEncodingFailed)?;
+
+    let card_number = credit_card
+        .get("cardNumber")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| {
+            error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
+                field_name: "cardNumber"
+            })
+        })?
+        .to_string();
+
+    let expiration_date = credit_card
+        .get("expirationDate")
+        .and_then(|v| v.as_str())
+        .unwrap_or("XXXX")
+        .to_string();
+
+    Ok(RefundPaymentDetails {
+        credit_card: CreditCardInfo {
+            card_number,
+            expiration_date,
+        },
+    })
 }
 
 fn get_random_string() -> String {
@@ -301,7 +346,7 @@ pub struct BillTo {
     first_name: Option<Secret<String>>,
     last_name: Option<Secret<String>>,
     address: Option<Secret<String>>,
-    city: Option<String>,
+    city: Option<Secret<String>>,
     state: Option<Secret<String>>,
     zip: Option<Secret<String>>,
     country: Option<enums::CountryAlpha2>,
@@ -1256,33 +1301,33 @@ enum AuthorizedotnetRefundPaymentDetails<T: PaymentMethodDataTypes> {
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AuthorizedotnetRefundTransactionDetails<T: PaymentMethodDataTypes> {
+pub struct AuthorizedotnetRefundTransactionDetails {
     transaction_type: TransactionType,
     amount: FloatMajorUnit,
-    payment: PaymentDetails<T>,
+    currency_code: api_enums::Currency,
+    payment: RefundPaymentDetails,
     ref_trans_id: String,
 }
 
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AuthorizedotnetRefundRequest<T: PaymentMethodDataTypes> {
-    create_transaction_request: CreateTransactionRefundRequest<T>,
+pub struct AuthorizedotnetRefundRequest {
+    create_transaction_request: CreateTransactionRefundRequest,
 }
 
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateTransactionRefundRequest<T: PaymentMethodDataTypes> {
+pub struct CreateTransactionRefundRequest {
     merchant_authentication: AuthorizedotnetAuthType,
-    ref_id: Option<String>,
-    transaction_request: AuthorizedotnetRefundTransactionDetails<T>,
+    transaction_request: AuthorizedotnetRefundTransactionDetails,
 }
 
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreditCardPayment {
+pub struct RefundPaymentDetails {
     credit_card: CreditCardInfo,
 }
 
@@ -1294,90 +1339,48 @@ pub struct CreditCardInfo {
     expiration_date: String,
 }
 
-// Specific implementation for DefaultPCIHolder
-impl
+// Unified generic implementation for all payment method types
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         AuthorizedotnetRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            DefaultPCIHolder,
+            T,
         >,
-    > for AuthorizedotnetRefundRequest<DefaultPCIHolder>
+    > for AuthorizedotnetRefundRequest
 {
     type Error = Error;
 
     fn try_from(
         item: AuthorizedotnetRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            DefaultPCIHolder,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
-        // Get connector metadata which contains payment details
-        let payment_details = item
-            .router_data
-            .request
-            .refund_connector_metadata
-            .as_ref()
-            .get_required_value("refund_connector_metadata")
-            .change_context(HsInterfacesConnectorError::MissingRequiredField {
-                field_name: "refund_connector_metadata",
-            })?
-            .clone();
-
         let merchant_authentication =
             AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
 
-        // Handle the payment details which might be a JSON string or a serde_json::Value
-        let payment_details_inner = payment_details.peek();
-        let payment_details_value = match payment_details_inner {
-            serde_json::Value::String(s) => {
-                serde_json::from_str::<serde_json::Value>(s.as_str())
-                    .change_context(HsInterfacesConnectorError::RequestEncodingFailed)?
-            }
-            _ => payment_details_inner.clone(),
-        };
+        // Extract payment details from metadata using unified helper
+        let connector_metadata_secret = item
+            .router_data
+            .request
+            .connector_metadata
+            .as_ref()
+            .map(|v| Secret::new(v.clone()))
+            .ok_or_else(|| {
+                error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
+                    field_name: "connector_metadata"
+                })
+            })?;
+        let payment = get_refund_credit_card_payment(&Some(connector_metadata_secret))?;
 
-        // For refunds, we need to reconstruct the payment details from the metadata
-        let payment_details = match payment_details_value.get("payment") {
-            Some(payment_obj) => {
-                if let Some(credit_card) = payment_obj.get("creditCard") {
-                    let card_number = credit_card
-                        .get("cardNumber")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("****")
-                        .to_string();
-                    let expiration_date = credit_card
-                        .get("expirationDate")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("YYYY-MM")
-                        .to_string();
-
-                    // For DefaultPCIHolder, create a proper CardNumber
-                    let raw_card_number = create_raw_card_number_for_default_pci(card_number)?;
-
-                    let credit_card_details = CreditCardDetails {
-                        card_number: raw_card_number,
-                        expiration_date: Secret::new(expiration_date),
-                        card_code: None, // Not needed for refunds
-                    };
-                    PaymentDetails::CreditCard(credit_card_details)
-                } else {
-                    return Err(error_stack::report!(
-                        HsInterfacesConnectorError::MissingRequiredField {
-                            field_name: "credit_card_details",
-                        }
-                    ));
-                }
-            }
-            None => {
-                return Err(error_stack::report!(
-                    HsInterfacesConnectorError::MissingRequiredField {
-                        field_name: "payment_details",
-                    }
-                ));
-            }
-        };
-
-        // Build the refund transaction request with parsed payment details
+        // Build the refund transaction request
         let transaction_request = AuthorizedotnetRefundTransactionDetails {
             transaction_type: TransactionType::RefundTransaction,
             amount: item
@@ -1388,139 +1391,15 @@ impl
                     item.router_data.request.currency,
                 )
                 .change_context(ConnectorError::AmountConversionFailed)
-                .attach_printable(
-                    "Failed to convert refund amount for refund transaction (DefaultPCIHolder)",
-                )?,
-            payment: payment_details,
+                .attach_printable("Failed to convert refund amount for refund transaction")?,
+            currency_code: item.router_data.request.currency,
+            payment,
             ref_trans_id: item.router_data.request.connector_transaction_id.clone(),
         };
 
         Ok(Self {
             create_transaction_request: CreateTransactionRefundRequest {
                 merchant_authentication,
-                ref_id: Some(format!(
-                    "refund_{}",
-                    std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs()
-                )),
-                transaction_request,
-            },
-        })
-    }
-}
-
-// Specific implementation for VaultTokenHolder
-impl
-    TryFrom<
-        AuthorizedotnetRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            VaultTokenHolder,
-        >,
-    > for AuthorizedotnetRefundRequest<VaultTokenHolder>
-{
-    type Error = Error;
-
-    fn try_from(
-        item: AuthorizedotnetRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            VaultTokenHolder,
-        >,
-    ) -> Result<Self, Self::Error> {
-        // Get connector metadata which contains payment details
-        let payment_details = item
-            .router_data
-            .request
-            .refund_connector_metadata
-            .as_ref()
-            .get_required_value("refund_connector_metadata")
-            .change_context(HsInterfacesConnectorError::MissingRequiredField {
-                field_name: "refund_connector_metadata",
-            })?
-            .clone();
-
-        let merchant_authentication =
-            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
-
-        // Handle the payment details which might be a JSON string or a serde_json::Value
-        let payment_details_inner = payment_details.peek();
-        let payment_details_value = match payment_details_inner {
-            serde_json::Value::String(s) => {
-                serde_json::from_str::<serde_json::Value>(s.as_str())
-                    .change_context(HsInterfacesConnectorError::RequestEncodingFailed)?
-            }
-            _ => payment_details_inner.clone(),
-        };
-
-        // For refunds, we need to reconstruct the payment details from the metadata
-        let payment_details = match payment_details_value.get("payment") {
-            Some(payment_obj) => {
-                if let Some(credit_card) = payment_obj.get("creditCard") {
-                    let card_number = credit_card
-                        .get("cardNumber")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("****")
-                        .to_string();
-                    let expiration_date = credit_card
-                        .get("expirationDate")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("YYYY-MM")
-                        .to_string();
-
-                    // For VaultTokenHolder, use the string directly as a token
-                    let raw_card_number = create_raw_card_number_for_vault_token(card_number);
-
-                    let credit_card_details = CreditCardDetails {
-                        card_number: raw_card_number,
-                        expiration_date: Secret::new(expiration_date),
-                        card_code: None, // Not needed for refunds
-                    };
-                    PaymentDetails::CreditCard(credit_card_details)
-                } else {
-                    return Err(error_stack::report!(
-                        HsInterfacesConnectorError::MissingRequiredField {
-                            field_name: "credit_card_details",
-                        }
-                    ));
-                }
-            }
-            None => {
-                return Err(error_stack::report!(
-                    HsInterfacesConnectorError::MissingRequiredField {
-                        field_name: "payment_details",
-                    }
-                ));
-            }
-        };
-
-        // Build the refund transaction request with parsed payment details
-        let transaction_request = AuthorizedotnetRefundTransactionDetails {
-            transaction_type: TransactionType::RefundTransaction,
-            amount: item
-                .connector
-                .amount_converter
-                .convert(
-                    item.router_data.request.minor_refund_amount,
-                    item.router_data.request.currency,
-                )
-                .change_context(ConnectorError::AmountConversionFailed)
-                .attach_printable(
-                    "Failed to convert refund amount for refund transaction (VaultTokenHolder)",
-                )?,
-            payment: payment_details,
-            ref_trans_id: item.router_data.request.connector_transaction_id.clone(),
-        };
-
-        let ref_id = Some(&item.router_data.request.refund_id)
-            .filter(|id| !id.is_empty())
-            .cloned();
-        let ref_id = get_the_truncate_id(ref_id, MAX_ID_LENGTH);
-
-        Ok(Self {
-            create_transaction_request: CreateTransactionRefundRequest {
-                merchant_authentication,
-                ref_id,
                 transaction_request,
             },
         })
@@ -1681,7 +1560,7 @@ struct ShipToList {
     first_name: Option<Secret<String>>,
     last_name: Option<Secret<String>>,
     address: Option<Secret<String>>,
-    city: Option<String>,
+    city: Option<Secret<String>>,
     state: Option<Secret<String>>,
     zip: Option<Secret<String>>,
     country: Option<common_enums::CountryAlpha2>,
@@ -2454,7 +2333,14 @@ fn build_connector_metadata(
         },
     };
 
-    serde_json::to_value(payment).ok()
+    serde_json::to_value(payment)
+        .inspect_err(|e| {
+            tracing::warn!(
+                error = %e,
+                "Failed to serialize connector_metadata payment"
+            );
+        })
+        .ok()
 }
 
 type PaymentConversionResult = Result<
@@ -2970,16 +2856,6 @@ impl<
 #[serde(rename_all = "camelCase")]
 pub struct AuthorizedotnetErrorResponse {
     pub messages: ResponseMessages,
-}
-
-fn get_the_truncate_id(id: Option<String>, max_length: usize) -> Option<String> {
-    id.map(|s| {
-        if s.len() > max_length {
-            s[..max_length].to_string()
-        } else {
-            s
-        }
-    })
 }
 
 // Webhook-related structures

@@ -100,3 +100,12 @@ pub use self::fiservemea::Fiservemea;
 
 pub mod datatrans;
 pub use self::datatrans::Datatrans;
+
+pub mod authipay;
+pub use self::authipay::Authipay;
+
+pub mod silverflow;
+pub use self::silverflow::Silverflow;
+
+pub mod celero;
+pub use self::celero::Celero;
