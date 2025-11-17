@@ -2138,6 +2138,9 @@ message PaymentServiceCreateSessionTokenRequest {
   
   // State Information
   optional ConnectorState state = 6; // State data for access token storage and other connector-specific state
+
+  // Browser Information
+  optional BrowserInformation browser_info = 7; // Information about the customer's browser
 }
 
 // Response message for creating a session token

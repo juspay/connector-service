@@ -5489,6 +5489,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateSessionTokenRe
         Ok(Self {
             amount: common_utils::types::MinorUnit::new(value.minor_amount),
             currency,
+            browser_info: value
+                .browser_info
+                .map(BrowserInformation::foreign_try_from)
+                .transpose()?,
         })
     }
 }
@@ -5554,6 +5558,7 @@ impl
             vault_headers: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
+            order_details: None,
         })
     }
 }
