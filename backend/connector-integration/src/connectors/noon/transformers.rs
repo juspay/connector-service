@@ -780,7 +780,7 @@ impl<
     ) -> Result<Self, Self::Error> {
         let item = &data.router_data;
         let refund_amount = data.connector.amount_converter.convert(
-            data.router_data.request.minor_payment_amount,
+            data.router_data.request.minor_refund_amount,
             data.router_data.request.currency,
         );
         let order = NoonActionOrder {
