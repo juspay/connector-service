@@ -124,7 +124,7 @@ pub enum AuthType {
 #[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Address {
-    city: String,
+    city: Secret<String>,
     country: common_enums::CountryAlpha2,
     house_number_or_name: Secret<String>,
     postal_code: Secret<String>,
@@ -272,7 +272,7 @@ pub struct RiskData {
     #[serde(rename = "riskdata.promotionName")]
     promotion_name: Option<String>,
     #[serde(rename = "riskdata.secondaryPhoneNumber")]
-    secondary_phone_number: Option<String>,
+    secondary_phone_number: Option<Secret<String>>,
     #[serde(rename = "riskdata.timefromLogintoOrder")]
     timefrom_loginto_order: Option<String>,
     #[serde(rename = "riskdata.totalSessionTime")]
@@ -1935,7 +1935,7 @@ pub fn get_risk_data(metadata: serde_json::Value) -> Option<RiskData> {
         merchant_reference,
         payment_method,
         promotion_name,
-        secondary_phone_number,
+        secondary_phone_number: secondary_phone_number.map(Secret::new),
         timefrom_loginto_order,
         total_session_time,
         total_authorized_amount_in_last30_days,

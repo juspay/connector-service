@@ -260,8 +260,7 @@ impl<
             city: item
                 .router_data
                 .resource_common_data
-                .get_optional_billing_city()
-                .map(Secret::new),
+                .get_optional_billing_city(),
             zip: item
                 .router_data
                 .resource_common_data
@@ -1892,8 +1891,7 @@ impl<
             city: item
                 .router_data
                 .resource_common_data
-                .get_optional_billing_city()
-                .map(Secret::new),
+                .get_optional_billing_city(),
             zip: item
                 .router_data
                 .resource_common_data
@@ -2163,8 +2161,7 @@ impl<
             city: item
                 .router_data
                 .resource_common_data
-                .get_optional_billing_city()
-                .map(Secret::new),
+                .get_optional_billing_city(),
             zip: item
                 .router_data
                 .resource_common_data

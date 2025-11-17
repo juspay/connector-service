@@ -91,3 +91,15 @@ pub use self::worldpay::Worldpay;
 
 pub mod worldpayvantiv;
 pub use self::worldpayvantiv::Worldpayvantiv;
+
+pub mod payload;
+pub use self::payload::Payload;
+
+pub mod fiservemea;
+pub use self::fiservemea::Fiservemea;
+
+pub mod datatrans;
+pub use self::datatrans::Datatrans;
+
+pub mod authipay;
+pub use self::authipay::Authipay;

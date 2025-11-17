@@ -5,6 +5,7 @@ use common_enums::AttemptStatus;
 use common_utils::{
     crypto::{self, VerifySignature},
     errors::CustomResult,
+    events,
     ext_traits::ByteSliceExt,
     types::StringMajorUnit,
 };
@@ -37,7 +38,6 @@ use domain_types::{
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
 pub mod transformers;
@@ -417,7 +417,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: NoonErrorResponse = res
             .response
@@ -436,8 +436,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.result_code.to_string(),
-            message: response.class_description.clone(),
-            reason: Some(response.message.clone()),
+            message: response.message.clone(),
+            reason: Some(response.message),
             attempt_status,
             connector_transaction_id: None,
             network_advice_code: None,

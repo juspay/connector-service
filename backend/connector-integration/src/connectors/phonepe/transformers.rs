@@ -20,6 +20,13 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
+pub const NEXT_ACTION_DATA: &str = "nextActionData";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum NextActionData {
+    WaitScreenInstructions,
+}
+
 use super::constants;
 use crate::{connectors::phonepe::PhonepeRouterData, types::ResponseRouterData};
 
@@ -44,7 +51,7 @@ struct PhonepePaymentRequestPayload {
     #[serde(rename = "merchantTransactionId")]
     merchant_transaction_id: String,
     #[serde(rename = "merchantUserId", skip_serializing_if = "Option::is_none")]
-    merchant_user_id: Option<String>,
+    merchant_user_id: Option<Secret<String>>,
     amount: MinorUnit,
     #[serde(rename = "callbackUrl")]
     callback_url: String,
@@ -289,7 +296,7 @@ impl<
                 .resource_common_data
                 .customer_id
                 .clone()
-                .map(|id| id.get_string_repr().to_string()),
+                .map(|id| Secret::new(id.get_string_repr().to_string())),
             amount: amount_in_minor_units,
             callback_url: router_data.request.get_webhook_url()?,
             mobile_number,
@@ -435,7 +442,7 @@ impl<
                 .resource_common_data
                 .customer_id
                 .clone()
-                .map(|id| id.get_string_repr().to_string()),
+                .map(|id| Secret::new(id.get_string_repr().to_string())),
             amount: amount_in_minor_units,
             callback_url: router_data.request.get_webhook_url()?,
             mobile_number,
@@ -561,7 +568,7 @@ impl<
                             },
                             redirection_data: None,
                             mandate_reference: None,
-                            connector_metadata: None,
+                            connector_metadata: get_wait_screen_metadata(),
                             network_txn_id: None,
                             connector_response_reference_id: Some(
                                 data.merchant_transaction_id.clone(),
@@ -595,12 +602,13 @@ impl<
 
             // Map specific PhonePe error codes to attempt status if needed
             let attempt_status = match error_code.as_str() {
-                "INVALID_TRANSACTION_ID" => Some(common_enums::AttemptStatus::Failure),
-                "TRANSACTION_NOT_FOUND" => Some(common_enums::AttemptStatus::Failure),
-                "INVALID_REQUEST" => Some(common_enums::AttemptStatus::Failure),
-                "INTERNAL_SERVER_ERROR" => Some(common_enums::AttemptStatus::Failure),
-                "PAYMENT_PENDING" => Some(common_enums::AttemptStatus::Pending),
-                "PAYMENT_DECLINED" => Some(common_enums::AttemptStatus::Failure),
+                "INVALID_TRANSACTION_ID"
+                | "TRANSACTION_NOT_FOUND"
+                | "INVALID_REQUEST"
+                | "PAYMENT_DECLINED" => Some(common_enums::AttemptStatus::Failure),
+                "INTERNAL_SERVER_ERROR" | "PAYMENT_PENDING" => {
+                    Some(common_enums::AttemptStatus::Pending)
+                }
                 _ => Some(common_enums::AttemptStatus::Pending),
             };
 
@@ -812,14 +820,14 @@ impl
                     // Map PhonePe response codes to payment statuses based on documentation
                     let status = match response.code.as_str() {
                         "PAYMENT_SUCCESS" => common_enums::AttemptStatus::Charged,
-                        "PAYMENT_PENDING" => common_enums::AttemptStatus::Pending,
-                        "PAYMENT_ERROR" | "PAYMENT_DECLINED" | "TIMED_OUT" => {
-                            common_enums::AttemptStatus::Failure
+                        "PAYMENT_PENDING" | "TIMED_OUT" | "INTERNAL_SERVER_ERROR" => {
+                            common_enums::AttemptStatus::Pending
                         }
-                        "BAD_REQUEST" | "AUTHORIZATION_FAILED" | "TRANSACTION_NOT_FOUND" => {
-                            common_enums::AttemptStatus::Failure
-                        }
-                        "INTERNAL_SERVER_ERROR" => common_enums::AttemptStatus::Pending, // Requires retry per docs
+                        "PAYMENT_ERROR"
+                        | "PAYMENT_DECLINED"
+                        | "BAD_REQUEST"
+                        | "AUTHORIZATION_FAILED"
+                        | "TRANSACTION_NOT_FOUND" => common_enums::AttemptStatus::Failure,
                         _ => common_enums::AttemptStatus::Pending, // Default to pending for unknown codes
                     };
 
@@ -828,7 +836,7 @@ impl
                             resource_id: ResponseId::ConnectorTransactionId(transaction_id.clone()),
                             redirection_data: None,
                             mandate_reference: None,
-                            connector_metadata: None,
+                            connector_metadata: get_wait_screen_metadata(),
                             network_txn_id: None,
                             connector_response_reference_id: Some(merchant_transaction_id.clone()),
                             incremental_authorization_allowed: None,
@@ -927,4 +935,15 @@ pub fn get_phonepe_error_status(error_code: &str) -> Option<common_enums::Attemp
         "AUTHORIZATION_FAILED" => Some(common_enums::AttemptStatus::AuthenticationFailed),
         _ => None,
     }
+}
+
+pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
+    serde_json::to_value(serde_json::json!({
+        NEXT_ACTION_DATA: NextActionData::WaitScreenInstructions
+    }))
+    .map_err(|e| {
+        tracing::error!("Failed to serialize wait screen metadata: {}", e);
+        e
+    })
+    .ok()
 }

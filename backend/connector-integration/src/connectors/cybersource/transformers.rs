@@ -947,7 +947,7 @@ pub struct BillTo {
     first_name: Option<Secret<String>>,
     last_name: Option<Secret<String>>,
     address1: Option<Secret<String>>,
-    locality: Option<String>,
+    locality: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     administrative_area: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1558,7 +1558,7 @@ impl<
             first_name: Some(first_name),
             last_name: Some(last_name),
             address1: paze_data.billing_address.line1,
-            locality: paze_data.billing_address.city.map(|city| city.expose()),
+            locality: paze_data.billing_address.city,
             administrative_area: Some(Secret::from(
                 //Paze wallet is currently supported in US only
                 domain_types::utils::convert_us_state_to_code(
@@ -2889,7 +2889,7 @@ pub struct CybersourceErrorInformationResponse {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CybersourceConsumerAuthInformationResponse {
-    access_token: String,
+    access_token: Secret<String>,
     device_data_collection_url: String,
     reference_id: String,
 }
@@ -3128,7 +3128,8 @@ impl<
                     redirection_data: Some(Box::new(RedirectForm::CybersourceAuthSetup {
                         access_token: info_response
                             .consumer_authentication_information
-                            .access_token,
+                            .access_token
+                            .expose(),
                         ddc_url: info_response
                             .consumer_authentication_information
                             .device_data_collection_url,
