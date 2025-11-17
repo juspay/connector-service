@@ -5388,8 +5388,12 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateSessionTokenRe
     }
 }
 
-impl ForeignTryFrom<(grpc_api_types::payments::PaymentServiceCreateSessionTokenRequest, Connectors, &MaskedMetadata)>
-    for PaymentFlowData
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::PaymentServiceCreateSessionTokenRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for PaymentFlowData
 {
     type Error = ApplicationErrorResponse;
 
