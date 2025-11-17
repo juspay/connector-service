@@ -5565,7 +5565,7 @@ impl
                     Some(false),
                 )
             })
-            .unwrap_or_else(|| payment_address::PaymentAddress::default());
+            .unwrap_or_else(payment_address::PaymentAddress::default);
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -5637,7 +5637,6 @@ pub fn generate_create_payment_method_token_response(
             let token_clone = response.token.clone();
             Ok(grpc_api_types::payments::PaymentServiceCreatePaymentMethodTokenResponse {
                 payment_method_token: response.token,
-                status: grpc_api_types::payments::PaymentStatus::Charged as i32,
                 error_code: None,
                 error_message: None,
                 status_code: 200,
@@ -5654,7 +5653,6 @@ pub fn generate_create_payment_method_token_response(
         },
         Err(e) => Ok(grpc_api_types::payments::PaymentServiceCreatePaymentMethodTokenResponse {
             payment_method_token: String::new(),
-            status: grpc_api_types::payments::PaymentStatus::Failure as i32,
             error_code: Some(e.code),
             error_message: Some(e.message),
             status_code: e.status_code as u32,

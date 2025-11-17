@@ -2523,8 +2523,6 @@ message PaymentServiceCreatePaymentMethodTokenResponse {
   // Token Information
   string payment_method_token = 1; // The created payment method token
 
-  // Status Information
-  PaymentStatus status = 2; // Status of the token creation attempt
   optional string error_code = 3; // Error code if the token creation failed
   optional string error_message = 4; // Error message if the token creation failed
   uint32 status_code = 5; // HTTP status code from the connector
