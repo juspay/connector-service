@@ -3432,34 +3432,3 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
     };
     Ok(response)
 }
-
-pub fn generate_session_token_response(
-    router_data_v2: RouterDataV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    >,
-) -> Result<PaymentServiceCreateSessionTokenResponse, error_stack::Report<ApplicationErrorResponse>>
-{
-    let transaction_response = router_data_v2.response;
-
-    let response = match transaction_response {
-        Ok(response) => {
-            let SessionTokenResponseData { session_token } = response;
-            PaymentServiceCreateSessionTokenResponse {
-                session_token,
-                error_message: None,
-                error_code: None,
-                status_code: 200u16.into(), // Default success status
-            }
-        }
-        Err(err) => PaymentServiceCreateSessionTokenResponse {
-            session_token: String::new(),
-            error_message: Some(err.message),
-            error_code: Some(err.code),
-            status_code: err.status_code.into(),
-        },
-    };
-    Ok(response)
-}
