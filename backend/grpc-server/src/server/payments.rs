@@ -2603,19 +2603,9 @@ impl PaymentService for Payments {
                     // Create response
                     let session_token_response = PaymentServiceCreateSessionTokenResponse {
                         session_token: session_token_data.session_token,
-                        response_ref_id: None,
-                        status: i32::from(grpc_api_types::payments::PaymentStatus::Pending), // Pending status
                         error_message: None,
                         error_code: None,
-                        raw_connector_response: None,
                         status_code: 200u16.into(),
-                        response_headers: HashMap::new(),
-                        connector_metadata: HashMap::new(),
-                        state: None,
-                        network_txn_id: None,
-                        transaction_id: None,
-                        redirection_data: None,
-                        raw_connector_request: None,
                     };
 
                     Ok(tonic::Response::new(session_token_response))
@@ -3447,57 +3437,23 @@ pub fn generate_session_token_response(
 ) -> Result<PaymentServiceCreateSessionTokenResponse, error_stack::Report<ApplicationErrorResponse>>
 {
     let transaction_response = router_data_v2.response;
-    let status = router_data_v2.resource_common_data.status;
-    let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
-    let raw_connector_response = router_data_v2
-        .resource_common_data
-        .get_raw_connector_response();
-    let response_headers = router_data_v2
-        .resource_common_data
-        .get_connector_response_headers_as_map();
 
     let response = match transaction_response {
         Ok(response) => {
             let SessionTokenResponseData { session_token } = response;
             PaymentServiceCreateSessionTokenResponse {
                 session_token,
-                response_ref_id: None,
-                status: grpc_status.into(),
                 error_message: None,
                 error_code: None,
-                raw_connector_response,
                 status_code: 200u16.into(), // Default success status
-                response_headers,
-                connector_metadata: HashMap::new(),
-                state: None,
-                network_txn_id: None,
-                transaction_id: None,
-                redirection_data: None,
-                raw_connector_request: None,
             }
         }
-        Err(err) => {
-            let status = err
-                .attempt_status
-                .map(grpc_api_types::payments::PaymentStatus::foreign_from)
-                .unwrap_or_default();
-            PaymentServiceCreateSessionTokenResponse {
-                session_token: String::new(),
-                response_ref_id: None,
-                status: status.into(),
-                error_message: Some(err.message),
-                error_code: Some(err.code),
-                status_code: err.status_code.into(),
-                response_headers,
-                raw_connector_response,
-                connector_metadata: HashMap::new(),
-                state: None,
-                network_txn_id: None,
-                transaction_id: None,
-                redirection_data: None,
-                raw_connector_request: None,
-            }
-        }
+        Err(err) => PaymentServiceCreateSessionTokenResponse {
+            session_token: String::new(),
+            error_message: Some(err.message),
+            error_code: Some(err.code),
+            status_code: err.status_code.into(),
+        },
     };
     Ok(response)
 }
