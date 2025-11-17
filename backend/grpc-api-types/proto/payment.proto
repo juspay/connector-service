@@ -1270,6 +1270,7 @@ message PaymentServiceAuthorizeResponse {
   PaymentStatus status = 2; // Status of the payment attempt
   optional string error_code = 3; // Error code if the authorization failed
   optional string error_message = 4; // Error message if the authorization failed
+  optional string error_reason = 20; // Detailed reason for the error
   uint32 status_code = 10; // HTTP status code from the connector
   map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
 
@@ -1333,6 +1334,7 @@ message PaymentServiceGetResponse {
   PaymentStatus status = 2; // Current status of the payment attempt
   optional string error_code = 3; // Error code if synchronization encountered an issue
   optional string error_message = 4; // Error message if synchronization encountered an issue
+  optional string error_reason = 31; // Detailed reason for the error
   uint32 status_code = 26; // HTTP status code from the connector
   map<string, string> response_headers = 27; // Optional HTTP response headers from the connector
   
@@ -1408,6 +1410,7 @@ message PaymentServiceVoidResponse {
   PaymentStatus status = 2; // Status of the payment attempt after voiding
   optional string error_code = 3; // Error code if the void operation failed
   optional string error_message = 4; // Error message if the void operation failed
+  optional string error_reason = 13; // Detailed reason for the error
   uint32 status_code = 6; // HTTP status code from the connector
   map<string, string> response_headers = 7; // Optional HTTP response headers from the connector
   
@@ -1453,6 +1456,7 @@ message PaymentServiceVoidPostCaptureResponse {
   PaymentStatus status = 2; // Status of the payment attempt after void post-capture
   optional string error_code = 3; // Error code if the void post-capture operation failed
   optional string error_message = 4; // Error message if the void post-capture operation failed
+  optional string error_reason = 8; // Detailed reason for the error
   uint32 status_code = 6; // HTTP status code from the connector
   map<string, string> response_headers = 7; // Optional HTTP response headers from the connector
   
@@ -1495,6 +1499,7 @@ message PaymentServiceCaptureResponse {
   PaymentStatus status = 2; // Status of the payment after the capture attempt
   optional string error_code = 3; // Error code if the capture failed
   optional string error_message = 4; // Error message if the capture failed
+  optional string error_reason = 15; // Detailed reason for the error
   uint32 status_code = 6; // HTTP status code from the connector
   map<string, string> response_headers = 7; // Optional HTTP response headers from the connector
   
@@ -1562,6 +1567,7 @@ message RefundResponse {
   RefundStatus status = 3; // Current status of the refund
   optional string error_code = 4; // Error code if synchronization encountered an issue
   optional string error_message = 5; // Error message if synchronization encountered an issue
+  optional string error_reason = 26; // Detailed reason for the error
   uint32 status_code = 22; // HTTP status code from the connector
   map<string, string> response_headers = 23; // Optional HTTP response headers from the connector
   
@@ -1621,6 +1627,7 @@ message DisputeResponse {
   optional string connector_status_code = 5; // Connector status code
   optional string error_code = 6; // Error code if retrieval failed
   optional string error_message = 7; // Error message if retrieval failed
+  optional string error_reason = 21; // Detailed reason for the error
   uint32 status_code = 18; // HTTP status code from the connector
   map<string, string> response_headers = 19; // Optional HTTP response headers from the connector
   
@@ -1714,6 +1721,7 @@ message PaymentServiceRegisterResponse {
   PaymentStatus status = 2; // Status of the mandate setup attempt (using PaymentStatus with mandate values)
   optional string error_code = 3; // Error code if the mandate setup failed
   optional string error_message = 4; // Error message if the mandate setup failed
+  optional string error_reason = 15; // Detailed reason for the error
   uint32 status_code = 10; // HTTP status code from the connector
   map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
   
@@ -1802,6 +1810,7 @@ message PaymentServiceRepeatEverythingResponse {
   PaymentStatus status = 2; // Status of the payment attempt
   optional string error_code = 3; // Error code if the payment failed
   optional string error_message = 4; // Error message if the payment failed
+  optional string error_reason = 17; // Detailed reason for the error
   uint32 status_code = 8; // HTTP status code from the connector
   map<string, string> response_headers = 9; // Optional HTTP response headers from the connector
 
@@ -1882,6 +1891,7 @@ message PaymentServicePreAuthenticateResponse {
   PaymentStatus status = 2; // Status of the pre-authentication attempt
   optional string error_code = 3; // Error code if the pre-authentication failed
   optional string error_message = 4; // Error message if the pre-authentication failed
+  optional string error_reason = 14; // Detailed reason for the error
   uint32 status_code = 10; // HTTP status code from the connector
   map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
   
@@ -1952,6 +1962,7 @@ message PaymentServiceAuthenticateResponse {
   PaymentStatus status = 2; // Status of the authentication attempt
   optional string error_code = 3; // Error code if the authentication failed
   optional string error_message = 4; // Error message if the authentication failed
+  optional string error_reason = 14; // Detailed reason for the error
   uint32 status_code = 10; // HTTP status code from the connector
   map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
   
@@ -2025,6 +2036,7 @@ message PaymentServicePostAuthenticateResponse {
   PaymentStatus status = 2; // Status of the post-authentication attempt
   optional string error_code = 3; // Error code if the post-authentication failed
   optional string error_message = 4; // Error message if the post-authentication failed
+  optional string error_reason = 15; // Detailed reason for the error
   uint32 status_code = 10; // HTTP status code from the connector
   map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
   
@@ -2243,6 +2255,7 @@ message DisputeServiceSubmitEvidenceResponse {
   optional string connector_status_code = 4; // Renamed from connector_dispute_status_code
   optional string error_code = 5; // Error code if submitting evidence failed
   optional string error_message = 6; // Error message if submitting evidence failed
+  optional string error_reason = 11; // Detailed reason for the error
   uint32 status_code = 8; // HTTP status code from the connector
   map<string, string> response_headers = 9; // Optional HTTP response headers from the connector
   
@@ -2377,6 +2390,7 @@ message DisputeDefendResponse {
   optional string connector_status_code = 3; // Connector status code
   optional string error_code = 4; // Error code if defending failed
   optional string error_message = 5; // Error message if defending failed
+  optional string error_reason = 10; // Detailed reason for the error
   uint32 status_code = 7; // HTTP status code from the connector
   map<string, string> response_headers = 8; // Optional HTTP response headers from the connector
   
@@ -2405,6 +2419,7 @@ message AcceptDisputeResponse {
   optional string connector_status_code = 3; // Connector status code
   optional string error_code = 4; // Error code if accepting failed
   optional string error_message = 5; // Error message if accepting failed
+  optional string error_reason = 10; // Detailed reason for the error
   uint32 status_code = 7; // HTTP status code from the connector
   map<string, string> response_headers = 8; // Optional HTTP response headers from the connector
   
