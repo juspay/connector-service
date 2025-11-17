@@ -21,6 +21,7 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+worldline.base_url = "https://eu.api-ingenico.com"
 authipay.base_url = "https://prod.emea.api.fiservapps.com/ipp/payments-gateway/v2/payments"
 fiservemea.base_url = "https://prod.emea.api.fiservapps.com/ipp/payments-gateway/v2/payments"
 datatrans.base_url = "https://api.datatrans.com"

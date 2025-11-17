@@ -103,3 +103,6 @@ pub use self::datatrans::Datatrans;
 
 pub mod authipay;
 pub use self::authipay::Authipay;
+
+pub mod worldline;
+pub use self::worldline::Worldline;

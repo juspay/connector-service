@@ -43,6 +43,7 @@ mock_server_url = "http://localhost:3000/mockGateway"
 psync = "GW_TXN_SYNC"
 
 [connectors]
+worldline.base_url = "https://api.eu1.preprod.connect.worldline-solutions.com/"
 authipay.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
 fiservemea.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
 datatrans.base_url = "https://api.sandbox.datatrans.com"

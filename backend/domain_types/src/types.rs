@@ -123,6 +123,7 @@ pub struct Connectors {
     pub fiservemea: ConnectorParams,
     pub datatrans: ConnectorParams,
     pub authipay: ConnectorParams,
+    pub worldline: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
