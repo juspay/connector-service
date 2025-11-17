@@ -81,6 +81,8 @@ cybersource.base_url = "https://apitest.cybersource.com/"
 worldpay.base_url = "https://try.access.worldpay.com/"
 worldpayvantiv.base_url = "https://transact.vantivprelive.com/vap/communicator/online"
 worldpayvantiv.secondary_base_url = "https://onlinessr.vantivprelive.com"
+billwerk.base_url = "https://api.reepay.com/"
+billwerk.secondary_base_url = "https://card.reepay.com/"
 
 # Generic Events Configuration
 [events]

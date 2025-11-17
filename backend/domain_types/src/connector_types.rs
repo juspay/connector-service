@@ -78,6 +78,7 @@ pub enum ConnectorEnum {
     Payload,
     Fiservemea,
     Datatrans,
+    Billwerk,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -120,6 +121,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Payload => Ok(Self::Payload),
             grpc_api_types::payments::Connector::Fiservemea => Ok(Self::Fiservemea),
             grpc_api_types::payments::Connector::Datatrans => Ok(Self::Datatrans),
+            grpc_api_types::payments::Connector::Billwerk => Ok(Self::Billwerk),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -1204,6 +1206,9 @@ pub enum PaymentsResponseData {
         authentication_data: Option<router_request_types::AuthenticationData>,
         connector_response_reference_id: Option<String>,
         status_code: u16,
+    },
+    TokenizationResponse {
+        token: String,
     },
 }
 
