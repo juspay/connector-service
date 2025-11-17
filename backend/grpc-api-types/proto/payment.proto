@@ -66,6 +66,17 @@ enum PaymentStatus {
   UNRESOLVED = 19;    // Status could not be determined
 }
 
+// Status of generic operations (non-payment specific).
+enum OperationStatus {
+  OPERATION_STATUS_UNSPECIFIED = 0; // Default value
+  OPERATION_STATUS_SUCCESS = 1;     // Operation completed successfully
+  OPERATION_STATUS_FAILURE = 2;     // Operation failed
+  OPERATION_STATUS_PENDING = 3;     // Operation is in progress
+  OPERATION_STATUS_AUTHENTICATION_FAILED = 4; // Authentication/authorization failed
+  OPERATION_STATUS_RATE_LIMITED = 5; // Rate limit exceeded
+  OPERATION_STATUS_INVALID_REQUEST = 6; // Invalid request parameters
+}
+
 // Note: MandateStatus enum removed - mandate setup now uses PaymentStatus with optional sub_status for detailed information
 
 // Status of a refund.
@@ -1200,31 +1211,16 @@ message PaymentServiceCreateAccessTokenRequest {
 
 // Response message for creating an access token.
 message PaymentServiceCreateAccessTokenResponse {
-  // Access Token Information
+  // Core token information
   string access_token = 1; // The access token string
-  
-  // Token Details
   optional string token_type = 2; // Token type (e.g., "Bearer", "Basic")
   optional int64 expires_in_seconds = 3; // Expiration timestamp of the token (seconds since epoch)
   
-  // Status Information
-  PaymentStatus status = 4; // Status of the access token creation attempt
+  // Status information
+  OperationStatus status = 4; // Status of the access token creation attempt
   optional string error_code = 5; // Error code if the access token creation failed
   optional string error_message = 6; // Error message if the access token creation failed
   uint32 status_code = 7; // HTTP status code from the connector
-  map<string, string> response_headers = 8; // Optional HTTP response headers from the connector
-  
-  // Reference
-  optional Identifier response_ref_id = 9; // Response reference ID for tracking
-
-  // State Information
-  optional ConnectorState state = 10; // State data for access token storage and other connector-specific state
-
-  // Raw Response
-  optional SecretString raw_connector_response = 11; // Raw response from the connector for debugging
-
-  // Raw Request
-  optional SecretString raw_connector_request = 12; // Raw request to the connector for debugging
 }
 
 // Request message for authorizing a payment.

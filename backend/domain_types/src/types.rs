@@ -41,66 +41,6 @@ fn extract_headers_from_metadata(
     }
 }
 
-pub fn generate_create_access_token_response(
-    router_data_v2: RouterDataV2<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        crate::connector_types::AccessTokenResponseData,
-    >,
-) -> Result<
-    grpc_api_types::payments::PaymentServiceCreateAccessTokenResponse,
-    error_stack::Report<ApplicationErrorResponse>,
-> {
-    let access_token_response = router_data_v2.response;
-    let raw_connector_request = router_data_v2
-        .resource_common_data
-        .get_raw_connector_request();
-
-    match access_token_response {
-        Ok(response) => Ok(
-            grpc_api_types::payments::PaymentServiceCreateAccessTokenResponse {
-                access_token: response.access_token.clone(),
-                token_type: response.token_type.clone(),
-                expires_in_seconds: response.expires_in,
-                status: grpc_api_types::payments::PaymentStatus::Charged as i32,
-                error_code: None,
-                error_message: None,
-                status_code: 200,
-                response_headers: router_data_v2
-                    .resource_common_data
-                    .get_connector_response_headers_as_map(),
-                response_ref_id: None,
-                state: None,
-                raw_connector_response: router_data_v2
-                    .resource_common_data
-                    .get_raw_connector_response(),
-                raw_connector_request,
-            },
-        ),
-        Err(e) => Ok(
-            grpc_api_types::payments::PaymentServiceCreateAccessTokenResponse {
-                access_token: String::new(),
-                token_type: None,
-                expires_in_seconds: None,
-                status: grpc_api_types::payments::PaymentStatus::Failure as i32,
-                error_code: Some(e.code),
-                error_message: Some(e.message),
-                status_code: e.status_code as u32,
-                response_headers: router_data_v2
-                    .resource_common_data
-                    .get_connector_response_headers_as_map(),
-                response_ref_id: None,
-                state: None,
-                raw_connector_response: router_data_v2
-                    .resource_common_data
-                    .get_raw_connector_response(),
-                raw_connector_request,
-            },
-        ),
-    }
-}
-
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use crate::{
     connector_flow::{

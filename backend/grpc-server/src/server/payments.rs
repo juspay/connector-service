@@ -2855,7 +2855,10 @@ impl PaymentService for Payments {
                         access_token: access_token_data.access_token,
                         token_type: access_token_data.token_type,
                         expires_in_seconds: access_token_data.expires_in,
-                        ..Default::default()
+                        status: grpc_api_types::payments::OperationStatus::Success as i32,
+                        error_code: None,
+                        error_message: None,
+                        status_code: 200,
                     };
 
                     Ok(tonic::Response::new(create_access_token_response))
