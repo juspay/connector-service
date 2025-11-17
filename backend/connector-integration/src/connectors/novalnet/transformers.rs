@@ -303,7 +303,11 @@ impl<
         let custom = NovalnetCustom { lang };
         let hook_url = item.router_data.request.get_webhook_url()?;
         let return_url = item.router_data.request.get_router_return_url()?;
-        let create_token = None;
+        let create_token = if item.router_data.request.is_mandate_payment() {
+            Some(CREATE_TOKEN_REQUIRED)
+        } else {
+            None
+        };
 
         let amount = item
             .connector
