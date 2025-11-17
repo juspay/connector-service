@@ -5498,7 +5498,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRegisterRequest>
     }
 }
 
-
 impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreatePaymentMethodTokenRequest>
     for PaymentMethodTokenizationData<DefaultPCIHolder>
 {
@@ -5522,9 +5521,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreatePaymentMethodT
                     })
                 })?,
             )?,
-            browser_info: None, // browser_info not available in this proto
+            browser_info: None,        // browser_info not available in this proto
             customer_acceptance: None, // customer_acceptance not available in this proto
-            setup_future_usage: None, // setup_future_usage not available in this proto
+            setup_future_usage: None,  // setup_future_usage not available in this proto
             mandate_id: None,
             setup_mandate_details: None,
             integrity_object: None,
@@ -5635,37 +5634,41 @@ pub fn generate_create_payment_method_token_response(
     match token_response {
         Ok(response) => {
             let token_clone = response.token.clone();
-            Ok(grpc_api_types::payments::PaymentServiceCreatePaymentMethodTokenResponse {
-                payment_method_token: response.token,
-                error_code: None,
-                error_message: None,
-                status_code: 200,
+            Ok(
+                grpc_api_types::payments::PaymentServiceCreatePaymentMethodTokenResponse {
+                    payment_method_token: response.token,
+                    error_code: None,
+                    error_message: None,
+                    status_code: 200,
+                    response_headers: router_data_v2
+                        .resource_common_data
+                        .get_connector_response_headers_as_map(),
+                    response_ref_id: Some(grpc_api_types::payments::Identifier {
+                        id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
+                            token_clone,
+                        )),
+                    }),
+                    state: None,
+                },
+            )
+        }
+        Err(e) => Ok(
+            grpc_api_types::payments::PaymentServiceCreatePaymentMethodTokenResponse {
+                payment_method_token: String::new(),
+                error_code: Some(e.code),
+                error_message: Some(e.message),
+                status_code: e.status_code as u32,
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
-                response_ref_id: Some(grpc_api_types::payments::Identifier {
-                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
-                        token_clone,
-                    )),
+                response_ref_id: e.connector_transaction_id.map(|id| {
+                    grpc_api_types::payments::Identifier {
+                        id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                    }
                 }),
                 state: None,
-            })
-        },
-        Err(e) => Ok(grpc_api_types::payments::PaymentServiceCreatePaymentMethodTokenResponse {
-            payment_method_token: String::new(),
-            error_code: Some(e.code),
-            error_message: Some(e.message),
-            status_code: e.status_code as u32,
-            response_headers: router_data_v2
-                .resource_common_data
-                .get_connector_response_headers_as_map(),
-            response_ref_id: e.connector_transaction_id.map(|id| {
-                grpc_api_types::payments::Identifier {
-                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
-                }
-            }),
-            state: None,
-        }),
+            },
+        ),
     }
 }
 

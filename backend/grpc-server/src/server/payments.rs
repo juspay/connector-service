@@ -2768,7 +2768,6 @@ impl PaymentService for Payments {
         .await
     }
 
-
     #[tracing::instrument(
         name = "create_payment_method_token",
         fields(
@@ -2793,14 +2792,15 @@ impl PaymentService for Payments {
     async fn create_payment_method_token(
         &self,
         request: tonic::Request<PaymentServiceCreatePaymentMethodTokenRequest>,
-    ) -> Result<tonic::Response<PaymentServiceCreatePaymentMethodTokenResponse>, tonic::Status> {
+    ) -> Result<tonic::Response<PaymentServiceCreatePaymentMethodTokenResponse>, tonic::Status>
+    {
         info!("CREATE_PAYMENT_METHOD_TOKEN_FLOW: initiated");
         let service_name = request
             .extensions()
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        
+
         grpc_logging_wrapper(
             request,
             &service_name,
@@ -2840,13 +2840,18 @@ impl PaymentService for Payments {
                     .map_err(|e| e.into_grpc_status())?;
 
                     // Get payment method token request data
-                    let payment_method_token_request_data = PaymentMethodTokenizationData::foreign_try_from(payload.clone())
-                        .map_err(|err| {
-                            tracing::error!("Failed to process payment method token data: {:?}", err);
-                            tonic::Status::internal(format!(
-                                "Failed to process payment method token data: {err}"
-                            ))
-                        })?;
+                    let payment_method_token_request_data =
+                        PaymentMethodTokenizationData::foreign_try_from(payload.clone()).map_err(
+                            |err| {
+                                tracing::error!(
+                                    "Failed to process payment method token data: {:?}",
+                                    err
+                                );
+                                tonic::Status::internal(format!(
+                                    "Failed to process payment method token data: {err}"
+                                ))
+                            },
+                        )?;
 
                     // Create router data for payment method token flow
                     let payment_method_token_router_data = RouterDataV2::<
@@ -2909,9 +2914,11 @@ impl PaymentService for Payments {
                     .map_err(|e| e.into_grpc_status())?;
 
                     // Generate response using the existing function
-                    let payment_method_token_response = 
-                        domain_types::types::generate_create_payment_method_token_response(response)
-                            .map_err(|e| e.into_grpc_status())?;
+                    let payment_method_token_response =
+                        domain_types::types::generate_create_payment_method_token_response(
+                            response,
+                        )
+                        .map_err(|e| e.into_grpc_status())?;
 
                     Ok(tonic::Response::new(payment_method_token_response))
                 })
@@ -3226,7 +3233,6 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
     };
     Ok(response)
 }
-
 
 pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
     router_data_v2: RouterDataV2<
