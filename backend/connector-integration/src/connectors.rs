@@ -104,5 +104,8 @@ pub use self::datatrans::Datatrans;
 pub mod authipay;
 pub use self::authipay::Authipay;
 
+pub mod silverflow;
+pub use self::silverflow::Silverflow;
+
 pub mod paypal;
 pub use self::paypal::Paypal;
