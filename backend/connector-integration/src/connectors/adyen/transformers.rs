@@ -835,11 +835,8 @@ impl<
         let adyen_metadata = get_adyen_metadata(item.router_data.request.metadata.clone());
         let device_fingerprint = adyen_metadata.device_fingerprint.clone();
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
-        let country_code = get_country_code(
-            item.router_data
-                .resource_common_data
-                .get_optional_billing(),
-        );
+        let country_code =
+            get_country_code(item.router_data.resource_common_data.get_optional_billing());
 
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
             AdyenPaymentMethod::try_from((card_data, card_holder_name))?,
@@ -860,14 +857,20 @@ impl<
             browser_info: get_browser_info(&item.router_data)?,
             additional_data,
             mpi_data: None,
-            telephone_number: item.router_data.resource_common_data.get_optional_billing_phone_number(),
+            telephone_number: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_phone_number(),
             shopper_name: get_shopper_name(
                 item.router_data
                     .resource_common_data
                     .address
                     .get_payment_billing(),
             ),
-            shopper_email: item.router_data.resource_common_data.get_optional_billing_email()
+            shopper_email: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_email()
                 .or_else(|| item.router_data.request.email.clone()),
             shopper_locale: item
                 .router_data
@@ -892,7 +895,12 @@ impl<
             store: None,
             splits: None,
             device_fingerprint,
-            metadata: item.router_data.request.metadata.clone().map(filter_adyen_metadata),
+            metadata: item
+                .router_data
+                .request
+                .metadata
+                .clone()
+                .map(filter_adyen_metadata),
             platform_chargeback_logic,
         })
     }
@@ -949,11 +957,8 @@ impl<
         let adyen_metadata = get_adyen_metadata(item.router_data.request.metadata.clone());
         let device_fingerprint = adyen_metadata.device_fingerprint.clone();
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
-        let country_code = get_country_code(
-            item.router_data
-                .resource_common_data
-                .get_optional_billing(),
-        );
+        let country_code =
+            get_country_code(item.router_data.resource_common_data.get_optional_billing());
 
         Ok(AdyenPaymentRequest {
             amount,
@@ -970,14 +975,20 @@ impl<
             browser_info: get_browser_info(&item.router_data)?,
             additional_data,
             mpi_data: None,
-            telephone_number: item.router_data.resource_common_data.get_optional_billing_phone_number(),
+            telephone_number: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_phone_number(),
             shopper_name: get_shopper_name(
                 item.router_data
                     .resource_common_data
                     .address
                     .get_payment_billing(),
             ),
-            shopper_email: item.router_data.resource_common_data.get_optional_billing_email()
+            shopper_email: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_email()
                 .or_else(|| item.router_data.request.email.clone()),
             shopper_locale: item
                 .router_data
@@ -1008,7 +1019,12 @@ impl<
             store: None,
             splits: None,
             device_fingerprint,
-            metadata: item.router_data.request.metadata.clone().map(filter_adyen_metadata),
+            metadata: item
+                .router_data
+                .request
+                .metadata
+                .clone()
+                .map(filter_adyen_metadata),
             platform_chargeback_logic,
         })
     }
@@ -1338,29 +1354,37 @@ impl<
         let is_manual_capture = false;
         let pmt = router_data.request.payment_method_type;
         // Extract captured amounts and process response
-        let (status, error, payment_response_data, amount_captured, minor_amount_captured) = match response {
-            AdyenPaymentResponse::Response(response) => {
-                let (status, error, payment_response_data) = get_adyen_response(*response.clone(), is_manual_capture, http_code, pmt)?;
-                // Extract captured amounts for successful transactions
-                let (amount_captured, minor_amount_captured) = match status {
-                    common_enums::AttemptStatus::Charged 
-                    | common_enums::AttemptStatus::PartialCharged
-                    | common_enums::AttemptStatus::PartialChargedAndChargeable => {
-                        response.amount.as_ref().map(|amt| (
-                            Some(amt.value.get_amount_as_i64()),
-                            Some(amt.value)
-                        )).unwrap_or((None, None))
-                    }
-                    _ => (None, None)
-                };
-                (status, error, payment_response_data, amount_captured, minor_amount_captured)
-            }
-            AdyenPaymentResponse::RedirectionResponse(response) => {
-                let (status, error, payment_response_data) = get_redirection_response(*response, is_manual_capture, http_code, pmt)?;
-                // For redirection responses, we typically don't have captured amount yet
-                (status, error, payment_response_data, None, None)
-            }
-        };
+        let (status, error, payment_response_data, amount_captured, minor_amount_captured) =
+            match response {
+                AdyenPaymentResponse::Response(response) => {
+                    let (status, error, payment_response_data) =
+                        get_adyen_response(*response.clone(), is_manual_capture, http_code, pmt)?;
+                    // Extract captured amounts for successful transactions
+                    let (amount_captured, minor_amount_captured) = match status {
+                        common_enums::AttemptStatus::Charged
+                        | common_enums::AttemptStatus::PartialCharged
+                        | common_enums::AttemptStatus::PartialChargedAndChargeable => response
+                            .amount
+                            .as_ref()
+                            .map(|amt| (Some(amt.value.get_amount_as_i64()), Some(amt.value)))
+                            .unwrap_or((None, None)),
+                        _ => (None, None),
+                    };
+                    (
+                        status,
+                        error,
+                        payment_response_data,
+                        amount_captured,
+                        minor_amount_captured,
+                    )
+                }
+                AdyenPaymentResponse::RedirectionResponse(response) => {
+                    let (status, error, payment_response_data) =
+                        get_redirection_response(*response, is_manual_capture, http_code, pmt)?;
+                    // For redirection responses, we typically don't have captured amount yet
+                    (status, error, payment_response_data, None, None)
+                }
+            };
 
         Ok(Self {
             response: error.map_or_else(|| Ok(payment_response_data), Err),
@@ -1388,28 +1412,36 @@ impl<F> TryFrom<ResponseRouterData<AdyenPSyncResponse, Self>>
         let pmt = router_data.request.payment_method_type;
         let is_manual_capture = false;
         // Extract captured amounts and process response
-        let (status, error, payment_response_data, amount_captured, minor_amount_captured) = match response {
-            AdyenPSyncResponse(AdyenPaymentResponse::Response(response)) => {
-                let (status, error, payment_response_data) = get_adyen_response(*response.clone(), is_manual_capture, http_code, pmt)?;
-                // Extract captured amounts for successful transactions
-                let (amount_captured, minor_amount_captured) = match status {
-                    common_enums::AttemptStatus::Charged 
-                    | common_enums::AttemptStatus::PartialCharged
-                    | common_enums::AttemptStatus::PartialChargedAndChargeable => {
-                        response.amount.as_ref().map(|amt| (
-                            Some(amt.value.get_amount_as_i64()),
-                            Some(amt.value)
-                        )).unwrap_or((None, None))
-                    }
-                    _ => (None, None)
-                };
-                (status, error, payment_response_data, amount_captured, minor_amount_captured)
-            }
-            AdyenPSyncResponse(AdyenPaymentResponse::RedirectionResponse(response)) => {
-                let (status, error, payment_response_data) = get_redirection_response(*response, is_manual_capture, http_code, pmt)?;
-                (status, error, payment_response_data, None, None)
-            }
-        };
+        let (status, error, payment_response_data, amount_captured, minor_amount_captured) =
+            match response {
+                AdyenPSyncResponse(AdyenPaymentResponse::Response(response)) => {
+                    let (status, error, payment_response_data) =
+                        get_adyen_response(*response.clone(), is_manual_capture, http_code, pmt)?;
+                    // Extract captured amounts for successful transactions
+                    let (amount_captured, minor_amount_captured) = match status {
+                        common_enums::AttemptStatus::Charged
+                        | common_enums::AttemptStatus::PartialCharged
+                        | common_enums::AttemptStatus::PartialChargedAndChargeable => response
+                            .amount
+                            .as_ref()
+                            .map(|amt| (Some(amt.value.get_amount_as_i64()), Some(amt.value)))
+                            .unwrap_or((None, None)),
+                        _ => (None, None),
+                    };
+                    (
+                        status,
+                        error,
+                        payment_response_data,
+                        amount_captured,
+                        minor_amount_captured,
+                    )
+                }
+                AdyenPSyncResponse(AdyenPaymentResponse::RedirectionResponse(response)) => {
+                    let (status, error, payment_response_data) =
+                        get_redirection_response(*response, is_manual_capture, http_code, pmt)?;
+                    (status, error, payment_response_data, None, None)
+                }
+            };
 
         Ok(Self {
             response: error.map_or_else(|| Ok(payment_response_data), Err),
@@ -2427,7 +2459,10 @@ impl<
             browser_info: None,
             additional_data,
             mpi_data: None,
-            telephone_number: item.router_data.resource_common_data.get_optional_billing_phone_number(),
+            telephone_number: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_phone_number(),
             shopper_name: None,
             shopper_email: None,
             shopper_locale: None,
@@ -2445,7 +2480,12 @@ impl<
             store: None,
             splits: None,
             device_fingerprint,
-            metadata: item.router_data.request.metadata.clone().map(filter_adyen_metadata),
+            metadata: item
+                .router_data
+                .request
+                .metadata
+                .clone()
+                .map(filter_adyen_metadata),
             platform_chargeback_logic,
         }))
     }
@@ -3281,7 +3321,6 @@ fn get_adyen_metadata(metadata: Option<serde_json::Value>) -> AdyenMetadata {
         .and_then(|value| serde_json::from_value(value).ok())
         .unwrap_or_default()
 }
-
 
 fn filter_adyen_metadata(metadata: serde_json::Value) -> serde_json::Value {
     if let serde_json::Value::Object(mut map) = metadata.clone() {
