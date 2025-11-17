@@ -2,10 +2,10 @@
 // This implements the request/response transformation for Wellsfargo payments
 
 use domain_types::payment_method_data::RawCardNumber;
-use common_enums::AttemptStatus;
+use common_enums::{AttemptStatus, RefundStatus};
 use domain_types::{
-    connector_flow::{Authorize, Capture},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, ResponseId},
+    connector_flow::{Authorize, Capture, Refund, RSync, Void},
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentVoidData, RefundFlowData, RefundsData, RefundSyncData, RefundsResponseData, PaymentsResponseData, ResponseId},
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
     router_data::ErrorResponse,
@@ -114,6 +114,66 @@ pub struct OrderInformationAmount {
 }
 
 // ============================================================================
+// VOID REQUEST STRUCTURES
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WellsfargoVoidRequest {
+    client_reference_information: ClientReferenceInformation,
+}
+
+// ============================================================================
+// REFUND REQUEST STRUCTURES
+// ============================================================================
+
+
+// HYPERSWITCH STRUCTURE : 
+
+// pub enum WellsfargoRefundStatus {
+//     Succeeded,
+//     Transmitted,
+//     Failed,
+//     Pending,
+//     Voided,
+//     Cancelled,
+// }
+
+// impl From<WellsfargoRefundStatus> for enums::RefundStatus {
+//     fn from(item: WellsfargoRefundStatus) -> Self {
+//         match item {
+//             WellsfargoRefundStatus::Succeeded | WellsfargoRefundStatus::Transmitted => {
+//                 Self::Success
+//             }
+//             WellsfargoRefundStatus::Cancelled
+//             | WellsfargoRefundStatus::Failed
+//             | WellsfargoRefundStatus::Voided => Self::Failure,
+//             WellsfargoRefundStatus::Pending => Self::Pending,
+//         }
+//     }
+// }
+
+// pub struct WellsfargoRefundRequest {
+//     order_information: OrderInformation,
+//     client_reference_information: ClientReferenceInformation,
+// }
+
+// pub struct WellsfargoRefundResponse {
+//     id: String,
+//     status: WellsfargoRefundStatus,
+//     error_information: Option<WellsfargoErrorInformation>,
+// }
+
+
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WellsfargoRefundRequest {
+    order_information: OrderInformationAmount,
+    client_reference_information: ClientReferenceInformation,
+}
+
+// ============================================================================
 // RESPONSE STRUCTURES
 // ============================================================================
 
@@ -149,6 +209,7 @@ pub enum WellsfargoPaymentStatus {
     Transmitted,
     Pending,
     AuthorizedRiskDeclined,
+    Voided,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -422,6 +483,73 @@ impl
 }
 
 // ============================================================================
+// VOID REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoVoidRequest
+// ============================================================================
+
+impl
+    TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>
+    for WellsfargoVoidRequest
+{
+    type Error = Report<errors::ConnectorError>;
+
+    fn try_from(
+        router_data: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+    ) -> Result<Self, Self::Error> {
+        let common_data = &router_data.resource_common_data;
+
+        // Client reference - use payment_id from common data
+        let client_reference_information = ClientReferenceInformation {
+            code: Some(common_data.payment_id.clone()),
+        };
+
+        Ok(Self {
+            client_reference_information,
+        })
+    }
+}
+
+// ============================================================================
+// REFUND REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoRefundRequest
+// ============================================================================
+
+impl
+    TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
+    for WellsfargoRefundRequest
+{
+    type Error = Report<errors::ConnectorError>;
+
+    fn try_from(
+        router_data: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+    ) -> Result<Self, Self::Error> {
+        let request = &router_data.request;
+        // let common_data = &router_data.resource_common_data;
+
+        // Amount information
+        let amount = request.refund_amount;
+        let currency = request.currency;
+
+        let amount_details = Amount {
+            total_amount: minor_to_major_unit(amount),
+            currency: currency.to_string(),
+        };
+
+        let order_information = OrderInformationAmount {
+            amount_details,
+        };
+
+        // Client reference - use refund_id from request
+        let client_reference_information = ClientReferenceInformation {
+            code: Some(request.refund_id.clone()),
+        };
+
+        Ok(Self {
+            order_information,
+            client_reference_information,
+        })
+    }
+}
+
+// ============================================================================
 // RESPONSE CONVERSION - TryFrom ResponseRouterData to RouterDataV2
 // ============================================================================
 
@@ -438,7 +566,7 @@ impl<T: PaymentMethodDataTypes>
         let status = get_payment_status(&response.status, &response.error_information);
 
         // Check if the payment was successful
-        let response_data = if is_payment_successful(&response.status) {
+        let response_data = if is_payment_successful(&response.status, &response.status_information) {
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
                 redirection_data: None,
@@ -506,11 +634,7 @@ impl
         let response = &item.response;
 
         // For PSync, check both status (Authorize response) and status_information (GET response)
-        let is_success = is_payment_successful(&response.status) ||
-            response.status_information.as_ref()
-                .and_then(|info| info.reason.as_ref())
-                .map(|reason| reason.eq_ignore_ascii_case("Success"))
-                .unwrap_or(false);
+        let is_success = is_payment_successful(&response.status, &response.status_information);
 
         let status = if is_success && response.status.is_none() {
             // PSync GET response with statusInformation: Success → treat as Charged
@@ -589,7 +713,7 @@ impl
         let status = get_payment_status(&response.status, &response.error_information);
 
         // Check if the capture was successful
-        let response_data = if is_payment_successful(&response.status) {
+        let response_data = if is_payment_successful(&response.status, &response.status_information) {
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
                 redirection_data: None,
@@ -644,18 +768,223 @@ impl
     }
 }
 
+// Void Response Conversion - Reuses same response structure as Authorize/Capture
+impl
+    TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+{
+    type Error = Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+        let status = get_payment_status(&response.status, &response.error_information);
+
+        // Check if the void was successful
+        let response_data = if is_payment_successful(&response.status, &response.status_information) {
+            Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: response.processor_information
+                    .as_ref()
+                    .and_then(|info| info.network_transaction_id.clone()),
+                connector_response_reference_id: response.client_reference_information
+                    .as_ref()
+                    .and_then(|info| info.code.clone()),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            })
+        } else {
+            // Build error response
+            let error_message = response.error_information
+                .as_ref()
+                .and_then(|info| info.message.clone())
+                .or_else(|| response.error_information
+                    .as_ref()
+                    .and_then(|info| info.reason.clone()))
+                .unwrap_or_else(|| "Void failed".to_string());
+
+            let error_code = response.error_information
+                .as_ref()
+                .and_then(|info| info.reason.clone());
+
+            Err(ErrorResponse {
+                code: error_code.unwrap_or_else(|| "DECLINED".to_string()),
+                message: error_message.clone(),
+                reason: Some(error_message),
+                status_code: item.http_code,
+                attempt_status: Some(status),
+                connector_transaction_id: Some(response.id.clone()),
+                network_decline_code: response.processor_information
+                    .as_ref()
+                    .and_then(|info| info.response_code.clone()),
+                network_advice_code: None,
+                network_error_message: None,
+            })
+        };
+
+        Ok(Self {
+            response: response_data,
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// Refund Response Conversion - Reuses same response structure as Authorize/Capture/Void
+impl
+    TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+{
+    type Error = Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+        let status = get_refund_status(&response.status, &response.error_information);
+
+        // Check if the refund was successful
+        let response_data = if is_payment_successful(&response.status, &response.status_information) {
+            Ok(RefundsResponseData {
+                connector_refund_id: response.id.clone(),
+                refund_status: status,
+                status_code: item.http_code,
+            })
+        } else {
+            // Build error response
+            let error_message = response.error_information
+                .as_ref()
+                .and_then(|info| info.message.clone())
+                .or_else(|| response.error_information
+                    .as_ref()
+                    .and_then(|info| info.reason.clone()))
+                .unwrap_or_else(|| "Refund failed".to_string());
+
+            let error_code = response.error_information
+                .as_ref()
+                .and_then(|info| info.reason.clone());
+
+            Err(ErrorResponse {
+                code: error_code.unwrap_or_else(|| "DECLINED".to_string()),
+                message: error_message.clone(),
+                reason: Some(error_message),
+                status_code: item.http_code,
+                attempt_status: None, // Refunds don't have attempt status
+                connector_transaction_id: Some(response.id.clone()),
+                network_decline_code: response.processor_information
+                    .as_ref()
+                    .and_then(|info| info.response_code.clone()),
+                network_advice_code: None,
+                network_error_message: None,
+            })
+        };
+
+        Ok(Self {
+            response: response_data,
+            resource_common_data: RefundFlowData {
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// ============================================================================
+// RESPONSE CONVERSIONS - RSYNC (REFUND SYNC)
+// ============================================================================
+
+impl
+    TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+{
+    type Error = Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+        let status = get_refund_status(&response.status, &response.error_information);
+
+        // Check if the refund sync was successful
+        let response_data = if is_payment_successful(&response.status, &response.status_information) {
+            Ok(RefundsResponseData {
+                connector_refund_id: response.id.clone(),
+                refund_status: status,
+                status_code: item.http_code,
+            })
+        } else {
+            // Build error response
+            let error_message = response.error_information
+                .as_ref()
+                .and_then(|info| info.message.clone())
+                .or_else(|| response.error_information
+                    .as_ref()
+                    .and_then(|info| info.reason.clone()))
+                .unwrap_or_else(|| "Refund sync failed".to_string());
+
+            let error_code = response.error_information
+                .as_ref()
+                .and_then(|info| info.reason.clone());
+
+            Err(ErrorResponse {
+                code: error_code.unwrap_or_else(|| "DECLINED".to_string()),
+                message: error_message.clone(),
+                reason: Some(error_message),
+                status_code: item.http_code,
+                attempt_status: None, // Refunds don't have attempt status
+                connector_transaction_id: Some(response.id.clone()),
+                network_decline_code: response.processor_information
+                    .as_ref()
+                    .and_then(|info| info.response_code.clone()),
+                network_advice_code: None,
+                network_error_message: None,
+            })
+        };
+
+        Ok(Self {
+            response: response_data,
+            resource_common_data: RefundFlowData {
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
-fn is_payment_successful(status: &Option<WellsfargoPaymentStatus>) -> bool {
-    matches!(
+fn is_payment_successful(
+    status: &Option<WellsfargoPaymentStatus>,
+    status_info: &Option<StatusInformation>,
+) -> bool {
+    // Check if status field indicates success
+    let status_success = matches!(
         status,
         Some(WellsfargoPaymentStatus::Authorized)
             | Some(WellsfargoPaymentStatus::AuthorizedPendingReview)
             | Some(WellsfargoPaymentStatus::PartialAuthorized)
             | Some(WellsfargoPaymentStatus::Pending) // Capture operations return PENDING status
-    )
+            | Some(WellsfargoPaymentStatus::Voided) // Void operations may return VOIDED status
+            | Some(WellsfargoPaymentStatus::Reversed) // Void operations return REVERSED status
+    );
+
+    // For refund sync operations, check status_information.reason for "Success"
+    let status_info_success = status_info
+        .as_ref()
+        .and_then(|info| info.reason.as_deref())
+        .map(|reason| reason.eq_ignore_ascii_case("success"))
+        .unwrap_or(false);
+
+    status_success || status_info_success
 }
 
 fn get_payment_status(
@@ -671,6 +1000,7 @@ fn get_payment_status(
         Some(WellsfargoPaymentStatus::PendingAuthentication) => AttemptStatus::AuthenticationPending,
         Some(WellsfargoPaymentStatus::PendingReview) => AttemptStatus::Pending,
         Some(WellsfargoPaymentStatus::Reversed) => AttemptStatus::Voided,
+        Some(WellsfargoPaymentStatus::Voided) => AttemptStatus::Voided,
         Some(WellsfargoPaymentStatus::PartialAuthorized) => AttemptStatus::PartialCharged,
         Some(WellsfargoPaymentStatus::Transmitted) => AttemptStatus::Pending,
         Some(WellsfargoPaymentStatus::Pending) => AttemptStatus::Pending,
@@ -681,6 +1011,26 @@ fn get_payment_status(
                 AttemptStatus::Pending
             }
         }
+    }
+}
+
+fn get_refund_status(
+    status: &Option<WellsfargoPaymentStatus>,
+    error_info: &Option<WellsfargoErrorInformation>,
+) -> RefundStatus {
+    match status {
+        Some(WellsfargoPaymentStatus::Pending) => RefundStatus::Pending,
+        Some(WellsfargoPaymentStatus::Transmitted) => RefundStatus::Pending,
+        Some(WellsfargoPaymentStatus::Declined) => RefundStatus::Failure,
+        Some(WellsfargoPaymentStatus::InvalidRequest) => RefundStatus::Failure,
+        None => {
+            if error_info.is_some() {
+                RefundStatus::Failure
+            } else {
+                RefundStatus::Pending
+            }
+        }
+        _ => RefundStatus::Success, // Default to success for other statuses
     }
 }
 
