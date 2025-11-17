@@ -193,13 +193,22 @@ impl From<HipayRefundStatus> for RefundStatus {
 }
 
 // Sync Response Types
+// Nested transaction details structure for PSync response
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HipayTransactionDetails {
+    pub status: HipayPaymentStatus,
+    pub message: String,
+    #[serde(rename = "transactionReference")]
+    pub transaction_reference: String,
+    #[serde(flatten)]
+    pub extra: std::collections::HashMap<String, serde_json::Value>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum HipaySyncResponse {
     Response {
-        status: HipayPaymentStatus,  // Use HipayPaymentStatus enum for type-safe deserialization
-        #[serde(flatten)]
-        extra: std::collections::HashMap<String, serde_json::Value>,
+        transaction: HipayTransactionDetails,
     },
     Error {
         message: String,
@@ -207,21 +216,24 @@ pub enum HipaySyncResponse {
     },
 }
 
-// Refund Sync Response - Untagged enum to handle both success and error responses
+// XML wrapper for refund sync response - HiPay returns XML for sync operations
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum HipayRefundSyncResponse {
-    Response {
-        id: u64,
-        status: u16,
-        #[serde(flatten)]
-        extra: std::collections::HashMap<String, serde_json::Value>,
-    },
-    Error {
-        message: String,
-        code: String,
-    },
+pub struct HipayRefundSyncXmlResponse {
+    pub transaction: HipayRefundTransactionDetails,
 }
+
+// Refund transaction details from XML response
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HipayRefundTransactionDetails {
+    pub status: HipayRefundStatus,
+    pub message: String,
+    pub transaction_reference: String,
+    #[serde(flatten)]
+    pub extra: std::collections::HashMap<String, serde_json::Value>,
+}
+
+// Type alias for backward compatibility
+pub type HipayRefundSyncResponse = HipayRefundSyncXmlResponse;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HipayPaymentsRequest<T: PaymentMethodDataTypes> {
@@ -407,22 +419,25 @@ pub struct PaymentOrder {
     id: String,
 }
 
-// Authorize Response - matches HiPay's order API response (snake_case from XML conversion)
+// Authorize Response - matches HiPay's order API response (camelCase from HiPay API)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HipayPaymentsResponse {
     status: HipayPaymentStatus,
     message: String,
     order: PaymentOrder,
     #[serde(default)]
+    #[serde(rename = "forwardUrl")]
     forward_url: String,
+    #[serde(rename = "transactionReference")]
     transaction_reference: String,
 }
 
-// Generic Maintenance Response for Capture/Void/Refund operations (snake_case from XML conversion)
+// Generic Maintenance Response for Capture/Void/Refund operations (camelCase from HiPay API)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HipayMaintenanceResponse<S> {
     status: S,
     message: String,
+    #[serde(rename = "transactionReference")]
     transaction_reference: String,
 }
 
@@ -666,14 +681,14 @@ impl
     ) -> Result<Self, Self::Error> {
         // Handle sync response - could be Response or Error variant
         match item.response {
-            HipaySyncResponse::Response { status, .. } => {
+            HipaySyncResponse::Response { transaction } => {
                 // Convert HipayPaymentStatus enum directly to AttemptStatus using From trait
-                let attempt_status = AttemptStatus::from(status);
+                let attempt_status = AttemptStatus::from(transaction.status.clone());
 
                 Ok(Self {
                     response: Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::ConnectorTransactionId(
-                            item.router_data.request.connector_transaction_id.get_connector_transaction_id().unwrap_or_default(),
+                            transaction.transaction_reference.clone(),
                         ),
                         redirection_data: None,
                         mandate_reference: None,
@@ -902,47 +917,20 @@ impl
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Handle refund sync response - could be Response or Error variant
-        match item.response {
-            HipayRefundSyncResponse::Response { id, status, .. } => {
-                // Map refund sync status codes to RefundStatus
-                // 124 = RefundRequested -> Pending
-                // 125 = Refunded -> Success
-                // 126 = PartiallyRefunded -> Success
-                // 165 = RefundRefused -> Failure
-                let refund_status = match status {
-                    124 => RefundStatus::Pending,
-                    125 | 126 => RefundStatus::Success,
-                    165 => RefundStatus::Failure,
-                    _ => RefundStatus::Pending,
-                };
+        // Handle refund sync XML response
+        let transaction = &item.response.transaction;
 
-                Ok(Self {
-                    response: Ok(RefundsResponseData {
-                        connector_refund_id: id.to_string(),
-                        refund_status,
-                        status_code: item.http_code,
-                    }),
-                    ..item.router_data
-                })
-            }
-            HipayRefundSyncResponse::Error { message, code } => {
-                Ok(Self {
-                    response: Err(domain_types::router_data::ErrorResponse {
-                        code,
-                        message: message.clone(),
-                        reason: Some(message),
-                        status_code: item.http_code,
-                        attempt_status: None,
-                        connector_transaction_id: None,
-                        network_decline_code: None,
-                        network_advice_code: None,
-                        network_error_message: None,
-                    }),
-                    ..item.router_data
-                })
-            }
-        }
+        // Convert HipayRefundStatus enum directly to RefundStatus using From trait
+        let refund_status = RefundStatus::from(transaction.status.clone());
+
+        Ok(Self {
+            response: Ok(RefundsResponseData {
+                connector_refund_id: transaction.transaction_reference.clone(),
+                refund_status,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
     }
 }
 

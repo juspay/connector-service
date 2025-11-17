@@ -7,7 +7,7 @@ use common_enums::CurrencyUnit;
 use common_utils::{
     errors::CustomResult,
     events,
-    ext_traits::ByteSliceExt,
+    ext_traits::{deserialize_xml_to_struct, ByteSliceExt},
     request::{Method, RequestContent},
     types::StringMajorUnit,
 };
@@ -1190,9 +1190,11 @@ impl<
         RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         errors::ConnectorError,
     > {
-        let response: HipayRSyncResponse = res
-            .response
-            .parse_struct("HipayRSyncResponse")
+        // HiPay RSync returns XML, not JSON
+        let response_str = std::str::from_utf8(&res.response)
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        let response: HipayRSyncResponse = deserialize_xml_to_struct(response_str)
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_response_body!(event_builder, response);
