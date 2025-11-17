@@ -94,14 +94,10 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         minor_amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Crypto(
-                CryptoCurrencyPaymentMethodType {
-                    crypto_currency: Some(CryptoCurrency {
-                        pay_currency: Some(TEST_PAY_CURRENCY.to_string()),
-                        network: Some(TEST_NETWORK.to_string()),
-                    }),
-                },
-            )),
+            payment_method: Some(payment_method::PaymentMethod::Crypto(CryptoCurrency {
+                pay_currency: Some(TEST_PAY_CURRENCY.to_string()),
+                network: Some(TEST_NETWORK.to_string()),
+            })),
         }),
         return_url: Some(
             "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),

@@ -1617,56 +1617,28 @@ impl PaymentService for Payments {
                 let authorize_response = match payload.payment_method.as_ref() {
                     Some(pm) => {
                         match pm.payment_method.as_ref() {
-                            Some(payment_method::PaymentMethod::Card(card_details)) => {
-                                match &card_details.card_type {
-                                    Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(proxy_card_details)) | Some(grpc_api_types::payments::card_payment_method_type::CardType::DebitProxy(proxy_card_details)) => {
-                                        let token_data = proxy_card_details.to_token_data();
-                                        match Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
-                                            payload.clone(),
-                                            metadata_payload.connector,
-                                            metadata_payload.connector_auth_type.clone(),
-                                            metadata,
-                                            &metadata_payload,
-                                            &service_name,
-                                            &metadata_payload.request_id,
-                                            Some(token_data),
-                                        ))
-                                        .await
-                                        {
-                                            Ok(response) => {
-                                                tracing::info!("INJECTOR: Authorization completed successfully with injector");
-                                                response
-                                            },
-                                            Err(error_response) => {
-                                                tracing::error!("INJECTOR: Authorization failed with injector - error: {:?}", error_response);
-                                                PaymentServiceAuthorizeResponse::from(error_response)
-                                            },
-                                        }
-                                    }
-                                    _ => {
-                                        tracing::info!("REGULAR: Processing regular payment (no injector)");
-                                        match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
-                                            payload.clone(),
-                                            metadata_payload.connector,
-                                            metadata_payload.connector_auth_type.clone(),
-                                            metadata,
-                                            &metadata_payload,
-                                            &service_name,
-                                            &metadata_payload.request_id,
-                                            None,
-                                        ))
-                                        .await
-                                        {
-                                            Ok(response) => {
-                                                tracing::info!("REGULAR: Authorization completed successfully without injector");
-                                                response
-                                            },
-                                            Err(error_response) => {
-                                                tracing::error!("REGULAR: Authorization failed without injector - error: {:?}", error_response);
-                                                PaymentServiceAuthorizeResponse::from(error_response)
-                                            },
-                                        }
-                                    }
+                            Some(payment_method::PaymentMethod::CreditProxy(proxy_card_details)) | Some(payment_method::PaymentMethod::DebitProxy(proxy_card_details)) | Some(payment_method::PaymentMethod::CardProxy(proxy_card_details)) => {
+                                let token_data = proxy_card_details.to_token_data();
+                                match Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
+                                    payload.clone(),
+                                    metadata_payload.connector,
+                                    metadata_payload.connector_auth_type.clone(),
+                                    metadata,
+                                    &metadata_payload,
+                                    &service_name,
+                                    &metadata_payload.request_id,
+                                    Some(token_data),
+                                ))
+                                .await
+                                {
+                                    Ok(response) => {
+                                        tracing::info!("INJECTOR: Authorization completed successfully with injector");
+                                        response
+                                    },
+                                    Err(error_response) => {
+                                        tracing::error!("INJECTOR: Authorization failed with injector - error: {:?}", error_response);
+                                        PaymentServiceAuthorizeResponse::from(error_response)
+                                    },
                                 }
                             }
                             _ => {
