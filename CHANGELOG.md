@@ -4,6 +4,24 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.11.17.1
+
+### Features
+
+- **connector:**
+  - Added Refund flow for Authorizedotnet ([#279](https://github.com/juspay/connector-service/pull/279)) ([`b73ad11`](https://github.com/juspay/connector-service/commit/b73ad115ba0186fe31f5fcd31e1431d04ddc889f))
+  - [SILVERFLOW] Connector Integration ([#240](https://github.com/juspay/connector-service/pull/240)) ([`9368fa6`](https://github.com/juspay/connector-service/commit/9368fa6a6bc69fa6cd9ad751252997e322ae35cb))
+- Add wait screen information for UPI payments ([#259](https://github.com/juspay/connector-service/pull/259)) ([`290b9d1`](https://github.com/juspay/connector-service/commit/290b9d1bcbda28299a60d387e57daf25f3d88b36))
+
+### Bug Fixes
+
+- Add optional error_reason field to payment responses ([#288](https://github.com/juspay/connector-service/pull/288)) ([`c0e6d22`](https://github.com/juspay/connector-service/commit/c0e6d228787c8ab970cd045c658fec6ebb5da45c))
+- Diff fixes for Novalnet Authorize flow ([#287](https://github.com/juspay/connector-service/pull/287)) ([`8abb1ba`](https://github.com/juspay/connector-service/commit/8abb1ba750df259f34e62de798ab9c66d6ee5242))
+
+**Full Changelog:** [`2025.11.17.0...2025.11.17.1`](https://github.com/juspay/connector-service/compare/2025.11.17.0...2025.11.17.1)
+
+- - -
+
 ## 2025.11.17.0
 
 ### Features
