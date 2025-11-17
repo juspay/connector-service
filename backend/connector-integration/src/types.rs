@@ -4,9 +4,9 @@ use domain_types::{connector_types::ConnectorEnum, payment_method_data::PaymentM
 use interfaces::connector_types::BoxedConnector;
 
 use crate::connectors::{
-    Aci, Adyen, Authipay, Authorizedotnet, Bluecode, Braintree, Cashfree, Cashtocode, Celero, Checkout,
-    Cryptopay, Cybersource, Datatrans, Dlocal, Elavon, Fiserv, Fiservemea, Fiuu, Helcim, Mifinity,
-    Nexinets, Noon, Novalnet, Payload, Paytm, Payu, Phonepe, Placetopay, Rapyd, Razorpay,
+    Aci, Adyen, Authipay, Authorizedotnet, Bluecode, Braintree, Cashfree, Cashtocode, Celero,
+    Checkout, Cryptopay, Cybersource, Datatrans, Dlocal, Elavon, Fiserv, Fiservemea, Fiuu, Helcim,
+    Mifinity, Nexinets, Noon, Novalnet, Payload, Paytm, Payu, Phonepe, Placetopay, Rapyd, Razorpay,
     RazorpayV2, Silverflow, Stripe, Trustpay, Volt, Worldpay, Worldpayvantiv, Xendit,
 };
 
