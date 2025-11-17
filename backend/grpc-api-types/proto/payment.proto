@@ -2518,8 +2518,6 @@ message PaymentServiceCreateConnectorCustomerResponse {
   // Customer Information
   string connector_customer_id = 1; // The created connector customer ID
 
-  // Status Information
-  PaymentStatus status = 2; // Status of the customer creation attempt
   optional string error_code = 3; // Error code if the customer creation failed
   optional string error_message = 4; // Error message if the customer creation failed
   uint32 status_code = 5; // HTTP status code from the connector

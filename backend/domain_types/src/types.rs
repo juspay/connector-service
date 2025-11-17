@@ -5597,7 +5597,6 @@ pub fn generate_create_connector_customer_response(
     match customer_response {
         Ok(response) => Ok(PaymentServiceCreateConnectorCustomerResponse {
             connector_customer_id: response.connector_customer_id.clone(),
-            status: grpc_api_types::payments::PaymentStatus::Charged as i32,
             error_code: None,
             error_message: None,
             status_code: 200,
@@ -5613,7 +5612,6 @@ pub fn generate_create_connector_customer_response(
         }),
         Err(e) => Ok(PaymentServiceCreateConnectorCustomerResponse {
             connector_customer_id: String::new(),
-            status: grpc_api_types::payments::PaymentStatus::Failure as i32,
             error_code: Some(e.code),
             error_message: Some(e.message),
             status_code: e.status_code as u32,
