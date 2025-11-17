@@ -17,9 +17,8 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, payment_method,
-        payment_service_client::PaymentServiceClient, Address, AuthenticationType,
-        BrowserInformation, CaptureMethod, CardDetails, CountryAlpha2,
+        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient, Address,
+        AuthenticationType, BrowserInformation, CaptureMethod, CardDetails, CountryAlpha2,
         Currency, Identifier, PaymentAddress, PaymentMethod, PaymentServiceAuthorizeRequest,
         PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
         PaymentServiceVoidRequest, PaymentStatus,
@@ -218,7 +217,7 @@ fn create_payment_authorize_request_with_amount(
         card_issuing_country_alpha2: None,
         bank_code: None,
         nick_name: None,
-    });
+    };
     let mut metadata = HashMap::new();
     metadata.insert(
         "description".to_string(),

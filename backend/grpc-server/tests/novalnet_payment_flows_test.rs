@@ -15,10 +15,9 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, payment_method,
-        payment_service_client::PaymentServiceClient, Address, AuthenticationType, CaptureMethod,
-        CardDetails, Currency, Identifier, PaymentAddress, PaymentMethod,
-        PaymentServiceAuthorizeRequest, PaymentStatus,
+        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient, Address,
+        AuthenticationType, CaptureMethod, CardDetails, Currency, Identifier, PaymentAddress,
+        PaymentMethod, PaymentServiceAuthorizeRequest, PaymentStatus,
     },
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -109,7 +108,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         card_issuing_country_alpha2: None,
         bank_code: None,
         nick_name: None,
-    });
+    };
     let address = PaymentAddress {
         billing_address: Some(Address {
             first_name: Some("John".to_string().into()),

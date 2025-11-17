@@ -16,10 +16,9 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, payment_method,
-        payment_service_client::PaymentServiceClient, AcceptanceType, Address, AuthenticationType,
-        CaptureMethod, CardDetails, CountryAlpha2, Currency,
-        CustomerAcceptance, FutureUsage, Identifier, MandateReference, PaymentAddress,
+        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
+        AcceptanceType, Address, AuthenticationType, CaptureMethod, CardDetails, CountryAlpha2,
+        Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReference, PaymentAddress,
         PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
         PaymentServiceRegisterRequest, PaymentServiceRepeatEverythingRequest,
@@ -105,7 +104,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         card_issuing_country_alpha2: None,
         bank_code: None,
         nick_name: None,
-    });
+    };
 
     // Generate random billing address to avoid duplicates
     let mut rng = rand::thread_rng();
@@ -288,7 +287,7 @@ fn create_register_request_with_prefix(prefix: &str) -> PaymentServiceRegisterRe
         card_issuing_country_alpha2: None,
         bank_code: None,
         nick_name: None,
-    });
+    };
 
     // Use random values to create unique data to avoid duplicate detection
     let mut rng = rand::thread_rng();

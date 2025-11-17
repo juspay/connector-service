@@ -90,8 +90,7 @@ message PaymentMethod {
 }
 
 // ============================================================================
-// FLATTENED STRUCTURE - No wrapper types needed
-// Credit/debit distinction preserved as direct variants in PaymentMethod oneof
+// PAYMENT METHOD CATEGORIES
 // ============================================================================
 
 // Real-time payment methods category - TODO: Not yet supported
@@ -985,11 +984,11 @@ message RedPagos {
 
 // Flattened reward payment methods - extensible message types
 message ClassicReward {
-  // Future fields: loyalty_program_id, points_amount, member_tier, etc.
+  // Future fields
 }
 
 message EVoucher {
-  // Future fields: voucher_code, expiry_date, voucher_provider, etc.  
+  // Future fields
 }
 
 message SecretString {

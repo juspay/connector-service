@@ -20,15 +20,15 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, payment_method,
-        payment_service_client::PaymentServiceClient, AcceptanceType, Address, AuthenticationType,
-        BrowserInformation, CaptureMethod, CardDetails, CountryAlpha2,
-        Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReference, PaymentAddress,
-        PaymentMethod, PaymentMethodType, PaymentServiceAuthorizeRequest,
-        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
-        PaymentServiceRefundRequest, PaymentServiceRegisterRequest,
-        PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
-        PaymentServiceVoidRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus,
+        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
+        AcceptanceType, Address, AuthenticationType, BrowserInformation, CaptureMethod,
+        CardDetails, CountryAlpha2, Currency, CustomerAcceptance, FutureUsage, Identifier,
+        MandateReference, PaymentAddress, PaymentMethod, PaymentMethodType,
+        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
+        PaymentServiceRegisterRequest, PaymentServiceRepeatEverythingRequest,
+        PaymentServiceRepeatEverythingResponse, PaymentServiceVoidRequest, PaymentStatus,
+        RefundServiceGetRequest, RefundStatus,
     },
 };
 use rand::{distributions::Alphanumeric, Rng};
@@ -305,7 +305,7 @@ fn create_payment_authorize_request(
         card_issuing_country_alpha2: None,
         bank_code: None,
         nick_name: None,
-    });
+    };
 
     request.payment_method = Some(PaymentMethod {
         payment_method: Some(payment_method::PaymentMethod::Credit(card_details)),
@@ -536,7 +536,7 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
         card_issuing_country_alpha2: None,
         bank_code: None,
         nick_name: None,
-    });
+    };
 
     request.payment_method = Some(PaymentMethod {
         payment_method: Some(payment_method::PaymentMethod::Credit(card_details)),

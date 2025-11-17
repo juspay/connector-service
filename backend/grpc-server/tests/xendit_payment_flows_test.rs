@@ -15,12 +15,12 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, payment_method,
-        payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient,
-        AuthenticationType, CaptureMethod, CardDetails, Currency,
-        Identifier, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
-        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentStatus, RefundResponse, RefundServiceGetRequest, RefundStatus,
+        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
+        refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails,
+        Currency, Identifier, PaymentMethod, PaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
+        PaymentServiceRefundRequest, PaymentStatus, RefundResponse, RefundServiceGetRequest,
+        RefundStatus,
     },
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -113,7 +113,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         card_issuing_country_alpha2: None,
         bank_code: None,
         nick_name: None,
-    });
+    };
     PaymentServiceAuthorizeRequest {
         amount: TEST_AMOUNT,
         minor_amount: TEST_MINOR_AMOUNT,

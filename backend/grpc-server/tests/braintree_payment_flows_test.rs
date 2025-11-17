@@ -15,13 +15,12 @@ use std::{
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, payment_method,
-        payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient,
-        AuthenticationType, CaptureMethod, CardDetails, Currency,
-        Identifier, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
-        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentServiceVoidRequest, PaymentStatus, RefundResponse, RefundServiceGetRequest,
-        RefundStatus,
+        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
+        refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails,
+        Currency, Identifier, PaymentMethod, PaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
+        PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentStatus, RefundResponse,
+        RefundServiceGetRequest, RefundStatus,
     },
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -138,7 +137,7 @@ fn create_payment_authorize_request(
         card_issuing_country_alpha2: None,
         bank_code: None,
         nick_name: None,
-    });
+    };
     let mut metadata = HashMap::new();
     metadata.insert("merchant_account_id".to_string(), "Anand".to_string());
     PaymentServiceAuthorizeRequest {

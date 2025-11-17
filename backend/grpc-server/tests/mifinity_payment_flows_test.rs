@@ -13,9 +13,9 @@ use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
         identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
-        AuthenticationType, CaptureMethod, Currency, Identifier,
-        MifinityWallet, PaymentMethod, PaymentServiceAuthorizeRequest,
-        PaymentServiceAuthorizeResponse, PaymentServiceGetRequest, PaymentStatus,
+        AuthenticationType, CaptureMethod, Currency, Identifier, MifinityWallet, PaymentMethod,
+        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceGetRequest,
+        PaymentStatus,
     },
 };
 use tonic::{transport::Channel, Request};

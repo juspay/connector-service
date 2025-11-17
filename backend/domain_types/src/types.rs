@@ -587,9 +587,7 @@ impl<
                 _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                     error_identifier: 400,
-                    error_message:
-                        "This payment method type is not yet supported"
-                            .to_owned(),
+                    error_message: "This payment method type is not yet supported".to_owned(),
                     error_object: None,
                 }))),
             },
