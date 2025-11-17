@@ -80,7 +80,7 @@ pub struct NovalnetPaymentsRequestCustomer {
     mobile: Option<Secret<String>>,
     billing: Option<NovalnetPaymentsRequestBilling>,
     no_nc: i64,
-    birth_date: Option<String>, // Mandatory for SEPA Guarentee Payment
+    birth_date: Option<String>, // Mandatory for SEPA Guarantee Payment
 }
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct NovalnetCard<
@@ -235,6 +235,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        let _ = Err(ConnectorError::RequestEncodingFailed)?;
         let auth = NovalnetAuthType::try_from(&item.router_data.connector_auth_type)?;
 
         let merchant = NovalnetPaymentsRequestMerchant {
