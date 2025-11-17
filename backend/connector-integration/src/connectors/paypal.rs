@@ -208,6 +208,7 @@ macros::create_all_prerequisites!(
             access_token: &str,
             connector_request_reference_id: &str,
             connector_auth_type: &ConnectorAuthType,
+            connector_metadata: Option<&serde_json::Value>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             let auth = paypal::PaypalAuthType::try_from(connector_auth_type)?;
             let mut headers = vec![
@@ -233,6 +234,13 @@ macros::create_all_prerequisites!(
             {
                 let auth_assertion_header =
                     construct_auth_assertion_header(&credentials.payer_id, &credentials.client_id);
+                let partner_attribution_id = connector_metadata
+                    .and_then(|metadata| metadata.get("paypal_partner_attribution_id"))
+                    .and_then(|value| value.as_str())
+                    .ok_or(errors::ConnectorError::InvalidConnectorConfig {
+                        config: "Missing paypal_partner_attribution_id in connector metadata for PartnerIntegration",
+                    })?;
+
                 headers.extend(vec![
                     (
                         auth_headers::PAYPAL_AUTH_ASSERTION.to_string(),
@@ -240,13 +248,18 @@ macros::create_all_prerequisites!(
                     ),
                     (
                         auth_headers::PAYPAL_PARTNER_ATTRIBUTION_ID.to_string(),
-                        "HyperSwitchPPCP_SP".to_string().into(),
+                        partner_attribution_id.to_string().into(),
                     ),
                 ])
             } else {
+                let legacy_attribution_id = connector_metadata
+                    .and_then(|metadata| metadata.get("paypal_legacy_partner_attribution_id"))
+                    .and_then(|value| value.as_str())
+                    .unwrap_or(""); // fallback to empty value
+
                 headers.extend(vec![(
                     auth_headers::PAYPAL_PARTNER_ATTRIBUTION_ID.to_string(),
-                    "HyperSwitchlegacy_Ecom".to_string().into(),
+                    legacy_attribution_id.to_string().into(),
                 )])
             }
             Ok(headers)
@@ -260,10 +273,14 @@ macros::create_all_prerequisites!(
                 .access_token
                 .clone()
                 .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
+            let connector_metadata = req.resource_common_data.connector_meta_data
+                .as_ref()
+                .map(|secret| secret.clone().expose());
             self.build_headers(
                 &access_token.access_token,
                 &req.resource_common_data.connector_request_reference_id,
                 &req.connector_auth_type,
+                connector_metadata.as_ref(),
             )
         }
         pub fn connector_base_url_payments<'a, F, Req, Res>(
