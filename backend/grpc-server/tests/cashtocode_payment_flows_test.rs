@@ -83,7 +83,9 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         minor_amount: TEST_AMOUNT,
         currency: i32::from(Currency::Eur),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::ClassicReward(ClassicReward {})),
+            payment_method: Some(payment_method::PaymentMethod::ClassicReward(
+                ClassicReward {},
+            )),
         }),
         customer_id: Some("cust_1233".to_string()),
         return_url: Some("https://hyperswitch.io/connector-service".to_string()),
