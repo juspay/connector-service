@@ -29,44 +29,56 @@ impl WorldlineAuthType {
     /// Generate GCS v1HMAC Authorization header
     /// Format: GCS v1HMAC:{api_key}:{signature}
     /// Signature is base64(HMAC-SHA256(stringToSign, apiSecret))
-    /// stringToSign = method + "\n" + contentType + "\n" + date + "\n" + "/" + endpoint + "\n"
+    /// stringToSign = method + "\n" + contentType + "\n" + date + "\n" + CanonicalizedHeaders + CanonicalizedResource + "\n"
     pub fn generate_authorization_header(
         &self,
         http_method: &str,
         content_type: &str,
         date: &str,
         endpoint: &str,
+        x_gcs_headers: &[(String, String)],
     ) -> Result<String, error_stack::Report<errors::ConnectorError>> {
         use base64::{engine::general_purpose::STANDARD, Engine};
         use ring::hmac;
 
+        // Build CanonicalizedHeaders per Worldline spec:
+        // 1. Collect all HTTP headers that start with 'X-GCS'
+        // 2. Lowercase each header-name
+        // 3. Alphabetically sort the headers
+        // 4. For each header, add: "<lowercased headername>:<header value>\n"
+        let canonicalized_headers = Self::build_canonicalized_headers(x_gcs_headers);
+
         // Build string to sign per Worldline spec
         // Format: "METHOD\ncontent-type\ndate\nCanonicalizedHeaders\nCanonicalizedResource\n"
-        // Note: CanonicalizedHeaders is empty (no X-GCS headers), but the newline remains
-        // This creates: "METHOD\ncontent-type\ndate\n\n/endpoint\n"
         // endpoint already has leading '/' from path extraction
         let string_to_sign = format!(
-            "{}\n{}\n{}\n\n{}\n",
+            "{}\n{}\n{}\n{}{}\n",
             http_method,
             content_type.trim(),
             date.trim(),
+            canonicalized_headers,
             endpoint.trim()
         );
 
-        // The secretApiKey from Worldline Configuration Center is base64-encoded
-        // We need to decode it before using it as the HMAC key
+        // Debug logging for HMAC signature troubleshooting
+        tracing::debug!(
+            "Worldline HMAC - String to sign: {:?}",
+            string_to_sign
+        );
+
+        // Worldline's secret API key is base64-encoded
+        // Decode it before using as HMAC key
         let secret_bytes = STANDARD
             .decode(self.api_secret.peek().as_bytes())
             .change_context(errors::ConnectorError::InvalidConnectorConfig {
                 config: "api_secret",
             })
-            .attach_printable("Failed to base64-decode api_secret - ensure it's a valid base64-encoded secret from Worldline Configuration Center")?;
+            .attach_printable("Failed to base64-decode api_secret")?;
 
-        // Create HMAC key using the decoded secret (32 bytes for SHA256)
         let key = hmac::Key::new(hmac::HMAC_SHA256, &secret_bytes);
 
         // Sign the string
-        let signature_bytes = hmac::sign(&key, string_to_sign.as_bytes());
+        let signature_bytes = hmac::sign(&key,string_to_sign.as_bytes());
 
         // Base64 encode the signature
         let signature = STANDARD.encode(signature_bytes.as_ref());
@@ -77,6 +89,30 @@ impl WorldlineAuthType {
             self.api_key.peek(),
             signature
         ))
+    }
+
+    /// Build CanonicalizedHeaders string per Worldline spec
+    /// Returns: concatenated lowercased, sorted X-GCS headers with newlines
+    /// Example: "x-gcs-applicationidentifier:value\nx-gcs-messageid:value\n"
+    fn build_canonicalized_headers(x_gcs_headers: &[(String, String)]) -> String {
+        if x_gcs_headers.is_empty() {
+            return String::new();
+        }
+
+        // Create a vector of (lowercase_name, value) tuples
+        let mut headers: Vec<(String, String)> = x_gcs_headers
+            .iter()
+            .map(|(name, value)| (name.to_lowercase(), value.clone()))
+            .collect();
+
+        // Sort alphabetically by header name
+        headers.sort_by(|a, b| a.0.cmp(&b.0));
+
+        // Build the canonicalized string
+        headers
+            .iter()
+            .map(|(name, value)| format!("{}:{}\n", name, value.trim()))
+            .collect::<String>()
     }
 
     /// Generate date string for the Date header in Worldline's expected format
