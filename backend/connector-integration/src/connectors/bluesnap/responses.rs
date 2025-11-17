@@ -1,3 +1,4 @@
+use common_utils::FloatMajorUnit;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
@@ -105,7 +106,7 @@ pub struct BluesnapPaymentsResponse {
     pub transaction_id: String,
     pub card_transaction_type: BluesnapTxnType,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub amount: Option<f64>,
+    pub amount: Option<FloatMajorUnit>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
     pub processing_info: BluesnapProcessingInfo,
@@ -221,7 +222,7 @@ pub enum BluesnapChargebackStatus {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BluesnapDisputeWebhookBody {
-    pub invoice_charge_amount: f64,
+    pub invoice_charge_amount: FloatMajorUnit,
     pub currency: common_enums::Currency,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reversal_reason: Option<String>,
