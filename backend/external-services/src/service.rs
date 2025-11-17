@@ -804,9 +804,9 @@ fn get_or_create_proxy_client(
             cached_client
         }
         None => {
-            let mut write_lock = cache.try_write().map_err(|_| {
-                ApiClientError::ClientConstructionFailed
-            })?;
+            let mut write_lock = cache
+                .try_write()
+                .map_err(|_| ApiClientError::ClientConstructionFailed)?;
 
             match write_lock.get(&cache_key) {
                 Some(cached_client) => {
@@ -819,11 +819,13 @@ fn get_or_create_proxy_client(
                 None => {
                     tracing::info!("Creating new proxy client for config: {:?}", cache_key);
 
-                    let new_client =
-                        apply_mitm_certificate(get_client_builder(proxy_config, false)?, proxy_config)?
-                            .build()
-                            .change_context(ApiClientError::ClientConstructionFailed)
-                            .attach_printable("Failed to construct proxy client")?;
+                    let new_client = apply_mitm_certificate(
+                        get_client_builder(proxy_config, false)?,
+                        proxy_config,
+                    )?
+                    .build()
+                    .change_context(ApiClientError::ClientConstructionFailed)
+                    .attach_printable("Failed to construct proxy client")?;
 
                     write_lock.insert(cache_key.clone(), new_client.clone());
                     tracing::debug!("Cached new proxy client for config: {:?}", cache_key);
@@ -843,7 +845,8 @@ fn apply_mitm_certificate(
     if proxy_config.mitm_proxy_enabled {
         if let Some(cert_content) = &proxy_config.mitm_ca_cert {
             if !cert_content.trim().is_empty() {
-                client_builder = load_custom_ca_certificate_from_content(client_builder, cert_content.trim())?;
+                client_builder =
+                    load_custom_ca_certificate_from_content(client_builder, cert_content.trim())?;
             }
         }
     }
@@ -873,10 +876,13 @@ fn get_base_client(
         let client = DEFAULT_CLIENT
             .get_or_try_init(|| {
                 tracing::info!("Initializing DEFAULT_CLIENT (no proxy configuration)");
-                apply_mitm_certificate(get_client_builder(proxy_config, should_bypass_proxy)?, proxy_config)?
-                    .build()
-                    .change_context(ApiClientError::ClientConstructionFailed)
-                    .attach_printable("Failed to construct default client")
+                apply_mitm_certificate(
+                    get_client_builder(proxy_config, should_bypass_proxy)?,
+                    proxy_config,
+                )?
+                .build()
+                .change_context(ApiClientError::ClientConstructionFailed)
+                .attach_printable("Failed to construct default client")
             })?
             .clone();
 
