@@ -21,6 +21,13 @@ use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
+pub const NEXT_ACTION_DATA: &str = "nextActionData";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum NextActionData {
+    WaitScreenInstructions,
+}
+
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub enum Currency {
     #[default]
@@ -1700,10 +1707,12 @@ impl<F, Req>
             }
         };
 
+        let connector_metadata = get_wait_screen_metadata();
+
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: transaction_id,
             redirection_data: redirection_data.map(Box::new),
-            connector_metadata: None,
+            connector_metadata,
             mandate_reference: None,
             network_txn_id: None,
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
@@ -1720,4 +1729,15 @@ impl<F, Req>
             ..data
         })
     }
+}
+
+pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
+    serde_json::to_value(serde_json::json!({
+        NEXT_ACTION_DATA: NextActionData::WaitScreenInstructions
+    }))
+    .map_err(|e| {
+        tracing::error!("Failed to serialize wait screen metadata: {}", e);
+        e
+    })
+    .ok()
 }

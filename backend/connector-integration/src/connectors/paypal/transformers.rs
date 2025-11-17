@@ -576,7 +576,7 @@ fn get_address_info(
             country_code: country.to_owned(),
             address_line_1: address.line1.clone(),
             postal_code: address.zip.clone(),
-            admin_area_2: address.city.clone(),
+            admin_area_2: address.city.clone().map(|city| city.expose()),
         }),
         None => None,
     }
