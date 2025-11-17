@@ -235,7 +235,6 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let _ = Err(ConnectorError::RequestEncodingFailed)?;
         let auth = NovalnetAuthType::try_from(&item.router_data.connector_auth_type)?;
 
         let merchant = NovalnetPaymentsRequestMerchant {
