@@ -177,7 +177,7 @@ impl HasConnectors for DisputeFlowData {
     }
 }
 
-#[derive(Debug, serde::Deserialize, Clone)]
+#[derive(Debug, serde::Deserialize, Clone, PartialEq, Eq, Hash)]
 pub struct Proxy {
     pub http_url: Option<String>,
     pub https_url: Option<String>,
@@ -185,6 +185,17 @@ pub struct Proxy {
     pub bypass_proxy_urls: Vec<String>,
     pub mitm_proxy_enabled: bool,
     pub mitm_ca_cert: Option<String>,
+}
+
+impl Proxy {
+    pub fn cache_key(&self) -> Option<Self> {
+        // Return Some(self) if there's an actual proxy configuration
+        if self.http_url.is_some() || self.https_url.is_some() {
+            Some(self.clone())
+        } else {
+            None
+        }
+    }
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for common_enums::CaptureMethod {
