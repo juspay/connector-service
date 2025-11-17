@@ -220,6 +220,7 @@ macros::create_all_prerequisites!(
     amount_converters: [],
     member_functions: {
         /// Build headers with HMAC authentication for a given HTTP method and path
+        /// Matches the Hyperswitch implementation exactly
         pub fn build_headers_with_auth<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
@@ -232,34 +233,18 @@ macros::create_all_prerequisites!(
             // Get auth credentials
             let auth = worldline::WorldlineAuthType::try_from(&req.connector_auth_type)?;
 
-            // Generate X-GCS headers required by Worldline
-            // Per Worldline spec, X-GCS headers MUST be included in CanonicalizedHeaders for HMAC signature
-            let x_gcs_request_id = uuid::Uuid::new_v4().to_string();
-            let x_gcs_message_id = uuid::Uuid::new_v4().to_string();
-            let x_gcs_app_identifier = "hyperswitch-connector-service".to_string();
-
-            // Build X-GCS headers array for signature calculation
-            let x_gcs_headers = vec![
-                ("X-GCS-ApplicationIdentifier".to_string(), x_gcs_app_identifier.clone()),
-                ("X-GCS-MessageId".to_string(), x_gcs_message_id.clone()),
-                ("X-GCS-RequestId".to_string(), x_gcs_request_id.clone()),
-            ];
-
-            // Generate HMAC Authorization header (WITH X-GCS headers in signature)
+            // Generate HMAC Authorization header (matching Hyperswitch - NO X-GCS headers)
             let authorization = auth.generate_authorization_header(
                 http_method,
                 content_type,
                 &date,
                 path,
-                &x_gcs_headers,
             )?;
 
+            // Only send the 3 required headers (matching Hyperswitch exactly)
             Ok(vec![
                 (headers::CONTENT_TYPE.to_string(), content_type.to_string().into()),
                 ("Date".to_string(), date.into()),
-                ("X-GCS-ApplicationIdentifier".to_string(), x_gcs_app_identifier.into()),
-                ("X-GCS-MessageId".to_string(), x_gcs_message_id.into()),
-                ("X-GCS-RequestId".to_string(), x_gcs_request_id.into()),
                 (headers::AUTHORIZATION.to_string(), authorization.into()),
             ])
         }
@@ -421,33 +406,19 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            // GET requests use empty content-type
+            // GET requests use empty content-type (matching Hyperswitch)
             let date = worldline::WorldlineAuthType::generate_date_header();
             let url = self.get_url(req)?;
             let base_url = self.connector_base_url_payments(req);
             let endpoint = format!("/{}", url.replace(base_url, ""));
             let auth = worldline::WorldlineAuthType::try_from(&req.connector_auth_type)?;
 
-            // Generate X-GCS headers for GET request
-            // Per Worldline spec, X-GCS headers MUST be included in CanonicalizedHeaders for HMAC signature
-            let x_gcs_request_id = uuid::Uuid::new_v4().to_string();
-            let x_gcs_message_id = uuid::Uuid::new_v4().to_string();
-            let x_gcs_app_identifier = "hyperswitch-connector-service".to_string();
+            // Generate HMAC Authorization header (matching Hyperswitch - NO X-GCS headers)
+            let authorization = auth.generate_authorization_header("GET", "", &date, &endpoint)?;
 
-            // Build X-GCS headers array for signature calculation
-            let x_gcs_headers = vec![
-                ("X-GCS-ApplicationIdentifier".to_string(), x_gcs_app_identifier.clone()),
-                ("X-GCS-MessageId".to_string(), x_gcs_message_id.clone()),
-                ("X-GCS-RequestId".to_string(), x_gcs_request_id.clone()),
-            ];
-
-            let authorization = auth.generate_authorization_header("GET", "", &date, &endpoint, &x_gcs_headers)?;
-
+            // Only send the 2 required headers for GET requests (Date and Authorization)
             Ok(vec![
                 ("Date".to_string(), date.into()),
-                ("X-GCS-ApplicationIdentifier".to_string(), x_gcs_app_identifier.into()),
-                ("X-GCS-MessageId".to_string(), x_gcs_message_id.into()),
-                ("X-GCS-RequestId".to_string(), x_gcs_request_id.into()),
                 (headers::AUTHORIZATION.to_string(), authorization.into()),
             ])
         }
@@ -630,33 +601,19 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            // GET requests use empty content-type
+            // GET requests use empty content-type (matching Hyperswitch)
             let date = worldline::WorldlineAuthType::generate_date_header();
             let url = self.get_url(req)?;
             let base_url = self.connector_base_url_refunds(req);
             let endpoint = format!("/{}", url.replace(base_url, ""));
             let auth = worldline::WorldlineAuthType::try_from(&req.connector_auth_type)?;
 
-            // Generate X-GCS headers for GET request
-            // Per Worldline spec, X-GCS headers MUST be included in CanonicalizedHeaders for HMAC signature
-            let x_gcs_request_id = uuid::Uuid::new_v4().to_string();
-            let x_gcs_message_id = uuid::Uuid::new_v4().to_string();
-            let x_gcs_app_identifier = "hyperswitch-connector-service".to_string();
+            // Generate HMAC Authorization header (matching Hyperswitch - NO X-GCS headers)
+            let authorization = auth.generate_authorization_header("GET", "", &date, &endpoint)?;
 
-            // Build X-GCS headers array for signature calculation
-            let x_gcs_headers = vec![
-                ("X-GCS-ApplicationIdentifier".to_string(), x_gcs_app_identifier.clone()),
-                ("X-GCS-MessageId".to_string(), x_gcs_message_id.clone()),
-                ("X-GCS-RequestId".to_string(), x_gcs_request_id.clone()),
-            ];
-
-            let authorization = auth.generate_authorization_header("GET", "", &date, &endpoint, &x_gcs_headers)?;
-
+            // Only send the 2 required headers for GET requests (Date and Authorization)
             Ok(vec![
                 ("Date".to_string(), date.into()),
-                ("X-GCS-ApplicationIdentifier".to_string(), x_gcs_app_identifier.into()),
-                ("X-GCS-MessageId".to_string(), x_gcs_message_id.into()),
-                ("X-GCS-RequestId".to_string(), x_gcs_request_id.into()),
                 (headers::AUTHORIZATION.to_string(), authorization.into()),
             ])
         }

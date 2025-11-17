@@ -29,34 +29,25 @@ impl WorldlineAuthType {
     /// Generate GCS v1HMAC Authorization header
     /// Format: GCS v1HMAC:{api_key}:{signature}
     /// Signature is base64(HMAC-SHA256(stringToSign, apiSecret))
-    /// stringToSign = method + "\n" + contentType + "\n" + date + "\n" + CanonicalizedHeaders + CanonicalizedResource + "\n"
+    /// stringToSign = method + "\n" + contentType + "\n" + date + "\n" + CanonicalizedResource + "\n"
     pub fn generate_authorization_header(
         &self,
         http_method: &str,
         content_type: &str,
         date: &str,
         endpoint: &str,
-        x_gcs_headers: &[(String, String)],
     ) -> Result<String, error_stack::Report<errors::ConnectorError>> {
         use base64::{engine::general_purpose::STANDARD, Engine};
         use ring::hmac;
 
-        // Build CanonicalizedHeaders per Worldline spec:
-        // 1. Collect all HTTP headers that start with 'X-GCS'
-        // 2. Lowercase each header-name
-        // 3. Alphabetically sort the headers
-        // 4. For each header, add: "<lowercased headername>:<header value>\n"
-        let canonicalized_headers = Self::build_canonicalized_headers(x_gcs_headers);
-
-        // Build string to sign per Worldline spec
-        // Format: "METHOD\ncontent-type\ndate\nCanonicalizedHeaders\nCanonicalizedResource\n"
-        // endpoint already has leading '/' from path extraction
+        // Build string to sign per Worldline spec (matching Hyperswitch implementation)
+        // Format: "METHOD\ncontent-type\ndate\n/endpoint\n"
+        // endpoint should have leading '/' from path extraction
         let string_to_sign = format!(
-            "{}\n{}\n{}\n{}{}\n",
+            "{}\n{}\n{}\n{}\n",
             http_method,
             content_type.trim(),
             date.trim(),
-            canonicalized_headers,
             endpoint.trim()
         );
 
@@ -66,19 +57,12 @@ impl WorldlineAuthType {
             string_to_sign
         );
 
-        // Worldline's secret API key is base64-encoded
-        // Decode it before using as HMAC key
-        let secret_bytes = STANDARD
-            .decode(self.api_secret.peek().as_bytes())
-            .change_context(errors::ConnectorError::InvalidConnectorConfig {
-                config: "api_secret",
-            })
-            .attach_printable("Failed to base64-decode api_secret")?;
-
-        let key = hmac::Key::new(hmac::HMAC_SHA256, &secret_bytes);
+        // Use api_secret directly as HMAC key (do NOT base64 decode)
+        // This matches the working Hyperswitch implementation
+        let key = hmac::Key::new(hmac::HMAC_SHA256, self.api_secret.peek().as_bytes());
 
         // Sign the string
-        let signature_bytes = hmac::sign(&key,string_to_sign.as_bytes());
+        let signature_bytes = hmac::sign(&key, string_to_sign.as_bytes());
 
         // Base64 encode the signature
         let signature = STANDARD.encode(signature_bytes.as_ref());
@@ -89,30 +73,6 @@ impl WorldlineAuthType {
             self.api_key.peek(),
             signature
         ))
-    }
-
-    /// Build CanonicalizedHeaders string per Worldline spec
-    /// Returns: concatenated lowercased, sorted X-GCS headers with newlines
-    /// Example: "x-gcs-applicationidentifier:value\nx-gcs-messageid:value\n"
-    fn build_canonicalized_headers(x_gcs_headers: &[(String, String)]) -> String {
-        if x_gcs_headers.is_empty() {
-            return String::new();
-        }
-
-        // Create a vector of (lowercase_name, value) tuples
-        let mut headers: Vec<(String, String)> = x_gcs_headers
-            .iter()
-            .map(|(name, value)| (name.to_lowercase(), value.clone()))
-            .collect();
-
-        // Sort alphabetically by header name
-        headers.sort_by(|a, b| a.0.cmp(&b.0));
-
-        // Build the canonicalized string
-        headers
-            .iter()
-            .map(|(name, value)| format!("{}:{}\n", name, value.trim()))
-            .collect::<String>()
     }
 
     /// Generate date string for the Date header in Worldline's expected format
@@ -327,8 +287,8 @@ pub struct WorldlinePaymentResponse {
     pub merchant_action: Option<WorldlineMerchantAction>,
 }
 
-// Type alias for PSync response - same structure as authorize response
-pub type WorldlinePaymentSyncResponse = WorldlinePaymentResponse;
+// PSync response returns the payment object directly (not wrapped)
+pub type WorldlinePaymentSyncResponse = WorldlinePaymentObject;
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -632,7 +592,15 @@ fn map_worldline_status(
     match status.to_uppercase().as_str() {
         "CREATED" | "PENDING_PAYMENT" | "PENDING_FRAUD_APPROVAL" => AttemptStatus::Pending,
         "AUTHORIZATION_REQUESTED" => AttemptStatus::Pending,
-        "PENDING_APPROVAL" => AttemptStatus::Pending,
+        "PENDING_APPROVAL" => {
+            // Check if authorized - PENDING_APPROVAL with is_authorized=true means Authorized
+            if let Some(output) = status_output {
+                if output.is_authorized == Some(true) {
+                    return AttemptStatus::Authorized;
+                }
+            }
+            AttemptStatus::Pending
+        }
         "PENDING_COMPLETION" => AttemptStatus::Pending,
         "PENDING_CAPTURE" => {
             // Check if authorized
@@ -690,32 +658,16 @@ impl
         let response = &item.response;
         let router_data = &item.router_data;
 
-        // Extract payment object - same structure as Authorize response
-        let payment = response
-            .payment
-            .as_ref()
-            .ok_or(errors::ConnectorError::ResponseDeserializationFailed)
-            .attach_printable("Missing payment object in PSync response")?;
+        // PSync response IS the payment object directly (no wrapper)
+        let payment = response;
 
         // Map status using the same status mapping function as Authorize
         let status = map_worldline_status(&payment.status, &payment.status_output);
 
-        // Check for redirect (may be present for pending payments)
-        let redirection_data = response
-            .merchant_action
-            .as_ref()
-            .and_then(|action| action.redirect_data.as_ref())
-            .and_then(|redirect| redirect.redirect_url.clone())
-            .map(|url| {
-                Box::new(domain_types::router_response_types::RedirectForm::Uri {
-                    uri: url,
-                })
-            });
-
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(payment.id.clone()),
-                redirection_data,
+                redirection_data: None,  // PSync doesn't include merchant_action
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
