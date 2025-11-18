@@ -62,6 +62,7 @@ mod tests {
                     payment_method: PaymentMethod::Card,
                     description: None,
                     return_url: None,
+                    order_details: None,
                     address: PaymentAddress::new(
                         None,
                         Some(Address {
@@ -284,6 +285,7 @@ mod tests {
                     minor_amount_capturable: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
+                    order_details: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -415,6 +417,7 @@ mod tests {
                     minor_amount_capturable: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
+                    order_details: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -568,6 +571,7 @@ mod tests {
                     minor_amount_capturable: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
+                    order_details: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -892,6 +896,7 @@ mod tests {
                 minor_amount_capturable: None,
                 connector_response: None,
                 recurring_mandate_payment_data: None,
+                order_details: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1079,6 +1084,7 @@ mod tests {
                 minor_amount_capturable: None,
                 connector_response: None,
                 recurring_mandate_payment_data: None,
+                order_details: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1268,6 +1274,7 @@ mod tests {
                     minor_amount_capturable: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
+                    order_details: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1381,6 +1388,7 @@ mod tests {
                     minor_amount_capturable: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
+                    order_details: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1497,6 +1505,7 @@ mod tests {
                     minor_amount_capturable: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
+                    order_details: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "invalid_key".to_string().into(),
@@ -1649,6 +1658,7 @@ mod tests {
                 minor_amount_capturable: None,
                 connector_response: None,
                 recurring_mandate_payment_data: None,
+                order_details: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1774,6 +1784,7 @@ mod tests {
                 minor_amount_capturable: None,
                 connector_response: None,
                 recurring_mandate_payment_data: None,
+                order_details: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1888,6 +1899,7 @@ mod tests {
                 minor_amount_capturable: None,
                 connector_response: None,
                 recurring_mandate_payment_data: None,
+                order_details: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
