@@ -80,6 +80,32 @@ pub struct ApplePayData {
     applepay_payment_data: Secret<String>, // Hex-encoded
 }
 
+// ===== MERCHANT DEFINED FIELDS =====
+
+#[derive(Debug, Serialize)]
+pub struct NmiMerchantDefinedField {
+    #[serde(flatten)]
+    inner: std::collections::BTreeMap<String, Secret<String>>,
+}
+
+impl NmiMerchantDefinedField {
+    pub fn new(metadata: &serde_json::Value) -> Self {
+        let metadata_as_string = metadata.to_string();
+        let hash_map: std::collections::BTreeMap<String, serde_json::Value> =
+            serde_json::from_str(&metadata_as_string).unwrap_or(std::collections::BTreeMap::new());
+        let inner = hash_map
+            .into_iter()
+            .enumerate()
+            .map(|(index, (hs_key, hs_value))| {
+                let nmi_key = format!("merchant_defined_field_{}", index + 1);
+                let nmi_value = format!("{hs_key}={hs_value}");
+                (nmi_key, Secret::new(nmi_value))
+            })
+            .collect();
+        Self { inner }
+    }
+}
+
 // ===== PAYMENT REQUEST =====
 
 #[derive(Debug, Serialize)]
@@ -92,6 +118,8 @@ pub struct NmiPaymentsRequest<T: PaymentMethodDataTypes> {
     orderid: String,
     #[serde(flatten)]
     payment_method: NmiPaymentMethod<T>,
+    #[serde(flatten)]
+    merchant_defined_field: Option<NmiMerchantDefinedField>,
 }
 
 impl<T: PaymentMethodDataTypes>
@@ -133,6 +161,11 @@ impl<T: PaymentMethodDataTypes>
             currency: item.request.currency,
             orderid: item.resource_common_data.connector_request_reference_id.clone(),
             payment_method,
+            merchant_defined_field: item
+                .request
+                .metadata
+                .as_ref()
+                .map(NmiMerchantDefinedField::new),
         })
     }
 }
