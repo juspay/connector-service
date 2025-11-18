@@ -488,7 +488,7 @@ impl<
     }
 
     fn get_currency_unit(&self) -> CurrencyUnit {
-        CurrencyUnit::Minor
+        CurrencyUnit::Base
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
@@ -503,15 +503,10 @@ impl<
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
         // Use HTTP Basic Auth for HiPay
-        let auth_value = if let Some(api_secret) = auth.api_secret {
-            use base64::Engine;
-            let credentials = format!("{}:{}", auth.api_key.expose(), api_secret.expose());
-            let base64_credentials = base64::engine::general_purpose::STANDARD.encode(credentials);
-            format!("Basic {}", base64_credentials)
-        } else {
-            // Fallback to API key only (shouldn't happen for HiPay)
-            format!("Bearer {}", auth.api_key.expose())
-        };
+        use base64::Engine;
+        let credentials = format!("{}:{}", auth.api_key.expose(), auth.api_secret.expose());
+        let base64_credentials = base64::engine::general_purpose::STANDARD.encode(credentials);
+        let auth_value = format!("Basic {}", base64_credentials);
 
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
@@ -548,8 +543,8 @@ impl<
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: error_response.code,
-            message: error_response.message,
-            reason: None,
+            message: error_response.message.clone(),
+            reason: Some(error_response.message),
             attempt_status: None,
             connector_transaction_id: None,
             network_decline_code: None,
@@ -581,26 +576,14 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = hipay::HipayAuthType::try_from(&req.connector_auth_type)
-                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-
-            let auth_value = if let Some(api_secret) = auth.api_secret {
-                use base64::Engine;
-                let credentials = format!("{}:{}", auth.api_key.expose(), api_secret.expose());
-                let base64_credentials = base64::engine::general_purpose::STANDARD.encode(credentials);
-                format!("Basic {}", base64_credentials)
-            } else {
-                return Err(errors::ConnectorError::FailedToObtainAuthType.into());
-            };
-
             // Do NOT set Content-Type header manually for FormData - reqwest sets it with boundary
-            Ok(vec![
-                (
-                    headers::ACCEPT.to_string(),
-                    constants::JSON_CONTENT_TYPE.to_string().into(),
-                ),
-                (headers::AUTHORIZATION.to_string(), auth_value.into()),
-            ])
+            let mut header = vec![(
+                headers::ACCEPT.to_string(),
+                constants::JSON_CONTENT_TYPE.to_string().into(),
+            )];
+            let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
+            header.append(&mut auth_header);
+            Ok(header)
         }
 
         fn get_url(
@@ -885,7 +868,9 @@ impl<
         let response: HipayRSyncResponse = deserialize_xml_to_struct(response_str)
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        event_builder.map(|i| i.set_connector_response(&response));
+        if let Some(event) = event_builder {
+            event.set_connector_response(&response);
+        }
 
         RouterDataV2::try_from(ResponseRouterData {
             response,

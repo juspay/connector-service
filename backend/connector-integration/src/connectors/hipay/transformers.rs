@@ -3,6 +3,7 @@ use crate::{
     types::ResponseRouterData,
 };
 use common_enums::{AttemptStatus, RefundStatus};
+use common_utils::types::StringMajorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
     connector_types::{
@@ -23,7 +24,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone)]
 pub struct HipayAuthType {
     pub api_key: Secret<String>,
-    pub api_secret: Option<Secret<String>>,
+    pub api_secret: Secret<String>,
 }
 
 impl TryFrom<&ConnectorAuthType> for HipayAuthType {
@@ -31,24 +32,12 @@ impl TryFrom<&ConnectorAuthType> for HipayAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
-                api_key: api_key.to_owned(),
-                api_secret: None,
-            }),
             ConnectorAuthType::BodyKey {
                 api_key,
                 key1: api_secret,
             } => Ok(Self {
                 api_key: api_key.to_owned(),
-                api_secret: Some(api_secret.to_owned()),
-            }),
-            ConnectorAuthType::SignatureKey {
-                api_key,
-                api_secret,
-                ..
-            } => Ok(Self {
-                api_key: api_key.to_owned(),
-                api_secret: Some(api_secret.to_owned()),
+                api_secret: api_secret.to_owned(),
             }),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType
@@ -297,7 +286,7 @@ pub struct HipayPaymentsRequest<T: PaymentMethodDataTypes> {
     pub operation: String,
     pub description: String,
     pub currency: common_enums::Currency,
-    pub amount: String,
+    pub amount: StringMajorUnit,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cardtoken: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -396,7 +385,7 @@ impl<
                     .resource_common_data
                     .connector_customer
                     .clone()
-                    .unwrap_or_else(|| "".to_string()) // Empty string fallback
+                    .unwrap_or_default() // Empty string fallback
             }
             _ => {
                 return Err(errors::ConnectorError::NotImplemented(
@@ -430,14 +419,15 @@ impl<
             Secret::new(e.peek().to_string())
         });
 
-        // Get IP address
+        // Get IP address using utility function
         let ipaddr = item
             .router_data
             .request
-            .browser_info
-            .as_ref()
-            .and_then(|b| b.ip_address.as_ref())
-            .map(|ip| ip.to_string());
+            .get_ip_address_as_optional()
+            .map(|ip| {
+                use hyperswitch_masking::PeekInterface;
+                ip.peek().to_string()
+            });
 
         // Get return URLs from router data
         let accept_url = item.router_data.request.complete_authorize_url.clone();
@@ -446,7 +436,7 @@ impl<
         let cancel_url = accept_url.clone();
         let exception_url = accept_url.clone();
 
-        // Convert amount to string (HiPay expects string with decimals)
+        // Convert amount to StringMajorUnit (HiPay expects string with decimals)
         let amount = item
             .connector
             .amount_converter
@@ -454,8 +444,7 @@ impl<
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(errors::ConnectorError::AmountConversionFailed)?
-            .get_amount_as_string();
+            .change_context(errors::ConnectorError::AmountConversionFailed)?;
 
         // Extract card token from payment_method_token if present,
         // or from connector_customer as fallback (when token is passed via gRPC)
@@ -638,10 +627,7 @@ pub struct HipayTokenRequest<T: PaymentMethodDataTypes> {
     pub card_expiry_month: Secret<String>,
     pub card_expiry_year: Secret<String>,
     pub card_holder: Secret<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cvc: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub multi_use: Option<String>,
+    pub cvc: Secret<String>,
 }
 
 impl<
@@ -687,8 +673,7 @@ impl<
                     .resource_common_data
                     .get_optional_billing_full_name()
                     .unwrap_or(Secret::new("".to_string())),
-                cvc: Some(card_data.card_cvc.clone()),
-                multi_use: Some("1".to_string()), // 1 for multi-use token
+                cvc: card_data.card_cvc.clone(),
             }),
             PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::Wallet(_)
@@ -721,15 +706,15 @@ impl<
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct HipayTokenResponse {
-    pub token: String,
+    pub token: Secret<String>,
     pub request_id: String,
     pub brand: String,
-    pub pan: String,
-    pub card_holder: String,
+    pub pan: Secret<String>,
+    pub card_holder: Secret<String>,
     pub card_expiry_month: String,
     pub card_expiry_year: String,
     pub issuer: Option<String>,
-    pub country: Option<String>,
+    pub country: Option<common_enums::CountryAlpha2>,
 }
 
 impl<T: PaymentMethodDataTypes>
@@ -764,9 +749,10 @@ impl<T: PaymentMethodDataTypes>
             >,
         >,
     ) -> Result<Self, Self::Error> {
+        use hyperswitch_masking::ExposeInterface;
         Ok(Self {
             response: Ok(PaymentMethodTokenResponse {
-                token: item.response.token,
+                token: item.response.token.expose(),
             }),
             ..item.router_data
         })
@@ -889,7 +875,7 @@ pub struct HipayCaptureRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub currency: Option<common_enums::Currency>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub amount: Option<String>,
+    pub amount: Option<StringMajorUnit>,
 }
 
 impl<
@@ -915,7 +901,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        // Convert amount to string with decimals (HiPay expects decimal format)
+        // Convert amount to StringMajorUnit (HiPay expects decimal format)
         let amount = item
             .connector
             .amount_converter
@@ -923,8 +909,7 @@ impl<
                 item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
-            .change_context(errors::ConnectorError::AmountConversionFailed)?
-            .get_amount_as_string();
+            .change_context(errors::ConnectorError::AmountConversionFailed)?;
 
         Ok(Self {
             operation: HipayOperation::Capture,
@@ -1002,7 +987,7 @@ pub struct HipayRefundRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub currency: Option<common_enums::Currency>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub amount: Option<String>,
+    pub amount: Option<StringMajorUnit>,
 }
 
 impl<
@@ -1025,7 +1010,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        // Convert minor unit amount to decimal format (HiPay expects decimal format)
+        // Convert minor unit amount to StringMajorUnit (HiPay expects decimal format)
         let amount = item
             .connector
             .amount_converter
@@ -1033,8 +1018,7 @@ impl<
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(errors::ConnectorError::AmountConversionFailed)?
-            .get_amount_as_string();
+            .change_context(errors::ConnectorError::AmountConversionFailed)?;
 
         Ok(Self {
             operation: HipayOperation::Refund,
@@ -1118,7 +1102,7 @@ pub struct HipayVoidRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub currency: Option<common_enums::Currency>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub amount: Option<String>,
+    pub amount: Option<StringMajorUnit>,
 }
 
 impl<
@@ -1147,7 +1131,7 @@ impl<
         Ok(Self {
             operation: HipayOperation::Cancel,
             currency: item.router_data.request.currency,
-            amount: Some("".to_string()), // Empty string as per Hyperswitch
+            amount: None, // None for void requests
         })
     }
 }
