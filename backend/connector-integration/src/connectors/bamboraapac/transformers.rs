@@ -39,11 +39,6 @@ impl TryFrom<&ConnectorAuthType> for BamboraapacAuthType {
                 password: api_secret.clone(),
                 account_number: key1.clone(),
             }),
-            ConnectorAuthType::BodyKey { api_key, key1, .. } => Ok(Self {
-                username: api_key.clone(),
-                password: key1.clone(),
-                account_number: api_key.clone(), // Using api_key as account number if not provided
-            }),
             _ => Err(ConnectorError::FailedToObtainAuthType),
         }
     }
@@ -204,6 +199,7 @@ pub struct BamboraapacCaptureRequest {
     pub cust_ref: String,
     pub receipt: String,
     pub amount: MinorUnit,
+    pub account_number: Secret<String>,
     pub username: Secret<String>,
     pub password: Secret<String>,
 }
@@ -214,29 +210,31 @@ impl BamboraapacCaptureRequest {
             r#"
             <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
             xmlns:dts="http://www.ippayments.com.au/interface/api/dts">
-                <soapenv:Header/>
                 <soapenv:Body>
-                    <dts:SubmitSingleRefund>
+                    <dts:SubmitSinglePayment>
                         <dts:trnXML>
                             <![CDATA[
-                    <Refund>
-                        <CustRef>{}</CustRef>
-                        <Receipt>{}</Receipt>
-                        <Amount>{}</Amount>
-                        <Security>
-                            <UserName>{}</UserName>
-                            <Password>{}</Password>
-                        </Security>
-                    </Refund>
-                ]]>
+        <Transaction>
+            <CustRef>{}</CustRef>
+            <Receipt>{}</Receipt>
+            <Amount>{}</Amount>
+            <TrnType>3</TrnType>
+            <AccountNumber>{}</AccountNumber>
+            <Security>
+                <UserName>{}</UserName>
+                <Password>{}</Password>
+            </Security>
+        </Transaction>
+                            ]]>
                         </dts:trnXML>
-                    </dts:SubmitSingleRefund>
+                    </dts:SubmitSinglePayment>
                 </soapenv:Body>
             </soapenv:Envelope>
         "#,
             self.cust_ref,
             self.receipt,
             self.amount.get_amount_as_i64(),
+            self.account_number.peek(),
             self.username.peek(),
             self.password.peek()
         )
@@ -433,18 +431,13 @@ impl<
             + 'static
             + Serialize,
     >
-    TryFrom<(
-        MinorUnit,
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    )> for BamboraapacPaymentRequest<T>
+    TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+    for BamboraapacPaymentRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        (amount, router_data): (
-            MinorUnit,
-            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ),
+        router_data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = BamboraapacAuthType::try_from(&router_data.connector_auth_type)?;
 
@@ -477,7 +470,7 @@ impl<
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            amount,
+            amount: router_data.request.minor_amount,
             trn_type,
             card_number: Secret::new(card_number_str),
             exp_month: card_data.card_exp_month.clone(),
@@ -622,17 +615,18 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::Capture, PaymentFlowDat
                 .clone(),
             receipt,
             amount: router_data.request.minor_amount_to_capture,
+            account_number: auth.account_number,
             username: auth.username,
             password: auth.password,
         })
     }
 }
 
-// Capture Response Transformation (reuses RefundResponseInner)
+// Capture Response Transformation (uses BamboraapacPaymentResponse)
 impl
     TryFrom<
         ResponseRouterData<
-            RefundResponseInner,
+            BamboraapacPaymentResponse,
             RouterDataV2<domain_types::connector_flow::Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     >
@@ -642,11 +636,11 @@ impl
 
     fn try_from(
         item: ResponseRouterData<
-            RefundResponseInner,
+            BamboraapacPaymentResponse,
             RouterDataV2<domain_types::connector_flow::Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let response = &item.response;
+        let response = &item.response.body.submit_single_payment_response.submit_single_payment_result.response;
         let router_data = &item.router_data;
 
         // Map Bambora response code to standard status (0 = Approved)

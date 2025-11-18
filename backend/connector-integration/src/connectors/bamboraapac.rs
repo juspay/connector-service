@@ -138,18 +138,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// Connector struct - remove Debug derive since amount_converter doesn't implement Debug
+// Connector struct
 #[derive(Clone)]
 pub struct Bamboraapac<T> {
-    #[allow(dead_code)]
-    amount_converter: &'static (dyn common_utils::types::AmountConvertor<Output = common_utils::types::MinorUnit> + Sync),
     _phantom: std::marker::PhantomData<T>,
 }
 
 impl<T> Bamboraapac<T> {
     pub const fn new() -> &'static Self {
         &Self {
-            amount_converter: &common_utils::types::MinorUnitForConnector,
             _phantom: std::marker::PhantomData,
         }
     }
@@ -296,13 +293,7 @@ impl<
             PaymentsResponseData,
         >,
     ) -> CustomResult<Option<RequestContent>, ConnectorError> {
-        let converted_amount = self
-            .amount_converter
-            .convert(req.request.minor_amount, req.request.currency)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-
-        let connector_req =
-            BamboraapacPaymentRequest::<T>::try_from((converted_amount, req))?;
+        let connector_req = BamboraapacPaymentRequest::<T>::try_from(req)?;
 
         // Convert to SOAP XML
         let soap_xml = connector_req.to_soap_xml();
@@ -682,31 +673,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ConnectorError,
     > {
-        // Parse the outer SOAP envelope
+        // Convert HTML entities to XML
         let response_str = String::from_utf8(res.response.to_vec())
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        let xml_response = response_str.replace("&lt;", "<").replace("&gt;", ">");
 
-        let outer_response: transformers::BamboraapacRefundResponse = response_str
-            .as_str()
-            .parse_xml()
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        // Extract and decode the HTML-encoded XML from submit_single_refund_result
-        let inner_xml = outer_response
-            .body
-            .submit_single_refund_response
-            .submit_single_refund_result
-            .replace("&lt;", "<")
-            .replace("&gt;", ">");
-
-        // Parse the inner Response XML
-        let inner_response: transformers::RefundResponseInner = inner_xml
+        // Parse XML response (same as authorize since capture uses SubmitSinglePayment)
+        let response: transformers::BamboraapacPaymentResponse = xml_response
             .as_str()
             .parse_xml()
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         RouterDataV2::try_from(ResponseRouterData {
-            response: inner_response,
+            response,
             router_data: data.clone(),
             http_code: res.status_code,
         })
