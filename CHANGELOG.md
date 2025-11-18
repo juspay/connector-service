@@ -4,6 +4,21 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.11.18.0
+
+### Features
+
+- **connector:** [CELEROCOMMERCE] Connector Integration ([#245](https://github.com/juspay/connector-service/pull/245)) ([`331ee50`](https://github.com/juspay/connector-service/commit/331ee5033fb7d0ec0de8f4e9c5f96d6da6a9cdb9))
+
+### Bug Fixes
+
+- **noon:** Refund diff check for connector noon ([#295](https://github.com/juspay/connector-service/pull/295)) ([`9cae4aa`](https://github.com/juspay/connector-service/commit/9cae4aa0e029315bd91fdab56724ae3154fd8579))
+- **razorpay:** Change payment_capture field type from boolean to integer ([#293](https://github.com/juspay/connector-service/pull/293)) ([`5bfd4e1`](https://github.com/juspay/connector-service/commit/5bfd4e1adb106133a72e9e06376963515a2c17d2))
+
+**Full Changelog:** [`2025.11.17.1...2025.11.18.0`](https://github.com/juspay/connector-service/compare/2025.11.17.1...2025.11.18.0)
+
+- - -
+
 ## 2025.11.17.1
 
 ### Features
