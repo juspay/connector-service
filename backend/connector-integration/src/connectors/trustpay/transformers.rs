@@ -694,7 +694,8 @@ fn handle_bank_redirects_sync_response(
                 .unwrap_or(NO_ERROR_CODE.to_string()),
             message: reason_info
                 .reason
-                .reject_reason.clone()
+                .reject_reason
+                .clone()
                 .unwrap_or(NO_ERROR_MESSAGE.to_string()),
             reason: reason_info.reason.reject_reason,
             status_code,
@@ -756,7 +757,8 @@ pub fn handle_webhook_response(
                 .unwrap_or(NO_ERROR_CODE.to_string()),
             message: reason_info
                 .reason
-                .reject_reason.clone()
+                .reject_reason
+                .clone()
                 .unwrap_or(NO_ERROR_MESSAGE.to_string()),
             reason: reason_info.reason.reject_reason,
             status_code,
