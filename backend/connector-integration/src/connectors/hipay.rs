@@ -1340,7 +1340,6 @@ impl<
 {
 }
 
-
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug

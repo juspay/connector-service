@@ -1,4 +1,7 @@
-use crate::{connectors::{hipay::HipayRouterData, macros::GetFormData}, types::ResponseRouterData};
+use crate::{
+    connectors::{hipay::HipayRouterData, macros::GetFormData},
+    types::ResponseRouterData,
+};
 use common_enums::{AttemptStatus, RefundStatus};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
@@ -62,17 +65,20 @@ pub fn build_form_from_struct<T: Serialize>(
     let mut form = reqwest::multipart::Form::new();
     let serialized = serde_json::to_value(&data)
         .map_err(|_| domain_types::errors::ParsingError::EncodeError("json-value"))?;
-    let serialized_object = serialized
-        .as_object()
-        .ok_or(domain_types::errors::ParsingError::EncodeError(
-            "Expected object",
-        ))?;
+    let serialized_object =
+        serialized
+            .as_object()
+            .ok_or(domain_types::errors::ParsingError::EncodeError(
+                "Expected object",
+            ))?;
     for (key, values) in serialized_object {
         let value = match values {
             serde_json::Value::String(s) => s.clone(),
             serde_json::Value::Number(n) => n.to_string(),
             serde_json::Value::Bool(b) => b.to_string(),
-            serde_json::Value::Array(_) | serde_json::Value::Object(_) | serde_json::Value::Null => {
+            serde_json::Value::Array(_)
+            | serde_json::Value::Object(_)
+            | serde_json::Value::Null => {
                 "".to_string() // Convert to empty string instead of skipping
             }
         };
@@ -179,8 +185,9 @@ impl From<HipayPaymentStatus> for AttemptStatus {
             HipayPaymentStatus::PendingPayment => Self::Pending,
             HipayPaymentStatus::ChargedBack => Self::Failure,
             HipayPaymentStatus::Created => Self::Started,
-            HipayPaymentStatus::UnableToAuthenticate
-            | HipayPaymentStatus::CouldNotAuthenticate => Self::AuthenticationFailed,
+            HipayPaymentStatus::UnableToAuthenticate | HipayPaymentStatus::CouldNotAuthenticate => {
+                Self::AuthenticationFailed
+            }
             HipayPaymentStatus::CardholderAuthenticated => Self::Pending,
             HipayPaymentStatus::AuthenticationAttempted => Self::AuthenticationPending,
             HipayPaymentStatus::Collected
@@ -241,7 +248,7 @@ pub enum HipaySyncResponse {
     },
     Error {
         message: String,
-        code: u32
+        code: u32,
     },
 }
 
@@ -321,10 +328,22 @@ pub struct HipayPaymentsRequest<T: PaymentMethodDataTypes> {
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         HipayRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for HipayPaymentsRequest<T>
@@ -431,7 +450,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let amount = item
             .connector
             .amount_converter
-            .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
             .change_context(errors::ConnectorError::AmountConversionFailed)?
             .get_amount_as_string();
 
@@ -446,7 +468,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 PaymentMethodTokenType::Token(token) => Some(token.peek().to_string()),
                 _ => None,
             })
-            .or_else(|| item.router_data.resource_common_data.connector_customer.clone());
+            .or_else(|| {
+                item.router_data
+                    .resource_common_data
+                    .connector_customer
+                    .clone()
+            });
 
         // Extract CVC for tokenized payments (HiPay requires CVC with token)
         let card_security_code = match &item.router_data.request.payment_method_data {
@@ -524,7 +551,6 @@ pub type HipayVoidResponse = HipayMaintenanceResponse<HipayPaymentStatus>;
 pub type HipayRefundResponse = HipayMaintenanceResponse<HipayRefundStatus>;
 pub type HipayPSyncResponse = HipaySyncResponse;
 pub type HipayRSyncResponse = HipayRefundSyncResponse;
-
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
@@ -618,7 +644,14 @@ pub struct HipayTokenRequest<T: PaymentMethodDataTypes> {
     pub multi_use: Option<String>,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         HipayRouterData<
             RouterDataV2<
@@ -686,7 +719,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct HipayTokenResponse {
     pub token: String,
@@ -740,7 +772,6 @@ impl<T: PaymentMethodDataTypes>
         })
     }
 }
-
 
 // Helper function to map v3 API integer status codes to AttemptStatus
 // Matches Hyperswitch's get_sync_status function
@@ -808,9 +839,7 @@ impl
 
                 Ok(Self {
                     response: Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
-                            id.to_string(),
-                        ),
+                        resource_id: ResponseId::ConnectorTransactionId(id.to_string()),
                         redirection_data: None,
                         mandate_reference: None,
                         connector_metadata: None,
@@ -826,26 +855,29 @@ impl
                     ..item.router_data
                 })
             }
-            HipaySyncResponse::Error { message, code } => {
-                Ok(Self {
-                    response: Err(domain_types::router_data::ErrorResponse {
-                        code: code.to_string(),
-                        message: message.clone(),
-                        reason: Some(message),
-                        status_code: item.http_code,
-                        attempt_status: None,
-                        connector_transaction_id: item.router_data.request.connector_transaction_id.get_connector_transaction_id().ok(),
-                        network_decline_code: None,
-                        network_advice_code: None,
-                        network_error_message: None,
-                    }),
-                    resource_common_data: PaymentFlowData {
-                        status: AttemptStatus::Failure,
-                        ..item.router_data.resource_common_data
-                    },
-                    ..item.router_data
-                })
-            }
+            HipaySyncResponse::Error { message, code } => Ok(Self {
+                response: Err(domain_types::router_data::ErrorResponse {
+                    code: code.to_string(),
+                    message: message.clone(),
+                    reason: Some(message),
+                    status_code: item.http_code,
+                    attempt_status: None,
+                    connector_transaction_id: item
+                        .router_data
+                        .request
+                        .connector_transaction_id
+                        .get_connector_transaction_id()
+                        .ok(),
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                }),
+                resource_common_data: PaymentFlowData {
+                    status: AttemptStatus::Failure,
+                    ..item.router_data.resource_common_data
+                },
+                ..item.router_data
+            }),
         }
     }
 }
@@ -860,7 +892,14 @@ pub struct HipayCaptureRequest {
     pub amount: Option<String>,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         HipayRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -880,7 +919,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let amount = item
             .connector
             .amount_converter
-            .convert(item.router_data.request.minor_amount_to_capture, item.router_data.request.currency)
+            .convert(
+                item.router_data.request.minor_amount_to_capture,
+                item.router_data.request.currency,
+            )
             .change_context(errors::ConnectorError::AmountConversionFailed)?
             .get_amount_as_string();
 
@@ -914,7 +956,8 @@ impl
         let status = AttemptStatus::from(item.response.status.clone());
 
         // Check if status indicates failure
-        let response = if status == AttemptStatus::Failure || status == AttemptStatus::CaptureFailed {
+        let response = if status == AttemptStatus::Failure || status == AttemptStatus::CaptureFailed
+        {
             Err(domain_types::router_data::ErrorResponse {
                 code: "CAPTURE_FAILED".to_string(),
                 message: item.response.message.clone(),
@@ -962,12 +1005,16 @@ pub struct HipayRefundRequest {
     pub amount: Option<String>,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
-        HipayRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        HipayRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for HipayRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -982,7 +1029,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let amount = item
             .connector
             .amount_converter
-            .convert(item.router_data.request.minor_refund_amount, item.router_data.request.currency)
+            .convert(
+                item.router_data.request.minor_refund_amount,
+                item.router_data.request.currency,
+            )
             .change_context(errors::ConnectorError::AmountConversionFailed)?
             .get_amount_as_string();
 
@@ -1071,7 +1121,14 @@ pub struct HipayVoidRequest {
     pub amount: Option<String>,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         HipayRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
