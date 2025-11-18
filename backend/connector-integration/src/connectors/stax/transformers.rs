@@ -194,9 +194,11 @@ pub struct StaxAuthorizeRequest<T: PaymentMethodDataTypes> {
     /// Amount in dollars (major units). Converted from MinorUnit at boundary.
     pub total: FloatMajorUnit,
     pub payment_method_id: String,
+    pub is_refundable: bool,
     pub pre_auth: bool,
     /// Metadata object - required by Stax API
     pub meta: StaxMeta,
+    pub idempotency_id: Option<String>,
     #[serde(skip)]
     _phantom: std::marker::PhantomData<T>,
 }
@@ -304,10 +306,17 @@ impl<
         Ok(Self {
             total,
             payment_method_id,
+            is_refundable: true,
             pre_auth: !is_auto_capture,
             meta: StaxMeta {
                 tax: MinorUnit::zero(),
             },
+            idempotency_id: Some(
+                item.router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
             _phantom: std::marker::PhantomData,
         })
     }
