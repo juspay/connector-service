@@ -1920,11 +1920,6 @@ impl RefundsData {
             .ok_or_else(missing_field_err("browser_info.ip_address"))
     }
 
-    pub fn get_refund_connector_metadata(&self) -> Result<SecretSerdeValue, Error> {
-        self.refund_connector_metadata
-            .clone()
-            .ok_or_else(missing_field_err("connector_meta_data"))
-    }
 }
 
 #[derive(Debug, Clone, Default)]
