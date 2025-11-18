@@ -4,15 +4,15 @@
 use domain_types::payment_method_data::RawCardNumber;
 use common_enums::{AttemptStatus, RefundStatus};
 use domain_types::{
-    connector_flow::{Authorize, Capture, Refund, RSync, Void},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentVoidData, RefundFlowData, RefundsData, RefundSyncData, RefundsResponseData, PaymentsResponseData, ResponseId},
+    connector_flow::{Authorize, Capture, Refund, RSync, SetupMandate, Void},
+    connector_types::{MandateReference, PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentVoidData, RefundFlowData, RefundsData, RefundSyncData, RefundsResponseData, PaymentsResponseData, ResponseId, SetupMandateRequestData},
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
     router_data::ErrorResponse,
     errors,
 };
 use error_stack::{Report};
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{Secret, ExposeInterface, PeekInterface};
 use serde::{Deserialize, Serialize};
 use crate::types::ResponseRouterData;
 
@@ -36,6 +36,12 @@ pub struct WellsfargoPaymentsRequest<T: PaymentMethodDataTypes> {
 pub struct ProcessingInformation {
     commerce_indicator: String,
     capture: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    action_list: Option<Vec<WellsfargoActionsList>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    action_token_types: Option<Vec<WellsfargoActionsTokenType>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    authorization_options: Option<WellsfargoAuthorizationOptions>,
 }
 
 #[derive(Debug, Serialize)]
@@ -174,6 +180,60 @@ pub struct WellsfargoRefundRequest {
 }
 
 // ============================================================================
+// MANDATE SUPPORT STRUCTURES
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum WellsfargoActionsList {
+    TokenCreate,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum WellsfargoActionsTokenType {
+    PaymentInstrument,
+    Customer,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WellsfargoAuthorizationOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    initiator: Option<WellsfargoPaymentInitiator>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WellsfargoPaymentInitiator {
+    #[serde(rename = "type")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    initiator_type: Option<WellsfargoPaymentInitiatorTypes>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    credential_stored_on_file: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stored_credential_used: Option<bool>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum WellsfargoPaymentInitiatorTypes {
+    Customer,
+    Merchant,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WellsfargoZeroMandateRequest<T: PaymentMethodDataTypes> {
+    processing_information: ProcessingInformation,
+    payment_information: PaymentInformation<T>,
+    order_information: OrderInformationWithBill,
+    client_reference_information: ClientReferenceInformation,
+    #[serde(skip)]
+    _phantom: std::marker::PhantomData<T>,
+}
+
+// ============================================================================
 // RESPONSE STRUCTURES
 // ============================================================================
 
@@ -186,6 +246,7 @@ pub struct WellsfargoPaymentsResponse {
     pub client_reference_information: Option<ClientReferenceInformation>,
     pub processor_information: Option<ClientProcessorInformation>,
     pub error_information: Option<WellsfargoErrorInformation>,
+    pub token_information: Option<WellsfargoTokenInformation>, // For SetupMandate responses
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -239,6 +300,25 @@ pub struct WellsfargoErrorInformation {
 pub struct ErrorInfo {
     pub field: Option<String>,
     pub reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WellsfargoTokenInformation {
+    pub payment_instrument: Option<WellsfargoPaymentInstrument>,
+    pub customer: Option<WellsfargoCustomer>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WellsfargoPaymentInstrument {
+    pub id: Secret<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WellsfargoCustomer {
+    pub id: Option<Secret<String>>,
 }
 
 // ============================================================================
@@ -424,6 +504,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             capture: request.capture_method.map(|method| {
                 matches!(method, common_enums::CaptureMethod::Automatic)
             }),
+            action_list: None,
+            action_token_types: None,
+            authorization_options: None,
         };
 
         // Client reference - use payment_id from common data
@@ -545,6 +628,113 @@ impl
         Ok(Self {
             order_information,
             client_reference_information,
+        })
+    }
+}
+
+// ============================================================================
+// SETUPMANDATE REQUEST CONVERSION
+// ============================================================================
+
+impl<T: PaymentMethodDataTypes>
+    TryFrom<&RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>>
+    for WellsfargoZeroMandateRequest<T>
+{
+    type Error = Report<errors::ConnectorError>;
+
+    fn try_from(
+        router_data: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+    ) -> Result<Self, Self::Error> {
+        let request = &router_data.request;
+        let common_data = &router_data.resource_common_data;
+
+        // Create billing information from address data
+        let billing_address = common_data.address.get_payment_method_billing();
+        let bill_to = billing_address.and_then(|addr| {
+            addr.address.as_ref().map(|addr_details| BillTo {
+                first_name: addr_details.first_name.clone(),
+                last_name: addr_details.last_name.clone(),
+                address1: addr_details.line1.clone(),
+                locality: addr_details.city.clone(),
+                administrative_area: addr_details.state.clone(),
+                postal_code: addr_details.zip.clone(),
+                country: addr_details.country,
+                email: request.email.clone()
+                    .map(|e| Secret::new(e.peek().to_string()))
+                    .or_else(|| addr.email.clone().map(|e| Secret::new(e.peek().to_string())))
+                    .unwrap_or_else(|| Secret::new(String::new())),
+            })
+        }).or_else(|| {
+            // Fallback to minimal billing info if no address
+            request.email.clone().map(|email| BillTo {
+                first_name: request.customer_name.clone().map(Secret::new),
+                last_name: None,
+                address1: None,
+                locality: None,
+                administrative_area: None,
+                postal_code: None,
+                country: None,
+                email: Secret::new(email.peek().to_string()),
+            })
+        });
+
+        // Zero amount for mandate setup
+        let order_information = OrderInformationWithBill {
+            amount_details: Amount {
+                total_amount: "0".to_string(),
+                currency: request.currency.to_string(),
+            },
+            bill_to,
+        };
+
+        // Processing information for mandate
+        let processing_information = ProcessingInformation {
+            commerce_indicator: "internet".to_string(),
+            capture: Some(false),
+            action_list: Some(vec![WellsfargoActionsList::TokenCreate]),
+            action_token_types: Some(vec![
+                WellsfargoActionsTokenType::PaymentInstrument,
+                WellsfargoActionsTokenType::Customer,
+            ]),
+            authorization_options: Some(WellsfargoAuthorizationOptions {
+                initiator: Some(WellsfargoPaymentInitiator {
+                    initiator_type: Some(WellsfargoPaymentInitiatorTypes::Customer),
+                    credential_stored_on_file: Some(true),
+                    stored_credential_used: None,
+                }),
+            }),
+        };
+
+        // Payment information from card
+        let payment_information = match &request.payment_method_data {
+            domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
+                PaymentInformation::Cards(Box::new(CardPaymentInformation {
+                    card: Card {
+                        number: card_data.card_number.clone(),
+                        expiration_month: card_data.card_exp_month.clone(),
+                        expiration_year: card_data.card_exp_year.clone(),
+                        security_code: Some(card_data.card_cvc.clone()),
+                        card_type: None,
+                        _phantom: std::marker::PhantomData,
+                    },
+                }))
+            },
+            _ => {
+                return Err(errors::ConnectorError::NotImplemented("Payment method not supported for SetupMandate".to_string()).into());
+            }
+        };
+
+        // Client reference - use payment_id
+        let client_reference_information = ClientReferenceInformation {
+            code: Some(common_data.payment_id.clone()),
+        };
+
+        Ok(Self {
+            processing_information,
+            payment_information,
+            order_information,
+            client_reference_information,
+            _phantom: std::marker::PhantomData,
         })
     }
 }
@@ -806,6 +996,89 @@ impl
                     .as_ref()
                     .and_then(|info| info.reason.clone()))
                 .unwrap_or_else(|| "Void failed".to_string());
+
+            let error_code = response.error_information
+                .as_ref()
+                .and_then(|info| info.reason.clone());
+
+            Err(ErrorResponse {
+                code: error_code.unwrap_or_else(|| "DECLINED".to_string()),
+                message: error_message.clone(),
+                reason: Some(error_message),
+                status_code: item.http_code,
+                attempt_status: Some(status),
+                connector_transaction_id: Some(response.id.clone()),
+                network_decline_code: response.processor_information
+                    .as_ref()
+                    .and_then(|info| info.response_code.clone()),
+                network_advice_code: None,
+                network_error_message: None,
+            })
+        };
+
+        Ok(Self {
+            response: response_data,
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// ============================================================================
+// SETUPMANDATE RESPONSE CONVERSION
+// ============================================================================
+
+impl<T: PaymentMethodDataTypes>
+    TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>>>
+    for RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+{
+    type Error = Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+        let status = get_payment_status(&response.status, &response.error_information);
+
+        // Check if the mandate setup was successful
+        let response_data = if is_payment_successful(&response.status, &response.status_information) {
+            // Extract mandate reference from token information
+            let mandate_reference = response.token_information
+                .as_ref()
+                .and_then(|token_info| token_info.payment_instrument.as_ref())
+                .map(|instrument| {
+                    domain_types::connector_types::MandateReference {
+                        connector_mandate_id: Some(instrument.id.clone().expose()),
+                        payment_method_id: None,
+                    }
+                });
+
+            Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
+                redirection_data: None,
+                mandate_reference: mandate_reference.map(Box::new),
+                connector_metadata: None,
+                network_txn_id: response.processor_information
+                    .as_ref()
+                    .and_then(|info| info.network_transaction_id.clone()),
+                connector_response_reference_id: response.client_reference_information
+                    .as_ref()
+                    .and_then(|info| info.code.clone()),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            })
+        } else {
+            // Build error response
+            let error_message = response.error_information
+                .as_ref()
+                .and_then(|info| info.message.clone())
+                .or_else(|| response.error_information
+                    .as_ref()
+                    .and_then(|info| info.reason.clone()))
+                .unwrap_or_else(|| "Setup mandate failed".to_string());
 
             let error_code = response.error_information
                 .as_ref()
