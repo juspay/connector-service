@@ -58,6 +58,9 @@ service PaymentService {
 
   // Creates an access token for connector authentication.
   rpc CreateAccessToken(PaymentServiceCreateAccessTokenRequest) returns (PaymentServiceCreateAccessTokenResponse);
+
+  // Creates a connector customer for future payment processing.
+  rpc CreateConnectorCustomer(PaymentServiceCreateConnectorCustomerRequest) returns (PaymentServiceCreateConnectorCustomerResponse);
 }
 
 // Service for refund-specific operations.
