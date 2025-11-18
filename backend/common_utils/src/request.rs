@@ -78,7 +78,7 @@ impl RequestContent {
             Self::FormUrlEncoded(i) => serde_urlencoded::to_string(i).unwrap_or_default().into(),
             Self::Xml(i) => quick_xml::se::to_string(&i).unwrap_or_default().into(),
             Self::FormData(_) => String::new().into(),
-            Self::RawBytes(_) => String::new().into(),
+            Self::RawBytes(bytes) => String::from_utf8_lossy(bytes).to_string().into(),
         }
     }
 }

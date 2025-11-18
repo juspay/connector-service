@@ -103,3 +103,6 @@ pub use self::datatrans::Datatrans;
 
 pub mod authipay;
 pub use self::authipay::Authipay;
+
+pub mod bamboraapac;
+pub use self::bamboraapac::Bamboraapac;

@@ -300,7 +300,30 @@ where
                             json!({ "error": "failed to mask serialize connector request"}),
                         ),
                         RequestContent::FormData(_) => json!({"request_type": "FORM_DATA"}),
-                        RequestContent::RawBytes(_) => json!({"request_type": "RAW_BYTES"}),
+                        RequestContent::RawBytes(bytes) => {
+                            // Try to convert raw bytes to UTF-8 string for logging
+                            match String::from_utf8(bytes.clone()) {
+                                Ok(text) => json!({
+                                    "request_type": "RAW_BYTES",
+                                    "content": text,
+                                    "size_bytes": bytes.len()
+                                }),
+                                Err(_) => {
+                                    // If not valid UTF-8, show as hex string for debugging
+                                    let hex: String = bytes.iter()
+                                        .take(1000) // Limit to first 1000 bytes for logging
+                                        .map(|b| format!("{:02x}", b))
+                                        .collect::<Vec<_>>()
+                                        .join(" ");
+                                    json!({
+                                        "request_type": "RAW_BYTES",
+                                        "content_hex": hex,
+                                        "size_bytes": bytes.len(),
+                                        "note": "Binary data (showing first 1000 bytes as hex)"
+                                    })
+                                }
+                            }
+                        },
                     },
                     None => serde_json::Value::Null,
                 };
@@ -660,6 +683,7 @@ pub async fn call_connector_api(
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
                     Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
             }
@@ -987,11 +1011,23 @@ fn extract_raw_connector_request(connector_request: &Request) -> String {
     // Extract actual body content
     let body_content = match connector_request.body.as_ref() {
         Some(request) => {
-            let inner_value = request.get_inner_value();
-            serde_json::from_str(&inner_value.expose()).unwrap_or_else(|_| {
-                tracing::warn!("failed to parse JSON body in extract_raw_connector_request");
-                json!({ "error": "failed to parse JSON body" })
-            })
+            match request {
+                // For RawBytes (e.g., SOAP XML), use the string directly without JSON parsing
+                RequestContent::RawBytes(_) => {
+                    let inner_value = request.get_inner_value();
+                    serde_json::Value::String(inner_value.expose())
+                }
+                // For other content types, try to parse as JSON
+                _ => {
+                    let inner_value = request.get_inner_value();
+                    let exposed_value = inner_value.expose();
+                    serde_json::from_str(&exposed_value).unwrap_or_else(|_| {
+                        // If parsing fails, treat it as a string
+                        tracing::warn!("failed to parse body as JSON, treating as string in extract_raw_connector_request");
+                        serde_json::Value::String(exposed_value)
+                    })
+                }
+            }
         }
         None => serde_json::Value::Null,
     };

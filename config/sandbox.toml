@@ -60,6 +60,7 @@ cybersource.base_url = "https://apitest.cybersource.com/"
 worldpay.base_url = "https://access.worldpay.com/"
 worldpayvantiv.base_url = "https://www.testvantivcnp.com/sandbox/new/sandbox/communicator/online"
 worldpayvantiv.secondary_base_url = "https://www.testvantivcnp.com/sandbox"
+bamboraapac.base_url = "https://demo.ippayments.com.au/interface/api"
 
 # Generic Events Configuration
 [events]
