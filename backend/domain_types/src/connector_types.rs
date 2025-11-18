@@ -1925,15 +1925,6 @@ impl RefundsData {
             .clone()
             .ok_or_else(missing_field_err("connector_meta_data"))
     }
-
-    pub fn to_connector_meta<T>(&self) -> Result<T, Error>
-    where
-        T: serde::de::DeserializeOwned,
-    {
-        self.get_refund_connector_metadata()?
-            .parse_value(std::any::type_name::<T>())
-            .change_context(ConnectorError::NoConnectorMetaData)
-    }
 }
 
 #[derive(Debug, Clone, Default)]
