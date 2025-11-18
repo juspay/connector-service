@@ -842,11 +842,15 @@ fn get_base_client(
 ) -> CustomResult<Client, ApiClientError> {
     // Check if proxy configuration is provided using cache_key method
     if let Some(cache_key) = proxy_config.cache_key(should_bypass_proxy) {
-        tracing::debug!( "Using proxy-specific client cache with key: {:?}", cache_key );
+        tracing::debug!(
+            "Using proxy-specific client cache with key: {:?}",
+            cache_key
+        );
 
         let cache = PROXY_CLIENT_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
 
-        let client = get_or_create_proxy_client(cache, cache_key, proxy_config, should_bypass_proxy)?;
+        let client =
+            get_or_create_proxy_client(cache, cache_key, proxy_config, should_bypass_proxy)?;
 
         Ok(client)
     } else {
