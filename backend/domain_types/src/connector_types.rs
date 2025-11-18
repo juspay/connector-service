@@ -79,6 +79,8 @@ pub enum ConnectorEnum {
     Fiservemea,
     Datatrans,
     Authipay,
+    Silverflow,
+    Celero,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -122,6 +124,8 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Fiservemea => Ok(Self::Fiservemea),
             grpc_api_types::payments::Connector::Datatrans => Ok(Self::Datatrans),
             grpc_api_types::payments::Connector::Authipay => Ok(Self::Authipay),
+            grpc_api_types::payments::Connector::Silverflow => Ok(Self::Silverflow),
+            grpc_api_types::payments::Connector::Celero => Ok(Self::Celero),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
