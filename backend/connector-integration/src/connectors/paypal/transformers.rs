@@ -238,7 +238,7 @@ pub struct Address {
     address_line_1: Option<Secret<String>>,
     postal_code: Option<Secret<String>>,
     country_code: common_enums::CountryAlpha2,
-    admin_area_2: Option<String>,
+    admin_area_2: Option<Secret<String>>,
 }
 
 #[derive(Default, Debug, Serialize, Eq, PartialEq)]
@@ -576,7 +576,7 @@ fn get_address_info(
             country_code: country.to_owned(),
             address_line_1: address.line1.clone(),
             postal_code: address.zip.clone(),
-            admin_area_2: address.city.clone().map(|city| city.expose()),
+            admin_area_2: address.city.clone(),
         }),
         None => None,
     }
@@ -1190,7 +1190,7 @@ impl<
         let auth = PaypalAuthType::try_from(&item.router_data.connector_auth_type)?;
         let credentials = auth.get_credentials()?;
         Ok(Self {
-            grant_type: "client_credentials".to_string(),
+            grant_type: item.router_data.request.grant_type,
             client_id: credentials.get_client_id(),
             client_secret: credentials.get_client_secret(),
         })
