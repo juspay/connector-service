@@ -5169,11 +5169,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateOrderRequest>
             amount: common_utils::types::MinorUnit::new(value.amount),
             currency,
             integrity_object: None,
-            metadata: if value.metadata.is_empty() {
-                None
-            } else {
-                Some(serde_json::to_value(value.metadata).unwrap_or_default())
-            },
+            metadata: (!value.metadata.is_empty())
+                .then(|| serde_json::to_value(value.metadata.clone()).unwrap_or_default()),
             webhook_url: value.webhook_url,
         })
     }
@@ -5259,6 +5256,7 @@ impl
             vault_headers,
             connector_response: None,
             recurring_mandate_payment_data: None,
+            order_details: None,
         })
     }
 }
