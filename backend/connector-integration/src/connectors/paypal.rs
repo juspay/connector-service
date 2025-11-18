@@ -394,7 +394,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let paypal_meta: paypal::PaypalMeta = req.resource_common_data.to_connector_meta()?;
+            let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(req.request.connector_meta.clone())?;
         match req.resource_common_data.payment_method {
             common_enums::PaymentMethod::Wallet | common_enums::PaymentMethod::BankRedirect => Ok(format!(
                 "{}v2/checkout/orders/{}",
@@ -466,7 +466,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let paypal_meta: paypal::PaypalMeta = req.resource_common_data.to_connector_meta()?;
+            let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(req.request.connector_metadata.clone())?;
             let authorize_id = paypal_meta.authorize_id.ok_or(
                 errors::ConnectorError::RequestEncodingFailedWithReason(
                     "Missing Authorize id".to_string(),
@@ -504,7 +504,8 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let paypal_meta: paypal::PaypalMeta = req.resource_common_data.to_connector_meta()?;
+            let connector_metadata_value = req.request.connector_metadata.clone().map(|secret| secret.expose());
+            let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(connector_metadata_value)?;
             let authorize_id = paypal_meta.authorize_id.ok_or(
                 errors::ConnectorError::RequestEncodingFailedWithReason(
                     "Missing Authorize id".to_string(),

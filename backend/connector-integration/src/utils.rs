@@ -1,5 +1,5 @@
 pub mod xml_utils;
-use common_utils::{types::MinorUnit, CustomResult};
+use common_utils::{errors::ReportSwitchExt, ext_traits::ValueExt, types::MinorUnit, CustomResult};
 use domain_types::{
     connector_types::{
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsSyncData,
@@ -266,4 +266,12 @@ pub enum ConnectorErrorType {
     BusinessError = 3,
     TechnicalError = 4,
     UnknownError = 1,
+}
+
+pub(crate) fn to_connector_meta<T>(connector_meta: Option<Value>) -> Result<T, Error>
+where
+    T: serde::de::DeserializeOwned,
+{
+    let json = connector_meta.ok_or_else(missing_field_err("connector_meta_data"))?;
+    json.parse_value(std::any::type_name::<T>()).switch()
 }
