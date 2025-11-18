@@ -71,6 +71,16 @@ pub enum CardBrand {
     CupSecurePlus,
     #[serde(rename = "maestro")]
     Maestro,
+    #[serde(rename = "rupay")]
+    Rupay,
+    #[serde(rename = "star")]
+    Star,
+    #[serde(rename = "accel")]
+    Accel,
+    #[serde(rename = "pulse")]
+    Pulse,
+    #[serde(rename = "nyce")]
+    Nyce,
 }
 
 #[derive(Debug, Serialize, PartialEq)]
@@ -634,7 +644,12 @@ fn get_adyen_card_network(card_network: common_enums::CardNetwork) -> Option<Car
         common_enums::CardNetwork::CartesBancaires => Some(CardBrand::CartesBancaires),
         common_enums::CardNetwork::UnionPay => Some(CardBrand::CupSecurePlus),
         common_enums::CardNetwork::Maestro => Some(CardBrand::Maestro),
-        _ => None,
+        common_enums::CardNetwork::RuPay => Some(CardBrand::Rupay),
+        common_enums::CardNetwork::Star => Some(CardBrand::Star),
+        common_enums::CardNetwork::Accel => Some(CardBrand::Accel),
+        common_enums::CardNetwork::Pulse => Some(CardBrand::Pulse),
+        common_enums::CardNetwork::Nyce => Some(CardBrand::Nyce),
+        common_enums::CardNetwork::Interac => None,
     }
 }
 
