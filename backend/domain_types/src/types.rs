@@ -5130,28 +5130,6 @@ pub fn generate_session_token_response(
     }
 }
 
-pub fn generate_payment_method_token_response<T: PaymentMethodDataTypes>(
-    router_data_v2: RouterDataV2<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    >,
-) -> Result<String, error_stack::Report<ApplicationErrorResponse>> {
-    let payment_method_token_response = router_data_v2.response;
-
-    match payment_method_token_response {
-        Ok(response) => Ok(response.token),
-        Err(e) => Err(report!(ApplicationErrorResponse::InternalServerError(
-            ApiError {
-                sub_code: "PAYMENT_METHOD_TOKEN_ERROR".to_string(),
-                error_identifier: 500,
-                error_message: format!("Payment method token creation failed: {}", e.message),
-                error_object: None,
-            }
-        ))),
-    }
-}
 #[derive(Debug, Clone, ToSchema, Serialize)]
 pub struct CardSpecificFeatures {
     /// Indicates whether three_ds card payments are supported
