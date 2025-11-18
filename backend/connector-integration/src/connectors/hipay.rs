@@ -58,7 +58,6 @@ pub(crate) mod headers {
 }
 
 pub(crate) mod constants {
-    pub(crate) const FORM_CONTENT_TYPE: &str = "application/x-www-form-urlencoded";
     pub(crate) const JSON_CONTENT_TYPE: &str = "application/json";
 }
 
@@ -564,11 +563,11 @@ impl<
 // MACRO-BASED FLOW IMPLEMENTATIONS
 // ========================================================================================
 
-// PaymentMethodToken flow - FormUrlEncoded, uses secondary_base_url
+// PaymentMethodToken flow - FormData (multipart/form-data), uses secondary_base_url
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: Hipay,
-    curl_request: FormUrlEncoded(HipayTokenRequest<T>),
+    curl_request: FormData(HipayTokenRequest<T>),
     curl_response: HipayTokenResponse,
     flow_name: PaymentMethodToken,
     resource_common_data: PaymentFlowData,
@@ -594,11 +593,8 @@ macros::macro_connector_implementation!(
                 return Err(errors::ConnectorError::FailedToObtainAuthType.into());
             };
 
+            // Do NOT set Content-Type header manually for FormData - reqwest sets it with boundary
             Ok(vec![
-                (
-                    headers::CONTENT_TYPE.to_string(),
-                    constants::FORM_CONTENT_TYPE.to_string().into(),
-                ),
                 (
                     headers::ACCEPT.to_string(),
                     constants::JSON_CONTENT_TYPE.to_string().into(),
@@ -617,11 +613,11 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Authorize flow - FormUrlEncoded, uses base_url
+// Authorize flow - FormData (multipart/form-data), uses base_url
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: Hipay,
-    curl_request: FormUrlEncoded(HipayPaymentsRequest<T>),
+    curl_request: FormData(HipayPaymentsRequest<T>),
     curl_response: HipayAuthorizeResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
@@ -635,16 +631,11 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut header = vec![
-                (
-                    headers::CONTENT_TYPE.to_string(),
-                    constants::FORM_CONTENT_TYPE.to_string().into(),
-                ),
-                (
-                    headers::ACCEPT.to_string(),
-                    constants::JSON_CONTENT_TYPE.to_string().into(),
-                ),
-            ];
+            // Do NOT set Content-Type header manually for FormData - reqwest sets it with boundary
+            let mut header = vec![(
+                headers::ACCEPT.to_string(),
+                constants::JSON_CONTENT_TYPE.to_string().into(),
+            )];
             let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
             header.append(&mut auth_header);
             Ok(header)
@@ -702,11 +693,11 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Capture flow - FormUrlEncoded, uses base_url
+// Capture flow - FormData (multipart/form-data), uses base_url
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: Hipay,
-    curl_request: FormUrlEncoded(HipayCaptureRequest),
+    curl_request: FormData(HipayCaptureRequest),
     curl_response: HipayCaptureResponse,
     flow_name: Capture,
     resource_common_data: PaymentFlowData,
@@ -720,16 +711,11 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut header = vec![
-                (
-                    headers::CONTENT_TYPE.to_string(),
-                    constants::FORM_CONTENT_TYPE.to_string().into(),
-                ),
-                (
-                    headers::ACCEPT.to_string(),
-                    constants::JSON_CONTENT_TYPE.to_string().into(),
-                ),
-            ];
+            // Do NOT set Content-Type header manually for FormData - reqwest sets it with boundary
+            let mut header = vec![(
+                headers::ACCEPT.to_string(),
+                constants::JSON_CONTENT_TYPE.to_string().into(),
+            )];
             let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
             header.append(&mut auth_header);
             Ok(header)
@@ -754,11 +740,11 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Void flow - FormUrlEncoded, uses base_url
+// Void flow - FormData (multipart/form-data), uses base_url
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: Hipay,
-    curl_request: FormUrlEncoded(HipayVoidRequest),
+    curl_request: FormData(HipayVoidRequest),
     curl_response: HipayVoidResponse,
     flow_name: Void,
     resource_common_data: PaymentFlowData,
@@ -772,16 +758,11 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut header = vec![
-                (
-                    headers::CONTENT_TYPE.to_string(),
-                    constants::FORM_CONTENT_TYPE.to_string().into(),
-                ),
-                (
-                    headers::ACCEPT.to_string(),
-                    constants::JSON_CONTENT_TYPE.to_string().into(),
-                ),
-            ];
+            // Do NOT set Content-Type header manually for FormData - reqwest sets it with boundary
+            let mut header = vec![(
+                headers::ACCEPT.to_string(),
+                constants::JSON_CONTENT_TYPE.to_string().into(),
+            )];
             let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
             header.append(&mut auth_header);
             Ok(header)
@@ -802,11 +783,11 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Refund flow - FormUrlEncoded, uses base_url
+// Refund flow - FormData (multipart/form-data), uses base_url
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: Hipay,
-    curl_request: FormUrlEncoded(HipayRefundRequest),
+    curl_request: FormData(HipayRefundRequest),
     curl_response: HipayRefundResponse,
     flow_name: Refund,
     resource_common_data: RefundFlowData,
@@ -820,16 +801,11 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut header = vec![
-                (
-                    headers::CONTENT_TYPE.to_string(),
-                    constants::FORM_CONTENT_TYPE.to_string().into(),
-                ),
-                (
-                    headers::ACCEPT.to_string(),
-                    constants::JSON_CONTENT_TYPE.to_string().into(),
-                ),
-            ];
+            // Do NOT set Content-Type header manually for FormData - reqwest sets it with boundary
+            let mut header = vec![(
+                headers::ACCEPT.to_string(),
+                constants::JSON_CONTENT_TYPE.to_string().into(),
+            )];
             let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
             header.append(&mut auth_header);
             Ok(header)
