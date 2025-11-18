@@ -5,22 +5,11 @@ use common_utils::{
     };
 use error_stack::report;
 use domain_types::{
-    // connector_flow::{
-    //     Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
-    //     RepeatPayment, SetupMandate, SubmitEvidence, Void, CreateSessionToken,
-    // },
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, DefendDispute, PaymentMethodToken, PostAuthenticate, PreAuthenticate, PSync,
         RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, CreateSessionToken,
     },
-    // connector_types::{
-    //     AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-    //     PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-    //     PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-    //     RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-    //     SetupMandateRequestData, SubmitEvidenceData, SessionTokenRequestData, SessionTokenResponseData,
-    // },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
@@ -58,7 +47,6 @@ use crate::{types::ResponseRouterData};
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
-// Trait implementations with generic type parameters
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Archipel<T>
 {
@@ -238,12 +226,6 @@ fn build_env_specific_endpoint(
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
 }
-
-// Stub implementations for unsupported flows
-
-// Refund flow implementation removed - using macro implementation below
-
-// RSync flow implementation removed - using macro implementation below
 
 impl<
         T: PaymentMethodDataTypes

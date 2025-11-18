@@ -2333,11 +2333,17 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             });
 
         // Convert connector_metadata map to JSON value
-        let connector_meta = if value.connector_metadata.is_empty() {
-            None
-        } else {
-            Some(serde_json::to_value(&value.connector_metadata).unwrap_or_default())
-        };
+        let connector_meta = (!value.connector_metadata.is_empty())
+            .then(|| serde_json::to_value(&value.connector_metadata))
+            .transpose()
+            .map_err(|_| {
+                error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_DATA_FORMAT".to_string(),
+                    error_identifier: 400,
+                    error_message: "Failed to serialize connector_metadata".to_string(),
+                    error_object: None,
+                }))
+            })?;
 
         Ok(Self {
             connector_transaction_id,
