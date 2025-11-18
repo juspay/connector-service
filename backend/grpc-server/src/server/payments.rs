@@ -2768,10 +2768,32 @@ impl PaymentService for Payments {
         .await
     }
 
+    #[tracing::instrument(
+        name = "create_access_token",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = FlowName::CreateAccessToken.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::CreateAccessToken.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
     async fn create_access_token(
         &self,
         request: tonic::Request<PaymentServiceCreateAccessTokenRequest>,
     ) -> Result<tonic::Response<PaymentServiceCreateAccessTokenResponse>, tonic::Status> {
+        tracing::info!("ACCESS_TOKEN_FLOW: initiated");
         let service_name = request
             .extensions()
             .get::<String>()

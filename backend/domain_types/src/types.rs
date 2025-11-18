@@ -5031,29 +5031,6 @@ pub fn generate_session_token_response(
     }
 }
 
-pub fn generate_create_session_token_response(
-    router_data_v2: RouterDataV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    >,
-) -> Result<String, error_stack::Report<ApplicationErrorResponse>> {
-    let session_token_response = router_data_v2.response;
-
-    match session_token_response {
-        Ok(response) => Ok(response.session_token),
-        Err(e) => Err(report!(ApplicationErrorResponse::InternalServerError(
-            ApiError {
-                sub_code: "SESSION_TOKEN_ERROR".to_string(),
-                error_identifier: 500,
-                error_message: format!("Session token creation failed: {}", e.message),
-                error_object: None,
-            }
-        ))),
-    }
-}
-
 pub fn generate_payment_method_token_response<T: PaymentMethodDataTypes>(
     router_data_v2: RouterDataV2<
         PaymentMethodToken,
