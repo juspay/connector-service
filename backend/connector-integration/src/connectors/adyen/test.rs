@@ -142,7 +142,7 @@ mod tests {
                     enrolled_for_3ds: true,
                     related_transaction_id: None,
                     payment_experience: None,
-                    payment_method_type: Some(common_enums::PaymentMethodType::Credit),
+                    payment_method_type: Some(common_enums::PaymentMethodType::Card),
                     customer_id: Some(
                         common_utils::id_type::CustomerId::try_from(Cow::from(
                             "cus_123456789".to_string(),

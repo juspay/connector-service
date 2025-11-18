@@ -197,7 +197,7 @@ fn create_payment_authorize_request(
         minor_amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Credit(card_details)
+            payment_method: Some(payment_method::PaymentMethod::Card(card_details)
             })),
         }), //i32::from(payment_method::PaymentMethod::Card),
         email: Some(TEST_EMAIL.to_string().into()),
@@ -209,7 +209,7 @@ fn create_payment_authorize_request(
         enrolled_for_3ds: false,
         request_incremental_authorization: false,
         capture_method: Some(i32::from(capture_method)),
-        // payment_method_type: Some(i32::from(PaymentMethodType::Credit)),
+        // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         metadata,
         ..Default::default()
     }

@@ -144,7 +144,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             metadata.insert("connector_meta_data".to_string(), connector_meta_data);
             metadata
         },
-        // payment_method_type: Some(i32::from(PaymentMethodType::Credit)),
+        // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         ..Default::default()
     }
 }

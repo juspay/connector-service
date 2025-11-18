@@ -32,14 +32,10 @@ enum CardNetwork {
 // It contains a oneof field with all possible payment method 
 message PaymentMethod {
   oneof payment_method {
-    // CARD METHODS (1-9) - Flattened with credit/debit distinction
-    CardDetails credit = 1;                             // Credit card payment
-    CardDetails debit = 2;                              // Debit card payment  
-    CardDetails card = 3;                               // Generic card (credit/debit)
+    // CARD METHODS (1-9) - Direct variants
+    CardDetails card = 3;                               // Generic card payment
     CardRedirect card_redirect = 4;                     // Card redirect flow
-    CardDetails credit_proxy = 5;                       // Credit card proxy payment
-    CardDetails debit_proxy = 6;                        // Debit card proxy payment
-    CardDetails card_proxy = 7;                         // Generic card proxy
+    CardDetails card_proxy = 7;                         // Generic card proxy payment
     TokenPaymentMethodType token = 8;                   // Payment tokens
     
     // DIGITAL WALLETS (10-29) - Direct variants

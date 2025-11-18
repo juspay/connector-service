@@ -228,7 +228,7 @@ fn create_payment_authorize_request_with_amount(
         minor_amount: amount,
         currency: i32::from(Currency::Usd),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Credit(card_details)),
+            payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
         return_url: Some("https://duck.com".to_string()),
         email: Some(TEST_EMAIL.to_string().into()),
@@ -243,7 +243,7 @@ fn create_payment_authorize_request_with_amount(
         capture_method: Some(i32::from(capture_method)),
         order_category: Some("PAY".to_string()),
         metadata,
-        // payment_method_type: Some(i32::from(PaymentMethodType::Credit)),
+        // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         ..Default::default()
     }
 }

@@ -1617,7 +1617,7 @@ impl PaymentService for Payments {
                 let authorize_response = match payload.payment_method.as_ref() {
                     Some(pm) => {
                         match pm.payment_method.as_ref() {
-                            Some(payment_method::PaymentMethod::CreditProxy(proxy_card_details)) | Some(payment_method::PaymentMethod::DebitProxy(proxy_card_details)) | Some(payment_method::PaymentMethod::CardProxy(proxy_card_details)) => {
+                            Some(payment_method::PaymentMethod::CardProxy(proxy_card_details)) => {
                                 let token_data = proxy_card_details.to_token_data();
                                 match Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
                                     payload.clone(),

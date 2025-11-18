@@ -256,29 +256,9 @@ impl<
         match value.payment_method {
             Some(data) => match data {
                 // ============================================================================
-                // CARD METHODS - Flattened
+                // CARD METHODS
                 // ============================================================================
-                grpc_api_types::payments::payment_method::PaymentMethod::Credit(card_details) => {
-                    let card = payment_method_data::Card::<T>::foreign_try_from(card_details)?;
-                    Ok(PaymentMethodData::Card(card))
-                }
-                grpc_api_types::payments::payment_method::PaymentMethod::Debit(card_details) => {
-                    let card = payment_method_data::Card::<T>::foreign_try_from(card_details)?;
-                    Ok(PaymentMethodData::Card(card))
-                }
                 grpc_api_types::payments::payment_method::PaymentMethod::Card(card_details) => {
-                    let card = payment_method_data::Card::<T>::foreign_try_from(card_details)?;
-                    Ok(PaymentMethodData::Card(card))
-                }
-                grpc_api_types::payments::payment_method::PaymentMethod::CreditProxy(
-                    card_details,
-                ) => {
-                    let card = payment_method_data::Card::<T>::foreign_try_from(card_details)?;
-                    Ok(PaymentMethodData::Card(card))
-                }
-                grpc_api_types::payments::payment_method::PaymentMethod::DebitProxy(
-                    card_details,
-                ) => {
                     let card = payment_method_data::Card::<T>::foreign_try_from(card_details)?;
                     Ok(PaymentMethodData::Card(card))
                 }
@@ -611,11 +591,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for Option<Paym
         match value {
             grpc_api_types::payments::PaymentMethodType::Unspecified => Ok(None),
             grpc_api_types::payments::PaymentMethodType::Credit => {
-                Ok(Some(PaymentMethodType::Credit))
+                Ok(Some(PaymentMethodType::Card))
             }
-            grpc_api_types::payments::PaymentMethodType::Debit => {
-                Ok(Some(PaymentMethodType::Debit))
-            }
+            grpc_api_types::payments::PaymentMethodType::Debit => Ok(Some(PaymentMethodType::Card)),
             grpc_api_types::payments::PaymentMethodType::UpiCollect => {
                 Ok(Some(PaymentMethodType::UpiCollect))
             }
@@ -675,22 +653,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
         match value.payment_method {
             Some(data) => match data {
                 // ============================================================================
-                // CARD METHODS - Flattened with credit/debit distinction
+                // CARD METHODS
                 // ============================================================================
-                grpc_api_types::payments::payment_method::PaymentMethod::Credit(_) => {
-                    Ok(Some(PaymentMethodType::Credit))
-                }
-                grpc_api_types::payments::payment_method::PaymentMethod::Debit(_) => {
-                    Ok(Some(PaymentMethodType::Debit))
-                }
                 grpc_api_types::payments::payment_method::PaymentMethod::Card(_) => {
                     Ok(None)
-                }
-                grpc_api_types::payments::payment_method::PaymentMethod::CreditProxy(_) => {
-                    Ok(Some(PaymentMethodType::Credit))
-                }
-                grpc_api_types::payments::payment_method::PaymentMethod::DebitProxy(_) => {
-                    Ok(Some(PaymentMethodType::Debit))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::CardProxy(_) => {
                     Ok(None)
@@ -2521,23 +2487,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for common_enums::P
         match item {
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Credit(_)),
-            } => Ok(Self::Card),
-            grpc_api_types::payments::PaymentMethod {
-                payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Debit(_)),
-            } => Ok(Self::Card),
-            grpc_api_types::payments::PaymentMethod {
-                payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Card(_)),
-            } => Ok(Self::Card),
-            grpc_api_types::payments::PaymentMethod {
-                payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::CreditProxy(_)),
-            } => Ok(Self::Card),
-            grpc_api_types::payments::PaymentMethod {
-                payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::DebitProxy(_)),
             } => Ok(Self::Card),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:

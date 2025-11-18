@@ -136,7 +136,7 @@ fn create_payment_authorize_request(
     });
 
     request.payment_method = Some(PaymentMethod {
-        payment_method: Some(payment_method::PaymentMethod::Credit(card_details)
+        payment_method: Some(payment_method::PaymentMethod::Card(card_details)
         })),
     });
 

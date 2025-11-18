@@ -191,9 +191,7 @@ impl TryFrom<&common_enums::PaymentMethodType> for NovalNetPaymentTypes {
     fn try_from(item: &common_enums::PaymentMethodType) -> Result<Self, Self::Error> {
         match item {
             common_enums::PaymentMethodType::ApplePay => Ok(Self::APPLEPAY),
-            common_enums::PaymentMethodType::Credit | common_enums::PaymentMethodType::Debit => {
-                Ok(Self::CREDITCARD)
-            }
+            common_enums::PaymentMethodType::Card => Ok(Self::CREDITCARD),
             common_enums::PaymentMethodType::GooglePay => Ok(Self::GOOGLEPAY),
             common_enums::PaymentMethodType::Paypal => Ok(Self::PAYPAL),
             _ => Err(errors::ConnectorError::NotImplemented(

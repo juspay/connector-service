@@ -146,7 +146,7 @@ fn create_payment_authorize_request(
     });
 
     request.payment_method = Some(PaymentMethod {
-        payment_method: Some(payment_method::PaymentMethod::Credit(card_details)),
+        payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
     });
 
     // Set connector customer ID
@@ -311,7 +311,7 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
         minor_amount: Some(TEST_AMOUNT),
         currency: i32::from(Currency::Usd),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Credit(card_details))
+            payment_method: Some(payment_method::PaymentMethod::Card(card_details))
             })),
         }),
         customer_name: Some(TEST_CARD_HOLDER.to_string()),

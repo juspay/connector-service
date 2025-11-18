@@ -4607,8 +4607,7 @@ impl<
             id: Secret::new(connector_mandate_id),
         };
         let mandate_card_information = match item.router_data.request.payment_method_type {
-            Some(common_enums::PaymentMethodType::Credit)
-            | Some(common_enums::PaymentMethodType::Debit) => Some(MandateCard {
+            Some(common_enums::PaymentMethodType::Card) => Some(MandateCard {
                 type_selection_indicator: Some("1".to_owned()),
             }),
             _ => None,

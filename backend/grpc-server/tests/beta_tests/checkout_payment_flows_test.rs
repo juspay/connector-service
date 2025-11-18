@@ -150,7 +150,7 @@ fn create_payment_authorize_request(
         minor_amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Credit(card_details)),
+            payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
         email: Some(TEST_EMAIL.to_string().into()),
         address: Some(grpc_api_types::payments::PaymentAddress::default()),

@@ -135,7 +135,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         minor_amount: unique_amount,
         currency: i32::from(Currency::Usd),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Credit(card_details)),
+            payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
         return_url: Some("https://example.com/return".to_string()),
         webhook_url: Some("https://example.com/webhook".to_string()),
@@ -301,7 +301,7 @@ fn create_register_request_with_prefix(prefix: &str) -> PaymentServiceRegisterRe
         minor_amount: Some(0), // Setup mandate with 0 amount
         currency: i32::from(Currency::Usd),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Credit(card_details)),
+            payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
         customer_name: Some(format!("{} Doe", unique_first_name)),
         email: Some(unique_email.clone().into()),

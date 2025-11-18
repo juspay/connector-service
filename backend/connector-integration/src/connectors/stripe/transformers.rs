@@ -808,8 +808,7 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(value: common_enums::PaymentMethodType) -> Result<Self, Self::Error> {
         match value {
-            common_enums::PaymentMethodType::Credit => Ok(Self::Card),
-            common_enums::PaymentMethodType::Debit => Ok(Self::Card),
+            common_enums::PaymentMethodType::Card => Ok(Self::Card),
             common_enums::PaymentMethodType::Klarna => Ok(Self::Klarna),
             common_enums::PaymentMethodType::Affirm => Ok(Self::Affirm),
             common_enums::PaymentMethodType::AfterpayClearpay => Ok(Self::AfterpayClearpay),
