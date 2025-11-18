@@ -220,22 +220,24 @@ impl From<HipayRefundStatus> for RefundStatus {
 }
 
 // Sync Response Types
-// Nested transaction details structure for PSync response
-#[derive(Debug, Serialize, Deserialize)]
-pub struct HipayTransactionDetails {
-    pub status: HipayPaymentStatus,
-    pub message: String,
-    #[serde(rename = "transactionReference")]
-    pub transaction_reference: String,
-    #[serde(flatten)]
-    pub extra: std::collections::HashMap<String, serde_json::Value>,
+// Reason struct for PSync response - matches v3 API format
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct Reason {
+    pub reason: Option<String>,
+    pub code: Option<u64>,
 }
 
+// HiPay v3 PSync Response - flat structure matching v3 transaction API
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum HipaySyncResponse {
     Response {
-        transaction: HipayTransactionDetails,
+        id: i64,
+        status: i32,
+        #[serde(default)]
+        reason: Reason,
+        #[serde(flatten)]
+        extra: std::collections::HashMap<String, serde_json::Value>,
     },
     Error {
         message: String,
@@ -706,8 +708,48 @@ impl<T: PaymentMethodDataTypes>
 }
 
 
+// Helper function to map v3 API integer status codes to AttemptStatus
+// Matches Hyperswitch's get_sync_status function
+fn get_sync_status(state: i32) -> AttemptStatus {
+    match state {
+        109 => AttemptStatus::AuthenticationFailed,
+        110 => AttemptStatus::Failure,
+        111 => AttemptStatus::Failure,
+        112 => AttemptStatus::Pending,
+        113 => AttemptStatus::Failure,
+        114 => AttemptStatus::Failure,
+        115 => AttemptStatus::Voided,
+        116 => AttemptStatus::Authorized,
+        117 => AttemptStatus::CaptureInitiated,
+        118 => AttemptStatus::Charged,
+        119 => AttemptStatus::PartialCharged,
+        129 => AttemptStatus::Failure,
+        173 => AttemptStatus::CaptureFailed,
+        174 => AttemptStatus::Pending,
+        175 => AttemptStatus::VoidInitiated,
+        177 => AttemptStatus::AuthenticationPending,
+        178 => AttemptStatus::Failure,
+        200 => AttemptStatus::Pending,
+        101 => AttemptStatus::Started,
+        105 => AttemptStatus::AuthenticationFailed,
+        106 => AttemptStatus::Pending,
+        107 => AttemptStatus::AuthenticationPending,
+        108 => AttemptStatus::AuthenticationFailed,
+        120 => AttemptStatus::Charged,
+        121 => AttemptStatus::Charged,
+        122 => AttemptStatus::Charged,
+        123 => AttemptStatus::Charged,
+        140 => AttemptStatus::AuthenticationPending,
+        141 => AttemptStatus::AuthenticationSuccessful,
+        151 => AttemptStatus::Failure,
+        161 => AttemptStatus::Pending,
+        163 => AttemptStatus::Failure,
+        _ => AttemptStatus::Failure,
+    }
+}
+
 // Payment Sync Response Implementation
-// Uses HipaySyncResponse enum with get_sync_status helper
+// Uses HipaySyncResponse enum with v3 API flat structure
 impl
     TryFrom<
         ResponseRouterData<
@@ -726,14 +768,14 @@ impl
     ) -> Result<Self, Self::Error> {
         // Handle sync response - could be Response or Error variant
         match item.response {
-            HipaySyncResponse::Response { transaction } => {
-                // Convert HipayPaymentStatus enum directly to AttemptStatus using From trait
-                let attempt_status = AttemptStatus::from(transaction.status.clone());
+            HipaySyncResponse::Response { id, status, .. } => {
+                // Convert i32 status code to AttemptStatus using mapping function
+                let attempt_status = get_sync_status(status);
 
                 Ok(Self {
                     response: Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::ConnectorTransactionId(
-                            transaction.transaction_reference.clone(),
+                            id.to_string(),
                         ),
                         redirection_data: None,
                         mandate_reference: None,
@@ -779,11 +821,9 @@ impl
 pub struct HipayCaptureRequest {
     pub operation: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub amount: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub operation_id: Option<String>,
+    pub amount: Option<String>,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
@@ -812,14 +852,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         Ok(Self {
             operation: "capture".to_string(),
-            amount: Some(amount),
             currency: Some(item.router_data.request.currency.to_string()),
-            operation_id: Some(
-                item.router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
-            ),
+            amount: Some(amount),
         })
     }
 }
@@ -889,11 +923,9 @@ impl
 pub struct HipayRefundRequest {
     pub operation: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub amount: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub operation_id: Option<String>,
+    pub amount: Option<String>,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
@@ -922,9 +954,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         Ok(Self {
             operation: "refund".to_string(),
-            amount: Some(amount),
             currency: Some(item.router_data.request.currency.to_string()),
-            operation_id: Some(item.router_data.request.refund_id.clone()),
+            amount: Some(amount),
         })
     }
 }
@@ -1001,9 +1032,9 @@ impl
 pub struct HipayVoidRequest {
     pub operation: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub operation_id: Option<String>,
+    pub currency: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub source: Option<String>,
+    pub amount: Option<String>,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
@@ -1024,13 +1055,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             operation: "cancel".to_string(),
-            operation_id: Some(
-                item.router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
-            ),
-            source: None,
+            currency: item.router_data.request.currency.map(|c| c.to_string()),
+            amount: Some("".to_string()), // Empty string as per Hyperswitch
         })
     }
 }

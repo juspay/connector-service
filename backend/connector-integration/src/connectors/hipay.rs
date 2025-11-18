@@ -685,7 +685,7 @@ macros::macro_connector_implementation!(
 
             let base_url = self.get_sync_base_url(req);
             Ok(format!(
-                "{}/v1/transaction/{}",
+                "{}/v3/transaction/{}",
                 base_url.trim_end_matches('/'),
                 transaction_reference
             ))
@@ -863,7 +863,7 @@ impl<
 
         let base_url = self.get_refund_sync_base_url(req);
         Ok(format!(
-            "{}/v1/transaction/{}",
+            "{}/v3/transaction/{}",
             base_url.trim_end_matches('/'),
             transaction_reference
         ))
