@@ -264,13 +264,32 @@ pub struct HipayRefundTransactionDetails {
 // Type alias for backward compatibility
 pub type HipayRefundSyncResponse = HipayRefundSyncXmlResponse;
 
+// HiPay Operation Enum - Type-safe operation codes for maintenance requests
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum HipayOperation {
+    Capture,
+    Refund,
+    Cancel,
+}
+
+impl std::fmt::Display for HipayOperation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Capture => write!(f, "capture"),
+            Self::Refund => write!(f, "refund"),
+            Self::Cancel => write!(f, "cancel"),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HipayPaymentsRequest<T: PaymentMethodDataTypes> {
     pub payment_product: String,
     pub orderid: String,
     pub operation: String,
     pub description: String,
-    pub currency: String,
+    pub currency: common_enums::Currency,
     pub amount: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cardtoken: Option<String>,
@@ -325,13 +344,41 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     ) -> Result<Self, Self::Error> {
         use hyperswitch_masking::PeekInterface;
 
-        // Get payment method - determine payment_product
+        // Get payment method - determine payment_product based on card network
+        // Priority order (matching Hyperswitch):
+        // 1. For tokenized cards: Use connector_customer (contains domestic_network from tokenization)
+        // 2. For raw cards: Map card_network enum to HiPay payment products
         let payment_product = match &item.router_data.request.payment_method_data {
-            PaymentMethodData::Card(_) => {
-                // Use "visa" as default for cards - could be enhanced based on card type
-                "visa".to_string()
+            PaymentMethodData::Card(card_data) => {
+                // Map card network to HiPay payment product
+                match card_data.card_network.as_ref() {
+                    Some(network) => match network {
+                        common_enums::CardNetwork::Visa => "visa",
+                        common_enums::CardNetwork::Mastercard => "mastercard",
+                        common_enums::CardNetwork::AmericanExpress => "american-express",
+                        common_enums::CardNetwork::JCB => "jcb",
+                        common_enums::CardNetwork::DinersClub => "diners",
+                        common_enums::CardNetwork::Discover => "discover",
+                        common_enums::CardNetwork::CartesBancaires => "cb",
+                        common_enums::CardNetwork::UnionPay => "unionpay",
+                        common_enums::CardNetwork::Interac => "interac",
+                        common_enums::CardNetwork::RuPay => "rupay",
+                        common_enums::CardNetwork::Maestro => "maestro",
+                        _ => "", // Empty string for unsupported card networks
+                    },
+                    None => "", // Empty string when card network is not provided
+                }
+                .to_string()
             }
-            PaymentMethodData::CardToken(_) => "visa".to_string(),
+            PaymentMethodData::CardToken(_) => {
+                // For tokenized cards, use connector_customer field which contains
+                // the payment product/domestic_network from tokenization response
+                item.router_data
+                    .resource_common_data
+                    .connector_customer
+                    .clone()
+                    .unwrap_or_else(|| "".to_string()) // Empty string fallback
+            }
             _ => {
                 return Err(errors::ConnectorError::NotImplemented(
                     "Payment method not supported".to_string(),
@@ -348,26 +395,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             _ => "Sale".to_string(), // Automatic capture or default
         };
 
-        // Extract customer information
-        let (firstname, lastname) = item
+        // Extract customer information using utility functions
+        let firstname = item
             .router_data
             .resource_common_data
-            .get_optional_billing_full_name()
-            .map(|name| {
-                let name_str = name.peek();
-                let parts: Vec<&str> = name_str.split_whitespace().collect();
-                if parts.len() > 1 {
-                    (
-                        Some(Secret::new(parts[0].to_string())),
-                        Some(Secret::new(parts[1..].join(" "))),
-                    )
-                } else if parts.len() == 1 {
-                    (Some(Secret::new(parts[0].to_string())), None)
-                } else {
-                    (None, None)
-                }
-            })
-            .unwrap_or((None, None));
+            .get_optional_billing_first_name();
+        let lastname = item
+            .router_data
+            .resource_common_data
+            .get_optional_billing_last_name();
 
         // Get email - convert Email type to Secret<String>
         let email = item.router_data.request.email.as_ref().map(|e| {
@@ -433,7 +469,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 .statement_descriptor
                 .clone()
                 .unwrap_or_else(|| "Payment".to_string()),
-            currency: item.router_data.request.currency.to_string(),
+            currency: item.router_data.request.currency,
             amount,
             cardtoken,
             card_security_code,
@@ -660,9 +696,7 @@ pub struct HipayTokenResponse {
     pub card_holder: String,
     pub card_expiry_month: String,
     pub card_expiry_year: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub issuer: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub country: Option<String>,
 }
 
@@ -819,9 +853,9 @@ impl
 // Capture Request Structure
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HipayCaptureRequest {
-    pub operation: String,
+    pub operation: HipayOperation,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub currency: Option<String>,
+    pub currency: Option<common_enums::Currency>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub amount: Option<String>,
 }
@@ -851,8 +885,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .get_amount_as_string();
 
         Ok(Self {
-            operation: "capture".to_string(),
-            currency: Some(item.router_data.request.currency.to_string()),
+            operation: HipayOperation::Capture,
+            currency: Some(item.router_data.request.currency),
             amount: Some(amount),
         })
     }
@@ -921,9 +955,9 @@ impl
 // Refund Request Structure
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HipayRefundRequest {
-    pub operation: String,
+    pub operation: HipayOperation,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub currency: Option<String>,
+    pub currency: Option<common_enums::Currency>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub amount: Option<String>,
 }
@@ -953,8 +987,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .get_amount_as_string();
 
         Ok(Self {
-            operation: "refund".to_string(),
-            currency: Some(item.router_data.request.currency.to_string()),
+            operation: HipayOperation::Refund,
+            currency: Some(item.router_data.request.currency),
             amount: Some(amount),
         })
     }
@@ -1030,9 +1064,9 @@ impl
 // Void Request Structure
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HipayVoidRequest {
-    pub operation: String,
+    pub operation: HipayOperation,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub currency: Option<String>,
+    pub currency: Option<common_enums::Currency>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub amount: Option<String>,
 }
@@ -1054,8 +1088,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            operation: "cancel".to_string(),
-            currency: item.router_data.request.currency.map(|c| c.to_string()),
+            operation: HipayOperation::Cancel,
+            currency: item.router_data.request.currency,
             amount: Some("".to_string()), // Empty string as per Hyperswitch
         })
     }
