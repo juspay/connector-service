@@ -2819,22 +2819,10 @@ impl PaymentService for Payments {
                     // Get connector data
                     let connector_data: ConnectorData<DefaultPCIHolder> =
                         ConnectorData::get_connector_by_name(&connector);
-
+                    let access_token_create_request = request_data.payload;
                     // Create minimal payment flow data for access token generation
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
-                        // Create a minimal payment flow data for access token generation
-                        PaymentServiceAuthorizeRequest {
-                            // Use default values since this is just for access token
-                            payment_method: None,
-                            amount: 0,
-                            minor_amount: 0,
-                            currency: grpc_api_types::payments::Currency::Usd.into(),
-                            capture_method: Some(i32::from(
-                                grpc_api_types::payments::CaptureMethod::Automatic,
-                            )),
-                            test_mode: Some(false),
-                            ..Default::default()
-                        },
+                        access_token_create_request,
                         self.config.connectors.clone(),
                         &request_data.masked_metadata,
                     ))
@@ -2881,6 +2869,7 @@ impl PaymentService for Payments {
                         error_code: None,
                         error_message: None,
                         status_code: 200,
+                        response_ref_id: None,
                     };
 
                     Ok(tonic::Response::new(create_access_token_response))

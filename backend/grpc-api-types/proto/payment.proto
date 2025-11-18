@@ -1261,11 +1261,14 @@ message ConnectorResponseData {
 
 // Request message for creating an access token.
 message PaymentServiceCreateAccessTokenRequest {
+  // Session Token create Identification
+  Identifier request_ref_id = 1; // Renamed from connector_request_reference_id
+
   // Connector Selection
-  Connector connector = 1; // The connector to create the access token for
+  Connector connector = 2; // The connector to create the access token for
   
   // Account-Specific Configuration
-  map<string, string> merchant_account_metadata = 2; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  map<string, string> merchant_account_metadata = 3; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for creating an access token.
@@ -1280,6 +1283,8 @@ message PaymentServiceCreateAccessTokenResponse {
   optional string error_code = 5; // Error code if the access token creation failed
   optional string error_message = 6; // Error message if the access token creation failed
   uint32 status_code = 7; // HTTP status code from the connector
+
+  optional Identifier response_ref_id = 8; // Renamed from connector_response_reference_id
 }
 
 // Request message for authorizing a payment.
