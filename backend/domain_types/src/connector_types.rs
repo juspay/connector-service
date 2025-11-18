@@ -1919,7 +1919,6 @@ impl RefundsData {
         self.get_ip_address_as_optional()
             .ok_or_else(missing_field_err("browser_info.ip_address"))
     }
-
 }
 
 #[derive(Debug, Clone, Default)]
