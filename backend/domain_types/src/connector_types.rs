@@ -12,7 +12,7 @@ use common_utils::{
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
@@ -950,26 +950,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub enable_overcapture: Option<bool>,
     pub setup_mandate_details: Option<MandateData>,
     pub merchant_account_metadata: Option<common_utils::pii::SecretSerdeValue>,
-}
-
-// Testing data support (same pattern as Hyperswitch)
-#[derive(Debug, serde::Deserialize)]
-pub struct AdyenTestingData {
-    pub holder_name: Option<hyperswitch_masking::Secret<String>>,
-}
-
-impl TryFrom<SecretSerdeValue> for AdyenTestingData {
-    type Error = error_stack::Report<crate::errors::ConnectorError>;
-
-    fn try_from(testing_data: SecretSerdeValue) -> Result<Self, Self::Error> {
-        let testing_data = testing_data
-            .expose()
-            .parse_value::<Self>("AdyenTestingData")
-            .change_context(crate::errors::ConnectorError::InvalidDataFormat {
-                field_name: "connector_metadata.adyen.testing",
-            })?;
-        Ok(testing_data)
-    }
+    pub connector_testing_data: Option<common_utils::pii::SecretSerdeValue>,
 }
 
 impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
@@ -998,6 +979,13 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
             .clone()
             .and_then(|browser_info| browser_info.language)
     }
+
+    pub fn get_customer_id(&self) -> Result<common_utils::id_type::CustomerId, Error> {
+        self.customer_id
+            .to_owned()
+            .ok_or_else(missing_field_err("customer_id"))
+    }
+
     pub fn get_card(&self) -> Result<Card<T>, Error> {
         match &self.payment_method_data {
             PaymentMethodData::Card(card) => Ok(card.clone()),
@@ -1172,13 +1160,7 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     }
 
     pub fn get_connector_testing_data(&self) -> Option<SecretSerdeValue> {
-        self.metadata
-            .as_ref()
-            .and_then(|metadata| metadata.as_object())
-            .and_then(|meta_obj| meta_obj.get("adyen"))
-            .and_then(|adyen_meta| adyen_meta.get("testing"))
-            .cloned()
-            .map(|value| value.into())
+        self.connector_testing_data.clone()
     }
 }
 
