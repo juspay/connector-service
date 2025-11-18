@@ -4,7 +4,9 @@ use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
 use common_utils::{
-    errors::CustomResult, events, request::RequestContent,
+    errors::CustomResult,
+    events,
+    request::RequestContent,
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
 };
 use domain_types::{
@@ -44,11 +46,11 @@ use crate::with_error_response_body;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
-    pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
 #[derive(Clone)]
 pub struct Nmi<T: PaymentMethodDataTypes> {
+    #[allow(dead_code)]
     amount_converter: &'static (dyn AmountConvertor<Output = FloatMajorUnit> + Sync),
     payment_method_type: std::marker::PhantomData<T>,
 }
@@ -234,7 +236,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PaymentsResponseData,
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
-        Ok(format!("https://secure.nmi.com/api/transact.php"))
+        Ok("https://secure.nmi.com/api/transact.php".to_string())
     }
 
     fn get_request_body(
@@ -313,7 +315,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         // IMPORTANT: query.php, not transact.php!
-        Ok(format!("https://secure.nmi.com/api/query.php"))
+        Ok("https://secure.nmi.com/api/query.php".to_string())
     }
 
     fn get_request_body(
@@ -336,10 +338,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         errors::ConnectorError,
     > {
         // Parse XML response using quick-xml
-        let response: nmi::SyncResponse = quick_xml::de::from_str(
-            &String::from_utf8_lossy(&res.response)
-        )
-        .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        let response: nmi::SyncResponse =
+            quick_xml::de::from_str(&String::from_utf8_lossy(&res.response))
+                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         RouterDataV2::try_from(ResponseRouterData {
             response,
@@ -381,7 +382,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         // Void uses transact.php endpoint (per tech spec section 3.3)
-        Ok(format!("https://secure.nmi.com/api/transact.php"))
+        Ok("https://secure.nmi.com/api/transact.php".to_string())
     }
 
     fn get_request_body(
@@ -458,7 +459,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         // Same endpoint as Authorize (transact.php)
-        Ok(format!("https://secure.nmi.com/api/transact.php"))
+        Ok("https://secure.nmi.com/api/transact.php".to_string())
     }
 
     fn get_request_body(
@@ -523,7 +524,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         // Refund uses transact.php endpoint (per tech spec section 3.4)
-        Ok(format!("https://secure.nmi.com/api/transact.php"))
+        Ok("https://secure.nmi.com/api/transact.php".to_string())
     }
 
     fn get_request_body(
@@ -588,7 +589,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         // CRITICAL: RSync uses query.php, NOT transact.php (per tech spec section 3.6)
-        Ok(format!("https://secure.nmi.com/api/query.php"))
+        Ok("https://secure.nmi.com/api/query.php".to_string())
     }
 
     fn get_request_body(
@@ -611,10 +612,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         errors::ConnectorError,
     > {
         // Parse XML response using quick-xml (same format as PSync per tech spec 3.9)
-        let response: nmi::SyncResponse = quick_xml::de::from_str(
-            &String::from_utf8_lossy(&res.response)
-        )
-        .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        let response: nmi::SyncResponse =
+            quick_xml::de::from_str(&String::from_utf8_lossy(&res.response))
+                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         RouterDataV2::try_from(ResponseRouterData {
             response,

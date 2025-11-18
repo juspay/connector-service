@@ -3,7 +3,11 @@ use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::types::FloatMajorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
-    connector_types::{MandateReference, PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, PaymentVoidData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId},
+    connector_types::{
+        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+    },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::ConnectorAuthType,
@@ -159,7 +163,10 @@ impl<T: PaymentMethodDataTypes>
             transaction_type,
             amount,
             currency: item.request.currency,
-            orderid: item.resource_common_data.connector_request_reference_id.clone(),
+            orderid: item
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             payment_method,
             merchant_defined_field: item
                 .request
@@ -182,7 +189,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMet
                 // This works for both DefaultPCIHolder (cards::CardNumber) and VaultTokenHolder (String)
                 let card_number_str = serde_json::to_string(&card_data.card_number.0)
                     .change_context(errors::ConnectorError::RequestEncodingFailed)?
-                    .trim_matches('"')  // Remove JSON quotes
+                    .trim_matches('"') // Remove JSON quotes
                     .to_string();
                 let card_number = Secret::new(card_number_str);
 
@@ -211,7 +218,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMet
             PaymentMethodData::Wallet(wallet_data) => match wallet_data {
                 WalletData::GooglePay(_google_pay_data) => {
                     // Use the get_wallet_token helper method
-                    let token = wallet_data.get_wallet_token()
+                    let token = wallet_data
+                        .get_wallet_token()
                         .change_context(errors::ConnectorError::InvalidWallet)?;
                     Ok(Self::GooglePay(Box::new(GooglePayData {
                         googlepay_payment_data: token,
@@ -219,7 +227,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMet
                 }
                 WalletData::ApplePay(_apple_pay_data) => {
                     // Use the get_wallet_token helper method
-                    let payment_data = wallet_data.get_wallet_token()
+                    let payment_data = wallet_data
+                        .get_wallet_token()
                         .change_context(errors::ConnectorError::InvalidWallet)?;
 
                     // For now, assume the data is already properly encoded
@@ -228,13 +237,13 @@ impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMet
                         applepay_payment_data: payment_data,
                     })))
                 }
-                _ => Err(error_stack::report!(errors::ConnectorError::NotImplemented(
-                    "Wallet type not supported".to_string()
-                ))),
+                _ => Err(error_stack::report!(
+                    errors::ConnectorError::NotImplemented("Wallet type not supported".to_string())
+                )),
             },
-            _ => Err(error_stack::report!(errors::ConnectorError::NotImplemented(
-                "Payment method not supported".to_string()
-            ))),
+            _ => Err(error_stack::report!(
+                errors::ConnectorError::NotImplemented("Payment method not supported".to_string())
+            )),
         }
     }
 }
@@ -243,7 +252,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMet
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct StandardResponse {
-    pub response: String,        // "1" = approved, "2" = declined, "3" = error
+    pub response: String, // "1" = approved, "2" = declined, "3" = error
     pub responsetext: String,
     pub authcode: Option<String>,
     pub transactionid: String,
@@ -384,25 +393,38 @@ pub struct SyncTransactionData {
     pub condition: String, // Maps to status
 }
 
-impl TryFrom<ResponseRouterData<SyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
-    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl
+    TryFrom<
+        ResponseRouterData<
+            SyncResponse,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
+    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<SyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
+        item: ResponseRouterData<
+            SyncResponse,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
 
         // Get the requested transaction_id to find the correct transaction
-        let requested_transaction_id = item.router_data.request.connector_transaction_id
+        let requested_transaction_id = item
+            .router_data
+            .request
+            .connector_transaction_id
             .get_connector_transaction_id()
             .ok();
 
         // Find the transaction matching the requested transaction_id
         // If not found or if no transaction_id was provided, use the most recent one (last in list)
         let transaction = if let Some(ref req_txn_id) = requested_transaction_id {
-            response.transaction.iter()
+            response
+                .transaction
+                .iter()
                 .find(|txn| &txn.transaction_id == req_txn_id)
                 .or_else(|| response.transaction.last())
         } else {
@@ -472,7 +494,8 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
         let auth = NmiAuthType::try_from(&item.connector_auth_type)?;
 
         // Get the original transaction ID from connector_transaction_id
-        let transactionid = item.request
+        let transactionid = item
+            .request
             .connector_transaction_id
             .get_connector_transaction_id()
             .change_context(errors::ConnectorError::MissingRequiredField {
@@ -494,7 +517,8 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
 
 // ===== CAPTURE RESPONSE =====
 
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             StandardResponse,
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -571,15 +595,19 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
         let auth = NmiAuthType::try_from(&item.connector_auth_type)?;
 
         // Get the original payment transaction ID
-        let transactionid = item.request
-            .connector_transaction_id
-            .clone();
+        let transactionid = item.request.connector_transaction_id.clone();
 
         // Get the refund ID (refund_id) as orderid
         // If refund_id is not present, use connector_request_reference_id as fallback
-        let orderid = item.resource_common_data.refund_id
+        let orderid = item
+            .resource_common_data
+            .refund_id
             .clone()
-            .unwrap_or_else(|| item.resource_common_data.connector_request_reference_id.clone());
+            .unwrap_or_else(|| {
+                item.resource_common_data
+                    .connector_request_reference_id
+                    .clone()
+            });
 
         // Convert amount from minor to major units (cents to dollars)
         // For full refund, amount should be 0.00
@@ -599,7 +627,8 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
 
 // ===== REFUND RESPONSE =====
 
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             StandardResponse,
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -670,13 +699,21 @@ impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsRespons
 // ===== REFUND SYNC (RSYNC) RESPONSE =====
 // Reusing SyncResponse structure as XML format is same (per tech spec section 3.9)
 
-impl TryFrom<ResponseRouterData<SyncResponse, RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>>
-    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl
+    TryFrom<
+        ResponseRouterData<
+            SyncResponse,
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        >,
+    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<SyncResponse, RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>,
+        item: ResponseRouterData<
+            SyncResponse,
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        >,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
 
@@ -747,15 +784,14 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
         let transactionid = item.request.connector_transaction_id.clone();
 
         // Map cancellation reason to NMI's void reason
-        let void_reason = item.request
+        let void_reason = item
+            .request
             .cancellation_reason
             .as_ref()
-            .and_then(|reason| {
-                match reason.as_str() {
-                    "fraud" => Some(VoidReason::Fraud),
-                    "user_cancel" | "requested_by_customer" => Some(VoidReason::UserCancel),
-                    _ => None,
-                }
+            .and_then(|reason| match reason.as_str() {
+                "fraud" => Some(VoidReason::Fraud),
+                "user_cancel" | "requested_by_customer" => Some(VoidReason::UserCancel),
+                _ => None,
             })
             .unwrap_or(VoidReason::UserCancel); // Default to UserCancel
 
@@ -771,7 +807,8 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
 
 // ===== VOID RESPONSE =====
 
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             StandardResponse,
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -791,7 +828,7 @@ impl TryFrom<
         // Void success = Voided status
         // Void failure = VoidFailed status
         let status = match response.response.as_str() {
-            "1" => AttemptStatus::Voided,       // Void successful
+            "1" => AttemptStatus::Voided,           // Void successful
             "2" | "3" => AttemptStatus::VoidFailed, // Void failed
             _ => AttemptStatus::Pending,
         };
