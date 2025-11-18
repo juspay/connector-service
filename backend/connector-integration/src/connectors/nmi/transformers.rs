@@ -620,7 +620,7 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
             transactionid,
             orderid,
             amount,
-            payment: Some(PaymentType::Creditcard), // Default to creditcard, can be made dynamic if needed
+            payment: None, // NMI infers payment type from the referenced transaction
         })
     }
 }
@@ -800,7 +800,7 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
             transaction_type: TransactionType::Void,
             transactionid,
             void_reason,
-            payment: Some(PaymentType::Creditcard),
+            payment: None, // NMI infers payment type from the referenced transaction
         })
     }
 }

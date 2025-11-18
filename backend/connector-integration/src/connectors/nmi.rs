@@ -48,6 +48,11 @@ pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
 }
 
+pub(crate) mod endpoints {
+    pub(crate) const TRANSACT: &str = "/api/transact.php";
+    pub(crate) const QUERY: &str = "/api/query.php";
+}
+
 #[derive(Clone)]
 pub struct Nmi<T: PaymentMethodDataTypes> {
     #[allow(dead_code)]
@@ -229,14 +234,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     fn get_url(
         &self,
-        _req: &RouterDataV2<
+        req: &RouterDataV2<
             Authorize,
             PaymentFlowData,
             PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
-        Ok("https://secure.nmi.com/api/transact.php".to_string())
+        Ok(format!(
+            "{}{}",
+            &req.resource_common_data.connectors.nmi.base_url,
+            endpoints::TRANSACT
+        ))
     }
 
     fn get_request_body(
@@ -312,10 +321,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     fn get_url(
         &self,
-        _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         // IMPORTANT: query.php, not transact.php!
-        Ok("https://secure.nmi.com/api/query.php".to_string())
+        Ok(format!(
+            "{}{}",
+            &req.resource_common_data.connectors.nmi.base_url,
+            endpoints::QUERY
+        ))
     }
 
     fn get_request_body(
@@ -379,10 +392,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     fn get_url(
         &self,
-        _req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         // Void uses transact.php endpoint (per tech spec section 3.3)
-        Ok("https://secure.nmi.com/api/transact.php".to_string())
+        Ok(format!(
+            "{}{}",
+            &req.resource_common_data.connectors.nmi.base_url,
+            endpoints::TRANSACT
+        ))
     }
 
     fn get_request_body(
@@ -456,10 +473,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     fn get_url(
         &self,
-        _req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         // Same endpoint as Authorize (transact.php)
-        Ok("https://secure.nmi.com/api/transact.php".to_string())
+        Ok(format!(
+            "{}{}",
+            &req.resource_common_data.connectors.nmi.base_url,
+            endpoints::TRANSACT
+        ))
     }
 
     fn get_request_body(
@@ -521,10 +542,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     fn get_url(
         &self,
-        _req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         // Refund uses transact.php endpoint (per tech spec section 3.4)
-        Ok("https://secure.nmi.com/api/transact.php".to_string())
+        Ok(format!(
+            "{}{}",
+            &req.resource_common_data.connectors.nmi.base_url,
+            endpoints::TRANSACT
+        ))
     }
 
     fn get_request_body(
@@ -586,10 +611,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     fn get_url(
         &self,
-        _req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         // CRITICAL: RSync uses query.php, NOT transact.php (per tech spec section 3.6)
-        Ok("https://secure.nmi.com/api/query.php".to_string())
+        Ok(format!(
+            "{}{}",
+            &req.resource_common_data.connectors.nmi.base_url,
+            endpoints::QUERY
+        ))
     }
 
     fn get_request_body(
@@ -981,8 +1010,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         "application/x-www-form-urlencoded"
     }
 
-    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
-        "https://secure.nmi.com"
+    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
+        connectors.nmi.base_url.as_ref()
     }
 
     fn build_error_response(
