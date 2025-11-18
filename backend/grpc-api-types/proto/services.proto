@@ -15,6 +15,9 @@ service PaymentService {
   // Authorizes a payment.
   rpc Authorize(PaymentServiceAuthorizeRequest) returns (PaymentServiceAuthorizeResponse);
   
+  // Authorizes a payment only (without setup flows).
+  rpc AuthorizeOnly(PaymentServiceAuthorizeOnlyRequest) returns (PaymentServiceAuthorizeResponse);
+  
   // Synchronizes the status of a payment.
   rpc Get(PaymentServiceGetRequest) returns (PaymentServiceGetResponse);
   
