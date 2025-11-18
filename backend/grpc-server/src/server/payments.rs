@@ -42,8 +42,9 @@ use grpc_api_types::payments::{
     PaymentServiceAuthenticateRequest, PaymentServiceAuthenticateResponse,
     PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
     PaymentServiceCaptureResponse, PaymentServiceCreateOrderRequest,
-    PaymentServiceCreateOrderResponse, PaymentServiceDisputeRequest, PaymentServiceGetRequest,
-    PaymentServiceGetResponse, PaymentServicePostAuthenticateRequest,
+    PaymentServiceCreateOrderResponse, PaymentServiceCreateSessionTokenRequest,
+    PaymentServiceCreateSessionTokenResponse, PaymentServiceDisputeRequest,
+    PaymentServiceGetRequest, PaymentServiceGetResponse, PaymentServicePostAuthenticateRequest,
     PaymentServicePostAuthenticateResponse, PaymentServicePreAuthenticateRequest,
     PaymentServicePreAuthenticateResponse, PaymentServiceRefundRequest,
     PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
@@ -2562,6 +2563,113 @@ impl PaymentService for Payments {
                         .map_err(|e| e.into_grpc_status())?;
 
                     Ok(tonic::Response::new(setup_mandate_response))
+                })
+            },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "create_session_token",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = FlowName::CreateSessionToken.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::CreateSessionToken.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn create_session_token(
+        &self,
+        request: tonic::Request<PaymentServiceCreateSessionTokenRequest>,
+    ) -> Result<tonic::Response<PaymentServiceCreateSessionTokenResponse>, tonic::Status> {
+        info!("CREATE_SESSION_TOKEN_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            FlowName::CreateSessionToken,
+            |request_data| {
+                let service_name = service_name.clone();
+                Box::pin(async move {
+                    let payload = request_data.payload;
+                    let metadata_payload = request_data.extracted_metadata;
+                    let (connector, request_id, lineage_ids) = (
+                        metadata_payload.connector,
+                        metadata_payload.request_id,
+                        metadata_payload.lineage_ids,
+                    );
+                    let connector_auth_details = &metadata_payload.connector_auth_type;
+
+                    //get connector data
+                    let connector_data: ConnectorData<DefaultPCIHolder> =
+                        ConnectorData::get_connector_by_name(&connector);
+
+                    // Create common request data
+                    let payment_flow_data = PaymentFlowData::foreign_try_from((
+                        payload.clone(),
+                        self.config.connectors.clone(),
+                        &request_data.masked_metadata,
+                    ))
+                    .map_err(|e| e.into_grpc_status())?;
+
+                    // Use the existing handle_session_token function
+                    let event_params = EventParams {
+                        _connector_name: &connector.to_string(),
+                        _service_name: &service_name,
+                        request_id: &request_id,
+                        lineage_ids: &lineage_ids,
+                        reference_id: &metadata_payload.reference_id,
+                        shadow_mode: metadata_payload.shadow_mode,
+                    };
+
+                    let session_token_data = Box::pin(self.handle_session_token(
+                        connector_data.clone(),
+                        &payment_flow_data,
+                        connector_auth_details.clone(),
+                        &payload,
+                        &connector.to_string(),
+                        &service_name,
+                        event_params,
+                    ))
+                    .await
+                    .map_err(|e| {
+                        let message = e
+                            .error_message
+                            .unwrap_or_else(|| "Session token creation failed".to_string());
+                        tonic::Status::internal(message)
+                    })?;
+
+                    tracing::info!(
+                        "Session token created successfully: {}",
+                        session_token_data.session_token
+                    );
+
+                    // Create response
+                    let session_token_response = PaymentServiceCreateSessionTokenResponse {
+                        session_token: session_token_data.session_token,
+                        error_message: None,
+                        error_code: None,
+                        status_code: 200u16.into(),
+                    };
+
+                    Ok(tonic::Response::new(session_token_response))
                 })
             },
         )
