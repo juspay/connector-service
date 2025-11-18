@@ -41,7 +41,8 @@ use grpc_api_types::payments::{
     payment_method, payment_service_server::PaymentService, DisputeResponse,
     PaymentServiceAuthenticateRequest, PaymentServiceAuthenticateResponse,
     PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
-    PaymentServiceCaptureResponse, PaymentServiceCreateSessionTokenRequest,
+    PaymentServiceCaptureResponse, PaymentServiceCreateAccessTokenRequest,
+    PaymentServiceCreateAccessTokenResponse, PaymentServiceCreateSessionTokenRequest,
     PaymentServiceCreateSessionTokenResponse, PaymentServiceDisputeRequest,
     PaymentServiceGetRequest, PaymentServiceGetResponse, PaymentServicePostAuthenticateRequest,
     PaymentServicePostAuthenticateResponse, PaymentServicePreAuthenticateRequest,
@@ -2871,6 +2872,117 @@ impl PaymentService for Payments {
             self.config.clone(),
             FlowName::PostAuthenticate,
             |request_data| async move { self.internal_post_authenticate(request_data).await },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "create_access_token",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = FlowName::CreateAccessToken.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::CreateAccessToken.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn create_access_token(
+        &self,
+        request: tonic::Request<PaymentServiceCreateAccessTokenRequest>,
+    ) -> Result<tonic::Response<PaymentServiceCreateAccessTokenResponse>, tonic::Status> {
+        tracing::info!("ACCESS_TOKEN_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            FlowName::CreateAccessToken,
+            |request_data| {
+                let service_name = service_name.clone();
+                Box::pin(async move {
+                    let metadata_payload = request_data.extracted_metadata;
+                    let (connector, request_id, lineage_ids) = (
+                        metadata_payload.connector,
+                        metadata_payload.request_id,
+                        metadata_payload.lineage_ids,
+                    );
+                    let connector_auth_details = &metadata_payload.connector_auth_type;
+
+                    // Get connector data
+                    let connector_data: ConnectorData<DefaultPCIHolder> =
+                        ConnectorData::get_connector_by_name(&connector);
+                    let access_token_create_request = request_data.payload;
+                    // Create minimal payment flow data for access token generation
+                    let payment_flow_data = PaymentFlowData::foreign_try_from((
+                        access_token_create_request,
+                        self.config.connectors.clone(),
+                        &request_data.masked_metadata,
+                    ))
+                    .map_err(|e| e.into_grpc_status())?;
+
+                    // Create event params for the handle_access_token function
+                    let event_params = EventParams {
+                        _connector_name: &connector.to_string(),
+                        _service_name: &service_name,
+                        request_id: &request_id,
+                        lineage_ids: &lineage_ids,
+                        reference_id: &metadata_payload.reference_id,
+                        shadow_mode: metadata_payload.shadow_mode,
+                    };
+
+                    // Reuse the existing handle_access_token function
+                    let access_token_data = Box::pin(self.handle_access_token(
+                        connector_data,
+                        &payment_flow_data,
+                        connector_auth_details.clone(),
+                        &connector.to_string(),
+                        &service_name,
+                        event_params,
+                    ))
+                    .await
+                    .map_err(|e| {
+                        let message = e
+                            .error_message
+                            .unwrap_or_else(|| "Access token creation failed".to_string());
+                        tonic::Status::internal(message)
+                    })?;
+
+                    tracing::info!(
+                        "Access token created successfully with expiry: {:?}",
+                        access_token_data.expires_in
+                    );
+
+                    // Create response using the access token data
+                    let create_access_token_response = PaymentServiceCreateAccessTokenResponse {
+                        access_token: access_token_data.access_token,
+                        token_type: access_token_data.token_type,
+                        expires_in_seconds: access_token_data.expires_in,
+                        status: i32::from(grpc_api_types::payments::OperationStatus::Success),
+                        error_code: None,
+                        error_message: None,
+                        status_code: 200,
+                        response_ref_id: None,
+                    };
+
+                    Ok(tonic::Response::new(create_access_token_response))
+                })
+            },
         )
         .await
     }
