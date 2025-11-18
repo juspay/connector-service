@@ -136,7 +136,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         enrolled_for_3ds: false,
         request_incremental_authorization: false,
         capture_method: Some(i32::from(capture_method)),
-        payment_method_type: Some(i32::from(PaymentMethodType::Card)),
+        // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         ..Default::default()
     }
 }

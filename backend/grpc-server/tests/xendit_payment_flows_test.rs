@@ -138,7 +138,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         customer_id: Some(CONNECTOR_CUSTOMER_ID.to_string()),
         // browser_info: TODO - BrowserInfo type not available in grpc_api_types
         capture_method: Some(i32::from(capture_method)),
-        payment_method_type: Some(i32::from(PaymentMethodType::Card)),
+        // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         ..Default::default()
     }
 }

@@ -153,7 +153,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         request_incremental_authorization: false,
         capture_method: Some(i32::from(capture_method)),
         connector_customer_id: Some("cus_TE8065JzRWlLQf".to_string()),
-        payment_method_type: Some(i32::from(PaymentMethodType::Card)),
+        // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         ..Default::default()
     }
 }
