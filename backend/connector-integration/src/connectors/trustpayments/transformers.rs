@@ -613,10 +613,8 @@ impl
         }
 
         // Map status based on settlestatus
-        let status = get_status_from_settlestatus(
-            record.settlestatus.as_ref(),
-            record.authcode.as_deref(),
-        );
+        let status =
+            get_status_from_settlestatus(record.settlestatus.as_ref(), record.authcode.as_deref());
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(record.transactionreference.clone()),
