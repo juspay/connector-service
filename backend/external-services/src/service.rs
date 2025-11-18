@@ -792,6 +792,7 @@ fn get_or_create_proxy_client(
     cache: &RwLock<HashMap<Proxy, Client>>,
     cache_key: Proxy,
     proxy_config: &Proxy,
+    should_bypass_proxy: bool,
 ) -> CustomResult<Client, ApiClientError> {
     let read_result = cache
         .read()
@@ -819,13 +820,10 @@ fn get_or_create_proxy_client(
                 None => {
                     tracing::info!("Creating new proxy client for config: {:?}", cache_key);
 
-                    let new_client = apply_mitm_certificate(
-                        get_client_builder(proxy_config, false)?,
-                        proxy_config,
-                    )?
-                    .build()
-                    .change_context(ApiClientError::ClientConstructionFailed)
-                    .attach_printable("Failed to construct proxy client")?;
+                    let new_client = get_client_builder(proxy_config, should_bypass_proxy)?
+                        .build()
+                        .change_context(ApiClientError::ClientConstructionFailed)
+                        .attach_printable("Failed to construct proxy client")?;
 
                     write_lock.insert(cache_key.clone(), new_client.clone());
                     tracing::debug!("Cached new proxy client for config: {:?}", cache_key);
@@ -838,35 +836,17 @@ fn get_or_create_proxy_client(
     Ok(client)
 }
 
-fn apply_mitm_certificate(
-    mut client_builder: reqwest::ClientBuilder,
-    proxy_config: &Proxy,
-) -> CustomResult<reqwest::ClientBuilder, ApiClientError> {
-    if proxy_config.mitm_proxy_enabled {
-        if let Some(cert_content) = &proxy_config.mitm_ca_cert {
-            if !cert_content.trim().is_empty() {
-                client_builder =
-                    load_custom_ca_certificate_from_content(client_builder, cert_content.trim())?;
-            }
-        }
-    }
-    Ok(client_builder)
-}
-
 fn get_base_client(
     proxy_config: &Proxy,
     should_bypass_proxy: bool,
 ) -> CustomResult<Client, ApiClientError> {
     // Check if proxy configuration is provided using cache_key method
-    if let Some(cache_key) = proxy_config.cache_key() {
-        tracing::debug!(
-            "Using proxy-specific client cache with key: {:?}",
-            cache_key
-        );
+    if let Some(cache_key) = proxy_config.cache_key(should_bypass_proxy) {
+        tracing::debug!( "Using proxy-specific client cache with key: {:?}", cache_key );
 
         let cache = PROXY_CLIENT_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
 
-        let client = get_or_create_proxy_client(cache, cache_key, proxy_config)?;
+        let client = get_or_create_proxy_client(cache, cache_key, proxy_config, should_bypass_proxy)?;
 
         Ok(client)
     } else {
@@ -876,13 +856,10 @@ fn get_base_client(
         let client = DEFAULT_CLIENT
             .get_or_try_init(|| {
                 tracing::info!("Initializing DEFAULT_CLIENT (no proxy configuration)");
-                apply_mitm_certificate(
-                    get_client_builder(proxy_config, should_bypass_proxy)?,
-                    proxy_config,
-                )?
-                .build()
-                .change_context(ApiClientError::ClientConstructionFailed)
-                .attach_printable("Failed to construct default client")
+                get_client_builder(proxy_config, should_bypass_proxy)?
+                    .build()
+                    .change_context(ApiClientError::ClientConstructionFailed)
+                    .attach_printable("Failed to construct default client")
             })?
             .clone();
 

@@ -188,13 +188,18 @@ pub struct Proxy {
 }
 
 impl Proxy {
-    pub fn cache_key(&self) -> Option<Self> {
+    pub fn cache_key(&self, should_bypass_proxy: bool) -> Option<Self> {
         // Return Some(self) if there's an actual proxy configuration
-        if self.http_url.is_some() || self.https_url.is_some() {
-            Some(self.clone())
-        } else {
+        // let sbp = self.bypass_proxy_urls.contains(&url.to_string());
+        if should_bypass_proxy || (self.http_url.is_none() && self.https_url.is_none()) {
             None
+        } else {
+            Some(self.clone())
         }
+    }
+
+    pub fn is_proxy_configured(&self, should_bypass_proxy: bool) -> bool {
+        should_bypass_proxy || (self.http_url.is_none() && self.https_url.is_none())
     }
 }
 
