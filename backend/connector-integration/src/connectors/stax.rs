@@ -44,25 +44,6 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum StaxEndpoint {
-    Charge,
-    Transaction,
-    PaymentMethod,
-    Customer,
-}
-
-impl AsRef<str> for StaxEndpoint {
-    fn as_ref(&self) -> &str {
-        match self {
-            Self::Charge => "/charge",
-            Self::Transaction => "/transaction",
-            Self::PaymentMethod => "/payment-method/",
-            Self::Customer => "/customer",
-        }
-    }
-}
-
 // ===== CONNECTOR COMMON IMPLEMENTATION - Must be defined before macros =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Stax<T>
@@ -107,48 +88,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         with_error_response_body!(event_builder, response);
 
-        let error_message = if let Some(id_value) = &response.id {
-            if let Some(arr) = id_value.as_array() {
-                arr.first().and_then(|v| v.as_str()).map(String::from)
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-        .or_else(|| response.message.clone())
-        .or_else(|| {
-            response
-                .validation
-                .as_ref()
-                .and_then(|v| v.as_str())
-                .map(String::from)
-        })
-        .or_else(|| {
-            response
-                .error
-                .as_ref()
-                .and_then(|v| v.as_str())
-                .map(String::from)
-        })
-        .unwrap_or_else(|| "Unknown error from Stax".to_string());
-
-        let connector_txn_id = response
-            .id
-            .as_ref()
-            .and_then(|v| v.as_str())
-            .map(String::from);
-
-        // Extract error code if available
-        let error_code = response.code.unwrap_or_else(|| res.status_code.to_string());
-
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: error_code,
-            message: error_message,
-            reason: None,
+            code: response
+                .code
+                .clone()
+                .unwrap_or_else(|| res.status_code.to_string()),
+            message: response.get_error_message(),
+            reason: Some(
+                std::str::from_utf8(&res.response)
+                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?
+                    .to_owned(),
+            ),
             attempt_status: None,
-            connector_transaction_id: connector_txn_id,
+            connector_transaction_id: response.get_connector_transaction_id(),
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
@@ -236,7 +189,7 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: Authorize,
-            request_body: StaxAuthorizeRequest<T>,
+            request_body: StaxAuthorizeRequest,
             response_body: StaxAuthorizeResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
@@ -335,7 +288,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}{}", base_url, StaxEndpoint::Charge.as_ref()))
+            Ok(format!("{}/charge", base_url))
         }
     }
 );
@@ -372,7 +325,7 @@ macros::macro_connector_implementation!(
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}{}/{}", base_url, StaxEndpoint::Transaction.as_ref(), transaction_id))
+            Ok(format!("{}/transaction/{}", base_url, transaction_id))
         }
     }
 );
@@ -401,7 +354,7 @@ macros::macro_connector_implementation!(
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}{}/{}/capture", base_url, StaxEndpoint::Transaction.as_ref(), transaction_id))
+            Ok(format!("{}/transaction/{}/capture", base_url, transaction_id))
         }
     }
 );
@@ -426,7 +379,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let transaction_id = req.request.connector_transaction_id.clone();
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}{}/{}/void", base_url, StaxEndpoint::Transaction.as_ref(), transaction_id))
+            Ok(format!("{}/transaction/{}/void", base_url, transaction_id))
         }
     }
 );
@@ -451,7 +404,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let transaction_id = req.request.connector_transaction_id.clone();
             let base_url = self.connector_base_url_refunds(req);
-            Ok(format!("{}{}/{}/refund", base_url, StaxEndpoint::Transaction.as_ref(), transaction_id))
+            Ok(format!("{}/transaction/{}/refund", base_url, transaction_id))
         }
     }
 );
@@ -484,7 +437,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let refund_id = req.request.connector_refund_id.clone();
             let base_url = self.connector_base_url_refunds(req);
-            Ok(format!("{}{}/{}", base_url, StaxEndpoint::Transaction.as_ref(), refund_id))
+            Ok(format!("{}/transaction/{}", base_url, refund_id))
         }
     }
 );
@@ -508,7 +461,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}{}", base_url, StaxEndpoint::PaymentMethod.as_ref()))
+            Ok(format!("{}/payment-method/", base_url))
         }
     }
 );
@@ -532,7 +485,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}{}", base_url, StaxEndpoint::Customer.as_ref()))
+            Ok(format!("{}/customer", base_url))
         }
     }
 );

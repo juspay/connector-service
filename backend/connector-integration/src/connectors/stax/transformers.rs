@@ -1,6 +1,10 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
-use common_utils::types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector, MinorUnit};
+use common_utils::{
+    consts,
+    pii::Email,
+    types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector, MinorUnit},
+};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
     connector_types::{
@@ -157,29 +161,67 @@ impl TryFrom<&ConnectorAuthType> for StaxAuthType {
 /// All fields are optional with defaults since error responses may vary.
 ///
 /// IMPORTANT: Stax validation errors can have different formats:
-/// 1. Normal error: {"id": "txn_123", "message": "error"}
-/// 2. Validation error: {"id": ["The selected id is invalid."]}
+/// 1. Transaction error: {"success": false, "id": "txn_123", "message": "error"}
+/// 2. Validation error: {"error": ["The selected id is invalid."]}
+/// 3. Field validation: {"card_number": ["Invalid Card Number"]}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StaxErrorResponse {
     #[serde(default)]
     pub success: bool,
     // id can be a String (transaction ID) OR Array (validation errors)
-    #[serde(default)]
     pub id: Option<serde_json::Value>,
-    #[serde(default)]
     pub message: Option<String>,
-    #[serde(rename = "type", default)]
+    #[serde(rename = "type")]
     pub transaction_type: Option<String>,
-    #[serde(default)]
     pub is_captured: Option<i8>,
-    #[serde(default)]
     pub is_voided: Option<bool>,
-    #[serde(default)]
     pub validation: Option<serde_json::Value>,
-    #[serde(default)]
     pub error: Option<serde_json::Value>,
-    #[serde(default)]
     pub code: Option<String>,
+    /// Capture any other fields for field-level validation errors
+    #[serde(flatten)]
+    pub other: std::collections::HashMap<String, serde_json::Value>,
+}
+
+impl StaxErrorResponse {
+    /// Extract error message from various Stax error response formats
+    pub fn get_error_message(&self) -> String {
+        // Helper to extract first array element as string
+        let extract_array_msg = |value: &serde_json::Value| -> Option<String> {
+            value
+                .as_array()
+                .and_then(|arr| arr.first())
+                .and_then(|v| v.as_str())
+                .map(String::from)
+        };
+
+        // Try different error formats in priority order
+        self.message
+            .clone()
+            .or_else(|| self.id.as_ref().and_then(extract_array_msg))
+            .or_else(|| {
+                self.error
+                    .as_ref()
+                    .and_then(|v| v.as_str().map(String::from))
+            })
+            .or_else(|| self.error.as_ref().and_then(extract_array_msg))
+            .or_else(|| {
+                self.validation
+                    .as_ref()
+                    .and_then(|v| v.as_str().map(String::from))
+            })
+            .or_else(|| self.validation.as_ref().and_then(extract_array_msg))
+            .or_else(|| {
+                // Check field-level validation errors (e.g., {"card_number": ["Invalid Card Number"]})
+                self.other.values().find_map(extract_array_msg)
+            })
+            .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string())
+    }
+
+    /// Extract connector transaction ID if available
+    pub fn get_connector_transaction_id(&self) -> Option<String> {
+        self.id.as_ref().and_then(|v| v.as_str()).map(String::from)
+    }
 }
 
 // ===== AUTHORIZE REQUEST =====
@@ -190,7 +232,7 @@ pub struct StaxErrorResponse {
 /// We convert from MinorUnit (cents) to FloatMajorUnit (dollars) at the API boundary.
 /// Example: MinorUnit(1000) -> FloatMajorUnit(10.00) dollars
 #[derive(Debug, Serialize)]
-pub struct StaxAuthorizeRequest<T: PaymentMethodDataTypes> {
+pub struct StaxAuthorizeRequest {
     /// Amount in dollars (major units). Converted from MinorUnit at boundary.
     pub total: FloatMajorUnit,
     pub payment_method_id: String,
@@ -199,8 +241,6 @@ pub struct StaxAuthorizeRequest<T: PaymentMethodDataTypes> {
     /// Metadata object - required by Stax API
     pub meta: StaxMeta,
     pub idempotency_id: Option<String>,
-    #[serde(skip)]
-    _phantom: std::marker::PhantomData<T>,
 }
 
 /// Additional metadata for Stax transactions
@@ -232,7 +272,7 @@ impl<
             >,
             T,
         >,
-    > for StaxAuthorizeRequest<T>
+    > for StaxAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -317,7 +357,6 @@ impl<
                     .connector_request_reference_id
                     .clone(),
             ),
-            _phantom: std::marker::PhantomData,
         })
     }
 }
@@ -338,21 +377,14 @@ impl<
 pub struct StaxPaymentResponse {
     pub success: bool,
     pub id: String,
-    #[serde(default)]
     pub is_captured: i8,
-    #[serde(default)]
     pub is_voided: bool,
-    #[serde(default)]
     pub child_captures: Vec<ChildCapture>,
     #[serde(rename = "type")]
     pub transaction_type: StaxTransactionType,
-    #[serde(default)]
     pub pre_auth: bool,
-    #[serde(default)]
     pub settled_at: Option<String>,
-    #[serde(default)]
     pub child_transactions: Vec<ChildTransaction>,
-    #[serde(default)]
     pub message: Option<String>,
 }
 
@@ -384,11 +416,8 @@ pub struct ChildTransaction {
     #[serde(rename = "type")]
     pub transaction_type: StaxTransactionType,
     pub success: bool,
-    #[serde(default)]
     pub total: Option<FloatMajorUnit>,
-    #[serde(default)]
     pub reference_id: Option<String>,
-    #[serde(default)]
     pub created_at: Option<String>,
 }
 
@@ -514,12 +543,10 @@ impl
 /// # Amount Handling
 /// Note: Stax API expects amounts in dollars (major units).
 /// We convert from MinorUnit (cents) to FloatMajorUnit (dollars) at the API boundary.
-/// Amount is optional - if omitted, Stax captures the full pre-auth amount.
 #[derive(Debug, Serialize)]
 pub struct StaxCaptureRequest {
-    /// Capture amount in dollars (converted from MinorUnit). Optional for full capture.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub total: Option<FloatMajorUnit>,
+    /// Capture amount in dollars (converted from MinorUnit).
+    pub total: FloatMajorUnit,
 }
 
 impl<
@@ -546,16 +573,14 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let converter = FloatMajorUnitForConnector;
-        let total_in_dollars = converter
+        let total = converter
             .convert(
                 item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
-        Ok(Self {
-            total: Some(total_in_dollars),
-        })
+        Ok(Self { total })
     }
 }
 
@@ -606,14 +631,6 @@ impl
 fn get_payment_status(
     response: &StaxPaymentResponse,
 ) -> Result<AttemptStatus, errors::ConnectorError> {
-    // Validate transaction type (defensive programming)
-    if response.transaction_type != StaxTransactionType::Charge
-        && response.transaction_type != StaxTransactionType::PreAuth
-    {
-        Err(errors::ConnectorError::ResponseHandlingFailed)?;
-    }
-
-    // Map status based on success and transaction_type (following HS pattern)
     let mut status = if !response.success {
         AttemptStatus::Failure
     } else {
@@ -627,7 +644,6 @@ fn get_payment_status(
         }
     };
 
-    // Override with Voided if is_voided flag is set
     if response.is_voided {
         status = AttemptStatus::Voided;
     }
@@ -647,12 +663,10 @@ fn get_capture_status(
 /// # Amount Handling
 /// Note: Stax API expects amounts in dollars (major units).
 /// We convert from MinorUnit (cents) to FloatMajorUnit (dollars) at the API boundary.
-/// Amount is optional - if omitted, Stax refunds the full transaction amount.
 #[derive(Debug, Serialize)]
 pub struct StaxRefundRequest {
-    /// Refund amount in dollars (converted from MinorUnit). Optional for full refund.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub total: Option<FloatMajorUnit>,
+    /// Refund amount in dollars (converted from MinorUnit).
+    pub total: FloatMajorUnit,
 }
 
 impl<
@@ -676,16 +690,14 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let converter = FloatMajorUnitForConnector;
-        let total_in_dollars = converter
+        let total = converter
             .convert(
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
-        Ok(Self {
-            total: Some(total_in_dollars),
-        })
+        Ok(Self { total })
     }
 }
 
@@ -866,9 +878,11 @@ impl
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
 
-        // DO NOT check parent's success field
-
-        let status = get_void_status(response)?;
+        let status = if response.is_voided {
+            AttemptStatus::Voided
+        } else {
+            AttemptStatus::VoidFailed
+        };
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -890,35 +904,14 @@ impl
     }
 }
 
-fn get_void_status(
-    response: &StaxPaymentResponse,
-) -> Result<AttemptStatus, errors::ConnectorError> {
-    if response.is_voided {
-        return Ok(AttemptStatus::Voided);
-    }
-
-    let void_child = response
-        .child_transactions
-        .iter()
-        .filter(|child| child.transaction_type == StaxTransactionType::Void)
-        .next_back()
-        .ok_or(errors::ConnectorError::ResponseHandlingFailed)?;
-
-    if void_child.success {
-        Ok(AttemptStatus::Voided)
-    } else {
-        Ok(AttemptStatus::VoidFailed)
-    }
-}
-
 // ===== CREATE CONNECTOR CUSTOMER =====
 /// Request to create a Stax customer account
 #[derive(Debug, Serialize)]
 pub struct StaxCustomerRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub email: Option<String>, // Customer email
+    pub email: Option<Email>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub firstname: Option<Secret<String>>, // Customer first name (masked)
+    pub firstname: Option<Secret<String>>,
 }
 
 impl<
@@ -954,40 +947,21 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        // Debug logging to see what data we have
-        tracing::info!(
-            "CreateConnectorCustomer TryFrom - email: {:?}, name: {:?}",
-            item.router_data.request.email.is_some(),
-            item.router_data.request.name.is_some()
-        );
-
-        // Require at least email OR name
         if item.router_data.request.email.is_none() && item.router_data.request.name.is_none() {
-            tracing::error!(
-                "CreateConnectorCustomer validation failed - both email and name are None"
-            );
-            return Err(errors::ConnectorError::MissingRequiredField {
+            Err(errors::ConnectorError::MissingRequiredField {
                 field_name: "email or name",
-            })?;
+            })?
+        } else {
+            Ok(Self {
+                email: item
+                    .router_data
+                    .request
+                    .email
+                    .as_ref()
+                    .map(|e| e.peek().clone()),
+                firstname: item.router_data.request.name.clone(),
+            })
         }
-
-        let email_string = item
-            .router_data
-            .request
-            .email
-            .as_ref()
-            .map(|e| e.clone().expose().expose().expose());
-
-        tracing::info!(
-            "CreateConnectorCustomer request built - email: {:?}, firstname: {:?}",
-            email_string.is_some(),
-            item.router_data.request.name.is_some()
-        );
-
-        Ok(Self {
-            email: email_string,
-            firstname: item.router_data.request.name.clone(),
-        })
     }
 }
 
