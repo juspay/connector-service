@@ -490,6 +490,7 @@ enum Connector {
   PAYLOAD = 96;
   AUTHIPAY = 97;
   SILVERFLOW = 98;
+  CELERO = 99;
 }
 
 // Payment method types.

@@ -124,6 +124,7 @@ pub struct Connectors {
     pub datatrans: ConnectorParams,
     pub authipay: ConnectorParams,
     pub silverflow: ConnectorParams,
+    pub celero: ConnectorParams,
     pub paypal: ConnectorParams,
 }
 

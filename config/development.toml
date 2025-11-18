@@ -47,6 +47,7 @@ authipay.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-g
 fiservemea.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
 datatrans.base_url = "https://api.sandbox.datatrans.com"
 silverflow.base_url = "https://api-sbx.silverflow.co/v1"
+celero.base_url = "https://sandbox.gotnpgateway.com"
 adyen.base_url = "https://checkout-test.adyen.com/"
 adyen.dispute_base_url = "https://ca-test.adyen.com/"
 razorpay.base_url = "https://api.razorpay.com/"
