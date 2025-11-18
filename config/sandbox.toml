@@ -62,6 +62,7 @@ cybersource.base_url = "https://apitest.cybersource.com/"
 worldpay.base_url = "https://try.access.worldpay.com/"
 worldpayvantiv.base_url = "https://www.testvantivcnp.com/sandbox/new/sandbox/communicator/online"
 worldpayvantiv.secondary_base_url = "https://www.testvantivcnp.com/sandbox"
+paypal.base_url = "https://api-m.sandbox.paypal.com/"
 
 # Generic Events Configuration
 [events]

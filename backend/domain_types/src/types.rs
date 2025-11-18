@@ -49,7 +49,7 @@ use crate::{
         VoidPC,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, ConnectorCustomerData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorMandateReferenceId, ConnectorResponseHeaders, ContinueRedirectionResponse,
         DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
         MandateReferenceId, MultipleCaptureRequestData, PaymentCreateOrderData,
@@ -125,6 +125,7 @@ pub struct Connectors {
     pub authipay: ConnectorParams,
     pub silverflow: ConnectorParams,
     pub celero: ConnectorParams,
+    pub paypal: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -1176,11 +1177,8 @@ impl<
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(|token| crate::connector_types::AccessTokenResponseData {
-                access_token: token.token.clone(),
-                token_type: None,
-                expires_in: token.expires_in_seconds,
-            });
+            .map(AccessTokenResponseData::from);
+        let shipping_cost = Some(common_utils::types::MinorUnit::new(value.shipping_cost()));
         Ok(Self {
             authentication_data,
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
@@ -1267,7 +1265,7 @@ impl<
             },
             merchant_order_reference_id: value.merchant_order_reference_id,
             order_tax_amount: None,
-            shipping_cost: None,
+            shipping_cost,
             merchant_account_id,
             integrity_object: None,
             merchant_config_currency: Some(merchant_config_currency),
@@ -1957,11 +1955,7 @@ impl
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
-            .map(|token| crate::connector_types::AccessTokenResponseData {
-                access_token: token.token.clone(),
-                token_type: None,
-                expires_in: token.expires_in_seconds,
-            });
+            .map(AccessTokenResponseData::from);
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -2019,6 +2013,11 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
         );
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(AccessTokenResponseData::from);
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -2039,7 +2038,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
-            access_token: None,
+            access_token,
             session_token: None,
             reference_id: None,
             payment_method_token: None,
@@ -2668,7 +2667,9 @@ impl ForeignFrom<common_enums::AttemptStatus> for grpc_api_types::payments::Paym
             common_enums::AttemptStatus::Pending => Self::Pending,
             common_enums::AttemptStatus::Failure => Self::Failure,
             common_enums::AttemptStatus::Authorized => Self::Authorized,
+            common_enums::AttemptStatus::PartiallyAuthorized => Self::PartiallyAuthorized,
             common_enums::AttemptStatus::Started => Self::Started,
+            common_enums::AttemptStatus::Expired => Self::Expired,
             common_enums::AttemptStatus::AuthenticationFailed => Self::AuthenticationFailed,
             common_enums::AttemptStatus::AuthenticationPending => Self::AuthenticationPending,
             common_enums::AttemptStatus::AuthenticationSuccessful => Self::AuthenticationSuccessful,
@@ -2722,6 +2723,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentStatus> for common_enums::A
                 Ok(Self::AuthenticationSuccessful)
             }
             grpc_api_types::payments::PaymentStatus::Authorizing => Ok(Self::Authorizing),
+            grpc_api_types::payments::PaymentStatus::PartiallyAuthorized => {
+                Ok(Self::PartiallyAuthorized)
+            }
             grpc_api_types::payments::PaymentStatus::CaptureInitiated => Ok(Self::CaptureInitiated),
             grpc_api_types::payments::PaymentStatus::CaptureFailed => Ok(Self::CaptureFailed),
             grpc_api_types::payments::PaymentStatus::VoidInitiated => Ok(Self::VoidInitiated),
@@ -2730,6 +2734,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentStatus> for common_enums::A
             grpc_api_types::payments::PaymentStatus::VoidedPostCapture => {
                 Ok(Self::VoidedPostCapture)
             }
+            grpc_api_types::payments::PaymentStatus::Expired => Ok(Self::Expired),
             grpc_api_types::payments::PaymentStatus::Unresolved => Ok(Self::Unresolved),
             grpc_api_types::payments::PaymentStatus::PaymentMethodAwaited => {
                 Ok(Self::PaymentMethodAwaited)
@@ -3244,6 +3249,11 @@ impl
             Connectors,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(AccessTokenResponseData::from);
         Ok(RefundFlowData {
             status: common_enums::RefundStatus::Pending,
             refund_id: None,
@@ -3254,6 +3264,7 @@ impl
             raw_connector_response: None,
             raw_connector_request: None,
             connector_response_headers: None,
+            access_token,
         })
     }
 }
@@ -3274,6 +3285,11 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(AccessTokenResponseData::from);
         Ok(RefundFlowData {
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
@@ -3285,6 +3301,7 @@ impl
             raw_connector_response: None,
             raw_connector_request: None,
             connector_response_headers: None,
+            access_token,
         })
     }
 }
@@ -3303,6 +3320,11 @@ impl
             Connectors,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(AccessTokenResponseData::from);
         Ok(RefundFlowData {
             status: common_enums::RefundStatus::Pending,
             refund_id: Some(value.refund_id),
@@ -3313,6 +3335,7 @@ impl
             raw_connector_response: None,
             raw_connector_request: None,
             connector_response_headers: None,
+            access_token,
         })
     }
 }
@@ -3333,6 +3356,11 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(AccessTokenResponseData::from);
         Ok(RefundFlowData {
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
@@ -3344,6 +3372,7 @@ impl
             raw_connector_response: None,
             raw_connector_request: None,
             connector_response_headers: None,
+            access_token,
         })
     }
 }
@@ -4465,6 +4494,11 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(AccessTokenResponseData::from);
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -4485,7 +4519,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
-            access_token: None,
+            access_token,
             session_token: None,
             reference_id: None,
             payment_method_token: None,
@@ -6049,6 +6083,16 @@ pub fn generate_repeat_payment_response(
                     minor_captured_amount: None,
                 },
             )
+        }
+    }
+}
+
+impl From<&grpc_api_types::payments::AccessToken> for AccessTokenResponseData {
+    fn from(token: &grpc_api_types::payments::AccessToken) -> Self {
+        Self {
+            access_token: token.token.clone(),
+            token_type: token.token_type.clone(),
+            expires_in: token.expires_in_seconds,
         }
     }
 }
