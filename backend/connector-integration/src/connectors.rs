@@ -109,3 +109,6 @@ pub use self::silverflow::Silverflow;
 
 pub mod celero;
 pub use self::celero::Celero;
+
+pub mod paypal;
+pub use self::paypal::Paypal;
