@@ -692,10 +692,9 @@ fn handle_bank_redirects_sync_response(
                 .code
                 .clone()
                 .unwrap_or(NO_ERROR_CODE.to_string()),
-            // message vary for the same code, so relying on code alone as it is unique
             message: reason_info
                 .reason
-                .code
+                .reject_reason.clone()
                 .unwrap_or(NO_ERROR_MESSAGE.to_string()),
             reason: reason_info.reason.reject_reason,
             status_code,
@@ -755,10 +754,9 @@ pub fn handle_webhook_response(
                 .code
                 .clone()
                 .unwrap_or(NO_ERROR_CODE.to_string()),
-            // message vary for the same code, so relying on code alone as it is unique
             message: reason_info
                 .reason
-                .code
+                .reject_reason.clone()
                 .unwrap_or(NO_ERROR_MESSAGE.to_string()),
             reason: reason_info.reason.reject_reason,
             status_code,
