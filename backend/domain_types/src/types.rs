@@ -1947,15 +1947,6 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
         );
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
-        let connector_meta_data = (!value.connector_metadata.is_empty()).then(|| {
-            Secret::new(serde_json::Value::Object(
-                value
-                    .connector_metadata
-                    .into_iter()
-                    .map(|(k, v)| (k, serde_json::Value::String(v)))
-                    .collect(),
-            ))
-        });
         let access_token = value
             .state
             .as_ref()
@@ -1977,7 +1968,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data,
+            connector_meta_data: None,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -4437,16 +4428,6 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
-        let connector_meta_data = (!value.connector_metadata.is_empty()).then(|| {
-            Secret::new(serde_json::Value::Object(
-                value
-                    .connector_metadata
-                    .into_iter()
-                    .map(|(k, v)| (k, serde_json::Value::String(v)))
-                    .collect(),
-            ))
-        });
-
         let access_token = value
             .state
             .as_ref()
@@ -4468,7 +4449,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data,
+            connector_meta_data: None,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
