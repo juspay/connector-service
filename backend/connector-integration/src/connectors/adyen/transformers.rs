@@ -28,7 +28,7 @@ use domain_types::{
     router_request_types::SyncRequestType,
     router_response_types::RedirectForm,
 };
-use error_stack::{Report, ResultExt};
+use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime};
@@ -53,20 +53,15 @@ pub struct Amount {
 type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
 pub enum CardBrand {
     Visa,
-    #[serde(rename = "mc")]
-    Mc,
+    MC,
     Amex,
     Jcb,
-    #[serde(rename = "diners")]
-    DinersClub,
+    Diners,
     Discover,
-    #[serde(rename = "cartebancaire")]
-    CartesBancaires,
-    #[serde(rename = "cup")]
-    CupSecurePlus,
+    Cartebancaire,
+    Cup,
     Maestro,
     Rupay,
     Star,
@@ -629,13 +624,13 @@ impl TryFrom<&ConnectorAuthType> for AdyenAuthType {
 fn get_adyen_card_network(card_network: common_enums::CardNetwork) -> Option<CardBrand> {
     match card_network {
         common_enums::CardNetwork::Visa => Some(CardBrand::Visa),
-        common_enums::CardNetwork::Mastercard => Some(CardBrand::Mc),
+        common_enums::CardNetwork::Mastercard => Some(CardBrand::MC),
         common_enums::CardNetwork::AmericanExpress => Some(CardBrand::Amex),
         common_enums::CardNetwork::JCB => Some(CardBrand::Jcb),
-        common_enums::CardNetwork::DinersClub => Some(CardBrand::DinersClub),
+        common_enums::CardNetwork::DinersClub => Some(CardBrand::Diners),
         common_enums::CardNetwork::Discover => Some(CardBrand::Discover),
-        common_enums::CardNetwork::CartesBancaires => Some(CardBrand::CartesBancaires),
-        common_enums::CardNetwork::UnionPay => Some(CardBrand::CupSecurePlus),
+        common_enums::CardNetwork::CartesBancaires => Some(CardBrand::Cartebancaire),
+        common_enums::CardNetwork::UnionPay => Some(CardBrand::Cup),
         common_enums::CardNetwork::Maestro => Some(CardBrand::Maestro),
         common_enums::CardNetwork::RuPay => Some(CardBrand::Rupay),
         common_enums::CardNetwork::Star => Some(CardBrand::Star),
@@ -655,7 +650,7 @@ impl<
             + Serialize,
     > TryFrom<(&Card<T>, Option<Secret<String>>)> for AdyenPaymentMethod<T>
 {
-    type Error = domain_types::errors::ConnectorError;
+    type Error = Error;
     fn try_from(
         (card, card_holder_name): (&Card<T>, Option<Secret<String>>),
     ) -> Result<Self, Self::Error> {
@@ -663,7 +658,7 @@ impl<
         let brand = if card
             .card_number
             .is_cobadged_card()
-            .map_err(|_| domain_types::errors::ConnectorError::RequestEncodingFailed)?
+            .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)?
         {
             // Use the detected card network from the card data
             card.card_network.clone().and_then(get_adyen_card_network)
@@ -1444,7 +1439,7 @@ pub trait ForeignTryFrom<F>: Sized {
 }
 
 impl ForeignTryFrom<(bool, AdyenWebhookStatus)> for common_enums::AttemptStatus {
-    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
+    type Error = Error;
     fn foreign_try_from(
         (is_manual_capture, adyen_webhook_status): (bool, AdyenWebhookStatus),
     ) -> Result<Self, Self::Error> {
@@ -3750,7 +3745,7 @@ pub struct DisputeServiceResult {
 impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
     for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
 {
-    type Error = Report<domain_types::errors::ConnectorError>;
+    type Error = Error;
 
     fn try_from(
         value: ResponseRouterData<AdyenDefendDisputeResponse, Self>,
@@ -3965,7 +3960,7 @@ pub struct AdyenTestingData {
 }
 
 impl TryFrom<SecretSerdeValue> for AdyenTestingData {
-    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
+    type Error = Error;
 
     fn try_from(testing_data: SecretSerdeValue) -> Result<Self, Self::Error> {
         let testing_data = testing_data
