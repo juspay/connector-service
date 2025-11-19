@@ -148,6 +148,7 @@ pub struct Connectors {
     pub hipay: ConnectorParams,
     pub trustpayments: ConnectorParams,
     pub globalpay: ConnectorParams,
+    pub iatapay: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
