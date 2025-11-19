@@ -588,7 +588,7 @@ pub struct StripeBillingAddressCardToken {
     #[serde(rename = "billing_details[address][state]")]
     pub state: Option<Secret<String>>,
     #[serde(rename = "billing_details[address][city]")]
-    pub city: Option<String>,
+    pub city: Option<Secret<String>>,
 }
 // Struct to call the Stripe tokens API to create a PSP token for the card details provided
 #[derive(Debug, Eq, PartialEq, Serialize)]
