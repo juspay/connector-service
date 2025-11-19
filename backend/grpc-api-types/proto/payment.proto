@@ -1437,6 +1437,11 @@ message PaymentServiceAuthorizeOnlyRequest {
 
   // Order Details
   repeated OrderDetailsWithAmount order_details = 39; // Details about the different products for which the payment is being made
+
+  // Payment Method Token
+  optional string payment_method_token = 40;
+  // Access Token
+  optional string access_token = 41;
 }
 
 // Response message for a payment authorization.
