@@ -3978,11 +3978,9 @@ pub fn get_present_to_shopper_metadata(
 ) -> CustomResult<Option<serde_json::Value>, domain_types::errors::ConnectorError> {
     // UCS currently only supports Card
     // For card payments via PresentToShopper flow, no special metadata is needed
-    match response.action.payment_method_type {
-        // For now, UCS doesn't support voucher or bank transfer methods
-        // that would require special metadata, so return None for all cases
-        _ => Ok(None),
-    }
+    // For now, UCS doesn't support voucher or bank transfer methods
+    // that would require special metadata, so return None for all cases
+    Ok(None)
 }
 
 impl AdditionalData {
