@@ -368,49 +368,36 @@ impl Payments {
 
         // Conditional token generation - ONLY if not provided in request
         let payment_flow_data = if should_do_access_token {
-            let access_token_data = match cached_access_token {
-                Some((token, expires_in)) => {
-                    // If provided cached token - use it, don't generate new one
-                    tracing::info!("Using cached access token from Hyperswitch");
-                    Some(AccessTokenResponseData {
-                        access_token: token,
-                        token_type: None,
-                        expires_in,
-                    })
-                }
-                None => {
-                    // No cached token - generate fresh one
-                    tracing::info!("No cached access token found, generating new token");
-                    let event_params = EventParams {
-                        _connector_name: &connector.to_string(),
-                        _service_name: service_name,
-                        request_id,
-                        lineage_ids,
-                        reference_id,
-                        shadow_mode: metadata_payload.shadow_mode,
-                    };
-
-                    let access_token_data = Box::pin(self.handle_access_token(
-                        connector_data.clone(),
-                        &payment_flow_data,
-                        connector_auth_details.clone(),
-                        &connector.to_string(),
-                        service_name,
-                        event_params,
-                    ))
-                    .await?;
-
-                    tracing::info!(
-                        "Access token created successfully with expiry: {:?}",
-                        access_token_data.expires_in
-                    );
-
-                    Some(access_token_data)
-                }
+            let event_params = EventParams {
+                _connector_name: &connector.to_string(),
+                _service_name: service_name,
+                request_id,
+                lineage_ids,
+                reference_id,
+                shadow_mode: metadata_payload.shadow_mode,
             };
 
+            let access_token_data = Box::pin(self.handle_access_token_flow(
+                &connector_data,
+                cached_access_token,
+                &payment_flow_data,
+                &connector_auth_details,
+                &connector.to_string(),
+                service_name,
+                event_params,
+            ))
+            .await
+            .map_err(|e| {
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(e.message().to_string()),
+                    Some("ACCESS_TOKEN_FLOW_ERROR".to_string()),
+                    None,
+                )
+            })?;
+
             // Store in flow data for connector API calls
-            payment_flow_data.set_access_token(access_token_data)
+            payment_flow_data.set_access_token(Some(access_token_data))
         } else {
             // Connector doesn't support access tokens
             payment_flow_data
@@ -2132,57 +2119,28 @@ impl PaymentService for Payments {
 
                     // Conditional token generation - ONLY if not provided in request
                     let payment_flow_data = if should_do_access_token {
-                        let access_token_data = match cached_access_token {
-                            Some((token, expires_in)) => {
-                                // If provided cached token - use it, don't generate new one
-                                tracing::info!("Using cached access token from Hyperswitch");
-                                Some(AccessTokenResponseData {
-                                    access_token: token,
-                                    token_type: None,
-                                    expires_in,
-                                })
-                            }
-                            None => {
-                                // No cached token - generate fresh one
-                                tracing::info!(
-                                    "No cached access token found, generating new token"
-                                );
-                                let event_params = EventParams {
-                                    _connector_name: &connector.to_string(),
-                                    _service_name: &service_name,
-                                    request_id,
-                                    lineage_ids,
-                                    reference_id,
-                                    shadow_mode: metadata_payload.shadow_mode,
-                                };
-
-                                let access_token_data = Box::pin(self.handle_access_token(
-                                    connector_data.clone(),
-                                    &payment_flow_data,
-                                    metadata_payload.connector_auth_type.clone(),
-                                    &metadata_payload.connector.to_string(),
-                                    &service_name,
-                                    event_params,
-                                ))
-                                .await
-                                .map_err(|e| {
-                                    let message = e.error_message.unwrap_or_else(|| {
-                                        "Access token creation failed".to_string()
-                                    });
-                                    tonic::Status::internal(message)
-                                })?;
-
-                                tracing::info!(
-                                    "Access token created successfully with expiry: {:?}",
-                                    access_token_data.expires_in
-                                );
-
-                                Some(access_token_data)
-                            }
+                        let event_params = EventParams {
+                            _connector_name: &connector.to_string(),
+                            _service_name: &service_name,
+                            request_id,
+                            lineage_ids,
+                            reference_id,
+                            shadow_mode: metadata_payload.shadow_mode,
                         };
 
+                        let access_token_data = Box::pin(self.handle_access_token_flow(
+                            &connector_data,
+                            cached_access_token,
+                            &payment_flow_data,
+                            &metadata_payload.connector_auth_type,
+                            &metadata_payload.connector.to_string(),
+                            &service_name,
+                            event_params,
+                        ))
+                        .await?;
+
                         // Store in flow data for connector API calls
-                        payment_flow_data.set_access_token(access_token_data)
+                        payment_flow_data.set_access_token(Some(access_token_data))
                     } else {
                         // Connector doesn't support access tokens
                         payment_flow_data

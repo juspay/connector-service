@@ -1302,7 +1302,9 @@ impl<
             .map(router_request_types::AuthenticationData::try_from)
             .transpose()?;
 
-        let access_token = value.state.as_ref()
+        let access_token = value
+            .state
+            .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
         let shipping_cost = Some(common_utils::types::MinorUnit::new(value.shipping_cost()));
@@ -2400,7 +2402,9 @@ impl
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
-        let access_token = value.state.as_ref()
+        let access_token = value
+            .state
+            .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
 
@@ -2462,7 +2466,9 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
         // Extract access token from state if present
-        let access_token = value.state.as_ref()
+        let access_token = value
+            .state
+            .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
 
@@ -3798,7 +3804,9 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Extract access token from state if present
-        let access_token = value.state.as_ref()
+        let access_token = value
+            .state
+            .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
 
@@ -3869,7 +3877,9 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Extract access token from state if present
-        let access_token = value.state.as_ref()
+        let access_token = value
+            .state
+            .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
 
@@ -5025,7 +5035,9 @@ impl
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
         // Extract access token from state if present
-        let access_token = value.state.as_ref()
+        let access_token = value
+            .state
+            .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
 
