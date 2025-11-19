@@ -44,6 +44,7 @@ psync = "GW_TXN_SYNC"
 
 [connectors]
 authipay.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
+stax.base_url = "https://apiprod.fattlabs.com"
 fiservemea.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
 datatrans.base_url = "https://api.sandbox.datatrans.com"
 silverflow.base_url = "https://api-sbx.silverflow.co/v1"
@@ -84,6 +85,7 @@ cybersource.base_url = "https://apitest.cybersource.com/"
 worldpay.base_url = "https://try.access.worldpay.com/"
 worldpayvantiv.base_url = "https://transact.vantivprelive.com/vap/communicator/online"
 worldpayvantiv.secondary_base_url = "https://onlinessr.vantivprelive.com"
+paypal.base_url = "https://api-m.sandbox.paypal.com/"
 
 # Generic Events Configuration
 [events]
