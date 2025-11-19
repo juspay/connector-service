@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
@@ -20,7 +18,6 @@ use grpc_api_types::payments::{
 };
 
 use crate::{
-    configs::{Config, ConfigHolder},
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
     request::RequestData,
@@ -35,18 +32,7 @@ trait RefundOperationsInternal {
 }
 
 #[derive(Debug, Clone)]
-pub struct Refunds {
-    /// INTERNAL: Do not access directly. Use get_config() method.
-    config: ConfigHolder,
-}
-
-impl Refunds {
-    pub fn new(config: &Arc<Config>) -> Self {
-        Self {
-            config: ConfigHolder::new(config),
-        }
-    }
-}
+pub struct Refunds;
 
 impl RefundOperationsInternal for Refunds {
     implement_connector_operation!(
@@ -97,7 +83,7 @@ impl RefundService for Refunds {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "RefundService".to_string());
-        let config = utils::get_config_from_request(&request, self.config.get_config());
+        let config = utils::get_config_from_request(&request)?;
         utils::grpc_logging_wrapper(
             request,
             &service_name,
@@ -131,7 +117,7 @@ impl RefundService for Refunds {
         &self,
         request: tonic::Request<RefundServiceTransformRequest>,
     ) -> Result<tonic::Response<RefundServiceTransformResponse>, tonic::Status> {
-        let config = utils::get_config_from_request(&request, self.config.get_config());
+        let config = utils::get_config_from_request(&request)?;
         let service_name = request
             .extensions()
             .get::<String>()

@@ -114,9 +114,9 @@ impl Service {
 
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
-            payments_service: crate::server::payments::Payments::new(&config),
-            refunds_service: crate::server::refunds::Refunds::new(&config),
-            disputes_service: crate::server::disputes::Disputes::new(&config),
+            payments_service: crate::server::payments::Payments,
+            refunds_service: crate::server::refunds::Refunds,
+            disputes_service: crate::server::disputes::Disputes,
         }
     }
 
@@ -200,7 +200,8 @@ impl Service {
         let propagate_request_id_layer = tower_http::request_id::PropagateRequestIdLayer::new(
             http::HeaderName::from_static(consts::X_REQUEST_ID),
         );
-        let config_override_layer = RequestExtensionsLayer::new();
+        let config = configs::Config::new().expect("Failed while parsing config");
+        let config_override_layer = RequestExtensionsLayer::new(config.clone());
 
         Server::builder()
             .layer(logging_layer)

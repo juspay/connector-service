@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
 
 use common_utils::{consts, events::EventConfig, metadata::HeaderMaskingConfig};
 use domain_types::types::{Connectors, Proxy};
@@ -23,25 +23,6 @@ pub struct Config {
     pub test: TestConfig,
     #[serde(default)]
     pub api_tags: ApiTagConfig,
-}
-
-/// Wrapper for Config that enforces access through getter methods
-/// Provides consistent config access pattern across all services
-#[derive(Clone, Debug)]
-pub struct ConfigHolder {
-    config: Arc<Config>,
-}
-
-impl ConfigHolder {
-    pub fn new(config: &Arc<Config>) -> Self {
-        Self {
-            config: Arc::clone(config),
-        }
-    }
-
-    pub fn get_config(&self) -> Arc<Config> {
-        Arc::clone(&self.config)
-    }
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default, Serialize)]

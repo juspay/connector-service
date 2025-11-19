@@ -3,6 +3,7 @@ use http::{Request, Response};
 use std::{
     future::Future,
     pin::Pin,
+    sync::Arc,
     task::{Context, Poll},
 };
 use tonic::body::Body;
@@ -10,12 +11,14 @@ use tower::{Layer, Service};
 
 // Simple middleware layer for Tonic
 #[derive(Clone)]
-pub struct RequestExtensionsLayer;
+pub struct RequestExtensionsLayer {
+    base_config: Config,
+}
 
 #[allow(clippy::new_without_default)]
 impl RequestExtensionsLayer {
-    pub fn new() -> Self {
-        Self
+    pub fn new(base_config: Config) -> Self {
+        Self { base_config }
     }
 }
 
@@ -23,14 +26,16 @@ impl<S> Layer<S> for RequestExtensionsLayer {
     type Service = TonicRequestExtensionsMiddleware<S>;
 
     fn layer(&self, inner: S) -> Self::Service {
-        TonicRequestExtensionsMiddleware { inner }
+        TonicRequestExtensionsMiddleware {
+            inner,
+            base_config: self.base_config.clone(),
+        }
     }
 }
-
-// Middleware service specifically for Tonic
 #[derive(Clone)]
 pub struct TonicRequestExtensionsMiddleware<S> {
     inner: S,
+    base_config: Config,
 }
 
 impl<S> Service<Request<Body>> for TonicRequestExtensionsMiddleware<S>
@@ -56,35 +61,26 @@ where
         // Only process config if override header is present
         match config_override {
             Some(override_str) => {
-                // Create default config only when needed
-                let default_config = match Config::new() {
-                    Ok(cfg) => cfg,
-                    Err(e) => {
-                        let err = tonic::Status::internal(format!(
-                            "Failed to create default config: {e:?}"
-                        ));
-                        let fut = async move { Err(err) };
-                        return Box::pin(fut);
-                    }
-                };
-
                 // Merge override with default
-                let new_config = match config_from_metadata(Some(override_str), default_config) {
-                    Ok(cfg) => cfg,
-                    Err(e) => {
-                        let err = tonic::Status::internal(format!(
-                            "Failed to create config from metadata: {e:?}"
-                        ));
-                        let fut = async move { Err(err) };
-                        return Box::pin(fut);
-                    }
-                };
+                let new_config =
+                    match config_from_metadata(Some(override_str), self.base_config.clone()) {
+                        Ok(cfg) => cfg,
+                        Err(e) => {
+                            let err = tonic::Status::internal(format!(
+                                "Failed to create config from metadata: {e:?}"
+                            ));
+                            let fut = async move { Err(err) };
+                            return Box::pin(fut);
+                        }
+                    };
 
                 // Insert merged config into extensions
                 req.extensions_mut().insert(new_config);
             }
             None => {
                 // No override header - skip processing, service will use base config
+                req.extensions_mut()
+                    .insert(Arc::new(self.base_config.clone()));
             }
         }
 

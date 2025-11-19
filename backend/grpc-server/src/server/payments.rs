@@ -60,7 +60,7 @@ use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
 
 use crate::{
-    configs::{Config, ConfigHolder},
+    configs::Config,
     error::{IntoGrpcStatus, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
     request::RequestData,
@@ -167,18 +167,9 @@ trait PaymentOperationsInternal {
 }
 
 #[derive(Clone)]
-pub struct Payments {
-    /// INTERNAL: Do not access directly. Use get_config() method.
-    config: ConfigHolder,
-}
+pub struct Payments;
 
 impl Payments {
-    pub fn new(config: &Arc<Config>) -> Self {
-        Self {
-            config: ConfigHolder::new(config),
-        }
-    }
-
     #[allow(clippy::too_many_arguments)]
     async fn handle_access_token_flow<
         T: PaymentMethodDataTypes
@@ -1638,7 +1629,7 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
         grpc_logging_wrapper(request, &service_name, config.clone(), FlowName::Authorize, |request_data| {
             let service_name = service_name.clone();
             Box::pin(async move {
@@ -1780,7 +1771,7 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
 
         grpc_logging_wrapper(
             request,
@@ -1972,7 +1963,7 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
         grpc_logging_wrapper(
             request,
             &service_name,
@@ -2091,7 +2082,7 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
         grpc_logging_wrapper(
             request,
             &service_name,
@@ -2132,7 +2123,7 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
         grpc_logging_wrapper(
             request,
             &service_name,
@@ -2287,7 +2278,7 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
         grpc_logging_wrapper(
             request,
             &service_name,
@@ -2328,7 +2319,7 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
         grpc_logging_wrapper(
             request,
             &service_name,
@@ -2375,7 +2366,7 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
         grpc_logging_wrapper(
             request,
             &service_name,
@@ -2494,7 +2485,7 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
         grpc_logging_wrapper(
             request,
             &service_name,
@@ -2707,7 +2698,7 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
         grpc_logging_wrapper(
             request,
             &service_name,
@@ -2814,7 +2805,7 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
         grpc_logging_wrapper(
             request,
             &service_name,
@@ -2951,7 +2942,7 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
         grpc_logging_wrapper(
             request,
             &service_name,
@@ -2992,7 +2983,7 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
         grpc_logging_wrapper(
             request,
             &service_name,
@@ -3033,7 +3024,7 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
         grpc_logging_wrapper(
             request,
             &service_name,
@@ -3075,7 +3066,7 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
         grpc_logging_wrapper(
             request,
             &service_name,

@@ -598,19 +598,20 @@ fn create_and_emit_grpc_event<R>(
 
 pub fn get_config_from_request<T>(
     request: &tonic::Request<T>,
-    default_config: Arc<configs::Config>,
-) -> Arc<configs::Config>
+) -> Result<Arc<configs::Config>, tonic::Status>
 where
     T: serde::Serialize,
 {
     match request.extensions().get::<Arc<configs::Config>>() {
         Some(config) => {
             tracing::info!("Using config from request extensions");
-            config.clone()
+            Ok(config.clone())
         }
         None => {
             tracing::info!("Configuration not found in request extensions, using default config.");
-            default_config
+            Err(tonic::Status::internal(
+                "Configuration not found in request extensions",
+            ))
         }
     }
 }
@@ -640,12 +641,7 @@ macro_rules! implement_connector_operation {
                 .extensions
                 .get::<std::sync::Arc<$crate::configs::Config>>()
                 .cloned()
-                .unwrap_or_else(|| {
-                    tracing::info!(
-                        "Configuration not found in request extensions, using default config."
-                    );
-                    self.config.get_config()
-                });
+                .ok_or_else(|| tonic::Status::internal("Configuration not found in request extensions"))?;
             let service_name = request
                 .extensions
                 .get::<String>()

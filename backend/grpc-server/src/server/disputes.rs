@@ -26,11 +26,9 @@ use grpc_api_types::payments::{
     WebhookResponseContent,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
-use std::sync::Arc;
 use tracing::info;
 
 use crate::{
-    configs::{Config, ConfigHolder},
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
     request::RequestData,
@@ -45,18 +43,7 @@ trait DisputeOperationsInternal {
     ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status>;
 }
 
-pub struct Disputes {
-    /// INTERNAL: Do not access directly. Use get_config() method.
-    config: ConfigHolder,
-}
-
-impl Disputes {
-    pub fn new(config: &Arc<Config>) -> Self {
-        Self {
-            config: ConfigHolder::new(config),
-        }
-    }
-}
+pub struct Disputes;
 
 impl DisputeOperationsInternal for Disputes {
     implement_connector_operation!(
@@ -103,7 +90,7 @@ impl DisputeService for Disputes {
         request: tonic::Request<DisputeServiceSubmitEvidenceRequest>,
     ) -> Result<tonic::Response<DisputeServiceSubmitEvidenceResponse>, tonic::Status> {
         info!("DISPUTE_FLOW: initiated");
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
         let service_name = request
             .extensions()
             .get::<String>()
@@ -222,7 +209,7 @@ impl DisputeService for Disputes {
     ) -> Result<tonic::Response<DisputeResponse>, tonic::Status> {
         // For now, return a basic dispute response
         // This will need proper implementation based on domain logic
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
         let service_name = request
             .extensions()
             .get::<String>()
@@ -274,7 +261,7 @@ impl DisputeService for Disputes {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "DisputeService".to_string());
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
         grpc_logging_wrapper(
             request,
             &service_name,
@@ -311,7 +298,7 @@ impl DisputeService for Disputes {
         request: tonic::Request<AcceptDisputeRequest>,
     ) -> Result<tonic::Response<AcceptDisputeResponse>, tonic::Status> {
         info!("DISPUTE_FLOW: initiated");
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
         let service_name = request
             .extensions()
             .get::<String>()
@@ -430,7 +417,7 @@ impl DisputeService for Disputes {
         &self,
         request: tonic::Request<DisputeServiceTransformRequest>,
     ) -> Result<tonic::Response<DisputeServiceTransformResponse>, tonic::Status> {
-        let config = get_config_from_request(&request, self.config.get_config());
+        let config = get_config_from_request(&request)?;
         let service_name = request
             .extensions()
             .get::<String>()
