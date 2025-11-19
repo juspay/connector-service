@@ -1,193 +1,288 @@
 pub mod transformers;
 
-use std::fmt::Debug;
+use std::{
+    fmt::Debug,
+    marker::{Send, Sync},
+};
 
-use common_utils::{errors::CustomResult, events, ext_traits::{ByteSliceExt, XmlExt}, request::RequestContent};
+use common_utils::{errors::CustomResult, events, ext_traits::XmlExt};
 use domain_types::{
-    connector_flow::Authorize,
-    connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+    connector_flow::{
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        CreateOrder, CreateSessionToken, DefendDispute, PaymentMethodToken, PostAuthenticate,
+        PreAuthenticate, PSync, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        VoidPC,
     },
-    errors::{self, ConnectorError},
+    connector_types::{
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
+        ConnectorCustomerData, ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSyncData, PaymentVoidData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
+    },
+    errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
 };
-use error_stack::ResultExt;
 use hyperswitch_masking::Maskable;
-use interfaces::{
-    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-};
+use interfaces::{api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2};
 use serde::Serialize;
-use transformers::{BamboraapacErrorResponse, BamboraapacPaymentRequest};
+use transformers::{
+    BamboraapacAuthorizeResponse, BamboraapacCaptureRequest, BamboraapacCaptureResponse,
+    BamboraapacErrorResponse, BamboraapacPSyncRequest, BamboraapacPSyncResponse,
+    BamboraapacPaymentRequest, BamboraapacRSyncRequest, BamboraapacRSyncResponse,
+    BamboraapacRefundRequest, BamboraapacRefundResponse, BamboraapacRepeatPaymentRequest,
+    BamboraapacRepeatPaymentResponse, BamboraapacSetupMandateRequest,
+    BamboraapacSetupMandateResponse,
+};
 
+use super::macros;
+use super::macros::GetSoapXml;
 use crate::types::ResponseRouterData;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
 }
 
-// Trait implementations with generic type parameters
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::ConnectorServiceTrait<T> for Bamboraapac<T>
+// Type alias for non-generic trait implementations
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::ConnectorServiceTrait<T> for Bamboraapac<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentAuthorizeV2<T> for Bamboraapac<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::PaymentAuthorizeV2<T> for Bamboraapac<T>
 {
 }
 
-// Stub implementations for all required flows (minimal connector with Authorize only)
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ValidationTrait for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSyncV2 for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidV2 for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundV2 for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundSyncV2 for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentCapture for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::CreateConnectorCustomer for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentTokenV2<T> for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidPostCaptureV2 for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::IncomingWebhook for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SetupMandateV2<T> for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::AcceptDispute for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SubmitEvidenceV2 for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::DisputeDefend for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthenticateV2<T> for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPreAuthenticateV2<T> for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPostAuthenticateV2<T> for Bamboraapac<T>
+    interfaces::connector_types::PaymentSyncV2 for Bamboraapac<T>
 {
 }
 
-// Connector struct
-#[derive(Clone)]
-pub struct Bamboraapac<T> {
-    _phantom: std::marker::PhantomData<T>,
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::PaymentCapture for Bamboraapac<T>
+{
 }
 
-impl<T> Bamboraapac<T> {
-    pub const fn new() -> &'static Self {
-        &Self {
-            _phantom: std::marker::PhantomData,
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::RefundV2 for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::RefundSyncV2 for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::SetupMandateV2<T> for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::RepeatPaymentV2 for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::PaymentPreAuthenticateV2<T> for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::PaymentAuthenticateV2<T> for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::PaymentPostAuthenticateV2<T> for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::SubmitEvidenceV2 for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::DisputeDefend for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::AcceptDispute for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::IncomingWebhook for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::PaymentVoidPostCaptureV2 for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::PaymentVoidV2 for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::PaymentTokenV2<T> for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::CreateConnectorCustomer for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::PaymentAccessToken for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::PaymentSessionToken for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::PaymentOrderCreate for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::connector_types::ValidationTrait for Bamboraapac<T>
+{
+}
+
+// Create all prerequisites for the connector using macros
+macros::create_all_prerequisites!(
+    connector_name: Bamboraapac,
+    generic_type: T,
+    api: [
+        (
+            flow: Authorize,
+            request_body: BamboraapacPaymentRequest<T>,
+            response_body: BamboraapacAuthorizeResponse,
+            response_format: xml,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PSync,
+            request_body: BamboraapacPSyncRequest,
+            response_body: BamboraapacPSyncResponse,
+            response_format: xml,
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
+            flow: Capture,
+            request_body: BamboraapacCaptureRequest,
+            response_body: BamboraapacCaptureResponse,
+            response_format: xml,
+            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ),
+        (
+            flow: Refund,
+            request_body: BamboraapacRefundRequest,
+            response_body: BamboraapacRefundResponse,
+            response_format: xml,
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
+            flow: RSync,
+            request_body: BamboraapacRSyncRequest,
+            response_body: BamboraapacRSyncResponse,
+            response_format: xml,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: BamboraapacSetupMandateRequest<T>,
+            response_body: BamboraapacSetupMandateResponse,
+            response_format: xml,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: BamboraapacRepeatPaymentRequest,
+            response_body: BamboraapacRepeatPaymentResponse,
+            response_format: xml,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        )
+    ],
+    amount_converters: [],
+    member_functions: {
+        pub fn build_headers<F, FCD, Req, Res>(
+            &self,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let header = vec![
+                (
+                    headers::CONTENT_TYPE.to_string(),
+                    "text/xml".to_string().into(),
+                ),
+            ];
+            Ok(header)
+        }
+
+        pub fn connector_base_url_payments<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.bamboraapac.base_url
+        }
+
+        pub fn connector_base_url_refunds<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.bamboraapac.base_url
         }
     }
+);
 
-    fn build_headers<F, FCD, Req, Res>(
+// Implement helper methods for Bamboraapac
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Bamboraapac<T> {
+    /// Minimal preprocessing - only removes namespace prefixes
+    /// Keeps full XML structure for deserialization
+    pub fn preprocess_response_bytes<F, FCD, Req, Res>(
         &self,
-        _req: &RouterDataV2<F, FCD, Req, Res>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-        let header = vec![
-            (
-                headers::CONTENT_TYPE.to_string(),
-                "text/xml".to_string().into(),
-            ),
-        ];
-        Ok(header)
-    }
+        _data: &RouterDataV2<F, FCD, Req, Res>,
+        response_bytes: bytes::Bytes,
+    ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
+        use error_stack::ResultExt;
 
-    fn connector_base_url_payments<'a, F, Req, Res>(
-        &self,
-        req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-    ) -> &'a str {
-        &req.resource_common_data.connectors.bamboraapac.base_url
-    }
+        let response_str = String::from_utf8(response_bytes.to_vec())
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-    fn connector_base_url_refunds<'a, F, Req, Res>(
-        &self,
-        req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
-    ) -> &'a str {
-        &req.resource_common_data.connectors.bamboraapac.base_url
+        // Only remove namespace prefixes for easier deserialization
+        // Keep the full structure including Envelope
+        let xml_response = response_str
+            .replace("soap:", "")
+            .replace(" xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"", "")
+            .replace(" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"", "")
+            .replace(" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"", "")
+            .replace(" xmlns=\"http://www.ippayments.com.au/interface/api/dts\"", "");
+
+        Ok(bytes::Bytes::from(xml_response))
     }
 }
 
 // Implement ConnectorCommon trait
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorCommon for Bamboraapac<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
+    for Bamboraapac<T>
 {
     fn id(&self) -> &'static str {
         "bamboraapac"
@@ -204,7 +299,7 @@ impl<
     fn get_auth_header(
         &self,
         _auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         // Bambora APAC includes auth in the request body (SOAP), not headers
         Ok(vec![])
     }
@@ -217,10 +312,10 @@ impl<
         let response: BamboraapacErrorResponse = if res.response.is_empty() {
             BamboraapacErrorResponse::default()
         } else {
-            // Try to parse as error response, fallback to default
-            res.response
-                .parse_struct("BamboraapacErrorResponse")
-                .unwrap_or_else(|_| BamboraapacErrorResponse::default())
+            String::from_utf8(res.response.to_vec())
+                .ok()
+                .and_then(|s| s.parse_xml().ok())
+                .unwrap_or_else(BamboraapacErrorResponse::default)
         };
 
         Ok(ErrorResponse {
@@ -240,744 +335,176 @@ impl<
     }
 }
 
-// Implement Authorize flow
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData<T>,
-        PaymentsResponseData,
-    > for Bamboraapac<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-        self.build_headers(req)
+// Implement Authorize flow using macros
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_headers, get_error_response_v2, get_content_type],
+    connector: Bamboraapac,
+    curl_request: SoapXml(BamboraapacPaymentRequest<T>),
+    curl_response: BamboraapacAuthorizeResponse,
+    flow_name: Authorize,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthorizeData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    preprocess_response: true,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/dts.asmx", self.connector_base_url_payments(req)))
+        }
     }
+);
 
-    fn get_url(
-        &self,
-        req: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<String, ConnectorError> {
-        Ok(format!("{}/dts.asmx", self.connector_base_url_payments(req)))
+// Implement PSync flow using macros
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_headers, get_error_response_v2, get_content_type],
+    connector: Bamboraapac,
+    curl_request: SoapXml(BamboraapacPSyncRequest),
+    curl_response: BamboraapacPSyncResponse,
+    flow_name: PSync,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsSyncData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    preprocess_response: true,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/dts.asmx", self.connector_base_url_payments(req)))
+        }
     }
+);
 
-    fn get_content_type(&self) -> &'static str {
-        "text/xml"
+// Implement Capture flow using macros
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_headers, get_error_response_v2, get_content_type],
+    connector: Bamboraapac,
+    curl_request: SoapXml(BamboraapacCaptureRequest),
+    curl_response: BamboraapacCaptureResponse,
+    flow_name: Capture,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsCaptureData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    preprocess_response: true,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/dts.asmx", self.connector_base_url_payments(req)))
+        }
     }
+);
 
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<RequestContent>, ConnectorError> {
-        let connector_req = BamboraapacPaymentRequest::<T>::try_from(req)?;
-
-        // Convert to SOAP XML
-        let soap_xml = connector_req.to_soap_xml();
-
-        // Log the complete raw SOAP XML being sent
-        tracing::info!(
-            target: "bamboraapac_authorize_request",
-            "Raw SOAP XML Request (Authorize):\n{}", soap_xml
-        );
-
-        Ok(Some(RequestContent::RawBytes(soap_xml.into_bytes())))
+// Implement Refund flow using macros
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_headers, get_error_response_v2, get_content_type],
+    connector: Bamboraapac,
+    curl_request: SoapXml(BamboraapacRefundRequest),
+    curl_response: BamboraapacRefundResponse,
+    flow_name: Refund,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundsData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    preprocess_response: true,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/dts.asmx", self.connector_base_url_refunds(req)))
+        }
     }
+);
 
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-        _event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ConnectorError,
-    > {
-        // Convert HTML entities to XML
-        let response_str = String::from_utf8(res.response.to_vec())
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-        let xml_response = response_str.replace("&lt;", "<").replace("&gt;", ">");
-
-        // Parse XML response
-        let response: transformers::BamboraapacPaymentResponse = xml_response
-            .as_str()
-            .parse_xml()
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-        .change_context(errors::ConnectorError::ResponseHandlingFailed)
+// Implement RSync flow using macros
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_headers, get_error_response_v2, get_content_type],
+    connector: Bamboraapac,
+    curl_request: SoapXml(BamboraapacRSyncRequest),
+    curl_response: BamboraapacRSyncResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    preprocess_response: true,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/dts.asmx", self.connector_base_url_refunds(req)))
+        }
     }
+);
 
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+// Implement SetupMandate flow using macros
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_headers, get_error_response_v2, get_content_type],
+    connector: Bamboraapac,
+    curl_request: SoapXml(BamboraapacSetupMandateRequest<T>),
+    curl_response: BamboraapacSetupMandateResponse,
+    flow_name: SetupMandate,
+    resource_common_data: PaymentFlowData,
+    flow_request: SetupMandateRequestData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    preprocess_response: true,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/sipp.asmx", self.connector_base_url_payments(req)))
+        }
     }
-}
+);
 
-// Add Source Verification stub for Authorize flow
-use interfaces::verification::SourceVerification;
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-    for Bamboraapac<T>
-{
-}
-
-// Stub implementations for all other required flows
-use domain_types::connector_flow::{
-    Accept, Authenticate, Capture, CreateConnectorCustomer, CreateOrder, CreateSessionToken,
-    CreateAccessToken, DefendDispute, PaymentMethodToken, PostAuthenticate, PreAuthenticate,
-    PSync, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
-};
-use domain_types::connector_types::{
-    AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-    ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-    PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentMethodTokenResponse,
-    PaymentMethodTokenizationData, PaymentVoidData, PaymentsCancelPostCaptureData,
-    PaymentsCaptureData, PaymentsAuthenticateData, PaymentsPostAuthenticateData,
-    PaymentsPreAuthenticateData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-    RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-    SetupMandateRequestData, SubmitEvidenceData,
-};
-
-// PSync (Payment Sync)
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Bamboraapac<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-        self.build_headers(req)
+// Implement RepeatPayment flow using macros
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_headers, get_error_response_v2, get_content_type],
+    connector: Bamboraapac,
+    curl_request: SoapXml(BamboraapacRepeatPaymentRequest),
+    curl_response: BamboraapacRepeatPaymentResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    preprocess_response: true,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/dts.asmx", self.connector_base_url_payments(req)))
+        }
     }
+);
 
-    fn get_url(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<String, ConnectorError> {
-        Ok(format!("{}/dts.asmx", self.connector_base_url_payments(req)))
-    }
+// Empty implementations for unsupported flows
 
-    fn get_content_type(&self) -> &'static str {
-        "text/xml"
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, ConnectorError> {
-        let connector_req = transformers::BamboraapacSyncRequest::try_from(req)?;
-        let soap_xml = connector_req.to_soap_xml();
-
-        // Log the complete raw SOAP XML being sent
-        tracing::info!(
-            target: "bamboraapac_psync_request",
-            "Raw SOAP XML Request (PSync):\n{}", soap_xml
-        );
-
-        Ok(Some(RequestContent::RawBytes(soap_xml.into_bytes())))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        _event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ConnectorError,
-    > {
-        let response_str = String::from_utf8(res.response.to_vec())
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-        let xml_response = response_str.replace("&lt;", "<").replace("&gt;", ">");
-
-        let response: transformers::BamboraapacSyncResponse = xml_response
-            .as_str()
-            .parse_xml()
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-        .change_context(errors::ConnectorError::ResponseHandlingFailed)
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
-
-// Void (Payment Void)
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Bamboraapac<T>
-{
-}
-
-// Refund
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    for Bamboraapac<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-        self.build_headers(req)
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<String, ConnectorError> {
-        Ok(format!("{}/dts.asmx", self.connector_base_url_refunds(req)))
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "text/xml"
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, ConnectorError> {
-        let connector_req = transformers::BamboraapacRefundRequest::try_from(req)?;
-        let soap_xml = connector_req.to_soap_xml();
-
-        // Log the complete raw SOAP XML being sent
-        tracing::info!(
-            target: "bamboraapac_refund_request",
-            "Raw SOAP XML Request (Refund):\n{}", soap_xml
-        );
-
-        Ok(Some(RequestContent::RawBytes(soap_xml.into_bytes())))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        _event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ConnectorError,
-    > {
-        // Parse the outer SOAP envelope
-        let response_str = String::from_utf8(res.response.to_vec())
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        let outer_response: transformers::BamboraapacRefundResponse = response_str
-            .as_str()
-            .parse_xml()
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        // Extract and decode the HTML-encoded XML from submit_single_refund_result
-        let inner_xml = outer_response
-            .body
-            .submit_single_refund_response
-            .submit_single_refund_result
-            .replace("&lt;", "<")
-            .replace("&gt;", ">");
-
-        // Parse the inner Response XML
-        let inner_response: transformers::RefundResponseInner = inner_xml
-            .as_str()
-            .parse_xml()
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response: inner_response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-        .change_context(errors::ConnectorError::ResponseHandlingFailed)
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
-
-// RSync (Refund Sync)
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Bamboraapac<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-        self.build_headers(req)
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<String, ConnectorError> {
-        Ok(format!("{}/dts.asmx", self.connector_base_url_refunds(req)))
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "text/xml"
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, ConnectorError> {
-        let connector_req = transformers::BamboraapacSyncRequest::try_from(req)?;
-        let soap_xml = connector_req.to_soap_xml();
-
-        // Log the complete raw SOAP XML being sent
-        tracing::info!(
-            target: "bamboraapac_rsync_request",
-            "Raw SOAP XML Request (RSync):\n{}", soap_xml
-        );
-
-        Ok(Some(RequestContent::RawBytes(soap_xml.into_bytes())))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        _event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ConnectorError,
-    > {
-        let response_str = String::from_utf8(res.response.to_vec())
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-        let xml_response = response_str.replace("&lt;", "<").replace("&gt;", ">");
-
-        let response: transformers::BamboraapacSyncResponse = xml_response
-            .as_str()
-            .parse_xml()
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-        .change_context(errors::ConnectorError::ResponseHandlingFailed)
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
-
-// Capture
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Bamboraapac<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-        self.build_headers(req)
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<String, ConnectorError> {
-        Ok(format!("{}/dts.asmx", self.connector_base_url_payments(req)))
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "text/xml"
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, ConnectorError> {
-        let connector_req = transformers::BamboraapacCaptureRequest::try_from(req)?;
-        let soap_xml = connector_req.to_soap_xml();
-
-        // Log the complete raw SOAP XML being sent
-        tracing::info!(
-            target: "bamboraapac_capture_request",
-            "Raw SOAP XML Request (Capture):\n{}", soap_xml
-        );
-
-        Ok(Some(RequestContent::RawBytes(soap_xml.into_bytes())))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        _event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ConnectorError,
-    > {
-        // Convert HTML entities to XML
-        let response_str = String::from_utf8(res.response.to_vec())
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-        let xml_response = response_str.replace("&lt;", "<").replace("&gt;", ">");
-
-        // Parse XML response (same as authorize since capture uses SubmitSinglePayment)
-        let response: transformers::BamboraapacPaymentResponse = xml_response
-            .as_str()
-            .parse_xml()
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-        .change_context(errors::ConnectorError::ResponseHandlingFailed)
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
-
-// CreateSessionToken
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Bamboraapac<T>
-{
-}
-
-// CreateOrder
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Bamboraapac<T>
-{
-}
-
-// CreateAccessToken
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-    > for Bamboraapac<T>
-{
-}
-
-// CreateConnectorCustomer
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateConnectorCustomer,
-        PaymentFlowData,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-    > for Bamboraapac<T>
-{
-}
-
-// PaymentMethodToken
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    > for Bamboraapac<T>
-{
-}
-
-// VoidPC (Void Post Capture)
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        VoidPC,
-        PaymentFlowData,
-        PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Bamboraapac<T>
-{
-}
-
-// SetupMandate
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Bamboraapac<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-        self.build_headers(req)
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<String, ConnectorError> {
-        // SIPP API endpoint for customer registration
-        Ok(format!("{}/sipp.asmx", self.connector_base_url_payments(req)))
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "text/xml"
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<RequestContent>, ConnectorError> {
-        let connector_req = transformers::BamboraapacSetupMandateRequest::<T>::try_from(req)?;
-        let soap_xml = connector_req.to_soap_xml();
-
-        // Log the complete raw SOAP XML being sent
-        tracing::info!(
-            target: "bamboraapac_setupmandate_request",
-            "Raw SOAP XML Request (SetupMandate):\n{}", soap_xml
-        );
-
-        Ok(Some(RequestContent::RawBytes(soap_xml.into_bytes())))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData<T>,
-            PaymentsResponseData,
-        >,
-        _event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ConnectorError,
-    > {
-        // Parse the outer SOAP envelope
-        let response_str = String::from_utf8(res.response.to_vec())
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        let outer_response: transformers::BamboraapacSetupMandateResponse = response_str
-            .as_str()
-            .parse_xml()
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        // Extract and decode the HTML-encoded XML from register_single_customer_result
-        let inner_xml = outer_response
-            .body
-            .register_single_customer_response
-            .register_single_customer_result
-            .replace("&lt;", "<")
-            .replace("&gt;", ">");
-
-        // Parse the inner RegisterSingleCustomerResponse XML
-        let inner_response: transformers::RegisterSingleCustomerResponseInner = inner_xml
-            .as_str()
-            .parse_xml()
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response: inner_response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-        .change_context(errors::ConnectorError::ResponseHandlingFailed)
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
-
-// RepeatPayment
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Bamboraapac<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-        self.build_headers(req)
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-    ) -> CustomResult<String, ConnectorError> {
-        Ok(format!("{}/dts.asmx", self.connector_base_url_payments(req)))
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "text/xml"
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, ConnectorError> {
-        let connector_req = transformers::BamboraapacRepeatPaymentRequest::try_from(req)?;
-        let soap_xml = connector_req.to_soap_xml();
-
-        // Log the complete raw SOAP XML being sent
-        tracing::info!(
-            target: "bamboraapac_repeatpayment_request",
-            "Raw SOAP XML Request (RepeatPayment):\n{}", soap_xml
-        );
-
-        Ok(Some(RequestContent::RawBytes(soap_xml.into_bytes())))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-        _event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-        ConnectorError,
-    > {
-        // Convert HTML entities to XML
-        let response_str = String::from_utf8(res.response.to_vec())
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-        let xml_response = response_str.replace("&lt;", "<").replace("&gt;", ">");
-
-        // Parse XML response (reuses BamboraapacPaymentResponse)
-        let response: transformers::BamboraapacPaymentResponse = xml_response
-            .as_str()
-            .parse_xml()
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-        .change_context(errors::ConnectorError::ResponseHandlingFailed)
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
-
-// Accept (Dispute)
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Bamboraapac<T>
-{
-}
-
-// SubmitEvidence
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Bamboraapac<T>
-{
-}
-
-// DefendDispute
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Bamboraapac<T>
-{
-}
-
-// PreAuthenticate
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PreAuthenticate,
@@ -988,7 +515,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// Authenticate
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         Authenticate,
@@ -999,7 +525,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// PostAuthenticate
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PostAuthenticate,
@@ -1010,99 +535,288 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// SourceVerification stub implementations for all flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
     for Bamboraapac<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
     for Bamboraapac<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Bamboraapac<T>
 {
 }
+
+// SourceVerification implementations for all flows
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    interfaces::verification::SourceVerification<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    > for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PSync,
+        PaymentFlowData,
+        PaymentsSyncData,
+        PaymentsResponseData,
+    > for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Capture,
+        PaymentFlowData,
+        PaymentsCaptureData,
+        PaymentsResponseData,
+    > for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Refund,
+        RefundFlowData,
+        RefundsData,
+        RefundsResponseData,
+    > for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        RSync,
+        RefundFlowData,
+        RefundSyncData,
+        RefundsResponseData,
+    > for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    > for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Accept,
+        DisputeFlowData,
+        AcceptDisputeData,
+        DisputeResponseData,
+    > for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        SubmitEvidence,
+        DisputeFlowData,
+        SubmitEvidenceData,
+        DisputeResponseData,
+    > for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        DefendDispute,
+        DisputeFlowData,
+        DisputeDefendData,
+        DisputeResponseData,
+    > for Bamboraapac<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
     for Bamboraapac<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Bamboraapac<T>
+    interfaces::verification::SourceVerification<
+        Void,
+        PaymentFlowData,
+        PaymentVoidData,
+        PaymentsResponseData,
+    > for Bamboraapac<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
-    for Bamboraapac<T>
+    ConnectorIntegrationV2<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Bamboraapac<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
-    for Bamboraapac<T>
+    interfaces::verification::SourceVerification<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Bamboraapac<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>
-    for Bamboraapac<T>
+    ConnectorIntegrationV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Bamboraapac<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>
-    for Bamboraapac<T>
+    interfaces::verification::SourceVerification<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Bamboraapac<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
-    for Bamboraapac<T>
+    ConnectorIntegrationV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Bamboraapac<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
-    for Bamboraapac<T>
+    interfaces::verification::SourceVerification<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Bamboraapac<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
-    for Bamboraapac<T>
+    ConnectorIntegrationV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Bamboraapac<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Bamboraapac<T>
+    interfaces::verification::SourceVerification<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Bamboraapac<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Bamboraapac<T>
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Bamboraapac<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Bamboraapac<T>
+    interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Bamboraapac<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Bamboraapac<T>
+    ConnectorIntegrationV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Bamboraapac<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
-    for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
-    for Bamboraapac<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    SourceVerification<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
-    for Bamboraapac<T>
+    interfaces::verification::SourceVerification<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Bamboraapac<T>
 {
 }
