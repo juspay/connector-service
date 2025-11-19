@@ -596,6 +596,7 @@ fn create_and_emit_grpc_event<R>(
     common_utils::emit_event_with_config(grpc_event, &config.events);
 }
 
+#[allow(clippy::result_large_err)]
 pub fn get_config_from_request<T>(
     request: &tonic::Request<T>,
 ) -> Result<Arc<configs::Config>, tonic::Status>

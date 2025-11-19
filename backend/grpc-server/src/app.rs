@@ -67,16 +67,19 @@ pub async fn server_builder(config: configs::Config) -> Result<(), Configuration
         logger::info!("Shutdown signal received");
     };
 
-    let service = Service::new(Arc::new(config));
+    let base_config = Arc::new(config);
+    let service = Service::new(Arc::clone(&base_config));
 
     logger::info!(host = %server_config.host, port = %server_config.port, r#type = ?server_config.type_, "starting connector service");
 
     match server_config.type_ {
         configs::ServiceType::Grpc => {
-            service
-                .await
-                .grpc_server(socket_addr, shutdown_signal)
-                .await?
+            Box::pin(
+                service
+                    .await
+                    .grpc_server(base_config, socket_addr, shutdown_signal),
+            )
+            .await?
         }
         configs::ServiceType::Http => {
             service
@@ -166,8 +169,14 @@ impl Service {
         Ok(())
     }
 
+    /// Starts the gRPC server
+    ///
+    /// # Errors
+    ///
+    /// Returns error if server fails to start or bind to socket
     pub async fn grpc_server(
         self,
+        base_config: Arc<configs::Config>,
         socket: net::SocketAddr,
         shutdown_signal: impl Future<Output = ()>,
     ) -> Result<(), ConfigurationError> {
@@ -200,8 +209,7 @@ impl Service {
         let propagate_request_id_layer = tower_http::request_id::PropagateRequestIdLayer::new(
             http::HeaderName::from_static(consts::X_REQUEST_ID),
         );
-        let config = configs::Config::new().expect("Failed while parsing config");
-        let config_override_layer = RequestExtensionsLayer::new(config.clone());
+        let config_override_layer = RequestExtensionsLayer::new((base_config).clone());
 
         Server::builder()
             .layer(logging_layer)

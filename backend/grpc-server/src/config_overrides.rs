@@ -12,12 +12,12 @@ use tower::{Layer, Service};
 // Simple middleware layer for Tonic
 #[derive(Clone)]
 pub struct RequestExtensionsLayer {
-    base_config: Config,
+    base_config: Arc<Config>,
 }
 
 #[allow(clippy::new_without_default)]
 impl RequestExtensionsLayer {
-    pub fn new(base_config: Config) -> Self {
+    pub fn new(base_config: Arc<Config>) -> Self {
         Self { base_config }
     }
 }
@@ -35,7 +35,7 @@ impl<S> Layer<S> for RequestExtensionsLayer {
 #[derive(Clone)]
 pub struct TonicRequestExtensionsMiddleware<S> {
     inner: S,
-    base_config: Config,
+    base_config: Arc<Config>,
 }
 
 impl<S> Service<Request<Body>> for TonicRequestExtensionsMiddleware<S>
@@ -63,7 +63,7 @@ where
             Some(override_str) => {
                 // Merge override with default
                 let new_config =
-                    match config_from_metadata(Some(override_str), self.base_config.clone()) {
+                    match config_from_metadata(Some(override_str), (*self.base_config).clone()) {
                         Ok(cfg) => cfg,
                         Err(e) => {
                             let err = tonic::Status::internal(format!(
@@ -78,9 +78,8 @@ where
                 req.extensions_mut().insert(new_config);
             }
             None => {
-                // No override header - skip processing, service will use base config
-                req.extensions_mut()
-                    .insert(Arc::new(self.base_config.clone()));
+                // No override header - insert base config
+                req.extensions_mut().insert(Arc::clone(&self.base_config));
             }
         }
 

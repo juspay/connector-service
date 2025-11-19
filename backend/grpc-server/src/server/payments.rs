@@ -489,7 +489,7 @@ impl Payments {
             };
             let payment_method_token_data = self
                 .handle_payment_method_token(
-                    &config,
+                    config,
                     connector_data.clone(),
                     &payment_flow_data,
                     connector_auth_details.clone(),
