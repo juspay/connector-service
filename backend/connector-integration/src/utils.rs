@@ -276,6 +276,11 @@ where
     json.parse_value(std::any::type_name::<T>()).switch()
 }
 
+pub(crate) fn is_manual_capture(capture_method: Option<enums::CaptureMethod>) -> bool {
+    capture_method == Some(enums::CaptureMethod::Manual)
+        || capture_method == Some(enums::CaptureMethod::ManualMultiple)
+}
+
 pub fn get_token_expiry_month_year_2_digit_with_delimiter(
     month: Secret<String>,
     year: Secret<String>,

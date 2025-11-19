@@ -82,6 +82,7 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     authentication_data: None,
+                    connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(
                         domain_types::payment_method_data::Card {
                             card_number: RawCardNumber(cards::CardNumber::from_str(
@@ -115,7 +116,7 @@ mod tests {
                     off_session: None,
                     browser_info: Some(
                         domain_types::router_request_types::BrowserInformation {
-                            color_depth: None,
+                            color_depth: Some(24),
                             java_enabled: Some(false),
                             screen_height: Some(1080),
                             screen_width: Some(1920),
@@ -128,7 +129,7 @@ mod tests {
                             ),
                             java_script_enabled: Some(false),
                             language: Some("en-US".to_string()),
-                            time_zone: None,
+                            time_zone: Some(-480),
                             referer: None,
                             ip_address: None,
                             os_type: None,
@@ -265,6 +266,7 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     authentication_data: None,
+                    connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Default::default()),
                     amount: 0,
                     order_tax_amount: None,
