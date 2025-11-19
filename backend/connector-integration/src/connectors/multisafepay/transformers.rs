@@ -15,64 +15,210 @@ use domain_types::{
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
+
+// ===== ENUMS =====
+
+/// MultiSafepay order type
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Type {
+    Direct,
+    Redirect,
+}
+
+/// MultiSafepay gateway identifiers
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum Gateway {
+    Visa,
+    Mastercard,
+    Amex,
+    Maestro,
+    #[serde(rename = "DINER")]
+    DinersClub,
+    Discover,
+    #[serde(rename = "CREDITCARD")]
+    CreditCard,
+    #[serde(rename = "IDEAL")]
+    Ideal,
+    #[serde(rename = "PAYPAL")]
+    PayPal,
+    #[serde(rename = "GOOGLEPAY")]
+    GooglePay,
+    #[serde(rename = "ALIPAY")]
+    AliPay,
+    #[serde(rename = "WECHATPAY")]
+    WeChatPay,
+    #[serde(rename = "TRUSTLY")]
+    Trustly,
+    #[serde(rename = "GIROPAY")]
+    Giropay,
+    #[serde(rename = "SOFORT")]
+    Sofort,
+    #[serde(rename = "EPS")]
+    Eps,
+    #[serde(rename = "DIRECTBANK")]
+    DirectBank,
+    #[serde(rename = "MBWAY")]
+    MbWay,
+}
+
 // ===== HELPER FUNCTIONS =====
 
 /// Determines the order type based on payment method
-/// Cards use direct flow, other payment methods use redirect flow
+/// Cards and certain payment methods use direct flow, others use redirect flow
 fn get_order_type_from_payment_method<T: PaymentMethodDataTypes>(
     payment_method_data: &domain_types::payment_method_data::PaymentMethodData<T>,
-) -> &'static str {
-    use domain_types::payment_method_data::PaymentMethodData;
+) -> Result<Type, error_stack::Report<errors::ConnectorError>> {
+    use domain_types::payment_method_data::{BankRedirectData, PaymentMethodData, WalletData};
+    use error_stack::ResultExt;
 
-    match payment_method_data {
-        PaymentMethodData::Card(_) => "direct",
-        _ => "redirect",
-    }
+    let payment_type = match payment_method_data {
+        PaymentMethodData::Card(_) => Type::Direct,
+        PaymentMethodData::CardRedirect(_) => Type::Redirect,
+        PaymentMethodData::MandatePayment => Type::Direct,
+        PaymentMethodData::Wallet(ref wallet_data) => match wallet_data {
+            WalletData::GooglePay(_) => Type::Direct,
+            WalletData::PaypalRedirect(_) => Type::Redirect,
+            WalletData::AliPayRedirect(_) => Type::Redirect,
+            WalletData::WeChatPayRedirect(_) => Type::Redirect,
+            WalletData::MbWayRedirect(_) => Type::Redirect,
+            WalletData::AliPayQr(_)
+            | WalletData::AliPayHkRedirect(_)
+            | WalletData::AmazonPayRedirect(_)
+            | WalletData::BluecodeRedirect {}
+            | WalletData::MomoRedirect(_)
+            | WalletData::KakaoPayRedirect(_)
+            | WalletData::GoPayRedirect(_)
+            | WalletData::GcashRedirect(_)
+            | WalletData::ApplePay(_)
+            | WalletData::ApplePayRedirect(_)
+            | WalletData::ApplePayThirdPartySdk(_)
+            | WalletData::DanaRedirect {}
+            | WalletData::GooglePayRedirect(_)
+            | WalletData::GooglePayThirdPartySdk(_)
+            | WalletData::MobilePayRedirect(_)
+            | WalletData::PaypalSdk(_)
+            | WalletData::Paze(_)
+            | WalletData::SamsungPay(_)
+            | WalletData::TwintRedirect {}
+            | WalletData::VippsRedirect {}
+            | WalletData::TouchNGoRedirect(_)
+            | WalletData::WeChatPayQr(_)
+            | WalletData::CashappQr(_)
+            | WalletData::SwishQr(_)
+            | WalletData::Mifinity(_)
+            | WalletData::RevolutPay(_) => {
+                Err(errors::ConnectorError::NotImplemented(
+                    crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
+                ))
+                .attach_printable("Wallet payment method not supported")?
+            }
+        },
+        PaymentMethodData::BankRedirect(ref bank_data) => match bank_data {
+            BankRedirectData::Giropay { .. } => Type::Redirect,
+            BankRedirectData::Ideal { .. } => Type::Direct,
+            BankRedirectData::Trustly { .. } => Type::Redirect,
+            BankRedirectData::Eps { .. } => Type::Redirect,
+            BankRedirectData::Sofort { .. } => Type::Redirect,
+            BankRedirectData::BancontactCard { .. }
+            | BankRedirectData::Bizum { .. }
+            | BankRedirectData::Blik { .. }
+            | BankRedirectData::Eft { .. }
+            | BankRedirectData::Interac { .. }
+            | BankRedirectData::OnlineBankingCzechRepublic { .. }
+            | BankRedirectData::OnlineBankingFinland { .. }
+            | BankRedirectData::OnlineBankingPoland { .. }
+            | BankRedirectData::OnlineBankingSlovakia { .. }
+            | BankRedirectData::OpenBankingUk { .. }
+            | BankRedirectData::Przelewy24 { .. }
+            | BankRedirectData::OnlineBankingFpx { .. }
+            | BankRedirectData::OnlineBankingThailand { .. }
+            | BankRedirectData::LocalBankRedirect {} => {
+                Err(errors::ConnectorError::NotImplemented(
+                    crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
+                ))
+                .attach_printable("Bank redirect payment method not supported")?
+            }
+        },
+        PaymentMethodData::PayLater(_) => Type::Redirect,
+        PaymentMethodData::BankDebit(_)
+        | PaymentMethodData::BankTransfer(_)
+        | PaymentMethodData::Crypto(_)
+        | PaymentMethodData::Reward
+        | PaymentMethodData::RealTimePayment(_)
+        | PaymentMethodData::MobilePayment(_)
+        | PaymentMethodData::Upi(_)
+        | PaymentMethodData::Voucher(_)
+        | PaymentMethodData::GiftCard(_)
+        | PaymentMethodData::OpenBanking(_)
+        | PaymentMethodData::CardToken(_)
+        | PaymentMethodData::NetworkToken(_)
+        | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+            Err(errors::ConnectorError::NotImplemented(
+                crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
+            ))
+            .attach_printable("Payment method not supported")?
+        }
+    };
+
+    Ok(payment_type)
 }
 
 /// Maps CardNetwork enum to MultiSafepay gateway identifier
 /// Returns None for unrecognized networks to trigger fallback to card number detection
-fn card_network_to_gateway(network: &common_enums::CardNetwork) -> Option<String> {
+fn card_network_to_gateway(network: &common_enums::CardNetwork) -> Option<Gateway> {
     match network {
-        common_enums::CardNetwork::Visa => Some("VISA".to_string()),
-        common_enums::CardNetwork::Mastercard => Some("MASTERCARD".to_string()),
-        common_enums::CardNetwork::AmericanExpress => Some("AMEX".to_string()),
-        common_enums::CardNetwork::Maestro => Some("MAESTRO".to_string()),
-        common_enums::CardNetwork::DinersClub => Some("DINER".to_string()),
-        common_enums::CardNetwork::Discover => Some("DISCOVER".to_string()),
+        common_enums::CardNetwork::Visa => Some(Gateway::Visa),
+        common_enums::CardNetwork::Mastercard => Some(Gateway::Mastercard),
+        common_enums::CardNetwork::AmericanExpress => Some(Gateway::Amex),
+        common_enums::CardNetwork::Maestro => Some(Gateway::Maestro),
+        common_enums::CardNetwork::DinersClub => Some(Gateway::DinersClub),
+        common_enums::CardNetwork::Discover => Some(Gateway::Discover),
         // Unknown card networks will fall through to card number detection
-        _ => None,
+        common_enums::CardNetwork::Interac
+        | common_enums::CardNetwork::JCB
+        | common_enums::CardNetwork::UnionPay
+        | common_enums::CardNetwork::RuPay
+        | common_enums::CardNetwork::CartesBancaires
+        | common_enums::CardNetwork::Star
+        | common_enums::CardNetwork::Pulse
+        | common_enums::CardNetwork::Accel
+        | common_enums::CardNetwork::Nyce => None,
     }
 }
 
 /// Maps CardIssuer (from card number analysis) to MultiSafepay gateway identifier
 /// Returns None for unsupported card types to trigger CREDITCARD fallback
-fn card_issuer_to_gateway(issuer: domain_types::utils::CardIssuer) -> Option<String> {
+fn card_issuer_to_gateway(issuer: domain_types::utils::CardIssuer) -> Option<Gateway> {
     match issuer {
-        domain_types::utils::CardIssuer::Visa => Some("VISA".to_string()),
-        domain_types::utils::CardIssuer::Master => Some("MASTERCARD".to_string()),
-        domain_types::utils::CardIssuer::AmericanExpress => Some("AMEX".to_string()),
-        domain_types::utils::CardIssuer::Maestro => Some("MAESTRO".to_string()),
-        domain_types::utils::CardIssuer::DinersClub => Some("DINER".to_string()),
-        domain_types::utils::CardIssuer::Discover => Some("DISCOVER".to_string()),
-        // Unsupported card types (JCB, CarteBlanche, etc.) will use CREDITCARD fallback
-        _ => None,
+        domain_types::utils::CardIssuer::Visa => Some(Gateway::Visa),
+        domain_types::utils::CardIssuer::Master => Some(Gateway::Mastercard),
+        domain_types::utils::CardIssuer::AmericanExpress => Some(Gateway::Amex),
+        domain_types::utils::CardIssuer::Maestro => Some(Gateway::Maestro),
+        domain_types::utils::CardIssuer::DinersClub => Some(Gateway::DinersClub),
+        domain_types::utils::CardIssuer::Discover => Some(Gateway::Discover),
+        // Unsupported card types will use CREDITCARD fallback
+        domain_types::utils::CardIssuer::JCB
+        | domain_types::utils::CardIssuer::CarteBlanche
+        | domain_types::utils::CardIssuer::CartesBancaires => None,
     }
 }
 
 /// Maps payment method data to MultiSafepay gateway identifier
-/// Uses three-tier detection: card_network metadata -> card number analysis -> CREDITCARD fallback
+/// Uses three-tier detection for cards: card_network metadata -> card number analysis -> CREDITCARD fallback
 fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
     payment_method_data: &domain_types::payment_method_data::PaymentMethodData<T>,
-) -> Option<String> {
+) -> Result<Gateway, error_stack::Report<errors::ConnectorError>> {
     use domain_types::payment_method_data::{BankRedirectData, PaymentMethodData, WalletData};
+    use error_stack::ResultExt;
 
-    match payment_method_data {
+    let gateway = match payment_method_data {
         PaymentMethodData::Card(card_data) => {
             // Tier 1: Try to use card_network metadata (fast path)
             if let Some(ref network) = card_data.card_network {
                 if let Some(gateway) = card_network_to_gateway(network) {
-                    return Some(gateway);
+                    return Ok(gateway);
                 }
             }
 
@@ -80,23 +226,105 @@ fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
             if let Ok(card_number_str) = get_card_number_string(&card_data.card_number) {
                 if let Ok(issuer) = domain_types::utils::get_card_issuer(&card_number_str) {
                     if let Some(gateway) = card_issuer_to_gateway(issuer) {
-                        return Some(gateway);
+                        return Ok(gateway);
                     }
                 }
             }
 
             // Tier 3: Final fallback for unsupported or undetectable card types
-            Some("CREDITCARD".to_string())
+            Gateway::CreditCard
         }
-        PaymentMethodData::BankRedirect(BankRedirectData::Ideal { .. }) => {
-            Some("IDEAL".to_string())
+        PaymentMethodData::CardRedirect(_) => {
+            // Card redirect payments use generic credit card gateway
+            Gateway::CreditCard
         }
-        PaymentMethodData::Wallet(WalletData::PaypalRedirect(_)) => {
-            Some("PAYPAL".to_string())
+        PaymentMethodData::BankRedirect(ref bank_data) => match bank_data {
+            BankRedirectData::Ideal { .. } => Gateway::Ideal,
+            BankRedirectData::Giropay { .. } => Gateway::Giropay,
+            BankRedirectData::Trustly { .. } => Gateway::Trustly,
+            BankRedirectData::Eps { .. } => Gateway::Eps,
+            BankRedirectData::Sofort { .. } => Gateway::Sofort,
+            BankRedirectData::BancontactCard { .. }
+            | BankRedirectData::Bizum { .. }
+            | BankRedirectData::Blik { .. }
+            | BankRedirectData::Eft { .. }
+            | BankRedirectData::Interac { .. }
+            | BankRedirectData::OnlineBankingCzechRepublic { .. }
+            | BankRedirectData::OnlineBankingFinland { .. }
+            | BankRedirectData::OnlineBankingPoland { .. }
+            | BankRedirectData::OnlineBankingSlovakia { .. }
+            | BankRedirectData::OpenBankingUk { .. }
+            | BankRedirectData::Przelewy24 { .. }
+            | BankRedirectData::OnlineBankingFpx { .. }
+            | BankRedirectData::OnlineBankingThailand { .. }
+            | BankRedirectData::LocalBankRedirect {} => {
+                Err(errors::ConnectorError::NotImplemented(
+                    crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
+                ))
+                .attach_printable("Bank redirect payment method not supported")?
+            }
+        },
+        PaymentMethodData::Wallet(ref wallet_data) => match wallet_data {
+            WalletData::GooglePay(_) => Gateway::GooglePay,
+            WalletData::PaypalRedirect(_) => Gateway::PayPal,
+            WalletData::AliPayRedirect(_) => Gateway::AliPay,
+            WalletData::WeChatPayRedirect(_) => Gateway::WeChatPay,
+            WalletData::MbWayRedirect(_) => Gateway::MbWay,
+            WalletData::AliPayQr(_)
+            | WalletData::AliPayHkRedirect(_)
+            | WalletData::AmazonPayRedirect(_)
+            | WalletData::BluecodeRedirect {}
+            | WalletData::MomoRedirect(_)
+            | WalletData::KakaoPayRedirect(_)
+            | WalletData::GoPayRedirect(_)
+            | WalletData::GcashRedirect(_)
+            | WalletData::ApplePay(_)
+            | WalletData::ApplePayRedirect(_)
+            | WalletData::ApplePayThirdPartySdk(_)
+            | WalletData::DanaRedirect {}
+            | WalletData::GooglePayRedirect(_)
+            | WalletData::GooglePayThirdPartySdk(_)
+            | WalletData::MobilePayRedirect(_)
+            | WalletData::PaypalSdk(_)
+            | WalletData::Paze(_)
+            | WalletData::SamsungPay(_)
+            | WalletData::TwintRedirect {}
+            | WalletData::VippsRedirect {}
+            | WalletData::TouchNGoRedirect(_)
+            | WalletData::WeChatPayQr(_)
+            | WalletData::CashappQr(_)
+            | WalletData::SwishQr(_)
+            | WalletData::Mifinity(_)
+            | WalletData::RevolutPay(_) => {
+                Err(errors::ConnectorError::NotImplemented(
+                    crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
+                ))
+                .attach_printable("Wallet payment method not supported")?
+            }
+        },
+        PaymentMethodData::MandatePayment
+        | PaymentMethodData::PayLater(_)
+        | PaymentMethodData::BankDebit(_)
+        | PaymentMethodData::BankTransfer(_)
+        | PaymentMethodData::Crypto(_)
+        | PaymentMethodData::Reward
+        | PaymentMethodData::RealTimePayment(_)
+        | PaymentMethodData::MobilePayment(_)
+        | PaymentMethodData::Upi(_)
+        | PaymentMethodData::Voucher(_)
+        | PaymentMethodData::GiftCard(_)
+        | PaymentMethodData::OpenBanking(_)
+        | PaymentMethodData::CardToken(_)
+        | PaymentMethodData::NetworkToken(_)
+        | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+            Err(errors::ConnectorError::NotImplemented(
+                crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
+            ))
+            .attach_printable("Payment method not supported")?
         }
-        // Add more payment methods as needed
-        _ => None,
-    }
+    };
+
+    Ok(gateway)
 }
 
 /// Helper function to extract card number as string from RawCardNumber
@@ -254,16 +482,17 @@ pub struct DeliveryObject {
 #[derive(Debug, Serialize)]
 pub struct MultisafepayPaymentsRequest<T: PaymentMethodDataTypes> {
     #[serde(rename = "type")]
-    pub order_type: String,
+    pub order_type: Type,
     pub order_id: String,
-    pub gateway: String,
+    pub gateway: Gateway,
     pub currency: common_enums::Currency,
     pub amount: MinorUnit,
     pub description: String,
     // Required fields for direct transactions
     pub payment_options: PaymentOptions,
     pub customer: CustomerInfo,
-    pub gateway_info: GatewayInfo<T>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gateway_info: Option<GatewayInfo<T>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delivery: Option<DeliveryObject>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -310,45 +539,40 @@ impl<
         use error_stack::ResultExt;
 
         let item = &wrapper.router_data;
-        let order_type = get_order_type_from_payment_method(&item.request.payment_method_data);
-        let gateway = get_gateway_from_payment_method(&item.request.payment_method_data).ok_or(
-            errors::ConnectorError::NotImplemented("Payment method not supported".to_string()),
-        )?;
+        let order_type = get_order_type_from_payment_method(&item.request.payment_method_data)?;
+        let gateway = get_gateway_from_payment_method(&item.request.payment_method_data)?;
 
-        // Extract card data for direct transactions - requires actual PCI data, not tokens
-        let card = match &item.request.payment_method_data {
-            PaymentMethodData::Card(card_data) => card_data,
-            _ => {
-                return Err(errors::ConnectorError::NotImplemented(
-                    "Non-card payment methods not supported for direct transactions".to_string(),
-                ))?
+        // Build gateway_info only for card payments (direct transactions with cards)
+        let gateway_info = match (&order_type, &item.request.payment_method_data) {
+            (Type::Direct, PaymentMethodData::Card(card_data)) => {
+                // Build gateway_info with card details
+                // Format card expiry as YYMM (2-digit year + 2-digit month) as integer
+                let card_exp_year_str = card_data.card_exp_year.peek();
+                let card_exp_year_2digit = if card_exp_year_str.len() == 4 {
+                    &card_exp_year_str[2..]
+                } else {
+                    card_exp_year_str
+                };
+
+                let card_expiry_str =
+                    format!("{}{}", card_exp_year_2digit, card_data.card_exp_month.peek());
+
+                let card_expiry_date: i64 = card_expiry_str
+                    .parse::<i64>()
+                    .change_context(errors::ConnectorError::RequestEncodingFailed)
+                    .attach_printable("Failed to parse card expiry date as integer")?;
+
+                Some(GatewayInfo {
+                    card_number: card_data.card_number.clone(),
+                    card_expiry_date,
+                    card_cvc: card_data.card_cvc.clone(),
+                    card_holder_name: card_data.card_holder_name.clone(),
+                    flexible_3d: None,
+                    moto: None,
+                    term_url: None,
+                })
             }
-        };
-
-        // Build gateway_info with card details
-        // Format card expiry as YYMM (2-digit year + 2-digit month) as integer
-        let card_exp_year_str = card.card_exp_year.peek();
-        let card_exp_year_2digit = if card_exp_year_str.len() == 4 {
-            &card_exp_year_str[2..]
-        } else {
-            card_exp_year_str
-        };
-
-        let card_expiry_str = format!("{}{}", card_exp_year_2digit, card.card_exp_month.peek());
-
-        let card_expiry_date: i64 = card_expiry_str
-            .parse::<i64>()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)
-            .attach_printable("Failed to parse card expiry date as integer")?;
-
-        let gateway_info = GatewayInfo {
-            card_number: card.card_number.clone(),
-            card_expiry_date,
-            card_cvc: card.card_cvc.clone(),
-            card_holder_name: card.card_holder_name.clone(),
-            flexible_3d: None,
-            moto: None,
-            term_url: None,
+            _ => None,
         };
 
         // Build customer info
@@ -367,7 +591,7 @@ impl<
                 .ok_or(errors::ConnectorError::MissingRequiredField {
                     field_name: "email",
                 })
-                .attach_printable("Missing email for direct transaction")?
+                .attach_printable("Missing email for transaction")?
                 .expose()
                 .expose(),
         };
@@ -381,7 +605,7 @@ impl<
                 .ok_or(errors::ConnectorError::MissingRequiredField {
                     field_name: "router_return_url",
                 })
-                .attach_printable("Missing return URL for direct transaction")?,
+                .attach_printable("Missing return URL for transaction")?,
             cancel_url: item
                 .request
                 .router_return_url
@@ -389,7 +613,7 @@ impl<
                 .ok_or(errors::ConnectorError::MissingRequiredField {
                     field_name: "router_return_url",
                 })
-                .attach_printable("Missing cancel URL for direct transaction")?,
+                .attach_printable("Missing cancel URL for transaction")?,
         };
 
         // Build delivery object from billing address if available
@@ -409,7 +633,7 @@ impl<
             });
 
         Ok(Self {
-            order_type: order_type.to_string(),
+            order_type,
             order_id: item
                 .resource_common_data
                 .connector_request_reference_id
@@ -451,45 +675,40 @@ impl<T: PaymentMethodDataTypes>
         use domain_types::payment_method_data::PaymentMethodData;
         use error_stack::ResultExt;
 
-        let order_type = get_order_type_from_payment_method(&item.request.payment_method_data);
-        let gateway = get_gateway_from_payment_method(&item.request.payment_method_data).ok_or(
-            errors::ConnectorError::NotImplemented("Payment method not supported".to_string()),
-        )?;
+        let order_type = get_order_type_from_payment_method(&item.request.payment_method_data)?;
+        let gateway = get_gateway_from_payment_method(&item.request.payment_method_data)?;
 
-        // Extract card data for direct transactions - requires actual PCI data, not tokens
-        let card = match &item.request.payment_method_data {
-            PaymentMethodData::Card(card_data) => card_data,
-            _ => {
-                return Err(errors::ConnectorError::NotImplemented(
-                    "Non-card payment methods not supported for direct transactions".to_string(),
-                ))?
+        // Build gateway_info only for card payments (direct transactions with cards)
+        let gateway_info = match (&order_type, &item.request.payment_method_data) {
+            (Type::Direct, PaymentMethodData::Card(card_data)) => {
+                // Build gateway_info with card details
+                // Format card expiry as YYMM (2-digit year + 2-digit month) as integer
+                let card_exp_year_str = card_data.card_exp_year.peek();
+                let card_exp_year_2digit = if card_exp_year_str.len() == 4 {
+                    &card_exp_year_str[2..]
+                } else {
+                    card_exp_year_str
+                };
+
+                let card_expiry_str =
+                    format!("{}{}", card_exp_year_2digit, card_data.card_exp_month.peek());
+
+                let card_expiry_date: i64 = card_expiry_str
+                    .parse::<i64>()
+                    .change_context(errors::ConnectorError::RequestEncodingFailed)
+                    .attach_printable("Failed to parse card expiry date as integer")?;
+
+                Some(GatewayInfo {
+                    card_number: card_data.card_number.clone(),
+                    card_expiry_date,
+                    card_cvc: card_data.card_cvc.clone(),
+                    card_holder_name: card_data.card_holder_name.clone(),
+                    flexible_3d: None,
+                    moto: None,
+                    term_url: None,
+                })
             }
-        };
-
-        // Build gateway_info with card details
-        // Format card expiry as YYMM (2-digit year + 2-digit month) as integer
-        let card_exp_year_str = card.card_exp_year.peek();
-        let card_exp_year_2digit = if card_exp_year_str.len() == 4 {
-            &card_exp_year_str[2..]
-        } else {
-            card_exp_year_str
-        };
-
-        let card_expiry_str = format!("{}{}", card_exp_year_2digit, card.card_exp_month.peek());
-
-        let card_expiry_date: i64 = card_expiry_str
-            .parse::<i64>()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)
-            .attach_printable("Failed to parse card expiry date as integer")?;
-
-        let gateway_info = GatewayInfo {
-            card_number: card.card_number.clone(),
-            card_expiry_date,
-            card_cvc: card.card_cvc.clone(),
-            card_holder_name: card.card_holder_name.clone(),
-            flexible_3d: None,
-            moto: None,
-            term_url: None,
+            _ => None,
         };
 
         // Build customer info
@@ -508,7 +727,7 @@ impl<T: PaymentMethodDataTypes>
                 .ok_or(errors::ConnectorError::MissingRequiredField {
                     field_name: "email",
                 })
-                .attach_printable("Missing email for direct transaction")?
+                .attach_printable("Missing email for transaction")?
                 .expose()
                 .expose(),
         };
@@ -522,7 +741,7 @@ impl<T: PaymentMethodDataTypes>
                 .ok_or(errors::ConnectorError::MissingRequiredField {
                     field_name: "router_return_url",
                 })
-                .attach_printable("Missing return URL for direct transaction")?,
+                .attach_printable("Missing return URL for transaction")?,
             cancel_url: item
                 .request
                 .router_return_url
@@ -530,7 +749,7 @@ impl<T: PaymentMethodDataTypes>
                 .ok_or(errors::ConnectorError::MissingRequiredField {
                     field_name: "router_return_url",
                 })
-                .attach_printable("Missing cancel URL for direct transaction")?,
+                .attach_printable("Missing cancel URL for transaction")?,
         };
 
         // Build delivery object from billing address if available
@@ -550,7 +769,7 @@ impl<T: PaymentMethodDataTypes>
             });
 
         Ok(Self {
-            order_type: order_type.to_string(),
+            order_type,
             order_id: item
                 .resource_common_data
                 .connector_request_reference_id
