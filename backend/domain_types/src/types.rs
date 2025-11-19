@@ -126,6 +126,7 @@ pub struct Connectors {
     pub silverflow: ConnectorParams,
     pub celero: ConnectorParams,
     pub paypal: ConnectorParams,
+    pub stax: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -583,6 +584,21 @@ impl<
                         },
                     }
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::BankTransfer(bank_transfer_type) => {
+                    match bank_transfer_type.bank_transfer_type {
+                        Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::InstantBankTransfer(_)) => {
+                            Ok(PaymentMethodData::BankTransfer(Box::new(payment_method_data::BankTransferData::InstantBankTransfer {  })))
+                        }
+                        None => {
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                                error_identifier: 400,
+                                error_message: "This bank transfer type is not yet supported".to_owned(),
+                                error_object: None,
+                            })))
+                        },
+                    }
+                }
                 grpc_api_types::payments::payment_method::PaymentMethod::MobilePayment(mobile_payment_type) => {
                     match mobile_payment_type.mobile_payment_type {
                         Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::DuitNow(_)) => {
@@ -815,6 +831,19 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                             sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                             error_identifier: 400,
                             error_message: "This mobile payment type is not yet supported".to_owned(),
+                            error_object: None,
+                        })))
+                    }
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::BankTransfer(bank_transfer_type) => {
+                    match bank_transfer_type.bank_transfer_type {
+                        Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::InstantBankTransfer(_)) => {
+                            Ok(Some(PaymentMethodType::InstantBankTransfer))
+                        }
+                        _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                            error_identifier: 400,
+                            error_message: "This bank transfer type is not yet supported".to_owned(),
                             error_object: None,
                         })))
                     }
@@ -1223,6 +1252,10 @@ impl<
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
         let shipping_cost = Some(common_utils::types::MinorUnit::new(value.shipping_cost()));
+        // Connector testing data should be sent as a separate field (for adyen) (to be implemented)
+        // For now, set to None as Hyperswitch needs to be updated to send this data properly
+        let connector_testing_data: Option<Secret<serde_json::Value>> = None;
+
         Ok(Self {
             authentication_data,
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
@@ -1322,6 +1355,7 @@ impl<
                 .transpose()?,
             request_extended_authorization: value.request_extended_authorization,
             merchant_account_metadata,
+            connector_testing_data,
         })
     }
 }
@@ -2579,6 +2613,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for common_enums::P
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Wallet(_)),
             } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::BankTransfer(_)),
+            } => Ok(Self::BankTransfer),
             _ => Ok(Self::Card), // Default fallback
         }
     }
@@ -5618,14 +5656,30 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
     fn foreign_try_from(
         value: grpc_api_types::payments::PaymentServiceAuthorizeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let email = value
-            .email
-            .and_then(|email_str| Email::try_from(email_str.expose()).ok());
+        // Try to get email from top level first, fallback to billing address
+        let email_string = value.email.or_else(|| {
+            value
+                .address
+                .as_ref()
+                .and_then(|addr| addr.billing_address.as_ref())
+                .and_then(|billing| billing.email.clone())
+        });
+
+        let email = email_string.and_then(|email_str| Email::try_from(email_str.expose()).ok());
+
+        // Try to get name from top level customer_name first, fallback to billing address first_name
+        let name_string = value.customer_name.map(Secret::new).or_else(|| {
+            value
+                .address
+                .as_ref()
+                .and_then(|addr| addr.billing_address.as_ref())
+                .and_then(|billing| billing.first_name.clone())
+        });
 
         Ok(Self {
             customer_id: value.customer_id.map(Secret::new),
             email: email.map(Secret::new),
-            name: value.customer_name.map(Secret::new),
+            name: name_string,
             description: None,
             split_payments: None,
             phone: None,
