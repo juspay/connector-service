@@ -2,7 +2,7 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
-use common_enums::CurrencyUnit;
+use common_enums::{CurrencyUnit, PaymentMethod, PaymentMethodType};
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
@@ -176,8 +176,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     /// Enable automatic payment method tokenization before payment
     /// When enabled, UCS will automatically call PaymentMethodToken before Authorize
-    fn should_do_payment_method_token(&self) -> bool {
-        true
+    fn should_do_payment_method_token(
+        &self,
+        payment_method: PaymentMethod,
+        _payment_method_type: Option<PaymentMethodType>,
+    ) -> bool {
+        matches!(
+            payment_method,
+            PaymentMethod::Card | PaymentMethod::BankDebit
+        )
     }
 }
 
