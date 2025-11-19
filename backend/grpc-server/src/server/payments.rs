@@ -40,12 +40,14 @@ use external_services::service::EventProcessingParams;
 use grpc_api_types::payments::{
     payment_method, payment_service_server::PaymentService, DisputeResponse,
     PaymentServiceAuthenticateRequest, PaymentServiceAuthenticateResponse,
-    PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
-    PaymentServiceCaptureResponse, PaymentServiceDisputeRequest, PaymentServiceGetRequest,
-    PaymentServiceGetResponse, PaymentServicePostAuthenticateRequest,
-    PaymentServicePostAuthenticateResponse, PaymentServicePreAuthenticateRequest,
-    PaymentServicePreAuthenticateResponse, PaymentServiceRefundRequest,
-    PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
+    PaymentServiceAuthorizeOnlyRequest, PaymentServiceAuthorizeRequest,
+    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
+    PaymentServiceCreateAccessTokenRequest, PaymentServiceCreateAccessTokenResponse,
+    PaymentServiceCreateSessionTokenRequest, PaymentServiceCreateSessionTokenResponse,
+    PaymentServiceDisputeRequest, PaymentServiceGetRequest, PaymentServiceGetResponse,
+    PaymentServicePostAuthenticateRequest, PaymentServicePostAuthenticateResponse,
+    PaymentServicePreAuthenticateRequest, PaymentServicePreAuthenticateResponse,
+    PaymentServiceRefundRequest, PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
     PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
     PaymentServiceTransformRequest, PaymentServiceTransformResponse,
     PaymentServiceVoidPostCaptureRequest, PaymentServiceVoidPostCaptureResponse,
@@ -170,6 +172,71 @@ pub struct Payments {
 }
 
 impl Payments {
+    #[allow(clippy::too_many_arguments)]
+    async fn handle_access_token_flow<
+        T: PaymentMethodDataTypes
+            + Default
+            + Eq
+            + Debug
+            + Send
+            + serde::Serialize
+            + serde::de::DeserializeOwned
+            + Clone
+            + Sync
+            + domain_types::types::CardConversionHelper<T>
+            + 'static,
+    >(
+        &self,
+        connector_data: &ConnectorData<T>,
+        cached_access_token: Option<(String, Option<i64>)>,
+        payment_flow_data: &PaymentFlowData,
+        connector_auth_type: &ConnectorAuthType,
+        connector_name: &str,
+        service_name: &str,
+        event_params: EventParams<'_>,
+    ) -> Result<AccessTokenResponseData, tonic::Status> {
+        let access_token_data = match cached_access_token {
+            Some((token, expires_in)) => {
+                // If provided cached token - use it, don't generate new one
+                tracing::info!("Using cached access token from Hyperswitch");
+                AccessTokenResponseData {
+                    access_token: token,
+                    token_type: None,
+                    expires_in,
+                }
+            }
+            None => {
+                // No cached token - generate fresh one
+                tracing::info!("No cached access token found, generating new token");
+
+                let access_token_data = Box::pin(self.handle_access_token(
+                    connector_data.clone(),
+                    payment_flow_data,
+                    connector_auth_type.clone(),
+                    connector_name,
+                    service_name,
+                    event_params,
+                ))
+                .await
+                .map_err(|e| {
+                    let message = e
+                        .error_message
+                        .unwrap_or_else(|| "Access token creation failed".to_string());
+                    tonic::Status::internal(message)
+                })?;
+
+                tracing::info!(
+                    "Access token created successfully with expiry: {:?}",
+                    access_token_data.expires_in
+                );
+
+                access_token_data
+            }
+        };
+
+        Ok(access_token_data)
+    }
+
     #[allow(clippy::too_many_arguments)]
     async fn process_authorization_internal<
         T: PaymentMethodDataTypes
@@ -386,37 +453,6 @@ impl Payments {
             payment_flow_data
         };
 
-        let should_do_payment_method_token =
-            connector_data.connector.should_do_payment_method_token();
-
-        let payment_flow_data = if should_do_payment_method_token {
-            let event_params = EventParams {
-                _connector_name: &connector.to_string(),
-                _service_name: service_name,
-                request_id,
-                lineage_ids,
-                reference_id,
-                shadow_mode: metadata_payload.shadow_mode,
-            };
-            let payment_method_token_data = self
-                .handle_payment_session_token(
-                    connector_data.clone(),
-                    &payment_flow_data,
-                    connector_auth_details.clone(),
-                    event_params,
-                    &payload,
-                    &connector.to_string(),
-                    service_name,
-                )
-                .await?;
-            tracing::info!("Payment Method Token created successfully");
-            payment_flow_data.set_payment_method_token(Some(payment_method_token_data.token))
-        } else {
-            payment_flow_data
-        };
-
-        // This duplicate session token check has been removed - the session token handling is already done above
-
         // Create connector request data
         let payment_authorize_data = PaymentsAuthorizeData::foreign_try_from(payload.clone())
             .map_err(|err| {
@@ -430,6 +466,38 @@ impl Payments {
             })?
             // Set session token from payment flow data if available
             .set_session_token(payment_flow_data.session_token.clone());
+
+        let should_do_payment_method_token =
+            connector_data.connector.should_do_payment_method_token(
+                payment_flow_data.payment_method,
+                payment_authorize_data.payment_method_type,
+            );
+
+        let payment_flow_data = if should_do_payment_method_token {
+            let event_params = EventParams {
+                _connector_name: &connector.to_string(),
+                _service_name: service_name,
+                request_id,
+                lineage_ids,
+                reference_id,
+                shadow_mode: metadata_payload.shadow_mode,
+            };
+            let payment_method_token_data = self
+                .handle_payment_method_token(
+                    connector_data.clone(),
+                    &payment_flow_data,
+                    connector_auth_details.clone(),
+                    event_params,
+                    &payment_authorize_data,
+                    &connector.to_string(),
+                    service_name,
+                )
+                .await?;
+            tracing::info!("Payment Method Token created successfully");
+            payment_flow_data.set_payment_method_token(Some(payment_method_token_data.token))
+        } else {
+            payment_flow_data
+        };
 
         // Construct router data
         let router_data = RouterDataV2::<
@@ -478,6 +546,198 @@ impl Payments {
         };
 
         // Execute connector processing
+        let response = external_services::service::execute_connector_processing_step(
+            &self.config.proxy,
+            connector_integration,
+            router_data,
+            None,
+            event_params,
+            token_data,
+            common_enums::CallConnectorAction::Trigger,
+            test_context,
+            api_tag,
+        )
+        .await;
+
+        // Generate response - pass both success and error cases
+        let authorize_response = match response {
+            Ok(success_response) => domain_types::types::generate_payment_authorize_response(
+                success_response,
+            )
+            .map_err(|err| {
+                tracing::error!("Failed to generate authorize response: {:?}", err);
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some("Failed to generate authorize response".to_string()),
+                    Some("RESPONSE_GENERATION_ERROR".to_string()),
+                    None,
+                )
+            })?,
+            Err(error_report) => {
+                // Convert error to RouterDataV2 with error response
+                let error_router_data = RouterDataV2 {
+                    flow: std::marker::PhantomData,
+                    resource_common_data: payment_flow_data,
+                    connector_auth_type: connector_auth_details,
+                    request: PaymentsAuthorizeData::foreign_try_from(payload.clone()).map_err(
+                        |err| {
+                            tracing::error!(
+                                "Failed to process payment authorize data in error path: {:?}",
+                                err
+                            );
+                            PaymentAuthorizationError::new(
+                                grpc_api_types::payments::PaymentStatus::Pending,
+                                Some(
+                                    "Failed to process payment authorize data in error path"
+                                        .to_string(),
+                                ),
+                                Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
+                                None,
+                            )
+                        },
+                    )?,
+                    response: Err(ErrorResponse {
+                        status_code: 400,
+                        code: "CONNECTOR_ERROR".to_string(),
+                        message: format!("{error_report}"),
+                        reason: None,
+                        attempt_status: Some(common_enums::AttemptStatus::Failure),
+                        connector_transaction_id: None,
+                        network_decline_code: None,
+                        network_advice_code: None,
+                        network_error_message: None,
+                    }),
+                };
+                domain_types::types::generate_payment_authorize_response::<T>(error_router_data)
+                    .map_err(|err| {
+                        tracing::error!(
+                            "Failed to generate authorize response for connector error: {:?}",
+                            err
+                        );
+                        PaymentAuthorizationError::new(
+                            grpc_api_types::payments::PaymentStatus::Pending,
+                            Some(format!("Connector error: {error_report}")),
+                            Some("CONNECTOR_ERROR".to_string()),
+                            None,
+                        )
+                    })?
+            }
+        };
+
+        Ok(authorize_response)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn process_authorization_only_internal<
+        T: PaymentMethodDataTypes
+            + Default
+            + Eq
+            + Debug
+            + Send
+            + serde::Serialize
+            + serde::de::DeserializeOwned
+            + Clone
+            + Sync
+            + domain_types::types::CardConversionHelper<T>
+            + 'static,
+    >(
+        &self,
+        payload: PaymentServiceAuthorizeOnlyRequest,
+        connector: domain_types::connector_types::ConnectorEnum,
+        connector_auth_details: ConnectorAuthType,
+        metadata: &MaskedMetadata,
+        metadata_payload: &utils::MetadataPayload,
+        service_name: &str,
+        request_id: &str,
+        token_data: Option<TokenData>,
+    ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
+        //get connector data
+        let connector_data = ConnectorData::get_connector_by_name(&connector);
+
+        // Get connector integration
+        let connector_integration: BoxedConnectorIntegrationV2<
+            '_,
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        > = connector_data.connector.get_connector_integration_v2();
+
+        // Create common request data
+        let payment_flow_data = PaymentFlowData::foreign_try_from((
+            payload.clone(),
+            self.config.connectors.clone(),
+            metadata,
+        ))
+        .map_err(|err| {
+            tracing::error!("Failed to process payment flow data: {:?}", err);
+            PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some("Failed to process payment flow data".to_string()),
+                Some("PAYMENT_FLOW_ERROR".to_string()),
+                None,
+            )
+        })?;
+
+        // Create connector request data
+        let payment_authorize_data = PaymentsAuthorizeData::foreign_try_from(payload.clone())
+            .map_err(|err| {
+                tracing::error!("Failed to process payment authorize data: {:?}", err);
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some("Failed to process payment authorize data".to_string()),
+                    Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
+                    None,
+                )
+            })?;
+
+        // Construct router data
+        let router_data = RouterDataV2::<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        > {
+            flow: std::marker::PhantomData,
+            resource_common_data: payment_flow_data.clone(),
+            connector_auth_type: connector_auth_details.clone(),
+            request: payment_authorize_data,
+            response: Err(ErrorResponse::default()),
+        };
+
+        // Get API tag for the current flow with payment method type from domain layer
+        let api_tag = self
+            .config
+            .api_tags
+            .get_tag(FlowName::Authorize, router_data.request.payment_method_type);
+
+        // Create test context if test mode is enabled
+        let test_context = self
+            .config
+            .test
+            .create_test_context(request_id)
+            .map_err(|e| {
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(format!("Test mode configuration error: {e}")),
+                    Some("TEST_CONFIG_ERROR".to_string()),
+                    None,
+                )
+            })?;
+
+        // Execute connector processing
+        let event_params = EventProcessingParams {
+            connector_name: &connector.to_string(),
+            service_name,
+            flow_name: FlowName::Authorize,
+            event_config: &self.config.events,
+            request_id,
+            lineage_ids: &metadata_payload.lineage_ids,
+            reference_id: &metadata_payload.reference_id,
+            shadow_mode: metadata_payload.shadow_mode,
+        };
+
+        // Execute connector processing - ONLY the authorize call
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
@@ -1313,7 +1573,7 @@ impl Payments {
     }
 
     #[allow(clippy::too_many_arguments)]
-    async fn handle_payment_session_token<
+    async fn handle_payment_method_token<
         T: PaymentMethodDataTypes
             + Default
             + Eq
@@ -1330,7 +1590,7 @@ impl Payments {
         payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
         event_params: EventParams<'_>,
-        payload: &PaymentServiceAuthorizeRequest,
+        payment_authorize_data: &PaymentsAuthorizeData<T>,
         connector_name: &str,
         service_name: &str,
     ) -> Result<PaymentMethodTokenResponse, PaymentAuthorizationError> {
@@ -1343,44 +1603,8 @@ impl Payments {
             PaymentMethodTokenResponse,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let currency =
-            common_enums::Currency::foreign_try_from(payload.currency()).map_err(|e| {
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(format!("Currency conversion failed: {e}")),
-                    Some("CURRENCY_ERROR".to_string()),
-                    None,
-                )
-            })?;
-        let payment_method_tokenization_data = PaymentMethodTokenizationData {
-            amount: common_utils::types::MinorUnit::new(payload.amount),
-            currency,
-            integrity_object: None,
-            browser_info: None,
-            customer_acceptance: None,
-            mandate_id: None,
-            setup_future_usage: None,
-            setup_mandate_details: None,
-            payment_method_data:
-                domain_types::payment_method_data::PaymentMethodData::foreign_try_from(
-                    payload.payment_method.clone().ok_or_else(|| {
-                        PaymentAuthorizationError::new(
-                            grpc_api_types::payments::PaymentStatus::Pending,
-                            Some("Payment method is required".to_string()),
-                            Some("PAYMENT_METHOD_MISSING".to_string()),
-                            None,
-                        )
-                    })?,
-                )
-                .map_err(|e| {
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some(format!("Payment method data conversion failed: {e}")),
-                        Some("PAYMENT_METHOD_DATA_ERROR".to_string()),
-                        None,
-                    )
-                })?,
-        };
+        let payment_method_tokenization_data =
+            PaymentMethodTokenizationData::from(payment_authorize_data);
 
         let payment_method_token_router_data = RouterDataV2::<
             PaymentMethodToken,
@@ -1714,6 +1938,143 @@ impl PaymentService for Payments {
     }
 
     #[tracing::instrument(
+        name = "payment_authorize_only",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = tracing::field::Empty,
+            service_method = FlowName::Authorize.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::Authorize.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn authorize_only(
+        &self,
+        request: tonic::Request<PaymentServiceAuthorizeOnlyRequest>,
+    ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
+        info!("PAYMENT_AUTHORIZE_ONLY_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        grpc_logging_wrapper(request, &service_name, self.config.clone(), FlowName::Authorize, |request_data| {
+            let service_name = service_name.clone();
+            Box::pin(async move {
+                let metadata_payload = request_data.extracted_metadata;
+                let metadata = &request_data.masked_metadata;
+                let payload = request_data.payload;
+
+                let authorize_response = match payload.payment_method.as_ref() {
+                    Some(pm) => {
+                        match pm.payment_method.as_ref() {
+                            Some(payment_method::PaymentMethod::Card(card_details)) => {
+                                match &card_details.card_type {
+                                    Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(proxy_card_details)) | Some(grpc_api_types::payments::card_payment_method_type::CardType::DebitProxy(proxy_card_details)) => {
+                                        let token_data = proxy_card_details.to_token_data();
+                                        match Box::pin(self.process_authorization_only_internal::<VaultTokenHolder>(
+                                            payload.clone(),
+                                            metadata_payload.connector,
+                                            metadata_payload.connector_auth_type.clone(),
+                                            metadata,
+                                            &metadata_payload,
+                                            &service_name,
+                                            &metadata_payload.request_id,
+                                            Some(token_data),
+                                        ))
+                                        .await
+                                        {
+                                            Ok(response) => {
+                                                tracing::info!("INJECTOR: Authorization only completed successfully with injector");
+                                                response
+                                            },
+                                            Err(error_response) => {
+                                                tracing::error!("INJECTOR: Authorization only failed with injector - error: {:?}", error_response);
+                                                PaymentServiceAuthorizeResponse::from(error_response)
+                                            },
+                                        }
+                                    }
+                                    _ => {
+                                        tracing::info!("REGULAR: Processing regular payment authorization only (no injector)");
+                                        match Box::pin(self.process_authorization_only_internal::<DefaultPCIHolder>(
+                                            payload.clone(),
+                                            metadata_payload.connector,
+                                            metadata_payload.connector_auth_type.clone(),
+                                            metadata,
+                                            &metadata_payload,
+                                            &service_name,
+                                            &metadata_payload.request_id,
+                                            None,
+                                        ))
+                                        .await
+                                        {
+                                            Ok(response) => {
+                                                tracing::info!("REGULAR: Authorization only completed successfully without injector");
+                                                response
+                                            },
+                                            Err(error_response) => {
+                                                tracing::error!("REGULAR: Authorization only failed without injector - error: {:?}", error_response);
+                                                PaymentServiceAuthorizeResponse::from(error_response)
+                                            },
+                                        }
+                                    }
+                                }
+                            }
+                            _ => {
+                                match Box::pin(self.process_authorization_only_internal::<DefaultPCIHolder>(
+                                    payload.clone(),
+                                    metadata_payload.connector,
+                                    metadata_payload.connector_auth_type.clone(),
+                                    metadata,
+                                    &metadata_payload,
+                                    &service_name,
+                                    &metadata_payload.request_id,
+                                    None,
+                                ))
+                                .await
+                                {
+                                    Ok(response) => response,
+                                    Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
+                                }
+                            }
+                        }
+                    }
+                    _ => {
+                        match Box::pin(self.process_authorization_only_internal::<DefaultPCIHolder>(
+                            payload.clone(),
+                            metadata_payload.connector,
+                            metadata_payload.connector_auth_type.clone(),
+                            metadata,
+                            &metadata_payload,
+                            &service_name,
+                            &metadata_payload.request_id,
+                            None,
+                        ))
+                        .await
+                        {
+                            Ok(response) => response,
+                            Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
+                        }
+                    }
+                };
+
+                Ok(tonic::Response::new(authorize_response))
+            })
+        })
+        .await
+    }
+
+    #[tracing::instrument(
         name = "payment_sync",
         fields(
             name = common_utils::consts::NAME,
@@ -1800,57 +2161,29 @@ impl PaymentService for Payments {
 
                     // Conditional token generation - ONLY if not provided in request
                     let payment_flow_data = if should_do_access_token {
-                        let access_token_data = match cached_access_token {
-                            Some((token, expires_in)) => {
-                                // If provided cached token - use it, don't generate new one
-                                tracing::info!("Using cached access token from Hyperswitch");
-                                Some(AccessTokenResponseData {
-                                    access_token: token,
-                                    token_type: None,
-                                    expires_in,
-                                })
-                            }
-                            None => {
-                                // No cached token - generate fresh one
-                                tracing::info!(
-                                    "No cached access token found, generating new token"
-                                );
-                                let event_params = EventParams {
-                                    _connector_name: &connector.to_string(),
-                                    _service_name: &service_name,
-                                    request_id,
-                                    lineage_ids,
-                                    reference_id,
-                                    shadow_mode: metadata_payload.shadow_mode,
-                                };
-
-                                let access_token_data = Box::pin(self.handle_access_token(
-                                    connector_data.clone(),
-                                    &payment_flow_data,
-                                    metadata_payload.connector_auth_type.clone(),
-                                    &metadata_payload.connector.to_string(),
-                                    &service_name,
-                                    event_params,
-                                ))
-                                .await
-                                .map_err(|e| {
-                                    let message = e.error_message.unwrap_or_else(|| {
-                                        "Access token creation failed".to_string()
-                                    });
-                                    tonic::Status::internal(message)
-                                })?;
-
-                                tracing::info!(
-                                    "Access token created successfully with expiry: {:?}",
-                                    access_token_data.expires_in
-                                );
-
-                                Some(access_token_data)
-                            }
+                        let event_params = EventParams {
+                            _connector_name: &connector.to_string(),
+                            _service_name: &service_name,
+                            request_id,
+                            lineage_ids,
+                            reference_id,
+                            shadow_mode: metadata_payload.shadow_mode,
                         };
 
+                        let access_token_data = self
+                            .handle_access_token_flow(
+                                &connector_data,
+                                cached_access_token,
+                                &payment_flow_data,
+                                &metadata_payload.connector_auth_type,
+                                &connector.to_string(),
+                                &service_name,
+                                event_params,
+                            )
+                            .await?;
+
                         // Store in flow data for connector API calls
-                        payment_flow_data.set_access_token(access_token_data)
+                        payment_flow_data.set_access_token(Some(access_token_data))
                     } else {
                         // Connector doesn't support access tokens
                         payment_flow_data
@@ -1958,6 +2291,7 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<PaymentServiceVoidRequest>,
     ) -> Result<tonic::Response<PaymentServiceVoidResponse>, tonic::Status> {
+        info!("PAYMENT_VOID_FLOW: initiated");
         let service_name = request
             .extensions()
             .get::<String>()
@@ -1968,7 +2302,84 @@ impl PaymentService for Payments {
             &service_name,
             self.config.clone(),
             FlowName::Void,
-            |request_data| async move { self.internal_void_payment(request_data).await },
+            |mut request_data| {
+                let service_name = service_name.clone();
+                Box::pin(async move {
+                    let metadata_payload = &request_data.extracted_metadata;
+                    let connector = metadata_payload.connector;
+
+                    // Get connector data to check if access token is needed
+                    let connector_data: ConnectorData<DefaultPCIHolder> =
+                        ConnectorData::get_connector_by_name(&connector);
+
+                    // Check if connector supports access tokens
+                    let should_do_access_token = connector_data.connector.should_do_access_token();
+
+                    if should_do_access_token {
+                        // Extract access token from Hyperswitch request
+                        let cached_access_token = request_data
+                            .payload
+                            .state
+                            .as_ref()
+                            .and_then(|state| state.access_token.as_ref())
+                            .map(|access| (access.token.clone(), access.expires_in_seconds));
+
+                        // Create temporary payment flow data for access token creation
+                        let temp_payment_flow_data = PaymentFlowData::foreign_try_from((
+                            request_data.payload.clone(),
+                            self.config.connectors.clone(),
+                            &request_data.masked_metadata,
+                        ))
+                        .map_err(|e| {
+                            tonic::Status::internal(format!(
+                                "Failed to create payment flow data: {e}"
+                            ))
+                        })?;
+
+                        let event_params = EventParams {
+                            _connector_name: &connector.to_string(),
+                            _service_name: &service_name,
+                            request_id: &metadata_payload.request_id,
+                            lineage_ids: &metadata_payload.lineage_ids,
+                            reference_id: &metadata_payload.reference_id,
+                            shadow_mode: metadata_payload.shadow_mode,
+                        };
+
+                        let access_token_data = self
+                            .handle_access_token_flow(
+                                &connector_data,
+                                cached_access_token,
+                                &temp_payment_flow_data,
+                                &metadata_payload.connector_auth_type,
+                                &connector.to_string(),
+                                &service_name,
+                                event_params,
+                            )
+                            .await?;
+
+                        // Create access token info for the request
+                        let access_token_info = grpc_api_types::payments::AccessToken {
+                            token: access_token_data.access_token,
+                            expires_in_seconds: access_token_data.expires_in,
+                            token_type: access_token_data.token_type,
+                        };
+
+                        // Set the access token in the request payload
+                        if request_data.payload.state.is_none() {
+                            request_data.payload.state =
+                                Some(grpc_api_types::payments::ConnectorState {
+                                    access_token: Some(access_token_info),
+                                    connector_customer_id: None,
+                                });
+                        } else if let Some(ref mut state) = request_data.payload.state {
+                            state.access_token = Some(access_token_info);
+                        }
+                    }
+
+                    // Now call the existing internal_void_payment method
+                    self.internal_void_payment(request_data).await
+                })
+            },
         )
         .await
     }
@@ -2277,17 +2688,95 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<PaymentServiceCaptureRequest>,
     ) -> Result<tonic::Response<PaymentServiceCaptureResponse>, tonic::Status> {
+        info!("PAYMENT_CAPTURE_FLOW: initiated");
         let service_name = request
             .extensions()
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
+
         grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
             FlowName::Capture,
-            |request_data| async move { self.internal_payment_capture(request_data).await },
+            |mut request_data| {
+                let service_name = service_name.clone();
+                Box::pin(async move {
+                    let metadata_payload = &request_data.extracted_metadata;
+                    let connector = metadata_payload.connector;
+
+                    // Get connector data to check if access token is needed
+                    let connector_data: ConnectorData<DefaultPCIHolder> =
+                        ConnectorData::get_connector_by_name(&connector);
+
+                    // Check if connector supports access tokens
+                    let should_do_access_token = connector_data.connector.should_do_access_token();
+
+                    if should_do_access_token {
+                        // Extract access token from Hyperswitch request
+                        let cached_access_token = request_data
+                            .payload
+                            .state
+                            .as_ref()
+                            .and_then(|state| state.access_token.as_ref())
+                            .map(|access| (access.token.clone(), access.expires_in_seconds));
+
+                        // Create temporary payment flow data for access token creation
+                        let temp_payment_flow_data = PaymentFlowData::foreign_try_from((
+                            request_data.payload.clone(),
+                            self.config.connectors.clone(),
+                            &request_data.masked_metadata,
+                        ))
+                        .map_err(|e| {
+                            tonic::Status::internal(format!(
+                                "Failed to create payment flow data: {e}"
+                            ))
+                        })?;
+
+                        let event_params = EventParams {
+                            _connector_name: &connector.to_string(),
+                            _service_name: &service_name,
+                            request_id: &metadata_payload.request_id,
+                            lineage_ids: &metadata_payload.lineage_ids,
+                            reference_id: &metadata_payload.reference_id,
+                            shadow_mode: metadata_payload.shadow_mode,
+                        };
+
+                        let access_token_data = self
+                            .handle_access_token_flow(
+                                &connector_data,
+                                cached_access_token,
+                                &temp_payment_flow_data,
+                                &metadata_payload.connector_auth_type,
+                                &connector.to_string(),
+                                &service_name,
+                                event_params,
+                            )
+                            .await?;
+
+                        // Create access token info for the request
+                        let access_token_info = grpc_api_types::payments::AccessToken {
+                            token: access_token_data.access_token.clone(),
+                            expires_in_seconds: access_token_data.expires_in,
+                            token_type: access_token_data.token_type.clone(),
+                        };
+
+                        // Set the access token in the request payload
+                        if request_data.payload.state.is_none() {
+                            request_data.payload.state =
+                                Some(grpc_api_types::payments::ConnectorState {
+                                    access_token: Some(access_token_info),
+                                    connector_customer_id: None,
+                                });
+                        } else if let Some(ref mut state) = request_data.payload.state {
+                            state.access_token = Some(access_token_info);
+                        }
+                    }
+                    // Now call the existing internal_payment_capture method
+                    self.internal_payment_capture(request_data).await
+                })
+            },
         )
         .await
     }
@@ -2501,6 +2990,113 @@ impl PaymentService for Payments {
                         .map_err(|e| e.into_grpc_status())?;
 
                     Ok(tonic::Response::new(setup_mandate_response))
+                })
+            },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "create_session_token",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = FlowName::CreateSessionToken.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::CreateSessionToken.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn create_session_token(
+        &self,
+        request: tonic::Request<PaymentServiceCreateSessionTokenRequest>,
+    ) -> Result<tonic::Response<PaymentServiceCreateSessionTokenResponse>, tonic::Status> {
+        info!("CREATE_SESSION_TOKEN_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            FlowName::CreateSessionToken,
+            |request_data| {
+                let service_name = service_name.clone();
+                Box::pin(async move {
+                    let payload = request_data.payload;
+                    let metadata_payload = request_data.extracted_metadata;
+                    let (connector, request_id, lineage_ids) = (
+                        metadata_payload.connector,
+                        metadata_payload.request_id,
+                        metadata_payload.lineage_ids,
+                    );
+                    let connector_auth_details = &metadata_payload.connector_auth_type;
+
+                    //get connector data
+                    let connector_data: ConnectorData<DefaultPCIHolder> =
+                        ConnectorData::get_connector_by_name(&connector);
+
+                    // Create common request data
+                    let payment_flow_data = PaymentFlowData::foreign_try_from((
+                        payload.clone(),
+                        self.config.connectors.clone(),
+                        &request_data.masked_metadata,
+                    ))
+                    .map_err(|e| e.into_grpc_status())?;
+
+                    // Use the existing handle_session_token function
+                    let event_params = EventParams {
+                        _connector_name: &connector.to_string(),
+                        _service_name: &service_name,
+                        request_id: &request_id,
+                        lineage_ids: &lineage_ids,
+                        reference_id: &metadata_payload.reference_id,
+                        shadow_mode: metadata_payload.shadow_mode,
+                    };
+
+                    let session_token_data = Box::pin(self.handle_session_token(
+                        connector_data.clone(),
+                        &payment_flow_data,
+                        connector_auth_details.clone(),
+                        &payload,
+                        &connector.to_string(),
+                        &service_name,
+                        event_params,
+                    ))
+                    .await
+                    .map_err(|e| {
+                        let message = e
+                            .error_message
+                            .unwrap_or_else(|| "Session token creation failed".to_string());
+                        tonic::Status::internal(message)
+                    })?;
+
+                    tracing::info!(
+                        "Session token created successfully: {}",
+                        session_token_data.session_token
+                    );
+
+                    // Create response
+                    let session_token_response = PaymentServiceCreateSessionTokenResponse {
+                        session_token: session_token_data.session_token,
+                        error_message: None,
+                        error_code: None,
+                        status_code: 200u16.into(),
+                    };
+
+                    Ok(tonic::Response::new(session_token_response))
                 })
             },
         )
@@ -2924,6 +3520,117 @@ impl PaymentService for Payments {
                             .map_err(|e| e.into_grpc_status())?;
 
                     Ok(tonic::Response::new(connector_customer_response))
+                })
+            },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "create_access_token",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = FlowName::CreateAccessToken.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::CreateAccessToken.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn create_access_token(
+        &self,
+        request: tonic::Request<PaymentServiceCreateAccessTokenRequest>,
+    ) -> Result<tonic::Response<PaymentServiceCreateAccessTokenResponse>, tonic::Status> {
+        tracing::info!("ACCESS_TOKEN_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            FlowName::CreateAccessToken,
+            |request_data| {
+                let service_name = service_name.clone();
+                Box::pin(async move {
+                    let metadata_payload = request_data.extracted_metadata;
+                    let (connector, request_id, lineage_ids) = (
+                        metadata_payload.connector,
+                        metadata_payload.request_id,
+                        metadata_payload.lineage_ids,
+                    );
+                    let connector_auth_details = &metadata_payload.connector_auth_type;
+
+                    // Get connector data
+                    let connector_data: ConnectorData<DefaultPCIHolder> =
+                        ConnectorData::get_connector_by_name(&connector);
+                    let access_token_create_request = request_data.payload;
+                    // Create minimal payment flow data for access token generation
+                    let payment_flow_data = PaymentFlowData::foreign_try_from((
+                        access_token_create_request,
+                        self.config.connectors.clone(),
+                        &request_data.masked_metadata,
+                    ))
+                    .map_err(|e| e.into_grpc_status())?;
+
+                    // Create event params for the handle_access_token function
+                    let event_params = EventParams {
+                        _connector_name: &connector.to_string(),
+                        _service_name: &service_name,
+                        request_id: &request_id,
+                        lineage_ids: &lineage_ids,
+                        reference_id: &metadata_payload.reference_id,
+                        shadow_mode: metadata_payload.shadow_mode,
+                    };
+
+                    // Reuse the existing handle_access_token function
+                    let access_token_data = Box::pin(self.handle_access_token(
+                        connector_data,
+                        &payment_flow_data,
+                        connector_auth_details.clone(),
+                        &connector.to_string(),
+                        &service_name,
+                        event_params,
+                    ))
+                    .await
+                    .map_err(|e| {
+                        let message = e
+                            .error_message
+                            .unwrap_or_else(|| "Access token creation failed".to_string());
+                        tonic::Status::internal(message)
+                    })?;
+
+                    tracing::info!(
+                        "Access token created successfully with expiry: {:?}",
+                        access_token_data.expires_in
+                    );
+
+                    // Create response using the access token data
+                    let create_access_token_response = PaymentServiceCreateAccessTokenResponse {
+                        access_token: access_token_data.access_token,
+                        token_type: access_token_data.token_type,
+                        expires_in_seconds: access_token_data.expires_in,
+                        status: i32::from(grpc_api_types::payments::OperationStatus::Success),
+                        error_code: None,
+                        error_message: None,
+                        status_code: 200,
+                        response_ref_id: None,
+                    };
+
+                    Ok(tonic::Response::new(create_access_token_response))
                 })
             },
         )

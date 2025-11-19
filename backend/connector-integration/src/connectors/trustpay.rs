@@ -41,10 +41,11 @@ pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::genera
 
 use transformers::{
     self as trustpay, TrustpayAuthUpdateRequest, TrustpayAuthUpdateResponse, TrustpayErrorResponse,
-    TrustpayPaymentsResponse as TrustpayPaymentsSyncResponse,
+    TrustpayPaymentsRequest, TrustpayPaymentsResponse as TrustpayPaymentsSyncResponse,
+    TrustpayPaymentsResponse,
 };
 
-use super::macros;
+use super::macros::{self, ContentTypeSelector};
 use crate::types::ResponseRouterData;
 
 // Local headers module
@@ -167,6 +168,12 @@ macros::create_all_prerequisites!(
             request_body: TrustpayAuthUpdateRequest,
             response_body: TrustpayAuthUpdateResponse,
             router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        ),
+        (
+            flow: Authorize,
+            request_body: TrustpayPaymentsRequest<T>,
+            response_body: TrustpayPaymentsResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -239,6 +246,30 @@ macros::create_all_prerequisites!(
         }
     }
 );
+
+// Implement ContentTypeSelector for dynamic content type selection
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ContentTypeSelector<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    for Trustpay<T>
+{
+    fn get_dynamic_content_type(
+        &self,
+        req: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<common_enums::DynamicContentType, errors::ConnectorError> {
+        match req.resource_common_data.payment_method {
+            common_enums::PaymentMethod::BankRedirect
+            | common_enums::PaymentMethod::BankTransfer => {
+                Ok(common_enums::DynamicContentType::Json)
+            }
+            _ => Ok(common_enums::DynamicContentType::FormUrlEncoded),
+        }
+    }
+}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Trustpay<T>
@@ -394,17 +425,48 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Implementation for empty stubs - these will need to be properly implemented later
+// Macro implementation for Authorize flow using dynamic content types
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Trustpay,
+    curl_request: Dynamic(TrustpayPaymentsRequest<T>),
+    curl_response: TrustpayPaymentsResponse,
+    flow_name: Authorize,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthorizeData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers_for_payments(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            match req.resource_common_data.payment_method {
+                common_enums::PaymentMethod::BankRedirect
+                | common_enums::PaymentMethod::BankTransfer => Ok(format!(
+                    "{}{}",
+                    self.connector_base_url_bank_redirects_payments(req),
+                    "api/Payments/Payment"
+                )),
+                _ => Ok(format!(
+                    "{}{}",
+                    self.connector_base_url_payments(req),
+                    "api/v1/purchase"
+                )),
+            }
+        }
+    }
+);
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData<T>,
-        PaymentsResponseData,
-    > for Trustpay<T>
-{
-}
+// Implementation for empty stubs - these will need to be properly implemented later
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
