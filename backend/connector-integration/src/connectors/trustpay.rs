@@ -47,7 +47,7 @@ use transformers::{
 
 use super::macros::{self, ContentTypeSelector};
 use crate::types::ResponseRouterData;
-use crate::utils::{ConnectorErrorType, ConnectorErrorTypeMapping};
+use crate::utils::{self, ConnectorErrorType, ConnectorErrorTypeMapping};
 
 // Local headers module
 mod headers {
@@ -362,7 +362,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 }
                 let error_list = response_data.errors.clone().unwrap_or_default();
                 let option_error_code_message =
-                    crate::utils::get_error_code_error_message_based_on_priority(
+                    utils::get_error_code_error_message_based_on_priority(
                         self.clone(),
                         error_list.into_iter().map(|errors| errors.into()).collect(),
                     );
