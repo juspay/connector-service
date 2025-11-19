@@ -38,7 +38,7 @@ message PaymentMethod {
     UpiIntent upi_intent = 4;                            // UPI Intent payment method - SUPPORTED
     UpiQr upi_qr = 6;                                    // UPI QR payment method - SUPPORTED
     TokenPaymentMethodType token = 5;                    // Tokenized payment methods - SUPPORTED
-    // BankTransferPaymentMethodType bank_transfer = 6;     // Bank transfer payment methods - TODO: Not yet supported
+    BankTransferPaymentMethodType bank_transfer = 15;     // Bank transfer payment methods - SUPPORTED
     OnlineBankingPaymentMethodType online_banking = 7;   // Online banking payment methods - SUPPORTED
     // BNPLPaymentMethodType bnpl = 8;                      // Buy now, pay later payment methods - TODO: Not yet supported
     MobilePaymentMethodType mobile_payment = 9;          // Mobile payment methods - SUPPORTED
@@ -106,24 +106,22 @@ message RTPPaymentMethodType {
 }
 */
 
-// Bank transfer payment methods category - TODO: Not yet supported
+// Bank transfer payment methods category
 // Includes various bank transfer systems across different regions
-/*
 message BankTransferPaymentMethodType {
   oneof bank_transfer_type {
-    ACH ach = 1;                           // Automated Clearing House - US bank transfer system
-    BACS bacs = 2;                         // Bankers' Automated Clearing Services - UK bank transfer
-    SEPA sepa = 3;                         // Single Euro Payments Area direct debit
-    SEPABankTransfer sepa_bank_transfer = 4; // SEPA credit transfer
-    EFT eft = 5;                           // Electronic Funds Transfer - Generic bank transfer
-    FPS fps = 6;                           // Faster Payments Service - UK real-time payments
-    LocalBankTransfer local_bank_transfer = 7; // Generic local bank transfer
+    // ACH ach = 1;                           // Automated Clearing House - US bank transfer system
+    // BACS bacs = 2;                         // Bankers' Automated Clearing Services - UK bank transfer
+    // SEPA sepa = 3;                         // Single Euro Payments Area direct debit
+    // SEPABankTransfer sepa_bank_transfer = 4; // SEPA credit transfer
+    // EFT eft = 5;                           // Electronic Funds Transfer - Generic bank transfer
+    // FPS fps = 6;                           // Faster Payments Service - UK real-time payments
+    // LocalBankTransfer local_bank_transfer = 7; // Generic local bank transfer
     InstantBankTransfer instant_bank_transfer = 8; // Generic instant bank transfer
-    BCABankTransfer bca_bank_transfer = 9; // Bank Central Asia transfer in Indonesia
-    PermataBankTransfer permata_bank_transfer = 10; // Permata Bank transfer in Indonesia
+    // BCABankTransfer bca_bank_transfer = 9; // Bank Central Asia transfer in Indonesia
+    // PermataBankTransfer permata_bank_transfer = 10; // Permata Bank transfer in Indonesia
   }
 }
-*/
 
 // Online banking payment methods category
 // Includes online banking systems and open banking initiatives
@@ -571,7 +569,7 @@ message VietQR {
 }
 
 // ============================================================================
-// BANK TRANSFER PAYMENT METHODS - TODO: Not yet supported
+// BANK TRANSFER PAYMENT METHODS
 // ============================================================================
 
 /*
@@ -610,12 +608,14 @@ message FPS {
 message LocalBankTransfer {
   // Fields will be added as needed for local bank transfers
 }
+*/
 
 // Instant Bank Transfer - Generic instant bank transfer method
 message InstantBankTransfer {
   // Fields will be added as needed for instant bank transfers
 }
 
+/*
 // BCA Bank Transfer - Bank Central Asia transfer in Indonesia
 message BCABankTransfer {
   // Fields will be added as needed for BCA Bank Transfer integration

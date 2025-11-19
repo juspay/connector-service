@@ -4,26 +4,31 @@ use common_enums::enums;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
+    pii,
     request::Method,
     types::{FloatMajorUnit, StringMajorUnit},
     Email,
 };
 use domain_types::{
-    connector_flow::CreateAccessToken,
+    connector_flow::{Authorize, CreateAccessToken},
     connector_types::{
-        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentsResponseData,
-        ResponseId,
+        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentsAuthorizeData,
+        PaymentsResponseData, ResponseId,
     },
     errors::{self, ConnectorError},
-    payment_method_data::{BankRedirectData, BankTransferData, PaymentMethodDataTypes},
-    router_data::{ConnectorAuthType, ErrorResponse},
+    payment_method_data::{
+        BankRedirectData, BankTransferData, Card, PaymentMethodData, PaymentMethodDataTypes,
+        RawCardNumber,
+    },
+    router_data::{ConnectorAuthType, ErrorResponse, NetworkTokenNumber},
     router_data_v2::RouterDataV2,
+    router_request_types::BrowserInformation,
     router_response_types::RedirectForm,
 };
-use hyperswitch_masking::{ExposeInterface, Secret};
-use serde::{Deserialize, Serialize};
-
+use error_stack::ResultExt;
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use reqwest::Url;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 type Error = error_stack::Report<errors::ConnectorError>;
@@ -56,6 +61,9 @@ impl TryFrom<&ConnectorAuthType> for TrustpayAuthType {
 }
 
 const CLIENT_CREDENTIAL: &str = "client_credentials";
+const CHALLENGE_WINDOW: &str = "1";
+const PAYMENT_TYPE: &str = "Plain";
+const STATUS: char = 'Y';
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum TrustpayPaymentMethod {
@@ -1021,6 +1029,532 @@ impl
                 }),
                 ..item.router_data
             }),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, PartialEq)]
+pub struct PaymentRequestCards<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
+    pub amount: StringMajorUnit,
+    pub currency: String,
+    pub pan: RawCardNumber<T>,
+    pub cvv: Secret<String>,
+    #[serde(rename = "exp")]
+    pub expiry_date: Secret<String>,
+    pub cardholder: Secret<String>,
+    pub reference: String,
+    #[serde(rename = "redirectUrl")]
+    pub redirect_url: String,
+    #[serde(rename = "billing[city]")]
+    pub billing_city: String,
+    #[serde(rename = "billing[country]")]
+    pub billing_country: common_enums::CountryAlpha2,
+    #[serde(rename = "billing[street1]")]
+    pub billing_street1: Secret<String>,
+    #[serde(rename = "billing[postcode]")]
+    pub billing_postcode: Secret<String>,
+    #[serde(rename = "customer[email]")]
+    pub customer_email: Email,
+    #[serde(rename = "customer[ipAddress]")]
+    pub customer_ip_address: Secret<String, pii::IpAddress>,
+    #[serde(rename = "browser[acceptHeader]")]
+    pub browser_accept_header: String,
+    #[serde(rename = "browser[language]")]
+    pub browser_language: String,
+    #[serde(rename = "browser[screenHeight]")]
+    pub browser_screen_height: String,
+    #[serde(rename = "browser[screenWidth]")]
+    pub browser_screen_width: String,
+    #[serde(rename = "browser[timezone]")]
+    pub browser_timezone: String,
+    #[serde(rename = "browser[userAgent]")]
+    pub browser_user_agent: String,
+    #[serde(rename = "browser[javaEnabled]")]
+    pub browser_java_enabled: String,
+    #[serde(rename = "browser[javaScriptEnabled]")]
+    pub browser_java_script_enabled: String,
+    #[serde(rename = "browser[screenColorDepth]")]
+    pub browser_screen_color_depth: String,
+    #[serde(rename = "browser[challengeWindow]")]
+    pub browser_challenge_window: String,
+    #[serde(rename = "browser[paymentAction]")]
+    pub payment_action: Option<String>,
+    #[serde(rename = "browser[paymentType]")]
+    pub payment_type: String,
+    pub descriptor: Option<String>,
+}
+
+#[derive(Debug, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentRequestBankRedirect {
+    pub payment_method: TrustpayPaymentMethod,
+    pub merchant_identification: MerchantIdentification,
+    pub payment_information: BankPaymentInformation,
+    pub callback_urls: CallbackURLs,
+}
+
+#[derive(Debug, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentRequestBankTransfer {
+    pub payment_method: TrustpayBankTransferPaymentMethod,
+    pub merchant_identification: MerchantIdentification,
+    pub payment_information: BankPaymentInformation,
+    pub callback_urls: CallbackURLs,
+}
+
+#[derive(Debug, Serialize, PartialEq)]
+pub struct PaymentRequestNetworkToken {
+    pub amount: StringMajorUnit,
+    pub currency: enums::Currency,
+    pub pan: NetworkTokenNumber,
+    #[serde(rename = "exp")]
+    pub expiry_date: Secret<String>,
+    #[serde(rename = "RedirectUrl")]
+    pub redirect_url: String,
+    #[serde(rename = "threeDSecureEnrollmentStatus")]
+    pub enrollment_status: char,
+    #[serde(rename = "threeDSecureEci")]
+    pub eci: String,
+    #[serde(rename = "threeDSecureAuthenticationStatus")]
+    pub authentication_status: char,
+    #[serde(rename = "threeDSecureVerificationId")]
+    pub verification_id: Secret<String>,
+}
+
+#[derive(Debug, Serialize, PartialEq)]
+#[serde(untagged)]
+pub enum TrustpayPaymentsRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
+    CardsPaymentRequest(Box<PaymentRequestCards<T>>),
+    BankRedirectPaymentRequest(Box<PaymentRequestBankRedirect>),
+    BankTransferPaymentRequest(Box<PaymentRequestBankTransfer>),
+    NetworkTokenPaymentRequest(Box<PaymentRequestNetworkToken>),
+}
+
+#[derive(Debug, Serialize, Eq, PartialEq)]
+pub struct TrustpayMandatoryParams {
+    pub billing_city: String,
+    pub billing_country: common_enums::CountryAlpha2,
+    pub billing_street1: Secret<String>,
+    pub billing_postcode: Secret<String>,
+    pub billing_first_name: Secret<String>,
+}
+
+fn get_card_request_data<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
+    item: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    browser_info: &BrowserInformation,
+    params: TrustpayMandatoryParams,
+    amount: StringMajorUnit,
+    ccard: &Card<T>,
+    return_url: String,
+) -> Result<TrustpayPaymentsRequest<T>, Error> {
+    let email = item.request.get_email()?;
+    let customer_ip_address = browser_info.get_ip_address()?;
+    let billing_last_name = item
+        .resource_common_data
+        .get_billing()?
+        .address
+        .as_ref()
+        .and_then(|address| address.last_name.clone());
+    Ok(TrustpayPaymentsRequest::CardsPaymentRequest(Box::new(
+        PaymentRequestCards {
+            amount,
+            currency: item.request.currency.to_string(),
+            pan: ccard.card_number.clone(),
+            cvv: ccard.card_cvc.clone(),
+            expiry_date: {
+                let year = ccard.card_exp_year.peek();
+                let year_2_digit = if year.len() == 4 { &year[2..] } else { year };
+                Secret::new(format!("{}/{}", ccard.card_exp_month.peek(), year_2_digit))
+            },
+            cardholder: get_full_name(params.billing_first_name, billing_last_name),
+            reference: item
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            redirect_url: return_url,
+            billing_city: params.billing_city,
+            billing_country: params.billing_country,
+            billing_street1: params.billing_street1,
+            billing_postcode: params.billing_postcode,
+            customer_email: email,
+            customer_ip_address,
+            browser_accept_header: browser_info.get_accept_header()?,
+            browser_language: browser_info.get_language()?,
+            browser_screen_height: browser_info.get_screen_height()?.to_string(),
+            browser_screen_width: browser_info.get_screen_width()?.to_string(),
+            browser_timezone: browser_info.get_time_zone()?.to_string(),
+            browser_user_agent: browser_info.get_user_agent()?,
+            browser_java_enabled: browser_info.get_java_enabled()?.to_string(),
+            browser_java_script_enabled: browser_info.get_java_script_enabled()?.to_string(),
+            browser_screen_color_depth: browser_info.get_color_depth()?.to_string(),
+            browser_challenge_window: CHALLENGE_WINDOW.to_string(),
+            payment_action: None,
+            payment_type: PAYMENT_TYPE.to_string(),
+            descriptor: item.request.statement_descriptor.clone(),
+        },
+    )))
+}
+
+fn get_full_name(
+    billing_first_name: Secret<String>,
+    billing_last_name: Option<Secret<String>>,
+) -> Secret<String> {
+    match billing_last_name {
+        Some(last_name) => format!("{} {}", billing_first_name.peek(), last_name.peek()).into(),
+        None => billing_first_name,
+    }
+}
+
+fn get_debtor_info<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
+    item: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    pm: TrustpayPaymentMethod,
+    params: TrustpayMandatoryParams,
+) -> CustomResult<Option<DebtorInformation>, errors::ConnectorError> {
+    let billing_last_name = item
+        .resource_common_data
+        .get_billing()?
+        .address
+        .as_ref()
+        .and_then(|address| address.last_name.clone());
+    Ok(match pm {
+        TrustpayPaymentMethod::Blik => Some(DebtorInformation {
+            name: get_full_name(params.billing_first_name, billing_last_name),
+            email: item.request.get_email()?,
+        }),
+        TrustpayPaymentMethod::Eps
+        | TrustpayPaymentMethod::Giropay
+        | TrustpayPaymentMethod::IDeal
+        | TrustpayPaymentMethod::Sofort => None,
+    })
+}
+
+fn get_bank_transfer_debtor_info<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
+    item: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    pm: TrustpayBankTransferPaymentMethod,
+    params: TrustpayMandatoryParams,
+) -> CustomResult<Option<DebtorInformation>, errors::ConnectorError> {
+    let billing_last_name = item
+        .resource_common_data
+        .get_billing()?
+        .address
+        .as_ref()
+        .and_then(|address| address.last_name.clone());
+    Ok(match pm {
+        TrustpayBankTransferPaymentMethod::SepaCreditTransfer
+        | TrustpayBankTransferPaymentMethod::InstantBankTransfer
+        | TrustpayBankTransferPaymentMethod::InstantBankTransferFI
+        | TrustpayBankTransferPaymentMethod::InstantBankTransferPL => Some(DebtorInformation {
+            name: get_full_name(params.billing_first_name, billing_last_name),
+            email: item.request.get_email()?,
+        }),
+    })
+}
+
+fn get_mandatory_fields<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
+    item: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+) -> Result<TrustpayMandatoryParams, Error> {
+    let billing_address = item
+        .resource_common_data
+        .get_billing()?
+        .address
+        .as_ref()
+        .ok_or_else(utils::missing_field_err("billing.address"))?;
+    Ok(TrustpayMandatoryParams {
+        billing_city: billing_address.get_city()?.peek().to_owned(),
+        billing_country: billing_address.get_country()?.to_owned(),
+        billing_street1: billing_address.get_line1()?.to_owned(),
+        billing_postcode: billing_address.get_zip()?.to_owned(),
+        billing_first_name: billing_address.get_first_name()?.to_owned(),
+    })
+}
+
+fn get_bank_redirection_request_data<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
+    item: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    bank_redirection_data: &BankRedirectData,
+    params: TrustpayMandatoryParams,
+    amount: StringMajorUnit,
+    auth: TrustpayAuthType,
+) -> Result<TrustpayPaymentsRequest<T>, error_stack::Report<errors::ConnectorError>> {
+    let pm = TrustpayPaymentMethod::try_from(bank_redirection_data)?;
+    let return_url = item.request.get_router_return_url()?;
+    let payment_request =
+        TrustpayPaymentsRequest::BankRedirectPaymentRequest(Box::new(PaymentRequestBankRedirect {
+            payment_method: pm.clone(),
+            merchant_identification: MerchantIdentification {
+                project_id: auth.project_id,
+            },
+            payment_information: BankPaymentInformation {
+                amount: Amount {
+                    amount,
+                    currency: item.request.currency.to_string(),
+                },
+                references: References {
+                    merchant_reference: item
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                },
+                debtor: get_debtor_info(item, pm, params)?,
+            },
+            callback_urls: CallbackURLs {
+                success: format!("{return_url}?status=SuccessOk"),
+                cancel: return_url.clone(),
+                error: return_url,
+            },
+        }));
+    Ok(payment_request)
+}
+
+fn get_bank_transfer_request_data<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
+    item: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    bank_transfer_data: &BankTransferData,
+    params: TrustpayMandatoryParams,
+    amount: StringMajorUnit,
+    auth: TrustpayAuthType,
+) -> Result<TrustpayPaymentsRequest<T>, error_stack::Report<errors::ConnectorError>> {
+    let pm = TrustpayBankTransferPaymentMethod::try_from(bank_transfer_data)?;
+    let return_url = item.request.get_router_return_url()?;
+    let payment_request =
+        TrustpayPaymentsRequest::BankTransferPaymentRequest(Box::new(PaymentRequestBankTransfer {
+            payment_method: pm.clone(),
+            merchant_identification: MerchantIdentification {
+                project_id: auth.project_id,
+            },
+            payment_information: BankPaymentInformation {
+                amount: Amount {
+                    amount,
+                    currency: item.request.currency.to_string(),
+                },
+                references: References {
+                    merchant_reference: item
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                },
+                debtor: get_bank_transfer_debtor_info(item, pm, params)?,
+            },
+            callback_urls: CallbackURLs {
+                success: format!("{return_url}?status=SuccessOk"),
+                cancel: return_url.clone(),
+                error: return_url,
+            },
+        }));
+    Ok(payment_request)
+}
+
+// Implement GetFormData for TrustpayPaymentsRequest to satisfy the macro requirement
+// This will never be called since TrustPay only uses Json and FormUrlEncoded
+impl<T> crate::connectors::macros::GetFormData for TrustpayPaymentsRequest<T>
+where
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+{
+    fn get_form_data(&self) -> reqwest::multipart::Form {
+        // This should never be called for TrustPay since we only use Json and FormUrlEncoded
+        panic!("TrustPay does not support FormData content type")
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        TrustpayRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for TrustpayPaymentsRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: TrustpayRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let browser_info = item
+            .router_data
+            .request
+            .browser_info
+            .clone()
+            .unwrap_or_default();
+        //     we don't want payment to fail, even if we don't get browser info from sdk, and these default values are present in Trustpay's doc,
+        //     Trustpay required to pass this values, when we don't get from sdk. That's why this values are hard coded.
+        let default_browser_info = BrowserInformation {
+            color_depth: Some(browser_info.color_depth.unwrap_or(24)),
+            java_enabled: Some(browser_info.java_enabled.unwrap_or(false)),
+            java_script_enabled: Some(browser_info.java_script_enabled.unwrap_or(true)),
+            language: Some(browser_info.language.unwrap_or("en-US".to_string())),
+            screen_height: Some(browser_info.screen_height.unwrap_or(1080)),
+            screen_width: Some(browser_info.screen_width.unwrap_or(1920)),
+            time_zone: Some(browser_info.time_zone.unwrap_or(3600)),
+            accept_header: Some(browser_info.accept_header.unwrap_or("*".to_string())),
+            user_agent: browser_info.user_agent,
+            ip_address: browser_info.ip_address,
+            os_type: None,
+            os_version: None,
+            device_model: None,
+            accept_language: Some(browser_info.accept_language.unwrap_or("en".to_string())),
+            referer: None,
+        };
+        let params = get_mandatory_fields(item.router_data.clone())?;
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
+            .change_context(ConnectorError::AmountConversionFailed)?;
+        let auth = TrustpayAuthType::try_from(&item.router_data.connector_auth_type)
+            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+        match item.router_data.request.payment_method_data {
+            PaymentMethodData::Card(ref ccard) => Ok(get_card_request_data(
+                item.router_data.clone(),
+                &default_browser_info,
+                params,
+                amount,
+                ccard,
+                item.router_data.request.get_router_return_url()?,
+            )?),
+            PaymentMethodData::BankRedirect(ref bank_redirection_data) => {
+                get_bank_redirection_request_data(
+                    item.router_data.clone(),
+                    bank_redirection_data,
+                    params,
+                    amount,
+                    auth,
+                )
+            }
+            PaymentMethodData::BankTransfer(ref bank_transfer_data) => {
+                get_bank_transfer_request_data(
+                    item.router_data.clone(),
+                    bank_transfer_data,
+                    params,
+                    amount,
+                    auth,
+                )
+            }
+            PaymentMethodData::NetworkToken(ref token_data) => {
+                let month = token_data.get_network_token_expiry_month();
+                let year = token_data.get_network_token_expiry_year();
+                let expiry_date =
+                    utils::get_token_expiry_month_year_2_digit_with_delimiter(month, year);
+                Ok(Self::NetworkTokenPaymentRequest(Box::new(
+                    PaymentRequestNetworkToken {
+                        amount,
+                        currency: item.router_data.request.currency,
+                        pan: token_data.get_network_token(),
+                        expiry_date,
+                        redirect_url: item.router_data.request.get_router_return_url()?,
+                        enrollment_status: STATUS,
+                        eci: token_data.eci.clone().ok_or_else(|| {
+                            errors::ConnectorError::MissingRequiredField { field_name: "eci" }
+                        })?,
+                        authentication_status: STATUS,
+                        verification_id: token_data.get_cryptogram().ok_or_else(|| {
+                            errors::ConnectorError::MissingRequiredField {
+                                field_name: "verification_id",
+                            }
+                        })?,
+                    },
+                )))
+            }
+            PaymentMethodData::CardRedirect(_)
+            | PaymentMethodData::Wallet(_)
+            | PaymentMethodData::PayLater(_)
+            | PaymentMethodData::BankDebit(_)
+            | PaymentMethodData::Crypto(_)
+            | PaymentMethodData::MandatePayment
+            | PaymentMethodData::Reward
+            | PaymentMethodData::RealTimePayment(_)
+            | PaymentMethodData::MobilePayment(_)
+            | PaymentMethodData::Upi(_)
+            | PaymentMethodData::Voucher(_)
+            | PaymentMethodData::GiftCard(_)
+            | PaymentMethodData::OpenBanking(_)
+            | PaymentMethodData::CardToken(_)
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                Err(errors::ConnectorError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("trustpay"),
+                )
+                .into())
+            }
         }
     }
 }
