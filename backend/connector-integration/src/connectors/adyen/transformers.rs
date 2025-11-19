@@ -3974,7 +3974,7 @@ impl TryFrom<SecretSerdeValue> for AdyenTestingData {
 }
 
 pub fn get_present_to_shopper_metadata(
-    response: &PresentToShopperResponse,
+    _response: &PresentToShopperResponse,
 ) -> CustomResult<Option<serde_json::Value>, domain_types::errors::ConnectorError> {
     // UCS currently only supports Card
     // For card payments via PresentToShopper flow, no special metadata is needed
