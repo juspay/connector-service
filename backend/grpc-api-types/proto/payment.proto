@@ -39,6 +39,7 @@ enum PaymentStatus {
   AUTHORIZING = 9;
   AUTHORIZED = 6;
   AUTHORIZATION_FAILED = 7;
+  PARTIALLY_AUTHORIZED = 25;
 
   // Charging flow
   CHARGED = 8;
@@ -58,12 +59,24 @@ enum PaymentStatus {
 
   // Other payment flows
   COD_INITIATED = 10; // Cash on Delivery initiated
+  EXPIRED = 26; // Payment expired before it could be captured
 
   // Terminal/fallback states
   ROUTER_DECLINED = 3;
   PENDING = 20;       // General pending state
   FAILURE = 21;       // General failure state
   UNRESOLVED = 19;    // Status could not be determined
+}
+
+// Status of generic operations (non-payment specific).
+enum OperationStatus {
+  OPERATION_STATUS_UNSPECIFIED = 0; // Default value
+  OPERATION_STATUS_SUCCESS = 1;     // Operation completed successfully
+  OPERATION_STATUS_FAILURE = 2;     // Operation failed
+  OPERATION_STATUS_PENDING = 3;     // Operation is in progress
+  OPERATION_STATUS_AUTHENTICATION_FAILED = 4; // Authentication/authorization failed
+  OPERATION_STATUS_RATE_LIMITED = 5; // Rate limit exceeded
+  OPERATION_STATUS_INVALID_REQUEST = 6; // Invalid request parameters
 }
 
 // Note: MandateStatus enum removed - mandate setup now uses PaymentStatus with optional sub_status for detailed information
@@ -1248,6 +1261,34 @@ message ConnectorResponseData {
 // PaymentService Messages
 // -------------------------
 
+// Request message for creating an access token.
+message PaymentServiceCreateAccessTokenRequest {
+  // Session Token create Identification
+  Identifier request_ref_id = 1; // Renamed from connector_request_reference_id
+
+  // Connector Selection
+  Connector connector = 2; // The connector to create the access token for
+  
+  // Account-Specific Configuration
+  map<string, string> merchant_account_metadata = 3; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+}
+
+// Response message for creating an access token.
+message PaymentServiceCreateAccessTokenResponse {
+  // Core token information
+  string access_token = 1; // The access token string
+  optional string token_type = 2; // Token type (e.g., "Bearer", "Basic")
+  optional int64 expires_in_seconds = 3; // Expiration timestamp of the token (seconds since epoch)
+  
+  // Status information
+  OperationStatus status = 4; // Status of the access token creation attempt
+  optional string error_code = 5; // Error code if the access token creation failed
+  optional string error_message = 6; // Error message if the access token creation failed
+  uint32 status_code = 7; // HTTP status code from the connector
+
+  optional Identifier response_ref_id = 8; // Renamed from connector_response_reference_id
+}
+
 // Request message for authorizing a payment.
 message PaymentServiceAuthorizeRequest {
   // Payment Identification
@@ -2196,6 +2237,37 @@ message PaymentServicePostAuthenticateResponse {
   
   // Raw Response
   optional SecretString raw_connector_response = 14; // Raw response from the connector for debugging
+}
+
+// Request message for creating a session token
+message PaymentServiceCreateSessionTokenRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+  
+  // Amount Information (required by SessionTokenRequestData)
+  int64 amount = 2; // The amount for the payment in major currency units
+  Currency currency = 3; // The currency for the payment, in ISO 4217 three-letter code
+  int64 minor_amount = 4; // The minor amount for the payment (e.g., cents)
+  
+  // Optional metadata for the connector
+  map<string, string> metadata = 5; // Additional metadata for the connector
+  
+  // State Information
+  optional ConnectorState state = 6; // State data for access token storage and other connector-specific state
+
+  // Browser Information
+  optional BrowserInformation browser_info = 7; // Information about the customer's browser
+}
+
+// Response message for creating a session token
+message PaymentServiceCreateSessionTokenResponse {
+  // Error Information
+  optional string error_code = 3; // Error code if the session token creation failed
+  optional string error_message = 4; // Error message if the session token creation failed
+  uint32 status_code = 10; // HTTP status code from the connector
+
+  // Session Token Details
+  string session_token = 5; // The created session token
 }
 
 // Request message for PaymentService.Transform RPC

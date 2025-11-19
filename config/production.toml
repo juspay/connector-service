@@ -62,6 +62,7 @@ cybersource.base_url = "https://api.cybersource.com/"
 worldpay.base_url = "https://access.worldpay.com/"
 worldpayvantiv.base_url = "https://transact.vantivcnp.com/vap/communicator/online"
 worldpayvantiv.secondary_base_url = "https://onlinessr.vantivcnp.com"
+paypal.base_url = "https://api-m.paypal.com/"
 
 # Generic Events Configuration
 [events]
