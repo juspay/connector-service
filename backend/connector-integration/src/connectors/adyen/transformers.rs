@@ -1818,8 +1818,6 @@ pub fn get_present_to_shopper_response(
         None
     };
 
-    // Note: UCS doesn't support split payments yet, so charges is None
-    let charges = None;
     let connector_metadata = get_present_to_shopper_metadata(&response)?;
 
     // We don't get connector transaction id for redirections in Adyen.
@@ -2466,7 +2464,7 @@ fn get_recurring_processing_model<
 
     match (item.request.setup_future_usage, item.request.off_session) {
         (Some(common_enums::FutureUsage::OffSession), _) => {
-            let store_payment_method = is_mandate_payment(item);
+            let store_payment_method = item.request.is_mandate_payment();
             Ok((
                 Some(AdyenRecurringModel::UnscheduledCardOnFile),
                 Some(store_payment_method),
@@ -2480,26 +2478,6 @@ fn get_recurring_processing_model<
         )),
         _ => Ok((None, None, None)),
     }
-}
-
-fn is_mandate_payment<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
->(
-    item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-) -> bool {
-    ((item.request.customer_acceptance.is_some() || item.request.setup_mandate_details.is_some())
-        && item.request.setup_future_usage == Some(common_enums::FutureUsage::OffSession))
-        || item
-            .request
-            .mandate_id
-            .as_ref()
-            .and_then(|mandate_ids| mandate_ids.mandate_reference_id.as_ref())
-            .is_some()
 }
 
 pub fn get_address_info(
