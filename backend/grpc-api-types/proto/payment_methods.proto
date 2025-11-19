@@ -63,6 +63,7 @@ message CardPaymentMethodType {
     CardRedirect card_redirect = 3;        // Card payment via redirect flow
     CardDetails credit_proxy = 4;       // Credit card details for proxy payments
     CardDetails debit_proxy = 5;        // Debit card details for proxy payments
+    CardDetails unspecified_card_type = 6;   // This is used when card type is not specified
   }
 }
 
