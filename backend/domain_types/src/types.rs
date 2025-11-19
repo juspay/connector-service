@@ -1360,6 +1360,202 @@ impl<
     }
 }
 
+impl<
+        T: PaymentMethodDataTypes
+            + Default
+            + Debug
+            + Send
+            + Eq
+            + PartialEq
+            + serde::Serialize
+            + serde::de::DeserializeOwned
+            + Clone
+            + CardConversionHelper<T>,
+    > ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeOnlyRequest>
+    for PaymentsAuthorizeData<T>
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::PaymentServiceAuthorizeOnlyRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let email: Option<Email> = match value.email {
+            Some(ref email_str) => {
+                Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
+                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
+                        error_identifier: 400,
+
+                        error_message: "Invalid email".to_owned(),
+                        error_object: None,
+                    }))
+                })?)
+            }
+            None => None,
+        };
+        let merchant_config_currency = common_enums::Currency::foreign_try_from(value.currency())?;
+
+        // Extract merchant_account_id from metadata before moving it
+        let merchant_account_id = value.metadata.get("merchant_account_id").cloned();
+
+        // Store merchant_account_metadata for connector use
+        let merchant_account_metadata = (!value.merchant_account_metadata.is_empty())
+            .then(|| {
+                serde_json::to_value(&value.merchant_account_metadata)
+                    .map(common_utils::pii::SecretSerdeValue::new)
+                    .map_err(|_| {
+                        error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
+                            crate::errors::ApiError {
+                                sub_code: "SERDE_JSON_ERROR".to_owned(),
+                                error_identifier: 500,
+                                error_message: "Failed to serialize merchant_account_metadata"
+                                    .to_owned(),
+                                error_object: None,
+                            },
+                        ))
+                    })
+            })
+            .transpose()?;
+
+        let setup_future_usage = value
+            .setup_future_usage
+            .map(|usage| {
+                grpc_api_types::payments::FutureUsage::try_from(usage)
+                    .map_err(|_| {
+                        error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_SETUP_FUTURE_USAGE".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid setup future usage value".to_owned(),
+                            error_object: None,
+                        }))
+                    })
+                    .and_then(|proto_usage| {
+                        common_enums::FutureUsage::foreign_try_from(proto_usage)
+                    })
+            })
+            .transpose()?;
+
+        let customer_acceptance = value.customer_acceptance.clone();
+        let authentication_data = value
+            .authentication_data
+            .clone()
+            .map(router_request_types::AuthenticationData::try_from)
+            .transpose()?;
+
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(AccessTokenResponseData::from);
+        let shipping_cost = Some(common_utils::types::MinorUnit::new(value.shipping_cost()));
+        // Connector testing data should be sent as a separate field (for adyen) (to be implemented)
+        // For now, set to None as Hyperswitch needs to be updated to send this data properly
+        let connector_testing_data: Option<Secret<serde_json::Value>> = None;
+
+        Ok(Self {
+            authentication_data,
+            capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
+                value.capture_method(),
+            )?),
+            payment_method_data: PaymentMethodData::<T>::foreign_try_from(
+                value.payment_method.clone().ok_or_else(|| {
+                    ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Payment method data is required".to_owned(),
+                        error_object: None,
+                    })
+                })?,
+            )
+            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
+                error_identifier: 400,
+                error_message: "Payment method data construction failed".to_owned(),
+                error_object: None,
+            }))?,
+            amount: common_utils::types::MinorUnit::new(value.amount),
+            currency: common_enums::Currency::foreign_try_from(value.currency())?,
+            confirm: true,
+            webhook_url: value.webhook_url.clone(),
+            browser_info: value
+                .browser_info
+                .as_ref()
+                .cloned()
+                .map(BrowserInformation::foreign_try_from)
+                .transpose()?,
+            payment_method_type: <Option<PaymentMethodType>>::foreign_try_from(
+                value.payment_method.clone().ok_or_else(|| {
+                    ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Payment method data is required".to_owned(),
+                        error_object: None,
+                    })
+                })?,
+            )?,
+            minor_amount: common_utils::types::MinorUnit::new(value.minor_amount),
+            email,
+            customer_name: None,
+            statement_descriptor_suffix: value.statement_descriptor_suffix,
+            statement_descriptor: value.statement_descriptor_name,
+
+            router_return_url: value.return_url.clone(),
+            complete_authorize_url: value.complete_authorize_url,
+            setup_future_usage,
+            mandate_id: None,
+            off_session: value.off_session,
+            order_category: value.order_category,
+            session_token: None,
+            access_token,
+            customer_acceptance: customer_acceptance
+                .map(mandates::CustomerAcceptance::foreign_try_from)
+                .transpose()?,
+            enrolled_for_3ds: false,
+            related_transaction_id: None,
+            payment_experience: None,
+            customer_id: value
+                .customer_id
+                .clone()
+                .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
+                .transpose()
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_CUSTOMER_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Failed to parse Customer Id".to_owned(),
+                    error_object: None,
+                }))?,
+            request_incremental_authorization: false,
+            metadata: if value.metadata.is_empty() {
+                None
+            } else {
+                Some(serde_json::Value::Object(
+                    value
+                        .metadata
+                        .into_iter()
+                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .collect(),
+                ))
+            },
+            merchant_order_reference_id: value.merchant_order_reference_id,
+            order_tax_amount: None,
+            shipping_cost,
+            merchant_account_id,
+            integrity_object: None,
+            merchant_config_currency: Some(merchant_config_currency),
+            all_keys_required: None, // Field not available in new proto structure
+            split_payments: None,
+            enable_overcapture: None,
+            setup_mandate_details: value
+                .setup_mandate_details
+                .map(mandates::MandateData::foreign_try_from)
+                .transpose()?,
+            request_extended_authorization: value.request_extended_authorization,
+            merchant_account_metadata,
+            connector_testing_data,
+        })
+    }
+}
+
 impl ForeignTryFrom<grpc_api_types::payments::PaymentAddress> for payment_address::PaymentAddress {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
@@ -1816,6 +2012,128 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
     fn foreign_try_from(
         (value, connectors, metadata): (
             PaymentServiceAuthorizeRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let address = match &value.address {
+            // Borrow value.address
+            Some(address_value) => {
+                // address_value is &grpc_api_types::payments::PaymentAddress
+                payment_address::PaymentAddress::foreign_try_from(
+                    (*address_value).clone(), // Clone the grpc_api_types::payments::PaymentAddress
+                )?
+            }
+            None => {
+                return Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_ADDRESS".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Address is required".to_owned(),
+                    error_object: None,
+                }))?
+            }
+        };
+
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+
+        // Extract specific headers for vault and other integrations
+        let vault_headers = extract_headers_from_metadata(metadata);
+
+        let connector_meta_data = serde_json::to_value(&value.merchant_account_metadata)
+            .map(common_utils::pii::SecretSerdeValue::new)
+            .map_err(|_| {
+                error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
+                    crate::errors::ApiError {
+                        sub_code: "SERDE_JSON_ERROR".to_owned(),
+                        error_identifier: 500,
+                        error_message: "Failed to serialize merchant_account_metadata".to_owned(),
+                        error_object: None,
+                    },
+                ))
+            })?;
+
+        let order_details = (!value.order_details.is_empty())
+            .then(|| {
+                value
+                    .order_details
+                    .into_iter()
+                    .map(OrderDetailsWithAmount::foreign_try_from)
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .transpose()?;
+
+        Ok(Self {
+            merchant_id: merchant_id_from_header,
+            payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
+            attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: common_enums::PaymentMethod::foreign_try_from(
+                value.payment_method.unwrap_or_default(),
+            )?, // Use direct enum
+            address,
+            auth_type: common_enums::AuthenticationType::foreign_try_from(
+                grpc_api_types::payments::AuthenticationType::try_from(value.auth_type)
+                    .unwrap_or_default(),
+            )?, // Use direct enum
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
+            customer_id: value
+                .customer_id
+                .clone()
+                .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
+                .transpose()
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_CUSTOMER_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Failed to parse Customer Id".to_owned(),
+                    error_object: None,
+                }))?,
+            connector_customer: value.connector_customer_id,
+            description: value.description,
+            return_url: value.return_url.clone(),
+            connector_meta_data: {
+                value.metadata.get("connector_meta_data").map(|json_string| {
+                    Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
+                }).transpose()?
+                .or(Some(connector_meta_data)) // Converts Option<Result<T, E>> to Result<Option<T>, E> and propagates E if it's an Err
+            },
+            amount_captured: None,
+            minor_amount_captured: None,
+            minor_amount_capturable: None,
+            access_token: None,
+            session_token: None,
+            reference_id: None,
+            payment_method_token: None,
+            preprocessing_id: None,
+            connector_api_version: None,
+            test_mode: value.test_mode,
+            connector_http_status_code: None,
+            external_latency: None,
+            connectors,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            connector_response_headers: None,
+            connector_response: None,
+            vault_headers,
+            recurring_mandate_payment_data: None,
+            order_details,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::PaymentServiceAuthorizeOnlyRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for PaymentFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (
+            grpc_api_types::payments::PaymentServiceAuthorizeOnlyRequest,
             Connectors,
             &MaskedMetadata,
         ),

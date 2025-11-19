@@ -1354,7 +1354,7 @@ message PaymentServiceAuthorizeRequest {
   // Mandate Setup Details
   optional SetupMandateDetails setup_mandate_details = 34; // Setup mandate details for the authorization
 
-  optional string statement_descriptor_name = 36; // Complete description that appears on customers’ statements
+  optional string statement_descriptor_name = 36; // Complete description that appears on customers' statements
   optional string statement_descriptor_suffix = 37; // Provides information about a card payment that customers see on their statements
 
   // State Information
@@ -1362,6 +1362,86 @@ message PaymentServiceAuthorizeRequest {
 
   // Order Details
   repeated OrderDetailsWithAmount order_details = 39; // Details about the different products for which the payment is being made
+}
+
+// Request message for authorizing a payment only (without setup flows).
+message PaymentServiceAuthorizeOnlyRequest {
+  // Payment Identification
+  Identifier request_ref_id = 1; // Renamed from connector_request_reference_id
+  
+  // Amount Information
+  int64 amount = 2; // The amount for the payment in major currency units
+  Currency currency = 3; // The currency for the payment, in ISO 4217 three-letter code
+  int64 minor_amount = 4; // The minor amount for the payment (e.g., cents)
+  optional int64 order_tax_amount = 5; // Tax amount for the order
+  optional int64 shipping_cost = 6; // Cost of shipping for the order
+  
+  // Payment Method and Capture Settings
+  PaymentMethod payment_method = 7; // Payment method to be used
+  optional CaptureMethod capture_method = 8; // Method for capturing the payment
+  
+  // Customer Information
+  optional SecretString email = 9; // Email address of the customer
+  optional string customer_name = 10; // Name of the customer
+  optional string customer_id = 32; // Merchant's customer ID
+  optional string connector_customer_id = 11; // Customer ID as recognized by the connector
+  
+  // Address Information
+  PaymentAddress address = 12; // Billing and shipping address details
+  
+  // Authentication Details
+  AuthenticationType auth_type = 13; // Type of authentication to be used
+  bool enrolled_for_3ds = 14; // Indicates if the customer is enrolled for 3D Secure
+  optional AuthenticationData authentication_data = 15; // Additional authentication data
+  
+  // Metadata
+  map<string, string> metadata = 16; // Additional metadata for the connector
+  
+  // URLs for Redirection and Webhooks
+  optional string return_url = 17; // URL to redirect after payment
+  optional string webhook_url = 18; // URL for webhook notifications
+  optional string complete_authorize_url = 19; // URL to complete authorization
+  
+  // Session and Token Information
+  optional string session_token = 21; // Session token, if applicable
+  
+  // Order Details
+  optional string order_category = 22; // Category of the order
+  optional string merchant_order_reference_id = 23; // Merchant's internal reference ID
+  
+  // Behavioral Flags and Preferences
+  optional FutureUsage setup_future_usage = 24; // Indicates future usage intention
+  optional bool off_session = 25; // Indicates if off-session transaction
+  bool request_incremental_authorization = 26; // Indicates if incremental authorization is requested
+  optional bool request_extended_authorization = 27; // Indicates if extended authorization is requested
+  
+  // Contextual Information
+  optional CustomerAcceptance customer_acceptance = 28; // Details of customer acceptance
+  optional BrowserInformation browser_info = 29; // Information about the customer's browser
+  optional PaymentExperience payment_experience = 30; // Preferred payment experience
+  optional string description = 35; // An arbitrary string attached to the payment. Often useful for displaying to users or for your internal record-keeping
+
+  optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
+
+  // Account-Specific Configuration
+  map<string, string> merchant_account_metadata = 33; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  
+  // Mandate Setup Details
+  optional SetupMandateDetails setup_mandate_details = 34; // Setup mandate details for the authorization
+
+  optional string statement_descriptor_name = 36; // Complete description that appears on customers' statements
+  optional string statement_descriptor_suffix = 37; // Provides information about a card payment that customers see on their statements
+
+  // State Information
+  optional ConnectorState state = 38; // State data for access token storage and other connector-specific state
+
+  // Order Details
+  repeated OrderDetailsWithAmount order_details = 39; // Details about the different products for which the payment is being made
+
+  // Payment Method Token
+  optional string payment_method_token = 40;
+  // Access Token
+  optional string access_token = 41;
 }
 
 // Response message for a payment authorization.
