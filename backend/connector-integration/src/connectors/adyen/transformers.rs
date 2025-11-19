@@ -660,7 +660,11 @@ impl<
         (card, card_holder_name): (&Card<T>, Option<Secret<String>>),
     ) -> Result<Self, Self::Error> {
         // Only set brand for cobadged cards
-        let brand = if card.card_number.is_cobadged_card().unwrap_or(false) {
+        let brand = if card
+            .card_number
+            .is_cobadged_card()
+            .map_err(|_| domain_types::errors::ConnectorError::RequestEncodingFailed)?
+        {
             // Use the detected card network from the card data
             card.card_network.clone().and_then(get_adyen_card_network)
         } else {
@@ -1274,6 +1278,44 @@ pub struct AdyenRedirectAction {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenPtsAction {
+    reference: String,
+    download_url: Option<Url>,
+    payment_method_type: PaymentType,
+    #[serde(rename = "expiresAt")]
+    #[serde(
+        default,
+        with = "common_utils::custom_serde::iso8601::option_without_timezone"
+    )]
+    expires_at: Option<time::PrimitiveDateTime>,
+    initial_amount: Option<Amount>,
+    pass_creation_token: Option<String>,
+    total_amount: Option<Amount>,
+    #[serde(rename = "type")]
+    type_of_response: ActionType,
+    instructions_url: Option<Url>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenQrCodeAction {
+    payment_method_type: PaymentType,
+    #[serde(rename = "type")]
+    type_of_response: ActionType,
+    #[serde(rename = "url")]
+    qr_code_url: Option<Url>,
+    qr_code_data: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QrCodeAdditionalData {
+    #[serde(rename = "pix.expirationDate")]
+    #[serde(default, with = "common_utils::custom_serde::iso8601::option")]
+    pix_expiration_date: Option<time::PrimitiveDateTime>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ActionType {
     Redirect,
@@ -1288,7 +1330,7 @@ pub enum ActionType {
 pub struct PresentToShopperResponse {
     psp_reference: Option<String>,
     result_code: AdyenStatus,
-    action: AdyenRedirectAction,
+    action: AdyenPtsAction,
     amount: Option<Amount>,
     refusal_reason: Option<String>,
     refusal_reason_code: Option<String>,
@@ -1311,14 +1353,14 @@ pub struct RedirectionErrorResponse {
 #[serde(rename_all = "camelCase")]
 pub struct QrCodeResponseResponse {
     result_code: AdyenStatus,
-    action: AdyenRedirectAction,
+    action: AdyenQrCodeAction,
     amount: Option<Amount>,
     refusal_reason: Option<String>,
     refusal_reason_code: Option<String>,
     psp_reference: Option<String>,
     merchant_reference: Option<String>,
     store: Option<String>,
-    additional_data: Option<AdditionalData>,
+    additional_data: Option<QrCodeAdditionalData>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1776,26 +1818,12 @@ pub fn get_present_to_shopper_response(
         None
     };
 
-    let redirection_data = response.action.url.clone().map(|url| {
-        let form_fields = response.action.data.clone().unwrap_or_else(|| {
-            std::collections::HashMap::from_iter(
-                url.query_pairs()
-                    .map(|(key, value)| (key.to_string(), value.to_string())),
-            )
-        });
-        RedirectForm::Form {
-            endpoint: url.to_string(),
-            method: response.action.method.unwrap_or(Method::Get),
-            form_fields,
-        }
-    });
-
     let payments_response_data = PaymentsResponseData::TransactionResponse {
         resource_id: match response.psp_reference.as_ref() {
             Some(psp) => ResponseId::ConnectorTransactionId(psp.to_string()),
             None => ResponseId::NoResponseId,
         },
-        redirection_data: redirection_data.map(Box::new),
+        redirection_data: None,
         connector_metadata: None,
         network_txn_id: None,
         connector_response_reference_id: response
@@ -1928,26 +1956,12 @@ pub fn get_qr_code_response(
         None
     };
 
-    let redirection_data = response.action.url.clone().map(|url| {
-        let form_fields = response.action.data.clone().unwrap_or_else(|| {
-            std::collections::HashMap::from_iter(
-                url.query_pairs()
-                    .map(|(key, value)| (key.to_string(), value.to_string())),
-            )
-        });
-        RedirectForm::Form {
-            endpoint: url.to_string(),
-            method: response.action.method.unwrap_or(Method::Get),
-            form_fields,
-        }
-    });
-
     let payments_response_data = PaymentsResponseData::TransactionResponse {
         resource_id: match response.psp_reference.as_ref() {
             Some(psp) => ResponseId::ConnectorTransactionId(psp.to_string()),
             None => ResponseId::NoResponseId,
         },
-        redirection_data: redirection_data.map(Box::new),
+        redirection_data: None,
         connector_metadata: None,
         network_txn_id: None,
         connector_response_reference_id: response
