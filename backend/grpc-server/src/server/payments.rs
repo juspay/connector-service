@@ -497,8 +497,8 @@ impl Payments {
                 shadow_mode: metadata_payload.shadow_mode,
             };
             let payment_method_token_data = self
-                .handle_payment_session_token(
-                    config,
+                .handle_payment_method_token(
+                    &config,
                     connector_data.clone(),
                     &payment_flow_data,
                     connector_auth_details.clone(),
