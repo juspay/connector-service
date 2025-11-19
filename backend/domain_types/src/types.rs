@@ -1179,6 +1179,10 @@ impl<
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
         let shipping_cost = Some(common_utils::types::MinorUnit::new(value.shipping_cost()));
+        // Connector testing data should be sent as a separate field (for adyen) (to be implemented)
+        // For now, set to None as Hyperswitch needs to be updated to send this data properly
+        let connector_testing_data: Option<Secret<serde_json::Value>> = None;
+
         Ok(Self {
             authentication_data,
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
@@ -1278,6 +1282,7 @@ impl<
                 .transpose()?,
             request_extended_authorization: value.request_extended_authorization,
             merchant_account_metadata,
+            connector_testing_data,
         })
     }
 }

@@ -275,3 +275,8 @@ where
     let json = connector_meta.ok_or_else(missing_field_err("connector_meta_data"))?;
     json.parse_value(std::any::type_name::<T>()).switch()
 }
+
+pub(crate) fn is_manual_capture(capture_method: Option<enums::CaptureMethod>) -> bool {
+    capture_method == Some(enums::CaptureMethod::Manual)
+        || capture_method == Some(enums::CaptureMethod::ManualMultiple)
+}
