@@ -5923,27 +5923,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeOnlyRequest>
-    for SessionTokenRequestData
-{
-    type Error = ApplicationErrorResponse;
-
-    fn foreign_try_from(
-        value: grpc_api_types::payments::PaymentServiceAuthorizeOnlyRequest,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let currency = common_enums::Currency::foreign_try_from(value.currency())?;
-
-        Ok(Self {
-            amount: common_utils::types::MinorUnit::new(value.minor_amount),
-            currency,
-            browser_info: value
-                .browser_info
-                .map(BrowserInformation::foreign_try_from)
-                .transpose()?,
-        })
-    }
-}
-
 impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
     for AccessTokenRequestData
 {
@@ -5951,20 +5930,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
 
     fn foreign_try_from(
         _value: grpc_api_types::payments::PaymentServiceAuthorizeRequest,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        Ok(Self {
-            grant_type: "client_credentials".to_string(),
-        })
-    }
-}
-
-impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeOnlyRequest>
-    for AccessTokenRequestData
-{
-    type Error = ApplicationErrorResponse;
-
-    fn foreign_try_from(
-        _value: grpc_api_types::payments::PaymentServiceAuthorizeOnlyRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
             grant_type: "client_credentials".to_string(),
@@ -6033,30 +5998,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
             customer_id: value.customer_id.map(Secret::new),
             email: email.map(Secret::new),
             name: name_string,
-            description: None,
-            split_payments: None,
-            phone: None,
-            preprocessing_id: None,
-        })
-    }
-}
-
-impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeOnlyRequest>
-    for ConnectorCustomerData
-{
-    type Error = ApplicationErrorResponse;
-
-    fn foreign_try_from(
-        value: grpc_api_types::payments::PaymentServiceAuthorizeOnlyRequest,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let email = value
-            .email
-            .and_then(|email_str| Email::try_from(email_str.expose()).ok());
-
-        Ok(Self {
-            customer_id: value.customer_id.map(Secret::new),
-            email: email.map(Secret::new),
-            name: value.customer_name.map(Secret::new),
             description: None,
             split_payments: None,
             phone: None,
