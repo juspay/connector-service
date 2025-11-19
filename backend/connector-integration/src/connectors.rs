@@ -109,3 +109,6 @@ pub use self::silverflow::Silverflow;
 
 pub mod celero;
 pub use self::celero::Celero;
+
+pub mod itaubank;
+pub use self::itaubank::Itaubank;

@@ -125,6 +125,7 @@ pub struct Connectors {
     pub authipay: ConnectorParams,
     pub silverflow: ConnectorParams,
     pub celero: ConnectorParams,
+    pub itaubank: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]

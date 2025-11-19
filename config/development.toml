@@ -21,16 +21,33 @@ type = "grpc"
 
 [metrics]
 host = "0.0.0.0"
-port = 8080
+port = 8089
 
 [proxy]
-idle_pool_connection_timeout = 90
+http_url = "http://localhost:8081"
+https_url = "http://localhost:8081"
+mitm_proxy_enabled = true
 bypass_proxy_urls = []
-mitm_proxy_enabled = false
-
-[test]
-enabled = false
-mock_server_url = "http://localhost:3000/mockGateway"
+mitm_ca_cert = """-----BEGIN CERTIFICATE-----
+MIIDNTCCAh2gAwIBAgIUaR/6o2wEgiHBibTRX68gV59jic4wDQYJKoZIhvcNAQEL
+BQAwKDESMBAGA1UEAwwJbWl0bXByb3h5MRIwEAYDVQQKDAltaXRtcHJveHkwHhcN
+MjUxMTEzMDgyMDQ1WhcNMzUxMTEzMDgyMDQ1WjAoMRIwEAYDVQQDDAltaXRtcHJv
+eHkxEjAQBgNVBAoMCW1pdG1wcm94eTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC
+AQoCggEBANHVztGGbTtDNU8MAQweMbYvt8bgpmESJ6p1MrgGAWchg2ymFUH0veHm
+kpDytKtq6hbxPOAH8NBbpKljoicgTFvkMlTW7NWsNqnEUp/FOIVjSq80DBsCvQBp
+zYNwOp+EwA2K9OUHbMn+aL7n8oesUOUL9Q5mnPUdB/XMI/BRzpT8/lShrr1VAcxx
+cmrJQsylugC4/YKGQ5YvpCQtCR6s1pj7O+ve+nFqbmkJSPpDF/fFSeFy0AYXCTEp
+nYYitkL7QNPFNjHne5/tty/Q2B5MgFRzuneZQBGX+fNxNv0ju6FV+v5Bhft0gLwJ
+IhbhCLHSOElSk83rCR7i7VSicB+w80UCAwEAAaNXMFUwDwYDVR0TAQH/BAUwAwEB
+/zATBgNVHSUEDDAKBggrBgEFBQcDATAOBgNVHQ8BAf8EBAMCAQYwHQYDVR0OBBYE
+FPO5S971bxqJt1lht3XPl4Kty0+XMA0GCSqGSIb3DQEBCwUAA4IBAQCF6PhrgKpq
+JODNLAxC0IY8B7oWfAWT/I2+M7QxuHv4swyA1BQcBcDkAoHE42/ey1qWmJzez1Kx
+h9PeYM6mJ8X6ijD6ZoYN/qmHFfrRblRFgKLJ0Ov0pXedlb2diSTCREEjRXIw1PTF
+JWoSib98bKPwOZPMZuFIjJJ+mGJZhuhRt5NF/DqSIO0C+iHs+H1QYBodPWokSC6E
+rJsz0RlpVxuOD7CyIPD6xB7WBgcnQ58rXC0EDXKCLw5wsaTcc6l8jfQzO35v2ZWJ
+R98tUvQWH5wpvIpB6FUSuHMytc6zuAReyEP+8kcwUCy9sVVziVSpUNVIHvIi6sK8
+MqTNzT904Abp
+-----END CERTIFICATE-----"""
 
 # API tag configuration for flow-based tagging
 # Supports both simple flow tags and payment-method-specific tags
@@ -43,6 +60,7 @@ mock_server_url = "http://localhost:3000/mockGateway"
 psync = "GW_TXN_SYNC"
 
 [connectors]
+itaubank.base_url = "https://boleto.${iupipes_env_dns}/boleto/v1"
 authipay.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
 fiservemea.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
 datatrans.base_url = "https://api.sandbox.datatrans.com"
