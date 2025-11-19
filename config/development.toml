@@ -44,6 +44,7 @@ psync = "GW_TXN_SYNC"
 
 [connectors]
 authipay.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
+stax.base_url = "https://apiprod.fattlabs.com"
 fiservemea.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
 datatrans.base_url = "https://api.sandbox.datatrans.com"
 silverflow.base_url = "https://api-sbx.silverflow.co/v1"

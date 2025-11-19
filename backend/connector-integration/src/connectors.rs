@@ -112,3 +112,6 @@ pub use self::celero::Celero;
 
 pub mod paypal;
 pub use self::paypal::Paypal;
+
+pub mod stax;
+pub use self::stax::Stax;

@@ -82,6 +82,7 @@ pub enum ConnectorEnum {
     Silverflow,
     Celero,
     Paypal,
+    Stax,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -128,6 +129,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Silverflow => Ok(Self::Silverflow),
             grpc_api_types::payments::Connector::Celero => Ok(Self::Celero),
             grpc_api_types::payments::Connector::Paypal => Ok(Self::Paypal),
+            grpc_api_types::payments::Connector::Stax => Ok(Self::Stax),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -905,7 +907,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     /// get_tax_on_surcharge_amount()
     /// get_total_surcharge_amount() // returns surcharge_amount + tax_on_surcharge_amount
     /// ```
-    pub amount: i64,
+    pub amount: MinorUnit,
     pub order_tax_amount: Option<MinorUnit>,
     pub email: Option<common_utils::pii::Email>,
     pub customer_name: Option<String>,
@@ -1253,7 +1255,7 @@ pub struct PaymentMethodTokenizationData<T: PaymentMethodDataTypes> {
     pub setup_mandate_details: Option<MandateData>,
     pub mandate_id: Option<MandateIds>,
     pub integrity_object: Option<PaymentMethodTokenIntegrityObject>,
-    // pub split_payments: Option<SplitPaymentsRequest>,
+    pub split_payments: Option<SplitPaymentsRequest>,
 }
 
 #[derive(Debug, Clone)]
