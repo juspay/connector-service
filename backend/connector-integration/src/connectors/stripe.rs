@@ -7,6 +7,7 @@ use std::{
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
+    events,
     ext_traits::ByteSliceExt,
 };
 use domain_types::{
@@ -36,10 +37,10 @@ use domain_types::{
 };
 
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface};
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface, Secret};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent, verification::SourceVerification,
+    verification::SourceVerification,
 };
 use serde::Serialize;
 use transformers::{
@@ -322,7 +323,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: stripe::ErrorResponse = res
             .response
@@ -336,11 +337,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             code: response
                 .error
                 .code
-                .clone()
                 .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
             message: response
                 .error
-                .code
+                .message
+                .clone()
                 .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
             reason: response.error.message.map(|message| {
                 response
@@ -476,7 +477,7 @@ macros::macro_connector_implementation!(
                     matches!(stripe_split_payment.charge_type, common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct))
                 })
                 .map(|stripe_split_payment| stripe_split_payment.transfer_account_id.clone())
-                .or_else(|| stripe_split_payment_metadata.transfer_account_id.clone());
+                .or_else(|| stripe_split_payment_metadata.transfer_account_id.clone().map(|s| s.expose()));
 
             if let Some(transfer_account_id) = transfer_account_id {
                 let mut customer_account_header = vec![(
@@ -694,7 +695,7 @@ macros::macro_connector_implementation!(
             {
                 transformers::transform_headers_for_connect_platform(
                     stripe_split_payment.charge_type.clone(),
-                    stripe_split_payment.transfer_account_id.clone(),
+                    Secret::new(stripe_split_payment.transfer_account_id.clone()),
                     &mut header,
                 );
             }
@@ -887,7 +888,7 @@ macros::macro_connector_implementation!(
             {
                 transformers::transform_headers_for_connect_platform(
                     stripe_refund.charge_type.clone(),
-                    stripe_refund.transfer_account_id.clone(),
+                    Secret::new(stripe_refund.transfer_account_id.clone()),
                     &mut header,
                 );
             }
