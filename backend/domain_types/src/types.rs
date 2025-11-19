@@ -1311,6 +1311,7 @@ impl<
         // Connector testing data should be sent as a separate field (for adyen) (to be implemented)
         // For now, set to None as Hyperswitch needs to be updated to send this data properly
         let connector_testing_data: Option<Secret<serde_json::Value>> = None;
+        
         Ok(Self {
             authentication_data,
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
@@ -2464,8 +2465,6 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
         );
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
-
-        // Extract access token from state if present
         let access_token = value
             .state
             .as_ref()
@@ -3803,7 +3802,6 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        // Extract access token from state if present
         let access_token = value
             .state
             .as_ref()
@@ -3876,7 +3874,6 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        // Extract access token from state if present
         let access_token = value
             .state
             .as_ref()
@@ -5033,8 +5030,6 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
-
-        // Extract access token from state if present
         let access_token = value
             .state
             .as_ref()
