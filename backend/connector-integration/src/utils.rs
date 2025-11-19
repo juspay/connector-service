@@ -232,3 +232,48 @@ pub fn get_token_expiry_month_year_2_digit_with_delimiter(
     };
     Secret::new(format!("{}/{}", month.peek(), year_2_digit.peek()))
 }
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
+//Priority of connector_error_type
+pub enum ConnectorErrorType {
+    UnknownError = 1,
+    UserError = 2,
+    BusinessError = 3,
+    TechnicalError = 4,
+}
+
+#[derive(Debug, Clone)]
+pub struct ErrorCodeAndMessage {
+    pub error_code: String,
+    pub error_message: String,
+}
+
+pub trait ConnectorErrorTypeMapping {
+    fn get_connector_error_type(
+        &self,
+        error_code: String,
+        error_message: String,
+    ) -> ConnectorErrorType;
+}
+
+pub(crate) fn get_error_code_error_message_based_on_priority(
+    connector: impl ConnectorErrorTypeMapping,
+    error_list: Vec<ErrorCodeAndMessage>,
+) -> Option<ErrorCodeAndMessage> {
+    let error_type_list = error_list
+        .iter()
+        .map(|error| {
+            connector
+                .get_connector_error_type(error.error_code.clone(), error.error_message.clone())
+        })
+        .collect::<Vec<ConnectorErrorType>>();
+    let mut error_zip_list = error_list
+        .iter()
+        .zip(error_type_list.iter())
+        .collect::<Vec<(&ErrorCodeAndMessage, &ConnectorErrorType)>>();
+    error_zip_list.sort_by_key(|&(_, error_type)| error_type);
+    error_zip_list
+        .first()
+        .map(|&(error_code_message, _)| error_code_message)
+        .cloned()
+}
