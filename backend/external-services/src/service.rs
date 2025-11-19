@@ -2,6 +2,7 @@ use std::{collections::HashMap, str::FromStr, time::Duration};
 
 use common_enums::ApiClientError;
 use common_utils::{
+    consts::{X_API_TAG, X_API_URL, X_SESSION_ID},
     ext_traits::AsyncExt,
     lineage,
     request::{Method, Request, RequestContent},
@@ -15,6 +16,13 @@ use domain_types::{
 };
 use hyperswitch_masking::Secret;
 use injector;
+
+/// Test context for mock server integration
+#[derive(Debug, Clone)]
+pub struct TestContext {
+    pub session_id: String,
+    pub mock_server_url: String,
+}
 
 pub trait ConnectorRequestReference {
     fn get_connector_request_reference_id(&self) -> &str;
@@ -126,6 +134,7 @@ pub struct EventProcessingParams<'a> {
         latency = Empty,
     )
 )]
+#[allow(clippy::too_many_arguments)]
 pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Resp>(
     proxy: &Proxy,
     connector: BoxedConnectorIntegrationV2<'static, F, ResourceCommonData, Req, Resp>,
@@ -134,6 +143,8 @@ pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Re
     event_params: EventProcessingParams<'_>,
     token_data: Option<TokenData>,
     call_connector_action: common_enums::CallConnectorAction,
+    test_context: Option<TestContext>,
+    api_tag: Option<String>,
 ) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
 where
     F: Clone + 'static,
@@ -226,6 +237,34 @@ where
                 }
                 req
             });
+
+            // Apply test environment modifications if test context is provided
+            connector_request = connector_request.map(|mut req| {
+                test_context.as_ref().map(|test_ctx| {
+                    // Store original URL for x-api-url header
+                    let original_url = req.url.clone();
+
+                    // Replace URL with mock server URL
+                    req.url = test_ctx.mock_server_url.clone();
+
+                    // Add test headers
+                    req.add_header(X_API_URL, original_url.clone().into());
+                    req.add_header(X_SESSION_ID, test_ctx.session_id.clone().into());
+
+                    // Add API tag if provided
+                    api_tag.as_ref().map(|tag| {
+                        req.add_header(X_API_TAG, tag.clone().into());
+                    });
+
+                    tracing::info!(
+                        "Test mode enabled: redirected {} to {}",
+                        original_url,
+                        test_ctx.mock_server_url
+                    );
+                });
+                req
+            });
+
             let headers = connector_request
                 .as_ref()
                 .map(|connector_request| connector_request.headers.clone())
