@@ -1,5 +1,6 @@
 #![allow(clippy::expect_used)]
 #![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_in_result)]
 #![allow(clippy::as_conversions)]
 #![allow(clippy::unnecessary_cast)]
 #![allow(clippy::print_stdout)]
