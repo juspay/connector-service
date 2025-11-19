@@ -467,8 +467,25 @@ impl Payments {
             payment_flow_data
         };
 
+        // Create connector request data
+        let payment_authorize_data = PaymentsAuthorizeData::foreign_try_from(payload.clone())
+            .map_err(|err| {
+                tracing::error!("Failed to process payment authorize data: {:?}", err);
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some("Failed to process payment authorize data".to_string()),
+                    Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
+                    None,
+                )
+            })?
+            // Set session token from payment flow data if available
+            .set_session_token(payment_flow_data.session_token.clone());
+
         let should_do_payment_method_token =
-            connector_data.connector.should_do_payment_method_token();
+            connector_data.connector.should_do_payment_method_token(
+                payment_flow_data.payment_method,
+                payment_authorize_data.payment_method_type,
+            );
 
         let payment_flow_data = if should_do_payment_method_token {
             let event_params = EventParams {
@@ -486,7 +503,7 @@ impl Payments {
                     &payment_flow_data,
                     connector_auth_details.clone(),
                     event_params,
-                    &payload,
+                    &payment_authorize_data,
                     &connector.to_string(),
                     service_name,
                 )
@@ -496,22 +513,6 @@ impl Payments {
         } else {
             payment_flow_data
         };
-
-        // This duplicate session token check has been removed - the session token handling is already done above
-
-        // Create connector request data
-        let payment_authorize_data = PaymentsAuthorizeData::foreign_try_from(payload.clone())
-            .map_err(|err| {
-                tracing::error!("Failed to process payment authorize data: {:?}", err);
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some("Failed to process payment authorize data".to_string()),
-                    Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
-                    None,
-                )
-            })?
-            // Set session token from payment flow data if available
-            .set_session_token(payment_flow_data.session_token.clone());
 
         // Construct router data
         let router_data = RouterDataV2::<
@@ -1382,7 +1383,7 @@ impl Payments {
     }
 
     #[allow(clippy::too_many_arguments)]
-    async fn handle_payment_session_token<
+    async fn handle_payment_method_token<
         T: PaymentMethodDataTypes
             + Default
             + Eq
@@ -1400,7 +1401,7 @@ impl Payments {
         payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
         event_params: EventParams<'_>,
-        payload: &PaymentServiceAuthorizeRequest,
+        payment_authorize_data: &PaymentsAuthorizeData<T>,
         connector_name: &str,
         service_name: &str,
     ) -> Result<PaymentMethodTokenResponse, PaymentAuthorizationError> {
@@ -1413,44 +1414,8 @@ impl Payments {
             PaymentMethodTokenResponse,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let currency =
-            common_enums::Currency::foreign_try_from(payload.currency()).map_err(|e| {
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(format!("Currency conversion failed: {e}")),
-                    Some("CURRENCY_ERROR".to_string()),
-                    None,
-                )
-            })?;
-        let payment_method_tokenization_data = PaymentMethodTokenizationData {
-            amount: common_utils::types::MinorUnit::new(payload.amount),
-            currency,
-            integrity_object: None,
-            browser_info: None,
-            customer_acceptance: None,
-            mandate_id: None,
-            setup_future_usage: None,
-            setup_mandate_details: None,
-            payment_method_data:
-                domain_types::payment_method_data::PaymentMethodData::foreign_try_from(
-                    payload.payment_method.clone().ok_or_else(|| {
-                        PaymentAuthorizationError::new(
-                            grpc_api_types::payments::PaymentStatus::Pending,
-                            Some("Payment method is required".to_string()),
-                            Some("PAYMENT_METHOD_MISSING".to_string()),
-                            None,
-                        )
-                    })?,
-                )
-                .map_err(|e| {
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some(format!("Payment method data conversion failed: {e}")),
-                        Some("PAYMENT_METHOD_DATA_ERROR".to_string()),
-                        None,
-                    )
-                })?,
-        };
+        let payment_method_tokenization_data =
+            PaymentMethodTokenizationData::from(payment_authorize_data);
 
         let payment_method_token_router_data = RouterDataV2::<
             PaymentMethodToken,

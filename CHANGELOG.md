@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.11.19.1
+
+### Bug Fixes
+
+- Adyen Diff Check Resolve ([#268](https://github.com/juspay/connector-service/pull/268)) ([`6db1fe4`](https://github.com/juspay/connector-service/commit/6db1fe45ac5959ad71ecfc9d4aac9b678bb1010f))
+
+**Full Changelog:** [`2025.11.19.0...2025.11.19.1`](https://github.com/juspay/connector-service/compare/2025.11.19.0...2025.11.19.1)
+
+- - -
+
 ## 2025.11.19.0
 
 ### Features

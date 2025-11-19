@@ -609,10 +609,7 @@ where
             config.clone()
         }
         None => {
-            tracing::warn!(
-                "Configuration not found in request extensions, using default config. \
-                This may indicate middleware didn't run or config wasn't properly set."
-            );
+            tracing::info!("Configuration not found in request extensions, using default config.");
             default_config
         }
     }
@@ -644,9 +641,8 @@ macro_rules! implement_connector_operation {
                 .get::<std::sync::Arc<$crate::configs::Config>>()
                 .cloned()
                 .unwrap_or_else(|| {
-                    tracing::warn!(
-                        "Configuration not found in request extensions, using default config. \
-                        This may indicate middleware didn't run or config wasn't properly set."
+                    tracing::info!(
+                        "Configuration not found in request extensions, using default config."
                     );
                     self.config.get_config()
                 });

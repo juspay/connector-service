@@ -11,7 +11,7 @@ use domain_types::{
     router_response_types::Response,
 };
 use error_stack::{Report, ResultExt};
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde_json::Value;
 use std::str::FromStr;
 pub use xml_utils::preprocess_xml_response_bytes;
@@ -274,4 +274,21 @@ where
 {
     let json = connector_meta.ok_or_else(missing_field_err("connector_meta_data"))?;
     json.parse_value(std::any::type_name::<T>()).switch()
+}
+
+pub(crate) fn is_manual_capture(capture_method: Option<enums::CaptureMethod>) -> bool {
+    capture_method == Some(enums::CaptureMethod::Manual)
+        || capture_method == Some(enums::CaptureMethod::ManualMultiple)
+}
+
+pub fn get_token_expiry_month_year_2_digit_with_delimiter(
+    month: Secret<String>,
+    year: Secret<String>,
+) -> Secret<String> {
+    let year_2_digit = if year.peek().len() == 4 {
+        Secret::new(year.peek().chars().skip(2).collect::<String>())
+    } else {
+        year
+    };
+    Secret::new(format!("{}/{}", month.peek(), year_2_digit.peek()))
 }
