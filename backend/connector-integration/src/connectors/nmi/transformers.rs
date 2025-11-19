@@ -177,6 +177,44 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
+// Implementation for NmiRouterData wrapper (needed by macros)
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        super::NmiRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for NmiPaymentsRequest<T>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: super::NmiRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(&item.router_data)
+    }
+}
+
 // ===== PAYMENT METHOD TRANSFORMATION =====
 
 impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMethod<T> {
@@ -515,6 +553,34 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
     }
 }
 
+// Implementation for NmiRouterData wrapper (needed by macros)
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        super::NmiRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for NmiCaptureRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: super::NmiRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(&item.router_data)
+    }
+}
+
 // ===== CAPTURE RESPONSE =====
 
 impl
@@ -622,6 +688,34 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
             amount,
             payment: None, // NMI infers payment type from the referenced transaction
         })
+    }
+}
+
+// Implementation for NmiRouterData wrapper (needed by macros)
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        super::NmiRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for NmiRefundRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: super::NmiRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(&item.router_data)
     }
 }
 
@@ -802,6 +896,34 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
             void_reason,
             payment: None, // NMI infers payment type from the referenced transaction
         })
+    }
+}
+
+// Implementation for NmiRouterData wrapper (needed by macros)
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        super::NmiRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for NmiVoidRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: super::NmiRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(&item.router_data)
     }
 }
 
