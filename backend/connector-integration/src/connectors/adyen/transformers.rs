@@ -1810,21 +1810,26 @@ pub fn get_present_to_shopper_response(
             status_code,
             attempt_status: None,
             connector_transaction_id: response.psp_reference.clone(),
-            network_decline_code: None,
             network_advice_code: None,
+            network_decline_code: None,
             network_error_message: None,
         })
     } else {
         None
     };
 
+    // Note: UCS doesn't support split payments yet, so charges is None
+    let charges = None;
+    let connector_metadata = get_present_to_shopper_metadata(&response)?;
+
+    // We don't get connector transaction id for redirections in Adyen.
     let payments_response_data = PaymentsResponseData::TransactionResponse {
         resource_id: match response.psp_reference.as_ref() {
             Some(psp) => ResponseId::ConnectorTransactionId(psp.to_string()),
             None => ResponseId::NoResponseId,
         },
         redirection_data: None,
-        connector_metadata: None,
+        connector_metadata,
         network_txn_id: None,
         connector_response_reference_id: response
             .merchant_reference
@@ -3992,6 +3997,18 @@ impl TryFrom<SecretSerdeValue> for AdyenTestingData {
                 field_name: "connector_metadata.adyen.testing",
             })?;
         Ok(testing_data)
+    }
+}
+
+pub fn get_present_to_shopper_metadata(
+    response: &PresentToShopperResponse,
+) -> CustomResult<Option<serde_json::Value>, domain_types::errors::ConnectorError> {
+    // UCS currently only supports Card
+    // For card payments via PresentToShopper flow, no special metadata is needed
+    match response.action.payment_method_type {
+        // For now, UCS doesn't support voucher or bank transfer methods
+        // that would require special metadata, so return None for all cases
+        _ => Ok(None),
     }
 }
 
