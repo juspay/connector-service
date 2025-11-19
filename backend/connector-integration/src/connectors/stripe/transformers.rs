@@ -1640,7 +1640,8 @@ impl<
                         ),
                     }))),
                 };
-                let apple_pay_wallet_data = apple_pay_decrypt_data.ok_or(ConnectorError::MissingApplePayTokenData)?;
+                let apple_pay_wallet_data =
+                    apple_pay_decrypt_data.ok_or(ConnectorError::MissingApplePayTokenData)?;
                 Ok(apple_pay_wallet_data)
             }
             WalletData::WeChatPayQr(_) => Ok(Self::Wallet(StripeWallet::WechatpayPayment(
