@@ -1403,7 +1403,6 @@ pub struct RefundFlowData {
     pub refund_id: Option<String>,
     pub connectors: Connectors,
     pub connector_request_reference_id: String,
-    pub access_token: Option<AccessTokenResponseData>,
     pub raw_connector_response: Option<Secret<String>>,
     pub connector_response_headers: Option<http::HeaderMap>,
     pub raw_connector_request: Option<Secret<String>>,
