@@ -48,6 +48,7 @@ mod tests {
                     payment_method: common_enums::PaymentMethod::Wallet,
                     description: Some("Payment for order #12345".to_string()),
                     return_url: Some("https://www.google.com".to_string()),
+                    order_details: None,
                     address: domain_types::payment_address::PaymentAddress::new(
                         None,
                         Some(domain_types::payment_address::Address {
@@ -55,7 +56,7 @@ mod tests {
                                 first_name: Some(Secret::new("John".to_string())),
                                 last_name: Some(Secret::new("Doe".to_string())),
                                 line1: Some(Secret::new("123 Main St".to_string())),
-                                city: Some("Anytown".to_string()),
+                                city: Some(Secret::new("Anytown".to_string())),
                                 zip: Some(Secret::new("12345".to_string())),
                                 country: Some(common_enums::CountryAlpha2::US),
                                 ..Default::default()
@@ -102,9 +103,10 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     authentication_data: None,
+                    connector_testing_data: None,
                     access_token: None,
                     payment_method_data: PaymentMethodData::Wallet(WalletData::BluecodeRedirect {}),
-                    amount: 1000,
+                    amount: MinorUnit::new(1000),
                     order_tax_amount: None,
                     email: Some(
                         Email::try_from("test@example.com".to_string())
@@ -212,6 +214,7 @@ mod tests {
                     payment_method: common_enums::PaymentMethod::Wallet,
                     description: None,
                     return_url: None,
+                    order_details: None,
                     address: domain_types::payment_address::PaymentAddress::new(
                         None, None, None, None,
                     ),
@@ -249,9 +252,10 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     authentication_data: None,
+                    connector_testing_data: None,
                     access_token: None,
                     payment_method_data: PaymentMethodData::Wallet(WalletData::BluecodeRedirect {}),
-                    amount: 0,
+                    amount: MinorUnit::new(1000),
                     order_tax_amount: None,
                     email: None,
                     customer_name: None,

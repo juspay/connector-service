@@ -21,8 +21,12 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+authipay.base_url = "https://prod.emea.api.fiservapps.com/ipp/payments-gateway/v2/payments"
+stax.base_url = "https://apiprod.fattlabs.com"
 fiservemea.base_url = "https://prod.emea.api.fiservapps.com/ipp/payments-gateway/v2/payments"
 datatrans.base_url = "https://api.datatrans.com"
+silverflow.base_url = "https://api.silverflow.co/v1"
+celero.base_url = "https://app.gotnpgateway.com"
 adyen.base_url = "https://{{merchant_endpoint_prefix}}-checkout-live.adyenpayments.com/checkout/"
 adyen.dispute_base_url = "https://{{merchant_endpoint_prefix}}-ca-live.adyen.com/"
 razorpay.base_url = "https://api.razorpay.com/"
@@ -37,7 +41,7 @@ cashfree.base_url = "https://sandbox.cashfree.com/"
 fiuu.base_url = "https://pay.merchant.razer.com/"
 payload.base_url = "https://api.payload.com"
 payu.base_url = "https://secure.payu.com/api/"
-paytm.base_url = "https://securegw-stage.paytm.in/"
+paytm.base_url = "https://secure.paytmpayments.com/"
 cashtocode.base_url = "https://cluster14.api.cashtocode.com"
 novalnet.base_url = "https://payport.novalnet.de/v2"
 nexinets.base_url = "https://api.payengine.de/v1"
@@ -61,6 +65,7 @@ worldpayvantiv.base_url = "https://transact.vantivcnp.com/vap/communicator/onlin
 worldpayvantiv.secondary_base_url = "https://onlinessr.vantivcnp.com"
 billwerk.base_url = "https://api.reepay.com/"
 billwerk.secondary_base_url = "https://card.reepay.com/"
+paypal.base_url = "https://api-m.paypal.com/"
 
 # Generic Events Configuration
 [events]

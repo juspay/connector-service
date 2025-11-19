@@ -43,8 +43,12 @@ mock_server_url = "http://localhost:3000/mockGateway"
 psync = "GW_TXN_SYNC"
 
 [connectors]
+authipay.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
+stax.base_url = "https://apiprod.fattlabs.com"
 fiservemea.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
 datatrans.base_url = "https://api.sandbox.datatrans.com"
+silverflow.base_url = "https://api-sbx.silverflow.co/v1"
+celero.base_url = "https://sandbox.gotnpgateway.com"
 adyen.base_url = "https://checkout-test.adyen.com/"
 adyen.dispute_base_url = "https://ca-test.adyen.com/"
 razorpay.base_url = "https://api.razorpay.com/"
@@ -59,7 +63,7 @@ cashfree.base_url = "https://sandbox.cashfree.com/"
 fiuu.base_url = "https://sandbox.merchant.razer.com/"
 payload.base_url = "https://api.payload.com"
 payu.base_url = "https://test.payu.in/"
-paytm.base_url = "https://securegw-stage.paytm.in/"
+paytm.base_url = "https://securestage.paytmpayments.com/"
 cashtocode.base_url = "https://cluster05.api-test.cashtocode.com"
 bluecode.base_url = "https://dev.eorder.reloadhero.com/"
 novalnet.base_url = "https://payport.novalnet.de/v2"
@@ -83,6 +87,7 @@ worldpayvantiv.base_url = "https://transact.vantivprelive.com/vap/communicator/o
 worldpayvantiv.secondary_base_url = "https://onlinessr.vantivprelive.com"
 billwerk.base_url = "https://api.reepay.com/"
 billwerk.secondary_base_url = "https://card.reepay.com/"
+paypal.base_url = "https://api-m.sandbox.paypal.com/"
 
 # Generic Events Configuration
 [events]
