@@ -1,10 +1,21 @@
 use std::marker::PhantomData;
 
+use common_enums::DynamicContentType;
 use common_utils::{errors::CustomResult, ext_traits::BytesExt};
 use domain_types::{errors, router_data_v2::RouterDataV2};
 use error_stack::ResultExt;
 
 use crate::types;
+
+/// Trait for connectors that need to dynamically select content types
+/// based on runtime conditions such as payment method, flow type, etc.
+pub trait ContentTypeSelector<F, FCD, Req, Res> {
+    /// Determines the appropriate content type for the given request
+    fn get_dynamic_content_type(
+        &self,
+        req: &RouterDataV2<F, FCD, Req, Res>,
+    ) -> CustomResult<DynamicContentType, errors::ConnectorError>;
+}
 
 pub trait FlowTypes {
     type Flow;
@@ -145,6 +156,49 @@ macro_rules! expand_fn_get_request_body {
                 let request = bridge.request_body(input_data)?;
                 let form_data = <$curl_req as GetFormData>::get_form_data(&request);
                 Ok(Some(macro_types::RequestContent::FormData(form_data)))
+            }
+        }
+    };
+    (
+        $connector: ty,
+        $curl_req: ty,
+        Dynamic,
+        $curl_res: ty,
+        $flow: ident,
+        $resource_common_data: ty,
+        $request: ty,
+        $response: ty
+    ) => {
+        paste::paste! {
+            fn get_request_body(
+                &self,
+                req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
+            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError>
+            {
+                use crate::connectors::macros::ContentTypeSelector;
+
+                let bridge = self.[< $flow:snake >];
+                let input_data = [< $connector RouterData >] {
+                    connector: self.to_owned(),
+                    router_data: req.clone(),
+                };
+                let request = bridge.request_body(input_data)?;
+
+                // Get dynamic content type based on runtime conditions
+                let content_type = self.get_dynamic_content_type(req)?;
+
+                match content_type {
+                    common_enums::DynamicContentType::Json => {
+                        Ok(Some(macro_types::RequestContent::Json(Box::new(request))))
+                    }
+                    common_enums::DynamicContentType::FormUrlEncoded => {
+                        Ok(Some(macro_types::RequestContent::FormUrlEncoded(Box::new(request))))
+                    }
+                    common_enums::DynamicContentType::FormData => {
+                        let form_data = <$curl_req as GetFormData>::get_form_data(&request);
+                        Ok(Some(macro_types::RequestContent::FormData(form_data)))
+                    }
+                }
             }
         }
     };
@@ -396,6 +450,65 @@ macro_rules! macro_connector_implementation {
                 $request,
                 $response,
                 preprocess_enabled
+            );
+        }
+    };
+
+    // Version with Dynamic content type selection
+    (
+        connector_default_implementations: [$($function_name:ident), *],
+        connector: $connector:ident,
+        curl_request: Dynamic($curl_req:ty),
+        curl_response: $curl_res:ty,
+        flow_name: $flow:ident,
+        resource_common_data:$resource_common_data:ty,
+        flow_request: $request:ty,
+        flow_response: $response:ty,
+        http_method: $http_method_type:ident,
+        generic_type: $generic_type:tt,
+        [$($bounds:tt)*],
+        other_functions: {
+            $($function_def: tt)*
+        }
+    ) => {
+        impl<$generic_type: $($bounds)*>
+            ConnectorIntegrationV2<
+                $flow,
+                $resource_common_data,
+                $request,
+                $response,
+            > for $connector<$generic_type>
+        {
+            fn get_http_method(&self) -> common_utils::request::Method {
+                common_utils::request::Method::$http_method_type
+            }
+            $($function_def)*
+            $(
+                macros::expand_default_functions!(
+                    function: $function_name,
+                    flow_name:$flow,
+                    resource_common_data:$resource_common_data,
+                    flow_request:$request,
+                    flow_response:$response,
+                );
+            )*
+            macros::expand_fn_get_request_body!(
+                $connector,
+                $curl_req,
+                Dynamic,
+                $curl_res,
+                $flow,
+                $resource_common_data,
+                $request,
+                $response
+            );
+            macros::expand_fn_handle_response!(
+                $connector,
+                $flow,
+                $resource_common_data,
+                $request,
+                $response,
+                no_preprocess
             );
         }
     };

@@ -539,6 +539,21 @@ impl<
                         },
                     }
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::BankTransfer(bank_transfer_type) => {
+                    match bank_transfer_type.bank_transfer_type {
+                        Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::InstantBankTransfer(_)) => {
+                            Ok(PaymentMethodData::BankTransfer(Box::new(payment_method_data::BankTransferData::InstantBankTransfer {  })))
+                        }
+                        None => {
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                                error_identifier: 400,
+                                error_message: "This bank transfer type is not yet supported".to_owned(),
+                                error_object: None,
+                            })))
+                        },
+                    }
+                }
                 grpc_api_types::payments::payment_method::PaymentMethod::MobilePayment(mobile_payment_type) => {
                     match mobile_payment_type.mobile_payment_type {
                         Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::DuitNow(_)) => {
@@ -771,6 +786,19 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                             sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                             error_identifier: 400,
                             error_message: "This mobile payment type is not yet supported".to_owned(),
+                            error_object: None,
+                        })))
+                    }
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::BankTransfer(bank_transfer_type) => {
+                    match bank_transfer_type.bank_transfer_type {
+                        Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::InstantBankTransfer(_)) => {
+                            Ok(Some(PaymentMethodType::InstantBankTransfer))
+                        }
+                        _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                            error_identifier: 400,
+                            error_message: "This bank transfer type is not yet supported".to_owned(),
                             error_object: None,
                         })))
                     }
@@ -2540,6 +2568,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for common_enums::P
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Wallet(_)),
             } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::BankTransfer(_)),
+            } => Ok(Self::BankTransfer),
             _ => Ok(Self::Card), // Default fallback
         }
     }
