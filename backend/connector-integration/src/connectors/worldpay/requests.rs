@@ -190,7 +190,7 @@ pub struct BillingAddress {
     pub address2: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub address3: Option<Secret<String>>,
-    pub city: String,
+    pub city: Secret<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub state: Option<Secret<String>>,
     pub postal_code: Secret<String>,
@@ -359,12 +359,9 @@ pub struct SubMerchant {
 }
 
 #[derive(Default, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct WorldpayPartialRequest {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub value: Option<PaymentValue>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reference: Option<String>,
+    pub value: PaymentValue,
+    pub reference: String,
 }
 
 // Type aliases to avoid duplicate template structs in macro generation

@@ -27,7 +27,7 @@ pub enum TransactionTypes {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BillingAddress {
     #[serde(rename = "payment_method[billing_address][city]")]
-    pub city: String,
+    pub city: Secret<String>,
     #[serde(rename = "payment_method[billing_address][country_code]")]
     pub country: common_enums::CountryAlpha2,
     #[serde(rename = "payment_method[billing_address][postal_code]")]
