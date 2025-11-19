@@ -112,6 +112,7 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     authentication_data: None,
+                    connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: RawCardNumber(
                             CardNumber::from_str("5123456789012346").unwrap(),
@@ -128,7 +129,7 @@ mod tests {
                         card_holder_name: Some("Test User".to_string().into()),
                         co_badged_card_data: None,
                     }),
-                    amount: 1000,
+                    amount: MinorUnit::new(1000),
                     order_tax_amount: None,
                     email: Some(email.clone()),
                     customer_name: None,
@@ -293,6 +294,7 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     authentication_data: None,
+                    connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: RawCardNumber(CardNumber::from_str("").unwrap_or_default()),
                         card_exp_month: "".to_string().into(),
@@ -307,7 +309,7 @@ mod tests {
                         card_holder_name: Some("Test User".to_string().into()),
                         co_badged_card_data: None,
                     }),
-                    amount: 1000,
+                    amount: MinorUnit::new(1000),
                     order_tax_amount: None,
                     email: None,
                     customer_name: None,
@@ -425,6 +427,7 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     authentication_data: None,
+                    connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: RawCardNumber(CardNumber::from_str("123").unwrap_or_default()),
                         card_exp_month: "99".to_string().into(),
@@ -439,7 +442,7 @@ mod tests {
                         card_holder_name: Some("Test User".to_string().into()),
                         co_badged_card_data: None,
                     }),
-                    amount: 1000,
+                    amount: MinorUnit::new(1000),
                     order_tax_amount: None,
                     email: Some(email),
                     customer_name: None,
@@ -579,6 +582,7 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     authentication_data: None,
+                    connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: RawCardNumber(
                             CardNumber::from_str("5123450000000008").unwrap(),
@@ -595,7 +599,7 @@ mod tests {
                         card_holder_name: Some("Test User".to_string().into()),
                         co_badged_card_data: None,
                     }),
-                    amount: 1000,
+                    amount: MinorUnit::new(1000),
                     order_tax_amount: None,
                     email: Some(email),
                     customer_name: None,
@@ -904,6 +908,7 @@ mod tests {
             },
             request: PaymentsAuthorizeData {
                 authentication_data: None,
+                connector_testing_data: None,
                 payment_method_data: PaymentMethodData::Card(Card {
                     card_number: RawCardNumber(CardNumber::from_str("5123450000000008").unwrap()),
                     card_exp_month: "12".to_string().into(),
@@ -918,7 +923,7 @@ mod tests {
                     card_holder_name: Some("Test User".to_string().into()),
                     co_badged_card_data: None,
                 }),
-                amount: 1000,
+                amount: MinorUnit::new(1000),
                 order_tax_amount: None,
                 email: Some(email),
                 customer_name: None,
@@ -1092,6 +1097,7 @@ mod tests {
             },
             request: PaymentsAuthorizeData {
                 authentication_data: None,
+                connector_testing_data: None,
                 payment_method_data: PaymentMethodData::Card(Card {
                     card_number: RawCardNumber(CardNumber::from_str("5123450000000008").unwrap()),
                     card_exp_month: "12".to_string().into(),
@@ -1106,7 +1112,7 @@ mod tests {
                     card_holder_name: Some("Test User".to_string().into()),
                     co_badged_card_data: None,
                 }),
-                amount: 1000,
+                amount: MinorUnit::new(1000),
                 order_tax_amount: None,
                 email: Some(email),
                 customer_name: None,
@@ -1513,6 +1519,7 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     authentication_data: None,
+                    connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: Default::default(),
                         card_exp_month: "".to_string().into(),
@@ -1527,7 +1534,7 @@ mod tests {
                         card_holder_name: Some("Test User".to_string().into()),
                         co_badged_card_data: None,
                     }),
-                    amount: 1000,
+                    amount: MinorUnit::new(1000),
                     order_tax_amount: None,
                     email: None,
                     customer_name: None,

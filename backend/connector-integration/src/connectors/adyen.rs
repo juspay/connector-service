@@ -97,6 +97,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Adyen<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Adyen<T>
 {
