@@ -1257,6 +1257,7 @@ pub struct RegisterSingleCustomerResponseInner {
     pub return_message: Option<String>,
     pub customer_id: Option<String>,
     pub cust_number: String,
+    pub credit_card_token: Option<String>,
     pub action_code: Option<u8>,
 }
 
@@ -1434,9 +1435,10 @@ impl<
         }
 
         // Success response - customer registration successful
-        // Use Bambora's assigned customer_id as the mandate_id for future RepeatPayment calls
-        // If customer_id is not returned, fall back to the cust_number we sent
-        let connector_mandate_id = response.customer_id.clone()
+        // Use the credit_card_token as mandate_id for RepeatPayment
+        // If not returned, fall back to customer_id or cust_number
+        let connector_mandate_id = response.credit_card_token.clone()
+            .or_else(|| response.customer_id.clone())
             .unwrap_or_else(|| response.cust_number.clone());
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
@@ -1449,6 +1451,7 @@ impl<
             connector_metadata: Some(serde_json::json!({
                 "customer_number": response.cust_number.clone(),
                 "customer_id": response.customer_id.clone(),
+                "credit_card_token": response.credit_card_token.clone(),
                 "action_code": response.action_code
             })),
             network_txn_id: None,
@@ -1472,21 +1475,20 @@ impl<
 // REPEAT PAYMENT FLOW STRUCTURES
 // ============================================================================
 
-// RepeatPayment Request Structure (Payment with registered customer)
+// RepeatPayment Request Structure (Payment with tokenized card)
 #[derive(Debug, Clone)]
 pub struct BamboraapacRepeatPaymentRequest {
     pub account_number: Secret<String>,
-    pub customer_storage_number: Option<String>,
-    pub cust_number: String,
     pub cust_ref: String,
     pub amount: MinorUnit,
     pub trn_type: BamboraapacTrnType,
+    pub card_token: String, // The customer_id/token from SetupMandate
     pub username: Secret<String>,
     pub password: Secret<String>,
 }
 
 impl BamboraapacRepeatPaymentRequest {
-    // Generate SOAP XML request for SubmitSinglePayment with registered customer
+    // Generate SOAP XML request for SubmitSinglePayment with tokenized card
     pub fn to_soap_xml(&self) -> String {
         format!(
             r#"
@@ -1497,12 +1499,14 @@ impl BamboraapacRepeatPaymentRequest {
                         <dts:trnXML>
                             <![CDATA[
         <Transaction>
-            <CustNumber>{}</CustNumber>
             <CustRef>{}</CustRef>
             <Amount>{}</Amount>
             <TrnType>{}</TrnType>
             <AccountNumber>{}</AccountNumber>
-            <CreditCard Registered="True"></CreditCard>
+            <CreditCard>
+                <TokeniseAlgorithmID>2</TokeniseAlgorithmID>
+                <CardNumber>{}</CardNumber>
+            </CreditCard>
             <Security>
                     <UserName>{}</UserName>
                     <Password>{}</Password>
@@ -1514,11 +1518,11 @@ impl BamboraapacRepeatPaymentRequest {
                 </soapenv:Body>
             </soapenv:Envelope>
         "#,
-            self.cust_number,
             self.cust_ref,
             self.amount.get_amount_as_i64(),
             self.trn_type as i32,
             self.account_number.peek(),
+            self.card_token,
             self.username.peek(),
             self.password.peek()
         )
@@ -1540,8 +1544,8 @@ impl TryFrom<&RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, Pa
     ) -> Result<Self, Self::Error> {
         let auth = BamboraapacAuthType::try_from(&router_data.connector_auth_type)?;
 
-        // Extract the connector mandate ID (customer number) from mandate_reference
-        let cust_number = match &router_data.request.mandate_reference {
+        // Extract the card token (customer_id from SetupMandate) from mandate_reference
+        let card_token = match &router_data.request.mandate_reference {
             domain_types::connector_types::MandateReferenceId::ConnectorMandateId(mandate_ref) => {
                 mandate_ref.get_connector_mandate_id().ok_or(
                     ConnectorError::MissingRequiredField {
@@ -1564,14 +1568,13 @@ impl TryFrom<&RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, Pa
 
         Ok(Self {
             account_number: auth.account_number,
-            customer_storage_number: None, // Optional field
-            cust_number,
             cust_ref: router_data
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
             amount: router_data.request.minor_amount,
             trn_type,
+            card_token,
             username: auth.username,
             password: auth.password,
         })
