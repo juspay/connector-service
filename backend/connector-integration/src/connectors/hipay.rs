@@ -2,7 +2,7 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
-use common_enums::CurrencyUnit;
+use common_enums::{CurrencyUnit, PaymentMethod, PaymentMethodType};
 
 use common_utils::{
     errors::CustomResult,
@@ -229,7 +229,11 @@ impl<
             + Serialize,
     > connector_types::ValidationTrait for Hipay<T>
 {
-    fn should_do_payment_method_token(&self) -> bool {
+    fn should_do_payment_method_token(
+        &self,
+        _payment_method: PaymentMethod,
+        _payment_method_type: Option<PaymentMethodType>,
+    ) -> bool {
         true
     }
 }
