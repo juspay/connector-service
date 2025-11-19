@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use common_utils::{consts, events::EventConfig, metadata::HeaderMaskingConfig};
 use domain_types::types::{Connectors, Proxy};
@@ -25,6 +25,25 @@ pub struct Config {
     pub api_tags: ApiTagConfig,
 }
 
+/// Wrapper for Config that enforces access through getter methods
+/// Provides consistent config access pattern across all services
+#[derive(Clone, Debug)]
+pub struct ConfigHolder {
+    config: Arc<Config>,
+}
+
+impl ConfigHolder {
+    pub fn new(config: &Arc<Config>) -> Self {
+        Self {
+            config: Arc::clone(config),
+        }
+    }
+
+    pub fn get_config(&self) -> Arc<Config> {
+        Arc::clone(&self.config)
+    }
+}
+
 #[derive(Clone, serde::Deserialize, Debug, Default, Serialize)]
 pub struct LineageConfig {
     /// Enable processing of x-lineage-ids header
@@ -46,7 +65,7 @@ fn default_lineage_prefix() -> String {
 }
 
 /// Test mode configuration for mock server integration
-#[derive(Clone, serde::Deserialize, Debug, Default)]
+#[derive(Clone, Deserialize, Debug, Default, Serialize)]
 pub struct TestConfig {
     #[serde(default)]
     pub enabled: bool,
@@ -91,7 +110,7 @@ impl TestConfig {
 /// ```
 ///
 /// Note: Config crate lowercases env var keys, lookup is case-insensitive
-#[derive(Clone, serde::Deserialize, Debug, Default)]
+#[derive(Clone, Deserialize, Debug, Default, Serialize)]
 pub struct ApiTagConfig {
     #[serde(default)]
     pub tags: std::collections::HashMap<String, String>,
@@ -141,7 +160,7 @@ impl ApiTagConfig {
     }
 }
 
-#[derive(Clone, serde::Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Serialize)]
 pub struct Common {
     pub environment: consts::Env,
 }

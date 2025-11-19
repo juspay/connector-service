@@ -114,13 +114,9 @@ impl Service {
 
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
-            payments_service: crate::server::payments::Payments {
-                config: Arc::clone(&config),
-            },
-            refunds_service: crate::server::refunds::Refunds {
-                config: Arc::clone(&config),
-            },
-            disputes_service: crate::server::disputes::Disputes { config },
+            payments_service: crate::server::payments::Payments::new(&config),
+            refunds_service: crate::server::refunds::Refunds::new(&config),
+            disputes_service: crate::server::disputes::Disputes::new(&config),
         }
     }
 

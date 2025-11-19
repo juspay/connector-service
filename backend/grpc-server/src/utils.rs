@@ -1,4 +1,3 @@
-use crate::{configs, error::ResultExtGrpc};
 use common_utils::{
     consts::{
         self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2, X_SHADOW_MODE,
@@ -21,12 +20,10 @@ use error_stack::{Report, ResultExt};
 use http::request::Request;
 use hyperswitch_masking;
 use serde_json::Value;
-use std::{str::FromStr, sync::Arc};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tonic::metadata;
 
 use crate::{configs, error::ResultExtGrpc, request::RequestData};
-use std::collections::HashMap;
-
 
 // Helper function to map flow markers to flow names
 pub fn flow_marker_to_flow_name<F>() -> FlowName
@@ -321,14 +318,28 @@ pub fn config_from_metadata(
                 }))
             })?;
             let merged = merge_configs(&override_value, &base_value);
-            serde_json::from_value(merged).map(Arc::new).map_err(|e| {
-                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "CANNOT_DESERIALIZE_JSON".into(),
-                    error_identifier: 400,
-                    error_message: format!("Cannot deserialize merged config: {e}"),
-                    error_object: None,
-                }))
-            })
+            let result = serde_json::from_value(merged.clone())
+                .map(Arc::new)
+                .map_err(|e| {
+                    tracing::error!(
+                        error = %e,
+                        merged_config = ?merged,
+                        "Failed to deserialize merged config"
+                    );
+                    Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "CANNOT_DESERIALIZE_JSON".into(),
+                        error_identifier: 400,
+                        error_message: format!("Cannot deserialize merged config: {e}"),
+                        error_object: None,
+                    }))
+                })?;
+
+            tracing::info!(
+                override_config = %config_override,
+                "Config override applied successfully"
+            );
+
+            Ok(result)
         }
     }
 }
@@ -587,22 +598,24 @@ fn create_and_emit_grpc_event<R>(
 
 pub fn get_config_from_request<T>(
     request: &tonic::Request<T>,
-) -> CustomResult<Arc<configs::Config>, ApplicationErrorResponse>
+    default_config: Arc<configs::Config>,
+) -> Arc<configs::Config>
 where
     T: serde::Serialize,
 {
-    request
-        .extensions()
-        .get::<Arc<configs::Config>>()
-        .cloned()
-        .ok_or_else(|| {
-            Report::new(ApplicationErrorResponse::InternalServerError(ApiError {
-                sub_code: "CONFIG_NOT_FOUND".to_string(),
-                error_identifier: 500,
-                error_message: "Configuration not found in request extensions".to_string(),
-                error_object: None,
-            }))
-        })
+    match request.extensions().get::<Arc<configs::Config>>() {
+        Some(config) => {
+            tracing::info!("Using config from request extensions");
+            config.clone()
+        }
+        None => {
+            tracing::warn!(
+                "Configuration not found in request extensions, using default config. \
+                This may indicate middleware didn't run or config wasn't properly set."
+            );
+            default_config
+        }
+    }
 }
 
 #[macro_export]
@@ -626,8 +639,17 @@ macro_rules! implement_connector_operation {
             request: $crate::request::RequestData<$request_type>,
         ) -> Result<tonic::Response<$response_type>, tonic::Status> {
             tracing::info!(concat!($log_prefix, "_FLOW: initiated"));
-            let config = $crate::utils::get_config_from_request(&request)
-                    .map_err(|e| e.into_grpc_status())?;
+            let config = request
+                .extensions
+                .get::<std::sync::Arc<$crate::configs::Config>>()
+                .cloned()
+                .unwrap_or_else(|| {
+                    tracing::warn!(
+                        "Configuration not found in request extensions, using default config. \
+                        This may indicate middleware didn't run or config wasn't properly set."
+                    );
+                    self.config.get_config()
+                });
             let service_name = request
                 .extensions
                 .get::<String>()
@@ -661,7 +683,7 @@ macro_rules! implement_connector_operation {
                 .into_grpc_status()?;
 
             // Create common request data
-            let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone(), &masked_metadata))
+            let common_flow_data = $common_flow_data_constructor((payload.clone(), config.connectors.clone(), &masked_metadata))
                 .into_grpc_status()?;
 
             // Create router data
@@ -683,13 +705,12 @@ macro_rules! implement_connector_operation {
 
             // Get API tag for the current flow
             // Note: Flows with payment_method_type should implement manually (e.g., authorize, psync)
-            let api_tag = self
-                .config
+            let api_tag = config
                 .api_tags
                 .get_tag(flow_name, None);
 
             // Create test context if test mode is enabled
-            let test_context = self.config.test.create_test_context(&request_id).map_err(|e| {
+            let test_context = config.test.create_test_context(&request_id).map_err(|e| {
                 tonic::Status::internal(format!("Test mode configuration error: {e}"))
             })?;
 
@@ -698,7 +719,7 @@ macro_rules! implement_connector_operation {
                 connector_name: &connector.to_string(),
                 service_name: &service_name,
                 flow_name,
-                event_config: &self.config.events,
+                event_config: &config.events,
                 request_id: &request_id,
                 lineage_ids: &metadata_payload.lineage_ids,
                 reference_id: &metadata_payload.reference_id,

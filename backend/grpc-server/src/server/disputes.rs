@@ -30,7 +30,7 @@ use std::sync::Arc;
 use tracing::info;
 
 use crate::{
-    configs::Config,
+    configs::{Config, ConfigHolder},
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
     request::RequestData,
@@ -46,7 +46,16 @@ trait DisputeOperationsInternal {
 }
 
 pub struct Disputes {
-    pub config: Arc<Config>,
+    /// INTERNAL: Do not access directly. Use get_config() method.
+    config: ConfigHolder,
+}
+
+impl Disputes {
+    pub fn new(config: &Arc<Config>) -> Self {
+        Self {
+            config: ConfigHolder::new(config),
+        }
+    }
 }
 
 impl DisputeOperationsInternal for Disputes {
@@ -94,7 +103,7 @@ impl DisputeService for Disputes {
         request: tonic::Request<DisputeServiceSubmitEvidenceRequest>,
     ) -> Result<tonic::Response<DisputeServiceSubmitEvidenceResponse>, tonic::Status> {
         info!("DISPUTE_FLOW: initiated");
-        let config = get_config_from_request(&request).map_err(|e| e.into_grpc_status())?;
+        let config = get_config_from_request(&request, self.config.get_config());
         let service_name = request
             .extensions()
             .get::<String>()
@@ -103,7 +112,7 @@ impl DisputeService for Disputes {
         Box::pin(grpc_logging_wrapper(
             request,
             &service_name,
-            self.config.clone(),
+            config.clone(),
             common_utils::events::FlowName::SubmitEvidence,
             |request_data| {
                 let service_name = service_name.clone();
@@ -154,7 +163,7 @@ impl DisputeService for Disputes {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
                         flow_name: common_utils::events::FlowName::SubmitEvidence,
-                        event_config: &self.config.events,
+                        event_config: &config.events,
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &reference_id,
@@ -213,7 +222,7 @@ impl DisputeService for Disputes {
     ) -> Result<tonic::Response<DisputeResponse>, tonic::Status> {
         // For now, return a basic dispute response
         // This will need proper implementation based on domain logic
-        let config = get_config_from_request(&request).map_err(|e| e.into_grpc_status())?;
+        let config = get_config_from_request(&request, self.config.get_config());
         let service_name = request
             .extensions()
             .get::<String>()
@@ -222,7 +231,7 @@ impl DisputeService for Disputes {
         grpc_logging_wrapper(
             request,
             &service_name,
-            self.config.clone(),
+            config.clone(),
             common_utils::events::FlowName::Dsync,
             |request_data| async {
                 let _payload = request_data.payload;
@@ -265,10 +274,11 @@ impl DisputeService for Disputes {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "DisputeService".to_string());
+        let config = get_config_from_request(&request, self.config.get_config());
         grpc_logging_wrapper(
             request,
             &service_name,
-            self.config.clone(),
+            config.clone(),
             common_utils::events::FlowName::DefendDispute,
             |request_data| async move { self.internal_defend(request_data).await },
         )
@@ -301,7 +311,7 @@ impl DisputeService for Disputes {
         request: tonic::Request<AcceptDisputeRequest>,
     ) -> Result<tonic::Response<AcceptDisputeResponse>, tonic::Status> {
         info!("DISPUTE_FLOW: initiated");
-        let config = get_config_from_request(&request).map_err(|e| e.into_grpc_status())?;
+        let config = get_config_from_request(&request, self.config.get_config());
         let service_name = request
             .extensions()
             .get::<String>()
@@ -310,7 +320,7 @@ impl DisputeService for Disputes {
         grpc_logging_wrapper(
             request,
             &service_name,
-            self.config.clone(),
+            config.clone(),
             common_utils::events::FlowName::AcceptDispute,
             |request_data| {
                 let service_name = service_name.clone();
@@ -363,7 +373,7 @@ impl DisputeService for Disputes {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
                         flow_name: common_utils::events::FlowName::AcceptDispute,
-                        event_config: &self.config.events,
+                        event_config: &config.events,
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &reference_id,
@@ -420,7 +430,7 @@ impl DisputeService for Disputes {
         &self,
         request: tonic::Request<DisputeServiceTransformRequest>,
     ) -> Result<tonic::Response<DisputeServiceTransformResponse>, tonic::Status> {
-        let config = get_config_from_request(&request).map_err(|e| e.into_grpc_status())?;
+        let config = get_config_from_request(&request, self.config.get_config());
         let service_name = request
             .extensions()
             .get::<String>()
@@ -429,7 +439,7 @@ impl DisputeService for Disputes {
         grpc_logging_wrapper(
             request,
             &service_name,
-            self.config.clone(),
+            config.clone(),
             common_utils::events::FlowName::IncomingWebhook,
             |request_data| {
                 async move {

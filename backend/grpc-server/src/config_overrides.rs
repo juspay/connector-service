@@ -47,34 +47,47 @@ where
     }
 
     fn call(&mut self, mut req: Request<Body>) -> Self::Future {
-        // Try to create the default config
-        let default_config = match Config::new() {
-            Ok(cfg) => cfg,
-            Err(e) => {
-                let err =
-                    tonic::Status::internal(format!("Failed to create default config: {e:?}"));
-                let fut = async move { Err(err) };
-                return Box::pin(fut);
-            }
-        };
-        // Extract x-config-override header
+        // Extract x-config-override header first
         let config_override = req
             .headers()
             .get("x-config-override")
             .and_then(|h| h.to_str().map(|s| s.to_owned()).ok());
 
-        let new_config = match config_from_metadata(config_override, default_config.clone()) {
-            Ok(cfg) => cfg,
-            Err(e) => {
-                let err = tonic::Status::internal(format!(
-                    "Failed to create config from metadata: {e:?}"
-                ));
-                let fut = async move { Err(err) };
-                return Box::pin(fut);
-            }
-        };
+        // Only process config if override header is present
+        match config_override {
+            Some(override_str) => {
+                // Create default config only when needed
+                let default_config = match Config::new() {
+                    Ok(cfg) => cfg,
+                    Err(e) => {
+                        let err = tonic::Status::internal(format!(
+                            "Failed to create default config: {e:?}"
+                        ));
+                        let fut = async move { Err(err) };
+                        return Box::pin(fut);
+                    }
+                };
 
-        req.extensions_mut().insert(new_config);
+                // Merge override with default
+                let new_config = match config_from_metadata(Some(override_str), default_config) {
+                    Ok(cfg) => cfg,
+                    Err(e) => {
+                        let err = tonic::Status::internal(format!(
+                            "Failed to create config from metadata: {e:?}"
+                        ));
+                        let fut = async move { Err(err) };
+                        return Box::pin(fut);
+                    }
+                };
+
+                // Insert merged config into extensions
+                req.extensions_mut().insert(new_config);
+            }
+            None => {
+                // No override header - skip processing, service will use base config
+            }
+        }
+
         let future = self.inner.call(req);
         Box::pin(async move {
             let response = future.await?;

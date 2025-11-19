@@ -20,7 +20,7 @@ use grpc_api_types::payments::{
 };
 
 use crate::{
-    configs::Config,
+    configs::{Config, ConfigHolder},
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
     request::RequestData,
@@ -34,9 +34,18 @@ trait RefundOperationsInternal {
     ) -> Result<tonic::Response<RefundResponse>, tonic::Status>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Refunds {
-    pub config: Arc<Config>,
+    /// INTERNAL: Do not access directly. Use get_config() method.
+    config: ConfigHolder,
+}
+
+impl Refunds {
+    pub fn new(config: &Arc<Config>) -> Self {
+        Self {
+            config: ConfigHolder::new(config),
+        }
+    }
 }
 
 impl RefundOperationsInternal for Refunds {
@@ -88,10 +97,11 @@ impl RefundService for Refunds {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "RefundService".to_string());
+        let config = utils::get_config_from_request(&request, self.config.get_config());
         utils::grpc_logging_wrapper(
             request,
             &service_name,
-            self.config.clone(),
+            config.clone(),
             common_utils::events::FlowName::Rsync,
             |request_data| async move { self.internal_get(request_data).await },
         )
@@ -121,7 +131,7 @@ impl RefundService for Refunds {
         &self,
         request: tonic::Request<RefundServiceTransformRequest>,
     ) -> Result<tonic::Response<RefundServiceTransformResponse>, tonic::Status> {
-        let config = utils::get_config_from_request(&request).map_err(|e| e.into_grpc_status())?;
+        let config = utils::get_config_from_request(&request, self.config.get_config());
         let service_name = request
             .extensions()
             .get::<String>()
@@ -130,7 +140,7 @@ impl RefundService for Refunds {
         utils::grpc_logging_wrapper(
             request,
             &service_name,
-            self.config.clone(),
+            config.clone(),
             common_utils::events::FlowName::IncomingWebhook,
             |request_data| async move {
                 let payload = request_data.payload;

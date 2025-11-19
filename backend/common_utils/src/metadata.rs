@@ -19,6 +19,19 @@ impl HeaderMaskingConfig {
     }
 }
 
+impl serde::Serialize for HeaderMaskingConfig {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut state = serializer.serialize_struct("HeaderMaskingConfig", 1)?;
+        let keys: Vec<String> = self.unmasked_keys.iter().cloned().collect();
+        state.serialize_field("keys", &keys)?;
+        state.end()
+    }
+}
+
 impl<'de> serde::Deserialize<'de> for HeaderMaskingConfig {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

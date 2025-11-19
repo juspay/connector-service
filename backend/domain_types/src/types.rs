@@ -20,7 +20,7 @@ use grpc_api_types::payments::{
     RefundResponse,
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tracing::info;
 use utoipa::ToSchema;
 
@@ -82,7 +82,7 @@ use crate::{
     utils::{extract_merchant_id_from_metadata, ForeignFrom, ForeignTryFrom},
 };
 
-#[derive(Clone, serde::Deserialize, Debug, Default)]
+#[derive(Clone, serde::Deserialize, serde::Serialize, Debug, Default)]
 pub struct Connectors {
     // Added pub
     pub adyen: ConnectorParams,
@@ -122,7 +122,7 @@ pub struct Connectors {
     pub datatrans: ConnectorParams,
 }
 
-#[derive(Clone, serde::Deserialize, Debug, Default)]
+#[derive(Clone, Deserialize, Serialize, Debug, Default)]
 pub struct ConnectorParams {
     /// base url
     #[serde(default)]
@@ -143,7 +143,7 @@ impl ConnectorParams {
     }
 }
 
-#[derive(Debug, serde::Deserialize, Clone, Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct ConnectorParamsWithMoreUrls {
     /// base url
     pub base_url: String,
@@ -174,7 +174,7 @@ impl HasConnectors for DisputeFlowData {
     }
 }
 
-#[derive(Debug, serde::Deserialize, Clone)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub struct Proxy {
     pub http_url: Option<String>,
     pub https_url: Option<String>,
