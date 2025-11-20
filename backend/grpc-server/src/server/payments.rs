@@ -44,6 +44,7 @@ use grpc_api_types::payments::{
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
     PaymentServiceCreateAccessTokenRequest, PaymentServiceCreateAccessTokenResponse,
     PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse,
+    PaymentServiceCreatePaymentMethodTokenRequest, PaymentServiceCreatePaymentMethodTokenResponse,
     PaymentServiceCreateSessionTokenRequest, PaymentServiceCreateSessionTokenResponse,
     PaymentServiceDisputeRequest, PaymentServiceGetRequest, PaymentServiceGetResponse,
     PaymentServicePostAuthenticateRequest, PaymentServicePostAuthenticateResponse,
@@ -3371,6 +3372,165 @@ impl PaymentService for Payments {
             self.config.clone(),
             FlowName::PostAuthenticate,
             |request_data| async move { self.internal_post_authenticate(request_data).await },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "create_payment_method_token",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = "CreatePaymentMethodToken",
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = "CreatePaymentMethodToken",
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn create_payment_method_token(
+        &self,
+        request: tonic::Request<PaymentServiceCreatePaymentMethodTokenRequest>,
+    ) -> Result<tonic::Response<PaymentServiceCreatePaymentMethodTokenResponse>, tonic::Status>
+    {
+        info!("CREATE_PAYMENT_METHOD_TOKEN_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            FlowName::PaymentMethodToken,
+            |request_data| {
+                let service_name = service_name.clone();
+                Box::pin(async move {
+                    let payload = request_data.payload;
+                    let metadata_payload = request_data.extracted_metadata;
+                    let (connector, request_id, lineage_ids) = (
+                        metadata_payload.connector,
+                        metadata_payload.request_id,
+                        metadata_payload.lineage_ids,
+                    );
+                    let connector_auth_details = &metadata_payload.connector_auth_type;
+
+                    // Get connector data
+                    let connector_data: ConnectorData<DefaultPCIHolder> =
+                        ConnectorData::get_connector_by_name(&connector);
+
+                    // Get connector integration
+                    let connector_integration: BoxedConnectorIntegrationV2<
+                        '_,
+                        PaymentMethodToken,
+                        PaymentFlowData,
+                        PaymentMethodTokenizationData<DefaultPCIHolder>,
+                        PaymentMethodTokenResponse,
+                    > = connector_data.connector.get_connector_integration_v2();
+
+                    // Create payment flow data
+                    let payment_flow_data = PaymentFlowData::foreign_try_from((
+                        payload.clone(),
+                        self.config.connectors.clone(),
+                        &request_data.masked_metadata,
+                    ))
+                    .map_err(|e| e.into_grpc_status())?;
+
+                    // Get payment method token request data
+                    let payment_method_token_request_data =
+                        PaymentMethodTokenizationData::foreign_try_from(payload.clone()).map_err(
+                            |err| {
+                                tracing::error!(
+                                    "Failed to process payment method token data: {:?}",
+                                    err
+                                );
+                                tonic::Status::internal(format!(
+                                    "Failed to process payment method token data: {err}"
+                                ))
+                            },
+                        )?;
+
+                    // Create router data for payment method token flow
+                    let payment_method_token_router_data = RouterDataV2::<
+                        PaymentMethodToken,
+                        PaymentFlowData,
+                        PaymentMethodTokenizationData<DefaultPCIHolder>,
+                        PaymentMethodTokenResponse,
+                    > {
+                        flow: std::marker::PhantomData,
+                        resource_common_data: payment_flow_data.clone(),
+                        connector_auth_type: connector_auth_details.clone(),
+                        request: payment_method_token_request_data.clone(),
+                        response: Err(ErrorResponse::default()),
+                    };
+
+                    // Get API tag for PaymentMethodToken flow
+                    let api_tag = self
+                        .config
+                        .api_tags
+                        .get_tag(FlowName::PaymentMethodToken, None);
+
+                    // Create test context if test mode is enabled
+                    let test_context =
+                        self.config
+                            .test
+                            .create_test_context(&request_id)
+                            .map_err(|e| {
+                                tonic::Status::internal(format!(
+                                    "Test mode configuration error: {e}"
+                                ))
+                            })?;
+
+                    // Execute connector processing
+                    let event_params = EventProcessingParams {
+                        connector_name: &connector.to_string(),
+                        service_name: &service_name,
+                        flow_name: FlowName::PaymentMethodToken,
+                        event_config: &self.config.events,
+                        request_id: &request_id,
+                        lineage_ids: &lineage_ids,
+                        reference_id: &metadata_payload.reference_id,
+                        shadow_mode: metadata_payload.shadow_mode,
+                    };
+
+                    let response = Box::pin(
+                        external_services::service::execute_connector_processing_step(
+                            &self.config.proxy,
+                            connector_integration,
+                            payment_method_token_router_data,
+                            None,
+                            event_params,
+                            None,
+                            common_enums::CallConnectorAction::Trigger,
+                            test_context,
+                            api_tag,
+                        ),
+                    )
+                    .await
+                    .switch()
+                    .map_err(|e| e.into_grpc_status())?;
+
+                    // Generate response using the existing function
+                    let payment_method_token_response =
+                        domain_types::types::generate_create_payment_method_token_response(
+                            response,
+                        )
+                        .map_err(|e| e.into_grpc_status())?;
+
+                    Ok(tonic::Response::new(payment_method_token_response))
+                })
+            },
         )
         .await
     }
