@@ -1252,6 +1252,7 @@ pub struct PaymentMethodTokenizationData<T: PaymentMethodDataTypes> {
     pub browser_info: Option<BrowserInformation>,
     pub currency: Currency,
     pub amount: MinorUnit,
+    pub capture_method: Option<common_enums::CaptureMethod>,
     pub customer_acceptance: Option<CustomerAcceptance>,
     pub setup_future_usage: Option<common_enums::FutureUsage>,
     pub setup_mandate_details: Option<MandateData>,
