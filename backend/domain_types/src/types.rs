@@ -119,6 +119,7 @@ pub struct Connectors {
     pub cybersource: ConnectorParams,
     pub worldpay: ConnectorParams,
     pub worldpayvantiv: ConnectorParams,
+    pub multisafepay: ConnectorParams,
     pub payload: ConnectorParams,
     pub fiservemea: ConnectorParams,
     pub datatrans: ConnectorParams,
