@@ -6260,6 +6260,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreatePaymentMethodT
             mandate_id: None,
             setup_mandate_details: None,
             integrity_object: None,
+            split_payments: None,
         })
     }
 }
@@ -6402,63 +6403,6 @@ pub fn generate_create_payment_method_token_response(
                 state: None,
             },
         ),
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + Default
-            + Debug
-            + Send
-            + Eq
-            + PartialEq
-            + serde::Serialize
-            + serde::de::DeserializeOwned
-            + Clone
-            + CardConversionHelper<T>,
-    > ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
-    for PaymentMethodTokenizationData<T>
-{
-    type Error = ApplicationErrorResponse;
-
-    fn foreign_try_from(
-        value: grpc_api_types::payments::PaymentServiceAuthorizeRequest,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let currency = common_enums::Currency::foreign_try_from(value.currency())?;
-        let customer_acceptance = value.customer_acceptance.clone();
-
-        Ok(Self {
-            amount: common_utils::types::MinorUnit::new(value.amount),
-            currency,
-            payment_method_data: PaymentMethodData::<T>::foreign_try_from(
-                value.payment_method.ok_or_else(|| {
-                    ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Payment method data is required".to_owned(),
-                        error_object: None,
-                    })
-                })?,
-            )?,
-            browser_info: value
-                .browser_info
-                .map(BrowserInformation::foreign_try_from)
-                .transpose()?,
-            customer_acceptance: customer_acceptance
-                .map(mandates::CustomerAcceptance::foreign_try_from)
-                .transpose()?,
-            setup_future_usage: value
-                .setup_future_usage
-                .map(|fu| {
-                    common_enums::FutureUsage::foreign_try_from(
-                        grpc_api_types::payments::FutureUsage::try_from(fu).unwrap_or_default(),
-                    )
-                })
-                .transpose()?,
-            mandate_id: None,
-            setup_mandate_details: None,
-            integrity_object: None,
-        })
     }
 }
 
