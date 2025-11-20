@@ -359,35 +359,6 @@ pub fn merge_configs(override_val: &Value, base_val: &Value) -> Value {
     }
 }
 
-pub fn extract_override_json(
-    metadata: &metadata::MetadataMap,
-) -> CustomResult<Option<Value>, ApplicationErrorResponse> {
-    match metadata.get("x-config-override") {
-        Some(value) => {
-            let json_str = value.to_str().map_err(|e| {
-                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_METADATA".into(),
-                    error_identifier: 400,
-                    error_message: format!("Invalid JSON in x-config-override: {e}"),
-                    error_object: None,
-                }))
-            })?;
-
-            let config = serde_json::from_str::<Value>(json_str).map_err(|e| {
-                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_JSON_FORMAT".into(),
-                    error_identifier: 400,
-                    error_message: format!("Invalid JSON format in x-config-override: {e}"),
-                    error_object: None,
-                }))
-            })?;
-
-            Ok(Some(config))
-        }
-        None => Ok(None),
-    }
-}
-
 fn parse_metadata<'a>(
     metadata: &'a metadata::MetadataMap,
     key: &str,
