@@ -127,7 +127,7 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod unit {
     use grpc_server::configs::Config;
-    use grpc_server::utils::{config_from_metadata, merge_configs};
+    use grpc_server::utils::{merge_config_with_override, merge_configs};
     use serde_json::json;
 
     #[test]
@@ -161,7 +161,7 @@ mod unit {
             "proxy": { "idle_pool_connection_timeout": 123 },
         });
         let override_str = override_json.to_string();
-        let result = config_from_metadata(Some(override_str), base_config.clone());
+        let result = merge_config_with_override(Some(override_str), base_config.clone());
         assert!(
             result.is_ok(),
             "config_from_metadata should succeed with valid override"
@@ -174,7 +174,7 @@ mod unit {
     #[test]
     fn test_config_from_metadata_no_override() {
         let base_config = Config::new().expect("default config should load");
-        let result = config_from_metadata(None, base_config.clone());
+        let result = merge_config_with_override(None, base_config.clone());
         assert!(
             result.is_ok(),
             "config_from_metadata should succeed with no override"
@@ -182,7 +182,7 @@ mod unit {
         let new_config = result.expect("should get config");
         // Should be equal to base config
         assert_eq!(
-            serde_json::to_value(&new_config).expect("serialize new config"),
+            serde_json::to_value(&*new_config).expect("serialize new config"),
             serde_json::to_value(&base_config).expect("serialize base config")
         );
     }
