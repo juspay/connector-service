@@ -181,7 +181,7 @@ impl HasConnectors for DisputeFlowData {
     }
 }
 
-#[derive(Debug, serde::Deserialize, Clone)]
+#[derive(Debug, serde::Deserialize, Clone, PartialEq, Eq, Hash)]
 pub struct Proxy {
     pub http_url: Option<String>,
     pub https_url: Option<String>,
@@ -189,6 +189,22 @@ pub struct Proxy {
     pub bypass_proxy_urls: Vec<String>,
     pub mitm_proxy_enabled: bool,
     pub mitm_ca_cert: Option<String>,
+}
+
+impl Proxy {
+    pub fn cache_key(&self, should_bypass_proxy: bool) -> Option<Self> {
+        // Return Some(self) if there's an actual proxy configuration
+        // let sbp = self.bypass_proxy_urls.contains(&url.to_string());
+        if should_bypass_proxy || (self.http_url.is_none() && self.https_url.is_none()) {
+            None
+        } else {
+            Some(self.clone())
+        }
+    }
+
+    pub fn is_proxy_configured(&self, should_bypass_proxy: bool) -> bool {
+        should_bypass_proxy || (self.http_url.is_none() && self.https_url.is_none())
+    }
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for common_enums::CaptureMethod {
