@@ -6,7 +6,7 @@ edition = "2021"
 
 [dependencies]
 error-stack = "0.4.1"
-serde = { version = "1.0.189", features = ["derive", "rc"] }
+serde = { version = "1.0.189", features = ["derive"] }
 thiserror = "1.0.69"
 time = "0.3.41"
 regex = "1.11.1"

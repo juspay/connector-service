@@ -643,6 +643,7 @@ impl Payments {
             + 'static,
     >(
         &self,
+        config: &Arc<Config>,
         payload: PaymentServiceAuthorizeOnlyRequest,
         connector: domain_types::connector_types::ConnectorEnum,
         connector_auth_details: ConnectorAuthType,
@@ -667,7 +668,7 @@ impl Payments {
         // Create common request data
         let payment_flow_data = PaymentFlowData::foreign_try_from((
             payload.clone(),
-            self.config.connectors.clone(),
+            config.connectors.clone(),
             metadata,
         ))
         .map_err(|err| {
@@ -707,31 +708,26 @@ impl Payments {
         };
 
         // Get API tag for the current flow with payment method type from domain layer
-        let api_tag = self
-            .config
+        let api_tag = config
             .api_tags
             .get_tag(FlowName::Authorize, router_data.request.payment_method_type);
 
         // Create test context if test mode is enabled
-        let test_context = self
-            .config
-            .test
-            .create_test_context(request_id)
-            .map_err(|e| {
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(format!("Test mode configuration error: {e}")),
-                    Some("TEST_CONFIG_ERROR".to_string()),
-                    None,
-                )
-            })?;
+        let test_context = config.test.create_test_context(request_id).map_err(|e| {
+            PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some(format!("Test mode configuration error: {e}")),
+                Some("TEST_CONFIG_ERROR".to_string()),
+                None,
+            )
+        })?;
 
         // Execute connector processing
         let event_params = EventProcessingParams {
             connector_name: &connector.to_string(),
             service_name,
             flow_name: FlowName::Authorize,
-            event_config: &self.config.events,
+            event_config: &config.events,
             request_id,
             lineage_ids: &metadata_payload.lineage_ids,
             reference_id: &metadata_payload.reference_id,
@@ -740,7 +736,7 @@ impl Payments {
 
         // Execute connector processing - ONLY the authorize call
         let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
+            &config.proxy,
             connector_integration,
             router_data,
             None,
@@ -1963,7 +1959,8 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
-        grpc_logging_wrapper(request, &service_name, self.config.clone(), FlowName::Authorize, |request_data| {
+        let config = get_config_from_request(&request)?;
+        grpc_logging_wrapper(request, &service_name, config.clone(), FlowName::Authorize, |request_data| {
             let service_name = service_name.clone();
             Box::pin(async move {
                 let metadata_payload = request_data.extracted_metadata;
@@ -1978,6 +1975,7 @@ impl PaymentService for Payments {
                                     Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(proxy_card_details)) | Some(grpc_api_types::payments::card_payment_method_type::CardType::DebitProxy(proxy_card_details)) => {
                                         let token_data = proxy_card_details.to_token_data();
                                         match Box::pin(self.process_authorization_only_internal::<VaultTokenHolder>(
+                                            &config,
                                             payload.clone(),
                                             metadata_payload.connector,
                                             metadata_payload.connector_auth_type.clone(),
@@ -2002,6 +2000,7 @@ impl PaymentService for Payments {
                                     _ => {
                                         tracing::info!("REGULAR: Processing regular payment authorization only (no injector)");
                                         match Box::pin(self.process_authorization_only_internal::<DefaultPCIHolder>(
+                                            &config,
                                             payload.clone(),
                                             metadata_payload.connector,
                                             metadata_payload.connector_auth_type.clone(),
@@ -2027,6 +2026,7 @@ impl PaymentService for Payments {
                             }
                             _ => {
                                 match Box::pin(self.process_authorization_only_internal::<DefaultPCIHolder>(
+                                    &config,
                                     payload.clone(),
                                     metadata_payload.connector,
                                     metadata_payload.connector_auth_type.clone(),
@@ -2046,6 +2046,7 @@ impl PaymentService for Payments {
                     }
                     _ => {
                         match Box::pin(self.process_authorization_only_internal::<DefaultPCIHolder>(
+                            &config,
                             payload.clone(),
                             metadata_payload.connector,
                             metadata_payload.connector_auth_type.clone(),

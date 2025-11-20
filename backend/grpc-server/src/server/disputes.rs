@@ -81,8 +81,8 @@ impl DisputeService for Disputes {
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
             flow = FlowName::SubmitEvidence.to_string(),
-            flow_specific_fields.status = tracing::field::Empty
-        ),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
         skip(self, request)
     )]
     async fn submit_evidence(
@@ -199,8 +199,8 @@ impl DisputeService for Disputes {
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
             flow = FlowName::Dsync.to_string(),
-            flow_specific_fields.status = tracing::field::Empty
-        ),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
         skip(self, request)
     )]
     async fn get(
@@ -248,8 +248,8 @@ impl DisputeService for Disputes {
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
             flow = FlowName::DefendDispute.to_string(),
-            flow_specific_fields.status = tracing::field::Empty
-        ),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
         skip(self, request)
     )]
     async fn defend(
@@ -289,8 +289,8 @@ impl DisputeService for Disputes {
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
             flow = FlowName::AcceptDispute.to_string(),
-            flow_specific_fields.status = tracing::field::Empty
-        ),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
         skip(self, request)
     )]
     async fn accept(
@@ -409,8 +409,8 @@ impl DisputeService for Disputes {
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
             flow = FlowName::IncomingWebhook.to_string(),
-            flow_specific_fields.status = tracing::field::Empty
-        ),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
         skip(self, request)
     )]
     async fn transform(

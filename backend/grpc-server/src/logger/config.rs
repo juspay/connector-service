@@ -1,3 +1,7 @@
+//!
+//! Logger-specific config.
+//!
+
 use serde::{Deserialize, Serialize};
 /// Log config settings.
 #[derive(Debug, Deserialize, Clone, Serialize)]

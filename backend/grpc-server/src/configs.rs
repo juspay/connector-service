@@ -25,7 +25,7 @@ pub struct Config {
     pub api_tags: ApiTagConfig,
 }
 
-#[derive(Clone, serde::Deserialize, Debug, Default, Serialize)]
+#[derive(Clone, Deserialize, Debug, Default, Serialize)]
 pub struct LineageConfig {
     /// Enable processing of x-lineage-ids header
     pub enabled: bool,

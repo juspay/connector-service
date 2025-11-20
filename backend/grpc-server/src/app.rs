@@ -169,11 +169,6 @@ impl Service {
         Ok(())
     }
 
-    /// Starts the gRPC server
-    ///
-    /// # Errors
-    ///
-    /// Returns error if server fails to start or bind to socket
     pub async fn grpc_server(
         self,
         base_config: Arc<configs::Config>,
@@ -209,7 +204,7 @@ impl Service {
         let propagate_request_id_layer = tower_http::request_id::PropagateRequestIdLayer::new(
             http::HeaderName::from_static(consts::X_REQUEST_ID),
         );
-        let config_override_layer = RequestExtensionsLayer::new((base_config).clone());
+        let config_override_layer = RequestExtensionsLayer::new(base_config.clone());
 
         Server::builder()
             .layer(logging_layer)

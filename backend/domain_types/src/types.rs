@@ -181,7 +181,7 @@ impl HasConnectors for DisputeFlowData {
     }
 }
 
-#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Proxy {
     pub http_url: Option<String>,
     pub https_url: Option<String>,

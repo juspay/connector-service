@@ -294,7 +294,7 @@ pub fn auth_from_metadata(
     }
 }
 
-pub fn config_from_metadata(
+pub fn merge_config_with_override(
     config_override: Option<String>,
     config: configs::Config,
 ) -> CustomResult<Arc<configs::Config>, ApplicationErrorResponse> {
