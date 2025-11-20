@@ -43,6 +43,7 @@ use grpc_api_types::payments::{
     PaymentServiceAuthorizeOnlyRequest, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
     PaymentServiceCreateAccessTokenRequest, PaymentServiceCreateAccessTokenResponse,
+    PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse,
     PaymentServiceCreatePaymentMethodTokenRequest, PaymentServiceCreatePaymentMethodTokenResponse,
     PaymentServiceCreateSessionTokenRequest, PaymentServiceCreateSessionTokenResponse,
     PaymentServiceDisputeRequest, PaymentServiceGetRequest, PaymentServiceGetResponse,
@@ -165,6 +166,11 @@ trait PaymentOperationsInternal {
         &self,
         request: RequestData<PaymentServicePostAuthenticateRequest>,
     ) -> Result<tonic::Response<PaymentServicePostAuthenticateResponse>, tonic::Status>;
+
+    async fn internal_create_order(
+        &self,
+        request: RequestData<PaymentServiceCreateOrderRequest>,
+    ) -> Result<tonic::Response<PaymentServiceCreateOrderResponse>, tonic::Status>;
 }
 
 #[derive(Clone)]
@@ -1797,6 +1803,21 @@ impl PaymentOperationsInternal for Payments {
         generate_response_fn: generate_payment_void_post_capture_response,
         all_keys_required: None
     );
+
+    implement_connector_operation!(
+        fn_name: internal_create_order,
+        log_prefix: "CREATE_ORDER",
+        request_type: PaymentServiceCreateOrderRequest,
+        response_type: PaymentServiceCreateOrderResponse,
+        flow_marker: CreateOrder,
+        resource_common_data_type: PaymentFlowData,
+        request_data_type: PaymentCreateOrderData,
+        response_data_type: PaymentCreateOrderResponse,
+        request_data_constructor: PaymentCreateOrderData::foreign_try_from,
+        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
+        generate_response_fn: generate_create_order_response,
+        all_keys_required: None
+    );
 }
 
 #[tonic::async_trait]
@@ -2214,6 +2235,46 @@ impl PaymentService for Payments {
                     Ok(tonic::Response::new(final_response))
                 })
             },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "payment_create_order",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = FlowName::CreateOrder.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::CreateOrder.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn create_order(
+        &self,
+        request: tonic::Request<PaymentServiceCreateOrderRequest>,
+    ) -> Result<tonic::Response<PaymentServiceCreateOrderResponse>, tonic::Status> {
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            FlowName::CreateOrder,
+            |request_data| async move { self.internal_create_order(request_data).await },
         )
         .await
     }
@@ -4051,6 +4112,62 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 state: None,
             }
         }
+    };
+    Ok(response)
+}
+
+pub fn generate_create_order_response(
+    router_data_v2: RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >,
+) -> Result<PaymentServiceCreateOrderResponse, error_stack::Report<ApplicationErrorResponse>> {
+    let transaction_response = router_data_v2.response;
+    let status = router_data_v2.resource_common_data.status;
+    let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
+    let raw_connector_response = router_data_v2
+        .resource_common_data
+        .get_raw_connector_response();
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
+    let response_headers = router_data_v2
+        .resource_common_data
+        .get_connector_response_headers_as_map();
+
+    let response = match transaction_response {
+        Ok(PaymentCreateOrderResponse { order_id }) => PaymentServiceCreateOrderResponse {
+            order_id: Some(grpc_api_types::payments::Identifier {
+                id_type: Some(grpc_api_types::payments::identifier::IdType::Id(order_id)),
+            }),
+            status: grpc_status.into(),
+            error_code: None,
+            error_message: None,
+            status_code: 200,
+            response_headers,
+            response_ref_id: None,
+            raw_connector_request,
+            raw_connector_response,
+        },
+        Err(err) => PaymentServiceCreateOrderResponse {
+            order_id: Some(grpc_api_types::payments::Identifier {
+                id_type: Some(grpc_api_types::payments::identifier::IdType::NoResponseIdMarker(())),
+            }),
+            status: err
+                .attempt_status
+                .map(grpc_api_types::payments::PaymentStatus::foreign_from)
+                .unwrap_or_default()
+                .into(),
+            error_code: Some(err.code),
+            error_message: Some(err.message),
+            status_code: err.status_code.into(),
+            response_headers,
+            response_ref_id: None,
+            raw_connector_request,
+            raw_connector_response,
+        },
     };
     Ok(response)
 }
