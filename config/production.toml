@@ -64,6 +64,7 @@ worldpay.base_url = "https://access.worldpay.com/"
 worldpayvantiv.base_url = "https://transact.vantivcnp.com/vap/communicator/online"
 worldpayvantiv.secondary_base_url = "https://onlinessr.vantivcnp.com"
 paypal.base_url = "https://api-m.paypal.com/"
+paysafe.base_url = "https://api.paysafe.com/paymenthub/"
 
 # Generic Events Configuration
 [events]

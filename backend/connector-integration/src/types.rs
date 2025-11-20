@@ -6,7 +6,7 @@ use interfaces::connector_types::BoxedConnector;
 use crate::connectors::{
     Aci, Adyen, Authipay, Authorizedotnet, Bluecode, Braintree, Cashfree, Cashtocode, Celero,
     Checkout, Cryptopay, Cybersource, Datatrans, Dlocal, Elavon, Fiserv, Fiservemea, Fiuu, Helcim,
-    Mifinity, Nexinets, Noon, Novalnet, Payload, Paypal, Paytm, Payu, Phonepe, Placetopay, Rapyd,
+    Mifinity, Nexinets, Noon, Novalnet, Payload, Paypal, Paysafe, Paytm, Payu, Phonepe, Placetopay, Rapyd,
     Razorpay, RazorpayV2, Silverflow, Stax, Stripe, Trustpay, Volt, Worldpay, Worldpayvantiv,
     Xendit,
 };
@@ -70,6 +70,8 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Worldpayvantiv => Box::new(Worldpayvantiv::new()),
             ConnectorEnum::Payload => Box::new(Payload::new()),
             ConnectorEnum::Paypal => Box::new(Paypal::new()),
+            ConnectorEnum::Paysafe => Box::new(Paysafe::new()),
+
         }
     }
 }
