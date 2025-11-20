@@ -3,7 +3,7 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events};
+use common_utils::{errors::CustomResult, events, types::FloatMajorUnit};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
@@ -43,6 +43,8 @@ use transformers::{
 pub type NmiCaptureResponse = StandardResponse;
 pub type NmiVoidResponse = StandardResponse;
 pub type NmiRefundResponse = StandardResponse;
+pub type NmiPSyncResponse = SyncResponse;
+pub type NmiRSyncResponse = SyncResponse;
 
 use super::macros;
 use crate::types::ResponseRouterData;
@@ -179,10 +181,49 @@ macros::create_all_prerequisites!(
             request_body: NmiRefundRequest,
             response_body: NmiRefundResponse,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
+            flow: PSync,
+            request_body: NmiSyncRequest,
+            response_body: NmiPSyncResponse,
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
+            flow: RSync,
+            request_body: NmiRefundSyncRequest,
+            response_body: NmiRSyncResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
-    amount_converters: [],
+    amount_converters: [
+        amount_converter: FloatMajorUnit
+    ],
     member_functions: {
+        fn preprocess_response_bytes<F, FCD, Req, Res>(
+            &self,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
+            bytes: bytes::Bytes,
+        ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
+            // Convert XML responses to JSON format for the macro's JSON parser
+            let response_str = std::str::from_utf8(&bytes)
+                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+            // Check if response is XML (PSync/RSync return XML, others return URL-encoded)
+            if response_str.trim().starts_with("<?xml") || response_str.trim().starts_with("<") {
+                // Parse XML to struct, then serialize back to JSON
+                let xml_response: SyncResponse = quick_xml::de::from_str(response_str)
+                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+                let json_bytes = serde_json::to_vec(&xml_response)
+                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+                Ok(bytes::Bytes::from(json_bytes))
+            } else {
+                // This is already URL-encoded or another format
+                Ok(bytes)
+            }
+        }
+
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
@@ -278,75 +319,38 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Payment Sync - Manual implementation (requires XML parsing)
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Nmi<T>
-{
-    fn get_headers(
-        &self,
-        _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        Ok(vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/x-www-form-urlencoded".to_string().into(),
-        )])
+// Payment Sync
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Nmi,
+    curl_request: FormUrlEncoded(NmiSyncRequest),
+    curl_response: NmiPSyncResponse,
+    flow_name: PSync,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsSyncData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    preprocess_response: true,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                "application/x-www-form-urlencoded".to_string().into(),
+            )])
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}{}", self.connector_base_url_payments(req), endpoints::QUERY))
+        }
     }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/x-www-form-urlencoded"
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        Ok(format!(
-            "{}{}",
-            self.connector_base_url_payments(req),
-            endpoints::QUERY
-        ))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<Option<common_utils::request::RequestContent>, errors::ConnectorError> {
-        let connector_req = NmiSyncRequest::try_from(req)?;
-        Ok(Some(common_utils::request::RequestContent::FormUrlEncoded(
-            Box::new(connector_req),
-        )))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        _event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        errors::ConnectorError,
-    > {
-        use crate::types::ResponseRouterData;
-        // Parse XML response using quick-xml
-        let response: SyncResponse =
-            quick_xml::de::from_str(&String::from_utf8_lossy(&res.response))
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
+);
 
 // Payment Capture
 macros::macro_connector_implementation!(
@@ -444,74 +448,38 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Refund Sync - Manual implementation (requires XML parsing)
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Nmi<T>
-{
-    fn get_headers(
-        &self,
-        _req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        Ok(vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/x-www-form-urlencoded".to_string().into(),
-        )])
+// Refund Sync
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Nmi,
+    curl_request: FormUrlEncoded(NmiRefundSyncRequest),
+    curl_response: NmiRSyncResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    preprocess_response: true,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                "application/x-www-form-urlencoded".to_string().into(),
+            )])
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}{}", self.connector_base_url_refunds(req), endpoints::QUERY))
+        }
     }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/x-www-form-urlencoded"
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        Ok(format!(
-            "{}{}",
-            self.connector_base_url_refunds(req),
-            endpoints::QUERY
-        ))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<Option<common_utils::request::RequestContent>, errors::ConnectorError> {
-        let connector_req = NmiRefundSyncRequest::try_from(req)?;
-        Ok(Some(common_utils::request::RequestContent::FormUrlEncoded(
-            Box::new(connector_req),
-        )))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        _event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        errors::ConnectorError,
-    > {
-        use crate::types::ResponseRouterData;
-        // Parse XML response using quick-xml
-        let response: SyncResponse =
-            quick_xml::de::from_str(&String::from_utf8_lossy(&res.response))
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
+);
 
 // ===== EMPTY CONNECTOR INTEGRATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

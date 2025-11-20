@@ -1,6 +1,6 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
-use common_utils::types::FloatMajorUnit;
+use common_utils::types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -9,7 +9,7 @@ use domain_types::{
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
@@ -61,27 +61,13 @@ pub enum TransactionType {
 #[serde(untagged)]
 pub enum NmiPaymentMethod<T: PaymentMethodDataTypes> {
     Card(Box<CardData<T>>),
-    GooglePay(Box<GooglePayData>),
-    ApplePay(Box<ApplePayData>),
 }
 
 #[derive(Debug, Serialize)]
 pub struct CardData<T: PaymentMethodDataTypes> {
-    ccnumber: Secret<String>,
+    ccnumber: RawCardNumber<T>,
     ccexp: Secret<String>, // MMYY format
     cvv: Secret<String>,
-    #[serde(skip)]
-    _phantom: std::marker::PhantomData<T>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct GooglePayData {
-    googlepay_payment_data: Secret<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ApplePayData {
-    applepay_payment_data: Secret<String>, // Hex-encoded
 }
 
 // ===== MERCHANT DEFINED FIELDS =====
@@ -126,57 +112,6 @@ pub struct NmiPaymentsRequest<T: PaymentMethodDataTypes> {
     merchant_defined_field: Option<NmiMerchantDefinedField>,
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    > for NmiPaymentsRequest<T>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let auth = NmiAuthType::try_from(&item.connector_auth_type)?;
-
-        // Determine transaction type based on auto_capture
-        let transaction_type = if item.request.is_auto_capture()? {
-            TransactionType::Sale
-        } else {
-            TransactionType::Auth
-        };
-
-        // Extract payment method data
-        let payment_method = NmiPaymentMethod::try_from(&item.request.payment_method_data)?;
-
-        // Convert amount from minor units to major units (cents to dollars)
-        // NMI uses base currency units (e.g., 10.00 USD, not 1000 cents)
-        let amount_i64 = item.request.minor_amount.get_amount_as_i64();
-        let amount = FloatMajorUnit(amount_i64 as f64 / 100.0);
-
-        Ok(Self {
-            security_key: auth.api_key,
-            transaction_type,
-            amount,
-            currency: item.request.currency,
-            orderid: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
-            payment_method,
-            merchant_defined_field: item
-                .request
-                .metadata
-                .as_ref()
-                .map(NmiMerchantDefinedField::new),
-        })
-    }
-}
-
 // Implementation for NmiRouterData wrapper (needed by macros)
 impl<
         T: PaymentMethodDataTypes
@@ -211,7 +146,44 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        Self::try_from(&item.router_data)
+        let router_data = &item.router_data;
+        let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
+
+        // Determine transaction type based on auto_capture
+        let transaction_type = if router_data.request.is_auto_capture()? {
+            TransactionType::Sale
+        } else {
+            TransactionType::Auth
+        };
+
+        // Extract payment method data
+        let payment_method = NmiPaymentMethod::try_from(&router_data.request.payment_method_data)?;
+
+        // Convert amount from minor units to major units using framework converter
+        let converter = FloatMajorUnitForConnector;
+        let amount = converter
+            .convert(
+                router_data.request.minor_amount,
+                router_data.request.currency,
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        Ok(Self {
+            security_key: auth.api_key,
+            transaction_type,
+            amount,
+            currency: router_data.request.currency,
+            orderid: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            payment_method,
+            merchant_defined_field: router_data
+                .request
+                .metadata
+                .as_ref()
+                .map(NmiMerchantDefinedField::new),
+        })
     }
 }
 
@@ -223,62 +195,17 @@ impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMet
     fn try_from(pm_data: &PaymentMethodData<T>) -> Result<Self, Self::Error> {
         match pm_data {
             PaymentMethodData::Card(card_data) => {
-                // Extract card number by serializing the inner value
-                // This works for both DefaultPCIHolder (cards::CardNumber) and VaultTokenHolder (String)
-                let card_number_str = serde_json::to_string(&card_data.card_number.0)
-                    .change_context(errors::ConnectorError::RequestEncodingFailed)?
-                    .trim_matches('"') // Remove JSON quotes
-                    .to_string();
-                let card_number = Secret::new(card_number_str);
-
-                // Extract expiry date in MMYY format
-                let exp_month = card_data.card_exp_month.clone().expose();
-                let exp_year = card_data.card_exp_year.clone().expose();
-
-                // Parse to get last 2 digits of year
-                let year_str = exp_year.as_str();
-                let year_short = if year_str.len() >= 2 {
-                    &year_str[year_str.len() - 2..]
-                } else {
-                    year_str
-                };
-
-                let ccexp = format!("{}{}", exp_month, year_short);
+                // Extract expiry date in MMYY format using framework utility
+                let ccexp =
+                    card_data.get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?;
 
                 let card = CardData {
-                    ccnumber: card_number,
-                    ccexp: Secret::new(ccexp),
+                    ccnumber: card_data.card_number.clone(),
+                    ccexp,
                     cvv: card_data.card_cvc.clone(),
-                    _phantom: std::marker::PhantomData,
                 };
                 Ok(Self::Card(Box::new(card)))
             }
-            PaymentMethodData::Wallet(wallet_data) => match wallet_data {
-                WalletData::GooglePay(_google_pay_data) => {
-                    // Use the get_wallet_token helper method
-                    let token = wallet_data
-                        .get_wallet_token()
-                        .change_context(errors::ConnectorError::InvalidWallet)?;
-                    Ok(Self::GooglePay(Box::new(GooglePayData {
-                        googlepay_payment_data: token,
-                    })))
-                }
-                WalletData::ApplePay(_apple_pay_data) => {
-                    // Use the get_wallet_token helper method
-                    let payment_data = wallet_data
-                        .get_wallet_token()
-                        .change_context(errors::ConnectorError::InvalidWallet)?;
-
-                    // For now, assume the data is already properly encoded
-                    // In production, you'd need to base64 decode then hex encode
-                    Ok(Self::ApplePay(Box::new(ApplePayData {
-                        applepay_payment_data: payment_data,
-                    })))
-                }
-                _ => Err(error_stack::report!(
-                    errors::ConnectorError::NotImplemented("Wallet type not supported".to_string())
-                )),
-            },
             _ => Err(error_stack::report!(
                 errors::ConnectorError::NotImplemented("Payment method not supported".to_string())
             )),
@@ -392,19 +319,36 @@ pub struct NmiSyncRequest {
     order_id: String, // Uses attempt_id, NOT connector_transaction_id
 }
 
-impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
-    for NmiSyncRequest
+// Implementation for NmiRouterData wrapper (needed by macros)
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        super::NmiRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    > for NmiSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: super::NmiRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
-        let auth = NmiAuthType::try_from(&item.connector_auth_type)?;
+        let router_data = &item.router_data;
+        let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
 
         // PSync uses attempt_id as order_id (NOT connector_transaction_id)
         // The connector_transaction_id contains the attempt_id for sync operations
-        let order_id = item
+        let order_id = router_data
             .resource_common_data
             .connector_request_reference_id
             .clone();
@@ -521,38 +465,6 @@ pub struct NmiCaptureRequest {
     amount: FloatMajorUnit,
 }
 
-impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>
-    for NmiCaptureRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        let auth = NmiAuthType::try_from(&item.connector_auth_type)?;
-
-        // Get the original transaction ID from connector_transaction_id
-        let transactionid = item
-            .request
-            .connector_transaction_id
-            .get_connector_transaction_id()
-            .change_context(errors::ConnectorError::MissingRequiredField {
-                field_name: "connector_transaction_id",
-            })?;
-
-        // Convert amount from minor to major units (cents to dollars)
-        let amount_i64 = item.request.minor_amount_to_capture.get_amount_as_i64();
-        let amount = FloatMajorUnit(amount_i64 as f64 / 100.0);
-
-        Ok(Self {
-            security_key: auth.api_key,
-            transaction_type: TransactionType::Capture,
-            transactionid,
-            amount,
-        })
-    }
-}
-
 // Implementation for NmiRouterData wrapper (needed by macros)
 impl<
         T: PaymentMethodDataTypes
@@ -577,7 +489,33 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        Self::try_from(&item.router_data)
+        let router_data = &item.router_data;
+        let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
+
+        // Get the original transaction ID from connector_transaction_id
+        let transactionid = router_data
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id()
+            .change_context(errors::ConnectorError::MissingRequiredField {
+                field_name: "connector_transaction_id",
+            })?;
+
+        // Convert amount from minor to major units using framework converter
+        let converter = FloatMajorUnitForConnector;
+        let amount = converter
+            .convert(
+                router_data.request.minor_amount_to_capture,
+                router_data.request.currency,
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        Ok(Self {
+            security_key: auth.api_key,
+            transaction_type: TransactionType::Capture,
+            transactionid,
+            amount,
+        })
     }
 }
 
@@ -650,47 +588,6 @@ pub enum PaymentType {
     Check,
 }
 
-impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
-    for NmiRefundRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        let auth = NmiAuthType::try_from(&item.connector_auth_type)?;
-
-        // Get the original payment transaction ID
-        let transactionid = item.request.connector_transaction_id.clone();
-
-        // Get the refund ID (refund_id) as orderid
-        // If refund_id is not present, use connector_request_reference_id as fallback
-        let orderid = item
-            .resource_common_data
-            .refund_id
-            .clone()
-            .unwrap_or_else(|| {
-                item.resource_common_data
-                    .connector_request_reference_id
-                    .clone()
-            });
-
-        // Convert amount from minor to major units (cents to dollars)
-        // For full refund, amount should be 0.00
-        let amount_i64 = item.request.minor_refund_amount.get_amount_as_i64();
-        let amount = FloatMajorUnit(amount_i64 as f64 / 100.0);
-
-        Ok(Self {
-            security_key: auth.api_key,
-            transaction_type: TransactionType::Refund,
-            transactionid,
-            orderid,
-            amount,
-            payment: None, // NMI infers payment type from the referenced transaction
-        })
-    }
-}
-
 // Implementation for NmiRouterData wrapper (needed by macros)
 impl<
         T: PaymentMethodDataTypes
@@ -715,7 +612,42 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        Self::try_from(&item.router_data)
+        let router_data = &item.router_data;
+        let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
+
+        // Get the original payment transaction ID
+        let transactionid = router_data.request.connector_transaction_id.clone();
+
+        // Get the refund ID (refund_id) as orderid
+        // If refund_id is not present, use connector_request_reference_id as fallback
+        let orderid = router_data
+            .resource_common_data
+            .refund_id
+            .clone()
+            .unwrap_or_else(|| {
+                router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone()
+            });
+
+        // Convert amount from minor to major units using framework converter
+        let converter = FloatMajorUnitForConnector;
+        let amount = converter
+            .convert(
+                router_data.request.minor_refund_amount,
+                router_data.request.currency,
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        Ok(Self {
+            security_key: auth.api_key,
+            transaction_type: TransactionType::Refund,
+            transactionid,
+            orderid,
+            amount,
+            payment: None, // NMI infers payment type from the referenced transaction
+        })
     }
 }
 
@@ -770,18 +702,35 @@ pub struct NmiRefundSyncRequest {
     order_id: String, // Uses connector_refund_id
 }
 
-impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>
-    for NmiRefundSyncRequest
+// Implementation for NmiRouterData wrapper (needed by macros)
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        super::NmiRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    > for NmiRefundSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        item: super::NmiRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
-        let auth = NmiAuthType::try_from(&item.connector_auth_type)?;
+        let router_data = &item.router_data;
+        let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
 
         // RSync uses connector_refund_id as order_id (per tech spec section 3.6)
-        let order_id = item.request.connector_refund_id.clone();
+        let order_id = router_data.request.connector_refund_id.clone();
 
         Ok(Self {
             security_key: auth.api_key,
@@ -864,41 +813,6 @@ pub enum VoidReason {
     IccRejected,
 }
 
-impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>
-    for NmiVoidRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        let auth = NmiAuthType::try_from(&item.connector_auth_type)?;
-
-        // Get the original payment transaction ID
-        let transactionid = item.request.connector_transaction_id.clone();
-
-        // Map cancellation reason to NMI's void reason
-        let void_reason = item
-            .request
-            .cancellation_reason
-            .as_ref()
-            .and_then(|reason| match reason.as_str() {
-                "fraud" => Some(VoidReason::Fraud),
-                "user_cancel" | "requested_by_customer" => Some(VoidReason::UserCancel),
-                _ => None,
-            })
-            .unwrap_or(VoidReason::UserCancel); // Default to UserCancel
-
-        Ok(Self {
-            security_key: auth.api_key,
-            transaction_type: TransactionType::Void,
-            transactionid,
-            void_reason,
-            payment: None, // NMI infers payment type from the referenced transaction
-        })
-    }
-}
-
 // Implementation for NmiRouterData wrapper (needed by macros)
 impl<
         T: PaymentMethodDataTypes
@@ -923,7 +837,31 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        Self::try_from(&item.router_data)
+        let router_data = &item.router_data;
+        let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
+
+        // Get the original payment transaction ID
+        let transactionid = router_data.request.connector_transaction_id.clone();
+
+        // Map cancellation reason to NMI's void reason
+        let void_reason = router_data
+            .request
+            .cancellation_reason
+            .as_ref()
+            .and_then(|reason| match reason.as_str() {
+                "fraud" => Some(VoidReason::Fraud),
+                "user_cancel" | "requested_by_customer" => Some(VoidReason::UserCancel),
+                _ => None,
+            })
+            .unwrap_or(VoidReason::UserCancel); // Default to UserCancel
+
+        Ok(Self {
+            security_key: auth.api_key,
+            transaction_type: TransactionType::Void,
+            transactionid,
+            void_reason,
+            payment: None, // NMI infers payment type from the referenced transaction
+        })
     }
 }
 
