@@ -300,30 +300,7 @@ where
                             json!({ "error": "failed to mask serialize connector request"}),
                         ),
                         RequestContent::FormData(_) => json!({"request_type": "FORM_DATA"}),
-                        RequestContent::RawBytes(bytes) => {
-                            // Try to convert raw bytes to UTF-8 string for logging
-                            match String::from_utf8(bytes.clone()) {
-                                Ok(text) => json!({
-                                    "request_type": "RAW_BYTES",
-                                    "content": text,
-                                    "size_bytes": bytes.len()
-                                }),
-                                Err(_) => {
-                                    // If not valid UTF-8, show as hex string for debugging
-                                    let hex: String = bytes.iter()
-                                        .take(1000) // Limit to first 1000 bytes for logging
-                                        .map(|b| format!("{:02x}", b))
-                                        .collect::<Vec<_>>()
-                                        .join(" ");
-                                    json!({
-                                        "request_type": "RAW_BYTES",
-                                        "content_hex": hex,
-                                        "size_bytes": bytes.len(),
-                                        "note": "Binary data (showing first 1000 bytes as hex)"
-                                    })
-                                }
-                            }
-                        },
+                        RequestContent::RawBytes(_) => json!({"request_type": "RAW_BYTES"}),
                     },
                     None => serde_json::Value::Null,
                 };
