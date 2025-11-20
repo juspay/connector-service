@@ -9,18 +9,18 @@ use common_utils::{errors::CustomResult, events, ext_traits::XmlExt};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
-        CreateOrder, CreateSessionToken, DefendDispute, PaymentMethodToken, PostAuthenticate,
-        PreAuthenticate, PSync, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
-        VoidPC,
+        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
+        SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
-        ConnectorCustomerData, ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, PaymentVoidData, RefundFlowData, RefundSyncData, RefundsData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
@@ -271,10 +271,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Bamb
         // Keep the full structure including Envelope
         let xml_response = response_str
             .replace("soap:", "")
-            .replace(" xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"", "")
-            .replace(" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"", "")
+            .replace(
+                " xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"",
+                "",
+            )
+            .replace(
+                " xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"",
+                "",
+            )
             .replace(" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"", "")
-            .replace(" xmlns=\"http://www.ippayments.com.au/interface/api/dts\"", "");
+            .replace(
+                " xmlns=\"http://www.ippayments.com.au/interface/api/dts\"",
+                "",
+            );
 
         Ok(bytes::Bytes::from(xml_response))
     }
@@ -315,7 +324,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             String::from_utf8(res.response.to_vec())
                 .ok()
                 .and_then(|s| s.parse_xml().ok())
-                .unwrap_or_else(BamboraapacErrorResponse::default)
+                .unwrap_or_default()
         };
 
         Ok(ErrorResponse {
