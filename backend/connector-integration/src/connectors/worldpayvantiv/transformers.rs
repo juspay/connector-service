@@ -1547,16 +1547,18 @@ where
                                 &apple_pay_data.payment_method.network,
                             )?;
                             // Extract expiry date from Apple Pay decrypted data
-                            let expiry_month: Secret<String> =
-                                apple_pay_decrypted_data.get_expiry_month()?;
-                            let expiry_year =
-                                apple_pay_decrypted_data.get_four_digit_expiry_year()?;
+                            let expiry_month: Secret<String> = apple_pay_decrypted_data
+                                .get_expiry_month()
+                                .change_context(ConnectorError::InvalidDataFormat {
+                                    field_name: "expiration_month",
+                                })?;
+                            let expiry_year = apple_pay_decrypted_data.get_four_digit_expiry_year();
                             let formatted_year = &expiry_year.expose()[2..]; // Convert to 2-digit year
                             let exp_date = format!("{}{}", expiry_month.expose(), formatted_year);
 
                             let card_number_string = apple_pay_decrypted_data
                                 .application_primary_account_number
-                                .expose();
+                                .get_card_no();
                             let raw_card_number =
                                 create_raw_card_number_from_string::<T>(card_number_string)?;
 

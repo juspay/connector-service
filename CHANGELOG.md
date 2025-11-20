@@ -4,6 +4,49 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.11.19.2
+
+### Features
+
+- **connector:**
+  - [STAX] Connector Integration ([#297](https://github.com/juspay/connector-service/pull/297)) ([`c8d20f3`](https://github.com/juspay/connector-service/commit/c8d20f3b0c53f4cac47dc7ad8a726fa8d669bedc))
+  - [Stripe] Add Apple pay, Google pay & PaymentMethodtoken flow for Stripe ([#255](https://github.com/juspay/connector-service/pull/255)) ([`e518f59`](https://github.com/juspay/connector-service/commit/e518f59bf80c096419fa59c5ebf3b86356429a44))
+- Introduce payment authorize only create grpc function ([#296](https://github.com/juspay/connector-service/pull/296)) ([`5df0c7c`](https://github.com/juspay/connector-service/commit/5df0c7cde787b3d49ce222fb6ffbbe7932b0af4d))
+
+### Miscellaneous Tasks
+
+- Added dynamic content type selection and authorize flow for Trustpay ([#227](https://github.com/juspay/connector-service/pull/227)) ([`75d9793`](https://github.com/juspay/connector-service/commit/75d9793ce51cfaa524f68b2878b5e257d022e3ee))
+
+**Full Changelog:** [`2025.11.19.1...2025.11.19.2`](https://github.com/juspay/connector-service/compare/2025.11.19.1...2025.11.19.2)
+
+- - -
+
+## 2025.11.19.1
+
+### Bug Fixes
+
+- Adyen Diff Check Resolve ([#268](https://github.com/juspay/connector-service/pull/268)) ([`6db1fe4`](https://github.com/juspay/connector-service/commit/6db1fe45ac5959ad71ecfc9d4aac9b678bb1010f))
+
+**Full Changelog:** [`2025.11.19.0...2025.11.19.1`](https://github.com/juspay/connector-service/compare/2025.11.19.0...2025.11.19.1)
+
+- - -
+
+## 2025.11.19.0
+
+### Features
+
+- **connector:** [Paypal] Connector Integration ([#246](https://github.com/juspay/connector-service/pull/246)) ([`3d7af89`](https://github.com/juspay/connector-service/commit/3d7af89ba3483731c68dfc63c4e7141ba89b38a7))
+- Introduce session token create grpc function ([#281](https://github.com/juspay/connector-service/pull/281)) ([`d49b576`](https://github.com/juspay/connector-service/commit/d49b576efb95a07790515e221a4c36874bf7d30e))
+- Introduce access token create grpc function ([#282](https://github.com/juspay/connector-service/pull/282)) ([`6387ea3`](https://github.com/juspay/connector-service/commit/6387ea38cd1c9d9caf9e1f6cfcbc42f72fee120b))
+
+### Bug Fixes
+
+- Capture body changes and baseurl changes ([#269](https://github.com/juspay/connector-service/pull/269)) ([`3abc1a5`](https://github.com/juspay/connector-service/commit/3abc1a57c9f85970259c6fbf2e8daa367be85036))
+
+**Full Changelog:** [`2025.11.18.0...2025.11.19.0`](https://github.com/juspay/connector-service/compare/2025.11.18.0...2025.11.19.0)
+
+- - -
+
 ## 2025.11.18.0
 
 ### Features
