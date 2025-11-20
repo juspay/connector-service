@@ -32,7 +32,7 @@ impl TryFrom<&ConnectorAuthType> for NmiAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, .. } => Ok(Self {
+            ConnectorAuthType::HeaderKey { api_key, .. } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
@@ -399,7 +399,7 @@ impl
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .ok();
+            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
 
         // Find the transaction matching the requested transaction_id
         // If not found or if no transaction_id was provided, use the most recent one (last in list)
