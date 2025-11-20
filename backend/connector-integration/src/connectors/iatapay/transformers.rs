@@ -3,12 +3,14 @@ use std::collections::HashMap;
 use common_enums::{AttemptStatus, CountryAlpha2, Currency, RefundStatus};
 use common_utils::{pii::UpiVpaMaskingStrategy, types::FloatMajorUnit, Method};
 use domain_types::{
-    connector_flow::{Authorize, PSync, Refund, RSync},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId},
+    connector_flow::{Authorize, PSync, RSync, Refund},
+    connector_types::{
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+    },
     errors::ConnectorError,
     payment_method_data::{
-        BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RealTimePaymentData,
-        UpiData,
+        BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RealTimePaymentData, UpiData,
     },
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -81,22 +83,34 @@ pub enum IatapayErrorResponse {
 impl IatapayErrorResponse {
     pub fn get_error_code(&self) -> String {
         match self {
-            Self::ApiError { error, .. } => error.clone().unwrap_or_else(|| "UNKNOWN_ERROR".to_string()),
-            Self::PaymentError { failure_code, .. } => failure_code.clone().unwrap_or_else(|| "UNKNOWN_ERROR".to_string()),
+            Self::ApiError { error, .. } => {
+                error.clone().unwrap_or_else(|| "UNKNOWN_ERROR".to_string())
+            }
+            Self::PaymentError { failure_code, .. } => failure_code
+                .clone()
+                .unwrap_or_else(|| "UNKNOWN_ERROR".to_string()),
         }
     }
 
     pub fn get_error_message(&self) -> String {
         match self {
-            Self::ApiError { message, .. } => message.clone().unwrap_or_else(|| "Unknown error occurred".to_string()),
-            Self::PaymentError { failure_details, .. } => failure_details.clone().unwrap_or_else(|| "Unknown error occurred".to_string()),
+            Self::ApiError { message, .. } => message
+                .clone()
+                .unwrap_or_else(|| "Unknown error occurred".to_string()),
+            Self::PaymentError {
+                failure_details, ..
+            } => failure_details
+                .clone()
+                .unwrap_or_else(|| "Unknown error occurred".to_string()),
         }
     }
 
     pub fn get_error_reason(&self) -> Option<String> {
         match self {
             Self::ApiError { message, .. } => message.clone(),
-            Self::PaymentError { failure_details, .. } => failure_details.clone(),
+            Self::PaymentError {
+                failure_details, ..
+            } => failure_details.clone(),
         }
     }
 }
@@ -124,6 +138,12 @@ impl IatapayAuthUpdateRequest {
             grant_type: "client_credentials".to_string(),
             scope: "payment".to_string(),
         }
+    }
+}
+
+impl Default for IatapayAuthUpdateRequest {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -162,9 +182,7 @@ impl From<IatapayPaymentStatus> for AttemptStatus {
             IatapayPaymentStatus::Authorized
             | IatapayPaymentStatus::Settled
             | IatapayPaymentStatus::Cleared => Self::Charged,
-            IatapayPaymentStatus::Failed | IatapayPaymentStatus::UnexpectedSettled => {
-                Self::Failure
-            }
+            IatapayPaymentStatus::Failed | IatapayPaymentStatus::UnexpectedSettled => Self::Failure,
         }
     }
 }
@@ -313,10 +331,22 @@ where
 }
 
 // ===== REQUEST TRANSFORMER =====
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         crate::connectors::iatapay::IatapayRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for IatapayPaymentsRequest<T>
@@ -344,13 +374,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         // Extract merchant ID from connector auth
         let auth = IatapayAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let merchant_id = auth.merchant_id.clone().unwrap_or_else(|| auth.api_key.clone());
+        let merchant_id = auth
+            .merchant_id
+            .clone()
+            .unwrap_or_else(|| auth.api_key.clone());
 
         // Extract payer info (only for UPI Collect)
         let payer_info = match payment_method_data {
-            PaymentMethodData::Upi(upi_data) => get_vpa_id_from_upi(upi_data).map(|vpa_id| PayerInfo {
-                token_id: Secret::new(vpa_id.expose()),
-            }),
+            PaymentMethodData::Upi(upi_data) => {
+                get_vpa_id_from_upi(upi_data).map(|vpa_id| PayerInfo {
+                    token_id: Secret::new(vpa_id.expose()),
+                })
+            }
             _ => None,
         };
 
@@ -358,23 +393,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let preferred_checkout_method = get_preferred_checkout_method(payment_method_data);
 
         // Get return URL and webhook URL
-        let return_url = item
-            .router_data
-            .request
-            .router_return_url
-            .clone()
-            .ok_or(ConnectorError::MissingRequiredField {
+        let return_url = item.router_data.request.router_return_url.clone().ok_or(
+            ConnectorError::MissingRequiredField {
                 field_name: "router_return_url",
-            })?;
+            },
+        )?;
 
-        let webhook_url = item
-            .router_data
-            .request
-            .webhook_url
-            .clone()
-            .ok_or(ConnectorError::MissingRequiredField {
+        let webhook_url = item.router_data.request.webhook_url.clone().ok_or(
+            ConnectorError::MissingRequiredField {
                 field_name: "webhook_url",
-            })?;
+            },
+        )?;
 
         // Convert amount from MinorUnit to FloatMajorUnit
         let amount = domain_types::utils::convert_amount(
@@ -385,7 +414,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         Ok(Self {
             merchant_id,
-            merchant_payment_id: Some(item.router_data.resource_common_data.connector_request_reference_id.clone()),
+            merchant_payment_id: Some(
+                item.router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
             amount,
             currency: item.router_data.request.currency,
             country,
@@ -403,7 +437,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 // ===== RESPONSE TRANSFORMER =====
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         ResponseRouterData<
             IatapayPaymentsResponse,
@@ -519,15 +560,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 // ===== PSYNC RESPONSE TRANSFORMER =====
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             IatapaySyncResponse,
-            RouterDataV2<
-                PSync,
-                PaymentFlowData,
-                PaymentsSyncData,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         >,
     > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
@@ -536,12 +573,7 @@ impl TryFrom<
     fn try_from(
         item: ResponseRouterData<
             IatapaySyncResponse,
-            RouterDataV2<
-                PSync,
-                PaymentFlowData,
-                PaymentsSyncData,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -702,7 +734,14 @@ pub struct IatapayRefundResponse {
 pub type IatapayRefundSyncResponse = IatapayRefundResponse;
 
 // ===== REFUND REQUEST TRANSFORMER =====
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         crate::connectors::iatapay::IatapayRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -723,7 +762,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         // Extract merchant_id from auth
         let auth = IatapayAuthType::try_from(&router_data.connector_auth_type)?;
-        let merchant_id = auth.merchant_id.ok_or(ConnectorError::FailedToObtainAuthType)?;
+        let merchant_id = auth
+            .merchant_id
+            .ok_or(ConnectorError::FailedToObtainAuthType)?;
 
         // Convert amount using FloatMajorUnit
         let amount = domain_types::utils::convert_amount(
@@ -739,14 +780,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             currency: router_data.request.currency.to_string(),
             bank_transfer_description: router_data.request.reason.clone(),
             notification_url: router_data.request.webhook_url.clone().ok_or(
-                ConnectorError::MissingRequiredField { field_name: "webhook_url" }
+                ConnectorError::MissingRequiredField {
+                    field_name: "webhook_url",
+                },
             )?,
         })
     }
 }
 
 // ===== REFUND RESPONSE TRANSFORMER =====
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             IatapayRefundResponse,
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -765,12 +809,11 @@ impl TryFrom<
         let response = item.response;
 
         let refund_status = match response.status {
-            IatapayRefundStatus::Created |
-            IatapayRefundStatus::Locked |
-            IatapayRefundStatus::Initiated |
-            IatapayRefundStatus::Authorized => RefundStatus::Pending,
-            IatapayRefundStatus::Settled |
-            IatapayRefundStatus::Cleared => RefundStatus::Success,
+            IatapayRefundStatus::Created
+            | IatapayRefundStatus::Locked
+            | IatapayRefundStatus::Initiated
+            | IatapayRefundStatus::Authorized => RefundStatus::Pending,
+            IatapayRefundStatus::Settled | IatapayRefundStatus::Cleared => RefundStatus::Success,
             IatapayRefundStatus::Failed => RefundStatus::Failure,
         };
 
@@ -785,7 +828,8 @@ impl TryFrom<
 }
 
 // ===== REFUND SYNC RESPONSE TRANSFORMER =====
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             IatapayRefundSyncResponse,
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
@@ -805,12 +849,11 @@ impl TryFrom<
 
         // Map status using the same logic as Refund
         let refund_status = match response.status {
-            IatapayRefundStatus::Created |
-            IatapayRefundStatus::Locked |
-            IatapayRefundStatus::Initiated |
-            IatapayRefundStatus::Authorized => RefundStatus::Pending,
-            IatapayRefundStatus::Settled |
-            IatapayRefundStatus::Cleared => RefundStatus::Success,
+            IatapayRefundStatus::Created
+            | IatapayRefundStatus::Locked
+            | IatapayRefundStatus::Initiated
+            | IatapayRefundStatus::Authorized => RefundStatus::Pending,
+            IatapayRefundStatus::Settled | IatapayRefundStatus::Cleared => RefundStatus::Success,
             IatapayRefundStatus::Failed => RefundStatus::Failure,
         };
 
@@ -825,7 +868,14 @@ impl TryFrom<
 }
 
 // ===== OAUTH 2.0 ACCESS TOKEN TRANSFORMERS =====
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         crate::connectors::iatapay::IatapayRouterData<
             RouterDataV2<
@@ -855,7 +905,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             IatapayAuthUpdateResponse,
             RouterDataV2<
