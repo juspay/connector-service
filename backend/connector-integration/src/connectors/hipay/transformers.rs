@@ -241,24 +241,16 @@ pub enum HipaySyncResponse {
     },
 }
 
-// XML wrapper for refund sync response - HiPay returns XML for sync operations
+// HiPay v3 Refund Sync Response - JSON structure matching v3 transaction API
+// Same endpoint as PSync but for refund transactions
 #[derive(Debug, Serialize, Deserialize)]
-pub struct HipayRefundSyncXmlResponse {
-    pub transaction: HipayRefundTransactionDetails,
-}
-
-// Refund transaction details from XML response
-#[derive(Debug, Serialize, Deserialize)]
-pub struct HipayRefundTransactionDetails {
-    pub status: HipayRefundStatus,
-    pub message: String,
-    pub transaction_reference: String,
-    #[serde(flatten)]
-    pub extra: std::collections::HashMap<String, serde_json::Value>,
+pub struct HipayRefundSyncJsonResponse {
+    pub id: i64,
+    pub status: i32,
 }
 
 // Type alias for backward compatibility
-pub type HipayRefundSyncResponse = HipayRefundSyncXmlResponse;
+pub type HipayRefundSyncResponse = HipayRefundSyncJsonResponse;
 
 // HiPay Operation Enum - Type-safe operation codes for maintenance requests
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -280,7 +272,7 @@ impl std::fmt::Display for HipayOperation {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct HipayPaymentsRequest<T: PaymentMethodDataTypes> {
+pub struct HipayPaymentsRequest {
     pub payment_product: String,
     pub orderid: String,
     pub operation: String,
@@ -313,8 +305,6 @@ pub struct HipayPaymentsRequest<T: PaymentMethodDataTypes> {
     pub eci: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authentication_indicator: Option<String>,
-    #[serde(skip)]
-    _phantom: std::marker::PhantomData<T>,
 }
 
 impl<
@@ -335,7 +325,7 @@ impl<
             >,
             T,
         >,
-    > for HipayPaymentsRequest<T>
+    > for HipayPaymentsRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -500,7 +490,6 @@ impl<
             exception_url,
             eci: None,
             authentication_indicator: None,
-            _phantom: std::marker::PhantomData,
         })
     }
 }
@@ -711,8 +700,8 @@ pub struct HipayTokenResponse {
     pub brand: String,
     pub pan: Secret<String>,
     pub card_holder: Secret<String>,
-    pub card_expiry_month: String,
-    pub card_expiry_year: String,
+    pub card_expiry_month: Secret<String>,
+    pub card_expiry_year: Secret<String>,
     pub issuer: Option<String>,
     pub country: Option<common_enums::CountryAlpha2>,
 }
@@ -763,38 +752,38 @@ impl<T: PaymentMethodDataTypes>
 // Matches Hyperswitch's get_sync_status function
 fn get_sync_status(state: i32) -> AttemptStatus {
     match state {
-        109 => AttemptStatus::AuthenticationFailed,
-        110 => AttemptStatus::Failure,
-        111 => AttemptStatus::Failure,
-        112 => AttemptStatus::Pending,
-        113 => AttemptStatus::Failure,
-        114 => AttemptStatus::Failure,
-        115 => AttemptStatus::Voided,
-        116 => AttemptStatus::Authorized,
-        117 => AttemptStatus::CaptureInitiated,
-        118 => AttemptStatus::Charged,
-        119 => AttemptStatus::PartialCharged,
-        129 => AttemptStatus::Failure,
-        173 => AttemptStatus::CaptureFailed,
-        174 => AttemptStatus::Pending,
-        175 => AttemptStatus::VoidInitiated,
-        177 => AttemptStatus::AuthenticationPending,
-        178 => AttemptStatus::Failure,
+        9 => AttemptStatus::AuthenticationFailed,
+        10 => AttemptStatus::Failure,
+        11 => AttemptStatus::Failure,
+        12 => AttemptStatus::Pending,
+        13 => AttemptStatus::Failure,
+        14 => AttemptStatus::Failure,
+        15 => AttemptStatus::Voided,
+        16 => AttemptStatus::Authorized,
+        17 => AttemptStatus::CaptureInitiated,
+        18 => AttemptStatus::Charged,
+        19 => AttemptStatus::PartialCharged,
+        29 => AttemptStatus::Failure,
+        73 => AttemptStatus::CaptureFailed,
+        74 => AttemptStatus::Pending,
+        75 => AttemptStatus::VoidInitiated,
+        77 => AttemptStatus::AuthenticationPending,
+        78 => AttemptStatus::Failure,
         200 => AttemptStatus::Pending,
-        101 => AttemptStatus::Started,
-        105 => AttemptStatus::AuthenticationFailed,
-        106 => AttemptStatus::Pending,
-        107 => AttemptStatus::AuthenticationPending,
-        108 => AttemptStatus::AuthenticationFailed,
-        120 => AttemptStatus::Charged,
-        121 => AttemptStatus::Charged,
-        122 => AttemptStatus::Charged,
-        123 => AttemptStatus::Charged,
-        140 => AttemptStatus::AuthenticationPending,
-        141 => AttemptStatus::AuthenticationSuccessful,
-        151 => AttemptStatus::Failure,
-        161 => AttemptStatus::Pending,
-        163 => AttemptStatus::Failure,
+        1 => AttemptStatus::Started,
+        5 => AttemptStatus::AuthenticationFailed,
+        6 => AttemptStatus::Pending,
+        7 => AttemptStatus::AuthenticationPending,
+        8 => AttemptStatus::AuthenticationFailed,
+        20 => AttemptStatus::Charged,
+        21 => AttemptStatus::Charged,
+        22 => AttemptStatus::Charged,
+        23 => AttemptStatus::Charged,
+        40 => AttemptStatus::AuthenticationPending,
+        41 => AttemptStatus::AuthenticationSuccessful,
+        51 => AttemptStatus::Failure,
+        61 => AttemptStatus::Pending,
+        63 => AttemptStatus::Failure,
         _ => AttemptStatus::Failure,
     }
 }
@@ -1061,7 +1050,7 @@ impl
 }
 
 // Refund Sync Response Implementation
-// Uses HipayRefundSyncResponse enum to handle both success and error responses
+// Uses HipayRefundSyncResponse JSON structure from v3 API
 impl
     TryFrom<
         ResponseRouterData<
@@ -1078,15 +1067,22 @@ impl
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Handle refund sync XML response
-        let transaction = &item.response.transaction;
-
-        // Convert HipayRefundStatus enum directly to RefundStatus using From trait
-        let refund_status = RefundStatus::from(transaction.status.clone());
+        // Map numeric status codes to RefundStatus (matching Hyperswitch)
+        // Status codes from HiPay API documentation:
+        // 24 = Refund Requested (Pending)
+        // 25 = Refunded (Success)
+        // 26 = Partially Refunded (Success)
+        // 65 = Refund Refused (Failure)
+        let refund_status = match item.response.status {
+            25 | 26 => RefundStatus::Success,
+            65 => RefundStatus::Failure,
+            24 => RefundStatus::Pending,
+            _ => RefundStatus::Pending, // Default to Pending for unknown statuses
+        };
 
         Ok(Self {
             response: Ok(RefundsResponseData {
-                connector_refund_id: transaction.transaction_reference.clone(),
+                connector_refund_id: item.response.id.to_string(),
                 refund_status,
                 status_code: item.http_code,
             }),
@@ -1209,7 +1205,7 @@ impl<T: PaymentMethodDataTypes + Serialize> GetFormData for HipayTokenRequest<T>
 }
 
 // GetFormData implementation for HipayPaymentsRequest
-impl<T: PaymentMethodDataTypes + Serialize> GetFormData for HipayPaymentsRequest<T> {
+impl GetFormData for HipayPaymentsRequest {
     fn get_form_data(&self) -> reqwest::multipart::Form {
         build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
     }

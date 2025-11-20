@@ -5,11 +5,7 @@ use std::fmt::Debug;
 use common_enums::{CurrencyUnit, PaymentMethod, PaymentMethodType};
 
 use common_utils::{
-    errors::CustomResult,
-    events,
-    ext_traits::{deserialize_xml_to_struct, ByteSliceExt},
-    request::Method,
-    types::StringMajorUnit,
+    errors::CustomResult, events, ext_traits::ByteSliceExt, request::Method, types::StringMajorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -366,7 +362,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: Authorize,
-            request_body: HipayPaymentsRequest<T>,
+            request_body: HipayPaymentsRequest,
             response_body: HipayAuthorizeResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
@@ -604,7 +600,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: Hipay,
-    curl_request: FormData(HipayPaymentsRequest<T>),
+    curl_request: FormData(HipayPaymentsRequest),
     curl_response: HipayAuthorizeResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
@@ -813,8 +809,8 @@ macros::macro_connector_implementation!(
     }
 );
 
-// RSync flow - Manual implementation required for XML deserialization
-// Cannot use macro due to custom handle_response_v2 logic
+// RSync flow - Manual implementation with custom handle_response_v2
+// Uses JSON deserialization from v3 API (same as PSync)
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -865,11 +861,10 @@ impl<
         RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         errors::ConnectorError,
     > {
-        // HiPay RSync returns XML, not JSON
-        let response_str = std::str::from_utf8(&res.response)
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        let response: HipayRSyncResponse = deserialize_xml_to_struct(response_str)
+        // HiPay RSync returns JSON from v3 API (same as PSync)
+        let response: HipayRSyncResponse = res
+            .response
+            .parse_struct("HipayRSyncResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         if let Some(event) = event_builder {
