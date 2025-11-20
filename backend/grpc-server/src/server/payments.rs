@@ -3008,6 +3008,128 @@ impl PaymentService for Payments {
         .await
     }
 
+    async fn register_only(
+        &self,
+        request: tonic::Request<PaymentServiceRegisterRequest>,
+    ) -> Result<tonic::Response<PaymentServiceRegisterResponse>, tonic::Status> {
+        info!("SETUP_MANDATE_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            FlowName::SetupMandate,
+            |request_data| {
+                let service_name = service_name.clone();
+                Box::pin(async move {
+                    let payload = request_data.payload;
+                    let metadata_payload = request_data.extracted_metadata;
+                    let (connector, request_id, lineage_ids) = (
+                        metadata_payload.connector,
+                        metadata_payload.request_id,
+                        metadata_payload.lineage_ids,
+                    );
+                    let connector_auth_details = &metadata_payload.connector_auth_type;
+
+                    //get connector data
+                    let connector_data = ConnectorData::get_connector_by_name(&connector);
+
+                    // Get connector integration
+                    let connector_integration: BoxedConnectorIntegrationV2<
+                        '_,
+                        SetupMandate,
+                        PaymentFlowData,
+                        SetupMandateRequestData<DefaultPCIHolder>,
+                        PaymentsResponseData,
+                    > = connector_data.connector.get_connector_integration_v2();
+
+                    // Create common request data
+                    let payment_flow_data = PaymentFlowData::foreign_try_from((
+                        payload.clone(),
+                        self.config.connectors.clone(),
+                        self.config.common.environment,
+                        &request_data.masked_metadata,
+                    ))
+                    .map_err(|e| e.into_grpc_status())?;
+
+                    let setup_mandate_request_data =
+                        SetupMandateRequestData::foreign_try_from(payload.clone())
+                            .map_err(|e| e.into_grpc_status())?;
+
+                    // Create router data
+                    let router_data: RouterDataV2<
+                        SetupMandate,
+                        PaymentFlowData,
+                        SetupMandateRequestData<DefaultPCIHolder>,
+                        PaymentsResponseData,
+                    > = RouterDataV2 {
+                        flow: std::marker::PhantomData,
+                        resource_common_data: payment_flow_data,
+                        connector_auth_type: connector_auth_details.clone(),
+                        request: setup_mandate_request_data.clone(),
+                        response: Err(ErrorResponse::default()),
+                    };
+
+                    // Get API tag for SetupMandate flow
+                    let api_tag = self.config.api_tags.get_tag(
+                        FlowName::SetupMandate,
+                        setup_mandate_request_data.payment_method_type,
+                    );
+
+                    // Create test context if test mode is enabled
+                    let test_context =
+                        self.config
+                            .test
+                            .create_test_context(&request_id)
+                            .map_err(|e| {
+                                tonic::Status::internal(format!(
+                                    "Test mode configuration error: {e}"
+                                ))
+                            })?;
+
+                    let event_params = EventProcessingParams {
+                        connector_name: &connector.to_string(),
+                        service_name: &service_name,
+                        flow_name: FlowName::SetupMandate,
+                        event_config: &self.config.events,
+                        request_id: &request_id,
+                        lineage_ids: &lineage_ids,
+                        reference_id: &metadata_payload.reference_id,
+                        shadow_mode: metadata_payload.shadow_mode,
+                    };
+
+                    let response = Box::pin(
+                        external_services::service::execute_connector_processing_step(
+                            &self.config.proxy,
+                            connector_integration,
+                            router_data,
+                            None,
+                            event_params,
+                            None, // token_data - None for non-proxy payments
+                            common_enums::CallConnectorAction::Trigger,
+                            test_context,
+                            api_tag,
+                        ),
+                    )
+                    .await
+                    .switch()
+                    .map_err(|e| e.into_grpc_status())?;
+
+                    // Generate response
+                    let setup_mandate_response = generate_setup_mandate_response(response)
+                        .map_err(|e| e.into_grpc_status())?;
+
+                    Ok(tonic::Response::new(setup_mandate_response))
+                })
+            },
+        )
+        .await
+    }
+
     #[tracing::instrument(
         name = "create_session_token",
         fields(
