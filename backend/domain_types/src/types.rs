@@ -181,7 +181,7 @@ impl HasConnectors for DisputeFlowData {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash)]
 pub struct Proxy {
     pub http_url: Option<String>,
     pub https_url: Option<String>,
@@ -189,6 +189,22 @@ pub struct Proxy {
     pub bypass_proxy_urls: Vec<String>,
     pub mitm_proxy_enabled: bool,
     pub mitm_ca_cert: Option<String>,
+}
+
+impl Proxy {
+    pub fn cache_key(&self, should_bypass_proxy: bool) -> Option<Self> {
+        // Return Some(self) if there's an actual proxy configuration
+        // let sbp = self.bypass_proxy_urls.contains(&url.to_string());
+        if should_bypass_proxy || (self.http_url.is_none() && self.https_url.is_none()) {
+            None
+        } else {
+            Some(self.clone())
+        }
+    }
+
+    pub fn is_proxy_configured(&self, should_bypass_proxy: bool) -> bool {
+        should_bypass_proxy || (self.http_url.is_none() && self.https_url.is_none())
+    }
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for common_enums::CaptureMethod {
@@ -3714,6 +3730,23 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             all_keys_required: None, // Field not available in new proto structure
             integrity_object: None,
             split_refunds: None,
+            merchant_account_metadata: (!value.merchant_account_metadata.is_empty())
+                .then(|| {
+                    serde_json::to_value(&value.merchant_account_metadata)
+                        .map(common_utils::pii::SecretSerdeValue::new)
+                        .map_err(|_| {
+                            error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
+                                crate::errors::ApiError {
+                                    sub_code: "SERDE_JSON_ERROR".to_owned(),
+                                    error_identifier: 500,
+                                    error_message: "Failed to serialize merchant_account_metadata"
+                                        .to_owned(),
+                                    error_object: None,
+                                },
+                            ))
+                        })
+                })
+                .transpose()?,
         })
     }
 }
@@ -4600,6 +4633,23 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
                 .transpose()?,
             integrity_object: None,
             split_refunds: None,
+            merchant_account_metadata: (!value.merchant_account_metadata.is_empty())
+                .then(|| {
+                    serde_json::to_value(&value.merchant_account_metadata)
+                        .map(common_utils::pii::SecretSerdeValue::new)
+                        .map_err(|_| {
+                            error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
+                                crate::errors::ApiError {
+                                    sub_code: "SERDE_JSON_ERROR".to_owned(),
+                                    error_identifier: 500,
+                                    error_message: "Failed to serialize merchant_account_metadata"
+                                        .to_owned(),
+                                    error_object: None,
+                                },
+                            ))
+                        })
+                })
+                .transpose()?,
         })
     }
 }
