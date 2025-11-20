@@ -70,8 +70,8 @@ use crate::{
     },
     payment_method_data,
     payment_method_data::{
-        DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes,
-        RawCardNumber, VaultTokenHolder,
+        DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        VaultTokenHolder,
     },
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ConnectorResponseData,
