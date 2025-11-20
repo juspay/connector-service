@@ -161,16 +161,18 @@ impl DisputeService for Disputes {
                         shadow_mode,
                     };
 
-                    let response = external_services::service::execute_connector_processing_step(
-                        &self.config.proxy,
-                        connector_integration,
-                        router_data,
-                        None,
-                        event_params,
-                        None,
-                        common_enums::CallConnectorAction::Trigger,
-                        None,
-                        None,
+                    let response = Box::pin(
+                        external_services::service::execute_connector_processing_step(
+                            &self.config.proxy,
+                            connector_integration,
+                            router_data,
+                            None,
+                            event_params,
+                            None,
+                            common_enums::CallConnectorAction::Trigger,
+                            None,
+                            None,
+                        ),
                     )
                     .await
                     .switch()
