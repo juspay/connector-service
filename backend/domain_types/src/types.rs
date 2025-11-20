@@ -6383,6 +6383,7 @@ pub fn generate_create_payment_method_token_response(
                     payment_method_token: response.token,
                     error_code: None,
                     error_message: None,
+                    error_reason: None,
                     status_code: 200,
                     response_headers: router_data_v2
                         .resource_common_data
@@ -6401,6 +6402,7 @@ pub fn generate_create_payment_method_token_response(
                 payment_method_token: String::new(),
                 error_code: Some(e.code),
                 error_message: Some(e.message),
+                error_reason: e.reason,
                 status_code: e.status_code as u32,
                 response_headers: router_data_v2
                     .resource_common_data
