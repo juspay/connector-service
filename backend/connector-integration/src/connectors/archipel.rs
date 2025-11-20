@@ -39,7 +39,8 @@ use transformers::{
     self as archipel, ArchipelCardAuthorizationRequest, ArchipelCaptureRequest,
     ArchipelCaptureResponse, ArchipelPaymentsResponse, ArchipelPSyncResponse,
     ArchipelVoidRequest, ArchipelVoidResponse, ArchipelRefundRequest,
-    ArchipelRefundResponse, ArchipelRSyncResponse
+    ArchipelRefundResponse, ArchipelRSyncResponse, ArchipelSetupMandateRequest,
+    ArchipelSetupMandateResponse
 };
 
 use super::macros;
@@ -173,6 +174,12 @@ macros::create_all_prerequisites!(
             flow: RSync,
             response_body: ArchipelRSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: ArchipelSetupMandateRequest<T>,
+            response_body: ArchipelSetupMandateResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -281,22 +288,6 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Archipel<T>
-{
-}
 
 impl<
         T: PaymentMethodDataTypes
@@ -952,6 +943,42 @@ macros::macro_connector_implementation!(
         fn get_ca_certificate(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Option<Secret<String>>, errors::ConnectorError> {
+            self.get_ca_cert(req)
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Archipel,
+    curl_request: Json(ArchipelSetupMandateRequest<T>),
+    curl_response: ArchipelSetupMandateResponse,
+    flow_name: SetupMandate,
+    resource_common_data: PaymentFlowData,
+    flow_request: SetupMandateRequestData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url =
+                build_env_specific_endpoint(self.connector_base_url_payments(req), &req.request.metadata)?;
+            Ok(format!("{}{}", base_url, "/authorize"))
+        }
+        fn get_ca_certificate(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         ) -> CustomResult<Option<Secret<String>>, errors::ConnectorError> {
             self.get_ca_cert(req)
         }

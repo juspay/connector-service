@@ -9,11 +9,11 @@ use common_utils::{consts,
 };
 use domain_types::{
     payment_address::AddressDetails,
-    connector_flow::{Authorize, Capture, Void, Refund},
+    connector_flow::{Authorize, Capture, Void, Refund, SetupMandate},
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
         PaymentsSyncData, PaymentVoidData, ResponseId, RefundFlowData, RefundsData,
-        RefundsResponseData, RefundSyncData,
+        RefundsResponseData, RefundSyncData, SetupMandateRequestData,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
@@ -1297,6 +1297,221 @@ impl<F>
                 connector_refund_id: item.response.0.transaction_id.clone(),
                 refund_status: common_enums::RefundStatus::from(item.response.0.transaction_result.clone()),
                 status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+// SETUP MANDATE FLOW
+#[derive(Debug, Serialize, Eq, PartialEq)]
+pub struct ArchipelSetupMandateRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(ArchipelCardAuthorizationRequest<T>);
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(transparent)]
+pub struct ArchipelSetupMandateResponse(ArchipelPaymentsResponse);
+
+impl std::ops::Deref for ArchipelSetupMandateResponse {
+    type Target = ArchipelPaymentsResponse;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        ArchipelRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for ArchipelSetupMandateRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ArchipelRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
+        // For setup mandate, we use a minimal amount (1 in minor units)
+        let amount = MinorUnit::new(1);
+
+        let payment_method_data = match &router_data.request.payment_method_data {
+            PaymentMethodData::Card(ccard) => {
+                let cardholder = router_data
+                    .resource_common_data
+                    .get_billing_address()
+                    .ok()
+                    .and_then(|address| address.to_archipel_billing_address())
+                    .map(|billing_address| ArchipelCardHolder {
+                        billing_address: Some(billing_address),
+                    });
+
+                let card_holder_name = cardholder.as_ref().and_then(|_| {
+                    router_data
+                        .resource_common_data
+                        .get_billing()
+                        .ok()
+                        .and_then(|billing| billing.get_optional_full_name())
+                });
+
+                ArchipelCard::try_from((card_holder_name, cardholder, ccard))?
+            }
+            PaymentMethodData::CardDetailsForNetworkTransactionId(..)
+            | PaymentMethodData::CardRedirect(..)
+            | PaymentMethodData::Wallet(..)
+            | PaymentMethodData::PayLater(..)
+            | PaymentMethodData::BankRedirect(..)
+            | PaymentMethodData::BankDebit(..)
+            | PaymentMethodData::BankTransfer(..)
+            | PaymentMethodData::Crypto(..)
+            | PaymentMethodData::MandatePayment
+            | PaymentMethodData::Reward
+            | PaymentMethodData::RealTimePayment(..)
+            | PaymentMethodData::Upi(..)
+            | PaymentMethodData::Voucher(..)
+            | PaymentMethodData::GiftCard(..)
+            | PaymentMethodData::CardToken(..)
+            | PaymentMethodData::OpenBanking(..)
+            | PaymentMethodData::NetworkToken(..)
+            | PaymentMethodData::MobilePayment(..) => Err(errors::ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("Archipel"),
+            ))?,
+        };
+
+        let connector_metadata = ArchipelConfigData::try_from(&router_data.request.metadata)?;
+
+        let cardholder = router_data
+            .resource_common_data
+            .get_billing_address()
+            .ok()
+            .and_then(|address| address.to_archipel_billing_address())
+            .map(|billing_address| ArchipelCardHolder {
+                billing_address: Some(billing_address),
+            });
+
+        let order = ArchipelOrderRequest {
+            amount,
+            currency: router_data.request.currency.to_string(),
+            certainty: ArchipelPaymentCertainty::Final,
+            initiator: ArchipelPaymentInitiator::Customer,
+        };
+
+        // For setup mandate, we always set stored_on_file to true and mark as initial credential indicator
+        let credential_indicator = Some(ArchipelCredentialIndicator {
+            status: ArchipelCredentialIndicatorStatus::Initial,
+            recurring: Some(true),
+            transaction_id: None,
+        });
+
+        Ok(Self(ArchipelCardAuthorizationRequest {
+            order,
+            card: payment_method_data,
+            cardholder,
+            three_ds: None,
+            credential_indicator,
+            stored_on_file: true,
+            tenant_id: connector_metadata.tenant_id,
+        }))
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        ResponseRouterData<
+            ArchipelSetupMandateResponse,
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+        >,
+    > for RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<
+            ArchipelSetupMandateResponse,
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        if let Some(error) = item.response.0.error {
+            return Ok(Self {
+                response: Err(ArchipelErrorMessageWithHttpCode::new(error, item.http_code).into()),
+                ..item.router_data
+            });
+        };
+
+        let connector_metadata: Option<serde_json::Value> =
+            ArchipelTransactionMetadata::from(&item.response.0)
+                .encode_to_value()
+                .ok();
+
+        // Setup mandate always uses Authorize flow
+        let status: AttemptStatus =
+            ArchipelFlowStatus::new(item.response.0.transaction_result, ArchipelPaymentFlow::Authorize).into();
+
+        // For mandate reference, we use the payment_account_reference which is the tokenized card reference
+        let mandate_reference = item.response.0.payment_account_reference.clone()
+            .map(|par| Box::new(domain_types::connector_types::MandateReference {
+                connector_mandate_id: Some(par.expose()),
+                payment_method_id: None,
+            }));
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(item.response.0.order.id),
+                status_code: item.http_code,
+                redirection_data: None,
+                mandate_reference,
+                connector_metadata,
+                network_txn_id: Some(item.response.0.transaction_id),
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: Some(false),
             }),
             ..item.router_data
         })
