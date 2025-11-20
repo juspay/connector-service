@@ -1,8 +1,8 @@
 pub mod transformers;
 
 use common_utils::{
-    consts::NO_ERROR_CODE, errors::CustomResult, ext_traits::BytesExt, fp_utils::generate_id,
-    types::FloatMajorUnit,
+    consts::NO_ERROR_CODE, errors::CustomResult, events, ext_traits::BytesExt,
+    fp_utils::generate_id, types::FloatMajorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -31,7 +31,6 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
 use std::{
@@ -292,7 +291,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: helcim::HelcimErrorResponse = res
             .response

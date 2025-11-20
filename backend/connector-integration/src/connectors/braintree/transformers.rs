@@ -878,11 +878,7 @@ impl<
             }
         } else {
             utils::to_connector_meta_from_secret(
-                item.router_data
-                    .request
-                    .connector_metadata
-                    .clone()
-                    .map(Secret::new),
+                item.router_data.request.merchant_account_metadata.clone(),
             )
             .change_context(errors::ConnectorError::InvalidConnectorConfig { config: "metadata" })?
         };
@@ -1077,7 +1073,7 @@ impl<
             }
         } else {
             utils::to_connector_meta_from_secret(
-                item.router_data.request.refund_connector_metadata.clone(),
+                item.router_data.request.merchant_account_metadata.clone(),
             )
             .change_context(errors::ConnectorError::InvalidConnectorConfig { config: "metadata" })?
         };

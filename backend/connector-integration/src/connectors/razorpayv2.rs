@@ -3,6 +3,7 @@ pub mod transformers;
 use common_enums::AttemptStatus;
 use common_utils::{
     errors::CustomResult,
+    events,
     ext_traits::BytesExt,
     request::RequestContent,
     types::{AmountConvertor, MinorUnit},
@@ -38,7 +39,6 @@ use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{self},
-    events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
 use transformers as razorpayv2;
@@ -117,7 +117,7 @@ impl<
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         let response: razorpayv2::RazorpayV2ErrorResponse = res
             .response
@@ -125,7 +125,7 @@ impl<
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         if let Some(i) = event_builder {
-            i.set_error_response_body(&response)
+            i.set_connector_response(&response)
         }
 
         let (code, message, attempt_status) = match response {
@@ -243,7 +243,7 @@ impl<
             PaymentCreateOrderData,
             PaymentCreateOrderResponse,
         >,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
         domain_types::router_data_v2::RouterDataV2<
@@ -260,7 +260,7 @@ impl<
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         if let Some(i) = event_builder {
-            i.set_response_body(&response)
+            i.set_connector_response(&response)
         }
 
         let order_response = PaymentCreateOrderResponse {
@@ -276,7 +276,7 @@ impl<
     fn get_error_response_v2(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
@@ -284,7 +284,7 @@ impl<
     fn get_5xx_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         let response: razorpayv2::RazorpayV2ErrorResponse = res
             .response
@@ -292,7 +292,7 @@ impl<
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         if let Some(i) = event_builder {
-            i.set_error_response_body(&response)
+            i.set_connector_response(&response)
         }
 
         let (code, message) = match response {
@@ -413,7 +413,7 @@ impl<
             PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         >,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
         domain_types::router_data_v2::RouterDataV2<
@@ -434,7 +434,7 @@ impl<
         match upi_response_result {
             Ok(upi_response) => {
                 if let Some(i) = event_builder {
-                    i.set_response_body(&upi_response)
+                    i.set_connector_response(&upi_response)
                 }
 
                 // Use the transformer for UPI response handling
@@ -454,7 +454,7 @@ impl<
                     .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
                 if let Some(i) = event_builder {
-                    i.set_response_body(&response)
+                    i.set_connector_response(&response)
                 }
 
                 // Use the transformer for regular response handling
@@ -472,7 +472,7 @@ impl<
     fn get_error_response_v2(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
@@ -480,7 +480,7 @@ impl<
     fn get_5xx_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
@@ -907,7 +907,7 @@ impl<
             PaymentsSyncData,
             PaymentsResponseData,
         >,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
         domain_types::router_data_v2::RouterDataV2<
@@ -925,7 +925,7 @@ impl<
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         if let Some(i) = event_builder {
-            i.set_response_body(&sync_response)
+            i.set_connector_response(&sync_response)
         }
 
         // Use the transformer for PSync response handling
@@ -941,7 +941,7 @@ impl<
     fn get_error_response_v2(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
@@ -949,7 +949,7 @@ impl<
     fn get_5xx_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
@@ -1042,7 +1042,7 @@ impl<
             RefundSyncData,
             RefundsResponseData,
         >,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
         domain_types::router_data_v2::RouterDataV2<
@@ -1059,7 +1059,7 @@ impl<
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         if let Some(i) = event_builder {
-            i.set_response_body(&response)
+            i.set_connector_response(&response)
         }
 
         RouterDataV2::foreign_try_from((
@@ -1074,7 +1074,7 @@ impl<
     fn get_error_response_v2(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
@@ -1082,7 +1082,7 @@ impl<
     fn get_5xx_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
@@ -1161,7 +1161,7 @@ impl<
             RefundsData,
             RefundsResponseData,
         >,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
         domain_types::router_data_v2::RouterDataV2<
@@ -1178,7 +1178,7 @@ impl<
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         if let Some(i) = event_builder {
-            i.set_response_body(&response)
+            i.set_connector_response(&response)
         }
 
         RouterDataV2::foreign_try_from((
@@ -1193,7 +1193,7 @@ impl<
     fn get_error_response_v2(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
@@ -1201,7 +1201,7 @@ impl<
     fn get_5xx_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }

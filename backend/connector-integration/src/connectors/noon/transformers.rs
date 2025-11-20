@@ -55,7 +55,7 @@ pub struct NoonSubscriptionData {
 pub struct NoonBillingAddress {
     street: Option<Secret<String>>,
     street2: Option<Secret<String>>,
-    city: Option<String>,
+    city: Option<Secret<String>>,
     state_province: Option<Secret<String>>,
     country: Option<CountryAlpha2>,
     postal_code: Option<Secret<String>>,
@@ -310,7 +310,7 @@ impl<
                         name_on_card: item.resource_common_data.get_optional_billing_full_name(),
                         number_plain: req_card.card_number.clone(),
                         expiry_month: req_card.card_exp_month.clone(),
-                        expiry_year: req_card.card_exp_year.clone(),
+                        expiry_year: req_card.get_expiry_year_4_digit(),
                         cvv: req_card.card_cvc,
                     })),
                     PaymentMethodData::Wallet(wallet_data) => match wallet_data.clone() {
@@ -822,7 +822,7 @@ impl<
     ) -> Result<Self, Self::Error> {
         let item = &data.router_data;
         let refund_amount = data.connector.amount_converter.convert(
-            data.router_data.request.minor_payment_amount,
+            data.router_data.request.minor_refund_amount,
             data.router_data.request.currency,
         );
         let order = NoonActionOrder {
@@ -938,7 +938,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
             Err(ErrorResponse {
                 status_code: item.http_code,
                 code: response.result_code.to_string(),
-                message: response.class_description.clone(),
+                message: response.message.clone(),
                 reason: Some(response.message.clone()),
                 attempt_status: None,
                 connector_transaction_id: Some(response.result.transaction.id.clone()),
@@ -1003,7 +1003,7 @@ impl<F> TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
             Err(ErrorResponse {
                 status_code: item.http_code,
                 code: response.result_code.to_string(),
-                message: response.class_description.clone(),
+                message: response.message.clone(),
                 reason: Some(response.message.clone()),
                 attempt_status: None,
                 connector_transaction_id: Some(noon_transaction.id.clone()),
@@ -1180,7 +1180,7 @@ impl<
                         name_on_card: item.resource_common_data.get_optional_billing_full_name(),
                         number_plain: req_card.card_number.clone(),
                         expiry_month: req_card.card_exp_month.clone(),
-                        expiry_year: req_card.card_exp_year.clone(),
+                        expiry_year: req_card.get_expiry_year_4_digit(),
                         cvv: req_card.card_cvc,
                     })),
                     PaymentMethodData::Wallet(wallet_data) => match wallet_data.clone() {

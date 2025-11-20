@@ -4,6 +4,7 @@ use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD_ENGINE, Engine
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
+    events,
     ext_traits::BytesExt,
     request::RequestContent,
     types::FloatMajorUnit,
@@ -38,7 +39,6 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 use ring::hmac;
 use serde::Serialize;
@@ -477,7 +477,7 @@ impl<
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: self::transformers::FiservErrorResponse = res
             .response

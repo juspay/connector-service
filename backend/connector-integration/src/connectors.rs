@@ -91,3 +91,30 @@ pub use self::worldpay::Worldpay;
 
 pub mod worldpayvantiv;
 pub use self::worldpayvantiv::Worldpayvantiv;
+
+pub mod multisafepay;
+pub use self::multisafepay::Multisafepay;
+
+pub mod payload;
+pub use self::payload::Payload;
+
+pub mod fiservemea;
+pub use self::fiservemea::Fiservemea;
+
+pub mod datatrans;
+pub use self::datatrans::Datatrans;
+
+pub mod authipay;
+pub use self::authipay::Authipay;
+
+pub mod silverflow;
+pub use self::silverflow::Silverflow;
+
+pub mod celero;
+pub use self::celero::Celero;
+
+pub mod paypal;
+pub use self::paypal::Paypal;
+
+pub mod stax;
+pub use self::stax::Stax;

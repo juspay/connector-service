@@ -42,6 +42,7 @@ mod tests {
                     payment_method: common_enums::PaymentMethod::Card,
                     description: Some("Payment for order #12345".to_string()),
                     return_url: Some("www.google.com".to_string()),
+                    order_details: None,
                     address: domain_types::payment_address::PaymentAddress::new(
                         None, None, None, None,
                     ),
@@ -80,6 +81,8 @@ mod tests {
                     key1: Secret::new(key1),
                 },
                 request: PaymentsAuthorizeData {
+                    authentication_data: None,
+                    connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(
                         domain_types::payment_method_data::Card {
                             card_number: RawCardNumber(cards::CardNumber::from_str(
@@ -92,7 +95,7 @@ mod tests {
                             ..Default::default()
                         },
                     ),
-                    amount: 1000,
+                    amount: MinorUnit::new(1000),
                     order_tax_amount: None,
                     email: Some(
                         Email::try_from("test@example.com".to_string())
@@ -113,7 +116,7 @@ mod tests {
                     off_session: None,
                     browser_info: Some(
                         domain_types::router_request_types::BrowserInformation {
-                            color_depth: None,
+                            color_depth: Some(24),
                             java_enabled: Some(false),
                             screen_height: Some(1080),
                             screen_width: Some(1920),
@@ -126,7 +129,7 @@ mod tests {
                             ),
                             java_script_enabled: Some(false),
                             language: Some("en-US".to_string()),
-                            time_zone: None,
+                            time_zone: Some(-480),
                             referer: None,
                             ip_address: None,
                             os_type: None,
@@ -140,7 +143,7 @@ mod tests {
                     enrolled_for_3ds: true,
                     related_transaction_id: None,
                     payment_experience: None,
-                    payment_method_type: Some(common_enums::PaymentMethodType::Credit),
+                    payment_method_type: Some(common_enums::PaymentMethodType::Card),
                     customer_id: Some(
                         common_utils::id_type::CustomerId::try_from(Cow::from(
                             "cus_123456789".to_string(),
@@ -223,6 +226,7 @@ mod tests {
                     payment_method: common_enums::PaymentMethod::Card,
                     description: None,
                     return_url: None,
+                    order_details: None,
                     address: domain_types::payment_address::PaymentAddress::new(
                         None, None, None, None,
                     ),
@@ -261,8 +265,10 @@ mod tests {
                     key1: Secret::new(key1),
                 },
                 request: PaymentsAuthorizeData {
+                    authentication_data: None,
+                    connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Default::default()),
-                    amount: 0,
+                    amount: MinorUnit::new(1000),
                     order_tax_amount: None,
                     email: None,
                     customer_name: None,

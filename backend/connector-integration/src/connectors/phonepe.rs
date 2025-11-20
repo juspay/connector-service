@@ -3,7 +3,7 @@ pub mod headers;
 pub mod transformers;
 
 use common_enums as enums;
-use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::MinorUnit};
+use common_utils::{errors::CustomResult, events, ext_traits::BytesExt, types::MinorUnit};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
@@ -36,7 +36,6 @@ use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types,
-    events::connector_api_logs::ConnectorEvent,
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
@@ -494,7 +493,7 @@ impl<
     fn build_error_response(
         &self,
         res: Response,
-        _event_builder: Option<&mut ConnectorEvent>,
+        _event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         // Parse PhonePe error response (unified for both sync and payments)
         let (error_message, error_code, attempt_status) = if let Ok(error_response) =

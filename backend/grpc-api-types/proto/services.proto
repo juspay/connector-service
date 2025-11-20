@@ -15,6 +15,9 @@ service PaymentService {
   // Authorizes a payment.
   rpc Authorize(PaymentServiceAuthorizeRequest) returns (PaymentServiceAuthorizeResponse);
   
+  // Authorizes a payment only (without setup flows).
+  rpc AuthorizeOnly(PaymentServiceAuthorizeOnlyRequest) returns (PaymentServiceAuthorizeResponse);
+  
   // Synchronizes the status of a payment.
   rpc Get(PaymentServiceGetRequest) returns (PaymentServiceGetResponse);
   
@@ -27,11 +30,17 @@ service PaymentService {
   // Captures a previously authorized payment.
   rpc Capture(PaymentServiceCaptureRequest) returns (PaymentServiceCaptureResponse);
 
+  // Creates an order before authorize.
+  rpc CreateOrder(PaymentServiceCreateOrderRequest) returns (PaymentServiceCreateOrderResponse);
+
   // Processes a refund request.
   rpc Refund(PaymentServiceRefundRequest) returns (RefundResponse);
 
   // Sets up a mandate for future payments.
   rpc Register(PaymentServiceRegisterRequest) returns (PaymentServiceRegisterResponse);
+
+  // Creates a session token for payment processing.
+  rpc CreateSessionToken(PaymentServiceCreateSessionTokenRequest) returns (PaymentServiceCreateSessionTokenResponse);
 
   // Processes a repeat payment using existing mandate (MIT - Merchant Initiated Transaction).
   rpc RepeatEverything(PaymentServiceRepeatEverythingRequest) returns (PaymentServiceRepeatEverythingResponse);
@@ -55,6 +64,17 @@ service PaymentService {
   
   // Post-authentication step - used when authentication results need validation
   rpc PostAuthenticate(PaymentServicePostAuthenticateRequest) returns (PaymentServicePostAuthenticateResponse);
+
+  // Creates a connector customer for future payment processing.
+  rpc CreateConnectorCustomer(PaymentServiceCreateConnectorCustomerRequest) returns (PaymentServiceCreateConnectorCustomerResponse);
+
+
+  // Creates a payment method token for future payment processing.
+  rpc CreatePaymentMethodToken(PaymentServiceCreatePaymentMethodTokenRequest) returns (PaymentServiceCreatePaymentMethodTokenResponse);
+
+
+  // Creates an access token for connector authentication.
+  rpc CreateAccessToken(PaymentServiceCreateAccessTokenRequest) returns (PaymentServiceCreateAccessTokenResponse);
 }
 
 // Service for refund-specific operations.

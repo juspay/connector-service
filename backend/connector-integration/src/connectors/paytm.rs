@@ -1,9 +1,11 @@
+pub mod request;
+pub mod response;
 pub mod transformers;
 
 use std::fmt::Debug;
 
 use common_enums::AttemptStatus;
-use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit};
+use common_utils::{errors::CustomResult, events, ext_traits::BytesExt, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
@@ -33,15 +35,15 @@ use domain_types::{
 use hyperswitch_masking::{Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent, verification,
+    verification,
 };
 use paytm::constants;
 use serde::Serialize;
 use transformers as paytm;
 
-use self::transformers::{
-    PaytmAuthorizeRequest, PaytmInitiateTxnRequest, PaytmInitiateTxnResponse,
-    PaytmProcessTxnResponse, PaytmTransactionStatusRequest, PaytmTransactionStatusResponse,
+use self::{
+    request::{PaytmAuthorizeRequest, PaytmInitiateTxnRequest, PaytmTransactionStatusRequest},
+    response::{PaytmInitiateTxnResponse, PaytmProcessTxnResponse, PaytmTransactionStatusResponse},
 };
 use crate::{connectors::macros, types::ResponseRouterData};
 
@@ -89,7 +91,7 @@ macros::create_all_prerequisites!(
         fn build_custom_error_response(
             &self,
             res: Response,
-            event_builder: Option<&mut ConnectorEvent>,
+            event_builder: Option<&mut events::Event>,
         ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
             // First try to parse as session token error response format
             if let Ok(session_error_response) = res
@@ -97,7 +99,7 @@ macros::create_all_prerequisites!(
                 .parse_struct::<paytm::PaytmSessionTokenErrorResponse>("PaytmSessionTokenErrorResponse")
             {
                 if let Some(event) = event_builder {
-                    event.set_error_response_body(&session_error_response);
+                    event.set_connector_response(&session_error_response);
                 }
 
                 return Ok(domain_types::router_data::ErrorResponse {
@@ -119,7 +121,7 @@ macros::create_all_prerequisites!(
                 .parse_struct::<paytm::PaytmCallbackErrorResponse>("PaytmCallbackErrorResponse")
             {
                 if let Some(event) = event_builder {
-                    event.set_error_response_body(&callback_response);
+                    event.set_connector_response(&callback_response);
                 }
 
                 return Ok(domain_types::router_data::ErrorResponse {
@@ -149,7 +151,7 @@ macros::create_all_prerequisites!(
                 .parse_struct::<paytm::PaytmErrorResponse>("PaytmErrorResponse")
             {
                 if let Some(event) = event_builder {
-                    event.set_error_response_body(&response);
+                    event.set_connector_response(&response);
                 }
 
                 return Ok(domain_types::router_data::ErrorResponse {
@@ -356,7 +358,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         self.build_custom_error_response(res, event_builder)
     }
@@ -531,7 +533,7 @@ macros::macro_connector_implementation!(
         fn get_5xx_error_response(
             &self,
             res: Response,
-            event_builder: Option<&mut ConnectorEvent>,
+            event_builder: Option<&mut events::Event>,
         ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
             self.build_custom_error_response(res, event_builder)
         }
@@ -600,7 +602,7 @@ macros::macro_connector_implementation!(
         fn get_5xx_error_response(
             &self,
             res: Response,
-            event_builder: Option<&mut ConnectorEvent>,
+            event_builder: Option<&mut events::Event>,
         ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
             self.build_custom_error_response(res, event_builder)
         }
@@ -640,7 +642,7 @@ macros::macro_connector_implementation!(
         fn get_5xx_error_response(
             &self,
             res: Response,
-            event_builder: Option<&mut ConnectorEvent>,
+            event_builder: Option<&mut events::Event>,
         ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
             self.build_custom_error_response(res, event_builder)
         }

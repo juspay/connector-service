@@ -2,7 +2,7 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
-use common_utils::{consts, errors::CustomResult, ext_traits::ByteSliceExt};
+use common_utils::{consts, errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
@@ -33,7 +33,6 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
 use transformers::{
@@ -399,7 +398,7 @@ impl<
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: CheckoutErrorResponse = if res.response.is_empty() {
             let (error_codes, error_type) = if res.status_code == 401 {
@@ -422,7 +421,7 @@ impl<
         };
 
         if let Some(i) = event_builder {
-            i.set_error_response_body(&response);
+            i.set_connector_response(&response);
         }
 
         Ok(ErrorResponse {

@@ -10,13 +10,15 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateConnectorCustomer, RepeatPayment, SetupMandate, Void,
+        Authorize, Capture, CreateConnectorCustomer, PaymentMethodToken, RepeatPayment,
+        SetupMandate, Void,
     },
     connector_types::{
         ConnectorCustomerData, ConnectorCustomerResponse, MandateReference, MandateReferenceId,
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::{self, ConnectorError},
     mandates::AcceptanceType,
@@ -232,7 +234,7 @@ pub struct IntentCharges {
         rename = "transfer_data[destination]",
         skip_serializing_if = "Option::is_none"
     )]
-    pub destination_account_id: Option<String>,
+    pub destination_account_id: Option<Secret<String>>,
 }
 
 // Field rename is required only in case of serialization as it is passed in the request to the connector.
@@ -562,7 +564,7 @@ pub enum StripePaymentMethodData<
         + 'static
         + Serialize,
 > {
-    CardToken(StripeCardToken),
+    CardToken(StripeCardToken<T>),
     Card(StripeCardData<T>),
     PayLater(StripePayLaterData),
     Wallet(StripeWallet),
@@ -586,15 +588,22 @@ pub struct StripeBillingAddressCardToken {
     #[serde(rename = "billing_details[address][state]")]
     pub state: Option<Secret<String>>,
     #[serde(rename = "billing_details[address][city]")]
-    pub city: Option<String>,
+    pub city: Option<Secret<String>>,
 }
 // Struct to call the Stripe tokens API to create a PSP token for the card details provided
 #[derive(Debug, Eq, PartialEq, Serialize)]
-pub struct StripeCardToken {
+pub struct StripeCardToken<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     #[serde(rename = "type")]
     pub payment_method_type: Option<StripePaymentMethodType>,
     #[serde(rename = "card[number]")]
-    pub token_card_number: cards::CardNumber,
+    pub token_card_number: RawCardNumber<T>,
     #[serde(rename = "card[exp_month]")]
     pub token_card_exp_month: Secret<String>,
     #[serde(rename = "card[exp_year]")]
@@ -808,8 +817,7 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(value: common_enums::PaymentMethodType) -> Result<Self, Self::Error> {
         match value {
-            common_enums::PaymentMethodType::Credit => Ok(Self::Card),
-            common_enums::PaymentMethodType::Debit => Ok(Self::Card),
+            common_enums::PaymentMethodType::Card => Ok(Self::Card),
             common_enums::PaymentMethodType::Klarna => Ok(Self::Klarna),
             common_enums::PaymentMethodType::Affirm => Ok(Self::Affirm),
             common_enums::PaymentMethodType::AfterpayClearpay => Ok(Self::AfterpayClearpay),
@@ -1599,12 +1607,42 @@ impl<
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        (wallet_data, _payment_method_token): (
+        (wallet_data, payment_method_token): (
             &WalletData,
             Option<domain_types::router_data::PaymentMethodToken>,
         ),
     ) -> Result<Self, Self::Error> {
         match wallet_data {
+            WalletData::ApplePay(applepay_data) => {
+                let apple_pay_decrypt_data = match payment_method_token {
+                    Some(domain_types::router_data::PaymentMethodToken::ApplePayDecrypt(
+                        decrypt_data,
+                    )) => {
+                        let expiry_year_4_digit = decrypt_data.get_four_digit_expiry_year();
+                        Some(Self::Wallet(StripeWallet::ApplePayPredecryptToken(
+                            Box::new(StripeApplePayPredecrypt {
+                                number: decrypt_data.clone().application_primary_account_number,
+                                exp_year: expiry_year_4_digit,
+                                exp_month: decrypt_data.application_expiration_month,
+                                eci: decrypt_data.payment_data.eci_indicator,
+                                cryptogram: decrypt_data.payment_data.online_payment_cryptogram,
+                                tokenization_method: "apple_pay".to_string(),
+                            }),
+                        )))
+                    }
+                    _ => Some(Self::Wallet(StripeWallet::ApplepayToken(StripeApplePay {
+                        pk_token: applepay_data.get_applepay_decoded_payment_data()?,
+                        pk_token_instrument_name: applepay_data.payment_method.pm_type.to_owned(),
+                        pk_token_payment_network: applepay_data.payment_method.network.to_owned(),
+                        pk_token_transaction_id: Secret::new(
+                            applepay_data.transaction_identifier.to_owned(),
+                        ),
+                    }))),
+                };
+                let apple_pay_wallet_data =
+                    apple_pay_decrypt_data.ok_or(ConnectorError::MissingApplePayTokenData)?;
+                Ok(apple_pay_wallet_data)
+            }
             WalletData::WeChatPayQr(_) => Ok(Self::Wallet(StripeWallet::WechatpayPayment(
                 WechatpayPayment {
                     client: WechatClient::Web,
@@ -1637,7 +1675,6 @@ impl<
                 .into(),
             ),
             WalletData::AliPayQr(_)
-            | WalletData::ApplePay(_)
             | WalletData::BluecodeRedirect {}
             | WalletData::AliPayHkRedirect(_)
             | WalletData::MomoRedirect(_)
@@ -2056,9 +2093,9 @@ impl<
                     }),
                     common_enums::StripeChargeType::Destination => Some(IntentCharges {
                         application_fee_amount: stripe_split_payment.application_fees,
-                        destination_account_id: Some(
+                        destination_account_id: Some(Secret::new(
                             stripe_split_payment.transfer_account_id.clone(),
-                        ),
+                        )),
                     }),
                 },
             },
@@ -2156,7 +2193,7 @@ impl From<BrowserInformation> for StripeBrowserInformation {
 pub struct StripeSplitPaymentRequest {
     pub charge_type: Option<common_enums::PaymentChargeType>,
     pub application_fees: Option<MinorUnit>,
-    pub transfer_account_id: Option<String>,
+    pub transfer_account_id: Option<Secret<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -3363,7 +3400,7 @@ pub struct ErrorResponse {
 #[derive(Debug, Default, Eq, PartialEq, Serialize)]
 pub struct StripeShippingAddress {
     #[serde(rename = "shipping[address][city]")]
-    pub city: Option<String>,
+    pub city: Option<Secret<String>>,
     #[serde(rename = "shipping[address][country]")]
     pub country: Option<common_enums::CountryAlpha2>,
     #[serde(rename = "shipping[address][line1]")]
@@ -3389,7 +3426,7 @@ pub struct StripeBillingAddress {
     #[serde(rename = "payment_method_data[billing_details][name]")]
     pub name: Option<Secret<String>>,
     #[serde(rename = "payment_method_data[billing_details][address][city]")]
-    pub city: Option<String>,
+    pub city: Option<Secret<String>>,
     #[serde(rename = "payment_method_data[billing_details][address][line1]")]
     pub address_line1: Option<Secret<String>>,
     #[serde(rename = "payment_method_data[billing_details][address][line2]")]
@@ -3911,7 +3948,7 @@ impl<
 
 pub(super) fn transform_headers_for_connect_platform(
     charge_type: common_enums::PaymentChargeType,
-    transfer_account_id: String,
+    transfer_account_id: Secret<String>,
     header: &mut Vec<(String, Maskable<String>)>,
 ) {
     if let common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct) =
@@ -4679,7 +4716,7 @@ impl TryFrom<&RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, Pa
                 || mit_transfer_account_id
                     != from_metadata
                         .as_ref()
-                        .and_then(|m| m.transfer_account_id.clone())
+                        .and_then(|m| m.transfer_account_id.clone().map(|s| s.expose()))
             {
                 let mismatched_fields = ["transfer_account_id", "application_fees", "charge_type"];
 
@@ -4872,9 +4909,9 @@ impl<
                     }),
                     common_enums::StripeChargeType::Destination => Some(IntentCharges {
                         application_fee_amount: stripe_split_payment.application_fees,
-                        destination_account_id: Some(
+                        destination_account_id: Some(Secret::new(
                             stripe_split_payment.transfer_account_id.clone(),
-                        ),
+                        )),
                     }),
                 },
             },
@@ -4976,5 +5013,120 @@ fn get_payment_method_type_for_saved_payment_method_payment(
             | StripePaymentMethodType::Sofort => Ok(Some(StripePaymentMethodType::Sepa)),
             _ => Ok(Some(stripe_payment_method_type)),
         }
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<
+                PaymentMethodToken,
+                PaymentFlowData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
+            >,
+            T,
+        >,
+    > for TokenRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: StripeRouterData<
+            RouterDataV2<
+                PaymentMethodToken,
+                PaymentFlowData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let billing_address = StripeBillingAddressCardToken {
+            name: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_full_name(),
+            email: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_email(),
+            phone: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_phone_number(),
+            address_line1: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_line1(),
+            address_line2: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_line2(),
+            city: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_city(),
+            state: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_state(),
+        };
+
+        // Card flow for tokenization is handled separately because of API contact difference
+        let request_payment_data = match &item.router_data.request.payment_method_data {
+            PaymentMethodData::Card(card_details) => {
+                StripePaymentMethodData::CardToken(StripeCardToken {
+                    payment_method_type: Some(StripePaymentMethodType::Card),
+                    token_card_number: card_details.card_number.clone(),
+                    token_card_exp_month: card_details.card_exp_month.clone(),
+                    token_card_exp_year: card_details.card_exp_year.clone(),
+                    token_card_cvc: card_details.card_cvc.clone(),
+                    billing: billing_address,
+                })
+            }
+            _ => {
+                create_stripe_payment_method(
+                    &item.router_data.request.payment_method_data,
+                    PaymentRequestDetails {
+                        auth_type: item.router_data.resource_common_data.auth_type,
+                        payment_method_token: item
+                            .router_data
+                            .resource_common_data
+                            .payment_method_token
+                            .clone(),
+                        is_customer_initiated_mandate_payment: None,
+                        billing_address: StripeBillingAddress::default(),
+                        request_incremental_authorization: false,
+                        request_extended_authorization: None,
+                        request_overcapture: None,
+                    },
+                )?
+                .0
+            }
+        };
+
+        Ok(Self {
+            token_data: request_payment_data,
+        })
+    }
+}
+
+impl<F, T> TryFrom<ResponseRouterData<StripeTokenResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, T, PaymentMethodTokenResponse>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(item: ResponseRouterData<StripeTokenResponse, Self>) -> Result<Self, Self::Error> {
+        let token = item.response.id.clone().expose();
+        Ok(Self {
+            response: Ok(PaymentMethodTokenResponse { token }),
+            ..item.router_data
+        })
     }
 }

@@ -12,6 +12,7 @@ use common_enums::{enums, PaymentMethodType};
 use common_utils::{
     consts,
     errors::CustomResult,
+    events,
     ext_traits::{ByteSliceExt, BytesExt},
     types::FloatMajorUnit,
 };
@@ -51,7 +52,6 @@ use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{self, ConnectorValidation},
-    events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
 use transformers::*;
@@ -741,7 +741,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: BluecodeErrorResponse = res
             .response

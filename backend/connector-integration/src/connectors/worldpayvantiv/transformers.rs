@@ -201,7 +201,7 @@ impl<
                         .resource_common_data
                         .get_customer_id()
                         .ok()
-                        .map(|id| id.get_string_repr().to_string()),
+                        .map(|id| Secret::new(id.get_string_repr().to_string())),
                     order_id: merchant_txn_id.clone(),
                     amount,
                     order_source,
@@ -222,7 +222,7 @@ impl<
                         .resource_common_data
                         .get_customer_id()
                         .ok()
-                        .map(|id| id.get_string_repr().to_string()),
+                        .map(|id| Secret::new(id.get_string_repr().to_string())),
                     order_id: merchant_txn_id.clone(),
                     amount,
                     order_source,
@@ -337,7 +337,7 @@ pub struct Authorization<T: PaymentMethodDataTypes> {
     #[serde(rename = "@reportGroup")]
     pub report_group: String,
     #[serde(rename = "@customerId", skip_serializing_if = "Option::is_none")]
-    pub customer_id: Option<String>,
+    pub customer_id: Option<Secret<String>>,
     pub order_id: String,
     pub amount: MinorUnit,
     pub order_source: OrderSource,
@@ -363,7 +363,7 @@ pub struct Sale<T: PaymentMethodDataTypes> {
     #[serde(rename = "@reportGroup")]
     pub report_group: String,
     #[serde(rename = "@customerId", skip_serializing_if = "Option::is_none")]
-    pub customer_id: Option<String>,
+    pub customer_id: Option<Secret<String>>,
     pub order_id: String,
     pub amount: MinorUnit,
     pub order_source: OrderSource,
@@ -550,7 +550,7 @@ pub struct BillToAddress {
     pub company: Option<String>,
     pub address_line1: Option<Secret<String>>,
     pub address_line2: Option<Secret<String>>,
-    pub city: Option<String>,
+    pub city: Option<Secret<String>>,
     pub state: Option<Secret<String>>,
     pub zip: Option<Secret<String>>,
     pub country: Option<CountryAlpha2>,
@@ -566,7 +566,7 @@ pub struct ShipToAddress {
     pub company: Option<String>,
     pub address_line1: Option<Secret<String>>,
     pub address_line2: Option<Secret<String>>,
-    pub city: Option<String>,
+    pub city: Option<Secret<String>>,
     pub state: Option<Secret<String>>,
     pub zip: Option<Secret<String>>,
     pub country: Option<CountryAlpha2>,
@@ -661,7 +661,7 @@ pub struct PaymentResponse {
     #[serde(rename = "@reportGroup")]
     pub report_group: String,
     #[serde(rename = "@customerId", skip_serializing_if = "Option::is_none")]
-    pub customer_id: Option<String>,
+    pub customer_id: Option<Secret<String>>,
     pub cnp_txn_id: String,
     pub order_id: String,
     pub response: WorldpayvantivResponseCode,
@@ -1547,16 +1547,18 @@ where
                                 &apple_pay_data.payment_method.network,
                             )?;
                             // Extract expiry date from Apple Pay decrypted data
-                            let expiry_month: Secret<String> =
-                                apple_pay_decrypted_data.get_expiry_month()?;
-                            let expiry_year =
-                                apple_pay_decrypted_data.get_four_digit_expiry_year()?;
+                            let expiry_month: Secret<String> = apple_pay_decrypted_data
+                                .get_expiry_month()
+                                .change_context(ConnectorError::InvalidDataFormat {
+                                    field_name: "expiration_month",
+                                })?;
+                            let expiry_year = apple_pay_decrypted_data.get_four_digit_expiry_year();
                             let formatted_year = &expiry_year.expose()[2..]; // Convert to 2-digit year
                             let exp_date = format!("{}{}", expiry_month.expose(), formatted_year);
 
                             let card_number_string = apple_pay_decrypted_data
                                 .application_primary_account_number
-                                .expose();
+                                .get_card_no();
                             let raw_card_number =
                                 create_raw_card_number_from_string::<T>(card_number_string)?;
 

@@ -578,8 +578,22 @@ macro_rules! implement_connector_operation {
                 response: Err(domain_types::router_data::ErrorResponse::default()),
             };
 
-            // Execute connector processing
+            // Calculate flow name for dynamic flow-specific configurations
             let flow_name = $crate::utils::flow_marker_to_flow_name::<$flow_marker>();
+
+            // Get API tag for the current flow
+            // Note: Flows with payment_method_type should implement manually (e.g., authorize, psync)
+            let api_tag = self
+                .config
+                .api_tags
+                .get_tag(flow_name, None);
+
+            // Create test context if test mode is enabled
+            let test_context = self.config.test.create_test_context(&request_id).map_err(|e| {
+                tonic::Status::internal(format!("Test mode configuration error: {e}"))
+            })?;
+
+            // Execute connector processing
             let event_params = external_services::service::EventProcessingParams {
                 connector_name: &connector.to_string(),
                 service_name: &service_name,
@@ -598,6 +612,8 @@ macro_rules! implement_connector_operation {
                 event_params,
                 None,
                 common_enums::CallConnectorAction::Trigger,
+                test_context,
+                api_tag,
             )
             .await
             .switch()
