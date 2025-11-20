@@ -44,9 +44,9 @@ fn extract_headers_from_metadata(
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use crate::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync,
-        PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
-        VoidPC,
+        Accept, Authorize, Capture, CreateConnectorCustomer, CreateOrder, CreateSessionToken,
+        DefendDispute, PSync, PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate,
+        SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -6266,6 +6266,139 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRegisterRequest>
             phone: None,
             preprocessing_id: None,
         })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateConnectorCustomerRequest>
+    for ConnectorCustomerData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::PaymentServiceCreateConnectorCustomerRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let email = value
+            .email
+            .and_then(|email_str| Email::try_from(email_str.expose()).ok());
+
+        Ok(Self {
+            customer_id: value.customer_id.map(Secret::new),
+            email: email.map(Secret::new),
+            name: value.customer_name.map(Secret::new),
+            description: None, // description field not available in this proto
+            split_payments: None,
+            phone: None,
+            preprocessing_id: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::PaymentServiceCreateConnectorCustomerRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for PaymentFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (
+            grpc_api_types::payments::PaymentServiceCreateConnectorCustomerRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+
+        Ok(Self {
+            merchant_id: merchant_id_from_header,
+            payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
+            attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: common_enums::PaymentMethod::Card, // Default for connector customer creation
+            address: payment_address::PaymentAddress::default(), // Default address
+            auth_type: common_enums::AuthenticationType::default(),
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ), // request_ref_id field not available in this proto
+            customer_id: None,
+            connector_customer: None,
+            description: None, // description field not available in this proto
+            return_url: None,
+            connector_meta_data: None,
+            amount_captured: None,
+            minor_amount_captured: None,
+            minor_amount_capturable: None,
+            access_token: None,
+            session_token: None,
+            reference_id: None,
+            payment_method_token: None,
+            preprocessing_id: None,
+            connector_api_version: None,
+            test_mode: None,
+            connector_http_status_code: None,
+            external_latency: None,
+            connectors,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            connector_response_headers: None,
+            vault_headers: None,
+            connector_response: None,
+            recurring_mandate_payment_data: None,
+            order_details: None,
+        })
+    }
+}
+
+pub fn generate_create_connector_customer_response(
+    router_data_v2: RouterDataV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        crate::connector_types::ConnectorCustomerResponse,
+    >,
+) -> Result<
+    grpc_payment_types::PaymentServiceCreateConnectorCustomerResponse,
+    error_stack::Report<ApplicationErrorResponse>,
+> {
+    let customer_response = router_data_v2.response;
+
+    match customer_response {
+        Ok(response) => Ok(
+            grpc_payment_types::PaymentServiceCreateConnectorCustomerResponse {
+                connector_customer_id: response.connector_customer_id.clone(),
+                error_code: None,
+                error_message: None,
+                status_code: 200,
+                response_headers: router_data_v2
+                    .resource_common_data
+                    .get_connector_response_headers_as_map(),
+                response_ref_id: Some(grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
+                        response.connector_customer_id.clone(),
+                    )),
+                }),
+                error_reason: None,
+            },
+        ),
+        Err(e) => Ok(
+            grpc_payment_types::PaymentServiceCreateConnectorCustomerResponse {
+                connector_customer_id: String::new(),
+                error_code: Some(e.code),
+                error_message: Some(e.message),
+                status_code: e.status_code as u32,
+                response_headers: router_data_v2
+                    .resource_common_data
+                    .get_connector_response_headers_as_map(),
+                response_ref_id: e.connector_transaction_id.map(|id| {
+                    grpc_api_types::payments::Identifier {
+                        id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                    }
+                }),
+                error_reason: e.reason,
+            },
+        ),
     }
 }
 

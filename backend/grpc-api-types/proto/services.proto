@@ -59,6 +59,9 @@ service PaymentService {
   // Post-authentication step - used when authentication results need validation
   rpc PostAuthenticate(PaymentServicePostAuthenticateRequest) returns (PaymentServicePostAuthenticateResponse);
 
+  // Creates a connector customer for future payment processing.
+  rpc CreateConnectorCustomer(PaymentServiceCreateConnectorCustomerRequest) returns (PaymentServiceCreateConnectorCustomerResponse);
+
   // Creates an access token for connector authentication.
   rpc CreateAccessToken(PaymentServiceCreateAccessTokenRequest) returns (PaymentServiceCreateAccessTokenResponse);
 }
