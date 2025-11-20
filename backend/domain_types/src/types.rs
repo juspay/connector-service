@@ -3714,6 +3714,23 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             all_keys_required: None, // Field not available in new proto structure
             integrity_object: None,
             split_refunds: None,
+            merchant_account_metadata: (!value.merchant_account_metadata.is_empty())
+                .then(|| {
+                    serde_json::to_value(&value.merchant_account_metadata)
+                        .map(common_utils::pii::SecretSerdeValue::new)
+                        .map_err(|_| {
+                            error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
+                                crate::errors::ApiError {
+                                    sub_code: "SERDE_JSON_ERROR".to_owned(),
+                                    error_identifier: 500,
+                                    error_message: "Failed to serialize merchant_account_metadata"
+                                        .to_owned(),
+                                    error_object: None,
+                                },
+                            ))
+                        })
+                })
+                .transpose()?,
         })
     }
 }
@@ -4600,6 +4617,23 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
                 .transpose()?,
             integrity_object: None,
             split_refunds: None,
+            merchant_account_metadata: (!value.merchant_account_metadata.is_empty())
+                .then(|| {
+                    serde_json::to_value(&value.merchant_account_metadata)
+                        .map(common_utils::pii::SecretSerdeValue::new)
+                        .map_err(|_| {
+                            error_stack::Report::new(ApplicationErrorResponse::InternalServerError(
+                                crate::errors::ApiError {
+                                    sub_code: "SERDE_JSON_ERROR".to_owned(),
+                                    error_identifier: 500,
+                                    error_message: "Failed to serialize merchant_account_metadata"
+                                        .to_owned(),
+                                    error_object: None,
+                                },
+                            ))
+                        })
+                })
+                .transpose()?,
         })
     }
 }
