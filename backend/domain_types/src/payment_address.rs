@@ -322,8 +322,8 @@ impl AddressDetails {
                 convert_us_state_to_code(&state.peek().to_string()).to_string(),
             )),
             common_enums::CountryAlpha2::CA => Ok(Secret::new(
-                            convert_canada_state_to_code(&state.peek().to_string()).to_string(),
-                        )),
+                convert_canada_state_to_code(&state.peek().to_string()).to_string(),
+            )),
             _ => Ok(state.clone()),
         }
     }

@@ -1491,6 +1491,8 @@ message PaymentServiceAuthorizeResponse {
 message PaymentServiceGetRequest {
   // Identification
   Identifier transaction_id = 1; // The resource ID to synchronize
+
+  optional string encoded_data = 9; // Encoded context data for redirect flows, etc if applicable
   
   // Reference
   optional Identifier request_ref_id = 2; // Renamed from connector_request_reference_id
@@ -1710,6 +1712,44 @@ message PaymentServiceCaptureResponse {
   map<string, string> connector_metadata = 14; // Connector-specific metadata for the transaction
 }
 
+// Request message for creating an order.
+message PaymentServiceCreateOrderRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+
+  // Amount Information
+  int64 amount = 2; // The amount for the order creation in major currency units
+  Currency currency = 3; // The currency for the order creation, in ISO 4217 three-letter code
+
+  // URLs for Redirection and Webhooks
+  optional string webhook_url = 4; // URL for webhook notifications
+
+  // Metadata
+  map<string, string> metadata = 5; // Additional metadata for the connector
+}
+
+// Response message for create order operation.
+message PaymentServiceCreateOrderResponse {
+// Identification
+  Identifier order_id = 1; // Identifier for the create order response
+
+// Status Information
+  PaymentStatus status = 2; // Status of the payment after the capture attempt
+  optional string error_code = 3; // Error code if the capture failed
+  optional string error_message = 4; // Error message if the capture failed
+  uint32 status_code = 5; // HTTP status code from the connector
+  map<string, string> response_headers = 6; // Optional HTTP response headers from the connector
+
+  // Reference
+  optional Identifier response_ref_id = 7; //  Response reference ID for tracking
+
+  // Raw Request
+  optional SecretString raw_connector_request = 8; // Raw request to the connector for debugging
+
+  // Raw Response
+  optional SecretString raw_connector_response = 9; // Raw response from the connector for debugging
+}
+
 // Request message for processing a refund.
 message PaymentServiceRefundRequest {
   // Identification
@@ -1739,6 +1779,9 @@ message PaymentServiceRefundRequest {
 
   // State Information
   optional ConnectorState state = 17; // State data for access token storage and other connector-specific state
+
+  // Account-Specific Configuration
+  map<string, string> merchant_account_metadata = 18; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for a refund operation (unified for both Create and Get).
@@ -2338,6 +2381,9 @@ message RefundServiceGetRequest {
 
 // State Information
   optional ConnectorState state = 8; // State data for access token storage and other connector-specific state
+
+// Account-Specific Configuration
+  map<string, string> merchant_account_metadata = 9; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Legacy alias for backward compatibility - use RefundResponse instead
@@ -2643,6 +2689,42 @@ message AcceptDisputeResponse {
 
   // Raw Request
   optional SecretString raw_connector_request = 9; // Raw request to the connector for debugging
+}
+
+// Request message for creating a connector customer.
+message PaymentServiceCreateConnectorCustomerRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+
+  // Account-Specific Configuration
+  map<string, string> merchant_account_metadata = 3; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+
+  // Customer Information
+  optional string customer_name = 4; // Name of the customer
+  optional SecretString email = 5; // Email address of the customer
+  optional string customer_id = 6; // Merchant's customer ID
+  optional string phone_number = 7; // Phone number of the customer
+
+  // Address Information
+  optional Address address = 8; // Customer address details
+
+  // Additional Metadata
+  map<string, string> metadata = 9; // Additional metadata for the connector
+}
+
+// Response message for creating a connector customer.
+message PaymentServiceCreateConnectorCustomerResponse {
+  // Customer Information
+  string connector_customer_id = 1; // The created connector customer ID
+
+  optional string error_code = 2; // Error code if the customer creation failed
+  optional string error_message = 3; // Error message if the customer creation failed
+  optional string error_reason = 4; // Detailed reason for the error
+  uint32 status_code = 5; // HTTP status code from the connector
+  map<string, string> response_headers = 6; // Optional HTTP response headers from the connector
+
+  // Reference
+  optional Identifier response_ref_id = 7; // Response reference ID for tracking
 }
 
 // ============================================================================

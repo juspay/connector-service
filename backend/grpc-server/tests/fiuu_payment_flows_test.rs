@@ -161,6 +161,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
+        encoded_data: None,
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id("fiuu_sync"))),
         }),
@@ -240,6 +241,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         browser_info: None,
         refund_metadata: std::collections::HashMap::new(),
         state: None,
+        merchant_account_metadata: std::collections::HashMap::new(),
     }
 }
 
