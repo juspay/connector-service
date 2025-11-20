@@ -3079,13 +3079,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
                 .unwrap_or_default(),
         );
 
-        let encoded_data = value
-            .transaction_id
-            .and_then(|id| id.id_type)
-            .and_then(|id_type| match id_type {
-                grpc_api_types::payments::identifier::IdType::EncodedData(data) => Some(data),
-                _ => None,
-            });
+        let encoded_data = value.encoded_data;
 
         Ok(Self {
             connector_transaction_id,

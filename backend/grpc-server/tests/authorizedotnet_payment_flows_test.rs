@@ -395,6 +395,7 @@ fn create_payment_get_request(transaction_id: &str) -> PaymentServiceGetRequest 
 
     PaymentServiceGetRequest {
         transaction_id: Some(transaction_id_obj),
+        encoded_data: None,
         request_ref_id: Some(request_ref_id),
         capture_method: None,
         handle_response: None,

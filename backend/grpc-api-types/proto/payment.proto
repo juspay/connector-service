@@ -1490,6 +1490,8 @@ message PaymentServiceAuthorizeResponse {
 message PaymentServiceGetRequest {
   // Identification
   Identifier transaction_id = 1; // The resource ID to synchronize
+
+  optional string encoded_data = 9; // Encoded context data for redirect flows, etc if applicable
   
   // Reference
   optional Identifier request_ref_id = 2; // Renamed from connector_request_reference_id
