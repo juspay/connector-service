@@ -1049,15 +1049,12 @@ fn extract_raw_connector_request(connector_request: &Request) -> String {
             match request {
                 // For RawBytes (e.g., SOAP XML), use the string directly without JSON parsing
                 RequestContent::RawBytes(_) => {
-                    let inner_value = request.get_inner_value();
-                    serde_json::Value::String(inner_value.expose())
+                    serde_json::Value::String(request.get_inner_value().expose())
                 }
                 // For other content types, try to parse as JSON
                 _ => {
-                    let inner_value = request.get_inner_value();
-                    let exposed_value = inner_value.expose();
+                    let exposed_value = request.get_inner_value().expose();
                     serde_json::from_str(&exposed_value).unwrap_or_else(|_| {
-                        // If parsing fails, treat it as a string
                         tracing::warn!("failed to parse body as JSON, treating as string in extract_raw_connector_request");
                         serde_json::Value::String(exposed_value)
                     })
