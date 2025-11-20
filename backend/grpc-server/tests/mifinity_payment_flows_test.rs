@@ -13,10 +13,9 @@ use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
         identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
-        wallet_payment_method_type, AuthenticationType, CaptureMethod, Currency, Identifier,
-        MifinityWallet, PaymentMethod, PaymentServiceAuthorizeRequest,
-        PaymentServiceAuthorizeResponse, PaymentServiceGetRequest, PaymentStatus,
-        WalletPaymentMethodType,
+        AuthenticationType, CaptureMethod, Currency, Identifier, MifinityWallet, PaymentMethod,
+        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceGetRequest,
+        PaymentStatus,
     },
 };
 use tonic::{transport::Channel, Request};
@@ -94,10 +93,10 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
 
 // Helper function to create a payment authorize request
 fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuthorizeRequest {
-    let wallet_details = wallet_payment_method_type::WalletType::Mifinity(MifinityWallet {
+    let mifinity_wallet = MifinityWallet {
         date_of_birth: Some(Secret::new(TEST_DATE_OF_BIRTH.to_string())),
         language_preference: Some("en-US".to_string()),
-    });
+    };
 
     // Create connector metadata JSON string
     let connector_meta_data = format!(
@@ -109,11 +108,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         minor_amount: TEST_AMOUNT,
         currency: i32::from(Currency::Eur),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Wallet(
-                WalletPaymentMethodType {
-                    wallet_type: Some(wallet_details),
-                },
-            )),
+            payment_method: Some(payment_method::PaymentMethod::Mifinity(mifinity_wallet)),
         }),
         return_url: Some(
             "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),
@@ -149,7 +144,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             metadata.insert("connector_meta_data".to_string(), connector_meta_data);
             metadata
         },
-        // payment_method_type: Some(i32::from(PaymentMethodType::Credit)),
+        // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         ..Default::default()
     }
 }
