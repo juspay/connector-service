@@ -16,10 +16,9 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        card_payment_method_type, identifier::IdType, payment_method,
-        payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient,
-        Address, AuthenticationType, CaptureMethod, CardDetails, CardPaymentMethodType,
-        CountryAlpha2, Currency, Identifier, PaymentAddress, PaymentMethod,
+        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
+        refund_service_client::RefundServiceClient, Address, AuthenticationType, CaptureMethod,
+        CardDetails, CountryAlpha2, Currency, Identifier, PaymentAddress, PaymentMethod,
         PaymentServiceAuthorizeRequest, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
         PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentStatus,
         RefundServiceGetRequest, RefundStatus,
@@ -101,7 +100,7 @@ fn add_bluesnap_metadata<T>(request: &mut Request<T>) {
 }
 
 fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuthorizeRequest {
-    let card_details = card_payment_method_type::CardType::Credit(CardDetails {
+    let card_details = CardDetails {
         card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
         card_exp_year: Some(Secret::new(TEST_CARD_EXP_YEAR.to_string())),
@@ -113,7 +112,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         card_issuing_country_alpha2: None,
         bank_code: None,
         nick_name: None,
-    });
+    };
 
     let mut rng = rand::thread_rng();
     let random_street_num = rng.gen_range(100..9999);
@@ -142,9 +141,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         minor_amount: unique_amount,
         currency: i32::from(Currency::Usd),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType {
-                card_type: Some(card_details),
-            })),
+            payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
         return_url: Some("https://example.com/return".to_string()),
         webhook_url: Some("https://example.com/webhook".to_string()),
@@ -174,6 +171,7 @@ fn create_payment_sync_request(transaction_id: &str, amount: i64) -> PaymentServ
         amount,
         currency: i32::from(Currency::Usd),
         state: None,
+        encoded_data: None,
     }
 }
 
