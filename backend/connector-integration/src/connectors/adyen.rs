@@ -97,6 +97,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Adyen<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Adyen<T>
 {
@@ -1033,22 +1034,7 @@ static ADYEN_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = Lazy
 
     adyen_supported_payment_methods.add(
         PaymentMethod::Card,
-        PaymentMethodType::Credit,
-        PaymentMethodDetails {
-            mandates: FeatureStatus::Supported,
-            refunds: FeatureStatus::Supported,
-            supported_capture_methods: adyen_supported_capture_methods.clone(),
-            specific_features: Some(PaymentMethodSpecificFeatures::Card(CardSpecificFeatures {
-                three_ds: FeatureStatus::Supported,
-                no_three_ds: FeatureStatus::Supported,
-                supported_card_networks: adyen_supported_card_network.clone(),
-            })),
-        },
-    );
-
-    adyen_supported_payment_methods.add(
-        PaymentMethod::Card,
-        PaymentMethodType::Debit,
+        PaymentMethodType::Card,
         PaymentMethodDetails {
             mandates: FeatureStatus::Supported,
             refunds: FeatureStatus::Supported,

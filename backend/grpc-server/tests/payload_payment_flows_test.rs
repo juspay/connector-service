@@ -16,10 +16,9 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        card_payment_method_type, identifier::IdType, payment_method,
-        payment_service_client::PaymentServiceClient, AcceptanceType, Address, AuthenticationType,
-        CaptureMethod, CardDetails, CardPaymentMethodType, CountryAlpha2, Currency,
-        CustomerAcceptance, FutureUsage, Identifier, MandateReference, PaymentAddress,
+        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
+        AcceptanceType, Address, AuthenticationType, CaptureMethod, CardDetails, CountryAlpha2,
+        Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReference, PaymentAddress,
         PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
         PaymentServiceRegisterRequest, PaymentServiceRepeatEverythingRequest,
@@ -93,7 +92,7 @@ fn add_payload_metadata<T>(request: &mut Request<T>) {
 }
 
 fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuthorizeRequest {
-    let card_details = card_payment_method_type::CardType::Credit(CardDetails {
+    let card_details = CardDetails {
         card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
         card_exp_year: Some(Secret::new(TEST_CARD_EXP_YEAR.to_string())),
@@ -105,7 +104,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         card_issuing_country_alpha2: None,
         bank_code: None,
         nick_name: None,
-    });
+    };
 
     // Generate random billing address to avoid duplicates
     let mut rng = rand::thread_rng();
@@ -136,9 +135,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         minor_amount: unique_amount,
         currency: i32::from(Currency::Usd),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType {
-                card_type: Some(card_details),
-            })),
+            payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
         return_url: Some("https://example.com/return".to_string()),
         webhook_url: Some("https://example.com/webhook".to_string()),
@@ -160,6 +157,7 @@ fn create_payment_sync_request(transaction_id: &str, amount: i64) -> PaymentServ
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
+        encoded_data: None,
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id("payload_sync"))),
         }),
@@ -278,7 +276,7 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
 }
 
 fn create_register_request_with_prefix(prefix: &str) -> PaymentServiceRegisterRequest {
-    let card_details = card_payment_method_type::CardType::Credit(CardDetails {
+    let card_details = CardDetails {
         card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
         card_exp_year: Some(Secret::new(TEST_CARD_EXP_YEAR.to_string())),
@@ -290,7 +288,7 @@ fn create_register_request_with_prefix(prefix: &str) -> PaymentServiceRegisterRe
         card_issuing_country_alpha2: None,
         bank_code: None,
         nick_name: None,
-    });
+    };
 
     // Use random values to create unique data to avoid duplicate detection
     let mut rng = rand::thread_rng();
@@ -304,9 +302,7 @@ fn create_register_request_with_prefix(prefix: &str) -> PaymentServiceRegisterRe
         minor_amount: Some(0), // Setup mandate with 0 amount
         currency: i32::from(Currency::Usd),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType {
-                card_type: Some(card_details),
-            })),
+            payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
         customer_name: Some(format!("{} Doe", unique_first_name)),
         email: Some(unique_email.clone().into()),
@@ -490,6 +486,7 @@ async fn test_authorize_capture_refund_rsync() {
             transaction_id: Some(Identifier {
                 id_type: Some(IdType::Id(refund_id)),
             }),
+            encoded_data: None,
             request_ref_id: Some(Identifier {
                 id_type: Some(IdType::Id(generate_unique_id("payload_rsync"))),
             }),

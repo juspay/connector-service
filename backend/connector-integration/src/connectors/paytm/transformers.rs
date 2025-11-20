@@ -36,6 +36,7 @@ use url::Url;
 use crate::{
     connectors::paytm::PaytmRouterData as MacroPaytmRouterData, types::ResponseRouterData,
 };
+use serde::{Deserialize, Serialize};
 
 pub use super::request::{
     PaytmAmount, PaytmAuthorizeRequest, PaytmEnableMethod, PaytmExtendInfo, PaytmGoodsInfo,
@@ -95,6 +96,13 @@ pub mod constants {
     pub const AES_128_KEY_LENGTH: usize = 16;
     pub const AES_192_KEY_LENGTH: usize = 24;
     pub const AES_256_KEY_LENGTH: usize = 32;
+}
+
+pub const NEXT_ACTION_DATA: &str = "nextActionData";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum NextActionData {
+    WaitScreenInstructions,
 }
 
 #[derive(Debug, Clone)]
@@ -645,6 +653,8 @@ impl<
         let attempt_status = map_paytm_authorize_status_to_attempt_status(result_code);
         router_data.resource_common_data.set_status(attempt_status);
 
+        let connector_metadata = get_wait_screen_metadata();
+
         router_data.response = if is_failure_status(attempt_status) {
             Err(domain_types::router_data::ErrorResponse {
                 code: result_code.clone(),
@@ -676,7 +686,7 @@ impl<
                 resource_id: connector_txn_id,
                 redirection_data,
                 mandate_reference: None,
-                connector_metadata: None,
+                connector_metadata,
                 network_txn_id: None,
                 connector_response_reference_id: connector_ref_id,
                 incremental_authorization_allowed: None,
@@ -820,11 +830,12 @@ impl
                 network_error_message: None,
             })
         } else {
+            let connector_metadata = get_wait_screen_metadata();
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: connector_txn_id,
                 redirection_data: None,
                 mandate_reference: None,
-                connector_metadata: None,
+                connector_metadata,
                 network_txn_id: None,
                 connector_response_reference_id: connector_ref_id,
                 incremental_authorization_allowed: None,
@@ -1135,4 +1146,15 @@ fn is_failure_status(status: AttemptStatus) -> bool {
             | AttemptStatus::AuthenticationFailed
             | AttemptStatus::AuthorizationFailed
     )
+}
+
+pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
+    serde_json::to_value(serde_json::json!({
+        NEXT_ACTION_DATA: NextActionData::WaitScreenInstructions
+    }))
+    .map_err(|e| {
+        tracing::error!("Failed to serialize wait screen metadata: {}", e);
+        e
+    })
+    .ok()
 }

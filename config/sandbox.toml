@@ -24,8 +24,11 @@ mitm_proxy_enabled = false
 bluesnap.base_url = "https://sandbox.bluesnap.com"
 bluesnap.secondary_base_url = "https://sandpay.bluesnap.com"
 authipay.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
+stax.base_url = "https://apiprod.fattlabs.com"
 fiservemea.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
 datatrans.base_url = "https://api.sandbox.datatrans.com"
+silverflow.base_url = "https://api-sbx.silverflow.co/v1"
+celero.base_url = "https://sandbox.gotnpgateway.com"
 adyen.base_url = "https://checkout-test.adyen.com/"
 adyen.dispute_base_url = "https://ca-test.adyen.com/"
 razorpay.base_url = "https://api.razorpay.com/"
@@ -59,9 +62,10 @@ trustpay.base_url = "https://test-tpgw.trustpay.eu/"
 trustpay.base_url_bank_redirects = "https://aapi.trustpay.eu/"
 stripe.base_url = "https://api.stripe.com/"
 cybersource.base_url = "https://apitest.cybersource.com/"
-worldpay.base_url = "https://access.worldpay.com/"
+worldpay.base_url = "https://try.access.worldpay.com/"
 worldpayvantiv.base_url = "https://www.testvantivcnp.com/sandbox/new/sandbox/communicator/online"
 worldpayvantiv.secondary_base_url = "https://www.testvantivcnp.com/sandbox"
+paypal.base_url = "https://api-m.sandbox.paypal.com/"
 
 # Generic Events Configuration
 [events]
