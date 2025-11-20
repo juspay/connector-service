@@ -15,13 +15,12 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        card_payment_method_type, identifier::IdType, payment_method,
-        payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient,
-        AuthenticationType, CaptureMethod, CardDetails, CardPaymentMethodType, Currency,
-        Identifier, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
-        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentServiceVoidRequest, PaymentStatus, RefundResponse, RefundServiceGetRequest,
-        RefundStatus,
+        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
+        refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails,
+        Currency, Identifier, PaymentMethod, PaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
+        PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentStatus, RefundResponse,
+        RefundServiceGetRequest, RefundStatus,
     },
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -116,7 +115,7 @@ fn extract_refund_id(response: &RefundResponse) -> &String {
 
 // Helper function to create a payment authorize request
 fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuthorizeRequest {
-    let card_details = card_payment_method_type::CardType::Credit(CardDetails {
+    let card_details = CardDetails {
         card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
         card_exp_year: Some(Secret::new(TEST_CARD_EXP_YEAR.to_string())),
@@ -128,15 +127,13 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         card_issuing_country_alpha2: None,
         bank_code: None,
         nick_name: None,
-    });
+    };
     PaymentServiceAuthorizeRequest {
         amount: TEST_AMOUNT,
         minor_amount: TEST_AMOUNT,
         currency: i32::from(Currency::Myr),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType {
-                card_type: Some(card_details),
-            })),
+            payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
         return_url: Some(
             "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),
@@ -153,7 +150,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         enrolled_for_3ds: false,
         request_incremental_authorization: false,
         capture_method: Some(i32::from(capture_method)),
-        // payment_method_type: Some(i32::from(PaymentMethodType::Credit)),
+        // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         ..Default::default()
     }
 }
@@ -243,6 +240,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         browser_info: None,
         refund_metadata: std::collections::HashMap::new(),
         state: None,
+        merchant_account_metadata: std::collections::HashMap::new(),
     }
 }
 

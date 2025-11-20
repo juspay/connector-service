@@ -733,14 +733,14 @@ async fn test_webhook_malformed_body() {
                 id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
                     "webhook_test".to_string(),
                 )),
-            }),
+card_details),
             request_details: Some(RequestDetails {
                 method: grpc_api_types::payments::HttpMethod::Post.into(),
                 headers: std::collections::HashMap::new(),
                 uri: Some("/webhooks/authorizedotnet".to_string()),
                 query_params: None,
                 body: request_body_bytes,
-            }),
+card_details),
             webhook_secrets: None,
             state: None,
         });
@@ -1006,14 +1006,14 @@ async fn test_webhook_source_verification_invalid_signature() {
                 id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
                     "webhook_test".to_string(),
                 )),
-            }),
+card_details),
             request_details: Some(RequestDetails {
                 method: grpc_api_types::payments::HttpMethod::Post.into(),
                 headers,
                 uri: Some("/webhooks/authorizedotnet".to_string()),
                 query_params: None,
                 body: request_body_bytes,
-            }),
+card_details),
             webhook_secrets,
             state: None,
         });
@@ -1114,14 +1114,14 @@ async fn test_webhook_source_verification_missing_signature() {
                 id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
                     "webhook_test".to_string(),
                 )),
-            }),
+card_details),
             request_details: Some(RequestDetails {
                 method: grpc_api_types::payments::HttpMethod::Post.into(),
                 headers,
                 uri: Some("/webhooks/authorizedotnet".to_string()),
                 query_params: None,
                 body: request_body_bytes,
-            }),
+card_details),
             webhook_secrets,
             state: None,
         });
@@ -1215,14 +1215,14 @@ async fn test_webhook_source_verification_no_secret_provided() {
                 id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
                     "webhook_test".to_string(),
                 )),
-            }),
+card_details),
             request_details: Some(RequestDetails {
                 method: grpc_api_types::payments::HttpMethod::Post.into(),
                 headers,
                 uri: Some("/webhooks/authorizedotnet".to_string()),
                 query_params: None,
                 body: request_body_bytes,
-            }),
+card_details),
             webhook_secrets,
             state: None,
         });

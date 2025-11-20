@@ -967,12 +967,11 @@ pub enum PaymentMethodType {
     CimbVa,
     #[serde(rename = "classic")]
     ClassicReward,
-    Credit,
+    Card,
     CryptoCurrency,
     Cashapp,
     Dana,
     DanamonVa,
-    Debit,
     DuitNow,
     Efecty,
     Eft,
@@ -1051,7 +1050,7 @@ pub enum PaymentMethodType {
 
 impl PaymentMethodType {
     pub fn should_check_for_customer_saved_payment_method_type(self) -> bool {
-        matches!(self, Self::Credit | Self::Debit)
+        matches!(self, Self::Card)
     }
 
     pub fn to_display_name(&self) -> String {

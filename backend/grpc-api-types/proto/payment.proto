@@ -1738,6 +1738,9 @@ message PaymentServiceRefundRequest {
 
   // State Information
   optional ConnectorState state = 17; // State data for access token storage and other connector-specific state
+
+  // Account-Specific Configuration
+  map<string, string> merchant_account_metadata = 18; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for a refund operation (unified for both Create and Get).
@@ -2337,6 +2340,9 @@ message RefundServiceGetRequest {
 
 // State Information
   optional ConnectorState state = 8; // State data for access token storage and other connector-specific state
+
+// Account-Specific Configuration
+  map<string, string> merchant_account_metadata = 9; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Legacy alias for backward compatibility - use RefundResponse instead
