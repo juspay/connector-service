@@ -1711,6 +1711,44 @@ message PaymentServiceCaptureResponse {
   map<string, string> connector_metadata = 14; // Connector-specific metadata for the transaction
 }
 
+// Request message for creating an order.
+message PaymentServiceCreateOrderRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+
+  // Amount Information
+  int64 amount = 2; // The amount for the order creation in major currency units
+  Currency currency = 3; // The currency for the order creation, in ISO 4217 three-letter code
+
+  // URLs for Redirection and Webhooks
+  optional string webhook_url = 4; // URL for webhook notifications
+
+  // Metadata
+  map<string, string> metadata = 5; // Additional metadata for the connector
+}
+
+// Response message for create order operation.
+message PaymentServiceCreateOrderResponse {
+// Identification
+  Identifier order_id = 1; // Identifier for the create order response
+
+// Status Information
+  PaymentStatus status = 2; // Status of the payment after the capture attempt
+  optional string error_code = 3; // Error code if the capture failed
+  optional string error_message = 4; // Error message if the capture failed
+  uint32 status_code = 5; // HTTP status code from the connector
+  map<string, string> response_headers = 6; // Optional HTTP response headers from the connector
+
+  // Reference
+  optional Identifier response_ref_id = 7; //  Response reference ID for tracking
+
+  // Raw Request
+  optional SecretString raw_connector_request = 8; // Raw request to the connector for debugging
+
+  // Raw Response
+  optional SecretString raw_connector_response = 9; // Raw response from the connector for debugging
+}
+
 // Request message for processing a refund.
 message PaymentServiceRefundRequest {
   // Identification
