@@ -16,10 +16,10 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        card_payment_method_type, identifier::IdType, payment_method,
+        identifier::IdType, payment_method,
         payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient,
         Address, AuthenticationType, BrowserInformation, CaptureMethod, CardDetails,
-        CardPaymentMethodType, CountryAlpha2, Currency, Identifier, PaymentAddress, PaymentMethod,
+        CountryAlpha2, Currency, Identifier, PaymentAddress, PaymentMethod,
         PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
         PaymentServiceVoidRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus,
@@ -129,7 +129,7 @@ fn create_payment_authorize_request(
     request.currency = i32::from(Currency::Myr);
 
     // Set up card payment method using the correct structure
-    let card_details = card_payment_method_type::CardType::Credit(CardDetails {
+    let card_details = CardDetails {
         card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
         card_exp_year: Some(Secret::new(TEST_CARD_EXP_YEAR.to_string())),
@@ -144,9 +144,7 @@ fn create_payment_authorize_request(
     });
 
     request.payment_method = Some(PaymentMethod {
-        payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType {
-            card_type: Some(card_details),
-        })),
+        payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
     });
 
     // Set connector customer ID
