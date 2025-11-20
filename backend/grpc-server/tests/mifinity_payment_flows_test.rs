@@ -155,8 +155,16 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
+        encoded_data: None,
+        request_ref_id: Some(Identifier {
+            id_type: Some(IdType::Id(
+        }),
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
+        }),
+        encoded_data: None,
+        request_ref_id: Some(Identifier {
+            id_type: Some(IdType::Id(
         }),
         capture_method: None,
         handle_response: None,

@@ -169,8 +169,10 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
-        request_ref_id: None,
-        // all_keys_required: None,
+        encoded_data: None,
+        request_ref_id: Some(Identifier {
+            id_type: Some(IdType::Id(format!("braintree_sync_{}", get_timestamp()))),
+        }),
         capture_method: None,
         handle_response: None,
         amount: TEST_AMOUNT,
@@ -185,6 +187,10 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
+        encoded_data: None,
+        request_ref_id: Some(Identifier {
+            id_type: Some(IdType::Id(
+        }),
         amount_to_capture: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
@@ -198,6 +204,10 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
     PaymentServiceVoidRequest {
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
+        }),
+        encoded_data: None,
+        request_ref_id: Some(Identifier {
+            id_type: Some(IdType::Id(
         }),
         cancellation_reason: None,
         request_ref_id: Some(Identifier {
@@ -217,6 +227,10 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         refund_id: format!("refund_{}", get_timestamp()),
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
+        }),
+        encoded_data: None,
+        request_ref_id: Some(Identifier {
+            id_type: Some(IdType::Id(
         }),
         currency: i32::from(Currency::Usd),
         payment_amount: TEST_AMOUNT,
@@ -243,6 +257,10 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
     RefundServiceGetRequest {
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
+        }),
+        encoded_data: None,
+        request_ref_id: Some(Identifier {
+            id_type: Some(IdType::Id(
         }),
         refund_id: refund_id.to_string(),
         refund_reason: None,
