@@ -15,7 +15,6 @@ use domain_types::{
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-
 // ===== ENUMS =====
 
 /// MultiSafepay order type
@@ -108,12 +107,10 @@ fn get_order_type_from_payment_method<T: PaymentMethodDataTypes>(
             | WalletData::CashappQr(_)
             | WalletData::SwishQr(_)
             | WalletData::Mifinity(_)
-            | WalletData::RevolutPay(_) => {
-                Err(errors::ConnectorError::NotImplemented(
-                    crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
-                ))
-                .attach_printable("Wallet payment method not supported")?
-            }
+            | WalletData::RevolutPay(_) => Err(errors::ConnectorError::NotImplemented(
+                crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
+            ))
+            .attach_printable("Wallet payment method not supported")?,
         },
         PaymentMethodData::BankRedirect(ref bank_data) => match bank_data {
             BankRedirectData::Giropay { .. } => Type::Redirect,
@@ -295,12 +292,10 @@ fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
             | WalletData::CashappQr(_)
             | WalletData::SwishQr(_)
             | WalletData::Mifinity(_)
-            | WalletData::RevolutPay(_) => {
-                Err(errors::ConnectorError::NotImplemented(
-                    crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
-                ))
-                .attach_printable("Wallet payment method not supported")?
-            }
+            | WalletData::RevolutPay(_) => Err(errors::ConnectorError::NotImplemented(
+                crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
+            ))
+            .attach_printable("Wallet payment method not supported")?,
         },
         PaymentMethodData::MandatePayment
         | PaymentMethodData::PayLater(_)
@@ -554,8 +549,11 @@ impl<
                     card_exp_year_str
                 };
 
-                let card_expiry_str =
-                    format!("{}{}", card_exp_year_2digit, card_data.card_exp_month.peek());
+                let card_expiry_str = format!(
+                    "{}{}",
+                    card_exp_year_2digit,
+                    card_data.card_exp_month.peek()
+                );
 
                 let card_expiry_date: i64 = card_expiry_str
                     .parse::<i64>()
@@ -628,7 +626,7 @@ impl<
                 address1: address.line1.clone(),
                 house_number: address.get_optional_line2(),
                 zip_code: address.zip.clone(),
-                city: address.city.clone(),
+                city: address.city.clone().map(|c| c.expose()),
                 country: address.get_optional_country(),
             });
 
@@ -690,8 +688,11 @@ impl<T: PaymentMethodDataTypes>
                     card_exp_year_str
                 };
 
-                let card_expiry_str =
-                    format!("{}{}", card_exp_year_2digit, card_data.card_exp_month.peek());
+                let card_expiry_str = format!(
+                    "{}{}",
+                    card_exp_year_2digit,
+                    card_data.card_exp_month.peek()
+                );
 
                 let card_expiry_date: i64 = card_expiry_str
                     .parse::<i64>()
@@ -764,7 +765,7 @@ impl<T: PaymentMethodDataTypes>
                 address1: address.line1.clone(),
                 house_number: address.get_optional_line2(),
                 zip_code: address.zip.clone(),
-                city: address.city.clone(),
+                city: address.city.clone().map(|c| c.expose()),
                 country: address.get_optional_country(),
             });
 

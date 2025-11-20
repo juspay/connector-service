@@ -70,7 +70,7 @@ use crate::{
     },
     payment_method_data,
     payment_method_data::{
-        CardRedirectData, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes,
+        DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes,
         RawCardNumber, VaultTokenHolder,
     },
     router_data::{
