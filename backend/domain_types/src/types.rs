@@ -6246,7 +6246,7 @@ pub fn generate_create_connector_customer_response(
                         response.connector_customer_id.clone(),
                     )),
                 }),
-                state: None,
+                error_reason: None,
             },
         ),
         Err(e) => Ok(
@@ -6263,7 +6263,7 @@ pub fn generate_create_connector_customer_response(
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                     }
                 }),
-                state: None,
+                error_reason: e.reason,
             },
         ),
     }
