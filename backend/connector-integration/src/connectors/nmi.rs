@@ -204,11 +204,13 @@ macros::create_all_prerequisites!(
             _req: &RouterDataV2<F, FCD, Req, Res>,
             bytes: bytes::Bytes,
         ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
-            // Convert XML responses to JSON format for the macro's JSON parser
+            // NMI returns different response formats:
+            // - XML for query endpoints (PSync/RSync)
+            // - URL-encoded for transact endpoints (Authorize/Capture/Refund/Void)
             let response_str = std::str::from_utf8(&bytes)
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-            // Check if response is XML (PSync/RSync return XML, others return URL-encoded)
+            // Check if response is XML (PSync/RSync return XML)
             if response_str.trim().starts_with("<?xml") || response_str.trim().starts_with("<") {
                 // Parse XML to struct, then serialize back to JSON
                 let xml_response: SyncResponse = quick_xml::de::from_str(response_str)
@@ -219,8 +221,14 @@ macros::create_all_prerequisites!(
 
                 Ok(bytes::Bytes::from(json_bytes))
             } else {
-                // This is already URL-encoded or another format
-                Ok(bytes)
+                // URL-encoded response - parse and convert to JSON
+                let url_encoded_response: StandardResponse = serde_urlencoded::from_bytes(&bytes)
+                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+                let json_bytes = serde_json::to_vec(&url_encoded_response)
+                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+                Ok(bytes::Bytes::from(json_bytes))
             }
         }
 
@@ -298,6 +306,7 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsAuthorizeData<T>,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
@@ -363,6 +372,7 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsCaptureData,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
@@ -395,6 +405,7 @@ macros::macro_connector_implementation!(
     flow_request: PaymentVoidData,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
@@ -427,6 +438,7 @@ macros::macro_connector_implementation!(
     flow_request: RefundsData,
     flow_response: RefundsResponseData,
     http_method: Post,
+    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {

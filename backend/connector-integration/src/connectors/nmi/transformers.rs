@@ -402,16 +402,12 @@ impl
             .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
 
         // Find the transaction matching the requested transaction_id
-        // If not found or if no transaction_id was provided, use the most recent one (last in list)
-        let transaction = if let Some(ref req_txn_id) = requested_transaction_id {
-            response
-                .transaction
-                .iter()
-                .find(|txn| &txn.transaction_id == req_txn_id)
-                .or_else(|| response.transaction.last())
-        } else {
-            response.transaction.last()
-        };
+        // If not found, use the most recent one (last in list)
+        let transaction = response
+            .transaction
+            .iter()
+            .find(|txn| txn.transaction_id == requested_transaction_id)
+            .or_else(|| response.transaction.last());
 
         // Handle empty response (means AuthenticationPending) or transaction data
         let (status, transaction_id) = if let Some(transaction) = transaction {
