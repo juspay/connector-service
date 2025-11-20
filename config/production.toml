@@ -22,8 +22,11 @@ mitm_proxy_enabled = false
 
 [connectors]
 authipay.base_url = "https://prod.emea.api.fiservapps.com/ipp/payments-gateway/v2/payments"
+stax.base_url = "https://apiprod.fattlabs.com"
 fiservemea.base_url = "https://prod.emea.api.fiservapps.com/ipp/payments-gateway/v2/payments"
 datatrans.base_url = "https://api.datatrans.com"
+silverflow.base_url = "https://api.silverflow.co/v1"
+celero.base_url = "https://app.gotnpgateway.com"
 adyen.base_url = "https://{{merchant_endpoint_prefix}}-checkout-live.adyenpayments.com/checkout/"
 adyen.dispute_base_url = "https://{{merchant_endpoint_prefix}}-ca-live.adyen.com/"
 razorpay.base_url = "https://api.razorpay.com/"
@@ -61,6 +64,7 @@ worldpay.base_url = "https://access.worldpay.com/"
 worldpayvantiv.base_url = "https://transact.vantivcnp.com/vap/communicator/online"
 worldpayvantiv.secondary_base_url = "https://onlinessr.vantivcnp.com"
 bamboraapac.base_url = "https://www.bambora.co.nz/interface/api/dts.asmx"
+paypal.base_url = "https://api-m.paypal.com/"
 
 # Generic Events Configuration
 [events]

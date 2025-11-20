@@ -106,3 +106,15 @@ pub use self::authipay::Authipay;
 
 pub mod bamboraapac;
 pub use self::bamboraapac::Bamboraapac;
+
+pub mod silverflow;
+pub use self::silverflow::Silverflow;
+
+pub mod celero;
+pub use self::celero::Celero;
+
+pub mod paypal;
+pub use self::paypal::Paypal;
+
+pub mod stax;
+pub use self::stax::Stax;

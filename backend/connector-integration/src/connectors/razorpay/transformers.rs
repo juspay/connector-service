@@ -935,7 +935,7 @@ pub struct RazorpayOrderRequest {
     pub partial_payment: Option<bool>,
     pub first_payment_min_amount: Option<MinorUnit>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub payment_capture: Option<bool>,
+    pub payment_capture: Option<i8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub method: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1022,7 +1022,7 @@ impl
                 .clone(),
             partial_payment: None,
             first_payment_min_amount: None,
-            payment_capture: Some(true),
+            payment_capture: Some(1),
             method: metadata_map.get("method").cloned(),
             discount: metadata_map
                 .get("discount")

@@ -112,6 +112,7 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     authentication_data: None,
+                    connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: RawCardNumber(
                             CardNumber::from_str("5123456789012346").unwrap(),
@@ -128,7 +129,7 @@ mod tests {
                         card_holder_name: Some("Test User".to_string().into()),
                         co_badged_card_data: None,
                     }),
-                    amount: 1000,
+                    amount: MinorUnit::new(1000),
                     order_tax_amount: None,
                     email: Some(email.clone()),
                     customer_name: None,
@@ -171,7 +172,7 @@ mod tests {
                     enrolled_for_3ds: false,
                     related_transaction_id: None,
                     payment_experience: None,
-                    payment_method_type: Some(PaymentMethodType::Credit),
+                    payment_method_type: Some(PaymentMethodType::Card),
                     customer_id: None,
                     request_incremental_authorization: false,
                     metadata: None,
@@ -293,6 +294,7 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     authentication_data: None,
+                    connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: RawCardNumber(CardNumber::from_str("").unwrap_or_default()),
                         card_exp_month: "".to_string().into(),
@@ -307,7 +309,7 @@ mod tests {
                         card_holder_name: Some("Test User".to_string().into()),
                         co_badged_card_data: None,
                     }),
-                    amount: 1000,
+                    amount: MinorUnit::new(1000),
                     order_tax_amount: None,
                     email: None,
                     customer_name: None,
@@ -329,7 +331,7 @@ mod tests {
                     enrolled_for_3ds: false,
                     related_transaction_id: None,
                     payment_experience: None,
-                    payment_method_type: Some(PaymentMethodType::Credit),
+                    payment_method_type: Some(PaymentMethodType::Card),
                     customer_id: None,
                     request_incremental_authorization: false,
                     metadata: None,
@@ -425,6 +427,7 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     authentication_data: None,
+                    connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: RawCardNumber(CardNumber::from_str("123").unwrap_or_default()),
                         card_exp_month: "99".to_string().into(),
@@ -439,7 +442,7 @@ mod tests {
                         card_holder_name: Some("Test User".to_string().into()),
                         co_badged_card_data: None,
                     }),
-                    amount: 1000,
+                    amount: MinorUnit::new(1000),
                     order_tax_amount: None,
                     email: Some(email),
                     customer_name: None,
@@ -461,7 +464,7 @@ mod tests {
                     enrolled_for_3ds: false,
                     related_transaction_id: None,
                     payment_experience: None,
-                    payment_method_type: Some(PaymentMethodType::Credit),
+                    payment_method_type: Some(PaymentMethodType::Card),
                     customer_id: None,
                     request_incremental_authorization: false,
                     metadata: None,
@@ -579,6 +582,7 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     authentication_data: None,
+                    connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: RawCardNumber(
                             CardNumber::from_str("5123450000000008").unwrap(),
@@ -595,7 +599,7 @@ mod tests {
                         card_holder_name: Some("Test User".to_string().into()),
                         co_badged_card_data: None,
                     }),
-                    amount: 1000,
+                    amount: MinorUnit::new(1000),
                     order_tax_amount: None,
                     email: Some(email),
                     customer_name: None,
@@ -638,7 +642,7 @@ mod tests {
                     enrolled_for_3ds: false,
                     related_transaction_id: None,
                     payment_experience: None,
-                    payment_method_type: Some(common_enums::PaymentMethodType::Credit),
+                    payment_method_type: Some(common_enums::PaymentMethodType::Card),
                     customer_id: None,
                     request_incremental_authorization: false,
                     metadata: None,
@@ -904,6 +908,7 @@ mod tests {
             },
             request: PaymentsAuthorizeData {
                 authentication_data: None,
+                connector_testing_data: None,
                 payment_method_data: PaymentMethodData::Card(Card {
                     card_number: RawCardNumber(CardNumber::from_str("5123450000000008").unwrap()),
                     card_exp_month: "12".to_string().into(),
@@ -918,7 +923,7 @@ mod tests {
                     card_holder_name: Some("Test User".to_string().into()),
                     co_badged_card_data: None,
                 }),
-                amount: 1000,
+                amount: MinorUnit::new(1000),
                 order_tax_amount: None,
                 email: Some(email),
                 customer_name: None,
@@ -958,7 +963,7 @@ mod tests {
                 enrolled_for_3ds: false,
                 related_transaction_id: None,
                 payment_experience: None,
-                payment_method_type: Some(common_enums::PaymentMethodType::Credit),
+                payment_method_type: Some(common_enums::PaymentMethodType::Card),
                 customer_id: None,
                 request_incremental_authorization: false,
                 metadata: None,
@@ -1092,6 +1097,7 @@ mod tests {
             },
             request: PaymentsAuthorizeData {
                 authentication_data: None,
+                connector_testing_data: None,
                 payment_method_data: PaymentMethodData::Card(Card {
                     card_number: RawCardNumber(CardNumber::from_str("5123450000000008").unwrap()),
                     card_exp_month: "12".to_string().into(),
@@ -1106,7 +1112,7 @@ mod tests {
                     card_holder_name: Some("Test User".to_string().into()),
                     co_badged_card_data: None,
                 }),
-                amount: 1000,
+                amount: MinorUnit::new(1000),
                 order_tax_amount: None,
                 email: Some(email),
                 customer_name: None,
@@ -1146,7 +1152,7 @@ mod tests {
                 enrolled_for_3ds: false,
                 related_transaction_id: None,
                 payment_experience: None,
-                payment_method_type: Some(common_enums::PaymentMethodType::Credit),
+                payment_method_type: Some(common_enums::PaymentMethodType::Card),
                 customer_id: None,
                 request_incremental_authorization: false,
                 metadata: None,
@@ -1513,6 +1519,7 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     authentication_data: None,
+                    connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
                         card_number: Default::default(),
                         card_exp_month: "".to_string().into(),
@@ -1527,7 +1534,7 @@ mod tests {
                         card_holder_name: Some("Test User".to_string().into()),
                         co_badged_card_data: None,
                     }),
-                    amount: 1000,
+                    amount: MinorUnit::new(1000),
                     order_tax_amount: None,
                     email: None,
                     customer_name: None,
@@ -1548,7 +1555,7 @@ mod tests {
                     enrolled_for_3ds: false,
                     related_transaction_id: None,
                     payment_experience: None,
-                    payment_method_type: Some(PaymentMethodType::Credit),
+                    payment_method_type: Some(PaymentMethodType::Card),
                     customer_id: None,
                     request_incremental_authorization: false,
                     metadata: None,

@@ -15,6 +15,9 @@ service PaymentService {
   // Authorizes a payment.
   rpc Authorize(PaymentServiceAuthorizeRequest) returns (PaymentServiceAuthorizeResponse);
   
+  // Authorizes a payment only (without setup flows).
+  rpc AuthorizeOnly(PaymentServiceAuthorizeOnlyRequest) returns (PaymentServiceAuthorizeResponse);
+  
   // Synchronizes the status of a payment.
   rpc Get(PaymentServiceGetRequest) returns (PaymentServiceGetResponse);
   
@@ -32,6 +35,9 @@ service PaymentService {
 
   // Sets up a mandate for future payments.
   rpc Register(PaymentServiceRegisterRequest) returns (PaymentServiceRegisterResponse);
+
+  // Creates a session token for payment processing.
+  rpc CreateSessionToken(PaymentServiceCreateSessionTokenRequest) returns (PaymentServiceCreateSessionTokenResponse);
 
   // Processes a repeat payment using existing mandate (MIT - Merchant Initiated Transaction).
   rpc RepeatEverything(PaymentServiceRepeatEverythingRequest) returns (PaymentServiceRepeatEverythingResponse);
@@ -52,6 +58,9 @@ service PaymentService {
   
   // Post-authentication step - used when authentication results need validation
   rpc PostAuthenticate(PaymentServicePostAuthenticateRequest) returns (PaymentServicePostAuthenticateResponse);
+
+  // Creates an access token for connector authentication.
+  rpc CreateAccessToken(PaymentServiceCreateAccessTokenRequest) returns (PaymentServiceCreateAccessTokenResponse);
 }
 
 // Service for refund-specific operations.
