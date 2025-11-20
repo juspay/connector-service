@@ -141,13 +141,7 @@ fn create_payment_authorize_request(
     // Initialize with all required fields
     let mut request = PaymentServiceAuthorizeRequest {
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Wallet(
-                WalletPaymentMethodType {
-                    wallet_type: Some(wallet_payment_method_type::WalletType::Bluecode(
-                        Bluecode {},
-                    )),
-                },
-            )),
+            payment_method: Some(payment_method::PaymentMethod::Bluecode(Bluecode {})),
         }),
         ..Default::default()
     };

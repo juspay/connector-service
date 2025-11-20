@@ -8,10 +8,9 @@
 
 use cards::CardNumber;
 use grpc_api_types::payments::{
-    card_payment_method_type, identifier::IdType, payment_method,
-    payment_service_client::PaymentServiceClient, Address, AuthenticationType, BrowserInformation,
-    CaptureMethod, CardDetails, CardPaymentMethodType, Currency, Identifier, PaymentAddress,
-    PaymentMethod, PaymentServiceAuthorizeRequest,
+    identifier::IdType, payment_method, payment_service_client::PaymentServiceClient, Address,
+    AuthenticationType, BrowserInformation, CaptureMethod, CardDetails, Currency, Identifier,
+    PaymentAddress, PaymentMethod, PaymentServiceAuthorizeRequest,
 };
 use grpc_server::{app, configs};
 use hyperswitch_masking::Secret;
@@ -33,14 +32,12 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
             currency: Currency::Inr as i32,
             email: Some(Secret::new("example@gmail.com".to_string())),
             payment_method: Some(PaymentMethod {
-                payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType {
-                    card_type: Some(card_payment_method_type::CardType::Debit(CardDetails {
-                        card_number: Some(CardNumber::from_str("5123456789012346").unwrap()),
-                        card_exp_month: Some(Secret::new("07".to_string())),
-                        card_exp_year: Some(Secret::new("2030".to_string())),
-                        card_cvc: Some(Secret::new("100".to_string())),
-                        ..Default::default()
-                    })),
+                payment_method: Some(payment_method::PaymentMethod::Card(CardDetails {
+                    card_number: Some(CardNumber::from_str("5123456789012346").unwrap()),
+                    card_exp_month: Some(Secret::new("07".to_string())),
+                    card_exp_year: Some(Secret::new("2030".to_string())),
+                    card_cvc: Some(Secret::new("100".to_string())),
+                    ..Default::default()
                 })),
             }),
             address: Some(PaymentAddress {
