@@ -125,7 +125,7 @@ pub struct Connectors {
     pub stripe: ConnectorParams,
     pub cybersource: ConnectorParams,
     pub worldpay: ConnectorParams,
-    pub archipel: ConnectorParams
+    pub archipel: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -2333,17 +2333,15 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             });
 
         // Convert connector_metadata map to JSON value
-        let connector_meta = (!value.connector_metadata.is_empty())
-            .then(|| serde_json::to_value(&value.connector_metadata))
-            .transpose()
-            .map_err(|_| {
-                error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_DATA_FORMAT".to_string(),
-                    error_identifier: 400,
-                    error_message: "Failed to serialize connector_metadata".to_string(),
-                    error_object: None,
-                }))
-            })?;
+        let connector_meta = (!value.connector_metadata.is_empty()).then(|| {
+            serde_json::Value::Object(
+                value
+                    .connector_metadata
+                    .into_iter()
+                    .map(|(k, v)| (k, serde_json::Value::String(v)))
+                    .collect(),
+            )
+        });
 
         Ok(Self {
             connector_transaction_id,

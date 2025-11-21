@@ -1,25 +1,28 @@
 pub mod transformers;
+
+// Standard library imports
+use std::fmt::Debug;
+
+// External crate imports
 use common_enums::{self as enums, CurrencyUnit};
-use common_utils::{
-    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE}, errors::CustomResult
-    };
-use error_stack::report;
+use common_utils::errors::CustomResult;
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
-        CreateOrder, DefendDispute, PaymentMethodToken, PostAuthenticate, PreAuthenticate, PSync,
-        RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, CreateSessionToken,
+        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
+        SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenizationData, PaymentMethodTokenResponse, PaymentVoidData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SetupMandateRequestData, SubmitEvidenceData, SessionTokenRequestData,
-        SessionTokenResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -28,23 +31,26 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
-use serde::Serialize;
-use std::fmt::Debug;
+use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, Maskable, Secret};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
-use transformers::{
-    self as archipel, ArchipelCardAuthorizationRequest, ArchipelCaptureRequest,
-    ArchipelCaptureResponse, ArchipelPaymentsResponse, ArchipelPSyncResponse,
-    ArchipelVoidRequest, ArchipelVoidResponse, ArchipelRefundRequest,
-    ArchipelRefundResponse, ArchipelRSyncResponse, ArchipelSetupMandateRequest,
-    ArchipelSetupMandateResponse
-};
+use serde::Serialize;
 
+// Crate imports
 use super::macros;
-use crate::{types::ResponseRouterData};
+use crate::types::ResponseRouterData;
+
+// Local module imports
+use transformers::{
+    self as archipel, ArchipelCaptureRequest, ArchipelCaptureResponse,
+    ArchipelCardAuthorizationRequest, ArchipelErrorMessageWithHttpCode, ArchipelPSyncResponse,
+    ArchipelPaymentsResponse, ArchipelRSyncResponse, ArchipelRefundRequest, ArchipelRefundResponse,
+    ArchipelSetupMandateRequest, ArchipelSetupMandateResponse, ArchipelVoidRequest,
+    ArchipelVoidResponse,
+};
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
@@ -287,7 +293,6 @@ impl<
     for Archipel<T>
 {
 }
-
 
 impl<
         T: PaymentMethodDataTypes
@@ -613,7 +618,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-for Archipel<T> {
+    for Archipel<T>
+{
     fn id(&self) -> &'static str {
         "archipel"
     }
@@ -642,18 +648,9 @@ for Archipel<T> {
         res: Response,
         _event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        // TODO: Implement proper error response parsing
-        Ok(ErrorResponse {
-            status_code: res.status_code,
-            code: NO_ERROR_CODE.to_string(),
-            attempt_status: None,
-            connector_transaction_id: None,
-            message: NO_ERROR_MESSAGE.to_string(),
-            reason: None,
-            network_decline_code: None,
-            network_advice_code: None,
-            network_error_message: None,
-        })
+        let error_response =
+            ArchipelErrorMessageWithHttpCode::from_response(&res.response, res.status_code);
+        Ok(error_response.into())
     }
 }
 
@@ -683,7 +680,8 @@ macros::macro_connector_implementation!(
             let capture_method = req
                 .request
                 .capture_method
-                .ok_or(errors::ConnectorError::CaptureMethodNotSupported)?;
+                .ok_or_else(|| report!(errors::ConnectorError::CaptureMethodNotSupported))
+                .attach_printable("Capture method is required for Archipel authorize flow")?;
             let base_url =
                 build_env_specific_endpoint(self.connector_base_url_payments(req), &req.request.metadata)?;
             match capture_method {
@@ -730,27 +728,27 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url =
                 build_env_specific_endpoint(self.connector_base_url_payments(req), &req.request.connector_meta)?;
-            print!("connector_meta sayak {:?}",req
-                .request
-                .connector_meta);
 
             // Extract the nested JSON string from connector_meta_data key
             let meta_obj = req.request.connector_meta
                 .clone()
-                .ok_or_else(|| errors::ConnectorError::MissingConnectorTransactionID)?;
+                .ok_or_else(|| report!(errors::ConnectorError::MissingConnectorTransactionID))
+                .attach_printable("connector_meta is required for Archipel capture flow")?;
 
             let connector_meta_str = meta_obj
                 .get("connector_meta_data")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| errors::ConnectorError::InvalidDataFormat { field_name: "connector_meta_data" })?;
+                .ok_or_else(|| report!(errors::ConnectorError::InvalidDataFormat { field_name: "connector_meta_data" }))
+                .attach_printable("connector_meta_data field is missing or invalid")?;
 
             // Parse the JSON string into the struct
             let metadata: archipel::ArchipelTransactionMetadata = serde_json::from_str(connector_meta_str)
-                .map_err(|_| report!(errors::ConnectorError::InvalidDataFormat { field_name: "ArchipelTransactionMetadata" }))?;
+                .change_context(errors::ConnectorError::InvalidDataFormat { field_name: "ArchipelTransactionMetadata" })
+                .attach_printable("Failed to deserialize ArchipelTransactionMetadata from connector_meta_data")?;
 
             Ok(format!(
-                "{}{}{}",
-                base_url, "/transactions/", metadata.transaction_id
+                "{}/transactions/{}",
+                base_url,metadata.transaction_id
             ))
         }
         fn get_ca_certificate(
@@ -925,15 +923,14 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = &req.resource_common_data.connectors.archipel.base_url;
 
-            // Get the connector refund ID
+            // Get and validate connector refund ID is not empty
             let connector_refund_id = req.request.connector_refund_id.clone();
-
-            // Validate refund ID is not empty
-            if connector_refund_id.is_empty() {
-                return Err(errors::ConnectorError::MissingRequiredField {
+            (!connector_refund_id.is_empty())
+                .then_some(())
+                .ok_or_else(|| report!(errors::ConnectorError::MissingRequiredField {
                     field_name: "connector_refund_id",
-                }.into());
-            }
+                }))
+                .attach_printable("connector_refund_id cannot be empty for refund sync")?;
 
             Ok(format!(
                 "{}/transactions/{}",

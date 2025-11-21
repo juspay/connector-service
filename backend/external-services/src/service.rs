@@ -731,46 +731,54 @@ pub fn create_client(
     client_certificate_key: Option<Secret<String>>,
     ca_certificate: Option<Secret<String>>,
 ) -> CustomResult<Client, ApiClientError> {
-
-    if let (Some(_encoded_certificate), Some(_encoded_certificate_key)) =
-        (client_certificate.clone(), client_certificate_key.clone())
-    {
-        if ca_certificate.is_some() {
-            tracing::warn!("All of client certificate, client key, and CA certificate are provided. CA certificate will be ignored in mutual TLS setup.");
+    match (client_certificate, client_certificate_key, ca_certificate) {
+        // Case 1: Mutual TLS (both client cert and key provided)
+        (Some(_client_cert), Some(_client_key), ca_cert) => {
+            if ca_cert.is_some() {
+                tracing::warn!("All of client certificate, client key, and CA certificate are provided. CA certificate will be ignored in mutual TLS setup.");
+            }
+            // Mutual TLS implementation would go here (currently commented out)
+            // For now, fall back to base client
+            tracing::debug!("Creating HTTP client with mutual TLS (client cert + key)");
+            get_base_client(proxy_config, should_bypass_proxy)
         }
 
-        // Mutual TLS implementation would go here (currently commented out)
-        // For now, fall back to base client
-        return get_base_client(proxy_config, should_bypass_proxy);
-    }
+        // Case 2: One-way TLS (only CA certificate provided for server authentication)
+        (None, None, Some(ca_pem)) => {
+            tracing::debug!("Creating HTTP client with one-way TLS (CA certificate)");
+            let pem = ca_pem.expose().replace("\\r\\n", "\n");
+            let cert = reqwest::Certificate::from_pem(pem.as_bytes())
+                .change_context(ApiClientError::ClientConstructionFailed)
+                .attach_printable("Failed to parse CA certificate PEM block")?;
 
-    // Case 2: Use provided CA certificate for server authentication only (one-way TLS)
-    if let Some(ca_pem) = ca_certificate {
-        tracing::debug!("Creating HTTP client with one-way TLS (CA certificate)");
-        let pem = ca_pem.expose().replace("\\r\\n", "\n"); // Fix escaped newlines
-        let cert = reqwest::Certificate::from_pem(pem.as_bytes())
-            .change_context(ApiClientError::ClientConstructionFailed)
-            .attach_printable("Failed to parse CA certificate PEM block")?;
-        let client_builder = get_client_builder(proxy_config, should_bypass_proxy)?
-            .add_root_certificate(cert);
-        return client_builder
-            .use_rustls_tls()
-            .build()
-            .change_context(ApiClientError::ClientConstructionFailed)
-            .inspect_err(|err| {
-                info_log(
-                    "ERROR",
-                    &json!(format!(
-                        "Failed to construct client with CA certificate. Error: {:?}",
-                        err
-                    )),
-                );
-            });
-    }
+            get_client_builder(proxy_config, should_bypass_proxy)?
+                .add_root_certificate(cert)
+                .use_rustls_tls()
+                .build()
+                .change_context(ApiClientError::ClientConstructionFailed)
+                .inspect_err(|err| {
+                    info_log(
+                        "ERROR",
+                        &json!(format!(
+                            "Failed to construct client with CA certificate. Error: {:?}",
+                            err
+                        )),
+                    );
+                })
+        }
 
-    // Case 3: Default client (no certs)
-    tracing::debug!("Creating default HTTP client (no client or CA certificates)");
-    get_base_client(proxy_config, should_bypass_proxy)
+        // Case 3: Invalid configuration - partial client cert setup
+        (Some(_), None, _) | (None, Some(_), _) => {
+            tracing::warn!("Incomplete client certificate configuration: both cert and key are required for mutual TLS");
+            get_base_client(proxy_config, should_bypass_proxy)
+        }
+
+        // Case 4: Default client (no certificates)
+        (None, None, None) => {
+            tracing::debug!("Creating default HTTP client (no client or CA certificates)");
+            get_base_client(proxy_config, should_bypass_proxy)
+        }
+    }
 }
 
 static NON_PROXIED_CLIENT: OnceCell<Client> = OnceCell::new();

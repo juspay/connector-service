@@ -1,39 +1,29 @@
 use bytes::Bytes;
-use common_enums::{
-    self, AttemptStatus, CaptureMethod, Currency, FutureUsage,
-};
-use common_utils::{consts,
-    CustomResult,
-    date_time, ext_traits::Encode,
-    types::MinorUnit,
-};
+use common_enums::{self, AttemptStatus, CaptureMethod, Currency, FutureUsage};
+use common_utils::{consts, date_time, ext_traits::Encode, types::MinorUnit, CustomResult};
 use domain_types::{
-    payment_address::AddressDetails,
-    connector_flow::{Authorize, Capture, Void, Refund, SetupMandate},
+    connector_flow::{Authorize, Capture, Refund, SetupMandate, Void},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, PaymentVoidData, ResponseId, RefundFlowData, RefundsData,
-        RefundsResponseData, RefundSyncData, SetupMandateRequestData,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
     errors::{self, ConnectorError},
-    payment_method_data::{
-        Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-    },
+    payment_address::AddressDetails,
+    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::AuthenticationData,
     utils::CardIssuer,
 };
-use error_stack::{ report};
+use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::{
     types::ResponseRouterData,
-    utils::{
-        self,
-    },
+    utils::{self},
 };
 
 use super::ArchipelRouterData;
@@ -83,9 +73,7 @@ impl TryFrom<&Option<Value>> for ArchipelConfigData {
 fn to_connector_meta(
     connector_meta: Option<Value>,
 ) -> CustomResult<ArchipelConfigData, ConnectorError> {
-    print!("this is the meta data{:?}",connector_meta);
-    let meta_obj = connector_meta
-        .ok_or_else(|| ConnectorError::NoConnectorMetaData)?;
+    let meta_obj = connector_meta.ok_or_else(|| ConnectorError::NoConnectorMetaData)?;
 
     // Handle two cases:
     // Case 1: Direct String (for Refund flow)
@@ -98,14 +86,17 @@ fn to_connector_meta(
         meta_obj
             .get("connector_meta_data")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| ConnectorError::InvalidDataFormat { field_name: "connector_meta_data" })?
+            .ok_or_else(|| ConnectorError::InvalidDataFormat {
+                field_name: "connector_meta_data",
+            })?
     };
 
-    print!("this is the connector_meta_str{:?}",connector_meta_str);
-
     // Parse the JSON string to get ArchipelConfigData
-    let config_data: ArchipelConfigData = serde_json::from_str(connector_meta_str)
-        .map_err(|_| report!(ConnectorError::InvalidDataFormat { field_name: "ArchipelConfigData" }))?;
+    let config_data: ArchipelConfigData = serde_json::from_str(connector_meta_str).change_context(
+        ConnectorError::InvalidDataFormat {
+            field_name: "ArchipelConfigData",
+        },
+    )?;
 
     Ok(config_data)
 }
@@ -293,10 +284,15 @@ pub struct ArchipelCard<
     scheme: ArchipelCardScheme,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static
-  + Serialize>
-      TryFrom<(Option<Secret<String>>, Option<ArchipelCardHolder>, &Card<T>)>
-      for ArchipelCard<T> {
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > TryFrom<(Option<Secret<String>>, Option<ArchipelCardHolder>, &Card<T>)> for ArchipelCard<T>
+{
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         (card_holder_name, card_holder_billing, ccard): (
@@ -313,12 +309,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .and_then(|_| ccard.card_holder_name.clone().or(card_holder_name.clone()));
 
         let raw_card = serde_json::to_string(&ccard.card_number.0)
-                    .unwrap_or_default()
-                    .trim_matches('"')
-                    .to_string();
+            .change_context(ConnectorError::RequestEncodingFailed)
+            .attach_printable("Failed to serialize card number")?
+            .trim_matches('"')
+            .to_string();
         let card_issuer = domain_types::utils::get_card_issuer(&raw_card).ok();
         let scheme = ArchipelCardScheme::from(card_issuer);
-        
+
         Ok(Self {
             number: ccard.card_number.clone(),
             expiry: CardExpiryDate {
@@ -481,10 +478,10 @@ impl From<ArchipelFlowStatus> for AttemptStatus {
 #[serde(rename_all = "camelCase")]
 pub struct ArchipelOrderResponse {
     id: String,
-    amount: Option<i64>,
+    amount: Option<MinorUnit>,
     currency: Option<Currency>,
-    captured_amount: Option<i64>,
-    authorized_amount: Option<i64>,
+    captured_amount: Option<MinorUnit>,
+    authorized_amount: Option<MinorUnit>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -503,12 +500,27 @@ impl Default for ArchipelErrorMessage {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-struct ArchipelErrorMessageWithHttpCode {
-    error_message: ArchipelErrorMessage,
-    http_code: u16,
+pub struct ArchipelErrorMessageWithHttpCode {
+    pub error_message: ArchipelErrorMessage,
+    pub http_code: u16,
 }
+
 impl ArchipelErrorMessageWithHttpCode {
-    fn new(error_message: ArchipelErrorMessage, http_code: u16) -> Self {
+    pub fn new(error_message: ArchipelErrorMessage, http_code: u16) -> Self {
+        Self {
+            error_message,
+            http_code,
+        }
+    }
+
+    pub fn from_response(response: &[u8], http_code: u16) -> Self {
+        let error_message = if response.is_empty() {
+            ArchipelErrorMessage::default()
+        } else {
+            serde_json::from_slice::<ArchipelErrorMessage>(response)
+                .unwrap_or_else(|_| ArchipelErrorMessage::default())
+        };
+
         Self {
             error_message,
             http_code,
@@ -685,19 +697,25 @@ impl
 }
 
 // AUTHORIZATION FLOW
-impl<T: PaymentMethodDataTypes> TryFrom<(
-    MinorUnit,
-    &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-)> for ArchipelPaymentInformation {
+impl<T: PaymentMethodDataTypes>
+    TryFrom<(
+        MinorUnit,
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    )> for ArchipelPaymentInformation
+{
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         (amount, router_data): (
             MinorUnit,
-            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         ),
     ) -> Result<Self, Self::Error> {
-
         let is_recurring_payment = router_data
             .request
             .mandate_id
@@ -821,14 +839,17 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let payment_information: ArchipelPaymentInformation =
-            ArchipelPaymentInformation::try_from((MinorUnit::new(item.router_data.request.amount), &item.router_data))?;
+            ArchipelPaymentInformation::try_from((
+                MinorUnit::new(item.router_data.request.amount),
+                &item.router_data,
+            ))?;
         let payment_method_data = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(ccard) => ArchipelCard::try_from((
                 payment_information.card_holder_name,
                 payment_information.cardholder.clone(),
                 ccard,
             ))?,
-            PaymentMethodData::CardDetailsForNetworkTransactionId(..) 
+            PaymentMethodData::CardDetailsForNetworkTransactionId(..)
             | PaymentMethodData::CardRedirect(..)
             | PaymentMethodData::Wallet(..)
             | PaymentMethodData::PayLater(..)
@@ -972,14 +993,11 @@ impl<F> TryFrom<ResponseRouterData<ArchipelPSyncResponse, Self>>
                 .encode_to_value()
                 .ok();
 
-
-        let capture_method = item
-        .router_data
-        .request
-        .capture_method
-        .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "capture_method",
-                })?;
+        let capture_method = item.router_data.request.capture_method.ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "capture_method",
+            },
+        )?;
 
         let archipel_flow = match capture_method {
             CaptureMethod::Automatic => ArchipelPaymentFlow::Pay,
@@ -987,7 +1005,8 @@ impl<F> TryFrom<ResponseRouterData<ArchipelPSyncResponse, Self>>
         };
 
         let status: AttemptStatus =
-            ArchipelFlowStatus::new(item.response.0.transaction_result.clone(), archipel_flow).into();
+            ArchipelFlowStatus::new(item.response.0.transaction_result.clone(), archipel_flow)
+                .into();
 
         Ok(Self {
             resource_common_data: PaymentFlowData {
@@ -1052,7 +1071,10 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         // Extract the value from Secret wrapper
-        let metadata_value = item.router_data.request.connector_metadata
+        let metadata_value = item
+            .router_data
+            .request
+            .connector_metadata
             .as_ref()
             .map(|secret| secret.clone().expose());
 
@@ -1118,6 +1140,32 @@ impl<F>
     }
 }
 
+fn get_error_attempt_status(error_code: &str, http_code: u16) -> AttemptStatus {
+    match http_code {
+        // 4xx Client errors
+        400 => match error_code {
+            // Card-related errors
+            code if code.contains("CARD") || code.contains("card") => AttemptStatus::Failure,
+            // Authentication errors
+            code if code.contains("AUTH") || code.contains("auth") => {
+                AttemptStatus::AuthenticationFailed
+            }
+            // Validation errors
+            _ => AttemptStatus::Failure,
+        },
+        401 | 403 => AttemptStatus::AuthenticationFailed,
+        404 => AttemptStatus::Failure,
+        422 => AttemptStatus::Failure,
+        429 => AttemptStatus::Pending,
+
+        // 5xx Server errors
+        500..=599 => AttemptStatus::Pending,
+
+        // Default for other status codes
+        _ => AttemptStatus::Failure,
+    }
+}
+
 impl From<ArchipelErrorMessageWithHttpCode> for ErrorResponse {
     fn from(
         ArchipelErrorMessageWithHttpCode {
@@ -1125,19 +1173,22 @@ impl From<ArchipelErrorMessageWithHttpCode> for ErrorResponse {
             http_code,
         }: ArchipelErrorMessageWithHttpCode,
     ) -> Self {
+        let attempt_status = get_error_attempt_status(&error_message.code, http_code);
+        let error_message_text = error_message
+            .description
+            .clone()
+            .unwrap_or(consts::NO_ERROR_MESSAGE.to_string());
+
         Self {
             status_code: http_code,
-            code: error_message.code,
-            attempt_status: None,
+            code: error_message.code.clone(),
+            attempt_status: Some(attempt_status),
             connector_transaction_id: None,
-            message: error_message
-                .description
-                .clone()
-                .unwrap_or(consts::NO_ERROR_MESSAGE.to_string()),
+            message: error_message_text.clone(),
             reason: error_message.description,
-            network_decline_code: None,
+            network_decline_code: Some(error_message.code),
             network_advice_code: None,
-            network_error_message: None,
+            network_error_message: Some(error_message_text),
         }
     }
 }
@@ -1208,9 +1259,8 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        print!("this is the meta data{:?}", item.router_data.request.connector_metadata);
-
-        let connector_metadata = ArchipelConfigData::try_from(&item.router_data.request.connector_metadata)?;
+        let connector_metadata =
+            ArchipelConfigData::try_from(&item.router_data.request.connector_metadata)?;
 
         Ok(Self {
             order: ArchipelRefundOrderRequest {
@@ -1295,7 +1345,9 @@ impl<F>
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.0.transaction_id.clone(),
-                refund_status: common_enums::RefundStatus::from(item.response.0.transaction_result.clone()),
+                refund_status: common_enums::RefundStatus::from(
+                    item.response.0.transaction_result.clone(),
+                ),
                 status_code: item.http_code,
             }),
             ..item.router_data
@@ -1461,7 +1513,13 @@ impl<
                 PaymentsResponseData,
             >,
         >,
-    > for RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+    >
+    for RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    >
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -1488,15 +1546,24 @@ impl<
                 .ok();
 
         // Setup mandate always uses Authorize flow
-        let status: AttemptStatus =
-            ArchipelFlowStatus::new(item.response.0.transaction_result, ArchipelPaymentFlow::Authorize).into();
+        let status: AttemptStatus = ArchipelFlowStatus::new(
+            item.response.0.transaction_result,
+            ArchipelPaymentFlow::Authorize,
+        )
+        .into();
 
         // For mandate reference, we use the payment_account_reference which is the tokenized card reference
-        let mandate_reference = item.response.0.payment_account_reference.clone()
-            .map(|par| Box::new(domain_types::connector_types::MandateReference {
-                connector_mandate_id: Some(par.expose()),
-                payment_method_id: None,
-            }));
+        let mandate_reference = item
+            .response
+            .0
+            .payment_account_reference
+            .clone()
+            .map(|par| {
+                Box::new(domain_types::connector_types::MandateReference {
+                    connector_mandate_id: Some(par.expose()),
+                    payment_method_id: None,
+                })
+            });
 
         Ok(Self {
             resource_common_data: PaymentFlowData {
