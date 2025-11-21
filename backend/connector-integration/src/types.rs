@@ -54,6 +54,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Datatrans => Box::new(connectors::Datatrans::new()),
             ConnectorEnum::Silverflow => Box::new(connectors::Silverflow::new()),
             ConnectorEnum::Celero => Box::new(connectors::Celero::new()),
+            ConnectorEnum::Globalpay => Box::new(connectors::Globalpay::new()),
             ConnectorEnum::Dlocal => Box::new(connectors::Dlocal::new()),
             ConnectorEnum::Hipay => Box::new(connectors::Dlocal::new()),
             ConnectorEnum::Placetopay => Box::new(connectors::Placetopay::new()),
