@@ -4,6 +4,30 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.11.21.0
+
+### Features
+
+- **connector:** [MULTISAFEPAY] Connector Integration ([#244](https://github.com/juspay/connector-service/pull/244)) ([`a853a4e`](https://github.com/juspay/connector-service/commit/a853a4e60fb980e8aea3364ea2666b45b73a5984))
+- **trustpay:** Implement error type mapping and enhance error handling ([#302](https://github.com/juspay/connector-service/pull/302)) ([`ad9d441`](https://github.com/juspay/connector-service/commit/ad9d4419caaa7c4962af89be23609907abea9186))
+- Client creation based on proxy ([#292](https://github.com/juspay/connector-service/pull/292)) ([`42afd04`](https://github.com/juspay/connector-service/commit/42afd040489c17f5f5801fb0c98f2907edaf16e1))
+- Introduce connector customer create grpc function ([#290](https://github.com/juspay/connector-service/pull/290)) ([`d47f7d0`](https://github.com/juspay/connector-service/commit/d47f7d03e694756644ba3903d94528e9b611e03b))
+- Encoded data in psync separate field ([#305](https://github.com/juspay/connector-service/pull/305)) ([`8edf9f7`](https://github.com/juspay/connector-service/commit/8edf9f744597c4f8712550a060a2bc1700c174d9))
+- Introduce create order grpc function ([#284](https://github.com/juspay/connector-service/pull/284)) ([`d613db4`](https://github.com/juspay/connector-service/commit/d613db4f6f71718477d8d0499034b58d15c8a052))
+- Introduce create payment method token create grpc function ([#291](https://github.com/juspay/connector-service/pull/291)) ([`dfa0d60`](https://github.com/juspay/connector-service/commit/dfa0d60f497d77fff2d520e560ace868970eec30))
+
+### Bug Fixes
+
+- **Braintree:** Refund diff check for connector Braintree ([#303](https://github.com/juspay/connector-service/pull/303)) ([`4c4b110`](https://github.com/juspay/connector-service/commit/4c4b1102c11e24401fc11c5256f1dc257b09979f))
+
+### Refactors
+
+- Flattened the payment method in proto ([#289](https://github.com/juspay/connector-service/pull/289)) ([`692f307`](https://github.com/juspay/connector-service/commit/692f3072a55b1a4864714f2484b267ca8b202fbb))
+
+**Full Changelog:** [`2025.11.19.2...2025.11.21.0`](https://github.com/juspay/connector-service/compare/2025.11.19.2...2025.11.21.0)
+
+- - -
+
 ## 2025.11.19.2
 
 ### Features
