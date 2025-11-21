@@ -309,7 +309,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
-            format!("Bearer {}", auth.api_key.peek()).into_masked(),
+            auth.client_id.into_masked(),
         )])
     }
 
@@ -318,13 +318,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut common_utils::events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: IatapayErrorResponse = if res.response.is_empty() {
-            IatapayErrorResponse::default()
-        } else {
-            res.response
-                .parse_struct("IatapayErrorResponse")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?
-        };
+        let response: IatapayErrorResponse = res.response
+            .parse_struct("IatapayErrorResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         if let Some(i) = event_builder {
             i.set_connector_response(&response);
@@ -332,9 +328,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: response.get_error_code(),
-            message: response.get_error_message(),
-            reason: response.get_error_reason(),
+            code: response.error,
+            message: response.message.unwrap_or_else(|| "Unknown error".to_string()),
+            reason: response.reason,
             attempt_status: None,
             connector_transaction_id: None,
             network_decline_code: None,
@@ -402,11 +398,7 @@ macros::macro_connector_implementation!(
             // Extract merchant_id from auth credentials
             let auth = transformers::IatapayAuthType::try_from(&req.connector_auth_type)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-            let merchant_id_secret = auth.merchant_id
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "merchant_id",
-                })?;
-            let merchant_id = merchant_id_secret.peek();
+            let merchant_id = auth.merchant_id.peek();
 
             // Extract connector_request_reference_id from request
             let payment_id = &req.resource_common_data.connector_request_reference_id;
@@ -533,13 +525,12 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            // For OAuth, api_key is client_id and we need api_secret from ConnectorAuthType
-            let (client_id, client_secret) = match &req.connector_auth_type {
-                ConnectorAuthType::SignatureKey { api_key, api_secret, .. } => {
-                    (api_key.peek(), api_secret.peek())
-                }
-                _ => return Err(errors::ConnectorError::FailedToObtainAuthType)?,
-            };
+            // For OAuth, extract client_id and client_secret from IatapayAuthType
+            let auth = transformers::IatapayAuthType::try_from(&req.connector_auth_type)
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+
+            let client_id = auth.client_id.peek();
+            let client_secret = auth.client_secret.peek();
 
             // Create Basic Auth: base64(client_id:client_secret)
             let credentials = format!("{}:{}", client_id, client_secret);

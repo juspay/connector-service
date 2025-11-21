@@ -26,8 +26,9 @@ use crate::types::ResponseRouterData;
 // ===== AUTHENTICATION =====
 #[derive(Debug, Clone)]
 pub struct IatapayAuthType {
-    pub api_key: Secret<String>,
-    pub merchant_id: Option<Secret<String>>,
+    pub(super) client_id: Secret<String>,
+    pub(super) merchant_id: Secret<String>,
+    pub(super) client_secret: Secret<String>,
 }
 
 impl TryFrom<&ConnectorAuthType> for IatapayAuthType {
@@ -35,17 +36,14 @@ impl TryFrom<&ConnectorAuthType> for IatapayAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
-                api_key: api_key.to_owned(),
-                merchant_id: None,
-            }),
             ConnectorAuthType::SignatureKey {
                 api_key,
                 key1,
-                api_secret: _,
+                api_secret,
             } => Ok(Self {
-                api_key: api_key.to_owned(),
-                merchant_id: Some(key1.to_owned()),
+                client_id: api_key.to_owned(),
+                merchant_id: key1.to_owned(),
+                client_secret: api_secret.to_owned(),
             }),
             _ => Err(Report::new(ConnectorError::FailedToObtainAuthType)),
         }
@@ -54,75 +52,11 @@ impl TryFrom<&ConnectorAuthType> for IatapayAuthType {
 
 // ===== ERROR RESPONSE =====
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum IatapayErrorResponse {
-    // General API error (status, error, message)
-    ApiError {
-        #[serde(skip_serializing_if = "Option::is_none")]
-        status: Option<u16>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        error: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        message: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        details: Option<String>,
-    },
-    // Payment/Refund failure (failureCode, failureDetails)
-    PaymentError {
-        #[serde(skip_serializing_if = "Option::is_none")]
-        status: Option<String>,
-        #[serde(rename = "failureCode")]
-        #[serde(skip_serializing_if = "Option::is_none")]
-        failure_code: Option<String>,
-        #[serde(rename = "failureDetails")]
-        #[serde(skip_serializing_if = "Option::is_none")]
-        failure_details: Option<String>,
-    },
-}
-
-impl IatapayErrorResponse {
-    pub fn get_error_code(&self) -> String {
-        match self {
-            Self::ApiError { error, .. } => {
-                error.clone().unwrap_or_else(|| "UNKNOWN_ERROR".to_string())
-            }
-            Self::PaymentError { failure_code, .. } => failure_code
-                .clone()
-                .unwrap_or_else(|| "UNKNOWN_ERROR".to_string()),
-        }
-    }
-
-    pub fn get_error_message(&self) -> String {
-        match self {
-            Self::ApiError { message, .. } => message
-                .clone()
-                .unwrap_or_else(|| "Unknown error occurred".to_string()),
-            Self::PaymentError {
-                failure_details, ..
-            } => failure_details
-                .clone()
-                .unwrap_or_else(|| "Unknown error occurred".to_string()),
-        }
-    }
-
-    pub fn get_error_reason(&self) -> Option<String> {
-        match self {
-            Self::ApiError { message, .. } => message.clone(),
-            Self::PaymentError {
-                failure_details, ..
-            } => failure_details.clone(),
-        }
-    }
-}
-
-impl Default for IatapayErrorResponse {
-    fn default() -> Self {
-        Self::PaymentError {
-            status: Some("FAILED".to_string()),
-            failure_code: Some("UNKNOWN_ERROR".to_string()),
-            failure_details: Some("Unknown error occurred".to_string()),
-        }
-    }
+pub struct IatapayErrorResponse {
+    pub status: Option<u16>,
+    pub error: String,
+    pub message: Option<String>,
+    pub reason: Option<String>,
 }
 
 // ===== OAUTH 2.0 ACCESS TOKEN STRUCTURES =====
@@ -374,10 +308,7 @@ impl<
 
         // Extract merchant ID from connector auth
         let auth = IatapayAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let merchant_id = auth
-            .merchant_id
-            .clone()
-            .unwrap_or_else(|| auth.api_key.clone());
+        let merchant_id = auth.merchant_id.clone();
 
         // Extract payer info (only for UPI Collect)
         let payer_info = match payment_method_data {
@@ -762,9 +693,7 @@ impl<
 
         // Extract merchant_id from auth
         let auth = IatapayAuthType::try_from(&router_data.connector_auth_type)?;
-        let merchant_id = auth
-            .merchant_id
-            .ok_or(ConnectorError::FailedToObtainAuthType)?;
+        let merchant_id = auth.merchant_id.clone();
 
         // Convert amount using FloatMajorUnit
         let amount = domain_types::utils::convert_amount(
