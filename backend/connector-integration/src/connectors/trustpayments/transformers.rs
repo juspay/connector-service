@@ -1092,7 +1092,7 @@ fn get_refund_status_from_settlestatus(
     match settlestatus {
         Some(TrustpaymentsSettleStatus::SettledComplete) => RefundStatus::Success, // Fully settled
         Some(TrustpaymentsSettleStatus::AutomaticCapture) => RefundStatus::Pending, // Pending settlement
-        Some(TrustpaymentsSettleStatus::SettledPending) => RefundStatus::Pending, // Being processed
+        Some(TrustpaymentsSettleStatus::SettledPending) => RefundStatus::Success, // Being processed (settled)
         Some(TrustpaymentsSettleStatus::ManualCapture) => RefundStatus::ManualReview, // Suspended
         Some(TrustpaymentsSettleStatus::Cancelled) => RefundStatus::Failure, // Cancelled/Reversed
         None => RefundStatus::Pending,
