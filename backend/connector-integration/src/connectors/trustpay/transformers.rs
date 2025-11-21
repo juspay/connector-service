@@ -1,4 +1,4 @@
-use crate::utils;
+use crate::utils::{self, ErrorCodeAndMessage};
 use crate::{connectors::trustpay::TrustpayRouterData, types::ResponseRouterData};
 use common_enums::enums;
 use common_utils::{
@@ -646,8 +646,11 @@ fn handle_bank_redirects_error_response(
     };
     let error = Some(ErrorResponse {
         code: response.payment_result_info.result_code.to_string(),
-        // message vary for the same code, so relying on code alone as it is unique
-        message: response.payment_result_info.result_code.to_string(),
+        message: response
+            .payment_result_info
+            .additional_info
+            .clone()
+            .unwrap_or(NO_ERROR_MESSAGE.to_string()),
         reason: response.payment_result_info.additional_info,
         status_code,
         attempt_status: Some(status),
@@ -829,6 +832,15 @@ pub struct Errors {
     pub description: String,
 }
 
+impl From<Errors> for ErrorCodeAndMessage {
+    fn from(error: Errors) -> Self {
+        ErrorCodeAndMessage {
+            error_code: error.code.to_string(),
+            error_message: error.description,
+        }
+    }
+}
+
 #[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TrustpayErrorResponse {
@@ -1001,8 +1013,12 @@ impl
             _ => Ok(Self {
                 response: Err(ErrorResponse {
                     code: item.response.result_info.result_code.to_string(),
-                    // message vary for the same code, so relying on code alone as it is unique
-                    message: item.response.result_info.result_code.to_string(),
+                    message: item
+                        .response
+                        .result_info
+                        .additional_info
+                        .clone()
+                        .unwrap_or(NO_ERROR_MESSAGE.to_string()),
                     reason: item.response.result_info.additional_info,
                     status_code: item.http_code,
                     attempt_status: None,

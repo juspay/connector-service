@@ -30,11 +30,17 @@ service PaymentService {
   // Captures a previously authorized payment.
   rpc Capture(PaymentServiceCaptureRequest) returns (PaymentServiceCaptureResponse);
 
+  // Creates an order before authorize.
+  rpc CreateOrder(PaymentServiceCreateOrderRequest) returns (PaymentServiceCreateOrderResponse);
+
   // Processes a refund request.
   rpc Refund(PaymentServiceRefundRequest) returns (RefundResponse);
 
   // Sets up a mandate for future payments.
   rpc Register(PaymentServiceRegisterRequest) returns (PaymentServiceRegisterResponse);
+
+  // Sets up a mandate for future payments in a granular way(without setup flows).
+  rpc RegisterOnly(PaymentServiceRegisterRequest) returns (PaymentServiceRegisterResponse);
 
   // Creates a session token for payment processing.
   rpc CreateSessionToken(PaymentServiceCreateSessionTokenRequest) returns (PaymentServiceCreateSessionTokenResponse);
@@ -58,6 +64,14 @@ service PaymentService {
   
   // Post-authentication step - used when authentication results need validation
   rpc PostAuthenticate(PaymentServicePostAuthenticateRequest) returns (PaymentServicePostAuthenticateResponse);
+
+  // Creates a connector customer for future payment processing.
+  rpc CreateConnectorCustomer(PaymentServiceCreateConnectorCustomerRequest) returns (PaymentServiceCreateConnectorCustomerResponse);
+
+
+  // Creates a payment method token for future payment processing.
+  rpc CreatePaymentMethodToken(PaymentServiceCreatePaymentMethodTokenRequest) returns (PaymentServiceCreatePaymentMethodTokenResponse);
+
 
   // Creates an access token for connector authentication.
   rpc CreateAccessToken(PaymentServiceCreateAccessTokenRequest) returns (PaymentServiceCreateAccessTokenResponse);

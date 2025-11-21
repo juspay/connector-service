@@ -21,12 +21,17 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+multisafepay.base_url = "https://testapi.multisafepay.com/v1/json"
 authipay.base_url = "https://prod.emea.api.fiservapps.com/ipp/payments-gateway/v2/payments"
 stax.base_url = "https://apiprod.fattlabs.com"
+trustpayments.base_url = "https://webservices.securetrading.net"
 fiservemea.base_url = "https://prod.emea.api.fiservapps.com/ipp/payments-gateway/v2/payments"
 datatrans.base_url = "https://api.datatrans.com"
 silverflow.base_url = "https://api.silverflow.co/v1"
 celero.base_url = "https://app.gotnpgateway.com"
+hipay.base_url = "https://secure-gateway.hipay-tpp.com/rest/"
+hipay.secondary_base_url = "https://secure2-vault.hipay-tpp.com/rest/v2/token"
+hipay.third_base_url = "https://api-gateway.hipay.com/"
 adyen.base_url = "https://{{merchant_endpoint_prefix}}-checkout-live.adyenpayments.com/checkout/"
 adyen.dispute_base_url = "https://{{merchant_endpoint_prefix}}-ca-live.adyen.com/"
 razorpay.base_url = "https://api.razorpay.com/"

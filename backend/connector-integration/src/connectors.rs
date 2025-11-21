@@ -92,6 +92,9 @@ pub use self::worldpay::Worldpay;
 pub mod worldpayvantiv;
 pub use self::worldpayvantiv::Worldpayvantiv;
 
+pub mod multisafepay;
+pub use self::multisafepay::Multisafepay;
+
 pub mod payload;
 pub use self::payload::Payload;
 
@@ -115,3 +118,9 @@ pub use self::paypal::Paypal;
 
 pub mod stax;
 pub use self::stax::Stax;
+
+pub mod hipay;
+pub use self::hipay::Hipay;
+
+pub mod trustpayments;
+pub use self::trustpayments::Trustpayments;

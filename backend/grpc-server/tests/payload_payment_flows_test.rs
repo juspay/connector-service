@@ -157,6 +157,7 @@ fn create_payment_sync_request(transaction_id: &str, amount: i64) -> PaymentServ
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
+        encoded_data: None,
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id("payload_sync"))),
         }),
@@ -485,6 +486,7 @@ async fn test_authorize_capture_refund_rsync() {
             transaction_id: Some(Identifier {
                 id_type: Some(IdType::Id(refund_id)),
             }),
+            encoded_data: None,
             request_ref_id: Some(Identifier {
                 id_type: Some(IdType::Id(generate_unique_id("payload_rsync"))),
             }),

@@ -169,8 +169,10 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
-        request_ref_id: None,
-        // all_keys_required: None,
+        encoded_data: None,
+        request_ref_id: Some(Identifier {
+            id_type: Some(IdType::Id(format!("braintree_sync_{}", get_timestamp()))),
+        }),
         capture_method: None,
         handle_response: None,
         amount: TEST_AMOUNT,

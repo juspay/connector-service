@@ -157,16 +157,18 @@ impl DisputeService for Disputes {
                         shadow_mode,
                     };
 
-                    let response = external_services::service::execute_connector_processing_step(
-                        &config.proxy,
-                        connector_integration,
-                        router_data,
-                        None,
-                        event_params,
-                        None,
-                        common_enums::CallConnectorAction::Trigger,
-                        None,
-                        None,
+                    let response = Box::pin(
+                        external_services::service::execute_connector_processing_step(
+                            &config.proxy,
+                            connector_integration,
+                            router_data,
+                            None,
+                            event_params,
+                            None,
+                            common_enums::CallConnectorAction::Trigger,
+                            None,
+                            None,
+                        ),
                     )
                     .await
                     .switch()
@@ -304,7 +306,7 @@ impl DisputeService for Disputes {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "DisputeService".to_string());
-        grpc_logging_wrapper(
+        Box::pin(grpc_logging_wrapper(
             request,
             &service_name,
             config.clone(),
@@ -367,16 +369,18 @@ impl DisputeService for Disputes {
                         shadow_mode,
                     };
 
-                    let response = external_services::service::execute_connector_processing_step(
-                        &config.proxy,
-                        connector_integration,
-                        router_data,
-                        None,
-                        event_params,
-                        None,
-                        common_enums::CallConnectorAction::Trigger,
-                        None,
-                        None,
+                    let response = Box::pin(
+                        external_services::service::execute_connector_processing_step(
+                            &config.proxy,
+                            connector_integration,
+                            router_data,
+                            None,
+                            event_params,
+                            None,
+                            common_enums::CallConnectorAction::Trigger,
+                            None,
+                            None,
+                        ),
                     )
                     .await
                     .switch()
@@ -388,7 +392,7 @@ impl DisputeService for Disputes {
                     Ok(tonic::Response::new(dispute_response))
                 }
             },
-        )
+        ))
         .await
     }
 
