@@ -1,11 +1,9 @@
-// Redsys Transformers - Request/Response Transformations
-//
-// This file contains all TryFrom implementations and helper functions for transforming
-// between Hyperswitch router data and Redsys connector requests/responses.
-
 use base64::Engine;
 use common_enums::{AttemptStatus, RefundStatus};
-use common_utils::{crypto::SignMessage, errors::CustomResult};
+use common_utils::{
+    crypto::{EncodeMessage, SignMessage},
+    errors::CustomResult,
+};
 use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
@@ -21,18 +19,11 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::PeekInterface;
 
-use super::{
-    requests::*,
-    responses::*,
-};
+use super::{requests::*, responses::*};
 use crate::{
-    connectors::redsys::{BASE64_ENGINE, SIGNATURE_VERSION, RedsysRouterData},
+    connectors::redsys::{RedsysRouterData, BASE64_ENGINE, SIGNATURE_VERSION},
     types::ResponseRouterData,
 };
-
-// ============================================================================
-// AUTHENTICATION TYPE CONVERSION
-// ============================================================================
 
 impl TryFrom<&ConnectorAuthType> for RedsysAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -53,11 +44,6 @@ impl TryFrom<&ConnectorAuthType> for RedsysAuthType {
     }
 }
 
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/// Convert Currency enum to ISO 4217 numeric code for Redsys
 fn get_currency_numeric_code(
     currency: common_enums::Currency,
 ) -> CustomResult<String, errors::ConnectorError> {
@@ -124,104 +110,102 @@ fn get_currency_numeric_code(
     Ok(numeric_code.to_string())
 }
 
-/// Get response status from Ds_Response code
-pub fn get_payment_status(response_code: &str) -> AttemptStatus {
-    let code = response_code.parse::<i32>().unwrap_or(9999);
+impl TryFrom<DsResponse> for AttemptStatus {
+    type Error = error_stack::Report<errors::ConnectorError>;
 
-    match code {
-        0..=99 => AttemptStatus::Charged, // 0000-0099: Authorized
-        900 => AttemptStatus::Charged,    // 0900: Refund/Confirmation authorized
-        400 => AttemptStatus::Voided,     // 0400: Cancellation authorized
-        9999 => AttemptStatus::AuthenticationPending, // 9999: Challenge required
-        9998 => AttemptStatus::Pending,   // 9998: Operation in progress
-        _ => AttemptStatus::Failure,
+    fn try_from(ds_response: DsResponse) -> Result<Self, Self::Error> {
+        match ds_response.0.as_str() {
+            code if code.starts_with("00") && code != "0002" => Ok(Self::Charged),
+            "0900" => Ok(Self::Charged),
+            "0400" | "0481" | "0940" | "9915" => Ok(Self::Voided),
+            "0950" => Ok(Self::VoidFailed),
+            "0112" | "0195" | "8210" | "8220" | "9998" | "9999" => Ok(Self::AuthenticationPending),
+            "0129" | "0184" | "9256" | "9257" => Ok(Self::AuthenticationFailed),
+            "0107" | "0300" => Ok(Self::Pending),
+            unknown_status => Err(errors::ConnectorError::ResponseHandlingFailed)
+                .attach_printable(format!(
+                    "Received unknown payment status: {}",
+                    unknown_status
+                ))?,
+        }
     }
 }
 
-pub fn get_refund_status(response_code: &str) -> RefundStatus {
-    let code = response_code.parse::<i32>().unwrap_or(9999);
+impl TryFrom<DsResponse> for RefundStatus {
+    type Error = error_stack::Report<errors::ConnectorError>;
 
-    match code {
-        900 => RefundStatus::Success,
-        9998 => RefundStatus::Pending,
-        _ => RefundStatus::Failure,
+    fn try_from(ds_response: DsResponse) -> Result<Self, Self::Error> {
+        match ds_response.0.as_str() {
+            "0900" => Ok(Self::Success),
+            "9999" => Ok(Self::Pending),
+            "0950" | "0172" | "174" => Ok(Self::Failure),
+            unknown_status => Err(errors::ConnectorError::ResponseHandlingFailed)
+                .attach_printable(format!(
+                    "Received unknown refund status: {}",
+                    unknown_status
+                ))?,
+        }
     }
 }
 
-// ============================================================================
-// SIGNATURE GENERATION
-// ============================================================================
+fn des_encrypt(message: &str, key: &str) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+    let iv_array = [0u8; common_utils::crypto::TripleDesEde3CBC::TRIPLE_DES_IV_LENGTH];
+    let iv = iv_array.to_vec();
 
-/// Generate 3DES encryption key from order ID and merchant secret
-fn generate_3des_key(
-    order_id: &str,
-    secret_key: &str,
-) -> CustomResult<Vec<u8>, errors::ConnectorError> {
-    use des::cipher::{BlockEncrypt, KeyInit};
-    use des::TdesEde3;
-
-    // Decode the Base64 secret key
     let key_bytes = BASE64_ENGINE
-        .decode(secret_key)
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        .decode(key)
+        .change_context(errors::ConnectorError::RequestEncodingFailed)
+        .attach_printable("Base64 decoding failed")?;
 
-    // Create 3DES cipher
-    let cipher = TdesEde3::new_from_slice(&key_bytes)
-        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+    let triple_des = common_utils::crypto::TripleDesEde3CBC::new(
+        Some(common_enums::CryptoPadding::ZeroPadding),
+        iv,
+    )
+    .change_context(errors::ConnectorError::RequestEncodingFailed)
+    .attach_printable("Triple DES encryption failed")?;
 
-    // Pad order ID to 8 bytes (DES block size)
-    let mut order_bytes = order_id.as_bytes().to_vec();
-    while order_bytes.len() % 8 != 0 {
-        order_bytes.push(0);
-    }
+    let encrypted = triple_des
+        .encode_message(&key_bytes, message.as_bytes())
+        .change_context(errors::ConnectorError::RequestEncodingFailed)
+        .attach_printable("Triple DES encryption failed")?;
 
-    // Encrypt in blocks
-    let mut encrypted = Vec::new();
-    for chunk in order_bytes.chunks(8) {
-        let mut block = des::cipher::Block::<TdesEde3>::clone_from_slice(chunk);
-        cipher.encrypt_block(&mut block);
-        encrypted.extend_from_slice(&block);
-    }
+    let expected_len =
+        encrypted.len() - common_utils::crypto::TripleDesEde3CBC::TRIPLE_DES_IV_LENGTH;
+    let encrypted_trimmed = encrypted
+        .get(..expected_len)
+        .ok_or(errors::ConnectorError::RequestEncodingFailed)
+        .attach_printable("Failed to trim encrypted data to the expected length")?;
 
-    Ok(encrypted)
+    Ok(encrypted_trimmed.to_vec())
 }
 
-/// Generate HMAC-SHA256 signature for Redsys request
 pub fn generate_signature(
     order_id: &str,
     merchant_params_b64: &str,
     secret_key: &str,
 ) -> CustomResult<String, errors::ConnectorError> {
-    use common_utils::crypto;
+    let secret_ko = des_encrypt(order_id, secret_key)?;
 
-    // Generate 3DES encryption key
-    let operation_key = generate_3des_key(order_id, secret_key)?;
-
-    // Calculate HMAC-SHA256
-    let signature = crypto::HmacSha256::sign_message(
-        &crypto::HmacSha256,
-        &operation_key,
+    let result = common_utils::crypto::HmacSha256::sign_message(
+        &common_utils::crypto::HmacSha256,
+        &secret_ko,
         merchant_params_b64.as_bytes(),
     )
     .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
-    // Base64 encode the signature
-    Ok(BASE64_ENGINE.encode(signature))
+    Ok(BASE64_ENGINE.encode(result))
 }
 
-/// Create RedsysTransaction wrapper with signature
 pub fn create_redsys_transaction<T: serde::Serialize>(
     params: &T,
     auth: &RedsysAuthType,
     order_id: &str,
 ) -> CustomResult<RedsysTransaction, errors::ConnectorError> {
-    // Serialize and Base64 encode parameters
     let params_json = serde_json::to_string(params)
         .change_context(errors::ConnectorError::RequestEncodingFailed)?;
     let merchant_parameters = BASE64_ENGINE.encode(params_json);
 
-    // Generate signature
-    let signature = generate_signature(order_id, &merchant_parameters, &auth.sha256_pwd.peek())?;
+    let signature = generate_signature(order_id, &merchant_parameters, auth.sha256_pwd.peek())?;
 
     Ok(RedsysTransaction {
         ds_signature_version: SIGNATURE_VERSION.to_string(),
@@ -230,25 +214,25 @@ pub fn create_redsys_transaction<T: serde::Serialize>(
     })
 }
 
-/// Decode and parse Redsys response parameters
 pub fn decode_response_params<T: serde::de::DeserializeOwned>(
     response: &RedsysTransactionResponse,
 ) -> CustomResult<T, errors::ConnectorError> {
-    // Decode Base64 merchant parameters
     let params_json = BASE64_ENGINE
         .decode(&response.ds_merchant_parameters)
         .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-    // Parse JSON
-    serde_json::from_slice(&params_json)
+    let json_string = String::from_utf8_lossy(&params_json);
+    tracing::info!("Redsys decoded response JSON: {}", json_string);
+
+    serde_json::from_slice::<T>(&params_json)
+        .map_err(|e| {
+            tracing::error!("Redsys response deserialization failed: {:?}", e);
+            tracing::error!("Raw JSON: {}", json_string);
+            errors::ConnectorError::ResponseDeserializationFailed
+        })
         .change_context(errors::ConnectorError::ResponseDeserializationFailed)
 }
 
-// ============================================================================
-// TRYFROM IMPLEMENTATIONS - REQUEST TRANSFORMATIONS
-// ============================================================================
-
-// Authenticate Flow - 3DS Method Invocation (iniciaPeticionREST)
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -347,7 +331,6 @@ impl<
     }
 }
 
-// PostAuthenticate Flow - Authorization after 3DS Method (trataPeticionREST)
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -501,7 +484,6 @@ impl<
     }
 }
 
-// Authorize Flow - Complete Authorization after Challenge (trataPeticionREST with cres)
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -601,7 +583,6 @@ impl<
     }
 }
 
-// Capture Flow
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -657,7 +638,6 @@ impl<
     }
 }
 
-// Void Flow
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -723,7 +703,6 @@ impl<
     }
 }
 
-// Refund Flow
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -776,11 +755,6 @@ impl<
     }
 }
 
-// ============================================================================
-// TRYFROM IMPLEMENTATIONS - RESPONSE TRANSFORMATIONS
-// ============================================================================
-
-// Response transformation for Authenticate flow
 impl<F, T> TryFrom<ResponseRouterData<RedsysResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
 where
@@ -816,7 +790,6 @@ where
     }
 }
 
-// Response transformation for PostAuthenticate and Authorize flows
 impl<F, T> TryFrom<ResponseRouterData<RedsysResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
 where
@@ -830,13 +803,15 @@ where
                 let params: RedsysPostAuthenticateResponseParams =
                     decode_response_params(&response)?;
 
-                // Check if challenge is required
                 let redirection_data = if let Some(emv3ds) = &params.ds_emv3ds {
                     if let (Some(acs_url), Some(creq)) = (&emv3ds.acs_url, &emv3ds.creq) {
                         Some(Box::new(RedirectForm::Form {
                             endpoint: acs_url.clone(),
                             method: common_utils::request::Method::Post,
-                            form_fields: std::collections::HashMap::from([("creq".to_string(), creq.clone())]),
+                            form_fields: std::collections::HashMap::from([(
+                                "creq".to_string(),
+                                creq.clone(),
+                            )]),
                         }))
                     } else {
                         None
@@ -974,7 +949,11 @@ impl<F> TryFrom<ResponseRouterData<RedsysResponse, Self>>
         match item.response {
             RedsysResponse::Success(response) => {
                 let params: RedsysRefundResponseParams = decode_response_params(&response)?;
-                let status = get_refund_status(&params.ds_response);
+
+                let ds_response = params
+                    .ds_response
+                    .unwrap_or_else(|| DsResponse("9999".to_string()));
+                let status = RefundStatus::try_from(ds_response)?;
 
                 Ok(Self {
                     response: Ok(RefundsResponseData {
@@ -1034,7 +1013,11 @@ impl<F> TryFrom<ResponseRouterData<RedsysResponse, Self>>
         match item.response {
             RedsysResponse::Success(response) => {
                 let params: RedsysRSyncResponseParams = decode_response_params(&response)?;
-                let status = get_refund_status(&params.ds_response);
+
+                let ds_response = params
+                    .ds_response
+                    .unwrap_or_else(|| DsResponse("9999".to_string()));
+                let status = RefundStatus::try_from(ds_response)?;
 
                 Ok(Self {
                     response: Ok(RefundsResponseData {
