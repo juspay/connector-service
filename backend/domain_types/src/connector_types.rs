@@ -85,6 +85,9 @@ pub enum ConnectorEnum {
     Celero,
     Paypal,
     Stax,
+    Hipay,
+    Trustpayments,
+    Globalpay,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -134,6 +137,9 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Celero => Ok(Self::Celero),
             grpc_api_types::payments::Connector::Paypal => Ok(Self::Paypal),
             grpc_api_types::payments::Connector::Stax => Ok(Self::Stax),
+            grpc_api_types::payments::Connector::Hipay => Ok(Self::Hipay),
+            grpc_api_types::payments::Connector::Trustpayments => Ok(Self::Trustpayments),
+            grpc_api_types::payments::Connector::Globalpay => Ok(Self::Globalpay),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -1431,6 +1437,26 @@ impl ConnectorResponseHeaders for RefundFlowData {
 
     fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
         self.connector_response_headers.as_ref()
+    }
+}
+
+impl RefundFlowData {
+    pub fn get_access_token(&self) -> Result<String, Error> {
+        self.access_token
+            .as_ref()
+            .map(|token_data| token_data.access_token.clone())
+            .ok_or_else(missing_field_err("access_token"))
+    }
+
+    pub fn get_access_token_data(&self) -> Result<AccessTokenResponseData, Error> {
+        self.access_token
+            .clone()
+            .ok_or_else(missing_field_err("access_token"))
+    }
+
+    pub fn set_access_token(mut self, access_token: Option<AccessTokenResponseData>) -> Self {
+        self.access_token = access_token;
+        self
     }
 }
 

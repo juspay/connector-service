@@ -121,3 +121,12 @@ pub use self::paypal::Paypal;
 
 pub mod stax;
 pub use self::stax::Stax;
+
+pub mod hipay;
+pub use self::hipay::Hipay;
+
+pub mod trustpayments;
+pub use self::trustpayments::Trustpayments;
+
+pub mod globalpay;
+pub use self::globalpay::Globalpay;
