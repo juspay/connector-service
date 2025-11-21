@@ -150,8 +150,12 @@ pub struct Connectors {
     pub hipay: ConnectorParams,
     pub trustpayments: ConnectorParams,
     pub globalpay: ConnectorParams,
+<<<<<<< HEAD
     pub nmi: ConnectorParams,
     pub shift4: ConnectorParams,
+=======
+    pub redsys: ConnectorParams,
+>>>>>>> dad6287df43b (redsys init)
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
