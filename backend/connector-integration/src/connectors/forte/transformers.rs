@@ -41,17 +41,6 @@ impl<T> From<(FloatMajorUnit, T)> for ForteRouterData1<T> {
     }
 }
 
-// impl TryFrom<&Option<pii::SecretSerdeValue>> for ForteMeta {
-//     type Error = error_stack::Report<errors::ConnectorError>;
-//     fn try_from(meta_data: &Option<pii::SecretSerdeValue>) -> Result<Self, Self::Error> {
-//         let metadata = OtherUtils::to_connector_meta_from_secret::<Self>(meta_data.clone())
-//             .change_context(errors::ConnectorError::InvalidConnectorConfig {
-//                 config: "metadata",
-//             })?;
-//         Ok(metadata)
-//     }
-// }
-
 impl TryFrom<&Option<serde_json::Value>> for ForteMeta {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(connector_metadata: &Option<serde_json::Value>) -> Result<Self, Self::Error> {
