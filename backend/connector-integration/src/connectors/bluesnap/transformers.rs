@@ -1,10 +1,6 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::AttemptStatus;
-use common_utils::{
-    errors::CustomResult,
-    types::{StringMajorUnit, StringMajorUnitForConnector},
-    AmountConvertor, MinorUnit,
-};
+use common_utils::errors::CustomResult;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund},
     connector_types::{
@@ -24,13 +20,16 @@ use serde::Serialize;
 use super::{requests, responses};
 use crate::types::ResponseRouterData;
 
+// Wallet type constants
+const WALLET_TYPE_APPLE_PAY: &str = "APPLE_PAY";
+const WALLET_TYPE_GOOGLE_PAY: &str = "GOOGLE_PAY";
+
 // Re-export request types
 pub use requests::{
     BluesnapCaptureRequest, BluesnapCardHolderInfo, BluesnapCompletePaymentsRequest,
     BluesnapCreditCard, BluesnapMetadata, BluesnapPaymentMethodDetails, BluesnapPaymentsRequest,
-    BluesnapPaymentsTokenRequest, BluesnapRefundRequest, BluesnapRefundSyncRequest,
-    BluesnapSyncRequest, BluesnapThreeDSecureInfo, BluesnapTxnType, BluesnapVoidRequest,
-    BluesnapWallet, RequestMetadata, TransactionFraudInfo,
+    BluesnapPaymentsTokenRequest, BluesnapRefundRequest, BluesnapThreeDSecureInfo, BluesnapTxnType,
+    BluesnapVoidRequest, BluesnapWallet, RequestMetadata, TransactionFraudInfo,
 };
 
 // Re-export response types
@@ -45,16 +44,6 @@ pub use responses::{
 };
 
 const DISPLAY_METADATA: &str = "Y";
-
-// Helper function to convert MinorUnit to StringMajorUnit
-fn convert_minor_to_major_unit(
-    minor_amount: MinorUnit,
-    currency: common_enums::Currency,
-) -> CustomResult<StringMajorUnit, errors::ConnectorError> {
-    StringMajorUnitForConnector
-        .convert(minor_amount, currency)
-        .change_context(errors::ConnectorError::RequestEncodingFailed)
-}
 
 fn convert_metadata_to_request_metadata(metadata: serde_json::Value) -> Vec<RequestMetadata> {
     let hashmap: std::collections::HashMap<Option<String>, Option<serde_json::Value>> =
@@ -164,7 +153,7 @@ impl<
             >,
             T,
         >,
-    > for BluesnapPaymentsRequest<T>
+    > for BluesnapPaymentsRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -233,7 +222,7 @@ impl<
                                 encoded_payment_token,
                             }),
                             google_pay: None,
-                            wallet_type: "APPLE_PAY".to_string(),
+                            wallet_type: WALLET_TYPE_APPLE_PAY.to_string(),
                         },
                     }
                 }
@@ -248,7 +237,7 @@ impl<
                             google_pay: Some(requests::BluesnapGooglePayWallet {
                                 encoded_payment_token,
                             }),
-                            wallet_type: "GOOGLE_PAY".to_string(),
+                            wallet_type: WALLET_TYPE_GOOGLE_PAY.to_string(),
                         },
                     }
                 }
@@ -261,12 +250,6 @@ impl<
             ))?,
         };
 
-        // Convert MinorUnit to StringMajorUnit
-        let amount = convert_minor_to_major_unit(
-            router_data.request.minor_amount,
-            router_data.request.currency,
-        )?;
-
         let transaction_meta_data =
             router_data
                 .request
@@ -275,6 +258,11 @@ impl<
                 .map(|metadata| BluesnapMetadata {
                     meta_data: convert_metadata_to_request_metadata(metadata.clone()),
                 });
+
+        let amount = super::BluesnapAmountConvertor::convert(
+            router_data.request.minor_amount,
+            router_data.request.currency,
+        )?;
 
         Ok(Self {
             amount,
@@ -287,7 +275,6 @@ impl<
             }),
             merchant_transaction_id: Some(router_data.resource_common_data.attempt_id.clone()),
             transaction_meta_data,
-            _phantom: std::marker::PhantomData,
         })
     }
 }
@@ -322,16 +309,15 @@ impl<
             _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into()),
         };
 
-        // Convert amount for capture - use minor_amount_to_capture
-        let amount = Some(convert_minor_to_major_unit(
+        let amount = super::BluesnapAmountConvertor::convert(
             router_data.request.minor_amount_to_capture,
             router_data.request.currency,
-        )?);
+        )?;
 
         Ok(Self {
             card_transaction_type: BluesnapTxnType::Capture,
             transaction_id: connector_transaction_id,
-            amount,
+            amount: Some(amount),
         })
     }
 }
@@ -388,34 +374,6 @@ impl<
     >
     TryFrom<
         super::BluesnapRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for BluesnapSyncRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        _item: super::BluesnapRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        // Empty request for GET-based sync
-        Ok(Self {})
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        super::BluesnapRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
             T,
         >,
@@ -431,44 +389,15 @@ impl<
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
-        // Convert amount for partial refund support
-        let amount = Some(convert_minor_to_major_unit(
+        let amount = super::BluesnapAmountConvertor::convert(
             router_data.request.minor_refund_amount,
             router_data.request.currency,
-        )?);
+        )?;
 
         Ok(Self {
-            amount,
+            amount: Some(amount),
             reason: router_data.request.reason.clone(),
         })
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        super::BluesnapRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    > for BluesnapRefundSyncRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        _item: super::BluesnapRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        // Empty request for GET-based sync
-        Ok(Self {})
     }
 }
 

@@ -1,5 +1,4 @@
 use common_utils::types::StringMajorUnit;
-use domain_types::payment_method_data::PaymentMethodDataTypes;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
@@ -94,7 +93,7 @@ pub struct RequestMetadata {
 // Main authorize request structure based on tech spec
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BluesnapPaymentsRequest<T: PaymentMethodDataTypes> {
+pub struct BluesnapPaymentsRequest {
     pub amount: StringMajorUnit,
     pub currency: String,
     pub card_transaction_type: BluesnapTxnType,
@@ -108,8 +107,6 @@ pub struct BluesnapPaymentsRequest<T: PaymentMethodDataTypes> {
     pub merchant_transaction_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub transaction_meta_data: Option<BluesnapMetadata>,
-    #[serde(skip)]
-    pub _phantom: std::marker::PhantomData<T>,
 }
 
 // Capture request structure based on BlueSnap tech spec
@@ -130,10 +127,6 @@ pub struct BluesnapVoidRequest {
     pub transaction_id: String,
 }
 
-// PSync request structure - empty for GET endpoint
-#[derive(Debug, Serialize, Default)]
-pub struct BluesnapSyncRequest {}
-
 // Refund request structure - supports partial refunds via optional amount
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -143,10 +136,6 @@ pub struct BluesnapRefundRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
 }
-
-// Refund sync request - empty for GET endpoint
-#[derive(Debug, Serialize, Default)]
-pub struct BluesnapRefundSyncRequest {}
 
 // ===== 3DS AUTHENTICATION STRUCTURES =====
 

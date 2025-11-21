@@ -39,8 +39,7 @@ use serde::Serialize;
 use transformers::{
     self as bluesnap, BluesnapAuthorizeResponse, BluesnapCaptureRequest, BluesnapCaptureResponse,
     BluesnapPSyncResponse, BluesnapPaymentsRequest, BluesnapRefundRequest, BluesnapRefundResponse,
-    BluesnapRefundSyncRequest, BluesnapRefundSyncResponse, BluesnapSyncRequest,
-    BluesnapVoidRequest, BluesnapVoidResponse,
+    BluesnapRefundSyncResponse, BluesnapVoidRequest, BluesnapVoidResponse,
 };
 
 use super::macros;
@@ -49,6 +48,8 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
+
+macros::create_amount_converter_wrapper!(connector_name: Bluesnap, amount_type: StringMajorUnit);
 
 // ===== CONNECTOR SERVICE TRAIT IMPLEMENTATIONS =====
 // Main service trait - aggregates all other traits
@@ -168,7 +169,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> CustomResult<bool, errors::ConnectorError> {
         let connector_webhook_secret = connector_webhook_secret
-            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Connector webhook secret not configured")?;
 
         let signature =
             self.get_webhook_source_verification_signature(&request, &connector_webhook_secret)?;
@@ -178,7 +180,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         use common_utils::crypto::{HmacSha256, SignMessage};
         let expected_signature = HmacSha256
             .sign_message(&connector_webhook_secret.secret, &message)
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Failed to sign webhook message with HMAC-SHA256")?;
 
         Ok(expected_signature.eq(&signature))
     }
@@ -343,7 +346,7 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: Authorize,
-            request_body: BluesnapPaymentsRequest<T>,
+            request_body: BluesnapPaymentsRequest,
             response_body: BluesnapAuthorizeResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
@@ -355,7 +358,6 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PSync,
-            request_body: BluesnapSyncRequest,
             response_body: BluesnapPSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
@@ -367,7 +369,6 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: RSync,
-            request_body: BluesnapRefundSyncRequest,
             response_body: BluesnapRefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ),
@@ -415,7 +416,7 @@ macros::create_all_prerequisites!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Bluesnap,
-    curl_request: Json(BluesnapPaymentsRequest<T>),
+    curl_request: Json(BluesnapPaymentsRequest),
     curl_response: BluesnapAuthorizeResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
@@ -444,7 +445,6 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Bluesnap,
-    curl_request: Json(BluesnapSyncRequest),
     curl_response: BluesnapPSyncResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
@@ -540,7 +540,6 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Bluesnap,
-    curl_request: Json(BluesnapRefundSyncRequest),
     curl_response: BluesnapRefundSyncResponse,
     flow_name: RSync,
     resource_common_data: RefundFlowData,
