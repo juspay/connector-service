@@ -502,6 +502,7 @@ enum Connector {
   AUTHIPAY = 97;
   SILVERFLOW = 98;
   CELERO = 99;
+  TRUSTPAYMENTS = 100;
 }
 
 // Payment method types.

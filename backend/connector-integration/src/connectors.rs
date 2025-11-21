@@ -121,3 +121,6 @@ pub use self::stax::Stax;
 
 pub mod hipay;
 pub use self::hipay::Hipay;
+
+pub mod trustpayments;
+pub use self::trustpayments::Trustpayments;
