@@ -128,6 +128,7 @@ pub struct Connectors {
     pub celero: ConnectorParams,
     pub paypal: ConnectorParams,
     pub stax: ConnectorParams,
+    pub hipay: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -139,6 +140,8 @@ pub struct ConnectorParams {
     pub dispute_base_url: Option<String>,
     #[serde(default)]
     pub secondary_base_url: Option<String>,
+    #[serde(default)]
+    pub third_base_url: Option<String>,
 }
 
 impl ConnectorParams {
@@ -147,6 +150,7 @@ impl ConnectorParams {
             base_url,
             dispute_base_url,
             secondary_base_url: None,
+            third_base_url: None,
         }
     }
 }
