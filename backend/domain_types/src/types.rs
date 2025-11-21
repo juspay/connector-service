@@ -6341,6 +6341,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreatePaymentMethodT
                 })?,
             )?,
             browser_info: None,        // browser_info not available in this proto
+            capture_method: None,      // capture_method not available in this proto
             customer_acceptance: None, // customer_acceptance not available in this proto
             setup_future_usage: None,  // setup_future_usage not available in this proto
             mandate_id: None,
