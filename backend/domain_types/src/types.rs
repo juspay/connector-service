@@ -123,6 +123,7 @@ pub struct Connectors {
     pub payload: ConnectorParams,
     pub fiservemea: ConnectorParams,
     pub datatrans: ConnectorParams,
+    pub bluesnap: ConnectorParams,
     pub authipay: ConnectorParams,
     pub silverflow: ConnectorParams,
     pub celero: ConnectorParams,
