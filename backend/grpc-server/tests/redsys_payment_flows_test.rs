@@ -360,7 +360,6 @@ async fn test_health() {
             .await
             .expect("Health check request failed");
 
-        println!("Health check response: {:?}", response);
         assert_eq!(response.into_inner().status, 1); // SERVING = 1
     });
 }
@@ -380,11 +379,9 @@ async fn test_authenticate_flow() {
             .expect("Authenticate request failed");
 
         let auth_response = response.into_inner();
-        println!("Authenticate response: {:?}", auth_response);
 
         // Extract threeDSServerTransID from connector metadata
         let three_ds_server_trans_id = extract_three_ds_server_trans_id(&auth_response);
-        println!("3DS Server Transaction ID: {:?}", three_ds_server_trans_id);
 
         // Verify response has authentication pending status
         assert_eq!(
@@ -424,11 +421,9 @@ async fn test_post_authenticate_frictionless_flow() {
             .expect("PostAuthenticate request failed");
 
         let post_auth_response = response.into_inner();
-        println!("PostAuthenticate response: {:?}", post_auth_response);
 
         // For frictionless flow, payment should be charged directly
         let status = PaymentStatus::try_from(post_auth_response.status).unwrap();
-        println!("Payment status: {:?}", status);
 
         // Status could be Charged (success) or AuthenticationPending (if challenge required)
         assert!(
@@ -446,7 +441,6 @@ async fn test_post_authenticate_frictionless_flow() {
                     IdType::Id(id) => Some(id),
                     _ => None,
                 });
-            println!("Transaction ID: {:?}", transaction_id);
         }
     });
 }
@@ -466,15 +460,12 @@ async fn test_payment_authorization_manual_capture() {
             .expect("Authorize request failed");
 
         let authorize_response = response.into_inner();
-        println!("Authorize response: {:?}", authorize_response);
 
         // Extract transaction ID
         let transaction_id = extract_transaction_id(&authorize_response);
-        println!("Transaction ID: {}", transaction_id);
 
         // Verify payment is in authorized state
         let status = PaymentStatus::try_from(authorize_response.status).unwrap();
-        println!("Payment status: {:?}", status);
 
         // Could be Authorized, AuthenticationPending, or Charged
         assert!(
@@ -495,11 +486,10 @@ async fn test_payment_authorization_manual_capture() {
                 .expect("Capture request failed");
 
             let capture_response = response.into_inner();
-            println!("Capture response: {:?}", capture_response);
 
             // Verify payment is now charged
             let capture_status = PaymentStatus::try_from(capture_response.status).unwrap();
-            println!("Capture status: {:?}", capture_status);
+
             assert_eq!(capture_status, PaymentStatus::Charged);
         }
     });
@@ -534,11 +524,9 @@ async fn test_payment_sync() {
             .expect("Payment sync request failed");
 
         let sync_response = response.into_inner();
-        println!("Payment sync response: {:?}", sync_response);
 
         // Verify sync succeeded
         let status = PaymentStatus::try_from(sync_response.status).unwrap();
-        println!("Sync status: {:?}", status);
     });
 }
 
@@ -560,8 +548,6 @@ async fn test_refund() {
         let transaction_id = extract_transaction_id(&authorize_response);
         let status = PaymentStatus::try_from(authorize_response.status).unwrap();
 
-        println!("Payment created with status: {:?}", status);
-
         // Only attempt refund if payment is charged
         if status == PaymentStatus::Charged {
             // Create refund request
@@ -573,10 +559,8 @@ async fn test_refund() {
             let response = client.refund(request).await.expect("Refund request failed");
 
             let refund_response = response.into_inner();
-            println!("Refund response: {:?}", refund_response);
 
             let refund_status = RefundStatus::try_from(refund_response.status).unwrap();
-            println!("Refund status: {:?}", refund_status);
 
             // Verify refund succeeded or is pending
             assert!(
@@ -584,7 +568,6 @@ async fn test_refund() {
                     || refund_status == RefundStatus::RefundPending
             );
         } else {
-            println!("Skipping refund test - payment not in charged state");
         }
     });
 }
@@ -631,12 +614,9 @@ async fn test_refund_sync() {
                     .expect("Refund sync request failed");
 
                 let sync_response = response.into_inner();
-                println!("Refund sync response: {:?}", sync_response);
 
                 let refund_status = RefundStatus::try_from(sync_response.status).unwrap();
-                println!("Refund sync status: {:?}", refund_status);
             } else {
-                println!("Skipping refund sync test - payment not in charged state");
             }
         });
     });
@@ -660,8 +640,6 @@ async fn test_payment_void() {
         let transaction_id = extract_transaction_id(&authorize_response);
         let status = PaymentStatus::try_from(authorize_response.status).unwrap();
 
-        println!("Payment created with status: {:?}", status);
-
         // Only attempt void if payment is in authorized state
         if status == PaymentStatus::Authorized {
             // Create void request
@@ -673,15 +651,12 @@ async fn test_payment_void() {
             let response = client.void(request).await.expect("Void request failed");
 
             let void_response = response.into_inner();
-            println!("Void response: {:?}", void_response);
 
             let void_status = PaymentStatus::try_from(void_response.status).unwrap();
-            println!("Void status: {:?}", void_status);
 
             // Verify void succeeded
             assert_eq!(void_status, PaymentStatus::Voided);
         } else {
-            println!("Skipping void test - payment not in authorized state");
         }
     });
 }
