@@ -136,13 +136,10 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Celero => Ok(Self::Celero),
             grpc_api_types::payments::Connector::Paypal => Ok(Self::Paypal),
             grpc_api_types::payments::Connector::Stax => Ok(Self::Stax),
-<<<<<<< HEAD
             grpc_api_types::payments::Connector::Hipay => Ok(Self::Hipay),
             grpc_api_types::payments::Connector::Trustpayments => Ok(Self::Trustpayments),
             grpc_api_types::payments::Connector::Globalpay => Ok(Self::Globalpay),
-=======
             grpc_api_types::payments::Connector::Redsys => Ok(Self::Redsys),
->>>>>>> 0e50a7aa0525 (redsys init)
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),

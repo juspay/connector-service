@@ -1815,3 +1815,10 @@ pub enum DynamicContentType {
     FormUrlEncoded,
     FormData,
 }
+
+/// Padding schemes used for cryptographic operations
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CryptoPadding {
+    PKCS7,
+    ZeroPadding,
+}

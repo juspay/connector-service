@@ -39,9 +39,9 @@ use requests::{
     RedsysRefundRequest, RedsysVoidRequest, RedysCaptureRequest,
 };
 use responses::{
-    RedsysAuthenticateResponse, RedsysAuthorizeResponse, RedsysPostAuthenticateResponse,
-    RedsysRSyncResponse, RedsysRefundResponse, RedsysVoidResponse, RedysCaptureResponse,
-    RedysPSyncResponse, RedsysErrorResponse,
+    RedsysAuthenticateResponse, RedsysAuthorizeResponse, RedsysErrorResponse,
+    RedsysPostAuthenticateResponse, RedsysRSyncResponse, RedsysRefundResponse, RedsysVoidResponse,
+    RedysCaptureResponse, RedysPSyncResponse,
 };
 
 use super::macros;
