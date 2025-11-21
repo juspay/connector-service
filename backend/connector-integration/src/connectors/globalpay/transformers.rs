@@ -41,8 +41,6 @@ pub type GlobalpayRSyncResponse = GlobalpayRefundResponse;
 // ===== CONSTANTS =====
 
 mod constants {
-    /// OAuth grant type for access token requests
-    pub(super) const GRANT_TYPE: &str = "client_credentials";
 
     /// Entry mode for e-commerce transactions
     pub(super) const ENTRY_MODE_ECOM: &str = "ECOM";
@@ -169,40 +167,6 @@ pub struct GlobalpayAccessTokenRequest {
     pub grant_type: String,
 }
 
-impl TryFrom<&ConnectorAuthType> for GlobalpayAccessTokenRequest {
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        if let ConnectorAuthType::BodyKey { key1, api_key } = auth_type {
-            use sha2::{Digest, Sha512};
-
-            // Generate random alphanumeric nonce (matching Hyperswitch implementation)
-            let nonce =
-                rand::distributions::Alphanumeric.sample_string(&mut rand::thread_rng(), 12);
-
-            // Create secret: SHA512(nonce + app_key)
-            let secret_input = format!("{}{}", nonce, api_key.peek());
-
-            // Generate SHA-512 hash
-            let mut hasher = Sha512::new();
-            hasher.update(secret_input.as_bytes());
-            let result = hasher.finalize();
-            let secret_hex = hex::encode(result);
-
-            Ok(Self {
-                app_id: key1.clone(),
-                nonce: Secret::new(nonce),
-                secret: Secret::new(secret_hex),
-                grant_type: constants::GRANT_TYPE.to_string(),
-            })
-        } else {
-            Err(error_stack::report!(
-                errors::ConnectorError::FailedToObtainAuthType
-            ))
-        }
-    }
-}
-
 impl
     TryFrom<
         &RouterDataV2<
@@ -223,7 +187,33 @@ impl
             AccessTokenResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        Self::try_from(&item.connector_auth_type)
+        if let ConnectorAuthType::BodyKey { key1, api_key } = &item.connector_auth_type {
+            use sha2::{Digest, Sha512};
+
+            // Generate random alphanumeric nonce (matching Hyperswitch implementation)
+            let nonce =
+                rand::distributions::Alphanumeric.sample_string(&mut rand::thread_rng(), 12);
+
+            // Create secret: SHA512(nonce + app_key)
+            let secret_input = format!("{}{}", nonce, api_key.peek());
+
+            // Generate SHA-512 hash
+            let mut hasher = Sha512::new();
+            hasher.update(secret_input.as_bytes());
+            let result = hasher.finalize();
+            let secret_hex = hex::encode(result);
+
+            Ok(Self {
+                app_id: key1.clone(),
+                nonce: Secret::new(nonce),
+                secret: Secret::new(secret_hex),
+                grant_type: item.request.grant_type.clone(),
+            })
+        } else {
+            Err(error_stack::report!(
+                errors::ConnectorError::FailedToObtainAuthType
+            ))
+        }
     }
 }
 
