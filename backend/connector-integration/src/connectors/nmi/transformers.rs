@@ -25,6 +25,7 @@ use serde_json;
 #[derive(Debug, Clone)]
 pub struct NmiAuthType {
     pub api_key: Secret<String>,
+    pub public_key: Option<Secret<String>>,
 }
 
 impl TryFrom<&ConnectorAuthType> for NmiAuthType {
@@ -32,8 +33,13 @@ impl TryFrom<&ConnectorAuthType> for NmiAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::HeaderKey { api_key, .. } => Ok(Self {
+            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
                 api_key: api_key.to_owned(),
+                public_key: None,
+            }),
+            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
+                api_key: api_key.to_owned(),
+                public_key: Some(key1.to_owned()),
             }),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType
