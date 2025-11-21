@@ -1,30 +1,24 @@
+use super::ForteRouterData;
 use common_enums::enums;
-use common_utils::{
-    pii,
-    types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
-};
+use common_utils::types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector};
 use domain_types::{
-    connector_flow::{Authorize, Refund, Void, Capture},
+    connector_flow::{Authorize, Capture, Refund, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors::{self, ConnectorError},
-    payment_method_data::{
-        PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-    },
-    router_data::{ConnectorAuthType},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
     utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Secret, PeekInterface};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-use super::ForteRouterData;
 
-use crate::{utils as OtherUtils, types::ResponseRouterData};
+use crate::types::ResponseRouterData;
 
 type HsInterfacesConnectorError = ConnectorError;
 
@@ -47,15 +41,50 @@ impl<T> From<(FloatMajorUnit, T)> for ForteRouterData1<T> {
     }
 }
 
-impl TryFrom<&Option<pii::SecretSerdeValue>> for ForteMeta {
+// impl TryFrom<&Option<pii::SecretSerdeValue>> for ForteMeta {
+//     type Error = error_stack::Report<errors::ConnectorError>;
+//     fn try_from(meta_data: &Option<pii::SecretSerdeValue>) -> Result<Self, Self::Error> {
+//         let metadata = OtherUtils::to_connector_meta_from_secret::<Self>(meta_data.clone())
+//             .change_context(errors::ConnectorError::InvalidConnectorConfig {
+//                 config: "metadata",
+//             })?;
+//         Ok(metadata)
+//     }
+// }
+
+impl TryFrom<&Option<serde_json::Value>> for ForteMeta {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(meta_data: &Option<pii::SecretSerdeValue>) -> Result<Self, Self::Error> {
-        let metadata = OtherUtils::to_connector_meta_from_secret::<Self>(meta_data.clone())
-            .change_context(errors::ConnectorError::InvalidConnectorConfig {
-                config: "metadata",
-            })?;
-        Ok(metadata)
+    fn try_from(connector_metadata: &Option<serde_json::Value>) -> Result<Self, Self::Error> {
+        let config_data = to_connector_meta(connector_metadata.clone())?;
+        Ok(config_data)
     }
+}
+
+fn to_connector_meta(
+    connector_meta: Option<serde_json::Value>,
+) -> common_utils::CustomResult<ForteMeta, ConnectorError> {
+    let meta_obj = connector_meta.ok_or_else(|| ConnectorError::NoConnectorMetaData)?;
+
+    let connector_meta_str = meta_obj
+        .get("connector_meta_data")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| ConnectorError::InvalidDataFormat {
+            field_name: "connector_meta_data",
+        })?;
+
+    let inner_json = serde_json::from_str(connector_meta_str).map_err(|_| {
+        error_stack::report!(ConnectorError::InvalidDataFormat {
+            field_name: "connector_meta_data inner json"
+        })
+    })?;
+
+    let config_data: ForteMeta = serde_json::from_value(inner_json).map_err(|_| {
+        error_stack::report!(ConnectorError::InvalidDataFormat {
+            field_name: "ForteMeta"
+        })
+    })?;
+
+    Ok(config_data)
 }
 
 #[derive(Debug, Serialize)]
@@ -133,12 +162,28 @@ impl<
             + Serialize,
     >
     TryFrom<
-        ForteRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        ForteRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for FortePaymentsRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ForteRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        item: ForteRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         if item.router_data.request.currency != enums::Currency::USD {
             Err(errors::ConnectorError::NotImplemented(
@@ -158,7 +203,10 @@ impl<
                     .to_string();
                 let card_issuer = domain_types::utils::get_card_issuer(&raw_card)?;
                 let card_type = ForteCardType::try_from(card_issuer)?;
-                let address = item.router_data.resource_common_data.get_billing_address()?;
+                let address = item
+                    .router_data
+                    .resource_common_data
+                    .get_billing_address()?;
                 let card = Card {
                     card_type,
                     name_on_card: item
@@ -480,12 +528,20 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > TryFrom<ForteRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>, >
-    for ForteCaptureRequest
+    >
+    TryFrom<
+        ForteRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for ForteCaptureRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ForteRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,T>,
+        item: ForteRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let trn_id = item
             .router_data
@@ -494,9 +550,8 @@ impl<
             .clone()
             .get_connector_transaction_id()
             .change_context(HsInterfacesConnectorError::MissingConnectorTransactionID)?;
-        let connector_auth_id: ForteMeta = ForteMeta::try_from(
-            &item.router_data.resource_common_data.connector_meta_data,
-        )?;
+        let connector_auth_id: ForteMeta =
+            ForteMeta::try_from(&item.router_data.request.connector_metadata)?;
         let auth_code = connector_auth_id.auth_id;
         Ok(Self {
             action: CAPTURE.to_string(),
@@ -528,9 +583,7 @@ impl<F, T> TryFrom<ResponseRouterData<ForteCaptureResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<ForteCaptureResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<ForteCaptureResponse, Self>) -> Result<Self, Self::Error> {
         let transaction_id = &item.response.transaction_id;
         Ok(Self {
             resource_common_data: PaymentFlowData {
@@ -569,16 +622,28 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > TryFrom<ForteRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,>
-    for ForteCancelRequest
+    >
+    TryFrom<
+        ForteRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for ForteCancelRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ForteRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T,>,
+        item: ForteRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let action = VOID.to_string();
         let metadata: ForteMeta = ForteMeta::try_from(
-            &item.router_data.request.connector_metadata,
+            &item
+                .router_data
+                .request
+                .connector_metadata
+                .map(|metadata| metadata.expose()),
         )?;
         let authorization_code = metadata.auth_id;
         Ok(Self {
@@ -650,12 +715,17 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > TryFrom<ForteRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,>
-    for ForteRefundRequest
+    >
+    TryFrom<
+        ForteRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    > for ForteRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: ForteRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: ForteRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let trn_id = match item.router_data.request.connector_metadata.clone() {
             Some(metadata) => metadata.as_str().map(|id| id.to_string()),
@@ -663,13 +733,17 @@ impl<
         }
         .ok_or(HsInterfacesConnectorError::NoConnectorMetaData)?;
         let connector_auth_id: ForteMeta = ForteMeta::try_from(
-            &item.router_data.request.refund_connector_metadata,
+            &item
+                .router_data
+                .request
+                .refund_connector_metadata
+                .map(|metadata| metadata.expose()),
         )?;
         let auth_code = connector_auth_id.auth_id;
         let converter = FloatMajorUnitForConnector;
         let authorization_amount = converter
             .convert(
-                item.router_data.request.minor_refund_amount,  // not sure
+                item.router_data.request.minor_refund_amount, // not sure
                 item.router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
@@ -724,9 +798,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<RefundResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
             resource_common_data: RefundFlowData {
                 status: enums::RefundStatus::from(item.response.response.response_code.clone()),
@@ -752,9 +824,7 @@ impl<F> TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<RefundSyncResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<RefundSyncResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
             resource_common_data: RefundFlowData {
                 status: enums::RefundStatus::from(item.response.status.clone()),
