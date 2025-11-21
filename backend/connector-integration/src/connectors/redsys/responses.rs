@@ -1,204 +1,129 @@
-use hyperswitch_masking::Secret;
+// Redsys Response Structures
+//
+// This file contains all response parameter structures and enums for Redsys flows.
+
 use serde::{Deserialize, Serialize};
 
-use super::requests::ThreeDSInfo;
+// ============================================================================
+// RESPONSE PARAMETER STRUCTS
+// ============================================================================
 
-// ===== EMV 3DS RESPONSE STRUCTURES =====
-
-// PreAuthenticate response - CardConfiguration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct EmvThreeDsCardConfiguration {
-    pub three_d_s_info: ThreeDSInfo,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub protocol_version: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub three_d_s_server_trans_i_d: Option<String>,
-    #[serde(rename = "threeDSMethodURL", skip_serializing_if = "Option::is_none")]
-    pub three_ds_method_url: Option<String>,
+/// Authenticate response parameters
+#[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct RedsysAuthenticateResponseParams {
+    pub ds_order: String,
+    pub ds_merchant_code: String,
+    pub ds_terminal: String,
+    pub ds_transaction_type: String,
+    #[serde(rename = "Ds_Card_PSD2")]
+    pub ds_card_psd2: Option<String>, // "Y" or "N"
+    pub ds_excep_sca: Option<String>,
+    #[serde(rename = "Ds_EMV3DS")]
+    pub ds_emv3ds: Option<RedsysEmv3DSResponse>,
 }
 
-// Authorize response - ChallengeRequest (when challenge required)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// PostAuthenticate response parameters
+/// Also used for Authorize, Capture, Void responses
+#[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct RedsysPostAuthenticateResponseParams {
+    pub ds_amount: Option<String>,
+    pub ds_currency: Option<String>,
+    pub ds_order: String,
+    pub ds_merchant_code: String,
+    pub ds_terminal: String,
+    pub ds_transaction_type: String,
+    pub ds_response: String, // Response code (0000-0099 = success, 9999 = challenge needed)
+    pub ds_authorisation_code: Option<String>,
+    pub ds_date: Option<String>,
+    pub ds_hour: Option<String>,
+    pub ds_secure_payment: Option<String>, // "0", "1", "2"
+    pub ds_card_number: Option<String>,    // Masked card number
+    #[serde(rename = "Ds_EMV3DS")]
+    pub ds_emv3ds: Option<RedsysEmv3DSResponse>,
+}
+
+/// Type aliases for different flow responses that use the same structure
+pub type RedsysAuthorizeResponseParams = RedsysPostAuthenticateResponseParams;
+pub type RedysCaptureResponseParams = RedsysPostAuthenticateResponseParams;
+pub type RedsysVoidResponseParams = RedsysPostAuthenticateResponseParams;
+pub type RedsysRefundResponseParams = RedsysPostAuthenticateResponseParams;
+pub type RedysPSyncResponseParams = RedsysPostAuthenticateResponseParams;
+pub type RedsysRSyncResponseParams = RedsysPostAuthenticateResponseParams;
+
+// ============================================================================
+// EMV 3DS RESPONSE DATA
+// ============================================================================
+
+/// EMV 3DS response data embedded in payment responses
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct EmvThreeDsChallengeRequest {
-    pub three_d_s_info: ThreeDSInfo,
+pub struct RedsysEmv3DSResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub protocol_version: Option<String>,
-    #[serde(rename = "acsURL", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "threeDSServerTransID")]
+    pub three_ds_server_trans_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub three_ds_info: Option<String>, // "CardConfiguration", "ChallengeRequest", etc.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "threeDSMethodURL")]
+    pub three_ds_method_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "acsURL")]
     pub acs_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub creq: Option<String>,
+    pub creq: Option<String>, // Challenge request
 }
 
-// ===== MERCHANT PARAMETERS RESPONSE =====
+// ============================================================================
+// MAIN RESPONSE WRAPPER
+// ============================================================================
 
-// PreAuthenticate response parameters
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RedsysPreAuthResponseParams {
-    #[serde(rename = "Ds_Order")]
-    pub ds_order: String,
-    #[serde(rename = "Ds_MerchantCode")]
-    pub ds_merchant_code: String,
-    #[serde(rename = "Ds_Terminal")]
-    pub ds_terminal: String,
-    #[serde(rename = "Ds_TransactionType")]
-    pub ds_transaction_type: String,
-    #[serde(rename = "Ds_Card_PSD2", skip_serializing_if = "Option::is_none")]
-    pub ds_card_psd2: Option<String>,
-    #[serde(rename = "Ds_Excep_SCA", skip_serializing_if = "Option::is_none")]
-    pub ds_excep_sca: Option<String>,
-    #[serde(rename = "Ds_EMV3DS", skip_serializing_if = "Option::is_none")]
-    pub ds_emv3ds: Option<EmvThreeDsCardConfiguration>,
-}
-
-// Authorize/PostAuthenticate response parameters (payment result)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RedsysPaymentResponseParams {
-    #[serde(rename = "Ds_Date", skip_serializing_if = "Option::is_none")]
-    pub ds_date: Option<String>,
-    #[serde(rename = "Ds_Hour", skip_serializing_if = "Option::is_none")]
-    pub ds_hour: Option<String>,
-    #[serde(rename = "Ds_Amount")]
-    pub ds_amount: String,
-    #[serde(rename = "Ds_Currency")]
-    pub ds_currency: String,
-    #[serde(rename = "Ds_Order")]
-    pub ds_order: String,
-    #[serde(rename = "Ds_MerchantCode")]
-    pub ds_merchant_code: String,
-    #[serde(rename = "Ds_Terminal")]
-    pub ds_terminal: String,
-    #[serde(rename = "Ds_Response")]
-    pub ds_response: String,
-    #[serde(
-        rename = "Ds_AuthorisationCode",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub ds_authorisation_code: Option<String>,
-    #[serde(rename = "Ds_TransactionType")]
-    pub ds_transaction_type: String,
-    #[serde(rename = "Ds_SecurePayment", skip_serializing_if = "Option::is_none")]
-    pub ds_secure_payment: Option<String>,
-    #[serde(rename = "Ds_Card_Number", skip_serializing_if = "Option::is_none")]
-    pub ds_card_number: Option<Secret<String>>,
-    #[serde(rename = "Ds_Card_Type", skip_serializing_if = "Option::is_none")]
-    pub ds_card_type: Option<String>,
-    #[serde(rename = "Ds_Card_Brand", skip_serializing_if = "Option::is_none")]
-    pub ds_card_brand: Option<String>,
-    #[serde(rename = "Ds_EMV3DS", skip_serializing_if = "Option::is_none")]
-    pub ds_emv3ds: Option<EmvThreeDsChallengeRequest>,
-}
-
-// Capture/Void/Refund response parameters
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RedsysOperationResponseParams {
-    #[serde(rename = "Ds_Date", skip_serializing_if = "Option::is_none")]
-    pub ds_date: Option<String>,
-    #[serde(rename = "Ds_Hour", skip_serializing_if = "Option::is_none")]
-    pub ds_hour: Option<String>,
-    #[serde(rename = "Ds_Amount")]
-    pub ds_amount: String,
-    #[serde(rename = "Ds_Currency")]
-    pub ds_currency: String,
-    #[serde(rename = "Ds_Order")]
-    pub ds_order: String,
-    #[serde(rename = "Ds_MerchantCode")]
-    pub ds_merchant_code: String,
-    #[serde(rename = "Ds_Terminal")]
-    pub ds_terminal: String,
-    #[serde(rename = "Ds_Response")]
-    pub ds_response: String,
-    #[serde(
-        rename = "Ds_AuthorisationCode",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub ds_authorisation_code: Option<String>,
-    #[serde(rename = "Ds_TransactionType")]
-    pub ds_transaction_type: String,
-}
-
-// ===== RESPONSE WRAPPER =====
-
-// Common wrapper for all REST responses
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Main response wrapper - all Redsys REST responses follow this structure
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
 pub struct RedsysTransactionResponse {
-    #[serde(rename = "Ds_SignatureVersion")]
     pub ds_signature_version: String,
-    #[serde(rename = "Ds_MerchantParameters")]
-    pub ds_merchant_parameters: Secret<String>,
-    #[serde(rename = "Ds_Signature")]
-    pub ds_signature: Secret<String>,
+    pub ds_merchant_parameters: String, // Base64-encoded JSON
+    pub ds_signature: String,           // Base64-encoded HMAC-SHA256
 }
 
-// ===== ERROR RESPONSE =====
+// ============================================================================
+// ERROR RESPONSE
+// ============================================================================
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RedsysErrorParams {
-    #[serde(rename = "Ds_Order", skip_serializing_if = "Option::is_none")]
-    pub ds_order: Option<String>,
-    #[serde(rename = "Ds_MerchantCode", skip_serializing_if = "Option::is_none")]
-    pub ds_merchant_code: Option<String>,
-    #[serde(rename = "Ds_Terminal", skip_serializing_if = "Option::is_none")]
-    pub ds_terminal: Option<String>,
-    #[serde(rename = "Ds_Response")]
-    pub ds_response: String,
-    #[serde(rename = "Ds_ErrorCode", skip_serializing_if = "Option::is_none")]
-    pub ds_error_code: Option<String>,
-    #[serde(rename = "Ds_TransactionType", skip_serializing_if = "Option::is_none")]
-    pub ds_transaction_type: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Error response structure
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct RedsysErrorResponse {
-    #[serde(rename = "Ds_SignatureVersion")]
-    pub ds_signature_version: String,
-    #[serde(rename = "Ds_MerchantParameters")]
-    pub ds_merchant_parameters: Secret<String>,
-    #[serde(rename = "Ds_Signature")]
-    pub ds_signature: Secret<String>,
+    #[serde(rename = "errorCode")]
+    pub error_code: String,
 }
 
-// ===== SOAP RESPONSE STRUCTURES =====
+// ============================================================================
+// UNIFIED RESPONSE ENUM
+// ============================================================================
 
-// Placeholder for future SOAP implementation
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RedsysSoapOperationData {
-    #[serde(rename = "Ds_Amount")]
-    pub ds_amount: String,
-    #[serde(rename = "Ds_Currency")]
-    pub ds_currency: String,
-    #[serde(rename = "Ds_Order")]
-    pub ds_order: String,
-    #[serde(rename = "Ds_Signature")]
-    pub ds_signature: String,
-    #[serde(rename = "Ds_MerchantCode")]
-    pub ds_merchant_code: String,
-    #[serde(rename = "Ds_Terminal")]
-    pub ds_terminal: String,
-    #[serde(rename = "Ds_Response")]
-    pub ds_response: String,
-    #[serde(
-        rename = "Ds_AuthorisationCode",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub ds_authorisation_code: Option<String>,
-    #[serde(rename = "Ds_TransactionType")]
-    pub ds_transaction_type: String,
-    #[serde(rename = "Ds_SecurePayment", skip_serializing_if = "Option::is_none")]
-    pub ds_secure_payment: Option<String>,
-    #[serde(rename = "Ds_Language", skip_serializing_if = "Option::is_none")]
-    pub ds_language: Option<String>,
-    #[serde(rename = "Ds_Card_Number", skip_serializing_if = "Option::is_none")]
-    pub ds_card_number: Option<Secret<String>>,
+/// Response enum to handle different response types
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(untagged)]
+pub enum RedsysResponse {
+    Success(RedsysTransactionResponse),
+    Error(RedsysErrorResponse),
 }
 
-// Type aliases for different flow responses
-pub type RedsysPreAuthenticateResponse = RedsysTransactionResponse;
-pub type RedsysAuthorizeResponse = RedsysTransactionResponse;
-pub type RedsysPostAuthenticateResponse = RedsysTransactionResponse;
-pub type RedsysPSyncResponse = RedsysTransactionResponse;
-pub type RedsysCaptureResponse = RedsysTransactionResponse;
-pub type RedsysVoidResponse = RedsysTransactionResponse;
-pub type RedsysRefundResponse = RedsysTransactionResponse;
-pub type RedsysRSyncResponse = RedsysTransactionResponse;
+// ============================================================================
+// TYPE ALIASES FOR MACRO SUPPORT
+// ============================================================================
+// The create_all_prerequisites! macro requires unique type names for each flow
+
+pub type RedsysAuthenticateResponse = RedsysResponse;
+pub type RedsysPostAuthenticateResponse = RedsysResponse;
+pub type RedsysAuthorizeResponse = RedsysResponse;
+pub type RedysPSyncResponse = RedsysResponse;
+pub type RedysCaptureResponse = RedsysResponse;
+pub type RedsysVoidResponse = RedsysResponse;
+pub type RedsysRefundResponse = RedsysResponse;
+pub type RedsysRSyncResponse = RedsysResponse;
