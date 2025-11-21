@@ -131,6 +131,7 @@ pub struct Connectors {
     pub hipay: ConnectorParams,
     pub trustpayments: ConnectorParams,
     pub globalpay: ConnectorParams,
+    pub getnet: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]

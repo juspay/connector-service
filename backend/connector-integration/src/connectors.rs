@@ -127,3 +127,6 @@ pub use self::trustpayments::Trustpayments;
 
 pub mod globalpay;
 pub use self::globalpay::Globalpay;
+
+pub mod getnet;
+pub use self::getnet::Getnet;
