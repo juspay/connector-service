@@ -1005,6 +1005,7 @@ dependencies = [
  "base64 0.21.7",
  "bytes",
  "cbc",
+ "des",
  "domain_types",
  "encoding_rs",
  "error-stack 0.4.1",
@@ -1274,6 +1275,15 @@ dependencies = [
  "quote",
  "syn 2.0.106",
  "unicode-xid",
+]
+
+[[package]]
+name = "des"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ffdd80ce8ce993de27e9f063a444a4d53ce8e8db4c1f00cc03af5ad5a9867a1e"
+dependencies = [
+ "cipher",
 ]
 
 [[package]]
