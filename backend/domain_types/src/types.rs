@@ -130,6 +130,7 @@ pub struct Connectors {
     pub stax: ConnectorParams,
     pub hipay: ConnectorParams,
     pub trustpayments: ConnectorParams,
+    pub globalpay: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
@@ -3806,6 +3807,7 @@ impl
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
+
         Ok(RefundFlowData {
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
@@ -3877,6 +3879,7 @@ impl
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
+
         Ok(RefundFlowData {
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,

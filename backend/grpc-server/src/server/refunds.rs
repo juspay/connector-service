@@ -1,16 +1,16 @@
+use std::fmt::Debug;
+
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
-    connector_flow::{FlowName, RSync},
+    connector_flow::{FlowName as DomainFlowName, RSync},
     connector_types::{RefundFlowData, RefundSyncData, RefundsResponseData},
     errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::DefaultPCIHolder,
     router_data::ConnectorAuthType,
-    types::generate_refund_sync_response,
     utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
-use external_services;
 use grpc_api_types::payments::{
     refund_service_server::RefundService, RefundResponse, RefundServiceGetRequest,
     RefundServiceTransformRequest, RefundServiceTransformResponse, WebhookEventType,
@@ -46,7 +46,7 @@ impl RefundOperationsInternal for Refunds {
         response_data_type: RefundsResponseData,
         request_data_constructor: RefundSyncData::foreign_try_from,
         common_flow_data_constructor: RefundFlowData::foreign_try_from,
-        generate_response_fn: generate_refund_sync_response,
+        generate_response_fn: domain_types::types::generate_refund_sync_response,
         all_keys_required: None
     );
 }
@@ -58,7 +58,7 @@ impl RefundService for Refunds {
         fields(
             name = common_utils::consts::NAME,
             service_name = tracing::field::Empty,
-            service_method = FlowName::Rsync.to_string(),
+            service_method = DomainFlowName::Rsync.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -69,7 +69,7 @@ impl RefundService for Refunds {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::Rsync.to_string(),
+            flow = DomainFlowName::Rsync.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -84,13 +84,13 @@ impl RefundService for Refunds {
             .cloned()
             .unwrap_or_else(|| "RefundService".to_string());
         let config = utils::get_config_from_request(&request)?;
-        utils::grpc_logging_wrapper(
+        Box::pin(utils::grpc_logging_wrapper(
             request,
             &service_name,
             config.clone(),
             common_utils::events::FlowName::Rsync,
             |request_data| async move { self.internal_get(request_data).await },
-        )
+        ))
         .await
     }
 
@@ -99,7 +99,7 @@ impl RefundService for Refunds {
         fields(
             name = common_utils::consts::NAME,
             service_name = tracing::field::Empty,
-            service_method = FlowName::IncomingWebhook.to_string(),
+            service_method = DomainFlowName::IncomingWebhook.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -110,7 +110,7 @@ impl RefundService for Refunds {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::IncomingWebhook.to_string(),
+            flow = DomainFlowName::IncomingWebhook.to_string(),
         )
     )]
     async fn transform(
