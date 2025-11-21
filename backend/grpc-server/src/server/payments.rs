@@ -3085,14 +3085,9 @@ impl PaymentService for Payments {
 
                     // Create test context if test mode is enabled
                     let test_context =
-                        config
-                            .test
-                            .create_test_context(&request_id)
-                            .map_err(|e| {
-                                tonic::Status::internal(format!(
-                                    "Test mode configuration error: {e}"
-                                ))
-                            })?;
+                        config.test.create_test_context(&request_id).map_err(|e| {
+                            tonic::Status::internal(format!("Test mode configuration error: {e}"))
+                        })?;
 
                     let event_params = EventProcessingParams {
                         connector_name: &connector.to_string(),
@@ -3603,20 +3598,13 @@ impl PaymentService for Payments {
                     };
 
                     // Get API tag for PaymentMethodToken flow
-                    let api_tag = config
-                        .api_tags
-                        .get_tag(FlowName::PaymentMethodToken, None);
+                    let api_tag = config.api_tags.get_tag(FlowName::PaymentMethodToken, None);
 
                     // Create test context if test mode is enabled
                     let test_context =
-                        config
-                            .test
-                            .create_test_context(&request_id)
-                            .map_err(|e| {
-                                tonic::Status::internal(format!(
-                                    "Test mode configuration error: {e}"
-                                ))
-                            })?;
+                        config.test.create_test_context(&request_id).map_err(|e| {
+                            tonic::Status::internal(format!("Test mode configuration error: {e}"))
+                        })?;
 
                     // Execute connector processing
                     let event_params = EventProcessingParams {
@@ -3769,14 +3757,9 @@ impl PaymentService for Payments {
 
                     // Create test context if test mode is enabled
                     let test_context =
-                        config
-                            .test
-                            .create_test_context(&request_id)
-                            .map_err(|e| {
-                                tonic::Status::internal(format!(
-                                    "Test mode configuration error: {e}"
-                                ))
-                            })?;
+                        config.test.create_test_context(&request_id).map_err(|e| {
+                            tonic::Status::internal(format!("Test mode configuration error: {e}"))
+                        })?;
 
                     // Execute connector processing
                     let external_event_params = EventProcessingParams {
