@@ -52,6 +52,9 @@ service PaymentService {
   
   // Post-authentication step - used when authentication results need validation
   rpc PostAuthenticate(PaymentServicePostAuthenticateRequest) returns (PaymentServicePostAuthenticateResponse);
+ 
+  // Placeholder
+  rpc SdkSessionToken(PaymentServiceSdkSessionTokenRequest) returns (PaymentServiceSdkSessionTokenResponse);
 }
 
 // Service for refund-specific operations.

@@ -9,7 +9,7 @@ use domain_types::{
     connector_flow::{
         Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
         CreateSessionToken, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund,
-        RepeatPayment, SetupMandate, Void, VoidPC,
+        RepeatPayment, SdkSessionToken, SetupMandate, Void, VoidPC,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -18,9 +18,9 @@ use domain_types::{
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData,
+        PaymentsSessionData, PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData,
+        RefundsData, RefundsResponseData, RepeatPaymentData, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData,
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
@@ -28,9 +28,9 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types,
     types::{
-        generate_payment_capture_response, generate_payment_sync_response,
-        generate_payment_void_post_capture_response, generate_payment_void_response,
-        generate_refund_response, generate_repeat_payment_response,
+        generate_payment_capture_response, generate_payment_sdk_session_token_response,
+        generate_payment_sync_response, generate_payment_void_post_capture_response,
+        generate_payment_void_response, generate_refund_response, generate_repeat_payment_response,
         generate_setup_mandate_response,
     },
     utils::{ForeignFrom, ForeignTryFrom},
@@ -47,6 +47,7 @@ use grpc_api_types::payments::{
     PaymentServicePreAuthenticateResponse, PaymentServiceRefundRequest,
     PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
     PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
+    PaymentServiceSdkSessionTokenRequest, PaymentServiceSdkSessionTokenResponse,
     PaymentServiceTransformRequest, PaymentServiceTransformResponse,
     PaymentServiceVoidPostCaptureRequest, PaymentServiceVoidPostCaptureResponse,
     PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse,
@@ -147,6 +148,11 @@ trait PaymentOperationsInternal {
         &self,
         request: RequestData<PaymentServiceCaptureRequest>,
     ) -> Result<tonic::Response<PaymentServiceCaptureResponse>, tonic::Status>;
+
+    async fn internal_sdk_session_token(
+        &self,
+        request: RequestData<PaymentServiceSdkSessionTokenRequest>,
+    ) -> Result<tonic::Response<PaymentServiceSdkSessionTokenResponse>, tonic::Status>;
 
     async fn internal_pre_authenticate(
         &self,
@@ -1354,6 +1360,21 @@ impl PaymentOperationsInternal for Payments {
     );
 
     implement_connector_operation!(
+        fn_name: internal_sdk_session_token,
+        log_prefix: "SDK_SESSION_TOKEN",
+        request_type: PaymentServiceSdkSessionTokenRequest,
+        response_type: PaymentServiceSdkSessionTokenResponse,
+        flow_marker: SdkSessionToken,
+        resource_common_data_type: PaymentFlowData,
+        request_data_type: PaymentsSessionData,
+        response_data_type: PaymentsResponseData,
+        request_data_constructor: PaymentsSessionData::foreign_try_from,
+        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
+        generate_response_fn: generate_payment_sdk_session_token_response,
+        all_keys_required: None
+    );
+
+    implement_connector_operation!(
         fn_name: internal_pre_authenticate,
         log_prefix: "PRE_AUTHENTICATE",
         request_type: PaymentServicePreAuthenticateRequest,
@@ -2070,6 +2091,46 @@ impl PaymentService for Payments {
                 };
                 Ok(tonic::Response::new(response))
             },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "sdk_session_token",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = FlowName::SdkSessionToken.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::SdkSessionToken.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn sdk_session_token(
+        &self,
+        request: tonic::Request<PaymentServiceSdkSessionTokenRequest>,
+    ) -> Result<tonic::Response<PaymentServiceSdkSessionTokenResponse>, tonic::Status> {
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            FlowName::SdkSessionToken,
+            |request_data| async move { self.internal_sdk_session_token(request_data).await },
         )
         .await
     }

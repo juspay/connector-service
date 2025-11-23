@@ -1182,6 +1182,252 @@ message ConnectorResponseData {
 }
 
 // ============================================================================
+// SESSION TOKEN MESSAGES
+// ============================================================================
+
+message SessionToken {
+  oneof wallet_name {
+    GpaySessionTokenResponse google_pay = 1;
+    PaypalSessionTokenResponse paypal = 2;
+    ApplepaySessionTokenResponse apple_pay = 3;
+    NoSessionTokenReceived no_session_token_received = 4;
+  }
+}
+
+message NoSessionTokenReceived {
+
+}
+
+// -------------------------
+// Google Pay Session Token
+// -------------------------
+
+message GpaySessionTokenResponse {
+  oneof response {
+    GooglePayThirdPartySdk third_party_response = 1;
+    GooglePaySessionResponse google_pay_session = 2;
+  }
+}
+
+message GooglePayThirdPartySdk {
+  bool delayed_session_token = 1;
+  string connector = 2;
+  SdkNextAction sdk_next_action = 3;
+}
+
+message GooglePaySessionResponse {
+  GpayMerchantInfo merchant_info = 1;
+  bool shipping_address_required = 2;
+  bool email_required = 3;
+  GpayShippingAddressParameters shipping_address_parameters = 4;
+  repeated GpayAllowedPaymentMethods allowed_payment_methods = 5;
+  GpayTransactionInfo transaction_info = 6;
+  bool delayed_session_token = 7;
+  string connector = 8;
+  SdkNextAction sdk_next_action = 9;
+  optional SecretInfoToInitiateSdk secrets = 10;
+}
+
+message GpayMerchantInfo {
+  optional string merchant_id = 1;
+  string merchant_name = 2;
+}
+
+message GpayShippingAddressParameters {
+  bool phone_number_required = 1;
+}
+
+message GpayAllowedPaymentMethods {
+  string payment_method_type = 1;
+  GpayAllowedMethodsParameters parameters = 2;
+  GpayTokenizationSpecification tokenization_specification = 3;
+}
+
+message GpayAllowedMethodsParameters {
+  repeated string allowed_auth_methods = 1;
+  repeated string allowed_card_networks = 2;
+  optional bool billing_address_required = 3;
+  optional GpayBillingAddressParameters billing_address_parameters = 4;
+  optional bool assurance_details_required = 5;
+}
+
+message GpayBillingAddressParameters {
+  bool phone_number_required = 1;
+  GpayBillingAddressFormat format = 2;
+}
+
+enum GpayBillingAddressFormat {
+  BILLING_ADDRESS_FORMAT_UNSPECIFIED = 0;
+  FULL = 1;
+  MIN = 2;
+}
+
+message GpayTokenizationSpecification {
+  string token_specification_type = 1;
+  GpayTokenParameters parameters = 2;
+}
+
+message GpayTokenParameters {
+  optional string gateway = 1;
+  optional string gateway_merchant_id = 2;
+  optional string stripe_version = 3;
+  optional string stripe_publishable_key = 4;
+  optional string protocol_version = 5;
+  optional SecretString public_key = 6;
+}
+
+message GpayTransactionInfo {
+  CountryAlpha2 country_code = 1;
+  Currency currency_code = 2;
+  string total_price_status = 3;
+  string total_price = 4; // StringMajorUnit
+}
+
+// -------------------------
+// Apple Pay Session Token
+// -------------------------
+
+message ApplepaySessionTokenResponse {
+  optional ApplePaySessionResponse session_token_data = 1;
+  optional ApplePayPaymentRequest payment_request_data = 2;
+  string connector = 3;
+  bool delayed_session_token = 4;
+  SdkNextAction sdk_next_action = 5;
+  optional string connector_reference_id = 6;
+  optional string connector_sdk_public_key = 7;
+  optional string connector_merchant_id = 8;
+}
+
+message ApplePaySessionResponse {
+  ThirdPartySdkSessionResponse third_party_sdk = 1;
+}
+
+message ThirdPartySdkSessionResponse {
+  SecretInfoToInitiateSdk secrets = 1;
+}
+
+message NoThirdPartySdkSessionResponse {
+  uint64 epoch_timestamp = 1;
+  uint64 expires_at = 2;
+  string merchant_session_identifier = 3;
+  string nonce = 4;
+  string merchant_identifier = 5;
+  string domain_name = 6;
+  string display_name = 7;
+  string signature = 8;
+  string operational_analytics_identifier = 9;
+  uint32 retries = 10; // u8 in rust
+  string psp_id = 11;
+}
+
+message ApplePayPaymentRequest {
+  CountryAlpha2 country_code = 1;
+  Currency currency_code = 2;
+  AmountInfo total = 3;
+  repeated string merchant_capabilities = 4;
+  repeated string supported_networks = 5;
+  optional string merchant_identifier = 6;
+  optional ApplePayBillingContactFields required_billing_contact_fields = 7;
+  optional ApplePayShippingContactFields required_shipping_contact_fields = 8;
+  optional ApplePayRecurringPaymentRequest recurring_payment_request = 9;
+}
+
+message AmountInfo {
+  string label = 1;
+  optional string total_type = 2;
+  string amount = 3; // StringMajorUnit
+}
+
+message ApplePayBillingContactFields {
+  repeated ApplePayAddressParameters fields = 1;
+}
+
+message ApplePayShippingContactFields {
+  repeated ApplePayAddressParameters fields = 1;
+}
+
+enum ApplePayAddressParameters {
+  APPLE_PAY_ADDRESS_PARAMETERS_UNSPECIFIED = 0;
+  POSTAL_ADDRESS = 1;
+  PHONE = 2;
+  EMAIL = 3;
+}
+
+message ApplePayRecurringPaymentRequest {
+  string payment_description = 1;
+  ApplePayRegularBillingRequest regular_billing = 2;
+  optional string billing_agreement = 3;
+  string management_url = 4;
+}
+
+message ApplePayRegularBillingRequest {
+  string amount = 1; // StringMajorUnit
+  string label = 2;
+  ApplePayPaymentTiming payment_timing = 3;
+  optional int64 recurring_payment_start_date = 4;
+  optional int64 recurring_payment_end_date = 5;
+  optional RecurringPaymentIntervalUnit recurring_payment_interval_unit = 6;
+  optional int32 recurring_payment_interval_count = 7;
+}
+
+enum ApplePayPaymentTiming {
+  APPLE_PAY_PAYMENT_TIMING_UNSPECIFIED = 0;
+  IMMEDIATE = 1;
+  RECURRING = 2;
+}
+
+enum RecurringPaymentIntervalUnit {
+  RECURRING_PAYMENT_INTERVAL_UNIT_UNSPECIFIED = 0;
+  YEAR = 1;
+  MONTH = 2;
+  DAY = 3;
+  HOUR = 4;
+  MINUTE = 5;
+}
+
+// -------------------------
+// PayPal Session Token
+// -------------------------
+
+message PaypalSessionTokenResponse {
+  string connector = 1;
+  string session_token = 2;
+  SdkNextAction sdk_next_action = 3;
+  optional string client_token = 4;
+  optional PaypalTransactionInfo transaction_info = 5;
+}
+
+message PaypalTransactionInfo {
+  PaypalFlow flow = 1;
+  Currency currency_code = 2;
+  string total_price = 3; // StringMajorUnit
+}
+
+enum PaypalFlow {
+  PAYPAL_FLOW_UNSPECIFIED = 0;
+  Checkout = 1;
+}
+
+// -------------------------
+// Common Session Token Types
+// -------------------------
+
+message SdkNextAction {
+  NextActionCall next_action = 1;
+}
+
+enum NextActionCall {
+  NEXT_ACTION_CALL_UNSPECIFIED = 0;
+  POST_SESSION_TOKENS = 1;
+  CONFIRM = 2;
+}
+
+message SecretInfoToInitiateSdk {
+  SecretString display = 1;
+  optional SecretString payment = 2;
+}
+
+// ============================================================================
 // SERVICE-SPECIFIC MESSAGES
 // ============================================================================
 
@@ -1455,6 +1701,43 @@ message PaymentServiceVoidPostCaptureResponse {
   
   // Reference
   optional Identifier response_ref_id = 5; // Response reference ID for tracking
+}
+
+// Placeholder
+message PaymentServiceSdkSessionTokenRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+
+  // Amount Information
+  int64 amount = 2; // The amount for the payment in major currency units
+  Currency currency = 3; // The currency for the payment, in ISO 4217 three-letter code
+  int64 minor_amount = 4; // The minor amount for the payment (e.g., cents)
+  optional int64 order_tax_amount = 5; // Tax amount for the order
+  optional int64 shipping_cost = 6; // Cost of shipping for the order
+  
+  // Payment Method Type
+  optional PaymentMethodType payment_method_type = 7; // Indicates the sub type of payment method. Eg: 'google_pay' & 'apple_pay'
+
+  optional CountryAlpha2 country_alpha2_code = 8;
+
+  // Customer Information
+  optional SecretString email = 9; // Email address of the customer
+  optional SecretString customer_name = 10; // Name of the customer
+
+  // Account-Specific Configuration
+  map<string, string> merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+}
+
+// Placeholder
+message PaymentServiceSdkSessionTokenResponse {
+  SessionToken session_token = 1;
+  optional string error_code = 2; // Error code if the post-authentication failed
+  optional string error_message = 3; // Error message if the post-authentication failed
+  uint32 status_code = 4; // HTTP status code from the connector
+  // Raw Response
+  optional SecretString raw_connector_response = 5; // Raw response from the connector for debugging
+  // Raw Request
+  optional SecretString raw_connector_request = 6; // Raw request to the connector for debugging
 }
 
 // Request message for capturing a payment.

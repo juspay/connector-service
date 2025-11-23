@@ -4,6 +4,7 @@
 //! It ensures that request and response data remain consistent across connector interactions
 //! by comparing critical fields like amounts, currencies, and transaction identifiers.
 use common_utils::errors::IntegrityCheckError;
+use domain_types::router_request_types::SdkSessionTokenIntegrityObject;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 // Domain type imports
 use domain_types::connector_types::{
@@ -11,8 +12,8 @@ use domain_types::connector_types::{
     PaymentCreateOrderData, PaymentMethodTokenizationData, PaymentVoidData,
     PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
     PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-    PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData, SessionTokenRequestData,
-    SetupMandateRequestData, SubmitEvidenceData,
+    PaymentsSessionData, PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData,
+    SessionTokenRequestData, SetupMandateRequestData, SubmitEvidenceData,
 };
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
@@ -165,6 +166,7 @@ impl_check_integrity!(PaymentsAuthenticateData<S>);
 impl_check_integrity!(PaymentsPostAuthenticateData<S>);
 impl_check_integrity!(PaymentsPreAuthenticateData<S>);
 impl_check_integrity!(ConnectorCustomerData);
+impl_check_integrity!(PaymentsSessionData);
 
 // ========================================================================
 // GET INTEGRITY OBJECT IMPLEMENTATIONS
@@ -375,6 +377,16 @@ impl GetIntegrityObject<AccessTokenIntegrityObject> for AccessTokenRequestData {
         AccessTokenIntegrityObject {
             grant_type: self.grant_type.clone(),
         }
+    }
+}
+
+impl GetIntegrityObject<SdkSessionTokenIntegrityObject> for PaymentsSessionData {
+    fn get_response_integrity_object(&self) -> Option<SdkSessionTokenIntegrityObject> {
+        None // Sdk session token responses don't have integrity objects
+    }
+
+    fn get_request_integrity_object(&self) -> SdkSessionTokenIntegrityObject {
+        SdkSessionTokenIntegrityObject {}
     }
 }
 
@@ -864,6 +876,18 @@ impl FlowIntegrity for SessionTokenIntegrityObject {
         }
 
         check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for SdkSessionTokenIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        _req_integrity_object: Self,
+        _res_integrity_object: Self,
+        _connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        Ok(())
     }
 }
 
