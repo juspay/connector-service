@@ -681,6 +681,7 @@ pub async fn call_connector_api(
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
                     Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
             }
@@ -701,6 +702,7 @@ pub async fn call_connector_api(
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
                     Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
             }
@@ -721,6 +723,7 @@ pub async fn call_connector_api(
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
                     Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
             }
@@ -1052,7 +1055,10 @@ fn extract_raw_connector_request(connector_request: &Request) -> String {
                     serde_json::Value::String(request.get_inner_value().expose())
                 }
                 // For other content types, try to parse as JSON
-                _ => {
+                RequestContent::Json(_)
+                | RequestContent::FormUrlEncoded(_)
+                | RequestContent::FormData(_)
+                | RequestContent::Xml(_) => {
                     let exposed_value = request.get_inner_value().expose();
                     serde_json::from_str(&exposed_value).unwrap_or_else(|_| {
                         tracing::warn!("failed to parse body as JSON, treating as string in extract_raw_connector_request");

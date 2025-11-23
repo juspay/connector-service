@@ -203,37 +203,6 @@ pub struct BamboraapacCaptureRequest {
     pub password: Secret<String>,
 }
 
-impl BamboraapacCaptureRequest {
-    pub fn to_soap_xml(&self) -> String {
-        format!(
-            r#"
-            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-            xmlns:dts="http://www.ippayments.com.au/interface/api/dts">
-                <soapenv:Body>
-                    <dts:SubmitSingleCapture>
-                        <dts:trnXML>
-                            <![CDATA[
-                                <Capture>
-                                        <Receipt>{}</Receipt>
-                                        <Amount>{}</Amount>
-                                        <Security>
-                                                <UserName>{}</UserName>
-                                                <Password>{}</Password>
-                                        </Security>
-                                </Capture>
-                            ]]>
-                        </dts:trnXML>
-                    </dts:SubmitSingleCapture>
-                </soapenv:Body>
-            </soapenv:Envelope>
-        "#,
-            self.receipt,
-            self.amount.get_amount_as_i64(),
-            self.username.peek(),
-            self.password.peek()
-        )
-    }
-}
 
 // Capture Response Structure
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -280,40 +249,6 @@ pub struct BamboraapacRefundRequest {
     pub password: Secret<String>,
 }
 
-impl BamboraapacRefundRequest {
-    pub fn to_soap_xml(&self) -> String {
-        format!(
-            r#"
-            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-            xmlns:dts="http://www.ippayments.com.au/interface/api/dts">
-                <soapenv:Header/>
-                <soapenv:Body>
-                    <dts:SubmitSingleRefund>
-                        <dts:trnXML>
-                            <![CDATA[
-                    <Refund>
-                        <CustRef>{}</CustRef>
-                        <Receipt>{}</Receipt>
-                        <Amount>{}</Amount>
-                        <Security>
-                            <UserName>{}</UserName>
-                            <Password>{}</Password>
-                        </Security>
-                    </Refund>
-                ]]>
-                        </dts:trnXML>
-                    </dts:SubmitSingleRefund>
-                </soapenv:Body>
-            </soapenv:Envelope>
-        "#,
-            self.cust_ref,
-            self.receipt,
-            self.amount.get_amount_as_i64(),
-            self.username.peek(),
-            self.password.peek()
-        )
-    }
-}
 
 // Refund Response Structure
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -359,42 +294,6 @@ pub struct BamboraapacSyncRequest {
     pub password: Secret<String>,
 }
 
-impl BamboraapacSyncRequest {
-    pub fn to_soap_xml(&self) -> String {
-        format!(
-            r#"
-            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-            xmlns:dts="http://www.ippayments.com.au/interface/api/dts">
-                <soapenv:Header/>
-                <soapenv:Body>
-                    <dts:QueryTransaction>
-                        <dts:queryXML>
-                            <![CDATA[
-                                <QueryTransaction>
-                                    <Criteria>
-                                        <AccountNumber>{}</AccountNumber>
-                                        <TrnStartTimestamp>2024-06-23 00:00:00</TrnStartTimestamp>
-                                        <TrnEndTimestamp>2099-12-31 23:59:59</TrnEndTimestamp>
-                                        <Receipt>{}</Receipt>
-                                    </Criteria>
-                                    <Security>
-                                        <UserName>{}</UserName>
-                                        <Password>{}</Password>
-                                    </Security>
-                            </QueryTransaction>
-                            ]]>
-                        </dts:queryXML>
-                    </dts:QueryTransaction>
-                </soapenv:Body>
-            </soapenv:Envelope>
-        "#,
-            self.account_number.peek(),
-            self.receipt,
-            self.username.peek(),
-            self.password.peek()
-        )
-    }
-}
 
 // Sync Response Structure
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -1296,57 +1195,6 @@ pub struct BamboraapacSetupMandateRequest<
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > BamboraapacSetupMandateRequest<T>
-{
-    // Generate SOAP XML request for RegisterSingleCustomer
-    pub fn to_soap_xml(&self) -> String {
-        format!(
-            r#"
-            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-            xmlns:sipp="http://www.ippayments.com.au/interface/api/sipp">
-                <soapenv:Header/>
-                <soapenv:Body>
-                    <sipp:RegisterSingleCustomer>
-                        <sipp:registerSingleCustomerXML>
-                            <![CDATA[
-                <Register>
-                    <Customer>
-                        <CustNumber>{}</CustNumber>
-                        <CreditCard>
-                            <CardNumber>{}</CardNumber>
-                            <ExpM>{}</ExpM>
-                            <ExpY>{}</ExpY>
-                            <CardHolderName>{}</CardHolderName>
-                        </CreditCard>
-                    </Customer>
-                    <Security>
-                        <UserName>{}</UserName>
-                        <Password>{}</Password>
-                    </Security>
-                </Register>
-            ]]>
-                        </sipp:registerSingleCustomerXML>
-                    </sipp:RegisterSingleCustomer>
-                </soapenv:Body>
-            </soapenv:Envelope>
-        "#,
-            self.cust_number,
-            self.card_number.peek(),
-            self.exp_month.peek(),
-            self.exp_year.peek(),
-            self.card_holder_name.peek(),
-            self.username.peek(),
-            self.password.peek()
-        )
-    }
-}
 
 // SetupMandate Response Structure (Outer SOAP envelope)
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -1611,47 +1459,6 @@ pub struct BamboraapacRepeatPaymentRequest {
     pub password: Secret<String>,
 }
 
-impl BamboraapacRepeatPaymentRequest {
-    // Generate SOAP XML request for SubmitSinglePayment with tokenized card
-    pub fn to_soap_xml(&self) -> String {
-        format!(
-            r#"
-            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-            xmlns:dts="http://www.ippayments.com.au/interface/api/dts">
-                <soapenv:Body>
-                    <dts:SubmitSinglePayment>
-                        <dts:trnXML>
-                            <![CDATA[
-        <Transaction>
-            <CustRef>{}</CustRef>
-            <Amount>{}</Amount>
-            <TrnType>{}</TrnType>
-            <AccountNumber>{}</AccountNumber>
-            <CreditCard>
-                <TokeniseAlgorithmID>2</TokeniseAlgorithmID>
-                <CardNumber>{}</CardNumber>
-            </CreditCard>
-            <Security>
-                    <UserName>{}</UserName>
-                    <Password>{}</Password>
-            </Security>
-        </Transaction>
-                            ]]>
-                        </dts:trnXML>
-                    </dts:SubmitSinglePayment>
-                </soapenv:Body>
-            </soapenv:Envelope>
-        "#,
-            self.cust_ref,
-            self.amount.get_amount_as_i64(),
-            self.trn_type as i32,
-            self.account_number.peek(),
-            self.card_token,
-            self.username.peek(),
-            self.password.peek()
-        )
-    }
-}
 
 // ============================================================================
 // REPEAT PAYMENT FLOW TRANSFORMERS
@@ -1844,19 +1651,105 @@ impl<
 
 impl GetSoapXml for BamboraapacCaptureRequest {
     fn to_soap_xml(&self) -> String {
-        self.to_soap_xml()
+        format!(
+            r#"
+            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+            xmlns:dts="http://www.ippayments.com.au/interface/api/dts">
+                <soapenv:Body>
+                    <dts:SubmitSingleCapture>
+                        <dts:trnXML>
+                            <![CDATA[
+                                <Capture>
+                                        <Receipt>{}</Receipt>
+                                        <Amount>{}</Amount>
+                                        <Security>
+                                                <UserName>{}</UserName>
+                                                <Password>{}</Password>
+                                        </Security>
+                                </Capture>
+                            ]]>
+                        </dts:trnXML>
+                    </dts:SubmitSingleCapture>
+                </soapenv:Body>
+            </soapenv:Envelope>
+        "#,
+            self.receipt,
+            self.amount.get_amount_as_i64(),
+            self.username.peek(),
+            self.password.peek()
+        )
     }
 }
 
 impl GetSoapXml for BamboraapacRefundRequest {
     fn to_soap_xml(&self) -> String {
-        self.to_soap_xml()
+        format!(
+            r#"
+            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+            xmlns:dts="http://www.ippayments.com.au/interface/api/dts">
+                <soapenv:Header/>
+                <soapenv:Body>
+                    <dts:SubmitSingleRefund>
+                        <dts:trnXML>
+                            <![CDATA[
+                    <Refund>
+                        <CustRef>{}</CustRef>
+                        <Receipt>{}</Receipt>
+                        <Amount>{}</Amount>
+                        <Security>
+                            <UserName>{}</UserName>
+                            <Password>{}</Password>
+                        </Security>
+                    </Refund>
+                ]]>
+                        </dts:trnXML>
+                    </dts:SubmitSingleRefund>
+                </soapenv:Body>
+            </soapenv:Envelope>
+        "#,
+            self.cust_ref,
+            self.receipt,
+            self.amount.get_amount_as_i64(),
+            self.username.peek(),
+            self.password.peek()
+        )
     }
 }
 
 impl GetSoapXml for BamboraapacSyncRequest {
     fn to_soap_xml(&self) -> String {
-        self.to_soap_xml()
+        format!(
+            r#"
+            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+            xmlns:dts="http://www.ippayments.com.au/interface/api/dts">
+                <soapenv:Header/>
+                <soapenv:Body>
+                    <dts:QueryTransaction>
+                        <dts:queryXML>
+                            <![CDATA[
+                                <QueryTransaction>
+                                    <Criteria>
+                                        <AccountNumber>{}</AccountNumber>
+                                        <TrnStartTimestamp>2024-06-23 00:00:00</TrnStartTimestamp>
+                                        <TrnEndTimestamp>2099-12-31 23:59:59</TrnEndTimestamp>
+                                        <Receipt>{}</Receipt>
+                                    </Criteria>
+                                    <Security>
+                                        <UserName>{}</UserName>
+                                        <Password>{}</Password>
+                                    </Security>
+                            </QueryTransaction>
+                            ]]>
+                        </dts:queryXML>
+                    </dts:QueryTransaction>
+                </soapenv:Body>
+            </soapenv:Envelope>
+        "#,
+            self.account_number.peek(),
+            self.receipt,
+            self.username.peek(),
+            self.password.peek()
+        )
     }
 }
 
@@ -1870,13 +1763,85 @@ impl<
     > GetSoapXml for BamboraapacSetupMandateRequest<T>
 {
     fn to_soap_xml(&self) -> String {
-        self.to_soap_xml()
+        format!(
+            r#"
+            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+            xmlns:sipp="http://www.ippayments.com.au/interface/api/sipp">
+                <soapenv:Header/>
+                <soapenv:Body>
+                    <sipp:RegisterSingleCustomer>
+                        <sipp:registerSingleCustomerXML>
+                            <![CDATA[
+                <Register>
+                    <Customer>
+                        <CustNumber>{}</CustNumber>
+                        <CreditCard>
+                            <CardNumber>{}</CardNumber>
+                            <ExpM>{}</ExpM>
+                            <ExpY>{}</ExpY>
+                            <CardHolderName>{}</CardHolderName>
+                        </CreditCard>
+                    </Customer>
+                    <Security>
+                        <UserName>{}</UserName>
+                        <Password>{}</Password>
+                    </Security>
+                </Register>
+            ]]>
+                        </sipp:registerSingleCustomerXML>
+                    </sipp:RegisterSingleCustomer>
+                </soapenv:Body>
+            </soapenv:Envelope>
+        "#,
+            self.cust_number,
+            self.card_number.peek(),
+            self.exp_month.peek(),
+            self.exp_year.peek(),
+            self.card_holder_name.peek(),
+            self.username.peek(),
+            self.password.peek()
+        )
     }
 }
 
 impl GetSoapXml for BamboraapacRepeatPaymentRequest {
     fn to_soap_xml(&self) -> String {
-        self.to_soap_xml()
+        format!(
+            r#"
+            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+            xmlns:dts="http://www.ippayments.com.au/interface/api/dts">
+                <soapenv:Body>
+                    <dts:SubmitSinglePayment>
+                        <dts:trnXML>
+                            <![CDATA[
+        <Transaction>
+            <CustRef>{}</CustRef>
+            <Amount>{}</Amount>
+            <TrnType>{}</TrnType>
+            <AccountNumber>{}</AccountNumber>
+            <CreditCard>
+                <TokeniseAlgorithmID>2</TokeniseAlgorithmID>
+                <CardNumber>{}</CardNumber>
+            </CreditCard>
+            <Security>
+                    <UserName>{}</UserName>
+                    <Password>{}</Password>
+            </Security>
+        </Transaction>
+                            ]]>
+                        </dts:trnXML>
+                    </dts:SubmitSinglePayment>
+                </soapenv:Body>
+            </soapenv:Envelope>
+        "#,
+            self.cust_ref,
+            self.amount.get_amount_as_i64(),
+            self.trn_type as i32,
+            self.account_number.peek(),
+            self.card_token,
+            self.username.peek(),
+            self.password.peek()
+        )
     }
 }
 
