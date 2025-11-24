@@ -2625,6 +2625,10 @@ impl ForeignTryFrom<ConnectorResponseData> for grpc_api_types::payments::Connect
                     grpc_api_types::payments::ExtendedAuthorizationResponseData {
                         extended_authentication_applied: extended_authorization_response_data
                             .extended_authentication_applied,
+                        extended_authorization_last_applied_at:
+                            extended_authorization_response_data
+                                .extended_authorization_last_applied_at
+                                .map(|dt| dt.assume_utc().unix_timestamp()),
                         capture_before: extended_authorization_response_data
                             .capture_before
                             .map(|dt| dt.assume_utc().unix_timestamp()),

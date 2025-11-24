@@ -1231,7 +1231,8 @@ message EvidenceDocument {
 // Extended authorization response data
 message ExtendedAuthorizationResponseData {
   optional bool extended_authentication_applied = 1; // Whether extended authentication was applied
-  optional int64 capture_before = 2; // Unix timestamp before which capture must occur
+  optional int64 extended_authorization_last_applied_at = 2; // Unix timestamp of when extended authentication was last applied
+  optional int64 capture_before = 3; // Unix timestamp before which capture must occur
 }
 
 // Additional payment method data for card payments
