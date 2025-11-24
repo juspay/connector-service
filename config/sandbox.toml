@@ -22,6 +22,8 @@ mitm_proxy_enabled = false
 
 [connectors]
 redsys.base_url = "https://sis-t.redsys.es:25443"
+bluesnap.base_url = "https://sandbox.bluesnap.com"
+bluesnap.secondary_base_url = "https://sandpay.bluesnap.com"
 multisafepay.base_url = "https://testapi.multisafepay.com/v1/json"
 authipay.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
 stax.base_url = "https://apiprod.fattlabs.com"
@@ -71,6 +73,7 @@ worldpay.base_url = "https://try.access.worldpay.com/"
 worldpayvantiv.base_url = "https://www.testvantivcnp.com/sandbox/new/sandbox/communicator/online"
 worldpayvantiv.secondary_base_url = "https://www.testvantivcnp.com/sandbox"
 paypal.base_url = "https://api-m.sandbox.paypal.com/"
+paysafe.base_url = "https://api.test.paysafe.com/paymenthub/"
 
 # Generic Events Configuration
 [events]

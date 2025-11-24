@@ -4,6 +4,25 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.11.24.0
+
+### Features
+
+- **connector:**
+  - [HIPAY] Connector Integration ([#299](https://github.com/juspay/connector-service/pull/299)) ([`ce21e56`](https://github.com/juspay/connector-service/commit/ce21e56a543320a56e4152f6da34ba2013a038ab))
+  - [TRUSTPAYMENTS] Connector Integration ([#272](https://github.com/juspay/connector-service/pull/272)) ([`4805c87`](https://github.com/juspay/connector-service/commit/4805c8735ac565bcb78429849f3961affcd671af))
+  - [GLOBALPAY] Connector Integration ([#241](https://github.com/juspay/connector-service/pull/241)) ([`ece29bb`](https://github.com/juspay/connector-service/commit/ece29bba21af617caa37e78c4fec23b5459e9697))
+  - Add bluesnap -- no3ds authorize, void, capture, refund, psync, rsync and webhooks ([#285](https://github.com/juspay/connector-service/pull/285)) ([`3a952fe`](https://github.com/juspay/connector-service/commit/3a952fe86f19c8c554e5a6f587c769b0fd103a2b))
+- Introduce register only grpc function ([#306](https://github.com/juspay/connector-service/pull/306)) ([`b5a367c`](https://github.com/juspay/connector-service/commit/b5a367c1c775c32503feb00cdc6cd063cc97ea3b))
+
+### Refactors
+
+- Use namespace imports for connectors in types.rs ([#308](https://github.com/juspay/connector-service/pull/308)) ([`63ec114`](https://github.com/juspay/connector-service/commit/63ec1148f0ec634a7f5b893db38b0387fbfeb54d))
+
+**Full Changelog:** [`2025.11.21.0...2025.11.24.0`](https://github.com/juspay/connector-service/compare/2025.11.21.0...2025.11.24.0)
+
+- - -
+
 ## 2025.11.21.0
 
 ### Features

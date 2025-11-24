@@ -25,6 +25,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
     fn convert_connector(connector_name: ConnectorEnum) -> BoxedConnector<T> {
         match connector_name {
             ConnectorEnum::Adyen => Box::new(connectors::Adyen::new()),
+            ConnectorEnum::Bluesnap => Box::new(connectors::Bluesnap::new()),
             ConnectorEnum::Razorpay => Box::new(connectors::Razorpay::new()),
             ConnectorEnum::RazorpayV2 => Box::new(connectors::RazorpayV2::new()),
             ConnectorEnum::Fiserv => Box::new(connectors::Fiserv::new()),
@@ -57,7 +58,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Celero => Box::new(connectors::Celero::new()),
             ConnectorEnum::Globalpay => Box::new(connectors::Globalpay::new()),
             ConnectorEnum::Dlocal => Box::new(connectors::Dlocal::new()),
-            ConnectorEnum::Hipay => Box::new(connectors::Dlocal::new()),
+            ConnectorEnum::Hipay => Box::new(connectors::Hipay::new()),
             ConnectorEnum::Placetopay => Box::new(connectors::Placetopay::new()),
             ConnectorEnum::Trustpayments => Box::new(connectors::Trustpayments::new()),
             ConnectorEnum::Rapyd => Box::new(connectors::Rapyd::new()),
@@ -68,6 +69,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Worldpay => Box::new(connectors::Worldpay::new()),
             ConnectorEnum::Worldpayvantiv => Box::new(connectors::Worldpayvantiv::new()),
             ConnectorEnum::Payload => Box::new(connectors::Payload::new()),
+            ConnectorEnum::Paysafe => Box::new(connectors::Paysafe::new()),
             ConnectorEnum::Paypal => Box::new(connectors::Paypal::new()),
         }
     }
