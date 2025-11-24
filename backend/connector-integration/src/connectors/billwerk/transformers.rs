@@ -9,11 +9,11 @@ use common_utils::{
 use crate::{connectors::billwerk::BillwerkRouterData, types::ResponseRouterData, utils};
 
 use domain_types::{
-    connector_flow::{Authorize, Capture, PaymentMethodToken, RSync, Void},
+    connector_flow::{Authorize, Capture, PaymentMethodToken, RSync},
     connector_types::{
         PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::{self, ConnectorError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -149,8 +149,30 @@ pub struct BillwerkPaymentsResponse {
     error_state: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum RefundState {
+    Refunded,
+    Failed,
+    Processing,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RefundResponse {
+    id: String,
+    state: RefundState,
+}
+
 #[derive(Debug, Serialize)]
-pub struct BillwerkVoidRequest {}
+pub struct BillwerkRefundRequest {
+    pub invoice: String,
+    pub amount: MinorUnit,
+    pub text: Option<String>,
+}
+
+pub type BillwerkRefundResponse = RefundResponse;
+
+pub type BillwerkRSyncResponse = RefundResponse;
 
 impl<
         T: PaymentMethodDataTypes
@@ -372,33 +394,6 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
-    TryFrom<
-        BillwerkRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
-    > for BillwerkVoidRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        _item: BillwerkRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {})
-    }
-}
-
 impl<F, T> TryFrom<ResponseRouterData<BillwerkPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
@@ -499,27 +494,6 @@ impl<
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum RefundState {
-    Refunded,
-    Failed,
-    Processing,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RefundResponse {
-    id: String,
-    state: RefundState,
-}
-
-#[derive(Debug, Serialize)]
-pub struct BillwerkRefundRequest {
-    pub invoice: String,
-    pub amount: MinorUnit,
-    pub text: Option<String>,
-}
-
 impl<
         F,
         T: PaymentMethodDataTypes
@@ -570,41 +544,6 @@ impl<F> TryFrom<RefundsResponseRouterData<F, RefundResponse>>
                 status_code: item.http_code,
             }),
             ..item.router_data
-        })
-    }
-}
-
-pub type BillwerkRSyncResponse = RefundResponse;
-
-pub type BillwerkRefundResponse = RefundResponse;
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
-    TryFrom<
-        BillwerkRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    > for BillwerkRefundRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: BillwerkRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            amount: MinorUnit::new(0),
-            invoice: item.router_data.request.connector_refund_id.clone(),
-            text: None,
         })
     }
 }

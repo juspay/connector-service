@@ -48,8 +48,8 @@ use transformers::{
     BillwerkPaymentsResponse as BillwerkPaymentsSyncResponse,
     BillwerkPaymentsResponse as BillwerkPaymentsVoidResponse,
     BillwerkPaymentsResponse as BillwerkCaptureResponse, BillwerkRefundRequest,
-    BillwerkRefundRequest as BillwerkRSyncRequest, BillwerkTokenRequest, BillwerkTokenResponse,
-    RefundResponse as BillwerkRefundResponse, RefundResponse as BillwerkRSyncResponse,
+    BillwerkTokenRequest, BillwerkTokenResponse, RefundResponse as BillwerkRefundResponse,
+    RefundResponse as BillwerkRSyncResponse,
 };
 
 use crate::{types::ResponseRouterData, with_response_body};
@@ -537,7 +537,6 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: RSync,
-            request_body: BillwerkRSyncRequest,
             response_body: BillwerkRSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
