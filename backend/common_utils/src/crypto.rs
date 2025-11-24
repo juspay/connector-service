@@ -623,6 +623,50 @@ pub type EncryptableName = Encryptable<Secret<String>>;
 /// Type alias for `Encryptable<Secret<String>>` used for `email` field
 pub type EncryptableEmail = Encryptable<Secret<String, pii::EmailStrategy>>;
 
+pub struct TripleDesEde3CBC {
+    padding: common_enums::CryptoPadding,
+    iv: Vec<u8>,
+}
+
+impl TripleDesEde3CBC {
+    const TRIPLE_DES_KEY_LENGTH: usize = 24;
+    pub const TRIPLE_DES_IV_LENGTH: usize = 8;
+
+    pub fn new(
+        padding: Option<common_enums::CryptoPadding>,
+        iv: Vec<u8>,
+    ) -> Result<Self, errors::CryptoError> {
+        if iv.len() != Self::TRIPLE_DES_IV_LENGTH {
+            Err(errors::CryptoError::InvalidIvLength)?
+        };
+        let padding = padding.unwrap_or(common_enums::CryptoPadding::PKCS7);
+        Ok(Self { iv, padding })
+    }
+}
+
+impl EncodeMessage for TripleDesEde3CBC {
+    fn encode_message(
+        &self,
+        secret: &[u8],
+        msg: &[u8],
+    ) -> CustomResult<Vec<u8>, errors::CryptoError> {
+        if secret.len() != Self::TRIPLE_DES_KEY_LENGTH {
+            Err(errors::CryptoError::InvalidKeyLength)?
+        }
+        let mut buffer = msg.to_vec();
+
+        if let common_enums::CryptoPadding::ZeroPadding = self.padding {
+            let pad_len = Self::TRIPLE_DES_IV_LENGTH - (buffer.len() % Self::TRIPLE_DES_IV_LENGTH);
+            if pad_len != Self::TRIPLE_DES_IV_LENGTH {
+                buffer.extend(vec![0u8; pad_len]);
+            }
+        };
+        let cipher = openssl::symm::Cipher::des_ede3_cbc();
+        openssl::symm::encrypt(cipher, secret, Some(&self.iv), &buffer)
+            .change_context(errors::CryptoError::EncodingFailed)
+    }
+}
+
 #[cfg(test)]
 mod crypto_tests {
     #![allow(clippy::expect_used)]

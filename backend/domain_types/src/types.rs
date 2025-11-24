@@ -147,6 +147,7 @@ pub struct Connectors {
     pub hipay: ConnectorParams,
     pub trustpayments: ConnectorParams,
     pub globalpay: ConnectorParams,
+    pub redsys: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]

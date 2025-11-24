@@ -133,3 +133,6 @@ pub use self::trustpayments::Trustpayments;
 
 pub mod globalpay;
 pub use self::globalpay::Globalpay;
+
+pub mod redsys;
+pub use self::redsys::Redsys;

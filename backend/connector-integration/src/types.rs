@@ -32,6 +32,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Elavon => Box::new(connectors::Elavon::new()),
             ConnectorEnum::Xendit => Box::new(connectors::Xendit::new()),
             ConnectorEnum::Checkout => Box::new(connectors::Checkout::new()),
+            ConnectorEnum::Redsys => Box::new(connectors::Redsys::new()),
             ConnectorEnum::Authorizedotnet => Box::new(connectors::Authorizedotnet::new()),
             ConnectorEnum::Mifinity => Box::new(connectors::Mifinity::new()),
             ConnectorEnum::Phonepe => Box::new(connectors::Phonepe::new()),
