@@ -37,10 +37,6 @@ impl TryFrom<&ConnectorAuthType> for NmiAuthType {
                 api_key: api_key.to_owned(),
                 public_key: None,
             }),
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                api_key: api_key.to_owned(),
-                public_key: Some(key1.to_owned()),
-            }),
             _ => Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType
             )),
@@ -59,6 +55,63 @@ pub enum TransactionType {
     Refund,
     Void,
     Validate,
+}
+
+// ===== NMI STATUS ENUM =====
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NmiStatus {
+    Abandoned,
+    Cancelled,
+    Pendingsettlement,
+    Pending,
+    Failed,
+    Complete,
+    InProgress,
+    Unknown,
+}
+
+impl From<String> for NmiStatus {
+    fn from(value: String) -> Self {
+        match value.as_str() {
+            "abandoned" => Self::Abandoned,
+            "canceled" => Self::Cancelled,
+            "in_progress" => Self::InProgress,
+            "pendingsettlement" => Self::Pendingsettlement,
+            "complete" => Self::Complete,
+            "failed" => Self::Failed,
+            "unknown" => Self::Unknown,
+            // Other than above values only pending is possible, since value is a string handling this as default
+            _ => Self::Pending,
+        }
+    }
+}
+
+impl From<NmiStatus> for AttemptStatus {
+    fn from(item: NmiStatus) -> Self {
+        match item {
+            NmiStatus::Abandoned => Self::AuthenticationFailed,
+            NmiStatus::Cancelled => Self::Voided,
+            NmiStatus::Pending => Self::Authorized,
+            NmiStatus::Pendingsettlement | NmiStatus::Complete => Self::Charged,
+            NmiStatus::InProgress => Self::AuthenticationPending,
+            NmiStatus::Failed | NmiStatus::Unknown => Self::Failure,
+        }
+    }
+}
+
+impl From<NmiStatus> for RefundStatus {
+    fn from(item: NmiStatus) -> Self {
+        match item {
+            NmiStatus::Abandoned
+            | NmiStatus::Cancelled
+            | NmiStatus::Failed
+            | NmiStatus::Unknown => Self::Failure,
+            NmiStatus::Pending | NmiStatus::InProgress => Self::Pending,
+            NmiStatus::Pendingsettlement | NmiStatus::Complete => Self::Success,
+        }
+    }
 }
 
 // ===== PAYMENT METHOD DATA =====
@@ -86,18 +139,24 @@ pub struct NmiMerchantDefinedField {
 
 impl NmiMerchantDefinedField {
     pub fn new(metadata: &serde_json::Value) -> Self {
-        let metadata_as_string = metadata.to_string();
-        let hash_map: std::collections::BTreeMap<String, serde_json::Value> =
-            serde_json::from_str(&metadata_as_string).unwrap_or(std::collections::BTreeMap::new());
-        let inner = hash_map
-            .into_iter()
-            .enumerate()
-            .map(|(index, (hs_key, hs_value))| {
-                let nmi_key = format!("merchant_defined_field_{}", index + 1);
-                let nmi_value = format!("{hs_key}={hs_value}");
-                (nmi_key, Secret::new(nmi_value))
+        let inner = metadata
+            .as_object()
+            .map(|obj| {
+                obj.iter()
+                    .enumerate()
+                    .map(|(index, (hs_key, hs_value))| {
+                        // Extract string value properly to avoid JSON encoding
+                        let value_str = hs_value
+                            .as_str()
+                            .map(str::to_owned)
+                            .unwrap_or_else(|| hs_value.to_string());
+                        let nmi_key = format!("merchant_defined_field_{}", index + 1);
+                        let nmi_value = format!("{hs_key}={value_str}");
+                        (nmi_key, Secret::new(nmi_value))
+                    })
+                    .collect()
             })
-            .collect();
+            .unwrap_or_default();
         Self { inner }
     }
 }
@@ -309,14 +368,6 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-// ===== ERROR RESPONSE =====
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NmiErrorResponse {
-    pub code: String,
-    pub message: String,
-}
-
 // ===== PAYMENT SYNC (PSYNC) REQUEST =====
 
 #[derive(Debug, Serialize)]
@@ -417,17 +468,8 @@ impl
 
         // Handle empty response (means AuthenticationPending) or transaction data
         let (status, transaction_id) = if let Some(transaction) = transaction {
-            // Map condition field from XML to AttemptStatus
-            let status = match transaction.condition.as_str() {
-                "pending" => AttemptStatus::Authorized,
-                "pendingsettlement" => AttemptStatus::Charged,
-                "complete" => AttemptStatus::Charged,
-                "in_progress" => AttemptStatus::AuthenticationPending,
-                "abandoned" => AttemptStatus::AuthenticationFailed,
-                "cancelled" | "canceled" => AttemptStatus::Voided,
-                "failed" => AttemptStatus::Failure,
-                _ => AttemptStatus::Pending,
-            };
+            // Map condition field from XML to AttemptStatus using NmiStatus enum
+            let status = AttemptStatus::from(NmiStatus::from(transaction.condition.clone()));
             (status, Some(transaction.transaction_id.clone()))
         } else {
             // Empty XML response = AuthenticationPending (during 3DS flow)
@@ -762,26 +804,29 @@ impl
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
 
-        // Get the last transaction from the list (most recent)
-        let transaction = response.transaction.last();
+        // Try to find exact match first, fallback to last transaction
+        let transaction = response
+            .transaction
+            .iter()
+            .find(|txn| txn.transaction_id == item.router_data.request.connector_refund_id)
+            .or_else(|| response.transaction.last());
 
-        // Map condition field from XML to RefundStatus (per tech spec section 3.10)
+        // Map condition field from XML to RefundStatus using NmiStatus enum
         let (status, connector_refund_id) = if let Some(transaction) = transaction {
-            let status = match transaction.condition.as_str() {
-                "complete" | "pendingsettlement" => RefundStatus::Success,
-                "pending" => RefundStatus::Pending,
-                "failed" | "abandoned" | "cancelled" | "canceled" => RefundStatus::Failure,
-                _ => RefundStatus::Pending,
-            };
-            (status, Some(transaction.transaction_id.clone()))
+            let status = RefundStatus::from(NmiStatus::from(transaction.condition.clone()));
+            (status, transaction.transaction_id.clone())
         } else {
-            // Empty response - treat as pending
-            (RefundStatus::Pending, None)
+            // Empty response - treat as pending with proper error for connector_refund_id
+            return Err(error_stack::report!(
+                errors::ConnectorError::MissingConnectorRelatedTransactionID {
+                    id: "connector_refund_id".to_string()
+                }
+            ));
         };
 
         Ok(Self {
             response: Ok(RefundsResponseData {
-                connector_refund_id: connector_refund_id.unwrap_or_default(),
+                connector_refund_id,
                 refund_status: status,
                 status_code: item.http_code,
             }),
