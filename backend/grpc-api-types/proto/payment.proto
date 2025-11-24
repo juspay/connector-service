@@ -2710,7 +2710,7 @@ message PaymentServiceCreatePaymentMethodTokenRequest {
   optional string customer_id = 10; // Merchant's customer ID
 
   // Address Information
-  optional Address address = 11; // Customer address details
+  optional PaymentAddress address = 11; // Customer address details
 
   // Additional Metadata
   map<string, string> metadata = 12; // Additional metadata for the connector
@@ -2749,7 +2749,7 @@ message PaymentServiceCreateConnectorCustomerRequest {
   optional string phone_number = 7; // Phone number of the customer
 
   // Address Information
-  optional Address address = 8; // Customer address details
+  optional PaymentAddress address = 8; // Customer address details
 
   // Additional Metadata
   map<string, string> metadata = 9; // Additional metadata for the connector
