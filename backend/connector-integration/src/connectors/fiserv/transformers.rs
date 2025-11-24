@@ -1,6 +1,7 @@
 use common_enums::enums;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    ext_traits::ValueExt,
     pii,
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
 };
@@ -17,8 +18,9 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::{report, ResultExt};
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 
 use crate::{connectors::fiserv::FiservRouterData, types::ResponseRouterData};
 
@@ -94,6 +96,7 @@ pub struct Amount {
 #[serde(rename_all = "camelCase")]
 pub struct TransactionDetails {
     pub capture_flag: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub reversal_reason_code: Option<String>,
     pub merchant_transaction_id: String,
 }
@@ -437,15 +440,11 @@ impl<
             .peek();
 
         let session_str = match session_meta_value {
-            serde_json::Value::String(s) => s,
-            _ => {
-                return Err(report!(ConnectorError::InvalidConnectorConfig {
-                    config: "connector_meta_data was not a JSON string for FiservSessionObject",
-                }))
-            }
+            serde_json::Value::String(s) => Cow::Borrowed(s),
+            _ => Cow::Owned(session_meta_value.to_string()),
         };
 
-        let session: FiservSessionObject = serde_json::from_str(session_str).change_context(
+        let session: FiservSessionObject = serde_json::from_str(&session_str).change_context(
             ConnectorError::InvalidConnectorConfig {
                 config: "Deserializing FiservSessionObject from connector_meta_data string",
             },
@@ -508,43 +507,21 @@ impl<
         let router_data = item.router_data;
         let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_auth_type)?;
 
-        // Prioritize connector_metadata from PaymentsCaptureData if available,
-        // otherwise fall back to resource_common_data.connector_meta_data.
-
-        // Try to get session string from different sources - converting both paths to String for type consistency
-        let session_str = if let Some(meta) = router_data
+        let session: FiservSessionObject = router_data
             .resource_common_data
             .connector_meta_data
             .as_ref()
-        {
-            // Use connector_meta_data from resource_common_data (which is Secret<Value>)
-            match meta.peek() {
-                serde_json::Value::String(s) => s.to_string(), // Convert &str to String
-                _ => return Err(report!(ConnectorError::InvalidConnectorConfig {
-                    config: "connector_meta_data was not a JSON string for FiservSessionObject in Capture",
-                })),
-            }
-        } else if let Some(connector_meta) = router_data.request.connector_metadata.as_ref() {
-            // Use connector_metadata from request (which is Value)
-            match connector_meta {
-                serde_json::Value::String(s) => s.clone(), // String
-                _ => return Err(report!(ConnectorError::InvalidConnectorConfig {
-                    config: "connector_metadata was not a JSON string for FiservSessionObject in Capture",
-                })),
-            }
-        } else {
-            // No metadata available
-            return Err(report!(ConnectorError::MissingRequiredField {
-                field_name:
-                    "connector_metadata or connector_meta_data for FiservSessionObject in Capture"
-            }));
-        };
-
-        let session: FiservSessionObject =
-            serde_json::from_str(&session_str)
-                .change_context(ConnectorError::InvalidConnectorConfig {
-                config:
-                    "Deserializing FiservSessionObject from connector_metadata string in Capture",
+            .ok_or_else(|| {
+                report!(ConnectorError::MissingRequiredField {
+                    field_name: "connector_meta_data"
+                })
+            })
+            .and_then(|meta| {
+                FiservSessionObject::try_from(&Some(meta.clone())).map_err(|e| {
+                    e.change_context(ConnectorError::MissingRequiredField {
+                        field_name: "connector_meta_data",
+                    })
+                })
             })?;
 
         let merchant_details = MerchantDetails {
@@ -654,32 +631,17 @@ impl<
         let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_auth_type)?;
 
         // Get session information
-        let session_meta_value = router_data
+        let metadata = router_data
             .resource_common_data
             .connector_meta_data
-            .as_ref()
-            .ok_or_else(|| {
-                report!(ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data for FiservSessionObject in Void"
-                })
-            })?
-            .peek();
-
-        let session_str = match session_meta_value {
-            serde_json::Value::String(s) => s,
-            _ => {
-                return Err(report!(ConnectorError::InvalidConnectorConfig {
-                    config:
-                        "connector_meta_data was not a JSON string for FiservSessionObject in Void",
-                }))
-            }
-        };
-
-        let session: FiservSessionObject = serde_json::from_str(session_str).change_context(
-            ConnectorError::InvalidConnectorConfig {
-                config: "Deserializing FiservSessionObject from connector_meta_data string in Void",
-            },
-        )?;
+            .clone()
+            .ok_or(ConnectorError::RequestEncodingFailed)?;
+        let session: FiservSessionObject = metadata
+            .expose()
+            .parse_value("FiservSessionObject")
+            .change_context(ConnectorError::InvalidConnectorConfig {
+                config: "Merchant connector account metadata",
+            })?;
 
         Ok(Self {
             merchant_details: MerchantDetails {
@@ -724,32 +686,18 @@ impl<
         let router_data = &item.router_data;
         let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_auth_type)?;
 
-        // Try to get session information - use only connector_metadata from request since
-        // RefundFlowData doesn't have connector_meta_data field in resource_common_data
-        let session_str = if let Some(connector_meta) =
-            router_data.request.connector_metadata.as_ref()
-        {
-            // Use connector_metadata from request
-            match connector_meta {
-                serde_json::Value::String(s) => s.clone(),
-                _ => return Err(report!(ConnectorError::InvalidConnectorConfig {
-                    config:
-                        "connector_metadata was not a JSON string for FiservSessionObject in Refund",
-                })),
-            }
-        } else {
-            // No metadata available
-            return Err(report!(ConnectorError::MissingRequiredField {
-                field_name:
-                    "connector_metadata or connector_meta_data for FiservSessionObject in Refund"
-            }));
-        };
-
-        let session: FiservSessionObject = serde_json::from_str(&session_str).change_context(
-            ConnectorError::InvalidConnectorConfig {
-                config: "Deserializing FiservSessionObject from metadata string in Refund",
-            },
-        )?;
+        let metadata = item
+            .router_data
+            .request
+            .merchant_account_metadata
+            .clone()
+            .ok_or(ConnectorError::RequestEncodingFailed)?;
+        let session: FiservSessionObject = metadata
+            .expose()
+            .parse_value("FiservSessionObject")
+            .change_context(ConnectorError::InvalidConnectorConfig {
+                config: "Merchant connector account metadata",
+            })?;
 
         // Convert minor amount to float major unit
         let converter = FloatMajorUnitForConnector;
