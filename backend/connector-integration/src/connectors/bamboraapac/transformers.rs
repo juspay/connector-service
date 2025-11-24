@@ -381,13 +381,8 @@ impl<
             _ => BamboraapacTrnType::Purchase,
         };
 
-        // Convert card number to string by serializing
-        let card_number_json = serde_json::to_value(&card_data.card_number.0)
-            .change_context(ConnectorError::RequestEncodingFailed)?;
-        let card_number_str = card_number_json
-            .as_str()
-            .ok_or(ConnectorError::RequestEncodingFailed)?
-            .to_string();
+        // Get card number using peek() method
+        let card_number_str = card_data.card_number.peek().to_string();
 
         Ok(Self {
             account_number: auth.account_number,
@@ -409,7 +404,9 @@ impl<
             card_holder_name: card_data
                 .card_holder_name
                 .clone()
-                .unwrap_or_else(|| Secret::new("".to_string())),
+                .ok_or(ConnectorError::MissingRequiredField {
+                    field_name: "card_holder_name",
+                })?,
             username: auth.username,
             password: auth.password,
             _phantom: std::marker::PhantomData,
@@ -1269,13 +1266,8 @@ impl<
             )),
         }?;
 
-        // Convert card number to string
-        let card_number_json = serde_json::to_value(&card_data.card_number.0)
-            .change_context(ConnectorError::RequestEncodingFailed)?;
-        let card_number_str = card_number_json
-            .as_str()
-            .ok_or(ConnectorError::RequestEncodingFailed)?
-            .to_string();
+        // Get card number using peek() method
+        let card_number_str = card_data.card_number.peek().to_string();
 
         // Generate customer number from customer_id or use connector request reference
         let cust_number = router_data
@@ -1299,7 +1291,9 @@ impl<
             card_holder_name: card_data
                 .card_holder_name
                 .clone()
-                .unwrap_or_else(|| Secret::new("".to_string())),
+                .ok_or(ConnectorError::MissingRequiredField {
+                    field_name: "card_holder_name",
+                })?,
             username: auth.username,
             password: auth.password,
             _phantom: std::marker::PhantomData,
@@ -1481,7 +1475,7 @@ impl TryFrom<&RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, Pa
         let auth = BamboraapacAuthType::try_from(&router_data.connector_auth_type)?;
 
         // Extract the card token (customer_id from SetupMandate) from mandate_reference
-        let card_token = match &router_data.request.mandate_reference {
+        let token = match &router_data.request.mandate_reference {
             domain_types::connector_types::MandateReferenceId::ConnectorMandateId(mandate_ref) => {
                 mandate_ref.get_connector_mandate_id().ok_or(
                     ConnectorError::MissingRequiredField {
@@ -1510,7 +1504,7 @@ impl TryFrom<&RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, Pa
                 .clone(),
             amount: router_data.request.minor_amount,
             trn_type,
-            card_token,
+            card_token: token,
             username: auth.username,
             password: auth.password,
         })
