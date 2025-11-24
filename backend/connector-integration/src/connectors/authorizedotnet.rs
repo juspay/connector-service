@@ -2,8 +2,7 @@ pub mod transformers;
 
 use common_enums;
 use common_utils::{
-    consts, errors::CustomResult, events, ext_traits::ByteSliceExt, request::RequestContent,
-    types::FloatMajorUnit,
+    consts, errors::CustomResult, events, ext_traits::ByteSliceExt, types::FloatMajorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -607,7 +606,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: Refund,
-            request_body: AuthorizedotnetRefundRequest<T>,
+            request_body: AuthorizedotnetRefundRequest,
             response_body: AuthorizedotnetRefundResponse,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
@@ -803,45 +802,35 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Empty implementation for Refund flow to satisfy trait bounds
-// The actual refund logic is handled by the specific implementations in transformers.rs
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    for Authorizedotnet<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-        self.build_headers(req)
-    }
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Authorizedotnet,
+    curl_request: Json(AuthorizedotnetRefundRequest),
+    curl_response: AuthorizedotnetRefundResponse,
+    flow_name: Refund,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundsData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    preprocess_response: true,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            self.build_headers(req)
+        }
 
-    fn get_content_type(&self) -> &'static str {
-        self.common_get_content_type()
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<String, ConnectorError> {
+            Ok(self.connector_base_url_refunds(req).to_string())
+        }
     }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<String, ConnectorError> {
-        Ok(self.connector_base_url_refunds(req).to_string())
-    }
-
-    fn get_request_body(
-        &self,
-        _req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, ConnectorError> {
-        // This is a placeholder implementation
-        // The actual refund logic should be handled by specific implementations
-        Err(ConnectorError::NotImplemented("Refund not implemented for generic type".into()).into())
-    }
-}
+);
 
 // Implement RSync flow
 macros::macro_connector_implementation!(

@@ -87,7 +87,11 @@ pub trait ValidationTrait {
         false
     }
 
-    fn should_do_payment_method_token(&self) -> bool {
+    fn should_do_payment_method_token(
+        &self,
+        _payment_method: PaymentMethod,
+        _payment_method_type: Option<PaymentMethodType>,
+    ) -> bool {
         false
     }
 }

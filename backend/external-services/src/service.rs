@@ -1,7 +1,8 @@
-use std::{collections::HashMap, str::FromStr, time::Duration};
+use std::{collections::HashMap, str::FromStr, sync::RwLock, time::Duration};
 
 use common_enums::ApiClientError;
 use common_utils::{
+    consts::{X_API_TAG, X_API_URL, X_SESSION_ID},
     ext_traits::AsyncExt,
     lineage,
     request::{Method, Request, RequestContent},
@@ -15,6 +16,13 @@ use domain_types::{
 };
 use hyperswitch_masking::Secret;
 use injector;
+
+/// Test context for mock server integration
+#[derive(Debug, Clone)]
+pub struct TestContext {
+    pub session_id: String,
+    pub mock_server_url: String,
+}
 
 pub trait ConnectorRequestReference {
     fn get_connector_request_reference_id(&self) -> &str;
@@ -126,6 +134,7 @@ pub struct EventProcessingParams<'a> {
         latency = Empty,
     )
 )]
+#[allow(clippy::too_many_arguments)]
 pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Resp>(
     proxy: &Proxy,
     connector: BoxedConnectorIntegrationV2<'static, F, ResourceCommonData, Req, Resp>,
@@ -134,6 +143,8 @@ pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Re
     event_params: EventProcessingParams<'_>,
     token_data: Option<TokenData>,
     call_connector_action: common_enums::CallConnectorAction,
+    test_context: Option<TestContext>,
+    api_tag: Option<String>,
 ) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
 where
     F: Clone + 'static,
@@ -226,6 +237,34 @@ where
                 }
                 req
             });
+
+            // Apply test environment modifications if test context is provided
+            connector_request = connector_request.map(|mut req| {
+                test_context.as_ref().map(|test_ctx| {
+                    // Store original URL for x-api-url header
+                    let original_url = req.url.clone();
+
+                    // Replace URL with mock server URL
+                    req.url = test_ctx.mock_server_url.clone();
+
+                    // Add test headers
+                    req.add_header(X_API_URL, original_url.clone().into());
+                    req.add_header(X_SESSION_ID, test_ctx.session_id.clone().into());
+
+                    // Add API tag if provided
+                    api_tag.as_ref().map(|tag| {
+                        req.add_header(X_API_TAG, tag.clone().into());
+                    });
+
+                    tracing::info!(
+                        "Test mode enabled: redirected {} to {}",
+                        original_url,
+                        test_ctx.mock_server_url
+                    );
+                });
+                req
+            });
+
             let headers = connector_request
                 .as_ref()
                 .map(|connector_request| connector_request.headers.clone())
@@ -746,32 +785,90 @@ pub fn create_client(
     // }
 }
 
-static NON_PROXIED_CLIENT: OnceCell<Client> = OnceCell::new();
-static PROXIED_CLIENT: OnceCell<Client> = OnceCell::new();
+static DEFAULT_CLIENT: OnceCell<Client> = OnceCell::new();
+static PROXY_CLIENT_CACHE: OnceCell<RwLock<HashMap<Proxy, Client>>> = OnceCell::new();
+
+fn get_or_create_proxy_client(
+    cache: &RwLock<HashMap<Proxy, Client>>,
+    cache_key: Proxy,
+    proxy_config: &Proxy,
+    should_bypass_proxy: bool,
+) -> CustomResult<Client, ApiClientError> {
+    let read_result = cache
+        .read()
+        .ok()
+        .and_then(|read_lock| read_lock.get(&cache_key).cloned());
+
+    let client = match read_result {
+        Some(cached_client) => {
+            tracing::debug!("Retrieved cached proxy client for config: {:?}", cache_key);
+            cached_client
+        }
+        None => {
+            let mut write_lock = cache
+                .try_write()
+                .map_err(|_| ApiClientError::ClientConstructionFailed)?;
+
+            match write_lock.get(&cache_key) {
+                Some(cached_client) => {
+                    tracing::debug!(
+                        "Retrieved cached proxy client after write lock for config: {:?}",
+                        cache_key
+                    );
+                    cached_client.clone()
+                }
+                None => {
+                    tracing::info!("Creating new proxy client for config: {:?}", cache_key);
+
+                    let new_client = get_client_builder(proxy_config, should_bypass_proxy)?
+                        .build()
+                        .change_context(ApiClientError::ClientConstructionFailed)
+                        .attach_printable("Failed to construct proxy client")?;
+
+                    write_lock.insert(cache_key.clone(), new_client.clone());
+                    tracing::debug!("Cached new proxy client for config: {:?}", cache_key);
+                    new_client
+                }
+            }
+        }
+    };
+
+    Ok(client)
+}
 
 fn get_base_client(
     proxy_config: &Proxy,
     should_bypass_proxy: bool,
 ) -> CustomResult<Client, ApiClientError> {
-    Ok(if should_bypass_proxy
-        || (proxy_config.http_url.is_none() && proxy_config.https_url.is_none())
-    {
-        &NON_PROXIED_CLIENT
+    // Check if proxy configuration is provided using cache_key method
+    if let Some(cache_key) = proxy_config.cache_key(should_bypass_proxy) {
+        tracing::debug!(
+            "Using proxy-specific client cache with key: {:?}",
+            cache_key
+        );
+
+        let cache = PROXY_CLIENT_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+
+        let client =
+            get_or_create_proxy_client(cache, cache_key, proxy_config, should_bypass_proxy)?;
+
+        Ok(client)
     } else {
-        &PROXIED_CLIENT
+        tracing::debug!("No proxy configuration detected, using DEFAULT_CLIENT");
+
+        // Use DEFAULT_CLIENT for non-proxy scenarios
+        let client = DEFAULT_CLIENT
+            .get_or_try_init(|| {
+                tracing::info!("Initializing DEFAULT_CLIENT (no proxy configuration)");
+                get_client_builder(proxy_config, should_bypass_proxy)?
+                    .build()
+                    .change_context(ApiClientError::ClientConstructionFailed)
+                    .attach_printable("Failed to construct default client")
+            })?
+            .clone();
+
+        Ok(client)
     }
-    .get_or_try_init(|| {
-        get_client_builder(proxy_config, should_bypass_proxy)?
-            .build()
-            .change_context(ApiClientError::ClientConstructionFailed)
-            .inspect_err(|err| {
-                info_log(
-                    "ERROR",
-                    &json!(format!("Failed to construct base client. Error: {:?}", err)),
-                );
-            })
-    })?
-    .clone())
 }
 
 fn load_custom_ca_certificate_from_content(

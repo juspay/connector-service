@@ -423,18 +423,11 @@ macros::macro_connector_implementation!(
             let connector_payment_id = req.request.connector_transaction_id.get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
 
-            // Use /settlements for full capture, /partialSettlements for partial captures
-            let endpoint = if req.request.is_multiple_capture() {
-                "partialSettlements"
-            } else {
-                "settlements"
-            };
-
+            // Always use /partialSettlements endpoint (same as Hyperswitch)
             Ok(format!(
-                "{}api/payments/{}/{}",
+                "{}api/payments/{}/partialSettlements",
                 self.connector_base_url_payments(req),
                 urlencoding::encode(&connector_payment_id),
-                endpoint
             ))
         }
     }

@@ -2,7 +2,7 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use base64::Engine;
-use common_enums::CurrencyUnit;
+use common_enums::{CurrencyUnit, PaymentMethod, PaymentMethodType};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
@@ -218,8 +218,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Braintree<T>
 {
-    fn should_do_payment_method_token(&self) -> bool {
-        true
+    fn should_do_payment_method_token(
+        &self,
+        payment_method: PaymentMethod,
+        _payment_method_type: Option<PaymentMethodType>,
+    ) -> bool {
+        matches!(payment_method, PaymentMethod::Card)
     }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

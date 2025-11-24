@@ -339,7 +339,7 @@ impl EventStage {
 }
 
 /// Configuration for events system
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EventConfig {
     pub enabled: bool,
     pub topic: String,

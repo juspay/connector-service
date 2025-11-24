@@ -4,8 +4,8 @@ use common_utils::{consts, events::EventConfig, metadata::HeaderMaskingConfig};
 use domain_types::types::{Connectors, Proxy};
 
 use crate::{error::ConfigurationError, logger::config::Log};
-
-#[derive(Clone, serde::Deserialize, Debug)]
+use serde::{Deserialize, Serialize};
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Config {
     pub common: Common,
     pub server: Server,
@@ -19,9 +19,13 @@ pub struct Config {
     pub lineage: LineageConfig,
     #[serde(default)]
     pub unmasked_headers: HeaderMaskingConfig,
+    #[serde(default)]
+    pub test: TestConfig,
+    #[serde(default)]
+    pub api_tags: ApiTagConfig,
 }
 
-#[derive(Clone, serde::Deserialize, Debug, Default)]
+#[derive(Clone, Deserialize, Debug, Default, Serialize)]
 pub struct LineageConfig {
     /// Enable processing of x-lineage-ids header
     pub enabled: bool,
@@ -41,7 +45,103 @@ fn default_lineage_prefix() -> String {
     consts::LINEAGE_FIELD_PREFIX.to_string()
 }
 
-#[derive(Clone, serde::Deserialize, Debug)]
+/// Test mode configuration for mock server integration
+#[derive(Clone, Deserialize, Debug, Default, Serialize)]
+pub struct TestConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    pub mock_server_url: Option<String>,
+}
+
+impl TestConfig {
+    /// Create test context if enabled, validating configuration
+    pub fn create_test_context(
+        &self,
+        request_id: &str,
+    ) -> Result<Option<external_services::service::TestContext>, config::ConfigError> {
+        self.enabled
+            .then(|| {
+                self.mock_server_url
+                    .as_ref()
+                    .ok_or_else(|| {
+                        config::ConfigError::Message(
+                            "Test mode enabled but mock_server_url is not set".to_string(),
+                        )
+                    })
+                    .map(|url| external_services::service::TestContext {
+                        session_id: request_id.to_string(),
+                        mock_server_url: url.clone(),
+                    })
+            })
+            .transpose()
+    }
+}
+
+/// API tag configuration for flow-based tagging with payment method type support
+///
+/// Environment variable format (case-insensitive):
+/// - Simple flow: CS__API_TAGS__TAGS__PSYNC=GW_TXN_SYNC
+/// - With payment method: CS__API_TAGS__TAGS__AUTHORIZE_UPICOLLECT=GW_INIT_COLLECT
+///
+/// TOML format:
+/// ```toml
+/// [api_tags.tags]
+/// psync = "GW_TXN_SYNC"
+/// authorize_upicollect = "GW_INIT_COLLECT"
+/// ```
+///
+/// Note: Config crate lowercases env var keys, lookup is case-insensitive
+#[derive(Clone, Deserialize, Debug, Default, Serialize)]
+pub struct ApiTagConfig {
+    #[serde(default)]
+    pub tags: std::collections::HashMap<String, String>,
+}
+
+impl ApiTagConfig {
+    /// Get API tag for a flow, optionally refined by payment method type
+    ///
+    /// Lookup order (case-insensitive):
+    /// 1. If payment_method_type provided: try "flow_paymentmethodtype" (composite key)
+    /// 2. Fall back to "flow" (simple key)
+    /// 3. Return None if not found
+    ///
+    /// Note: Keys are lowercased for lookup because config crate lowercases env var keys
+    pub fn get_tag(
+        &self,
+        flow: common_utils::events::FlowName,
+        payment_method_type: Option<common_enums::PaymentMethodType>,
+    ) -> Option<String> {
+        let flow_str = flow.as_str();
+
+        payment_method_type.map_or_else(
+            || {
+                let result = self.tags.get(&flow_str.to_lowercase()).cloned();
+                if result.is_none() {
+                    tracing::debug!(
+                        flow = %flow_str,
+                        payment_method_type = ?payment_method_type,
+                        "No API tag configured for flow"
+                    );
+                }
+                result
+            },
+            |pmt| {
+                let composite_key = format!("{}_{:?}", flow_str, pmt).to_lowercase();
+                let result = self.tags.get(&composite_key).cloned();
+                if result.is_none() {
+                    tracing::debug!(
+                        flow = %flow_str,
+                        payment_method_type = ?payment_method_type,
+                        "No API tag configured for flow with payment method type"
+                    );
+                }
+                result
+            },
+        )
+    }
+}
+
+#[derive(Clone, Deserialize, Debug, Serialize)]
 pub struct Common {
     pub environment: consts::Env,
 }
@@ -55,7 +155,7 @@ impl Common {
     }
 }
 
-#[derive(Clone, serde::Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Serialize)]
 pub struct Server {
     pub host: String,
     pub port: u16,
@@ -63,13 +163,13 @@ pub struct Server {
     pub type_: ServiceType,
 }
 
-#[derive(Clone, serde::Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Serialize)]
 pub struct MetricsServer {
     pub host: String,
     pub port: u16,
 }
 
-#[derive(Clone, serde::Deserialize, Debug, Default)]
+#[derive(Clone, Deserialize, Serialize, Debug, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum ServiceType {
     #[default]

@@ -1,3 +1,5 @@
+pub mod request;
+pub mod response;
 pub mod transformers;
 
 use std::fmt::Debug;
@@ -39,9 +41,9 @@ use paytm::constants;
 use serde::Serialize;
 use transformers as paytm;
 
-use self::transformers::{
-    PaytmAuthorizeRequest, PaytmInitiateTxnRequest, PaytmInitiateTxnResponse,
-    PaytmProcessTxnResponse, PaytmTransactionStatusRequest, PaytmTransactionStatusResponse,
+use self::{
+    request::{PaytmAuthorizeRequest, PaytmInitiateTxnRequest, PaytmTransactionStatusRequest},
+    response::{PaytmInitiateTxnResponse, PaytmProcessTxnResponse, PaytmTransactionStatusResponse},
 };
 use crate::{connectors::macros, types::ResponseRouterData};
 

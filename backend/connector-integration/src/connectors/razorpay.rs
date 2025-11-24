@@ -1747,24 +1747,7 @@ static RAZORPAY_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> =
 
         razorpay_supported_payment_methods.add(
             PaymentMethod::Card,
-            PaymentMethodType::Debit,
-            PaymentMethodDetails {
-                mandates: FeatureStatus::NotSupported,
-                refunds: FeatureStatus::Supported,
-                supported_capture_methods: razorpay_supported_capture_methods.clone(),
-                specific_features: Some(PaymentMethodSpecificFeatures::Card(
-                    CardSpecificFeatures {
-                        three_ds: FeatureStatus::NotSupported,
-                        no_three_ds: FeatureStatus::Supported,
-                        supported_card_networks: razorpay_supported_card_network.clone(),
-                    },
-                )),
-            },
-        );
-
-        razorpay_supported_payment_methods.add(
-            PaymentMethod::Card,
-            PaymentMethodType::Credit,
+            PaymentMethodType::Card,
             PaymentMethodDetails {
                 mandates: FeatureStatus::NotSupported,
                 refunds: FeatureStatus::Supported,

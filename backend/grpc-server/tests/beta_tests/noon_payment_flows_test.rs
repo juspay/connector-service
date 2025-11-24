@@ -4,10 +4,10 @@
 
 use grpc_server::{app, configs};
 mod common;
+mod utils;
 
 use std::{
     collections::HashMap,
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -16,25 +16,20 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        card_payment_method_type, identifier::IdType, payment_method,
+        identifier::IdType, payment_method,
         payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient,
-        AuthenticationType, CaptureMethod, CardDetails, CardPaymentMethodType, Currency,
+        AuthenticationType, CaptureMethod, CardDetails, Currency,
         Identifier, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
         PaymentServiceVoidRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus,
     },
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use tonic::{transport::Channel, Request};
 
 // Constants for Noon connector
 const CONNECTOR_NAME: &str = "noon";
 const AUTH_TYPE: &str = "signature-key";
-
-// Environment variable names for API credentials (can be set or overridden with provided values)
-const NOON_API_KEY_ENV: &str = "TEST_NOON_API_KEY";
-const NOON_KEY1_ENV: &str = "TEST_NOON_KEY1";
-const NOON_API_SECRET_ENV: &str = "TEST_NOON_API_SECRET";
 
 // Test card data
 const TEST_AMOUNT: i64 = 1000;
@@ -55,12 +50,17 @@ fn get_timestamp() -> u64 {
 
 // Helper function to add Noon metadata headers to a request
 fn add_noon_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables - throw error if not set
-    let api_key =
-        env::var(NOON_API_KEY_ENV).expect("TEST_NOON_API_KEY environment variable is required");
-    let key1 = env::var(NOON_KEY1_ENV).expect("TEST_NOON_KEY1 environment variable is required");
-    let api_secret = env::var(NOON_API_SECRET_ENV)
-        .expect("TEST_NOON_API_SECRET environment variable is required");
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load noon credentials");
+
+    let (api_key, key1, api_secret) = match auth {
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
+            api_key,
+            key1,
+            api_secret,
+        } => (api_key.expose(), key1.expose(), api_secret.expose()),
+        _ => panic!("Expected SignatureKey auth type for noon"),
+    };
 
     request.metadata_mut().append(
         "x-connector",
@@ -127,7 +127,7 @@ fn extract_request_ref_id(response: &PaymentServiceAuthorizeResponse) -> String 
 fn create_payment_authorize_request(
     capture_method: CaptureMethod,
 ) -> PaymentServiceAuthorizeRequest {
-    let card_details = card_payment_method_type::CardType::Credit(CardDetails {
+    let card_details = CardDetails {
         card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
         card_exp_year: Some(Secret::new(TEST_CARD_EXP_YEAR.to_string())),
@@ -150,8 +150,7 @@ fn create_payment_authorize_request(
         minor_amount: TEST_AMOUNT,
         currency: i32::from(Currency::Aed),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType {
-                card_type: Some(card_details),
+            payment_method: Some(payment_method::PaymentMethod::Card(card_details)
             })),
         }),
         return_url: Some("https://duck.com".to_string()),
@@ -166,7 +165,7 @@ fn create_payment_authorize_request(
         capture_method: Some(i32::from(capture_method)),
         order_category: Some("PAY".to_string()),
         metadata,
-        // payment_method_type: Some(i32::from(PaymentMethodType::Credit)),
+        // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         ..Default::default()
     }
 }
