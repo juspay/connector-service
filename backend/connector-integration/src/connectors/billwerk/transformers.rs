@@ -443,6 +443,10 @@ impl<F, T> TryFrom<ResponseRouterData<BillwerkPaymentsResponse, Self>>
             status_code: http_code,
         };
         Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: common_enums::AttemptStatus::from(response.state),
+                ..router_data.resource_common_data
+            },
             response: error_response.map_or_else(|| Ok(payments_response), Err),
             ..router_data
         })
@@ -570,39 +574,9 @@ impl<F> TryFrom<RefundsResponseRouterData<F, RefundResponse>>
     }
 }
 
-#[derive(Debug, Serialize)]
-pub struct BillwerkRSyncRequest {}
-
 pub type BillwerkRSyncResponse = RefundResponse;
 
 pub type BillwerkRefundResponse = RefundResponse;
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
-    TryFrom<
-        BillwerkRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    > for BillwerkRSyncRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        _item: BillwerkRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {})
-    }
-}
 
 impl<
         T: PaymentMethodDataTypes
