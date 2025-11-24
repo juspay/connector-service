@@ -262,7 +262,7 @@ pub struct GlobalpayNotifications {
     pub status_url: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum InitiatorType {
     Merchant,
@@ -277,7 +277,7 @@ pub struct Initiator {
     pub stored_credential: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum StoredCredentialType {
     Installment,
@@ -286,7 +286,7 @@ pub enum StoredCredentialType {
     Subscription,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum StoredCredentialSequence {
     First,
@@ -424,8 +424,12 @@ impl<
 
         // Build initiator and stored_credential for mandate payments
         let (initiator, stored_credential) = if item.request.is_mandate_payment() {
-            // Determine if this is a merchant or payer initiated transaction
-            let is_off_session = matches!(item.request.off_session, Some(true));
+            // Determine initiator type based on off_session flag
+            let initiator_type = if matches!(item.request.off_session, Some(true)) {
+                InitiatorType::Merchant
+            } else {
+                InitiatorType::Payer
+            };
 
             // Check if we have an existing connector mandate ID (indicates subsequent payment)
             let has_connector_mandate = item
@@ -441,11 +445,7 @@ impl<
                 .is_some();
 
             let initiator = Some(Initiator {
-                initiator_type: Some(if is_off_session {
-                    InitiatorType::Merchant
-                } else {
-                    InitiatorType::Payer
-                }),
+                initiator_type: Some(initiator_type),
                 id: None,
                 stored_credential: None,
             });
@@ -461,11 +461,7 @@ impl<
                 } else {
                     StoredCredentialSequence::First
                 }),
-                initiator: Some(if is_off_session {
-                    InitiatorType::Merchant
-                } else {
-                    InitiatorType::Payer
-                }),
+                initiator: Some(initiator_type),
             });
 
             (initiator, stored_credential)
