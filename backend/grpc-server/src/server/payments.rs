@@ -582,6 +582,7 @@ impl Payments {
                 )
             })?,
             Err(error_report) => {
+                tracing::error!("{:?}", error_report);
                 // Convert error to RouterDataV2 with error response
                 let error_router_data = RouterDataV2 {
                     flow: std::marker::PhantomData,
