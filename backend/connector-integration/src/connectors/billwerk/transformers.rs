@@ -20,26 +20,15 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse, PaymentMethodToken as PaymentMethodTokenFlow},
     router_data_v2::RouterDataV2,
 };
+
 use hyperswitch_masking::{ExposeInterface, Secret};
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub struct BillwerkAuthType {
     pub api_key: Secret<String>,
     pub public_api_key: Secret<String>,
-}
-
-impl TryFrom<&ConnectorAuthType> for BillwerkAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                api_key: api_key.to_owned(),
-                public_api_key: key1.to_owned(),
-            }),
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -86,6 +75,7 @@ pub struct BillwerkTokenResponse {
     pub id: Secret<String>,
     pub recurring: Option<bool>,
 }
+
 #[derive(Debug, Serialize)]
 pub struct BillwerkPaymentsRequest {
     handle: String,
@@ -97,39 +87,6 @@ pub struct BillwerkPaymentsRequest {
     settle: bool,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct BillwerkSource {
-    #[serde(rename = "type")]
-    pub source_type: Option<String>,
-    pub fingerprint: Option<String>,
-    pub provider: Option<String>,
-    pub frictionless: Option<bool>,
-    pub card_type: Option<String>,
-    pub transaction_card_type: Option<String>,
-    pub exp_date: Option<String>,
-    pub masked_card: Option<String>,
-    pub card_country: Option<String>,
-    pub acquirer_reference: Option<String>,
-    pub text_on_statement: Option<String>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct BillwerkOrderLine {
-    pub id: Option<String>,
-    pub ordertext: Option<String>,
-    pub amount: Option<i64>,
-    pub vat: Option<f64>,
-    pub quantity: Option<i64>,
-    pub origin: Option<String>,
-    pub timestamp: Option<String>,
-    pub amount_vat: Option<i64>,
-    pub amount_ex_vat: Option<i64>,
-    pub unit_amount: Option<i64>,
-    pub unit_amount_vat: Option<i64>,
-    pub unit_amount_ex_vat: Option<i64>,
-    pub amount_defined_incl_vat: Option<bool>,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum BillwerkPaymentState {
@@ -139,6 +96,23 @@ pub enum BillwerkPaymentState {
     Settled,
     Failed,
     Cancelled,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BillwerkCustomerObject {
+    handle: Option<common_utils::id_type::CustomerId>,
+    email: Option<common_utils::pii::Email>,
+    address: Option<Secret<String>>,
+    address2: Option<Secret<String>>,
+    city: Option<Secret<String>>,
+    country: Option<common_enums::CountryAlpha2>,
+    first_name: Option<Secret<String>>,
+    last_name: Option<Secret<String>>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BillwerkCaptureRequest {
+    amount: MinorUnit,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -247,18 +221,6 @@ impl<
             }
         }
     }
-}
-
-#[derive(Debug, Serialize)]
-pub struct BillwerkCustomerObject {
-    handle: Option<common_utils::id_type::CustomerId>,
-    email: Option<common_utils::pii::Email>,
-    address: Option<Secret<String>>,
-    address2: Option<Secret<String>>,
-    city: Option<Secret<String>>,
-    country: Option<common_enums::CountryAlpha2>,
-    first_name: Option<Secret<String>>,
-    last_name: Option<Secret<String>>,
 }
 
 impl<
@@ -460,9 +422,17 @@ impl From<BillwerkPaymentState> for common_enums::AttemptStatus {
     }
 }
 
-#[derive(Debug, Serialize)]
-pub struct BillwerkCaptureRequest {
-    amount: MinorUnit,
+impl TryFrom<&ConnectorAuthType> for BillwerkAuthType {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+        match auth_type {
+            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
+                api_key: api_key.to_owned(),
+                public_api_key: key1.to_owned(),
+            }),
+            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+        }
+    }
 }
 
 impl<
