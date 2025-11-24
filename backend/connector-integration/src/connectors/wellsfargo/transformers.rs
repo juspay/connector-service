@@ -5,16 +5,39 @@ use domain_types::payment_method_data::RawCardNumber;
 use common_enums::{AttemptStatus, RefundStatus};
 use domain_types::{
     connector_flow::{Authorize, Capture, Refund, RSync, SetupMandate, Void},
-    connector_types::{MandateReference, PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentVoidData, RefundFlowData, RefundsData, RefundSyncData, RefundsResponseData, PaymentsResponseData, ResponseId, SetupMandateRequestData},
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentVoidData, RefundFlowData, RefundsData, RefundSyncData, RefundsResponseData, PaymentsResponseData, ResponseId, SetupMandateRequestData},
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
     router_data::ErrorResponse,
     errors,
 };
-use error_stack::{Report};
+use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{Secret, ExposeInterface, PeekInterface};
 use serde::{Deserialize, Serialize};
 use crate::types::ResponseRouterData;
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+// Error message constants for consistent error handling
+mod error_messages {
+    pub const PAYMENT_FAILED: &str = "Payment failed";
+    pub const CAPTURE_FAILED: &str = "Capture failed";
+    pub const VOID_FAILED: &str = "Void failed";
+    pub const REFUND_FAILED: &str = "Refund failed";
+    pub const SETUP_MANDATE_FAILED: &str = "Setup mandate failed";
+    pub const REFUND_SYNC_FAILED: &str = "Refund sync failed";
+    pub const MISSING_APPLICATION_INFO: &str = "Missing application_information in response";
+}
+
+// Required Field Validation Summary:
+// - Authorize: email (validated), payment_method (pattern matched), amount/currency (framework)
+// - Capture: transaction_id, amount, currency (all handled by framework)
+// - Void: transaction_id (framework), amount/currency (validated if provided)
+// - Refund: transaction_id, refund_amount, currency (all handled by framework)
+// - SetupMandate: email (validated), payment_method (pattern matched), customer_acceptance (validated by framework)
+// - Sync flows: transaction_id (framework)
 
 // ============================================================================
 // REQUEST STRUCTURES
@@ -27,6 +50,8 @@ pub struct WellsfargoPaymentsRequest<T: PaymentMethodDataTypes> {
     payment_information: PaymentInformation<T>,
     order_information: OrderInformationWithBill,
     client_reference_information: ClientReferenceInformation,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    merchant_defined_information: Option<Vec<MerchantDefinedInformation>>,
     #[serde(skip)]
     _phantom: std::marker::PhantomData<T>,
 }
@@ -79,8 +104,8 @@ pub struct OrderInformationWithBill {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Amount {
-    total_amount: String,
-    currency: String,
+    total_amount: common_utils::types::StringMajorUnit,
+    currency: common_enums::Currency,
 }
 
 #[derive(Debug, Serialize)]
@@ -94,6 +119,15 @@ pub struct BillTo {
     postal_code: Option<Secret<String>>,
     country: Option<common_enums::CountryAlpha2>,
     email: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    phone_number: Option<Secret<String>>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MerchantDefinedInformation {
+    key: u8,
+    value: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -127,6 +161,18 @@ pub struct OrderInformationAmount {
 #[serde(rename_all = "camelCase")]
 pub struct WellsfargoVoidRequest {
     client_reference_information: ClientReferenceInformation,
+    reversal_information: ReversalInformation,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    merchant_defined_information: Option<Vec<MerchantDefinedInformation>>,
+    // The connector documentation does not mention the merchantDefinedInformation field
+    // for Void requests. But this has been still added because it works!
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReversalInformation {
+    amount_details: Amount,
+    reason: String,
 }
 
 // ============================================================================
@@ -134,30 +180,31 @@ pub struct WellsfargoVoidRequest {
 // ============================================================================
 
 
-// HYPERSWITCH STRUCTURE : 
+// Refund status enum for TSS endpoint responses
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum WellsfargoRefundStatus {
+    Succeeded,
+    Transmitted,
+    Failed,
+    Pending,
+    Voided,
+    Cancelled,
+}
 
-// pub enum WellsfargoRefundStatus {
-//     Succeeded,
-//     Transmitted,
-//     Failed,
-//     Pending,
-//     Voided,
-//     Cancelled,
-// }
-
-// impl From<WellsfargoRefundStatus> for enums::RefundStatus {
-//     fn from(item: WellsfargoRefundStatus) -> Self {
-//         match item {
-//             WellsfargoRefundStatus::Succeeded | WellsfargoRefundStatus::Transmitted => {
-//                 Self::Success
-//             }
-//             WellsfargoRefundStatus::Cancelled
-//             | WellsfargoRefundStatus::Failed
-//             | WellsfargoRefundStatus::Voided => Self::Failure,
-//             WellsfargoRefundStatus::Pending => Self::Pending,
-//         }
-//     }
-// }
+impl From<WellsfargoRefundStatus> for RefundStatus {
+    fn from(item: WellsfargoRefundStatus) -> Self {
+        match item {
+            WellsfargoRefundStatus::Succeeded | WellsfargoRefundStatus::Transmitted => {
+                Self::Success
+            }
+            WellsfargoRefundStatus::Cancelled
+            | WellsfargoRefundStatus::Failed
+            | WellsfargoRefundStatus::Voided => Self::Failure,
+            WellsfargoRefundStatus::Pending => Self::Pending,
+        }
+    }
+}
 
 // pub struct WellsfargoRefundRequest {
 //     order_information: OrderInformation,
@@ -247,6 +294,24 @@ pub struct WellsfargoPaymentsResponse {
     pub processor_information: Option<ClientProcessorInformation>,
     pub error_information: Option<WellsfargoErrorInformation>,
     pub token_information: Option<WellsfargoTokenInformation>, // For SetupMandate responses
+    #[serde(rename = "_links")]
+    pub links: Option<WellsfargoLinks>, // HATEOAS links to determine payment state
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WellsfargoLinks {
+    pub capture: Option<WellsfargoLink>,
+    #[serde(rename = "self")]
+    pub self_link: Option<WellsfargoLink>,
+    pub auth_reversal: Option<WellsfargoLink>,
+    pub void: Option<WellsfargoLink>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct WellsfargoLink {
+    pub href: String,
+    pub method: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -254,6 +319,22 @@ pub struct WellsfargoPaymentsResponse {
 pub struct StatusInformation {
     pub reason: Option<String>,
     pub message: Option<String>,
+}
+
+// Response structure for TSS (Transaction Search Service) endpoint
+// Used for RSync (Refund Sync) to query transaction status
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WellsfargoRSyncResponse {
+    pub id: String,
+    pub application_information: Option<RSyncApplicationInformation>,
+    pub error_information: Option<WellsfargoErrorInformation>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RSyncApplicationInformation {
+    pub status: Option<WellsfargoRefundStatus>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -328,13 +409,25 @@ pub struct WellsfargoCustomer {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum WellsfargoErrorResponse {
-    StandardError(StandardErrorResponse),
+    AuthenticationError(Box<WellsfargoAuthenticationErrorResponse>),
     NotAvailableError(NotAvailableErrorResponse),
+    StandardError(StandardErrorResponse),
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct WellsfargoAuthenticationErrorResponse {
+    pub response: AuthenticationErrorInformation,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AuthenticationErrorInformation {
+    pub rmsg: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StandardErrorResponse {
+    pub id: Option<String>,  // Transaction ID if available in error response
     pub error_information: Option<WellsfargoErrorInformation>,
     pub status: Option<String>,
     pub message: Option<String>,
@@ -344,6 +437,7 @@ pub struct StandardErrorResponse {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct NotAvailableErrorResponse {
+    pub id: Option<String>,  // Transaction ID if available in error response
     pub errors: Vec<NotAvailableErrorObject>,
 }
 
@@ -389,12 +483,51 @@ impl TryFrom<&domain_types::router_data::ConnectorAuthType> for WellsfargoAuthTy
 // HELPER FUNCTIONS
 // ============================================================================
 
-/// Convert minor units (cents) to major units (dollars) as decimal string
-/// Example: 1000 cents -> "10.00"
-fn minor_to_major_unit(minor_amount: i64) -> String {
-    let major = minor_amount / 100;
-    let minor_part = minor_amount % 100;
-    format!("{}.{:02}", major, minor_part)
+/// Converts metadata JSON to Wells Fargo MerchantDefinedInformation format
+fn convert_metadata_to_merchant_defined_info(metadata: serde_json::Value) -> Vec<MerchantDefinedInformation> {
+    let hashmap: std::collections::BTreeMap<String, serde_json::Value> =
+        serde_json::from_str(&metadata.to_string()).unwrap_or(std::collections::BTreeMap::new());
+    let mut vector = Vec::new();
+    let mut iter = 1;
+    for (key, value) in hashmap {
+        vector.push(MerchantDefinedInformation {
+            key: iter,
+            value: format!("{key}={value}"),
+        });
+        iter += 1;
+    }
+    vector
+}
+
+/// Converts CardIssuer enum to CyberSource/Wells Fargo card type code
+fn card_issuer_to_cybersource_code(card_issuer: domain_types::utils::CardIssuer) -> String {
+    use domain_types::utils::CardIssuer;
+    match card_issuer {
+        CardIssuer::Visa => "001",
+        CardIssuer::Master => "002",
+        CardIssuer::AmericanExpress => "003",
+        CardIssuer::Discover => "004",
+        CardIssuer::DinersClub => "005",
+        CardIssuer::CarteBlanche => "006",
+        CardIssuer::JCB => "007",
+        CardIssuer::Maestro => "042",
+        CardIssuer::CartesBancaires => "036",
+    }
+    .to_string()
+}
+
+/// Extracts phone number with country code from address
+fn get_phone_number(
+    address: Option<&domain_types::payment_address::Address>,
+) -> Option<Secret<String>> {
+    address
+        .and_then(|addr| addr.phone.as_ref())
+        .and_then(|phone| {
+            phone.number.as_ref().and_then(|number| {
+                phone.country_code.as_ref()
+                    .map(|cc| Secret::new(format!("{}{}", cc, number.peek())))
+            })
+        })
 }
 
 // ============================================================================
@@ -418,21 +551,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let request = &router_data.request;
         let common_data = &router_data.resource_common_data;
 
-        // Get payment method data - for now we only support Cards
+        // Get payment method data
         let payment_information = match &request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
-                // Get card type as string
-                let card_type = card_data.card_network.as_ref().map(|network| {
-                    match network {
-                        common_enums::CardNetwork::Visa => "001",
-                        common_enums::CardNetwork::Mastercard => "002",
-                        common_enums::CardNetwork::AmericanExpress => "003",
-                        common_enums::CardNetwork::Discover => "004",
-                        common_enums::CardNetwork::DinersClub => "005",
-                        common_enums::CardNetwork::JCB => "007",
-                        _ => "001", // Default to Visa
-                    }
-                }).map(String::from);
+                // Use get_card_issuer for robust card type detection with fallback
+                let card_issuer = domain_types::utils::get_card_issuer(&(format!("{:?}", card_data.card_number.0)));
+                let card_type = match card_issuer {
+                    Ok(issuer) => Some(card_issuer_to_cybersource_code(issuer)),
+                    Err(_) => None,
+                };
 
                 let card = Card {
                     number: card_data.card_number.clone(),
@@ -444,18 +571,51 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 };
                 PaymentInformation::Cards(Box::new(CardPaymentInformation { card }))
             }
-            _ => Err(errors::ConnectorError::NotImplemented(
-                "Payment method not supported".to_string(),
-            ))?,
+            // Connector supports these but not yet implemented
+            PaymentMethodData::Wallet(_)
+            | PaymentMethodData::CardToken(_)
+            | PaymentMethodData::NetworkToken(_) => {
+                Err(errors::ConnectorError::NotImplemented(
+                    "Payment method supported by connector but not yet implemented".to_string(),
+                ))?
+            }
+            // Connector does not support these payment methods
+            PaymentMethodData::CardDetailsForNetworkTransactionId(_)
+            | PaymentMethodData::CardRedirect(_)
+            | PaymentMethodData::PayLater(_)
+            | PaymentMethodData::BankRedirect(_)
+            | PaymentMethodData::BankDebit(_)
+            | PaymentMethodData::BankTransfer(_)
+            | PaymentMethodData::Crypto(_)
+            | PaymentMethodData::MandatePayment
+            | PaymentMethodData::Reward
+            | PaymentMethodData::RealTimePayment(_)
+            | PaymentMethodData::Upi(_)
+            | PaymentMethodData::Voucher(_)
+            | PaymentMethodData::GiftCard(_)
+            | PaymentMethodData::OpenBanking(_)
+            | PaymentMethodData::MobilePayment(_) => {
+                Err(errors::ConnectorError::NotSupported {
+                    message: "Payment method not supported by Wellsfargo".to_string(),
+                    connector: "Wellsfargo",
+                })?
+            }
         };
 
         // Get amount and currency - amount is in minor units (cents)
         let amount = request.minor_amount;
         let currency = request.currency;
 
+        // Convert amount using the framework's amount converter
+        let total_amount = item
+            .connector
+            .amount_converter
+            .convert(amount, currency)
+            .change_context(errors::ConnectorError::AmountConversionFailed)?;
+
         let amount_details = Amount {
-            total_amount: minor_to_major_unit(amount.get_amount_as_i64()),
-            currency: currency.to_string(),
+            total_amount,
+            currency,
         };
 
         // Build billing information if available
@@ -467,11 +627,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         // Convert Email type to Secret<String>
         // Email wraps Secret<String, EmailStrategy>, we need to extract and re-wrap
-        use hyperswitch_masking::ExposeInterface;
         let email_inner = email.expose();
         let email_secret = Secret::new(email_inner.expose());
 
-        let bill_to = billing.and_then(|addr| {
+        let bill_to = billing.map(|addr| {
+            let phone_number = get_phone_number(Some(addr));
             addr.address.as_ref().map(|details| BillTo {
                 first_name: details.first_name.clone(),
                 last_name: details.last_name.clone(),
@@ -481,6 +641,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 postal_code: details.zip.clone(),
                 country: details.country,
                 email: email_secret.clone(),
+                phone_number: phone_number.clone(),
+            }).unwrap_or_else(|| BillTo {
+                first_name: None,
+                last_name: None,
+                address1: None,
+                locality: None,
+                administrative_area: None,
+                postal_code: None,
+                country: None,
+                email: email_secret.clone(),
+                phone_number,
             })
         }).or_else(|| Some(BillTo {
             first_name: None,
@@ -491,6 +662,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             postal_code: None,
             country: None,
             email: email_secret.clone(),
+            phone_number: None,
         }));
 
         let order_information = OrderInformationWithBill {
@@ -514,11 +686,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             code: Some(common_data.payment_id.clone()),
         };
 
+        // Merchant defined information from metadata
+        let merchant_defined_information = request
+            .metadata
+            .clone()
+            .map(convert_metadata_to_merchant_defined_info);
+
         Ok(Self {
             processing_information,
             payment_information,
             order_information,
             client_reference_information,
+            merchant_defined_information,
             _phantom: std::marker::PhantomData,
         })
     }
@@ -528,15 +707,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 // CAPTURE REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoCaptureRequest
 // ============================================================================
 
-impl
-    TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    TryFrom<super::WellsfargoRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
     for WellsfargoCaptureRequest
 {
     type Error = Report<errors::ConnectorError>;
 
     fn try_from(
-        router_data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        item: super::WellsfargoRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
         let request = &router_data.request;
         let common_data = &router_data.resource_common_data;
 
@@ -544,9 +724,16 @@ impl
         let amount = request.minor_amount_to_capture;
         let currency = request.currency;
 
+        // Convert amount using the framework's amount converter
+        let total_amount = item
+            .connector
+            .amount_converter
+            .convert(amount, currency)
+            .change_context(errors::ConnectorError::AmountConversionFailed)?;
+
         let amount_details = Amount {
-            total_amount: minor_to_major_unit(amount.get_amount_as_i64()),
-            currency: currency.to_string(),
+            total_amount,
+            currency,
         };
 
         let order_information = OrderInformationAmount {
@@ -569,24 +756,65 @@ impl
 // VOID REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoVoidRequest
 // ============================================================================
 
-impl
-    TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    TryFrom<super::WellsfargoRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
     for WellsfargoVoidRequest
 {
     type Error = Report<errors::ConnectorError>;
 
     fn try_from(
-        router_data: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        item: super::WellsfargoRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
         let common_data = &router_data.resource_common_data;
+        let request = &router_data.request;
+
+        // Amount information - must be provided in the request
+        let amount = request.amount.ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "amount",
+            },
+        )?;
+        let currency = request.currency.ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "currency",
+            },
+        )?;
+
+        // Convert amount using the framework's amount converter
+        let total_amount = item
+            .connector
+            .amount_converter
+            .convert(amount, currency)
+            .change_context(errors::ConnectorError::AmountConversionFailed)?;
+
+        let amount_details = Amount {
+            total_amount,
+            currency,
+        };
+
+        // Reversal information with amount and reason
+        let reversal_information = ReversalInformation {
+            amount_details,
+            reason: request
+                .cancellation_reason
+                .clone()
+                .unwrap_or_else(|| "Cancellation requested".to_string()),
+        };
 
         // Client reference - use payment_id from common data
         let client_reference_information = ClientReferenceInformation {
             code: Some(common_data.payment_id.clone()),
         };
 
+        // Merchant defined information from metadata
+        // Note: PaymentVoidData in UCS v2 doesn't have metadata field, so set to None
+        let merchant_defined_information = None;
+
         Ok(Self {
             client_reference_information,
+            reversal_information,
+            merchant_defined_information,
         })
     }
 }
@@ -595,25 +823,32 @@ impl
 // REFUND REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoRefundRequest
 // ============================================================================
 
-impl
-    TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    TryFrom<super::WellsfargoRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
     for WellsfargoRefundRequest
 {
     type Error = Report<errors::ConnectorError>;
 
     fn try_from(
-        router_data: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        item: super::WellsfargoRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
         let request = &router_data.request;
-        // let common_data = &router_data.resource_common_data;
 
         // Amount information
-        let amount = request.refund_amount;
+        let amount = request.minor_refund_amount;
         let currency = request.currency;
 
+        // Convert amount using the framework's amount converter
+        let total_amount = item
+            .connector
+            .amount_converter
+            .convert(amount, currency)
+            .change_context(errors::ConnectorError::AmountConversionFailed)?;
+
         let amount_details = Amount {
-            total_amount: minor_to_major_unit(amount),
-            currency: currency.to_string(),
+            total_amount,
+            currency,
         };
 
         let order_information = OrderInformationAmount {
@@ -636,21 +871,31 @@ impl
 // SETUPMANDATE REQUEST CONVERSION
 // ============================================================================
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<&RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    TryFrom<super::WellsfargoRouterData<RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>, T>>
     for WellsfargoZeroMandateRequest<T>
 {
     type Error = Report<errors::ConnectorError>;
 
     fn try_from(
-        router_data: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        item: super::WellsfargoRouterData<RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
         let request = &router_data.request;
         let common_data = &router_data.resource_common_data;
 
+        // Get email - required for mandate setup
+        let email = request.email.clone()
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "email",
+            })?;
+        let email_secret = Secret::new(email.peek().to_string());
+
         // Create billing information from address data
         let billing_address = common_data.address.get_payment_method_billing();
-        let bill_to = billing_address.and_then(|addr| {
+
+        let bill_to = billing_address.map(|addr| {
+            let phone_number = get_phone_number(Some(addr));
             addr.address.as_ref().map(|addr_details| BillTo {
                 first_name: addr_details.first_name.clone(),
                 last_name: addr_details.last_name.clone(),
@@ -659,14 +904,9 @@ impl<T: PaymentMethodDataTypes>
                 administrative_area: addr_details.state.clone(),
                 postal_code: addr_details.zip.clone(),
                 country: addr_details.country,
-                email: request.email.clone()
-                    .map(|e| Secret::new(e.peek().to_string()))
-                    .or_else(|| addr.email.clone().map(|e| Secret::new(e.peek().to_string())))
-                    .unwrap_or_else(|| Secret::new(String::new())),
-            })
-        }).or_else(|| {
-            // Fallback to minimal billing info if no address
-            request.email.clone().map(|email| BillTo {
+                email: email_secret.clone(),
+                phone_number: phone_number.clone(),
+            }).unwrap_or_else(|| BillTo {
                 first_name: request.customer_name.clone().map(Secret::new),
                 last_name: None,
                 address1: None,
@@ -674,15 +914,29 @@ impl<T: PaymentMethodDataTypes>
                 administrative_area: None,
                 postal_code: None,
                 country: None,
-                email: Secret::new(email.peek().to_string()),
+                email: email_secret.clone(),
+                phone_number,
+            })
+        }).or_else(|| {
+            // Fallback to minimal billing info if no address
+            Some(BillTo {
+                first_name: request.customer_name.clone().map(Secret::new),
+                last_name: None,
+                address1: None,
+                locality: None,
+                administrative_area: None,
+                postal_code: None,
+                country: None,
+                email: email_secret.clone(),
+                phone_number: None,
             })
         });
 
         // Zero amount for mandate setup
         let order_information = OrderInformationWithBill {
             amount_details: Amount {
-                total_amount: "0".to_string(),
-                currency: request.currency.to_string(),
+                total_amount: common_utils::types::StringMajorUnit::zero(),
+                currency: request.currency,
             },
             bill_to,
         };
@@ -753,7 +1007,11 @@ impl<T: PaymentMethodDataTypes>
         item: ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
-        let status = get_payment_status(&response.status, &response.error_information);
+        // For Authorize flow, determine if it's auto-capture or manual based on capture_method
+        let is_auto_capture = item.router_data.request.capture_method
+            .map(|method| matches!(method, common_enums::CaptureMethod::Automatic))
+            .unwrap_or(false);
+        let status = map_attempt_status(&response.status, is_auto_capture, &response.error_information);
 
         // Check if the payment was successful
         let response_data = if is_payment_successful(&response.status, &response.status_information) {
@@ -779,7 +1037,7 @@ impl<T: PaymentMethodDataTypes>
                 .or_else(|| response.error_information
                     .as_ref()
                     .and_then(|info| info.reason.clone()))
-                .unwrap_or_else(|| "Payment failed".to_string());
+                .unwrap_or_else(|| error_messages::PAYMENT_FAILED.to_string());
 
             let error_code = response.error_information
                 .as_ref()
@@ -827,10 +1085,10 @@ impl
         let is_success = is_payment_successful(&response.status, &response.status_information);
 
         let status = if is_success && response.status.is_none() {
-            // PSync GET response with statusInformation: Success → treat as Charged
-            AttemptStatus::Charged
+            AttemptStatus::Authorized
         } else {
-            get_payment_status(&response.status, &response.error_information)
+            // For PSync with status field, capture=false to correctly map "Authorized" to "Authorized" not "Charged"
+            map_attempt_status(&response.status, false, &response.error_information)
         };
 
         // Check if the payment was successful
@@ -857,7 +1115,7 @@ impl
                 .or_else(|| response.error_information
                     .as_ref()
                     .and_then(|info| info.reason.clone()))
-                .unwrap_or_else(|| "Payment failed".to_string());
+                .unwrap_or_else(|| error_messages::PAYMENT_FAILED.to_string());
 
             let error_code = response.error_information
                 .as_ref()
@@ -900,7 +1158,8 @@ impl
         item: ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
-        let status = get_payment_status(&response.status, &response.error_information);
+        // For Capture flow, capture=true
+        let status = map_attempt_status(&response.status, true, &response.error_information);
 
         // Check if the capture was successful
         let response_data = if is_payment_successful(&response.status, &response.status_information) {
@@ -926,7 +1185,7 @@ impl
                 .or_else(|| response.error_information
                     .as_ref()
                     .and_then(|info| info.reason.clone()))
-                .unwrap_or_else(|| "Capture failed".to_string());
+                .unwrap_or_else(|| error_messages::CAPTURE_FAILED.to_string());
 
             let error_code = response.error_information
                 .as_ref()
@@ -969,7 +1228,8 @@ impl
         item: ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
-        let status = get_payment_status(&response.status, &response.error_information);
+        // For Void flow, capture=false
+        let status = map_attempt_status(&response.status, false, &response.error_information);
 
         // Check if the void was successful
         let response_data = if is_payment_successful(&response.status, &response.status_information) {
@@ -995,7 +1255,7 @@ impl
                 .or_else(|| response.error_information
                     .as_ref()
                     .and_then(|info| info.reason.clone()))
-                .unwrap_or_else(|| "Void failed".to_string());
+                .unwrap_or_else(|| error_messages::VOID_FAILED.to_string());
 
             let error_code = response.error_information
                 .as_ref()
@@ -1041,18 +1301,21 @@ impl<T: PaymentMethodDataTypes>
         item: ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
-        let status = get_payment_status(&response.status, &response.error_information);
+        // For SetupMandate flow, capture=false (zero-dollar auth)
+        let status = map_attempt_status(&response.status, false, &response.error_information);
 
         // Check if the mandate setup was successful
         let response_data = if is_payment_successful(&response.status, &response.status_information) {
             // Extract mandate reference from token information
+            // Wells Fargo returns both payment_instrument.id and customer.id in token_information
+            // We store payment_instrument.id as the connector_mandate_id for future recurring payments
             let mandate_reference = response.token_information
                 .as_ref()
                 .and_then(|token_info| token_info.payment_instrument.as_ref())
                 .map(|instrument| {
                     domain_types::connector_types::MandateReference {
                         connector_mandate_id: Some(instrument.id.clone().expose()),
-                        payment_method_id: None,
+                        payment_method_id: None, // Could potentially use token_information.customer.id here if needed
                     }
                 });
 
@@ -1078,7 +1341,7 @@ impl<T: PaymentMethodDataTypes>
                 .or_else(|| response.error_information
                     .as_ref()
                     .and_then(|info| info.reason.clone()))
-                .unwrap_or_else(|| "Setup mandate failed".to_string());
+                .unwrap_or_else(|| error_messages::SETUP_MANDATE_FAILED.to_string());
 
             let error_code = response.error_information
                 .as_ref()
@@ -1174,51 +1437,100 @@ impl
 // ============================================================================
 
 impl
-    TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>>
+    TryFrom<ResponseRouterData<WellsfargoRSyncResponse, RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>,
+        item: ResponseRouterData<WellsfargoRSyncResponse, RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
-        let status = get_refund_status(&response.status, &response.error_information);
 
-        // Check if the refund sync was successful
-        let response_data = if is_payment_successful(&response.status, &response.status_information) {
-            Ok(RefundsResponseData {
-                connector_refund_id: response.id.clone(),
-                refund_status: status,
-                status_code: item.http_code,
-            })
-        } else {
-            // Build error response
-            let error_message = response.error_information
-                .as_ref()
-                .and_then(|info| info.message.clone())
-                .or_else(|| response.error_information
-                    .as_ref()
-                    .and_then(|info| info.reason.clone()))
-                .unwrap_or_else(|| "Refund sync failed".to_string());
+        // Extract status from application_information (TSS endpoint structure)
+        let response_data = match response
+            .application_information
+            .as_ref()
+            .and_then(|app_info| app_info.status.clone())
+        {
+            Some(refund_status) => {
+                let status: RefundStatus = refund_status.clone().into();
 
-            let error_code = response.error_information
-                .as_ref()
-                .and_then(|info| info.reason.clone());
-
-            Err(ErrorResponse {
-                code: error_code.unwrap_or_else(|| "DECLINED".to_string()),
-                message: error_message.clone(),
-                reason: Some(error_message),
-                status_code: item.http_code,
-                attempt_status: None, // Refunds don't have attempt status
-                connector_transaction_id: Some(response.id.clone()),
-                network_decline_code: response.processor_information
-                    .as_ref()
-                    .and_then(|info| info.response_code.clone()),
-                network_advice_code: None,
-                network_error_message: None,
-            })
+                // Check if this is a failure status
+                if matches!(status, RefundStatus::Failure) {
+                    // Special handling for VOIDED status
+                    if refund_status == WellsfargoRefundStatus::Voided {
+                        Err(ErrorResponse {
+                            code: "REFUND_VOIDED".to_string(),
+                            message: "Refund has been voided".to_string(),
+                            reason: Some("Refund has been voided".to_string()),
+                            status_code: item.http_code,
+                            attempt_status: None,
+                            connector_transaction_id: Some(response.id.clone()),
+                            network_decline_code: None,
+                            network_advice_code: None,
+                            network_error_message: None,
+                        })
+                    } else {
+                        // Other failure cases
+                        Err(ErrorResponse {
+                            code: response.error_information
+                                .as_ref()
+                                .and_then(|info| info.reason.clone())
+                                .unwrap_or_else(|| "REFUND_FAILED".to_string()),
+                            message: response.error_information
+                                .as_ref()
+                                .and_then(|info| info.message.clone())
+                                .unwrap_or_else(|| error_messages::REFUND_FAILED.to_string()),
+                            reason: response.error_information
+                                .as_ref()
+                                .and_then(|info| info.message.clone()),
+                            status_code: item.http_code,
+                            attempt_status: None,
+                            connector_transaction_id: Some(response.id.clone()),
+                            network_decline_code: None,
+                            network_advice_code: None,
+                            network_error_message: None,
+                        })
+                    }
+                } else {
+                    // Success or pending status
+                    Ok(RefundsResponseData {
+                        connector_refund_id: response.id.clone(),
+                        refund_status: status,
+                        status_code: item.http_code,
+                    })
+                }
+            }
+            None => {
+                // No status found - check for error information
+                if let Some(error_info) = &response.error_information {
+                    Err(ErrorResponse {
+                        code: error_info.reason.clone().unwrap_or_else(|| "DECLINED".to_string()),
+                        message: error_info.message.clone().unwrap_or_else(|| error_messages::REFUND_SYNC_FAILED.to_string()),
+                        reason: error_info.message.clone(),
+                        status_code: item.http_code,
+                        attempt_status: None,
+                        connector_transaction_id: Some(response.id.clone()),
+                        network_decline_code: None,
+                        network_advice_code: None,
+                        network_error_message: None,
+                    })
+                } else {
+                    // No status and no error - return unknown status error
+                    Err(ErrorResponse {
+                        code: "UNKNOWN_STATUS".to_string(),
+                        message: "Unable to determine refund status".to_string(),
+                        reason: Some(error_messages::MISSING_APPLICATION_INFO.to_string()),
+                        status_code: item.http_code,
+                        attempt_status: None,
+                        connector_transaction_id: Some(response.id.clone()),
+                        network_decline_code: None,
+                        network_advice_code: None,
+                        network_error_message: None,
+                    })
+                }
+            }
         };
 
         Ok(Self {
@@ -1260,23 +1572,69 @@ fn is_payment_successful(
     status_success || status_info_success
 }
 
-fn get_payment_status(
+/// Maps Wells Fargo payment status to Hyperswitch AttemptStatus
+///
+/// # Arguments
+/// * `status` - Wells Fargo payment status from API response
+/// * `capture` - Whether this is a capture operation (affects status interpretation)
+/// * `error_info` - Error information if present
+///
+/// # Status Mappings
+/// - `Authorized` / `AuthorizedPendingReview`:
+///   - If capture=true → `Charged` (Wells Fargo returns "Authorized" even for auto-capture)
+///   - If capture=false → `Authorized` (standard authorization)
+/// - `Pending`:
+///   - If capture=true → `Charged` (capture is processing)
+///   - If capture=false → `Pending` (awaiting action)
+/// - `Transmitted` → `Charged` (payment has been transmitted for settlement)
+/// - `Voided` / `Reversed` → `Voided` (authorization cancelled)
+/// - `Declined` / `AuthorizedRiskDeclined` / `InvalidRequest` → `Failure` (payment failed)
+/// - `PendingAuthentication` → `AuthenticationPending` (awaiting 3DS auth)
+/// - `PendingReview` → `Pending` (under manual review)
+/// - `PartialAuthorized`:
+///   - If capture=true → `PartialCharged` (partial amount captured)
+///   - If capture=false → `Authorized` (partial authorization approved)
+/// - `None`:
+///   - If error_info present → `Failure` (failed with error)
+///   - Otherwise → `Pending` (status unknown, awaiting update)
+fn map_attempt_status(
     status: &Option<WellsfargoPaymentStatus>,
+    capture: bool,
     error_info: &Option<WellsfargoErrorInformation>,
 ) -> AttemptStatus {
     match status {
-        Some(WellsfargoPaymentStatus::Authorized) => AttemptStatus::Charged,
-        Some(WellsfargoPaymentStatus::AuthorizedPendingReview) => AttemptStatus::Pending,
-        Some(WellsfargoPaymentStatus::Declined) => AttemptStatus::Failure,
-        Some(WellsfargoPaymentStatus::InvalidRequest) => AttemptStatus::Failure,
-        Some(WellsfargoPaymentStatus::AuthorizedRiskDeclined) => AttemptStatus::Failure,
-        Some(WellsfargoPaymentStatus::PendingAuthentication) => AttemptStatus::AuthenticationPending,
+        Some(WellsfargoPaymentStatus::Authorized) | Some(WellsfargoPaymentStatus::AuthorizedPendingReview) => {
+            if capture {
+                AttemptStatus::Charged
+            } else {
+                AttemptStatus::Authorized
+            }
+        }
+        Some(WellsfargoPaymentStatus::Pending) => {
+            if capture {
+                AttemptStatus::Charged
+            } else {
+                AttemptStatus::Pending
+            }
+        }
+        Some(WellsfargoPaymentStatus::Transmitted) => AttemptStatus::Charged,
+        Some(WellsfargoPaymentStatus::Voided) | Some(WellsfargoPaymentStatus::Reversed) => {
+            AttemptStatus::Voided
+        }
+        Some(WellsfargoPaymentStatus::Declined)
+        | Some(WellsfargoPaymentStatus::AuthorizedRiskDeclined)
+        | Some(WellsfargoPaymentStatus::InvalidRequest) => AttemptStatus::Failure,
+        Some(WellsfargoPaymentStatus::PendingAuthentication) => {
+            AttemptStatus::AuthenticationPending
+        }
         Some(WellsfargoPaymentStatus::PendingReview) => AttemptStatus::Pending,
-        Some(WellsfargoPaymentStatus::Reversed) => AttemptStatus::Voided,
-        Some(WellsfargoPaymentStatus::Voided) => AttemptStatus::Voided,
-        Some(WellsfargoPaymentStatus::PartialAuthorized) => AttemptStatus::PartialCharged,
-        Some(WellsfargoPaymentStatus::Transmitted) => AttemptStatus::Pending,
-        Some(WellsfargoPaymentStatus::Pending) => AttemptStatus::Pending,
+        Some(WellsfargoPaymentStatus::PartialAuthorized) => {
+            if capture {
+                AttemptStatus::PartialCharged
+            } else {
+                AttemptStatus::Authorized
+            }
+        }
         None => {
             if error_info.is_some() {
                 AttemptStatus::Failure
@@ -1287,6 +1645,21 @@ fn get_payment_status(
     }
 }
 
+/// Maps Wells Fargo payment status to Hyperswitch RefundStatus
+///
+/// # Arguments
+/// * `status` - Wells Fargo payment status from API response
+/// * `error_info` - Error information if present
+///
+/// # Status Mappings
+/// - `Pending` → `Pending` (refund is being processed)
+/// - `Transmitted` → `Pending` (refund has been transmitted but not yet completed)
+/// - `Declined` → `Failure` (refund was declined)
+/// - `InvalidRequest` → `Failure` (refund request was invalid)
+/// - `None`:
+///   - If error_info present → `Failure` (failed with error)
+///   - Otherwise → `Pending` (status unknown, awaiting update)
+/// - All other statuses → `Success` (refund completed successfully)
 fn get_refund_status(
     status: &Option<WellsfargoPaymentStatus>,
     error_info: &Option<WellsfargoErrorInformation>,
@@ -1303,7 +1676,7 @@ fn get_refund_status(
                 RefundStatus::Pending
             }
         }
-        _ => RefundStatus::Success, // Default to success for other statuses
+        _ => RefundStatus::Success,
     }
 }
 
@@ -1311,11 +1684,39 @@ fn get_refund_status(
 // ERROR REASON HELPER
 // ============================================================================
 
+/// Formats error reason with detailed error information and AVS messages
+///
+/// This helper combines various error information sources into a structured
+/// error message following the pattern from Hyperswitch reference implementation.
+///
+/// # Arguments
+/// * `error_info` - Primary error message
+/// * `detailed_error_info` - Field-level error details
+/// * `avs_error_info` - AVS/risk verification messages
+///
+/// # Returns
+/// Combined error message or None if all inputs are None
 pub fn get_error_reason(
-    error_info: Option<WellsfargoErrorInformation>,
-    default_message: String,
-) -> String {
-    error_info
-        .and_then(|info| info.message.or(info.reason))
-        .unwrap_or(default_message)
+    error_info: Option<String>,
+    detailed_error_info: Option<String>,
+    avs_error_info: Option<String>,
+) -> Option<String> {
+    match (error_info, detailed_error_info, avs_error_info) {
+        (Some(message), Some(details), Some(avs_message)) => Some(format!(
+            "{message}, detailed_error_information: {details}, avs_message: {avs_message}",
+        )),
+        (Some(message), Some(details), None) => {
+            Some(format!("{message}, detailed_error_information: {details}"))
+        }
+        (Some(message), None, Some(avs_message)) => {
+            Some(format!("{message}, avs_message: {avs_message}"))
+        }
+        (None, Some(details), Some(avs_message)) => {
+            Some(format!("{details}, avs_message: {avs_message}"))
+        }
+        (Some(message), None, None) => Some(message),
+        (None, Some(details), None) => Some(details),
+        (None, None, Some(avs_message)) => Some(avs_message),
+        (None, None, None) => None,
+    }
 }

@@ -5,7 +5,8 @@ use common_enums::CurrencyUnit;
 use common_utils::{
     errors::CustomResult, ext_traits::ByteSliceExt,
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    request::{Method, Request, RequestBuilder, RequestContent},
+    request::Method,
+    types::StringMajorUnit,
     };
 use time::OffsetDateTime;
 use url::Url;
@@ -30,21 +31,28 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
 };
 use serde::Serialize;
 use std::fmt::Debug;
-use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
 use transformers::{
     self as wellsfargo, WellsfargoCaptureRequest, WellsfargoRefundRequest, WellsfargoVoidRequest, WellsfargoPaymentsRequest,
-    WellsfargoPaymentsResponse, WellsfargoZeroMandateRequest,
+    WellsfargoPaymentsResponse,
+    WellsfargoPaymentsResponse as WellsfargoCaptureResponse,
+    WellsfargoPaymentsResponse as WellsfargoVoidResponse,
+    WellsfargoPaymentsResponse as WellsfargoPSyncResponse,
+    WellsfargoPaymentsResponse as WellsfargoRefundResponse,
+    WellsfargoRSyncResponse as WellsfargoRefundSyncResponse,
+    WellsfargoPaymentsResponse as WellsfargoSetupMandateResponse,
+    WellsfargoZeroMandateRequest,
 };
 
 use super::macros;
@@ -238,39 +246,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 pub(crate) mod headers {
     pub(crate) const ACCEPT: &str = "Accept";
-    pub(crate) const API_KEY: &str = "API-KEY";
-    pub(crate) const APIKEY: &str = "apikey";
-    pub(crate) const API_TOKEN: &str = "Api-Token";
-    pub(crate) const AUTHORIZATION: &str = "Authorization";
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
-    pub(crate) const DATE: &str = "Date";
-    pub(crate) const IDEMPOTENCY_KEY: &str = "Idempotency-Key";
-    pub(crate) const MESSAGE_SIGNATURE: &str = "Message-Signature";
-    pub(crate) const MERCHANT_ID: &str = "Merchant-ID";
-    pub(crate) const REQUEST_ID: &str = "request-id";
-    pub(crate) const NONCE: &str = "nonce";
-    pub(crate) const TIMESTAMP: &str = "Timestamp";
-    pub(crate) const TOKEN: &str = "token";
-    pub(crate) const X_ACCEPT_VERSION: &str = "X-Accept-Version";
-    pub(crate) const X_CC_API_KEY: &str = "X-CC-Api-Key";
-    pub(crate) const X_CC_VERSION: &str = "X-CC-Version";
-    pub(crate) const X_DATE: &str = "X-Date";
-    pub(crate) const X_LOGIN: &str = "X-Login";
-    pub(crate) const X_NN_ACCESS_KEY: &str = "X-NN-Access-Key";
-    pub(crate) const X_TRANS_KEY: &str = "X-Trans-Key";
-    pub(crate) const X_RANDOM_VALUE: &str = "X-RandomValue";
-    pub(crate) const X_REQUEST_DATE: &str = "X-RequestDate";
-    pub(crate) const X_VERSION: &str = "X-Version";
-    pub(crate) const X_API_KEY: &str = "X-Api-Key";
-    pub(crate) const CORRELATION_ID: &str = "Correlation-Id";
-    pub(crate) const WP_API_VERSION: &str = "WP-Api-Version";
-    pub(crate) const STRIPE_COMPATIBLE_CONNECT_ACCOUNT: &str = "Stripe-Account";
-    pub(crate) const SOURCE: &str = "Source";
-    pub(crate) const USER_AGENT: &str = "User-Agent";
-    pub(crate) const KEY: &str = "key";
-    pub(crate) const X_SIGNATURE: &str = "X-Signature";
-    pub(crate) const SOAP_ACTION: &str = "SOAPAction";
-    pub(crate) const X_PROFILE_ID: &str = "X-Profile-Id";
 }
 
 macros::create_all_prerequisites!(
@@ -282,9 +258,45 @@ macros::create_all_prerequisites!(
             request_body: WellsfargoPaymentsRequest<T>,
             response_body: WellsfargoPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PSync,
+            response_body: WellsfargoPSyncResponse,
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
+            flow: Capture,
+            request_body: WellsfargoCaptureRequest,
+            response_body: WellsfargoCaptureResponse,
+            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ),
+        (
+            flow: Void,
+            request_body: WellsfargoVoidRequest,
+            response_body: WellsfargoVoidResponse,
+            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: Refund,
+            request_body: WellsfargoRefundRequest,
+            response_body: WellsfargoRefundResponse,
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
+            flow: RSync,
+            response_body: WellsfargoRefundSyncResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: WellsfargoZeroMandateRequest<T>,
+            response_body: WellsfargoSetupMandateResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         )
     ],
-    amount_converters: [],
+    amount_converters: [
+        amount_converter: StringMajorUnit
+    ],
     member_functions: {
         fn generate_digest(&self, payload: &[u8]) -> String {
             use sha2::{Digest, Sha256};
@@ -308,6 +320,7 @@ macros::create_all_prerequisites!(
 
             let is_post_method = matches!(http_method, Method::Post);
             let is_patch_method = matches!(http_method, Method::Patch);
+            let is_delete_method = matches!(http_method, Method::Delete);
             let digest_str = if is_post_method || is_patch_method {
                 "digest "
             } else {
@@ -320,6 +333,8 @@ macros::create_all_prerequisites!(
                 format!("(request-target): post {resource}\ndigest: SHA-256={payload}\n")
             } else if is_patch_method {
                 format!("(request-target): patch {resource}\ndigest: SHA-256={payload}\n")
+            } else if is_delete_method {
+                format!("(request-target): delete {resource}\n")
             } else {
                 format!("(request-target): get {resource}\n")
             };
@@ -537,17 +552,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                             details
                                 .iter()
                                 .map(|det| {
-                                    let field = det.field.as_deref().unwrap_or("unknown");
-                                    let reason = det.reason.as_deref().unwrap_or("unknown");
-                                    format!("{} : {}", field, reason)
+                                    format!(
+                                        "{} : {}",
+                                        det.field.as_deref().unwrap_or("unknown"),
+                                        det.reason.as_deref().unwrap_or("unknown")
+                                    )
                                 })
                                 .collect::<Vec<_>>()
                                 .join(", ")
                         });
                         (
-                            error_info.reason.clone().unwrap_or_else(|| NO_ERROR_CODE.to_string()),
-                            error_info.message.clone().unwrap_or_else(|| error_message.to_string()),
-                            detailed_error_info.unwrap_or_else(|| error_message.to_string()),
+                            error_info.reason.clone(),
+                            error_info.message.clone(),
+                            transformers::get_error_reason(
+                                error_info.message.clone(),
+                                detailed_error_info,
+                                None, // AVS/risk info support can be added later
+                            ),
                         )
                     }
                     None => {
@@ -563,18 +584,37 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                                 .join(", ")
                         });
                         (
-                            response.reason.clone().unwrap_or_else(|| NO_ERROR_CODE.to_string()),
-                            response.message.clone().unwrap_or_else(|| error_message.to_string()),
-                            detailed_error_info.unwrap_or_else(|| error_message.to_string()),
+                            response.reason.clone(),
+                            response.message.clone(),
+                            transformers::get_error_reason(
+                                response.message.clone(),
+                                detailed_error_info,
+                                None, // AVS/risk info support can be added later
+                            ),
                         )
                     }
                 };
 
                 Ok(ErrorResponse {
                     status_code: res.status_code,
-                    code,
-                    message,
-                    reason: Some(reason),
+                    code: code.unwrap_or_else(|| NO_ERROR_CODE.to_string()),
+                    message: message.unwrap_or_else(|| error_message.to_string()),
+                    reason: reason.or_else(|| Some(error_message.to_string())),
+                    attempt_status: None,
+                    connector_transaction_id: response.id.clone(),
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    network_error_message: None,
+                })
+            }
+            Ok(transformers::WellsfargoErrorResponse::AuthenticationError(response)) => {
+                event_builder.map(|i| i.set_error_response_body(&response));
+                tracing::info!(connector_response=?response);
+                Ok(ErrorResponse {
+                    status_code: res.status_code,
+                    code: NO_ERROR_CODE.to_string(),
+                    message: response.response.rmsg.clone(),
+                    reason: Some(response.response.rmsg),
                     attempt_status: None,
                     connector_transaction_id: None,
                     network_advice_code: None,
@@ -597,7 +637,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     message: error_response.clone(),
                     reason: Some(error_response),
                     attempt_status: None,
-                    connector_transaction_id: None,
+                    connector_transaction_id: response.id.clone(),
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
@@ -644,531 +684,217 @@ macros::macro_connector_implementation!(
 );
 
 // Capture implementation - POST request to capture authorized payment
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Wellsfargo<T>
-{
-}
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Wellsfargo,
+    curl_request: Json(WellsfargoCaptureRequest),
+    curl_response: WellsfargoCaptureResponse,
+    flow_name: Capture,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsCaptureData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let connector_payment_id = req.request
+                .connector_transaction_id
+                .get_connector_transaction_id()
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Wellsfargo<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        self.build_headers(req)
+            Ok(format!(
+                "{}pts/v2/payments/{}/captures",
+                self.connector_base_url_payments(req),
+                connector_payment_id
+            ))
+        }
     }
+);
 
-    fn get_url(
-        &self,
-        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        let connector_payment_id = req.request
-            .connector_transaction_id
-            .get_connector_transaction_id()
-            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+// Void implementation - POST request to reverse/cancel authorized payment
+// Uses /reversals endpoint (matching Hyperswitch implementation) which is semantically correct
+// for authorization reversals. This endpoint should only work for authorized-but-not-captured payments.
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Wellsfargo,
+    curl_request: Json(WellsfargoVoidRequest),
+    curl_response: WellsfargoVoidResponse,
+    flow_name: Void,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentVoidData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let connector_payment_id = &req.request.connector_transaction_id;
 
-        Ok(format!(
-            "{}pts/v2/payments/{}/captures",
-            self.connector_base_url_payments(req),
-            connector_payment_id
-        ))
+            Ok(format!(
+                "{}pts/v2/payments/{}/reversals",
+                self.connector_base_url_payments(req),
+                connector_payment_id
+            ))
+        }
     }
-
-    fn get_http_method(&self) -> Method {
-        Method::Post
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        self.common_get_content_type()
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let wellsfargo_req = WellsfargoCaptureRequest::try_from(req)?;
-        Ok(Some(RequestContent::Json(Box::new(wellsfargo_req))))
-    }
-
-    fn build_request_v2(
-        &self,
-        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
-        let wellsfargo_req = WellsfargoCaptureRequest::try_from(req)?;
-
-        Ok(Some(
-            RequestBuilder::new()
-                .method(Method::Post)
-                .url(&self.get_url(req)?)
-                .attach_default_headers()
-                .headers(self.get_headers(req)?)
-                .set_body(RequestContent::Json(Box::new(wellsfargo_req)))
-                .build(),
-        ))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, errors::ConnectorError> {
-        let response: wellsfargo::WellsfargoPaymentsResponse = res
-            .response
-            .parse_struct("WellsfargoPaymentsResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        event_builder.map(|i| i.set_response_body(&response));
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
-
-// Void implementation - POST request to void/cancel authorized payment
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Wellsfargo<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Wellsfargo<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        self.build_headers(req)
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        let connector_payment_id = &req.request.connector_transaction_id;
-
-        Ok(format!(
-            "{}pts/v2/payments/{}/voids",
-            self.connector_base_url_payments(req),
-            connector_payment_id
-        ))
-    }
-
-    fn get_http_method(&self) -> Method {
-        Method::Post
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        self.common_get_content_type()
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let wellsfargo_req = WellsfargoVoidRequest::try_from(req)?;
-        Ok(Some(RequestContent::Json(Box::new(wellsfargo_req))))
-    }
-
-    fn build_request_v2(
-        &self,
-        req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
-        let wellsfargo_req = WellsfargoVoidRequest::try_from(req)?;
-
-        Ok(Some(
-            RequestBuilder::new()
-                .method(Method::Post)
-                .url(&self.get_url(req)?)
-                .attach_default_headers()
-                .headers(self.get_headers(req)?)
-                .set_body(RequestContent::Json(Box::new(wellsfargo_req)))
-                .build(),
-        ))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, errors::ConnectorError> {
-        let response: wellsfargo::WellsfargoPaymentsResponse = res
-            .response
-            .parse_struct("WellsfargoPaymentsResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        event_builder.map(|i| i.set_response_body(&response));
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
+);
 
 // Refund implementation - POST request to refund captured payment
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    for Wellsfargo<T>
-{
-}
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Wellsfargo,
+    curl_request: Json(WellsfargoRefundRequest),
+    curl_response: WellsfargoRefundResponse,
+    flow_name: Refund,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundsData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers_refunds(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let connector_transaction_id = &req.request.connector_transaction_id;
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    for Wellsfargo<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        self.build_headers_refunds(req)
+            Ok(format!(
+                "{}pts/v2/payments/{}/refunds",
+                self.connector_base_url_refunds(req),
+                connector_transaction_id
+            ))
+        }
     }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        let connector_transaction_id = &req.request.connector_transaction_id;
-
-        Ok(format!(
-            "{}pts/v2/captures/{}/refunds",
-            self.connector_base_url_refunds(req),
-            connector_transaction_id
-        ))
-    }
-
-    fn get_http_method(&self) -> Method {
-        Method::Post
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        self.common_get_content_type()
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let wellsfargo_req = WellsfargoRefundRequest::try_from(req)?;
-        Ok(Some(RequestContent::Json(Box::new(wellsfargo_req))))
-    }
-
-    fn build_request_v2(
-        &self,
-        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
-        let wellsfargo_req = WellsfargoRefundRequest::try_from(req)?;
-
-        Ok(Some(
-            RequestBuilder::new()
-                .method(Method::Post)
-                .url(&self.get_url(req)?)
-                .attach_default_headers()
-                .headers(self.get_headers(req)?)
-                .set_body(RequestContent::Json(Box::new(wellsfargo_req)))
-                .build(),
-        ))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, errors::ConnectorError> {
-        let response: wellsfargo::WellsfargoPaymentsResponse = res
-            .response
-            .parse_struct("WellsfargoPaymentsResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        event_builder.map(|i| i.set_response_body(&response));
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
+);
 
 // PSync (Payment Sync) implementation - GET request, no request body
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Wellsfargo<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        self.build_headers(req)
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Wellsfargo,
+    curl_response: WellsfargoPSyncResponse,
+    flow_name: PSync,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsSyncData,
+    flow_response: PaymentsResponseData,
+    http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let connector_payment_id = req.request
+                .connector_transaction_id
+                .get_connector_transaction_id()
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+
+            Ok(format!(
+                "{}pts/v2/payments/{}",
+                self.connector_base_url_payments(req),
+                connector_payment_id
+            ))
+        }
     }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        let connector_payment_id = req.request
-            .connector_transaction_id
-            .get_connector_transaction_id()
-            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
-
-        Ok(format!(
-            "{}pts/v2/payments/{}",
-            self.connector_base_url_payments(req),
-            connector_payment_id
-        ))
-    }
-
-    fn get_http_method(&self) -> Method {
-        Method::Get
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        self.common_get_content_type()
-    }
-
-    fn build_request_v2(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
-        Ok(Some(
-            RequestBuilder::new()
-                .method(Method::Get)
-                .url(&self.get_url(req)?)
-                .attach_default_headers()
-                .headers(self.get_headers(req)?)
-                .build(),
-        ))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, errors::ConnectorError> {
-        let response: wellsfargo::WellsfargoPaymentsResponse = res
-            .response
-            .parse_struct("WellsfargoPaymentsResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        event_builder.map(|i| i.set_response_body(&response));
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
+);
 
 // RSync (Refund Sync) implementation - GET request to check refund status
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Wellsfargo<T>
-{
-}
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Wellsfargo,
+    curl_response: WellsfargoRefundSyncResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers_refunds(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let connector_refund_id = &req.request.connector_transaction_id;
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Wellsfargo<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        self.build_headers_refunds(req)
+            Ok(format!(
+                "{}tss/v2/transactions/{}",
+                self.connector_base_url_refunds(req),
+                connector_refund_id
+            ))
+        }
     }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        let connector_refund_id = &req.request.connector_transaction_id;
-
-        Ok(format!(
-            "{}pts/v2/refunds/{}",
-            self.connector_base_url_refunds(req),
-            connector_refund_id
-        ))
-    }
-
-    fn get_http_method(&self) -> Method {
-        Method::Get
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        self.common_get_content_type()
-    }
-
-    fn build_request_v2(
-        &self,
-        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
-        Ok(Some(
-            RequestBuilder::new()
-                .method(Method::Get)
-                .url(&self.get_url(req)?)
-                .attach_default_headers()
-                .headers(self.get_headers(req)?)
-                .build(),
-        ))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, errors::ConnectorError> {
-        let response: wellsfargo::WellsfargoPaymentsResponse = res
-            .response
-            .parse_struct("WellsfargoPaymentsResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        event_builder.map(|i| i.set_response_body(&response));
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
+);
 
 // SetupMandate implementation - POST request to setup mandate (zero-dollar auth)
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
-    for Wellsfargo<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
-    for Wellsfargo<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        self.build_headers(req)
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Wellsfargo,
+    curl_request: Json(WellsfargoZeroMandateRequest<T>),
+    curl_response: WellsfargoSetupMandateResponse,
+    flow_name: SetupMandate,
+    resource_common_data: PaymentFlowData,
+    flow_request: SetupMandateRequestData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+                "{}pts/v2/payments",
+                self.connector_base_url_payments(req)
+            ))
+        }
     }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        Ok(format!(
-            "{}pts/v2/payments",
-            self.connector_base_url_payments(req)
-        ))
-    }
-
-    fn get_http_method(&self) -> Method {
-        Method::Post
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        self.common_get_content_type()
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let wellsfargo_req = WellsfargoZeroMandateRequest::try_from(req)?;
-        Ok(Some(RequestContent::Json(Box::new(wellsfargo_req))))
-    }
-
-    fn build_request_v2(
-        &self,
-        req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
-        let wellsfargo_req = WellsfargoZeroMandateRequest::try_from(req)?;
-
-        Ok(Some(
-            RequestBuilder::new()
-                .method(Method::Post)
-                .url(&self.get_url(req)?)
-                .attach_default_headers()
-                .headers(self.get_headers(req)?)
-                .set_body(RequestContent::Json(Box::new(wellsfargo_req)))
-                .build(),
-        ))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>, errors::ConnectorError> {
-        let response: wellsfargo::WellsfargoPaymentsResponse = res
-            .response
-            .parse_struct("WellsfargoPaymentsResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        event_builder.map(|i| i.set_response_body(&response));
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
+);
 
 // Stub implementations for unsupported flows
 
@@ -1333,6 +1059,57 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
+    > for Wellsfargo<T>
+{
+}
+
+// SourceVerification implementations for flows converted to macros
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Capture,
+        PaymentFlowData,
+        PaymentsCaptureData,
+        PaymentsResponseData,
+    > for Wellsfargo<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Void,
+        PaymentFlowData,
+        PaymentVoidData,
+        PaymentsResponseData,
+    > for Wellsfargo<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Refund,
+        RefundFlowData,
+        RefundsData,
+        RefundsResponseData,
+    > for Wellsfargo<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        RSync,
+        RefundFlowData,
+        RefundSyncData,
+        RefundsResponseData,
+    > for Wellsfargo<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
     > for Wellsfargo<T>
 {
 }
