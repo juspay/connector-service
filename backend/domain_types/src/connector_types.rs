@@ -1236,9 +1236,6 @@ pub enum PaymentsResponseData {
         connector_response_reference_id: Option<String>,
         status_code: u16,
     },
-    TokenizationResponse {
-        token: String,
-    },
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
