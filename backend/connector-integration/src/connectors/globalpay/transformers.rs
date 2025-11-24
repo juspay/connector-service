@@ -7,9 +7,10 @@ use common_utils::types::StringMinorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateAccessToken, PSync, RSync, Refund, Void},
     connector_types::{
-        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        AccessTokenRequestData, AccessTokenResponseData, MandateReferenceId, PaymentFlowData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -310,11 +311,9 @@ pub struct GlobalpayPaymentsRequest<T: PaymentMethodDataTypes> {
     pub country: common_enums::CountryAlpha2,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub capture_mode: Option<GlobalpayCaptureMode>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub initiator: Option<Initiator>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub notifications: Option<GlobalpayNotifications>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub stored_credential: Option<StoredCredential>,
     pub payment_method: GlobalpayPaymentMethod<T>,
 }
@@ -334,8 +333,6 @@ pub struct GlobalpayCard<T: PaymentMethodDataTypes> {
     pub expiry_month: Secret<String>,
     pub expiry_year: Secret<String>,
     pub cvv: Secret<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cvv_indicator: Option<String>,
 }
 
 impl<
@@ -379,13 +376,6 @@ impl<
                     .get_card_expiry_year_2_digit()
                     .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
-                // Determine cvv_indicator based on whether CVV is provided
-                let cvv_indicator = if card_data.card_cvc.peek().is_empty() {
-                    Some("NOT_PRESENT".to_string())
-                } else {
-                    Some("PRESENT".to_string())
-                };
-
                 GlobalpayPaymentMethod {
                     name: item.request.customer_name.clone().map(Secret::new),
                     entry_mode: constants::ENTRY_MODE_ECOM.to_string(),
@@ -394,7 +384,6 @@ impl<
                         expiry_month: card_data.card_exp_month.clone(),
                         expiry_year: expiry_year_2digit,
                         cvv: card_data.card_cvc.clone(),
-                        cvv_indicator,
                     }),
                 }
             }
@@ -433,6 +422,57 @@ impl<
             None
         };
 
+        // Build initiator and stored_credential for mandate payments
+        let (initiator, stored_credential) = if item.request.is_mandate_payment() {
+            // Determine if this is a merchant or payer initiated transaction
+            let is_off_session = matches!(item.request.off_session, Some(true));
+
+            // Check if we have an existing connector mandate ID (indicates subsequent payment)
+            let has_connector_mandate = item
+                .request
+                .mandate_id
+                .as_ref()
+                .and_then(|mandate_ids| match &mandate_ids.mandate_reference_id {
+                    Some(MandateReferenceId::ConnectorMandateId(connector_mandate_ids)) => {
+                        connector_mandate_ids.get_connector_mandate_id()
+                    }
+                    _ => None,
+                })
+                .is_some();
+
+            let initiator = Some(Initiator {
+                initiator_type: Some(if is_off_session {
+                    InitiatorType::Merchant
+                } else {
+                    InitiatorType::Payer
+                }),
+                id: None,
+                stored_credential: None,
+            });
+
+            let stored_credential = Some(StoredCredential {
+                credential_type: Some(if has_connector_mandate {
+                    StoredCredentialType::Recurring
+                } else {
+                    StoredCredentialType::Unscheduled
+                }),
+                sequence: Some(if has_connector_mandate {
+                    StoredCredentialSequence::Subsequent
+                } else {
+                    StoredCredentialSequence::First
+                }),
+                initiator: Some(if is_off_session {
+                    InitiatorType::Merchant
+                } else {
+                    InitiatorType::Payer
+                }),
+            });
+
+            (initiator, stored_credential)
+        } else {
+            (None, None)
+        };
+
         Ok(Self {
             account_name: constants::ACCOUNT_NAME.to_string(),
             channel: constants::CHANNEL_CNP.to_string(),
@@ -448,9 +488,9 @@ impl<
                 .clone(),
             country,
             capture_mode,
-            initiator: None,
+            initiator,
             notifications,
-            stored_credential: None,
+            stored_credential,
             payment_method,
         })
     }
