@@ -4,7 +4,7 @@
 // ID Generation and Length Constants
 // =============================================================================
 
-use serde::{de::IntoDeserializer, Deserialize};
+use serde::{de::IntoDeserializer, Deserialize, Serialize};
 
 pub const ID_LENGTH: usize = 20;
 
@@ -49,6 +49,17 @@ pub const X_CONNECTOR_SERVICE: &str = "connector-service";
 pub const X_FLOW_NAME: &str = "x-flow";
 /// Header key for shadow mode
 pub const X_SHADOW_MODE: &str = "x-shadow-mode";
+
+// =============================================================================
+// Test Environment Headers
+// =============================================================================
+
+/// Header key for session ID (test mode)
+pub const X_SESSION_ID: &str = "x-session-id";
+/// Header key for API URL (test mode)
+pub const X_API_URL: &str = "x-api-url";
+/// Header key for API tag (test mode)
+pub const X_API_TAG: &str = "x-api-tag";
 
 // =============================================================================
 // Authentication Headers (Internal)
@@ -137,7 +148,7 @@ pub const CONST_PRODUCTION: &str = "production";
 
 pub const ENV_PREFIX: &str = "CS";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Env {
     Development,
@@ -157,21 +168,15 @@ impl Env {
     /// that cannot be deserialized into one of the valid environment variants.
     #[allow(clippy::panic)]
     pub fn current_env() -> Self {
-        let default_env = if cfg!(debug_assertions) {
-            Self::Development
-        } else {
-            Self::Production
-        };
         let env_key = format!("{ENV_PREFIX}__COMMON__ENVIRONMENT");
-        let res = std::env::var(&env_key).map_or_else(
-            |_| default_env,
+        std::env::var(&env_key).map_or_else(
+            |_| Self::Development,
             |v| {
                 Self::deserialize(v.into_deserializer()).unwrap_or_else(|err: serde_json::Error| {
                     panic!("Invalid value found in environment variable {env_key}: {err}")
                 })
             },
-        );
-        res
+        )
     }
 
     pub const fn config_path(self) -> &'static str {

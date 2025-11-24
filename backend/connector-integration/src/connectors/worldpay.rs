@@ -12,7 +12,7 @@ use self::response::{
     WorldpayRefundSyncResponse, WorldpayRepeatPaymentResponse, WorldpaySyncResponse,
     WorldpayVoidResponse,
 };
-use common_utils::{errors::CustomResult, ext_traits::BytesExt};
+use common_utils::{errors::CustomResult, events, ext_traits::BytesExt};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync,
@@ -38,7 +38,6 @@ use domain_types::{
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
 use std::fmt::Debug;
@@ -304,7 +303,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response = if !res.response.is_empty() {
             res.response
@@ -420,18 +419,11 @@ macros::macro_connector_implementation!(
             let connector_payment_id = req.request.connector_transaction_id.get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
 
-            // Use /settlements for full capture, /partialSettlements for partial captures
-            let endpoint = if req.request.is_multiple_capture() {
-                "partialSettlements"
-            } else {
-                "settlements"
-            };
-
+            // Always use /partialSettlements endpoint (same as Hyperswitch)
             Ok(format!(
-                "{}api/payments/{}/{}",
+                "{}api/payments/{}/partialSettlements",
                 self.connector_base_url_payments(req),
                 urlencoding::encode(&connector_payment_id),
-                endpoint
             ))
         }
     }

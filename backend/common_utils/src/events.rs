@@ -256,6 +256,10 @@ impl Event {
         self.response_data =
             MaskedSerdeValue::from_masked_optional(response, "grpc_success_response");
     }
+
+    pub fn set_connector_response<R: Serialize>(&mut self, response: &R) {
+        self.response_data = MaskedSerdeValue::from_masked_optional(response, "connector_response");
+    }
 }
 
 #[derive(strum::Display)]
@@ -333,7 +337,7 @@ impl EventStage {
 }
 
 /// Configuration for events system
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EventConfig {
     pub enabled: bool,
     pub topic: String,

@@ -436,7 +436,7 @@ pub struct FiuuApplePayData {
     txn_channel: TxnChannel,
     cc_month: Secret<String>,
     cc_year: Secret<String>,
-    cc_token: Secret<String>,
+    cc_token: CardNumber,
     eci: Option<String>,
     token_cryptogram: Secret<String>,
     token_type: FiuuTokenType,
@@ -551,7 +551,7 @@ impl<
             false => TxnType::Auts,
         };
         let return_url = item.router_data.request.router_return_url.clone();
-        let non_3ds = match item.router_data.request.enrolled_for_3ds {
+        let non_3ds = match item.router_data.resource_common_data.is_three_ds() {
             false => 1,
             true => 0,
         };
@@ -757,7 +757,7 @@ impl<
         ),
     ) -> Result<Self, Self::Error> {
         let (mps_token_status, customer_email) = (Some(3), None);
-        let non_3ds = match item.request.enrolled_for_3ds {
+        let non_3ds = match item.resource_common_data.is_three_ds() {
             false => 1,
             true => 0,
         };
@@ -862,8 +862,12 @@ impl<
     fn try_from(decrypt_data: Box<ApplePayPredecryptData>) -> Result<Self, Self::Error> {
         Ok(Self::FiuuApplePayData(Box::new(FiuuApplePayData {
             txn_channel: TxnChannel::Creditan,
-            cc_month: decrypt_data.get_expiry_month()?,
-            cc_year: decrypt_data.get_four_digit_expiry_year()?,
+            cc_month: decrypt_data.get_expiry_month().change_context(
+                errors::ConnectorError::InvalidDataFormat {
+                    field_name: "expiration_month",
+                },
+            )?,
+            cc_year: decrypt_data.get_four_digit_expiry_year(),
             cc_token: decrypt_data.application_primary_account_number,
             eci: decrypt_data.payment_data.eci_indicator,
             token_cryptogram: decrypt_data.payment_data.online_payment_cryptogram,

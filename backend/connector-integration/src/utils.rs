@@ -1,5 +1,5 @@
 pub mod xml_utils;
-use common_utils::{types::MinorUnit, CustomResult};
+use common_utils::{errors::ReportSwitchExt, ext_traits::ValueExt, types::MinorUnit, CustomResult};
 use domain_types::{
     connector_types::{
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsSyncData,
@@ -11,7 +11,7 @@ use domain_types::{
     router_response_types::Response,
 };
 use error_stack::{Report, ResultExt};
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde_json::Value;
 use std::str::FromStr;
 pub use xml_utils::preprocess_xml_response_bytes;
@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 macro_rules! with_error_response_body {
     ($event_builder:ident, $response:ident) => {
         if let Some(body) = $event_builder {
-            body.set_error_response_body(&$response);
+            body.set_connector_response(&$response);
         }
     };
 }
@@ -33,7 +33,7 @@ macro_rules! with_error_response_body {
 macro_rules! with_response_body {
     ($event_builder:ident, $response:ident) => {
         if let Some(body) = $event_builder {
-            body.set_response_body(&$response);
+            body.set_connector_response(&$response);
         }
     };
 }
@@ -219,4 +219,76 @@ pub fn serialize_to_xml_string_with_root<T: Serialize>(
 
     let full_xml = format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>{}", xml_content);
     Ok(full_xml)
+}
+
+pub fn get_error_code_error_message_based_on_priority(
+    connector: impl ConnectorErrorTypeMapping,
+    error_list: Vec<ErrorCodeAndMessage>,
+) -> Option<ErrorCodeAndMessage> {
+    let error_type_list = error_list
+        .iter()
+        .map(|error| {
+            connector
+                .get_connector_error_type(error.error_code.clone(), error.error_message.clone())
+        })
+        .collect::<Vec<ConnectorErrorType>>();
+    let mut error_zip_list = error_list
+        .iter()
+        .zip(error_type_list.iter())
+        .collect::<Vec<(&ErrorCodeAndMessage, &ConnectorErrorType)>>();
+    error_zip_list.sort_by_key(|&(_, error_type)| error_type);
+    error_zip_list
+        .first()
+        .map(|&(error_code_message, _)| error_code_message)
+        .cloned()
+}
+
+pub trait ConnectorErrorTypeMapping {
+    fn get_connector_error_type(
+        &self,
+        _error_code: String,
+        _error_message: String,
+    ) -> ConnectorErrorType {
+        ConnectorErrorType::UnknownError
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ErrorCodeAndMessage {
+    pub error_code: String,
+    pub error_message: String,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
+//Priority of connector_error_type
+pub enum ConnectorErrorType {
+    UserError = 2,
+    BusinessError = 3,
+    TechnicalError = 4,
+    UnknownError = 1,
+}
+
+pub(crate) fn to_connector_meta<T>(connector_meta: Option<Value>) -> Result<T, Error>
+where
+    T: serde::de::DeserializeOwned,
+{
+    let json = connector_meta.ok_or_else(missing_field_err("connector_meta_data"))?;
+    json.parse_value(std::any::type_name::<T>()).switch()
+}
+
+pub(crate) fn is_manual_capture(capture_method: Option<enums::CaptureMethod>) -> bool {
+    capture_method == Some(enums::CaptureMethod::Manual)
+        || capture_method == Some(enums::CaptureMethod::ManualMultiple)
+}
+
+pub fn get_token_expiry_month_year_2_digit_with_delimiter(
+    month: Secret<String>,
+    year: Secret<String>,
+) -> Secret<String> {
+    let year_2_digit = if year.peek().len() == 4 {
+        Secret::new(year.peek().chars().skip(2).collect::<String>())
+    } else {
+        year
+    };
+    Secret::new(format!("{}/{}", month.peek(), year_2_digit.peek()))
 }

@@ -1,15 +1,22 @@
-use common_enums::{CaptureMethod, Currency};
+use std::str::FromStr;
+
+use common_enums::{self, CaptureMethod, Currency};
 use common_utils::{
     pii::{self, IpAddress},
     types::SemanticVersion,
     Email, MinorUnit,
 };
+use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::Serialize;
 
+use crate::utils::ForeignFrom;
+use grpc_api_types::payments;
+
 use crate::{
+    errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    utils::missing_field_err,
+    utils,
 };
 
 pub type Error = error_stack::Report<crate::errors::ConnectorError>;
@@ -37,52 +44,52 @@ impl BrowserInformation {
     pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
         let ip_address = self
             .ip_address
-            .ok_or_else(missing_field_err("browser_info.ip_address"))?;
+            .ok_or_else(utils::missing_field_err("browser_info.ip_address"))?;
         Ok(Secret::new(ip_address.to_string()))
     }
     pub fn get_accept_header(&self) -> Result<String, Error> {
         self.accept_header
             .clone()
-            .ok_or_else(missing_field_err("browser_info.accept_header"))
+            .ok_or_else(utils::missing_field_err("browser_info.accept_header"))
     }
     pub fn get_language(&self) -> Result<String, Error> {
         self.language
             .clone()
-            .ok_or_else(missing_field_err("browser_info.language"))
+            .ok_or_else(utils::missing_field_err("browser_info.language"))
     }
     pub fn get_screen_height(&self) -> Result<u32, Error> {
         self.screen_height
-            .ok_or_else(missing_field_err("browser_info.screen_height"))
+            .ok_or_else(utils::missing_field_err("browser_info.screen_height"))
     }
     pub fn get_screen_width(&self) -> Result<u32, Error> {
         self.screen_width
-            .ok_or_else(missing_field_err("browser_info.screen_width"))
+            .ok_or_else(utils::missing_field_err("browser_info.screen_width"))
     }
     pub fn get_color_depth(&self) -> Result<u8, Error> {
         self.color_depth
-            .ok_or_else(missing_field_err("browser_info.color_depth"))
+            .ok_or_else(utils::missing_field_err("browser_info.color_depth"))
     }
     pub fn get_user_agent(&self) -> Result<String, Error> {
         self.user_agent
             .clone()
-            .ok_or_else(missing_field_err("browser_info.user_agent"))
+            .ok_or_else(utils::missing_field_err("browser_info.user_agent"))
     }
     pub fn get_time_zone(&self) -> Result<i32, Error> {
         self.time_zone
-            .ok_or_else(missing_field_err("browser_info.time_zone"))
+            .ok_or_else(utils::missing_field_err("browser_info.time_zone"))
     }
     pub fn get_java_enabled(&self) -> Result<bool, Error> {
         self.java_enabled
-            .ok_or_else(missing_field_err("browser_info.java_enabled"))
+            .ok_or_else(utils::missing_field_err("browser_info.java_enabled"))
     }
     pub fn get_java_script_enabled(&self) -> Result<bool, Error> {
         self.java_script_enabled
-            .ok_or_else(missing_field_err("browser_info.java_script_enabled"))
+            .ok_or_else(utils::missing_field_err("browser_info.java_script_enabled"))
     }
     pub fn get_referer(&self) -> Result<String, Error> {
         self.referer
             .clone()
-            .ok_or_else(missing_field_err("browser_info.referer"))
+            .ok_or_else(utils::missing_field_err("browser_info.referer"))
     }
 }
 
@@ -110,13 +117,108 @@ pub struct PaymentsCancelData {
     pub capture_method: Option<CaptureMethod>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct AuthenticationData {
+    pub trans_status: Option<common_enums::TransactionStatus>,
     pub eci: Option<String>,
-    pub cavv: Secret<String>,
+    pub cavv: Option<Secret<String>>,
+    // This is mastercard specific field
+    pub ucaf_collection_indicator: Option<String>,
     pub threeds_server_transaction_id: Option<String>,
     pub message_version: Option<SemanticVersion>,
     pub ds_trans_id: Option<String>,
+    pub acs_transaction_id: Option<String>,
+    pub transaction_id: Option<String>,
+}
+
+impl TryFrom<payments::AuthenticationData> for AuthenticationData {
+    type Error = error_stack::Report<errors::ApplicationErrorResponse>;
+    fn try_from(value: payments::AuthenticationData) -> Result<Self, Self::Error> {
+        let payments::AuthenticationData {
+            eci,
+            cavv,
+            threeds_server_transaction_id,
+            message_version,
+            ds_transaction_id,
+            trans_status,
+            acs_transaction_id,
+            transaction_id,
+            ucaf_collection_indicator,
+        } = value;
+        let threeds_server_transaction_id =
+            utils::extract_optional_connector_request_reference_id(&threeds_server_transaction_id);
+        let message_version = message_version.map(|message_version|{
+            SemanticVersion::from_str(&message_version).change_context(errors::ApplicationErrorResponse::BadRequest(errors::ApiError{
+                sub_code: "INVALID_SEMANTIC_VERSION_DATA".to_owned(),
+                error_identifier: 400,
+                error_message: "Invalid semantic version format. Expected format: 'major.minor.patch' (e.g., '2.1.0')".to_string(),
+                error_object: Some(serde_json::json!({
+                    "field": "message_version",
+                    "provided_value": message_version,
+                    "expected_format": "major.minor.patch",
+                    "examples": ["1.0.0", "2.1.0", "2.2.0"],
+                    "validation_rule": "Must be in format X.Y.Z where X, Y, Z are non-negative integers"
+                })),
+            }))
+        }).transpose()?;
+        let trans_status = trans_status.map(|trans_status|{
+            grpc_api_types::payments::TransactionStatus::try_from(trans_status).change_context(errors::ApplicationErrorResponse::BadRequest(errors::ApiError{
+                sub_code: "INVALID_TRANSACTION_STATUS".to_owned(),
+                error_identifier: 400,
+                error_message: "Invalid transaction status format. Expected one of the valid 3DS transaction status values".to_string(),
+                error_object: Some(serde_json::json!({
+                    "field": "transaction_status",
+                    "provided_value": trans_status,
+                    "expected_values": [
+                        "Y (Success)",
+                        "N (Failure)", 
+                        "U (Verification Not Performed)",
+                        "A (Not Verified)",
+                        "R (Rejected)",
+                        "C (Challenge Required)",
+                        "D (Challenge Required - Decoupled Authentication)",
+                        "I (Information Only)"
+                    ],
+                    "validation_rule": "Must be one of the valid 3DS transaction status codes (Y, N, U, A, R, C, D, I)",
+                    "description": "Transaction status represents the result of 3D Secure authentication/verification process"
+                })),
+            }))}).transpose()?.map(common_enums::TransactionStatus::foreign_from);
+        Ok(Self {
+            ucaf_collection_indicator,
+            trans_status,
+            eci,
+            cavv: cavv.map(Secret::new),
+            threeds_server_transaction_id,
+            message_version,
+            ds_trans_id: ds_transaction_id,
+            acs_transaction_id,
+            transaction_id,
+        })
+    }
+}
+
+impl utils::ForeignFrom<AuthenticationData> for payments::AuthenticationData {
+    fn foreign_from(value: AuthenticationData) -> Self {
+        use hyperswitch_masking::ExposeInterface;
+        Self {
+            ucaf_collection_indicator: value.ucaf_collection_indicator,
+            eci: value.eci,
+            cavv: value.cavv.map(|cavv| cavv.expose()),
+            threeds_server_transaction_id: value.threeds_server_transaction_id.map(|id| {
+                payments::Identifier {
+                    id_type: Some(payments::identifier::IdType::Id(id)),
+                }
+            }),
+            message_version: value.message_version.map(|v| v.to_string()),
+            ds_transaction_id: value.ds_trans_id,
+            trans_status: value
+                .trans_status
+                .map(payments::TransactionStatus::foreign_from)
+                .map(i32::from),
+            acs_transaction_id: value.acs_transaction_id,
+            transaction_id: value.transaction_id,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -132,7 +234,9 @@ pub struct ConnectorCustomerData<T: PaymentMethodDataTypes> {
 
 impl<T: PaymentMethodDataTypes> ConnectorCustomerData<T> {
     pub fn get_email(&self) -> Result<Email, Error> {
-        self.email.clone().ok_or_else(missing_field_err("email"))
+        self.email
+            .clone()
+            .ok_or_else(utils::missing_field_err("email"))
     }
 }
 #[derive(Debug, Clone, PartialEq, Serialize)]

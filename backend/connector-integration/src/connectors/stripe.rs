@@ -7,6 +7,7 @@ use std::{
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
+    events,
     ext_traits::ByteSliceExt,
 };
 use domain_types::{
@@ -36,10 +37,10 @@ use domain_types::{
 };
 
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface};
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface, Secret};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent, verification::SourceVerification,
+    verification::SourceVerification,
 };
 use serde::Serialize;
 use transformers::{
@@ -48,7 +49,8 @@ use transformers::{
     PaymentIntentRequest as RepeatPaymentRequest, PaymentSyncResponse, PaymentsAuthorizeResponse,
     PaymentsAuthorizeResponse as RepeatPaymentResponse, PaymentsCaptureResponse,
     PaymentsVoidResponse, RefundResponse, RefundResponse as RefundSyncResponse,
-    SetupMandateRequest, SetupMandateResponse, StripeRefundRequest,
+    SetupMandateRequest, SetupMandateResponse, StripeRefundRequest, StripeTokenResponse,
+    TokenRequest,
 };
 
 use super::macros;
@@ -176,6 +178,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn should_create_connector_customer(&self) -> bool {
         true
     }
+    fn should_do_payment_method_token(
+        &self,
+        payment_method: common_enums::PaymentMethod,
+        payment_method_type: Option<common_enums::PaymentMethodType>,
+    ) -> bool {
+        matches!(payment_method, common_enums::PaymentMethod::Wallet)
+            && !matches!(
+                payment_method_type,
+                Some(common_enums::PaymentMethodType::GooglePay)
+            )
+    }
 }
 
 macros::create_amount_converter_wrapper!(connector_name: Stripe, amount_type: MinorUnit);
@@ -222,6 +235,12 @@ macros::create_all_prerequisites!(
             flow: RSync,
             response_body: RefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: PaymentMethodToken,
+            request_body: TokenRequest<T>,
+            response_body: StripeTokenResponse,
+            router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         ),
         (
             flow: SetupMandate,
@@ -304,7 +323,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: stripe::ErrorResponse = res
             .response
@@ -318,11 +337,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             code: response
                 .error
                 .code
-                .clone()
                 .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
             message: response
                 .error
-                .code
+                .message
+                .clone()
                 .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
             reason: response.error.message.map(|message| {
                 response
@@ -458,7 +477,7 @@ macros::macro_connector_implementation!(
                     matches!(stripe_split_payment.charge_type, common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct))
                 })
                 .map(|stripe_split_payment| stripe_split_payment.transfer_account_id.clone())
-                .or_else(|| stripe_split_payment_metadata.transfer_account_id.clone());
+                .or_else(|| stripe_split_payment_metadata.transfer_account_id.clone().map(|s| s.expose()));
 
             if let Some(transfer_account_id) = transfer_account_id {
                 let mut customer_account_header = vec![(
@@ -479,6 +498,74 @@ macros::macro_connector_implementation!(
                 self.connector_base_url_payments(req),
                 "v1/payment_intents"
             ))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Stripe,
+    curl_request: FormUrlEncoded(TokenRequest),
+    curl_response: StripeTokenResponse,
+    flow_name: PaymentMethodToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentMethodTokenizationData<T>,
+    flow_response: PaymentMethodTokenResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let mut header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )];
+            let transfer_account_id = req
+                .request
+                .split_payments
+                .as_ref()
+                .map(|split_payments| {
+                    let domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(stripe_split_payment) =
+                        split_payments;
+                    stripe_split_payment
+                })
+                .filter(|stripe_split_payment| {
+                    matches!(stripe_split_payment.charge_type, common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct))
+                })
+                .map(|stripe_split_payment| stripe_split_payment.transfer_account_id.clone());
+
+            if let Some(transfer_account_id) = transfer_account_id {
+                let mut customer_account_header = vec![(
+                    headers::STRIPE_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
+                    transfer_account_id.clone().into_masked(),
+                )];
+                header.append(&mut customer_account_header);
+            };
+
+            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            header.append(&mut api_key);
+            Ok(header)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            if matches!(
+                req.request.split_payments,
+                Some(domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(_))
+            ) {
+                Ok(format!(
+                    "{}{}",
+                    self.connector_base_url_payments(req),
+                    "v1/payment_methods"
+                ))
+            }
+            else {
+                Ok(format!("{}{}", self.connector_base_url_payments(req), "v1/tokens"))
+            }
         }
     }
 );
@@ -608,7 +695,7 @@ macros::macro_connector_implementation!(
             {
                 transformers::transform_headers_for_connect_platform(
                     stripe_split_payment.charge_type.clone(),
-                    stripe_split_payment.transfer_account_id.clone(),
+                    Secret::new(stripe_split_payment.transfer_account_id.clone()),
                     &mut header,
                 );
             }
@@ -801,7 +888,7 @@ macros::macro_connector_implementation!(
             {
                 transformers::transform_headers_for_connect_platform(
                     stripe_refund.charge_type.clone(),
-                    stripe_refund.transfer_account_id.clone(),
+                    Secret::new(stripe_refund.transfer_account_id.clone()),
                     &mut header,
                 );
             }
@@ -857,16 +944,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         AccessTokenRequestData,
         AccessTokenResponseData,
-    > for Stripe<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
     > for Stripe<T>
 {
 }

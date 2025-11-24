@@ -15,7 +15,7 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
-use error_stack::{report, ResultExt};
+use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -51,7 +51,7 @@ pub struct BluecodePaymentsRequest {
     pub first_name: Secret<String>,
     pub last_name: Secret<String>,
     pub billing_address_country_code_iso: enums::CountryAlpha2,
-    pub billing_address_city: String,
+    pub billing_address_city: Secret<String>,
     pub billing_address_line1: Secret<String>,
     pub billing_address_postal_code: Option<Secret<String>>,
     pub webhook_url: url::Url,
@@ -66,7 +66,7 @@ pub struct BluecodeWebhookResponse {
     pub user_id: Option<i64>,
     pub customer_id: Option<String>,
     pub customer_email: Option<common_utils::Email>,
-    pub customer_phone: Option<String>,
+    pub customer_phone: Option<Secret<String>>,
     pub status: BluecodePaymentStatus,
     pub payment_provider: Option<String>,
     pub payment_connector: Option<String>,
@@ -122,20 +122,18 @@ impl TryFrom<&pii::SecretSerdeValue> for BluecodeMetadataObject {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(secret_value: &pii::SecretSerdeValue) -> Result<Self, Self::Error> {
-        let secret_value_str = match secret_value.peek() {
-            serde_json::Value::String(s) => s.clone(),
-            _ => {
-                return Err(report!(errors::ConnectorError::InvalidConnectorConfig {
-                    config: "BluecodeMetadataObject in connector_meta_data was not a JSON string",
-                }));
-            }
-        };
-
-        serde_json::from_str(&secret_value_str).change_context(
-            errors::ConnectorError::InvalidConnectorConfig {
-                config: "Deserializing BluecodeMetadataObject from connector_meta_data string",
-            },
-        )
+        match secret_value.peek() {
+            serde_json::Value::String(s) => serde_json::from_str(s).change_context(
+                errors::ConnectorError::InvalidConnectorConfig {
+                    config: "Deserializing BluecodeMetadataObject from connector_meta_data string",
+                },
+            ),
+            value => serde_json::from_value(value.clone()).change_context(
+                errors::ConnectorError::InvalidConnectorConfig {
+                    config: "Deserializing BluecodeMetadataObject from connector_meta_data value",
+                },
+            ),
+        }
     }
 }
 

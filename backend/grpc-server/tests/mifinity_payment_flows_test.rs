@@ -3,22 +3,19 @@
 #![allow(clippy::panic)]
 
 use grpc_server::{app, configs};
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 mod common;
+mod utils;
 
-use std::{
-    env,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
         identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
-        wallet_payment_method_type, AuthenticationType, CaptureMethod, Currency, Identifier,
-        MifinityWallet, PaymentMethod, PaymentServiceAuthorizeRequest,
-        PaymentServiceAuthorizeResponse, PaymentServiceGetRequest, PaymentStatus,
-        WalletPaymentMethodType,
+        AuthenticationType, CaptureMethod, Currency, Identifier, MifinityWallet, PaymentMethod,
+        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceGetRequest,
+        PaymentStatus,
     },
 };
 use tonic::{transport::Channel, Request};
@@ -34,9 +31,6 @@ fn get_timestamp() -> u64 {
 // Constants for Mifinity connector
 const CONNECTOR_NAME: &str = "mifinity";
 
-// Environment variable names for API credentials (can be set or overridden with provided values)
-const MIFINITY_API_KEY_ENV: &str = "TEST_MIFINITY_API_KEY";
-
 // Test card data
 const TEST_AMOUNT: i64 = 1000;
 const TEST_DESTINATION_ACCOUNT_NUMBER: &str = "5001000001223369"; // Valid test destination account number for Mifinity
@@ -45,9 +39,13 @@ const TEST_DATE_OF_BIRTH: &str = "2001-10-16";
 const TEST_EMAIL: &str = "customer@example.com";
 
 fn add_mifinity_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables - throw error if not set
-    let api_key = env::var(MIFINITY_API_KEY_ENV)
-        .expect("TEST_MIFINITY_API_KEY environment variable is required");
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load mifinity credentials");
+
+    let api_key = match auth {
+        domain_types::router_data::ConnectorAuthType::HeaderKey { api_key } => api_key.expose(),
+        _ => panic!("Expected HeaderKey auth type for mifinity"),
+    };
 
     request.metadata_mut().append(
         "x-connector",
@@ -95,10 +93,10 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
 
 // Helper function to create a payment authorize request
 fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuthorizeRequest {
-    let wallet_details = wallet_payment_method_type::WalletType::Mifinity(MifinityWallet {
+    let mifinity_wallet = MifinityWallet {
         date_of_birth: Some(Secret::new(TEST_DATE_OF_BIRTH.to_string())),
         language_preference: Some("en-US".to_string()),
-    });
+    };
 
     // Create connector metadata JSON string
     let connector_meta_data = format!(
@@ -110,11 +108,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         minor_amount: TEST_AMOUNT,
         currency: i32::from(Currency::Eur),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Wallet(
-                WalletPaymentMethodType {
-                    wallet_type: Some(wallet_details),
-                },
-            )),
+            payment_method: Some(payment_method::PaymentMethod::Mifinity(mifinity_wallet)),
         }),
         return_url: Some(
             "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),
@@ -150,7 +144,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             metadata.insert("connector_meta_data".to_string(), connector_meta_data);
             metadata
         },
-        // payment_method_type: Some(i32::from(PaymentMethodType::Credit)),
+        // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         ..Default::default()
     }
 }
@@ -161,6 +155,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
+        encoded_data: None,
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
