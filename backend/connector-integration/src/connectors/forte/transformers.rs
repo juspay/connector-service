@@ -1,6 +1,6 @@
 use super::ForteRouterData;
 use common_enums::enums;
-use common_utils::types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector};
+use common_utils::types::FloatMajorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, Refund, Void},
     connector_types::{
@@ -18,7 +18,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::types::ResponseRouterData;
+use crate::{types::ResponseRouterData, utils as OtherUtils};
 
 type HsInterfacesConnectorError = ConnectorError;
 
@@ -44,36 +44,9 @@ impl<T> From<(FloatMajorUnit, T)> for ForteRouterData1<T> {
 impl TryFrom<&Option<serde_json::Value>> for ForteMeta {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(connector_metadata: &Option<serde_json::Value>) -> Result<Self, Self::Error> {
-        let config_data = to_connector_meta(connector_metadata.clone())?;
+        let config_data = OtherUtils::to_connector_meta(connector_metadata.clone())?;
         Ok(config_data)
     }
-}
-
-fn to_connector_meta(
-    connector_meta: Option<serde_json::Value>,
-) -> common_utils::CustomResult<ForteMeta, ConnectorError> {
-    let meta_obj = connector_meta.ok_or_else(|| ConnectorError::NoConnectorMetaData)?;
-
-    let connector_meta_str = meta_obj
-        .get("connector_meta_data")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| ConnectorError::InvalidDataFormat {
-            field_name: "connector_meta_data",
-        })?;
-
-    let inner_json = serde_json::from_str(connector_meta_str).map_err(|_| {
-        error_stack::report!(ConnectorError::InvalidDataFormat {
-            field_name: "connector_meta_data inner json"
-        })
-    })?;
-
-    let config_data: ForteMeta = serde_json::from_value(inner_json).map_err(|_| {
-        error_stack::report!(ConnectorError::InvalidDataFormat {
-            field_name: "ForteMeta"
-        })
-    })?;
-
-    Ok(config_data)
 }
 
 #[derive(Debug, Serialize)]
@@ -213,13 +186,14 @@ impl<
                     first_name: first_name.clone(),
                     last_name: address.get_last_name().unwrap_or(first_name).clone(),
                 };
-                let converter = FloatMajorUnitForConnector;
-                let authorization_amount = converter
+                let authorization_amount = item
+                    .connector
+                    .amount_converter
                     .convert(
                         item.router_data.request.minor_amount,
                         item.router_data.request.currency,
                     )
-                    .change_context(ConnectorError::RequestEncodingFailed)?;
+                    .change_context(errors::ConnectorError::RequestEncodingFailed)?;
                 Ok(Self {
                     action,
                     authorization_amount,
@@ -729,13 +703,14 @@ impl<
                 .map(|metadata| metadata.expose()),
         )?;
         let auth_code = connector_auth_id.auth_id;
-        let converter = FloatMajorUnitForConnector;
-        let authorization_amount = converter
+        let authorization_amount = item
+            .connector
+            .amount_converter
             .convert(
-                item.router_data.request.minor_refund_amount, // not sure
+                item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
         Ok(Self {
             action: REVERSE.to_string(),
             authorization_amount,

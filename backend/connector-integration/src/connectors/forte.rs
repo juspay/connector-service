@@ -4,7 +4,9 @@ use base64::Engine;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
+    events,
     ext_traits::ByteSliceExt,
+    FloatMajorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -34,7 +36,6 @@ use domain_types::{
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
 use std::fmt::Debug;
@@ -562,7 +563,9 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         )
     ],
-    amount_converters: [],
+    amount_converters: [
+        amount_converter: FloatMajorUnit
+    ],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
@@ -833,7 +836,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: forte::ForteErrorResponse = res
             .response
