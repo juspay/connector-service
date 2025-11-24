@@ -72,6 +72,7 @@ worldpay.base_url = "https://try.access.worldpay.com/"
 worldpayvantiv.base_url = "https://www.testvantivcnp.com/sandbox/new/sandbox/communicator/online"
 worldpayvantiv.secondary_base_url = "https://www.testvantivcnp.com/sandbox"
 paypal.base_url = "https://api-m.sandbox.paypal.com/"
+paysafe.base_url = "https://api.test.paysafe.com/paymenthub/"
 
 # Generic Events Configuration
 [events]

@@ -492,3 +492,30 @@ pub fn convert_us_state_to_code(state: &str) -> String {
         _ => state.to_string(),
     }
 }
+
+/// Convert Canadian province/territory names to their 2-letter abbreviations
+pub fn convert_canada_state_to_code(state: &str) -> String {
+    // If already 2 characters, assume it's already an abbreviation
+    if state.len() == 2 {
+        return state.to_uppercase();
+    }
+
+    // Convert full province/territory names to abbreviations (case-insensitive)
+    match state.to_lowercase().trim() {
+        "alberta" => "AB".to_string(),
+        "british columbia" => "BC".to_string(),
+        "manitoba" => "MB".to_string(),
+        "new brunswick" => "NB".to_string(),
+        "newfoundland and labrador" | "newfoundland" => "NL".to_string(),
+        "northwest territories" => "NT".to_string(),
+        "nova scotia" => "NS".to_string(),
+        "nunavut" => "NU".to_string(),
+        "ontario" => "ON".to_string(),
+        "prince edward island" => "PE".to_string(),
+        "quebec" | "québec" => "QC".to_string(),
+        "saskatchewan" => "SK".to_string(),
+        "yukon" => "YT".to_string(),
+        // If no match found, return original
+        _ => state.to_string(),
+    }
+}
