@@ -1,6 +1,3 @@
-// Wellsfargo (CyberSource) transformers for V2 API
-// This implements the request/response transformation for Wellsfargo payments
-
 use domain_types::payment_method_data::RawCardNumber;
 use common_enums::{AttemptStatus, RefundStatus};
 use domain_types::{
@@ -16,11 +13,6 @@ use hyperswitch_masking::{Secret, ExposeInterface, PeekInterface};
 use serde::{Deserialize, Serialize};
 use crate::types::ResponseRouterData;
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-// Error message constants for consistent error handling
 mod error_messages {
     pub const PAYMENT_FAILED: &str = "Payment failed";
     pub const CAPTURE_FAILED: &str = "Capture failed";
@@ -31,17 +23,7 @@ mod error_messages {
     pub const MISSING_APPLICATION_INFO: &str = "Missing application_information in response";
 }
 
-// Required Field Validation Summary:
-// - Authorize: email (validated), payment_method (pattern matched), amount/currency (framework)
-// - Capture: transaction_id, amount, currency (all handled by framework)
-// - Void: transaction_id (framework), amount/currency (validated if provided)
-// - Refund: transaction_id, refund_amount, currency (all handled by framework)
-// - SetupMandate: email (validated), payment_method (pattern matched), customer_acceptance (validated by framework)
-// - Sync flows: transaction_id (framework)
-
-// ============================================================================
 // REQUEST STRUCTURES
-// ============================================================================
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -52,6 +34,8 @@ pub struct WellsfargoPaymentsRequest<T: PaymentMethodDataTypes> {
     client_reference_information: ClientReferenceInformation,
     #[serde(skip_serializing_if = "Option::is_none")]
     merchant_defined_information: Option<Vec<MerchantDefinedInformation>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    consumer_authentication_information: Option<ConsumerAuthenticationInformation>,
     #[serde(skip)]
     _phantom: std::marker::PhantomData<T>,
 }
@@ -136,9 +120,36 @@ pub struct ClientReferenceInformation {
     code: Option<String>,
 }
 
-// ============================================================================
-// CAPTURE REQUEST STRUCTURES
-// ============================================================================
+/// Consumer authentication information for 3DS transactions
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConsumerAuthenticationInformation {
+    /// Cardholder Authentication Verification Value
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cavv: Option<Secret<String>>,
+    /// Electronic Commerce Indicator
+    #[serde(skip_serializing_if = "Option::is_none")]
+    eci: Option<String>,
+    /// 3DS Server Transaction ID (3DS 2.x)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    threeds_server_transaction_id: Option<String>,
+    /// Directory Server Transaction ID (3DS 2.x)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ds_transaction_id: Option<String>,
+    /// ACS Transaction ID (3DS 2.x)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    acs_transaction_id: Option<String>,
+    /// 3DS Version (e.g., "2.1.0")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    specification_version: Option<String>,
+    /// UCAF Collection Indicator (Mastercard)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ucaf_collection_indicator: Option<String>,
+    /// Transaction ID (XID for 3DS 1.0)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    xid: Option<String>,
+}
+
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -153,9 +164,6 @@ pub struct OrderInformationAmount {
     amount_details: Amount,
 }
 
-// ============================================================================
-// VOID REQUEST STRUCTURES
-// ============================================================================
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -175,12 +183,6 @@ pub struct ReversalInformation {
     reason: String,
 }
 
-// ============================================================================
-// REFUND REQUEST STRUCTURES
-// ============================================================================
-
-
-// Refund status enum for TSS endpoint responses
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum WellsfargoRefundStatus {
@@ -226,9 +228,7 @@ pub struct WellsfargoRefundRequest {
     client_reference_information: ClientReferenceInformation,
 }
 
-// ============================================================================
 // MANDATE SUPPORT STRUCTURES
-// ============================================================================
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -280,9 +280,7 @@ pub struct WellsfargoZeroMandateRequest<T: PaymentMethodDataTypes> {
     _phantom: std::marker::PhantomData<T>,
 }
 
-// ============================================================================
 // RESPONSE STRUCTURES
-// ============================================================================
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -402,9 +400,7 @@ pub struct WellsfargoCustomer {
     pub id: Option<Secret<String>>,
 }
 
-// ============================================================================
 // ERROR RESPONSE STRUCTURES
-// ============================================================================
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
@@ -448,9 +444,7 @@ pub struct NotAvailableErrorObject {
     pub message: Option<String>,
 }
 
-// ============================================================================
 // AUTH TYPE
-// ============================================================================
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WellsfargoAuthType {
@@ -479,9 +473,7 @@ impl TryFrom<&domain_types::router_data::ConnectorAuthType> for WellsfargoAuthTy
     }
 }
 
-// ============================================================================
 // HELPER FUNCTIONS
-// ============================================================================
 
 /// Converts metadata JSON to Wells Fargo MerchantDefinedInformation format
 fn convert_metadata_to_merchant_defined_info(metadata: serde_json::Value) -> Vec<MerchantDefinedInformation> {
@@ -530,9 +522,64 @@ fn get_phone_number(
         })
 }
 
-// ============================================================================
+/// Determines Wells Fargo commerce indicator based on 3DS authentication status
+/// - Success (Y) → "vbv" (liability shift to issuer)
+/// - NotVerified/VerificationNotPerformed (A/U) → "spa" (partial protection)
+/// - Other/None → "internet" (merchant liable)
+fn get_commerce_indicator(
+    authentication_data: &Option<domain_types::router_request_types::AuthenticationData>,
+) -> String {
+    use common_enums::TransactionStatus;
+
+    match authentication_data {
+        Some(auth_data) => match auth_data.trans_status {
+            Some(TransactionStatus::Success) => "vbv".to_string(),
+            Some(TransactionStatus::NotVerified)
+            | Some(TransactionStatus::VerificationNotPerformed) => "spa".to_string(),
+            Some(TransactionStatus::Failure)
+            | Some(TransactionStatus::Rejected)
+            | Some(TransactionStatus::ChallengeRequired)
+            | Some(TransactionStatus::ChallengeRequiredDecoupledAuthentication)
+            | Some(TransactionStatus::InformationOnly)
+            | None => "internet".to_string(),
+        },
+        None => "internet".to_string(),
+    }
+}
+
+/// Converts AuthenticationData to ConsumerAuthenticationInformation for Wells Fargo
+/// Returns None if no 3DS data is present
+fn build_consumer_authentication_information(
+    authentication_data: &Option<domain_types::router_request_types::AuthenticationData>,
+) -> Option<ConsumerAuthenticationInformation> {
+    authentication_data.as_ref().and_then(|auth_data| {
+        let has_3ds_data = auth_data.cavv.is_some()
+            || auth_data.eci.is_some()
+            || auth_data.threeds_server_transaction_id.is_some()
+            || auth_data.ds_trans_id.is_some()
+            || auth_data.acs_transaction_id.is_some()
+            || auth_data.message_version.is_some()
+            || auth_data.ucaf_collection_indicator.is_some()
+            || auth_data.transaction_id.is_some();
+
+        if !has_3ds_data {
+            return None;
+        }
+
+        Some(ConsumerAuthenticationInformation {
+            cavv: auth_data.cavv.clone(),
+            eci: auth_data.eci.clone(),
+            threeds_server_transaction_id: auth_data.threeds_server_transaction_id.clone(),
+            ds_transaction_id: auth_data.ds_trans_id.clone(),
+            acs_transaction_id: auth_data.acs_transaction_id.clone(),
+            specification_version: auth_data.message_version.as_ref().map(|v| v.to_string()),
+            ucaf_collection_indicator: auth_data.ucaf_collection_indicator.clone(),
+            xid: auth_data.transaction_id.clone(),
+        })
+    })
+}
+
 // REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoPaymentsRequest
-// ============================================================================
 
 // Specific implementation for Authorize flow
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
@@ -670,9 +717,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             bill_to,
         };
 
-        // Processing information
+        // Processing information - set commerce indicator based on 3DS authentication
         let processing_information = ProcessingInformation {
-            commerce_indicator: "internet".to_string(),
+            commerce_indicator: get_commerce_indicator(&request.authentication_data),
             capture: request.capture_method.map(|method| {
                 matches!(method, common_enums::CaptureMethod::Automatic)
             }),
@@ -692,20 +739,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             .clone()
             .map(convert_metadata_to_merchant_defined_info);
 
+        // Consumer authentication information from 3DS data
+        let consumer_authentication_information =
+            build_consumer_authentication_information(&request.authentication_data);
+
         Ok(Self {
             processing_information,
             payment_information,
             order_information,
             client_reference_information,
             merchant_defined_information,
+            consumer_authentication_information,
             _phantom: std::marker::PhantomData,
         })
     }
 }
 
-// ============================================================================
 // CAPTURE REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoCaptureRequest
-// ============================================================================
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     TryFrom<super::WellsfargoRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
@@ -752,9 +802,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-// ============================================================================
 // VOID REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoVoidRequest
-// ============================================================================
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     TryFrom<super::WellsfargoRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
@@ -819,9 +867,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-// ============================================================================
 // REFUND REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoRefundRequest
-// ============================================================================
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     TryFrom<super::WellsfargoRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
@@ -867,9 +913,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-// ============================================================================
 // SETUPMANDATE REQUEST CONVERSION
-// ============================================================================
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     TryFrom<super::WellsfargoRouterData<RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>, T>>
@@ -993,9 +1037,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-// ============================================================================
 // RESPONSE CONVERSION - TryFrom ResponseRouterData to RouterDataV2
-// ============================================================================
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
@@ -1287,9 +1329,7 @@ impl
     }
 }
 
-// ============================================================================
 // SETUPMANDATE RESPONSE CONVERSION
-// ============================================================================
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>>>
@@ -1432,9 +1472,7 @@ impl
     }
 }
 
-// ============================================================================
 // RESPONSE CONVERSIONS - RSYNC (REFUND SYNC)
-// ============================================================================
 
 impl
     TryFrom<ResponseRouterData<WellsfargoRSyncResponse, RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>>
@@ -1543,9 +1581,7 @@ impl
     }
 }
 
-// ============================================================================
 // HELPER FUNCTIONS
-// ============================================================================
 
 fn is_payment_successful(
     status: &Option<WellsfargoPaymentStatus>,
@@ -1572,31 +1608,8 @@ fn is_payment_successful(
     status_success || status_info_success
 }
 
-/// Maps Wells Fargo payment status to Hyperswitch AttemptStatus
-///
-/// # Arguments
-/// * `status` - Wells Fargo payment status from API response
-/// * `capture` - Whether this is a capture operation (affects status interpretation)
-/// * `error_info` - Error information if present
-///
-/// # Status Mappings
-/// - `Authorized` / `AuthorizedPendingReview`:
-///   - If capture=true → `Charged` (Wells Fargo returns "Authorized" even for auto-capture)
-///   - If capture=false → `Authorized` (standard authorization)
-/// - `Pending`:
-///   - If capture=true → `Charged` (capture is processing)
-///   - If capture=false → `Pending` (awaiting action)
-/// - `Transmitted` → `Charged` (payment has been transmitted for settlement)
-/// - `Voided` / `Reversed` → `Voided` (authorization cancelled)
-/// - `Declined` / `AuthorizedRiskDeclined` / `InvalidRequest` → `Failure` (payment failed)
-/// - `PendingAuthentication` → `AuthenticationPending` (awaiting 3DS auth)
-/// - `PendingReview` → `Pending` (under manual review)
-/// - `PartialAuthorized`:
-///   - If capture=true → `PartialCharged` (partial amount captured)
-///   - If capture=false → `Authorized` (partial authorization approved)
-/// - `None`:
-///   - If error_info present → `Failure` (failed with error)
-///   - Otherwise → `Pending` (status unknown, awaiting update)
+/// Maps Wells Fargo payment status to AttemptStatus
+/// The capture flag affects interpretation: Authorized+capture=true → Charged
 fn map_attempt_status(
     status: &Option<WellsfargoPaymentStatus>,
     capture: bool,
@@ -1645,21 +1658,7 @@ fn map_attempt_status(
     }
 }
 
-/// Maps Wells Fargo payment status to Hyperswitch RefundStatus
-///
-/// # Arguments
-/// * `status` - Wells Fargo payment status from API response
-/// * `error_info` - Error information if present
-///
-/// # Status Mappings
-/// - `Pending` → `Pending` (refund is being processed)
-/// - `Transmitted` → `Pending` (refund has been transmitted but not yet completed)
-/// - `Declined` → `Failure` (refund was declined)
-/// - `InvalidRequest` → `Failure` (refund request was invalid)
-/// - `None`:
-///   - If error_info present → `Failure` (failed with error)
-///   - Otherwise → `Pending` (status unknown, awaiting update)
-/// - All other statuses → `Success` (refund completed successfully)
+/// Maps Wells Fargo payment status to RefundStatus
 fn get_refund_status(
     status: &Option<WellsfargoPaymentStatus>,
     error_info: &Option<WellsfargoErrorInformation>,
@@ -1680,22 +1679,7 @@ fn get_refund_status(
     }
 }
 
-// ============================================================================
-// ERROR REASON HELPER
-// ============================================================================
-
-/// Formats error reason with detailed error information and AVS messages
-///
-/// This helper combines various error information sources into a structured
-/// error message following the pattern from Hyperswitch reference implementation.
-///
-/// # Arguments
-/// * `error_info` - Primary error message
-/// * `detailed_error_info` - Field-level error details
-/// * `avs_error_info` - AVS/risk verification messages
-///
-/// # Returns
-/// Combined error message or None if all inputs are None
+/// Combines error information into a formatted error message
 pub fn get_error_reason(
     error_info: Option<String>,
     detailed_error_info: Option<String>,
