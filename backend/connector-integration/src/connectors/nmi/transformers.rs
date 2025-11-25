@@ -338,8 +338,7 @@ impl<T: PaymentMethodDataTypes>
                     AttemptStatus::Authorized
                 }
             }
-            "2" => AttemptStatus::Failure, // Declined
-            "3" => AttemptStatus::Failure, // Error
+            "2" | "3" => AttemptStatus::Failure, // Declined or Error
             _ => AttemptStatus::Pending,
         };
 
@@ -464,7 +463,17 @@ impl
             .transaction
             .iter()
             .find(|txn| txn.transaction_id == requested_transaction_id)
-            .or_else(|| response.transaction.last());
+            .or_else(|| {
+                // Log when using fallback to most recent transaction
+                if let Some(last_txn) = response.transaction.last() {
+                    tracing::warn!(
+                        requested_txn = %requested_transaction_id,
+                        fallback_txn = %last_txn.transaction_id,
+                        "PSync: Transaction not found in response, using most recent transaction instead"
+                    );
+                }
+                response.transaction.last()
+            });
 
         // Handle empty response (means AuthenticationPending) or transaction data
         let (status, transaction_id) = if let Some(transaction) = transaction {
@@ -669,6 +678,7 @@ impl<
             .refund_id
             .clone()
             .unwrap_or_else(|| {
+                tracing::debug!("Refund: refund_id not present, using connector_request_reference_id as orderid");
                 router_data
                     .resource_common_data
                     .connector_request_reference_id

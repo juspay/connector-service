@@ -214,19 +214,23 @@ macros::create_all_prerequisites!(
             if response_str.trim().starts_with("<?xml") || response_str.trim().starts_with("<") {
                 // Parse XML to struct, then serialize back to JSON
                 let xml_response: SyncResponse = quick_xml::de::from_str(response_str)
-                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+                    .attach_printable("Failed to parse XML response from NMI query endpoint")?;
 
                 let json_bytes = serde_json::to_vec(&xml_response)
-                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+                    .attach_printable("Failed to convert XML response to JSON")?;
 
                 Ok(bytes::Bytes::from(json_bytes))
             } else {
                 // URL-encoded response - parse and convert to JSON
                 let url_encoded_response: StandardResponse = serde_urlencoded::from_bytes(&bytes)
-                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+                    .attach_printable("Failed to parse URL-encoded response from NMI transact endpoint")?;
 
                 let json_bytes = serde_json::to_vec(&url_encoded_response)
-                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+                    .attach_printable("Failed to convert URL-encoded response to JSON")?;
 
                 Ok(bytes::Bytes::from(json_bytes))
             }
