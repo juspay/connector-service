@@ -15,7 +15,7 @@ use domain_types::{
     utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::{types::ResponseRouterData, utils as OtherUtils};
@@ -513,8 +513,14 @@ impl<
             .clone()
             .get_connector_transaction_id()
             .change_context(HsInterfacesConnectorError::MissingConnectorTransactionID)?;
-        let connector_auth_id: ForteMeta =
-            ForteMeta::try_from(&item.router_data.request.connector_metadata)?;
+        let connector_auth_id: ForteMeta = ForteMeta::try_from(
+            &item
+                .router_data
+                .resource_common_data
+                .connector_meta_data
+                .as_ref()
+                .map(|s| s.peek().clone()),
+        )?;
         let auth_code = connector_auth_id.auth_id;
         Ok(Self {
             action: CAPTURE.to_string(),
@@ -604,9 +610,10 @@ impl<
         let metadata: ForteMeta = ForteMeta::try_from(
             &item
                 .router_data
-                .request
-                .connector_metadata
-                .map(|metadata| metadata.expose()),
+                .resource_common_data
+                .connector_meta_data
+                .as_ref()
+                .map(|s| s.peek().clone()),
         )?;
         let authorization_code = metadata.auth_id;
         Ok(Self {
@@ -699,8 +706,9 @@ impl<
             &item
                 .router_data
                 .request
-                .refund_connector_metadata
-                .map(|metadata| metadata.expose()),
+                .merchant_account_metadata
+                .as_ref()
+                .map(|s| s.peek().clone()),
         )?;
         let auth_code = connector_auth_id.auth_id;
         let authorization_amount = item
