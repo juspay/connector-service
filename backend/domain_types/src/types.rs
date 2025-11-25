@@ -6380,17 +6380,10 @@ impl
         let address = value
             .address
             .map(|addr| {
-                // Convert grpc Address to payment_address Address first
-                let payment_addr = payment_address::Address::foreign_try_from(addr.clone())
-                    .unwrap_or_else(|_| payment_address::Address::default());
                 // Then create PaymentAddress
-                payment_address::PaymentAddress::new(
-                    Some(payment_addr.clone()),
-                    Some(payment_addr.clone()),
-                    Some(payment_addr),
-                    Some(false),
-                )
+                payment_address::PaymentAddress::foreign_try_from(addr)
             })
+            .transpose()?
             .unwrap_or_else(payment_address::PaymentAddress::default);
 
         Ok(Self {
@@ -6542,14 +6535,21 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
-
+        let address = value
+            .address
+            .map(|addr| {
+                // Then create PaymentAddress
+                payment_address::PaymentAddress::foreign_try_from(addr)
+            })
+            .transpose()?
+            .unwrap_or_else(payment_address::PaymentAddress::default);
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
             attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
             status: common_enums::AttemptStatus::Pending,
             payment_method: common_enums::PaymentMethod::Card, // Default for connector customer creation
-            address: payment_address::PaymentAddress::default(), // Default address
+            address,                                           // Default address
             auth_type: common_enums::AuthenticationType::default(),
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
