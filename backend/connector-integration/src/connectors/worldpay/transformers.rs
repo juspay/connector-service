@@ -1046,7 +1046,12 @@ impl<
                 .request
                 .merchant_reference_payment_id
                 .as_ref()
-                .unwrap_or(&item.router_data.resource_common_data.connector_request_reference_id)
+                .unwrap_or(
+                    &item
+                        .router_data
+                        .resource_common_data
+                        .connector_request_reference_id,
+                )
                 .replace('_', "-"),
             value: PaymentValue {
                 amount: item.router_data.request.minor_amount_to_capture,
