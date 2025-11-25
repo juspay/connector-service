@@ -681,6 +681,7 @@ macros::macro_connector_implementation!(
                 .request
                 .capture_method
                 .ok_or_else(|| report!(errors::ConnectorError::CaptureMethodNotSupported))
+                .change_context(errors::ConnectorError::CaptureMethodNotSupported)
                 .attach_printable("Capture method is required for Archipel authorize flow")?;
             let base_url =
                 build_env_specific_endpoint(self.connector_base_url_payments(req), &req.request.metadata)?;
@@ -733,13 +734,20 @@ macros::macro_connector_implementation!(
             let meta_obj = req.request.connector_meta
                 .clone()
                 .ok_or_else(|| report!(errors::ConnectorError::MissingConnectorTransactionID))
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)
                 .attach_printable("connector_meta is required for Archipel capture flow")?;
 
             let connector_meta_str = meta_obj
                 .get("connector_meta_data")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| report!(errors::ConnectorError::InvalidDataFormat { field_name: "connector_meta_data" }))
+                .ok_or_else(|| report!(errors::ConnectorError::InvalidDataFormat { 
+                    field_name: "connector_meta_data",
+                }))
+                .change_context(errors::ConnectorError::InvalidDataFormat { 
+                    field_name: "connector_meta_data",
+                })
                 .attach_printable("connector_meta_data field is missing or invalid")?;
+
 
             // Parse the JSON string into the struct
             let metadata: archipel::ArchipelTransactionMetadata = serde_json::from_str(connector_meta_str)
@@ -921,7 +929,15 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = &req.resource_common_data.connectors.archipel.base_url;
+            // Extract metadata from refund_connector_metadata
+            let metadata_value = req.request.refund_connector_metadata
+                .as_ref()
+                .map(|secret| secret.clone().expose());
+
+            let base_url_str = &req.resource_common_data.connectors.archipel.base_url;
+
+            // Build environment-specific endpoint by replacing {{merchant_endpoint_prefix}}
+            let base_url = build_env_specific_endpoint(base_url_str, &metadata_value)?;
 
             // Get and validate connector refund ID is not empty
             let connector_refund_id = req.request.connector_refund_id.clone();

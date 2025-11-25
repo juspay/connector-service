@@ -518,7 +518,13 @@ impl ArchipelErrorMessageWithHttpCode {
             ArchipelErrorMessage::default()
         } else {
             serde_json::from_slice::<ArchipelErrorMessage>(response)
-                .unwrap_or_else(|_| ArchipelErrorMessage::default())
+                .unwrap_or_else(|error| {
+                    tracing::warn!(
+                        error = ?error,
+                        "failed to deserialize ArchipelErrorMessage, using default"
+                    );
+                    ArchipelErrorMessage::default()
+                })
         };
 
         Self {
@@ -870,7 +876,48 @@ impl<
                 utils::get_unimplemented_payment_method_error_message("Archipel"),
             ))?,
         };
-        let three_ds: Option<Archipel3DS> = None;
+
+        // Extract 3DS authentication data if available
+        // 3DS data comes from completed authentication flow and is stored in metadata
+        let three_ds: Option<Archipel3DS> = item
+            .router_data
+            .request
+            .metadata
+            .as_ref()
+            .and_then(|metadata| {
+                // Extract individual 3DS fields from metadata
+                let auth_data = metadata.get("authentication_data")?;
+
+                // Extract CAVV (required field for 3DS)
+                let cavv = auth_data
+                    .get("cavv")
+                    .and_then(|v| v.as_str())
+                    .map(|s| Secret::new(s.to_string()))?;
+
+                // Extract optional fields
+                let eci = auth_data.get("eci").and_then(|v| v.as_str()).map(String::from);
+                let ds_trans_id = auth_data.get("ds_trans_id").and_then(|v| v.as_str()).map(String::from);
+                let message_version = auth_data
+                    .get("message_version")
+                    .and_then(|v| v.as_str())
+                    .and_then(|s| s.parse::<common_utils::types::SemanticVersion>().ok());
+
+                let now = date_time::date_as_yyyymmddthhmmssmmmz().ok();
+
+                Some(Archipel3DS {
+                    acs_trans_id: None,
+                    ds_trans_id: ds_trans_id.map(Secret::new),
+                    three_ds_requestor_name: None,
+                    three_ds_auth_date: now,
+                    three_ds_auth_amt: None,
+                    three_ds_auth_status: None,
+                    three_ds_max_supported_version: THREE_DS_MAX_SUPPORTED_VERSION.into(),
+                    three_ds_version: message_version,
+                    authentication_value: cavv,
+                    authentication_method: None,
+                    eci,
+                })
+            });
 
         let connector_metadata = ArchipelConfigData::try_from(&item.router_data.request.metadata)?;
 
@@ -1483,11 +1530,52 @@ impl<
             transaction_id: None,
         });
 
+        // Extract 3DS authentication data if available
+        // 3DS data comes from completed authentication flow and is stored in metadata
+        let three_ds: Option<Archipel3DS> = router_data
+            .request
+            .metadata
+            .as_ref()
+            .and_then(|metadata| {
+                // Extract individual 3DS fields from metadata
+                let auth_data = metadata.get("authentication_data")?;
+
+                // Extract CAVV (required field for 3DS)
+                let cavv = auth_data
+                    .get("cavv")
+                    .and_then(|v| v.as_str())
+                    .map(|s| Secret::new(s.to_string()))?;
+
+                // Extract optional fields
+                let eci = auth_data.get("eci").and_then(|v| v.as_str()).map(String::from);
+                let ds_trans_id = auth_data.get("ds_trans_id").and_then(|v| v.as_str()).map(String::from);
+                let message_version = auth_data
+                    .get("message_version")
+                    .and_then(|v| v.as_str())
+                    .and_then(|s| s.parse::<common_utils::types::SemanticVersion>().ok());
+
+                let now = date_time::date_as_yyyymmddthhmmssmmmz().ok();
+
+                Some(Archipel3DS {
+                    acs_trans_id: None,
+                    ds_trans_id: ds_trans_id.map(Secret::new),
+                    three_ds_requestor_name: None,
+                    three_ds_auth_date: now,
+                    three_ds_auth_amt: None,
+                    three_ds_auth_status: None,
+                    three_ds_max_supported_version: THREE_DS_MAX_SUPPORTED_VERSION.into(),
+                    three_ds_version: message_version,
+                    authentication_value: cavv,
+                    authentication_method: None,
+                    eci,
+                })
+            });
+
         Ok(Self(ArchipelCardAuthorizationRequest {
             order,
             card: payment_method_data,
             cardholder,
-            three_ds: None,
+            three_ds,
             credential_indicator,
             stored_on_file: true,
             tenant_id: connector_metadata.tenant_id,
