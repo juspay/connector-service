@@ -4,6 +4,22 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.11.25.0
+
+### Features
+
+- **connector:** [paysafe] integrate no3ds card, refund, void, capture ([#267](https://github.com/juspay/connector-service/pull/267)) ([`c2b013f`](https://github.com/juspay/connector-service/commit/c2b013fb8355ba375345cc3ae67d91fcb3ea1830))
+- Added Config Overrides ([#18](https://github.com/juspay/connector-service/pull/18)) ([`44c5a4a`](https://github.com/juspay/connector-service/commit/44c5a4aa76e51ffc827d8d594117ef8380668bda))
+
+### Bug Fixes
+
+- Mapping wrongly done for hipay in types.rs ([#311](https://github.com/juspay/connector-service/pull/311)) ([`6671334`](https://github.com/juspay/connector-service/commit/667133432d6cb50639d6371f755fea1164df0489))
+- Stripe connector_response diff fix ([#312](https://github.com/juspay/connector-service/pull/312)) ([`75a8240`](https://github.com/juspay/connector-service/commit/75a8240d44d110aa7d0048b265ee093bb0251489))
+
+**Full Changelog:** [`2025.11.24.0...2025.11.25.0`](https://github.com/juspay/connector-service/compare/2025.11.24.0...2025.11.25.0)
+
+- - -
+
 ## 2025.11.24.0
 
 ### Features
