@@ -4,6 +4,20 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.11.25.1
+
+### Features
+
+- **connector:** Billwerk Connector Integration ([#307](https://github.com/juspay/connector-service/pull/307)) ([`1581ed4`](https://github.com/juspay/connector-service/commit/1581ed4ae9f85345e0292eaebf864e691b797f5b))
+
+### Miscellaneous Tasks
+
+- **core:** Updating tokio and hyperswitch dependency ([#313](https://github.com/juspay/connector-service/pull/313)) ([`972c80d`](https://github.com/juspay/connector-service/commit/972c80d2b9d9555fb1b9cde37e032716313267b8))
+
+**Full Changelog:** [`2025.11.25.0...2025.11.25.1`](https://github.com/juspay/connector-service/compare/2025.11.25.0...2025.11.25.1)
+
+- - -
+
 ## 2025.11.25.0
 
 ### Features
