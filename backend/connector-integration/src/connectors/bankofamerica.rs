@@ -1007,7 +1007,7 @@ macros::macro_connector_implementation!(
     }
 );
 
-// 4. SetupMandate
+
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Bankofamerica,
@@ -1074,7 +1074,7 @@ macros::macro_connector_implementation!(
     }
 );
 
-// 6. Refund
+
 // macros::macro_connector_implementation!(
 //     connector_default_implementations: [get_content_type, get_error_response_v2],
 //     connector: Bankofamerica,
