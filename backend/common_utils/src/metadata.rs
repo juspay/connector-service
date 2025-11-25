@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use bytes::Bytes;
 use hyperswitch_masking::{Maskable, Secret};
+use serde::ser::SerializeStruct;
 
 /// Configuration for header masking in gRPC metadata.
 #[derive(Debug, Clone)]
@@ -16,6 +17,18 @@ impl HeaderMaskingConfig {
 
     pub fn should_unmask(&self, key: &str) -> bool {
         self.unmasked_keys.contains(&key.to_lowercase())
+    }
+}
+
+impl serde::Serialize for HeaderMaskingConfig {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("HeaderMaskingConfig", 1)?;
+        let keys: Vec<String> = self.unmasked_keys.iter().cloned().collect();
+        state.serialize_field("keys", &keys)?;
+        state.end()
     }
 }
 

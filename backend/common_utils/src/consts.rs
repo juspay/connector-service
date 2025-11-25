@@ -4,7 +4,7 @@
 // ID Generation and Length Constants
 // =============================================================================
 
-use serde::{de::IntoDeserializer, Deserialize};
+use serde::{de::IntoDeserializer, Deserialize, Serialize};
 
 pub const ID_LENGTH: usize = 20;
 
@@ -148,7 +148,7 @@ pub const CONST_PRODUCTION: &str = "production";
 
 pub const ENV_PREFIX: &str = "CS";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Env {
     Development,
