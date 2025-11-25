@@ -767,7 +767,7 @@ macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Forte,
     curl_request: Json(ForteCancelRequest),
-    curl_response: FortePaymentsResponse,
+    curl_response: ForteCancelResponse,
     flow_name: Void,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentVoidData,

@@ -1233,6 +1233,7 @@ message EvidenceDocument {
 message ExtendedAuthorizationResponseData {
   optional bool extended_authentication_applied = 1; // Whether extended authentication was applied
   optional int64 capture_before = 2; // Unix timestamp before which capture must occur
+  optional int64 extended_authorization_last_applied_at = 3; // Unix timestamp of when extended authentication was last applied
 }
 
 // Additional payment method data for card payments
@@ -2712,7 +2713,7 @@ message PaymentServiceCreatePaymentMethodTokenRequest {
   optional string customer_id = 10; // Merchant's customer ID
 
   // Address Information
-  optional Address address = 11; // Customer address details
+  optional PaymentAddress address = 11; // Customer address details
 
   // Additional Metadata
   map<string, string> metadata = 12; // Additional metadata for the connector
@@ -2751,7 +2752,7 @@ message PaymentServiceCreateConnectorCustomerRequest {
   optional string phone_number = 7; // Phone number of the customer
 
   // Address Information
-  optional Address address = 8; // Customer address details
+  optional PaymentAddress address = 8; // Customer address details
 
   // Additional Metadata
   map<string, string> metadata = 9; // Additional metadata for the connector

@@ -26,21 +26,6 @@ const CAPTURE: &str = "capture";
 const VOID: &str = "void";
 const REVERSE: &str = "reverse";
 
-#[derive(Debug, Serialize)]
-pub struct ForteRouterData1<T> {
-    pub amount: FloatMajorUnit,
-    pub router_data: T,
-}
-
-impl<T> From<(FloatMajorUnit, T)> for ForteRouterData1<T> {
-    fn from((amount, router_data): (FloatMajorUnit, T)) -> Self {
-        Self {
-            amount,
-            router_data,
-        }
-    }
-}
-
 impl TryFrom<&Option<serde_json::Value>> for ForteMeta {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(connector_metadata: &Option<serde_json::Value>) -> Result<Self, Self::Error> {
@@ -148,9 +133,11 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         if item.router_data.request.currency != enums::Currency::USD {
-            Err(errors::ConnectorError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("Forte"),
-            ))?
+            return Err(errors::ConnectorError::NotSupported {
+                message: "Only USD currency is supported by Forte".to_string(),
+                connector: "Forte",
+            }
+            .into());
         }
         match item.router_data.request.payment_method_data {
             PaymentMethodData::Card(ref ccard) => {
@@ -158,12 +145,8 @@ impl<
                     true => ForteAction::Sale,
                     false => ForteAction::Authorize,
                 };
-                // Use the card's get_card_issuer method
-                let raw_card = serde_json::to_string(&ccard.card_number.0)
-                    .unwrap_or_default()
-                    .trim_matches('"')
-                    .to_string();
-                let card_issuer = domain_types::utils::get_card_issuer(&raw_card)?;
+                let card_number = ccard.card_number.peek();
+                let card_issuer = domain_types::utils::get_card_issuer(card_number)?;
                 let card_type = ForteCardType::try_from(card_issuer)?;
                 let address = item
                     .router_data
@@ -244,12 +227,24 @@ impl TryFrom<&ConnectorAuthType> for ForteAuthType {
                 key1,
                 api_secret,
                 key2,
-            } => Ok(Self {
-                api_access_id: api_key.to_owned(),
-                organization_id: Secret::new(format!("org_{}", key1.peek())),
-                location_id: Secret::new(format!("loc_{}", key2.peek())),
-                api_secret_key: api_secret.to_owned(),
-            }),
+            } => {
+                let organization_id = key1.peek();
+                let location_id = key2.peek();
+                Ok(Self {
+                    api_access_id: api_key.to_owned(),
+                    organization_id: if organization_id.starts_with("org_") {
+                        key1.to_owned()
+                    } else {
+                        Secret::new(format!("org_{}", organization_id))
+                    },
+                    location_id: if location_id.starts_with("loc_") {
+                        key2.to_owned()
+                    } else {
+                        Secret::new(format!("loc_{}", location_id))
+                    },
+                    api_secret_key: api_secret.to_owned(),
+                })
+            }
             _ => Err(errors::ConnectorError::FailedToObtainAuthType)?,
         }
     }
@@ -307,6 +302,8 @@ pub enum ForteResponseCode {
     U14,
     U18,
     U20,
+    #[serde(other)]
+    Unknown,
 }
 
 impl From<ForteResponseCode> for enums::AttemptStatus {
@@ -315,7 +312,11 @@ impl From<ForteResponseCode> for enums::AttemptStatus {
             ForteResponseCode::A01 | ForteResponseCode::A05 | ForteResponseCode::A06 => {
                 Self::Pending
             }
-            _ => Self::Failure,
+            ForteResponseCode::U13
+            | ForteResponseCode::U14
+            | ForteResponseCode::U18
+            | ForteResponseCode::U20 => Self::Failure,
+            ForteResponseCode::Unknown => Self::Failure,
         }
     }
 }

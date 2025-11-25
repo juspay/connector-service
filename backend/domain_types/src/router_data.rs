@@ -402,5 +402,6 @@ pub enum AdditionalPaymentMethodConnectorResponse {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ExtendedAuthorizationResponseData {
     pub extended_authentication_applied: Option<bool>,
+    pub extended_authorization_last_applied_at: Option<time::PrimitiveDateTime>,
     pub capture_before: Option<time::PrimitiveDateTime>,
 }
