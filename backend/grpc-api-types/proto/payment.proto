@@ -1676,6 +1676,9 @@ message PaymentServiceCaptureRequest {
 
   // State Information
   optional ConnectorState state = 10; // State data for access token storage and other connector-specific state
+
+  // Merchant's original payment ID for connectors that need it (e.g., Worldpay)
+  optional string merchant_reference_payment_id = 11;
 }
 
 // Response message for a payment capture operation.
