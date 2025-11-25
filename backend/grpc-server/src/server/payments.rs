@@ -369,7 +369,9 @@ impl Payments {
             .map(|access| (access.token.clone(), access.expires_in_seconds));
 
         // Check if connector supports access tokens
-        let should_do_access_token = connector_data.connector.should_do_access_token();
+        let should_do_access_token = connector_data
+            .connector
+            .should_do_access_token(payment_flow_data.payment_method);
 
         // Conditional token generation - ONLY if not provided in request
         let payment_flow_data = if should_do_access_token {
@@ -2126,7 +2128,9 @@ impl PaymentService for Payments {
                         .map(|access| (access.token.clone(), access.expires_in_seconds));
 
                     // Check if connector supports access tokens
-                    let should_do_access_token = connector_data.connector.should_do_access_token();
+                    let should_do_access_token = connector_data
+                        .connector
+                        .should_do_access_token(payment_flow_data.payment_method);
 
                     // Conditional token generation - ONLY if not provided in request
                     let payment_flow_data = if should_do_access_token {
@@ -2323,7 +2327,17 @@ impl PaymentService for Payments {
                         ConnectorData::get_connector_by_name(&connector);
 
                     // Check if connector supports access tokens
-                    let should_do_access_token = connector_data.connector.should_do_access_token();
+                    let temp_payment_flow_data = PaymentFlowData::foreign_try_from((
+                        request_data.payload.clone(),
+                        config.connectors.clone(),
+                        &request_data.masked_metadata,
+                    ))
+                    .map_err(|e| {
+                        tonic::Status::internal(format!("Failed to create payment flow data: {e}"))
+                    })?;
+                    let should_do_access_token = connector_data
+                        .connector
+                        .should_do_access_token(temp_payment_flow_data.payment_method);
 
                     if should_do_access_token {
                         // Extract access token from Hyperswitch request
@@ -2333,18 +2347,6 @@ impl PaymentService for Payments {
                             .as_ref()
                             .and_then(|state| state.access_token.as_ref())
                             .map(|access| (access.token.clone(), access.expires_in_seconds));
-
-                        // Create temporary payment flow data for access token creation
-                        let temp_payment_flow_data = PaymentFlowData::foreign_try_from((
-                            request_data.payload.clone(),
-                            config.connectors.clone(),
-                            &request_data.masked_metadata,
-                        ))
-                        .map_err(|e| {
-                            tonic::Status::internal(format!(
-                                "Failed to create payment flow data: {e}"
-                            ))
-                        })?;
 
                         let event_params = EventParams {
                             _connector_name: &connector.to_string(),
@@ -2726,7 +2728,17 @@ impl PaymentService for Payments {
                         ConnectorData::get_connector_by_name(&connector);
 
                     // Check if connector supports access tokens
-                    let should_do_access_token = connector_data.connector.should_do_access_token();
+                    let temp_payment_flow_data = PaymentFlowData::foreign_try_from((
+                        request_data.payload.clone(),
+                        config.connectors.clone(),
+                        &request_data.masked_metadata,
+                    ))
+                    .map_err(|e| {
+                        tonic::Status::internal(format!("Failed to create payment flow data: {e}"))
+                    })?;
+                    let should_do_access_token = connector_data
+                        .connector
+                        .should_do_access_token(temp_payment_flow_data.payment_method);
 
                     if should_do_access_token {
                         // Extract access token from Hyperswitch request
@@ -2736,18 +2748,6 @@ impl PaymentService for Payments {
                             .as_ref()
                             .and_then(|state| state.access_token.as_ref())
                             .map(|access| (access.token.clone(), access.expires_in_seconds));
-
-                        // Create temporary payment flow data for access token creation
-                        let temp_payment_flow_data = PaymentFlowData::foreign_try_from((
-                            request_data.payload.clone(),
-                            config.connectors.clone(),
-                            &request_data.masked_metadata,
-                        ))
-                        .map_err(|e| {
-                            tonic::Status::internal(format!(
-                                "Failed to create payment flow data: {e}"
-                            ))
-                        })?;
 
                         let event_params = EventParams {
                             _connector_name: &connector.to_string(),
