@@ -2118,6 +2118,9 @@ message PaymentServicePreAuthenticateRequest {
 
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 16; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+
+  // Capture Configuration
+  optional CaptureMethod capture_method = 17; // Whether to automatically capture funds or require manual capture
 }
 
 // Response message for pre-authentication step
@@ -2189,6 +2192,9 @@ message PaymentServiceAuthenticateRequest {
 
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+
+  // Capture Configuration
+  optional CaptureMethod capture_method = 18; // Whether to automatically capture funds or require manual capture
 }
 
 // Response message for authentication step
@@ -2263,6 +2269,9 @@ message PaymentServicePostAuthenticateRequest {
 
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+
+  // Capture Configuration
+  optional CaptureMethod capture_method = 18; // Whether to automatically capture funds or require manual capture
 }
 
 // Response message for post-authentication step
