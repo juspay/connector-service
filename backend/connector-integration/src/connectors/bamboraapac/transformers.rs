@@ -17,6 +17,104 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
 
+// ============================================================================
+// XML SERIALIZATION STRUCTURES (for quick-xml)
+// ============================================================================
+
+// Inner Transaction XML structure (inside CDATA)
+#[derive(Debug, Serialize)]
+#[serde(rename = "Transaction")]
+struct TransactionXml {
+    #[serde(rename = "CustRef")]
+    cust_ref: String,
+    #[serde(rename = "Amount")]
+    amount: i64,
+    #[serde(rename = "TrnType")]
+    trn_type: i32,
+    #[serde(rename = "AccountNumber")]
+    account_number: String,
+    #[serde(rename = "CreditCard")]
+    credit_card: CreditCardXml,
+    #[serde(rename = "Security")]
+    security: SecurityXml,
+}
+
+#[derive(Debug, Serialize)]
+struct CreditCardXml {
+    #[serde(rename = "@Registered")]
+    registered: &'static str,
+    #[serde(rename = "CardNumber")]
+    card_number: String,
+    #[serde(rename = "ExpM")]
+    exp_month: String,
+    #[serde(rename = "ExpY")]
+    exp_year: String,
+    #[serde(rename = "CVN")]
+    cvn: String,
+    #[serde(rename = "CardHolderName")]
+    card_holder_name: String,
+}
+
+#[derive(Debug, Serialize)]
+struct SecurityXml {
+    #[serde(rename = "UserName")]
+    username: String,
+    #[serde(rename = "Password")]
+    password: String,
+}
+
+// Capture XML structure
+#[derive(Debug, Serialize)]
+#[serde(rename = "Capture")]
+struct CaptureXml {
+    #[serde(rename = "Receipt")]
+    receipt: String,
+    #[serde(rename = "Amount")]
+    amount: i64,
+    #[serde(rename = "Security")]
+    security: SecurityXml,
+}
+
+// Refund XML structure
+#[derive(Debug, Serialize)]
+#[serde(rename = "Refund")]
+struct RefundXml {
+    #[serde(rename = "CustRef")]
+    cust_ref: String,
+    #[serde(rename = "Receipt")]
+    receipt: String,
+    #[serde(rename = "Amount")]
+    amount: i64,
+    #[serde(rename = "Security")]
+    security: SecurityXml,
+}
+
+// Query Transaction XML structure
+#[derive(Debug, Serialize)]
+#[serde(rename = "QueryTransaction")]
+struct QueryTransactionXml {
+    #[serde(rename = "Criteria")]
+    criteria: QueryCriteriaXml,
+    #[serde(rename = "Security")]
+    security: SecurityXml,
+}
+
+#[derive(Debug, Serialize)]
+struct QueryCriteriaXml {
+    #[serde(rename = "AccountNumber")]
+    account_number: String,
+    #[serde(rename = "TrnStartTimestamp")]
+    trn_start_timestamp: &'static str,
+    #[serde(rename = "TrnEndTimestamp")]
+    trn_end_timestamp: &'static str,
+    #[serde(rename = "Receipt")]
+    receipt: String,
+}
+
+// ============================================================================
+// END XML SERIALIZATION STRUCTURES
+// ============================================================================
+
 // Authentication Type Definition
 #[derive(Debug, Clone)]
 pub struct BamboraapacAuthType {
@@ -88,54 +186,42 @@ impl<
             + Serialize,
     > BamboraapacPaymentRequest<T>
 {
-    // Generate SOAP XML request
+    // Generate SOAP XML request using quick-xml serialization
     pub fn to_soap_xml(&self) -> String {
+        // Build the inner Transaction XML using quick-xml
+        let transaction_xml = TransactionXml {
+            cust_ref: self.cust_ref.clone(),
+            amount: self.amount.get_amount_as_i64(),
+            trn_type: self.trn_type as i32,
+            account_number: self.account_number.peek().to_string(),
+            credit_card: CreditCardXml {
+                registered: "False",
+                card_number: self.card_number.peek().to_string(),
+                exp_month: self.exp_month.peek().to_string(),
+                exp_year: self.exp_year.peek().to_string(),
+                cvn: self.cvn.peek().to_string(),
+                card_holder_name: self.card_holder_name.peek().to_string(),
+            },
+            security: SecurityXml {
+                username: self.username.peek().to_string(),
+                password: self.password.peek().to_string(),
+            },
+        };
+
+        // Serialize using quick-xml
+        let transaction_xml_string = quick_xml::se::to_string(&transaction_xml)
+            .unwrap_or_else(|_| String::from("<Transaction/>"));
+
+        // Wrap in SOAP envelope (only the envelope structure, data is safely serialized)
         format!(
-            r#"
-            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-            xmlns:dts="http://www.ippayments.com.au/interface/api/dts">
-                <soapenv:Body>
-                    <dts:SubmitSinglePayment>
-                        <dts:trnXML>
-                            <![CDATA[
-
-        <Transaction>
-            <CustRef>{}</CustRef>
-            <Amount>{}</Amount>
-            <TrnType>{}</TrnType>
-            <AccountNumber>{}</AccountNumber>
-
-                    <CreditCard Registered="False">
-                        <CardNumber>{}</CardNumber>
-                        <ExpM>{}</ExpM>
-                        <ExpY>{}</ExpY>
-                        <CVN>{}</CVN>
-                        <CardHolderName>{}</CardHolderName>
-                    </CreditCard>
-
-            <Security>
-                    <UserName>{}</UserName>
-                    <Password>{}</Password>
-            </Security>
-        </Transaction>
-
-                            ]]>
-                        </dts:trnXML>
-                    </dts:SubmitSinglePayment>
-                </soapenv:Body>
-            </soapenv:Envelope>
-        "#,
-            self.cust_ref,
-            self.amount.get_amount_as_i64(),
-            self.trn_type as i32,
-            self.account_number.peek(),
-            self.card_number.peek(),
-            self.exp_month.peek(),
-            self.exp_year.peek(),
-            self.cvn.peek(),
-            self.card_holder_name.peek(),
-            self.username.peek(),
-            self.password.peek()
+            r#"<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:dts="http://www.ippayments.com.au/interface/api/dts">
+<soapenv:Body>
+<dts:SubmitSinglePayment>
+<dts:trnXML><![CDATA[{}]]></dts:trnXML>
+</dts:SubmitSinglePayment>
+</soapenv:Body>
+</soapenv:Envelope>"#,
+            transaction_xml_string
         )
     }
 }
@@ -1645,104 +1731,97 @@ impl<
 
 impl GetSoapXml for BamboraapacCaptureRequest {
     fn to_soap_xml(&self) -> String {
+        // Build the inner Capture XML using quick-xml
+        let capture_xml = CaptureXml {
+            receipt: self.receipt.clone(),
+            amount: self.amount.get_amount_as_i64(),
+            security: SecurityXml {
+                username: self.username.peek().to_string(),
+                password: self.password.peek().to_string(),
+            },
+        };
+
+        // Serialize using quick-xml
+        let capture_xml_string = quick_xml::se::to_string(&capture_xml)
+            .unwrap_or_else(|_| String::from("<Capture/>"));
+
+        // Wrap in SOAP envelope
         format!(
-            r#"
-            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-            xmlns:dts="http://www.ippayments.com.au/interface/api/dts">
-                <soapenv:Body>
-                    <dts:SubmitSingleCapture>
-                        <dts:trnXML>
-                            <![CDATA[
-                                <Capture>
-                                        <Receipt>{}</Receipt>
-                                        <Amount>{}</Amount>
-                                        <Security>
-                                                <UserName>{}</UserName>
-                                                <Password>{}</Password>
-                                        </Security>
-                                </Capture>
-                            ]]>
-                        </dts:trnXML>
-                    </dts:SubmitSingleCapture>
-                </soapenv:Body>
-            </soapenv:Envelope>
-        "#,
-            self.receipt,
-            self.amount.get_amount_as_i64(),
-            self.username.peek(),
-            self.password.peek()
+            r#"<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:dts="http://www.ippayments.com.au/interface/api/dts">
+<soapenv:Body>
+<dts:SubmitSingleCapture>
+<dts:trnXML><![CDATA[{}]]></dts:trnXML>
+</dts:SubmitSingleCapture>
+</soapenv:Body>
+</soapenv:Envelope>"#,
+            capture_xml_string
         )
     }
 }
 
 impl GetSoapXml for BamboraapacRefundRequest {
     fn to_soap_xml(&self) -> String {
+        // Build the inner Refund XML using quick-xml
+        let refund_xml = RefundXml {
+            cust_ref: self.cust_ref.clone(),
+            receipt: self.receipt.clone(),
+            amount: self.amount.get_amount_as_i64(),
+            security: SecurityXml {
+                username: self.username.peek().to_string(),
+                password: self.password.peek().to_string(),
+            },
+        };
+
+        // Serialize using quick-xml
+        let refund_xml_string = quick_xml::se::to_string(&refund_xml)
+            .unwrap_or_else(|_| String::from("<Refund/>"));
+
+        // Wrap in SOAP envelope
         format!(
-            r#"
-            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-            xmlns:dts="http://www.ippayments.com.au/interface/api/dts">
-                <soapenv:Header/>
-                <soapenv:Body>
-                    <dts:SubmitSingleRefund>
-                        <dts:trnXML>
-                            <![CDATA[
-                    <Refund>
-                        <CustRef>{}</CustRef>
-                        <Receipt>{}</Receipt>
-                        <Amount>{}</Amount>
-                        <Security>
-                            <UserName>{}</UserName>
-                            <Password>{}</Password>
-                        </Security>
-                    </Refund>
-                ]]>
-                        </dts:trnXML>
-                    </dts:SubmitSingleRefund>
-                </soapenv:Body>
-            </soapenv:Envelope>
-        "#,
-            self.cust_ref,
-            self.receipt,
-            self.amount.get_amount_as_i64(),
-            self.username.peek(),
-            self.password.peek()
+            r#"<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:dts="http://www.ippayments.com.au/interface/api/dts">
+<soapenv:Header/>
+<soapenv:Body>
+<dts:SubmitSingleRefund>
+<dts:trnXML><![CDATA[{}]]></dts:trnXML>
+</dts:SubmitSingleRefund>
+</soapenv:Body>
+</soapenv:Envelope>"#,
+            refund_xml_string
         )
     }
 }
 
 impl GetSoapXml for BamboraapacSyncRequest {
     fn to_soap_xml(&self) -> String {
+        // Build the inner QueryTransaction XML using quick-xml
+        let query_xml = QueryTransactionXml {
+            criteria: QueryCriteriaXml {
+                account_number: self.account_number.peek().to_string(),
+                trn_start_timestamp: "2024-06-23 00:00:00",
+                trn_end_timestamp: "2099-12-31 23:59:59",
+                receipt: self.receipt.clone(),
+            },
+            security: SecurityXml {
+                username: self.username.peek().to_string(),
+                password: self.password.peek().to_string(),
+            },
+        };
+
+        // Serialize using quick-xml
+        let query_xml_string = quick_xml::se::to_string(&query_xml)
+            .unwrap_or_else(|_| String::from("<QueryTransaction/>"));
+
+        // Wrap in SOAP envelope
         format!(
-            r#"
-            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-            xmlns:dts="http://www.ippayments.com.au/interface/api/dts">
-                <soapenv:Header/>
-                <soapenv:Body>
-                    <dts:QueryTransaction>
-                        <dts:queryXML>
-                            <![CDATA[
-                                <QueryTransaction>
-                                    <Criteria>
-                                        <AccountNumber>{}</AccountNumber>
-                                        <TrnStartTimestamp>2024-06-23 00:00:00</TrnStartTimestamp>
-                                        <TrnEndTimestamp>2099-12-31 23:59:59</TrnEndTimestamp>
-                                        <Receipt>{}</Receipt>
-                                    </Criteria>
-                                    <Security>
-                                        <UserName>{}</UserName>
-                                        <Password>{}</Password>
-                                    </Security>
-                            </QueryTransaction>
-                            ]]>
-                        </dts:queryXML>
-                    </dts:QueryTransaction>
-                </soapenv:Body>
-            </soapenv:Envelope>
-        "#,
-            self.account_number.peek(),
-            self.receipt,
-            self.username.peek(),
-            self.password.peek()
+            r#"<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:dts="http://www.ippayments.com.au/interface/api/dts">
+<soapenv:Header/>
+<soapenv:Body>
+<dts:QueryTransaction>
+<dts:queryXML><![CDATA[{}]]></dts:queryXML>
+</dts:QueryTransaction>
+</soapenv:Body>
+</soapenv:Envelope>"#,
+            query_xml_string
         )
     }
 }

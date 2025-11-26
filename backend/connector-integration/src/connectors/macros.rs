@@ -42,8 +42,35 @@ pub trait GetFormData {
     fn get_form_data(&self) -> reqwest::multipart::Form;
 }
 
+/// Trait for converting request structures into SOAP XML format
+/// Implement this trait for request types that need to be sent as SOAP/XML
 pub trait GetSoapXml {
+    /// Converts the implementing type into a SOAP XML string
+    /// The output should be properly formatted and escaped XML
     fn to_soap_xml(&self) -> String;
+}
+
+/// Helper function to validate XML is well-formed
+/// This catches malformed XML before sending to the connector
+#[inline]
+pub(crate) fn validate_xml_structure(xml_str: &str) -> Result<(), String> {
+    use quick_xml::{events::Event, Reader};
+
+    let mut reader = Reader::from_str(xml_str);
+    reader.trim_text(true);
+    reader.check_end_names(true);  // Verify open/close tags match
+
+    let mut buf = Vec::new();
+    loop {
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Eof) => break,
+            Err(e) => return Err(format!("XML validation failed: {}", e)),
+            _ => {}
+        }
+        buf.clear();
+    }
+
+    Ok(())
 }
 
 pub struct NoRequestBody;
@@ -186,6 +213,14 @@ macro_rules! expand_fn_get_request_body {
                 };
                 let request = bridge.request_body(input_data)?;
                 let soap_xml = <$curl_req as GetSoapXml>::to_soap_xml(&request);
+
+                // Validate XML structure before sending
+                crate::connectors::macros::validate_xml_structure(&soap_xml)
+                    .map_err(|e| {
+                        error_stack::report!(errors::ConnectorError::RequestEncodingFailed)
+                            .attach_printable(e)
+                    })?;
+
                 Ok(Some(macro_types::RequestContent::RawBytes(soap_xml.into_bytes())))
             }
         }
@@ -824,12 +859,14 @@ macro_rules! impl_templating_mixed {
                     }
 
                     let response_str = String::from_utf8(bytes.to_vec())
-                        .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+                        .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+                        .attach_printable("Failed to convert response bytes to UTF-8 string")?;
 
                     response_str
                         .as_str()
                         .parse_xml::<Self::ResponseBody>()
                         .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+                        .attach_printable("Failed to parse XML response")
                 }
             }
         }
@@ -865,12 +902,14 @@ macro_rules! impl_templating_mixed {
                     }
 
                     let response_str = String::from_utf8(bytes.to_vec())
-                        .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+                        .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+                        .attach_printable("Failed to convert response bytes to UTF-8 string")?;
 
                     response_str
                         .as_str()
                         .parse_xml::<Self::ResponseBody>()
                         .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+                        .attach_printable("Failed to parse XML response")
                 }
             }
         }
