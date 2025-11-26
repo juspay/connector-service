@@ -318,7 +318,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut common_utils::events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: IatapayErrorResponse = res.response
+        let response: IatapayErrorResponse = res
+            .response
             .parse_struct("IatapayErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
@@ -329,7 +330,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.error,
-            message: response.message.unwrap_or_else(|| "Unknown error".to_string()),
+            message: response
+                .message
+                .unwrap_or_else(|| "Unknown error".to_string()),
             reason: response.reason,
             attempt_status: None,
             connector_transaction_id: None,

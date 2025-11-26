@@ -716,11 +716,31 @@ impl
             IatapayRefundStatus::Failed => RefundStatus::Failure,
         };
 
-        router_data.response = Ok(RefundsResponseData {
-            connector_refund_id: response.iata_refund_id.clone(),
-            refund_status,
-            status_code: item.http_code,
-        });
+        // Check if refund failed and return error response
+        router_data.response = if refund_status == RefundStatus::Failure {
+            Err(ErrorResponse {
+                status_code: item.http_code,
+                code: response
+                    .failure_code
+                    .unwrap_or_else(|| "REFUND_FAILED".to_string()),
+                message: response
+                    .failure_details
+                    .clone()
+                    .unwrap_or_else(|| "Refund failed".to_string()),
+                reason: response.failure_details,
+                attempt_status: None,
+                connector_transaction_id: Some(response.iata_refund_id.clone()),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+            })
+        } else {
+            Ok(RefundsResponseData {
+                connector_refund_id: response.iata_refund_id.clone(),
+                refund_status,
+                status_code: item.http_code,
+            })
+        };
 
         Ok(router_data)
     }
@@ -756,11 +776,31 @@ impl
             IatapayRefundStatus::Failed => RefundStatus::Failure,
         };
 
-        router_data.response = Ok(RefundsResponseData {
-            connector_refund_id: response.iata_refund_id.clone(),
-            refund_status,
-            status_code: item.http_code,
-        });
+        // Check if refund failed and return error response
+        router_data.response = if refund_status == RefundStatus::Failure {
+            Err(ErrorResponse {
+                status_code: item.http_code,
+                code: response
+                    .failure_code
+                    .unwrap_or_else(|| "REFUND_FAILED".to_string()),
+                message: response
+                    .failure_details
+                    .clone()
+                    .unwrap_or_else(|| "Refund failed".to_string()),
+                reason: response.failure_details,
+                attempt_status: None,
+                connector_transaction_id: Some(response.iata_refund_id.clone()),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+            })
+        } else {
+            Ok(RefundsResponseData {
+                connector_refund_id: response.iata_refund_id.clone(),
+                refund_status,
+                status_code: item.http_code,
+            })
+        };
 
         Ok(router_data)
     }
