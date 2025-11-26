@@ -78,7 +78,7 @@ pub trait ValidationTrait {
         false
     }
 
-    fn should_do_access_token(&self) -> bool {
+    fn should_do_access_token(&self, _payment_method: PaymentMethod) -> bool {
         false
     }
 

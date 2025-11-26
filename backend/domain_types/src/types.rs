@@ -144,6 +144,7 @@ pub struct Connectors {
     pub celero: ConnectorParams,
     pub paypal: ConnectorParams,
     pub stax: ConnectorParams,
+    pub billwerk: ConnectorParams,
     pub hipay: ConnectorParams,
     pub trustpayments: ConnectorParams,
     pub globalpay: ConnectorParams,
@@ -2601,6 +2602,10 @@ impl ForeignTryFrom<ConnectorResponseData> for grpc_api_types::payments::Connect
                     grpc_api_types::payments::ExtendedAuthorizationResponseData {
                         extended_authentication_applied: extended_authorization_response_data
                             .extended_authentication_applied,
+                        extended_authorization_last_applied_at:
+                            extended_authorization_response_data
+                                .extended_authorization_last_applied_at
+                                .map(|dt| dt.assume_utc().unix_timestamp()),
                         capture_before: extended_authorization_response_data
                             .capture_before
                             .map(|dt| dt.assume_utc().unix_timestamp()),
@@ -4916,6 +4921,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
             minor_amount_to_capture: minor_amount,
             currency: common_enums::Currency::foreign_try_from(value.currency())?,
             connector_transaction_id,
+            merchant_reference_payment_id: value.merchant_reference_payment_id,
             multiple_capture_data,
             connector_metadata: (!value.connector_metadata.is_empty()).then(|| {
                 serde_json::Value::Object(
@@ -6381,17 +6387,10 @@ impl
         let address = value
             .address
             .map(|addr| {
-                // Convert grpc Address to payment_address Address first
-                let payment_addr = payment_address::Address::foreign_try_from(addr.clone())
-                    .unwrap_or_else(|_| payment_address::Address::default());
                 // Then create PaymentAddress
-                payment_address::PaymentAddress::new(
-                    Some(payment_addr.clone()),
-                    Some(payment_addr.clone()),
-                    Some(payment_addr),
-                    Some(false),
-                )
+                payment_address::PaymentAddress::foreign_try_from(addr)
             })
+            .transpose()?
             .unwrap_or_else(payment_address::PaymentAddress::default);
 
         Ok(Self {
@@ -6543,14 +6542,21 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
-
+        let address = value
+            .address
+            .map(|addr| {
+                // Then create PaymentAddress
+                payment_address::PaymentAddress::foreign_try_from(addr)
+            })
+            .transpose()?
+            .unwrap_or_else(payment_address::PaymentAddress::default);
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
             attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
             status: common_enums::AttemptStatus::Pending,
             payment_method: common_enums::PaymentMethod::Card, // Default for connector customer creation
-            address: payment_address::PaymentAddress::default(), // Default address
+            address,                                           // Default address
             auth_type: common_enums::AuthenticationType::default(),
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
