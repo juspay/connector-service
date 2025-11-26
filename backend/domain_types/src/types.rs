@@ -149,6 +149,7 @@ pub struct Connectors {
     pub trustpayments: ConnectorParams,
     pub globalpay: ConnectorParams,
     pub nmi: ConnectorParams,
+    pub nexixpay: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]

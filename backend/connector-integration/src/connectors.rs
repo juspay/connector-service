@@ -139,3 +139,6 @@ pub use self::billwerk::Billwerk;
 
 pub mod nmi;
 pub use self::nmi::Nmi;
+
+pub mod nexixpay;
+pub use self::nexixpay::Nexixpay;
