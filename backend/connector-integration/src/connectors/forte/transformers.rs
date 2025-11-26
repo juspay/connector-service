@@ -158,7 +158,9 @@ impl<
                         .router_data
                         .resource_common_data
                         .get_optional_billing_full_name()
-                        .unwrap_or(Secret::new("".to_string())),
+                        .ok_or(errors::ConnectorError::MissingRequiredField {
+                            field_name: "name_on_card",
+                        })?,
                     account_number: ccard.card_number.clone(),
                     expire_month: ccard.card_exp_month.clone(),
                     expire_year: ccard.card_exp_year.clone(),
@@ -280,7 +282,7 @@ fn get_status(response_code: ForteResponseCode, action: ForteAction) -> enums::A
             ForteAction::Sale => enums::AttemptStatus::Pending,
             ForteAction::Verify | ForteAction::Capture => enums::AttemptStatus::Charged,
         },
-        ForteResponseCode::A05 | ForteResponseCode::A06 => enums::AttemptStatus::Authorizing,
+        ForteResponseCode::A05 | ForteResponseCode::A06 => enums::AttemptStatus::Pending,
         _ => enums::AttemptStatus::Failure,
     }
 }
@@ -507,6 +509,22 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        let authorized_amount = item
+            .router_data
+            .resource_common_data
+            .minor_amount_capturable
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "amount",
+            })?;
+
+        if item.router_data.request.minor_amount_to_capture != authorized_amount {
+            return Err(errors::ConnectorError::NotSupported {
+                message: "Forte only supports full captures.".to_string(),
+                connector: "Forte",
+            }
+            .into());
+        }
+
         let trn_id = item
             .router_data
             .request
