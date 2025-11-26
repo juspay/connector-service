@@ -3,6 +3,8 @@ use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 pub type RedsysPreAuthenticateRequest = super::transformers::RedsysTransaction;
+pub type RedsysAuthenticateRequest = super::transformers::RedsysTransaction;
+pub type RedsysPostAuthenticateRequest = super::transformers::RedsysTransaction;
 pub type RedsysCaptureRequest = super::transformers::RedsysTransaction;
 pub type RedsysVoidRequest = super::transformers::RedsysTransaction;
 pub type RedsysRefundRequest = super::transformers::RedsysTransaction;
@@ -100,20 +102,6 @@ pub enum RedsysThreeDsInfo {
 pub enum RedsysThreeDSCompInd {
     Y,
     N,
-}
-
-#[derive(Debug)]
-pub struct RedsysCardData {
-    pub card_number: cards::CardNumber,
-    pub expiry_date: Secret<String>, // YYMM
-    pub cvv2: Secret<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ThreedsInvokeRequest {
-    three_d_s_server_trans_i_d: String,
-    three_d_s_method_notification_u_r_l: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

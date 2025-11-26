@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use super::{requests::RedsysThreeDsInfo, transformers::RedsysTransaction};
 
 pub type RedsysPreAuthenticateResponse = RedsysResponse;
+pub type RedsysAuthenticateResponse = RedsysResponse;
+pub type RedsysPostAuthenticateResponse = RedsysResponse;
 pub type RedsysCaptureResponse = RedsysResponse;
 pub type RedsysVoidResponse = RedsysResponse;
 pub type RedsysRefundResponse = RedsysResponse;
@@ -49,11 +51,6 @@ pub struct RedsysEmv3DSResponseData {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DsResponse(pub String);
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ThreedsChallengeResponse {
-    pub cres: String,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RedsysOperationsResponse {
