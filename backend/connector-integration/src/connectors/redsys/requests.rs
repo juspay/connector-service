@@ -1,200 +1,184 @@
-// Redsys Request Structures
-//
-// This file contains all request parameter structures and enums for Redsys flows.
-
+use common_utils::{pii, StringMinorUnit};
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-// ============================================================================
-// REQUEST PARAMETER STRUCTS
-// ============================================================================
+pub type RedsysPreAuthenticateRequest = super::transformers::RedsysTransaction;
+pub type RedsysCaptureRequest = super::transformers::RedsysTransaction;
+pub type RedsysVoidRequest = super::transformers::RedsysTransaction;
+pub type RedsysRefundRequest = super::transformers::RedsysTransaction;
 
-/// Authenticate request parameters (iniciaPeticionREST)
-/// Used for 3DS Method Invocation
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub struct RedsysAuthenticateRequestParams {
-    pub ds_merchant_order: String,
-    pub ds_merchant_merchantcode: String,
-    pub ds_merchant_terminal: String,
+pub struct RedsysPaymentRequest {
+    pub ds_merchant_amount: StringMinorUnit,
     pub ds_merchant_currency: String,
-    pub ds_merchant_transactiontype: String, // "0" = payment, "1" = preauth
-    pub ds_merchant_amount: String,
-    pub ds_merchant_pan: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ds_merchant_emv3ds: Option<RedsysEmv3DSRequest>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ds_merchant_excep_sca: Option<String>, // "Y" to query exemptions
-}
-
-/// PostAuthenticate request parameters (trataPeticionREST)
-/// Used for authorization after 3DS Method completes
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub struct RedsysPostAuthenticateRequestParams {
-    pub ds_merchant_amount: String,
-    pub ds_merchant_currency: String,
+    pub ds_merchant_emv3ds: Option<RedsysEmvThreeDsRequestData>,
+    pub ds_merchant_expirydate: Secret<String>,
+    pub ds_merchant_merchantcode: Secret<String>,
     pub ds_merchant_order: String,
-    pub ds_merchant_merchantcode: String,
-    pub ds_merchant_terminal: String,
-    pub ds_merchant_transactiontype: String,
-    pub ds_merchant_pan: String,
-    pub ds_merchant_expirydate: String, // YYMM
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ds_merchant_cvv2: Option<String>,
-    pub ds_merchant_emv3ds: RedsysEmv3DSRequest,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ds_merchant_merchanturl: Option<String>, // Webhook URL
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ds_merchant_productdescription: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ds_merchant_titular: Option<String>, // Cardholder name
+    pub ds_merchant_pan: cards::CardNumber,
+    pub ds_merchant_terminal: Secret<String>,
+    pub ds_merchant_transactiontype: RedsysTransactionType,
+    pub ds_merchant_cvv2: Secret<String>,
 }
 
-/// Authorize request parameters (trataPeticionREST with cres)
-/// Used for final authorization after 3DS challenge
+#[derive(Debug, Serialize, Deserialize)]
+pub enum RedsysTransactionType {
+    #[serde(rename = "0")]
+    Payment,
+    #[serde(rename = "1")]
+    Preauthorization,
+    #[serde(rename = "2")]
+    Confirmation,
+    #[serde(rename = "3")]
+    Refund,
+    #[serde(rename = "9")]
+    Cancellation,
+}
+
 #[derive(Debug, Serialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub struct RedsysAuthorizeRequestParams {
-    pub ds_merchant_order: String,
-    pub ds_merchant_merchantcode: String,
-    pub ds_merchant_terminal: String,
-    pub ds_merchant_currency: String,
-    pub ds_merchant_transactiontype: String,
-    pub ds_merchant_amount: String,
-    pub ds_merchant_pan: String,
-    pub ds_merchant_expirydate: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ds_merchant_cvv2: Option<String>,
-    pub ds_merchant_emv3ds: RedsysEmv3DSRequest,
-}
-
-/// Capture request parameters
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub struct RedysCaptureRequestParams {
-    pub ds_merchant_amount: String,
-    pub ds_merchant_currency: String,
-    pub ds_merchant_order: String,
-    pub ds_merchant_merchantcode: String,
-    pub ds_merchant_terminal: String,
-    pub ds_merchant_transactiontype: String, // "2" = capture
-}
-
-/// Void request parameters
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub struct RedsysVoidRequestParams {
-    pub ds_merchant_amount: String,
-    pub ds_merchant_currency: String,
-    pub ds_merchant_order: String,
-    pub ds_merchant_merchantcode: String,
-    pub ds_merchant_terminal: String,
-    pub ds_merchant_transactiontype: String, // "9" = cancellation
-}
-
-/// Refund request parameters
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub struct RedsysRefundRequestParams {
-    pub ds_merchant_amount: String,
-    pub ds_merchant_currency: String,
-    pub ds_merchant_order: String,
-    pub ds_merchant_merchantcode: String,
-    pub ds_merchant_terminal: String,
-    pub ds_merchant_transactiontype: String, // "3" = refund
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ds_merchant_authorisationcode: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ds_merchant_transactiondate: Option<String>, // yyyy-mm-dd
-}
-
-/// PSync request (SOAP-based query)
-#[derive(Debug, Serialize)]
-pub struct RedysPSyncRequest {
-    pub order: String,
-}
-
-/// RSync request (SOAP-based refund query)
-#[derive(Debug, Serialize)]
-pub struct RedsysRSyncRequest {
-    pub order: String,
-}
-
-// ============================================================================
-// EMV 3DS DATA STRUCTURES
-// ============================================================================
-
-/// EMV 3DS request data embedded in payment requests
-#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct RedsysEmv3DSRequest {
-    pub three_ds_info: String, // "CardData", "AuthenticationData", or "ChallengeResponse"
-    #[serde(skip_serializing_if = "Option::is_none")]
+pub struct RedsysEmvThreeDsRequestData {
+    pub three_d_s_info: RedsysThreeDsInfo,
     pub protocol_version: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub browser_accept_header: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub browser_user_agent: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    pub browser_user_agent: Option<Secret<String>>,
     pub browser_java_enabled: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub browser_javascript_enabled: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub browser_language: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub browser_color_depth: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub browser_screen_height: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub browser_screen_width: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "browserTZ")]
-    pub browser_tz: Option<String>, // Timezone offset in minutes
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "threeDSServerTransID")]
-    pub three_ds_server_trans_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "notificationURL")]
-    pub notification_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub three_ds_comp_ind: Option<String>, // "Y" or "N"
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cres: Option<String>, // Challenge response for final authorization
+    pub browser_t_z: Option<String>,
+    pub browser_i_p: Option<Secret<String, pii::IpAddress>>,
+    pub three_d_s_server_trans_i_d: Option<String>,
+    pub notification_u_r_l: Option<String>,
+    pub three_d_s_comp_ind: Option<RedsysThreeDSCompInd>,
+    pub cres: Option<String>,
+    #[serde(flatten)]
+    pub billing_data: Option<RedsysBillingData>,
+    #[serde(flatten)]
+    pub shipping_data: Option<RedsysShippingData>,
 }
 
-// ============================================================================
-// MAIN REQUEST WRAPPER
-// ============================================================================
-
-/// Main request wrapper - all Redsys REST requests follow this structure
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct RedsysTransaction {
-    pub ds_signature_version: String,
-    pub ds_merchant_parameters: String, // Base64-encoded JSON
-    pub ds_signature: String,           // Base64-encoded HMAC-SHA256
+pub struct RedsysBillingData {
+    pub bill_addr_city: Option<Secret<String>>,
+    pub bill_addr_country: Option<String>,
+    pub bill_addr_line1: Option<Secret<String>>,
+    pub bill_addr_line2: Option<Secret<String>>,
+    pub bill_addr_line3: Option<Secret<String>>,
+    pub bill_addr_postal_code: Option<Secret<String>>,
+    pub bill_addr_state: Option<Secret<String>>,
 }
 
-// ============================================================================
-// TYPE ALIASES FOR MACRO SUPPORT
-// ============================================================================
-// The create_all_prerequisites! macro requires unique type names for each flow
-
-pub type RedsysAuthenticateRequest = RedsysTransaction;
-pub type RedsysPostAuthenticateRequest = RedsysTransaction;
-pub type RedsysAuthorizeRequest = RedsysTransaction;
-pub type RedysCaptureRequest = RedsysTransaction;
-pub type RedsysVoidRequest = RedsysTransaction;
-pub type RedsysRefundRequest = RedsysTransaction;
-
-// ============================================================================
-// AUTHENTICATION STRUCTURE
-// ============================================================================
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RedsysAuthType {
-    pub merchant_id: Secret<String>, // FUC code (api_key)
-    pub terminal_id: Secret<String>, // Terminal number (key1)
-    pub sha256_pwd: Secret<String>,  // SHA256 password (api_secret)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RedsysShippingData {
+    pub ship_addr_city: Option<Secret<String>>,
+    pub ship_addr_country: Option<String>,
+    pub ship_addr_line1: Option<Secret<String>>,
+    pub ship_addr_line2: Option<Secret<String>>,
+    pub ship_addr_line3: Option<Secret<String>>,
+    pub ship_addr_postal_code: Option<Secret<String>>,
+    pub ship_addr_state: Option<Secret<String>>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub enum RedsysThreeDsInfo {
+    CardData,
+    CardConfiguration,
+    ChallengeRequest,
+    ChallengeResponse,
+    AuthenticationData,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum RedsysThreeDSCompInd {
+    Y,
+    N,
+}
+
+#[derive(Debug)]
+pub struct RedsysCardData {
+    pub card_number: cards::CardNumber,
+    pub expiry_date: Secret<String>, // YYMM
+    pub cvv2: Secret<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreedsInvokeRequest {
+    three_d_s_server_trans_i_d: String,
+    three_d_s_method_notification_u_r_l: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RedsysThreeDsInvokeData {
+    pub three_ds_method_url: String,
+    pub three_ds_method_data: String,
+    pub message_version: String,
+    pub directory_server_id: String,
+    pub three_ds_method_data_submission: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ThreeDsInvokeExempt {
+    pub three_d_s_server_trans_i_d: String,
+    pub message_version: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub struct RedsysOperationRequest {
+    pub ds_merchant_order: String,
+    pub ds_merchant_merchantcode: Secret<String>,
+    pub ds_merchant_terminal: Secret<String>,
+    pub ds_merchant_currency: String,
+    pub ds_merchant_transactiontype: RedsysTransactionType,
+    pub ds_merchant_amount: StringMinorUnit,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Messages {
+    #[serde(rename = "Version")]
+    pub version: RedsysVersionData,
+    #[serde(rename = "Signature")]
+    pub signature: String,
+    #[serde(rename = "SignatureVersion")]
+    pub signature_version: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename = "Version")]
+pub struct RedsysVersionData {
+    #[serde(rename = "@Ds_Version")]
+    pub ds_version: String,
+    #[serde(rename = "Message")]
+    pub message: Message,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Message {
+    #[serde(rename = "Transaction")]
+    pub transaction: RedsysSyncRequest,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename = "Transaction")]
+pub struct RedsysSyncRequest {
+    #[serde(rename = "Ds_MerchantCode")]
+    pub ds_merchant_code: Secret<String>,
+    #[serde(rename = "Ds_Terminal")]
+    pub ds_terminal: Secret<String>,
+    #[serde(rename = "Ds_Order")]
+    pub ds_order: String,
+    #[serde(rename = "Ds_TransactionType")]
+    pub ds_transaction_type: String,
+}
+
+// Note: PSync and RSync use SOAP XML and are implemented manually in redsys.rs
+// They don't use request type structs - the SOAP XML is built directly as Vec<u8>
