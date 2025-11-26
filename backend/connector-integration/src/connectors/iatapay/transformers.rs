@@ -121,14 +121,6 @@ impl From<IatapayPaymentStatus> for AttemptStatus {
     }
 }
 
-// ===== PREFERRED CHECKOUT METHOD ENUM =====
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "UPPERCASE")]
-pub enum PreferredCheckoutMethod {
-    Vpa,
-    Qr,
-}
-
 // ===== REQUEST STRUCTURES =====
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -147,8 +139,6 @@ where
     pub notification_url: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payer_info: Option<PayerInfo>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub preferred_checkout_method: Option<PreferredCheckoutMethod>,
     #[serde(skip)]
     _phantom: std::marker::PhantomData<T>,
 }
@@ -248,22 +238,6 @@ fn get_vpa_id_from_upi(upi_data: &UpiData) -> Option<Secret<String, UpiVpaMaskin
     }
 }
 
-/// Determine preferred checkout method from payment method data
-fn get_preferred_checkout_method<T>(
-    payment_method_data: &PaymentMethodData<T>,
-) -> Option<PreferredCheckoutMethod>
-where
-    T: PaymentMethodDataTypes,
-{
-    match payment_method_data {
-        PaymentMethodData::Upi(upi_data) => match upi_data {
-            UpiData::UpiIntent(_) | UpiData::UpiQr(_) => Some(PreferredCheckoutMethod::Qr),
-            UpiData::UpiCollect(_) => Some(PreferredCheckoutMethod::Vpa),
-        },
-        _ => None,
-    }
-}
-
 // ===== REQUEST TRANSFORMER =====
 impl<
         T: PaymentMethodDataTypes
@@ -320,9 +294,6 @@ impl<
             _ => None,
         };
 
-        // Determine preferred checkout method
-        let preferred_checkout_method = get_preferred_checkout_method(payment_method_data);
-
         // Get return URL and webhook URL
         let return_url = item.router_data.request.router_return_url.clone().ok_or(
             ConnectorError::MissingRequiredField {
@@ -361,7 +332,6 @@ impl<
             },
             notification_url: webhook_url,
             payer_info,
-            preferred_checkout_method,
             _phantom: std::marker::PhantomData,
         })
     }
