@@ -4,6 +4,19 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.11.26.0
+
+### Bug Fixes
+
+- **Trustpay:** AccessToken creation fix ([#321](https://github.com/juspay/connector-service/pull/321)) ([`3d11036`](https://github.com/juspay/connector-service/commit/3d110363ee671895ce5e28c58341127d37e5e395))
+- Change address type for Customer Create and PaymenMethodToken Create Request ([#318](https://github.com/juspay/connector-service/pull/318)) ([`ae3b003`](https://github.com/juspay/connector-service/commit/ae3b0030cf670679f491ae649efe2b283db0db9b))
+- Sandbox url fix ([#316](https://github.com/juspay/connector-service/pull/316)) ([`7b5e7af`](https://github.com/juspay/connector-service/commit/7b5e7af1c7480b605664072c4d8187ec24537bc9))
+- [WORLDPAYVANTIV] sandbox url fix ([#320](https://github.com/juspay/connector-service/pull/320)) ([`0ab1279`](https://github.com/juspay/connector-service/commit/0ab12798f5d86736dda0c799dd3c59d33ad60eb5))
+
+**Full Changelog:** [`2025.11.25.1...2025.11.26.0`](https://github.com/juspay/connector-service/compare/2025.11.25.1...2025.11.26.0)
+
+- - -
+
 ## 2025.11.25.1
 
 ### Features
