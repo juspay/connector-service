@@ -157,10 +157,7 @@ impl<
                     name_on_card: item
                         .router_data
                         .resource_common_data
-                        .get_optional_billing_full_name()
-                        .ok_or(errors::ConnectorError::MissingRequiredField {
-                            field_name: "name_on_card",
-                        })?,
+                        .get_billing_full_name()?,
                     account_number: ccard.card_number.clone(),
                     expire_month: ccard.card_exp_month.clone(),
                     expire_year: ccard.card_exp_year.clone(),
