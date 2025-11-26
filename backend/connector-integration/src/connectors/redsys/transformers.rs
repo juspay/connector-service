@@ -6,16 +6,20 @@ use common_utils::{
     ext_traits::Encode,
 };
 use domain_types::{
-    connector_flow::{Capture, PSync, PreAuthenticate, RSync, Refund, Void},
+    connector_flow::{
+        Authenticate, Capture, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund, Void,
+    },
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsCaptureData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        ResponseId,
     },
     errors,
     payment_method_data::{self, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
+    router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -225,6 +229,24 @@ where
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
         let auth = RedsysAuthType::try_from(&router_data.connector_auth_type)?;
+
+        if !router_data.request.enrolled_for_3ds {
+            return Err(errors::ConnectorError::NotSupported {
+                message: "Non-3DS payments".to_string(),
+                connector: "redsys",
+            })?;
+        }
+
+        if router_data.resource_common_data.auth_type != common_enums::AuthenticationType::ThreeDs {
+            return Err(errors::ConnectorError::NotSupported {
+                message: format!(
+                    "Authentication type {:?}",
+                    router_data.resource_common_data.auth_type
+                ),
+                connector: "redsys",
+            })?;
+        }
+
         let payment_method_data = router_data.request.payment_method_data.as_ref().ok_or(
             errors::ConnectorError::MissingRequiredField {
                 field_name: "payment_method_data",
@@ -262,6 +284,13 @@ where
             )
         }?;
 
+        let billing_data = requests::RedsysBillingData::try_from_address(
+            router_data.resource_common_data.get_optional_billing(),
+        )?;
+        let shipping_data = requests::RedsysShippingData::try_from_address(
+            router_data.resource_common_data.get_optional_shipping(),
+        )?;
+
         let payment_request = requests::RedsysPaymentRequest {
             ds_merchant_amount: crate::connectors::redsys::RedsysAmountConvertor::convert(
                 router_data.request.amount,
@@ -285,8 +314,8 @@ where
                 notification_u_r_l: None,
                 three_d_s_comp_ind: None,
                 cres: None,
-                billing_data: None,
-                shipping_data: None,
+                billing_data,
+                shipping_data,
             }),
             ds_merchant_expirydate: Secret::new(format!(
                 "{}{}",
@@ -299,7 +328,11 @@ where
                 .change_context(errors::ConnectorError::RequestEncodingFailed)
                 .attach_printable("Invalid card number")?,
             ds_merchant_terminal: auth.terminal_id.clone(),
-            ds_merchant_transactiontype: requests::RedsysTransactionType::Payment,
+            ds_merchant_transactiontype: if router_data.request.is_auto_capture()? {
+                requests::RedsysTransactionType::Payment
+            } else {
+                requests::RedsysTransactionType::Preauthorization
+            },
             ds_merchant_cvv2: card.card_cvc.clone(),
         };
 
@@ -494,14 +527,394 @@ impl<T: PaymentMethodDataTypes>
                     &transaction.ds_merchant_parameters.clone().expose(),
                 )?;
 
+                let connector_metadata = if let Some(ref emv3ds) = response_data.ds_emv3ds {
+                    if emv3ds.three_d_s_method_u_r_l.is_some() {
+                        let threeds_data = requests::RedsysThreeDsInvokeData {
+                            three_ds_method_url: emv3ds
+                                .three_d_s_method_u_r_l
+                                .clone()
+                                .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?,
+                            three_ds_method_data: String::new(),
+                            message_version: emv3ds.protocol_version.clone(),
+                            directory_server_id: emv3ds
+                                .three_d_s_server_trans_i_d
+                                .clone()
+                                .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?,
+                            three_ds_method_data_submission: true,
+                        };
+                        Some(
+                            serde_json::to_value(&threeds_data)
+                                .change_context(errors::ConnectorError::ResponseHandlingFailed)?,
+                        )
+                    } else {
+                        let exempt_data =
+                            requests::ThreeDsInvokeExempt {
+                                three_d_s_server_trans_i_d: emv3ds
+                                    .three_d_s_server_trans_i_d
+                                    .clone()
+                                    .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?,
+                                message_version: emv3ds.protocol_version.clone(),
+                            };
+                        Some(
+                            serde_json::to_value(&exempt_data)
+                                .change_context(errors::ConnectorError::ResponseHandlingFailed)?,
+                        )
+                    }
+                } else {
+                    None
+                };
+
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
                         status: AttemptStatus::AuthenticationPending,
+                        connector_meta_data: connector_metadata.map(Secret::new),
                         ..item.router_data.resource_common_data
                     },
                     response: Ok(PaymentsResponseData::PreAuthenticateResponse {
                         redirection_data: None,
                         connector_response_reference_id: Some(response_data.ds_order),
+                        status_code: item.http_code,
+                    }),
+                    ..item.router_data
+                })
+            }
+            responses::RedsysResponse::RedsysErrorResponse(ref err) => Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status: AttemptStatus::Failure,
+                    ..item.router_data.resource_common_data
+                },
+                response: Err(domain_types::router_data::ErrorResponse {
+                    code: err.error_code.clone(),
+                    message: err.error_code.clone(),
+                    reason: Some(err.error_code.clone()),
+                    status_code: item.http_code,
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                }),
+                ..item.router_data
+            }),
+        }
+    }
+}
+
+impl<T>
+    TryFrom<
+        RedsysRouterData<
+            RouterDataV2<
+                Authenticate,
+                PaymentFlowData,
+                PaymentsAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for requests::RedsysAuthenticateRequest
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+    T::Inner: Clone,
+{
+    type Error = Error;
+
+    fn try_from(
+        item: RedsysRouterData<
+            RouterDataV2<
+                Authenticate,
+                PaymentFlowData,
+                PaymentsAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let auth = RedsysAuthType::try_from(&router_data.connector_auth_type)?;
+
+        let connector_meta = router_data
+            .resource_common_data
+            .connector_meta_data
+            .clone()
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "connector_meta_data",
+            })?
+            .expose();
+
+        // Hyperswitch populates connector_request_reference_id with the ds_order from PreAuthenticate response
+        let ds_merchant_order = router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        let payment_method_data = router_data.request.payment_method_data.as_ref().ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "payment_method_data",
+            },
+        )?;
+
+        let card = match payment_method_data {
+            payment_method_data::PaymentMethodData::Card(card_data) => Ok(card_data),
+            _ => Err(errors::ConnectorError::NotImplemented(
+                "Only card payments are supported".to_string(),
+            )),
+        }?;
+
+        let currency =
+            router_data
+                .request
+                .currency
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "currency",
+                })?;
+
+        let billing_data = requests::RedsysBillingData::try_from_address(
+            router_data.resource_common_data.get_optional_billing(),
+        )?;
+        let shipping_data = requests::RedsysShippingData::try_from_address(
+            router_data.resource_common_data.get_optional_shipping(),
+        )?;
+
+        // Get notification URL (router_return_url for async authentication results)
+        let notification_url = router_data
+            .request
+            .router_return_url
+            .as_ref()
+            .map(|url| url.to_string());
+
+        let emv3ds_data = if let Ok(invoke_data) =
+            serde_json::from_value::<requests::RedsysThreeDsInvokeData>(connector_meta.clone())
+        {
+            requests::RedsysEmvThreeDsRequestData {
+                three_d_s_info: requests::RedsysThreeDsInfo::AuthenticationData,
+                protocol_version: Some(invoke_data.message_version.clone()),
+                three_d_s_server_trans_i_d: Some(invoke_data.directory_server_id),
+                notification_u_r_l: notification_url.clone(),
+                browser_accept_header: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.accept_header.clone()),
+                browser_user_agent: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.user_agent.clone().map(Secret::new)),
+                browser_java_enabled: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.java_enabled),
+                browser_javascript_enabled: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.java_script_enabled),
+                browser_language: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.language.clone()),
+                browser_color_depth: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.color_depth.map(|d| d.to_string())),
+                browser_screen_height: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.screen_height.map(|h| h.to_string())),
+                browser_screen_width: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.screen_width.map(|w| w.to_string())),
+                browser_t_z: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.time_zone.map(|tz| tz.to_string())),
+                browser_i_p: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.ip_address.map(|ip| Secret::new(ip.to_string()))),
+                three_d_s_comp_ind: Some(requests::RedsysThreeDSCompInd::Y),
+                billing_data,
+                shipping_data,
+                cres: None,
+            }
+        } else if let Ok(exempt_data) =
+            serde_json::from_value::<requests::ThreeDsInvokeExempt>(connector_meta)
+        {
+            requests::RedsysEmvThreeDsRequestData {
+                three_d_s_info: requests::RedsysThreeDsInfo::AuthenticationData,
+                protocol_version: Some(exempt_data.message_version.clone()),
+                three_d_s_server_trans_i_d: Some(exempt_data.three_d_s_server_trans_i_d),
+                notification_u_r_l: notification_url,
+                browser_accept_header: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.accept_header.clone()),
+                browser_user_agent: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.user_agent.clone().map(Secret::new)),
+                browser_java_enabled: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.java_enabled),
+                browser_javascript_enabled: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.java_script_enabled),
+                browser_language: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.language.clone()),
+                browser_color_depth: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.color_depth.map(|d| d.to_string())),
+                browser_screen_height: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.screen_height.map(|h| h.to_string())),
+                browser_screen_width: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.screen_width.map(|w| w.to_string())),
+                browser_t_z: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.time_zone.map(|tz| tz.to_string())),
+                browser_i_p: router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|b| b.ip_address.map(|ip| Secret::new(ip.to_string()))),
+                three_d_s_comp_ind: Some(requests::RedsysThreeDSCompInd::N),
+                billing_data,
+                shipping_data,
+                cres: None,
+            }
+        } else {
+            return Err(errors::ConnectorError::MissingRequiredField {
+                field_name: "connector_meta_data",
+            })?;
+        };
+
+        let payment_request = requests::RedsysPaymentRequest {
+            ds_merchant_amount: crate::connectors::redsys::RedsysAmountConvertor::convert(
+                router_data.request.amount,
+                currency,
+            )?,
+            ds_merchant_currency: currency.iso_4217().to_owned(),
+            ds_merchant_emv3ds: Some(emv3ds_data),
+            ds_merchant_expirydate: Secret::new(format!(
+                "{}{}",
+                card.card_exp_year.peek(),
+                card.card_exp_month.peek()
+            )),
+            ds_merchant_merchantcode: auth.merchant_id.clone(),
+            ds_merchant_order,
+            ds_merchant_pan: cards::CardNumber::try_from(card.card_number.peek().to_string())
+                .change_context(errors::ConnectorError::RequestEncodingFailed)
+                .attach_printable("Invalid card number")?,
+            ds_merchant_terminal: auth.terminal_id.clone(),
+            ds_merchant_transactiontype: if router_data.request.is_auto_capture()? {
+                requests::RedsysTransactionType::Payment
+            } else {
+                requests::RedsysTransactionType::Preauthorization
+            },
+            ds_merchant_cvv2: card.card_cvc.clone(),
+        };
+
+        let transaction = RedsysTransaction::try_from((&payment_request, &auth))?;
+        Ok(transaction)
+    }
+}
+
+impl<T: PaymentMethodDataTypes>
+    TryFrom<
+        ResponseRouterData<
+            responses::RedsysResponse,
+            RouterDataV2<
+                Authenticate,
+                PaymentFlowData,
+                PaymentsAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+        >,
+    >
+    for RouterDataV2<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    >
+{
+    type Error = Error;
+
+    fn try_from(
+        item: ResponseRouterData<
+            responses::RedsysResponse,
+            RouterDataV2<
+                Authenticate,
+                PaymentFlowData,
+                PaymentsAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        match item.response {
+            responses::RedsysResponse::RedsysResponse(ref transaction) => {
+                let response_data: responses::RedsysPaymentsResponse = to_connector_response_data(
+                    &transaction.ds_merchant_parameters.clone().expose(),
+                )?;
+
+                let redirection_data = response_data.ds_emv3ds.and_then(|emv3ds| {
+                    emv3ds.acs_u_r_l.as_ref().and_then(|acs_url| {
+                        emv3ds.creq.as_ref().map(|creq| RedirectForm::Form {
+                            endpoint: acs_url.clone(),
+                            method: common_utils::request::Method::Post,
+                            form_fields: std::collections::HashMap::from([(
+                                "creq".to_string(),
+                                creq.clone(),
+                            )]),
+                        })
+                    })
+                });
+
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status: AttemptStatus::AuthenticationPending,
+                        connector_meta_data: item
+                            .router_data
+                            .resource_common_data
+                            .connector_meta_data,
+                        ..item.router_data.resource_common_data
+                    },
+                    response: Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(
+                            response_data.ds_order.clone(),
+                        ),
+                        redirection_data: redirection_data.map(Box::new),
+                        mandate_reference: None,
+                        connector_metadata: None,
+                        network_txn_id: None,
+                        connector_response_reference_id: Some(response_data.ds_order),
+                        incremental_authorization_allowed: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -714,6 +1127,243 @@ impl
             response,
             ..item.router_data
         })
+    }
+}
+
+impl<T>
+    TryFrom<
+        RedsysRouterData<
+            RouterDataV2<
+                PostAuthenticate,
+                PaymentFlowData,
+                PaymentsPostAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for requests::RedsysPostAuthenticateRequest
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+    T::Inner: Clone,
+{
+    type Error = Error;
+
+    fn try_from(
+        item: RedsysRouterData<
+            RouterDataV2<
+                PostAuthenticate,
+                PaymentFlowData,
+                PaymentsPostAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let auth = RedsysAuthType::try_from(&router_data.connector_auth_type)?;
+
+        let connector_meta = router_data
+            .resource_common_data
+            .connector_meta_data
+            .clone()
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "connector_meta_data",
+            })?
+            .expose();
+
+        let ds_merchant_order = router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        let payment_method_data = router_data.request.payment_method_data.as_ref().ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "payment_method_data",
+            },
+        )?;
+
+        let card = match payment_method_data {
+            payment_method_data::PaymentMethodData::Card(card_data) => Ok(card_data),
+            _ => Err(errors::ConnectorError::NotImplemented(
+                "Only card payments are supported".to_string(),
+            )),
+        }?;
+
+        let currency =
+            router_data
+                .request
+                .currency
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "currency",
+                })?;
+
+        let cres = router_data
+            .request
+            .redirect_response
+            .as_ref()
+            .and_then(|resp| resp.params.clone())
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "redirect_response.params",
+            })?
+            .expose();
+
+        let protocol_version = if let Ok(invoke_data) =
+            serde_json::from_value::<requests::RedsysThreeDsInvokeData>(connector_meta.clone())
+        {
+            invoke_data.message_version
+        } else if let Ok(exempt_data) =
+            serde_json::from_value::<requests::ThreeDsInvokeExempt>(connector_meta)
+        {
+            exempt_data.message_version
+        } else {
+            return Err(errors::ConnectorError::MissingRequiredField {
+                field_name: "connector_meta_data",
+            })?;
+        };
+
+        let billing_data = requests::RedsysBillingData::try_from_address(
+            router_data.resource_common_data.get_optional_billing(),
+        )?;
+        let shipping_data = requests::RedsysShippingData::try_from_address(
+            router_data.resource_common_data.get_optional_shipping(),
+        )?;
+
+        let emv3ds_data = requests::RedsysEmvThreeDsRequestData {
+            three_d_s_info: requests::RedsysThreeDsInfo::ChallengeResponse,
+            protocol_version: Some(protocol_version),
+            cres: Some(cres),
+            three_d_s_server_trans_i_d: None,
+            notification_u_r_l: None,
+            browser_accept_header: None,
+            browser_user_agent: None,
+            browser_java_enabled: None,
+            browser_javascript_enabled: None,
+            browser_language: None,
+            browser_color_depth: None,
+            browser_screen_height: None,
+            browser_screen_width: None,
+            browser_t_z: None,
+            browser_i_p: None,
+            three_d_s_comp_ind: None,
+            billing_data,
+            shipping_data,
+        };
+
+        let payment_request = requests::RedsysPaymentRequest {
+            ds_merchant_amount: crate::connectors::redsys::RedsysAmountConvertor::convert(
+                router_data.request.amount,
+                currency,
+            )?,
+            ds_merchant_currency: currency.iso_4217().to_owned(),
+            ds_merchant_emv3ds: Some(emv3ds_data),
+            ds_merchant_expirydate: Secret::new(format!(
+                "{}{}",
+                card.card_exp_year.peek(),
+                card.card_exp_month.peek()
+            )),
+            ds_merchant_merchantcode: auth.merchant_id.clone(),
+            ds_merchant_order,
+            ds_merchant_pan: cards::CardNumber::try_from(card.card_number.peek().to_string())
+                .change_context(errors::ConnectorError::RequestEncodingFailed)
+                .attach_printable("Invalid card number")?,
+            ds_merchant_terminal: auth.terminal_id.clone(),
+            ds_merchant_transactiontype: if router_data.request.is_auto_capture()? {
+                requests::RedsysTransactionType::Payment
+            } else {
+                requests::RedsysTransactionType::Preauthorization
+            },
+            ds_merchant_cvv2: card.card_cvc.clone(),
+        };
+
+        let transaction = RedsysTransaction::try_from((&payment_request, &auth))?;
+        Ok(transaction)
+    }
+}
+
+impl<T: PaymentMethodDataTypes>
+    TryFrom<
+        ResponseRouterData<
+            responses::RedsysResponse,
+            RouterDataV2<
+                PostAuthenticate,
+                PaymentFlowData,
+                PaymentsPostAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+        >,
+    >
+    for RouterDataV2<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    >
+{
+    type Error = Error;
+
+    fn try_from(
+        item: ResponseRouterData<
+            responses::RedsysResponse,
+            RouterDataV2<
+                PostAuthenticate,
+                PaymentFlowData,
+                PaymentsPostAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        match item.response {
+            responses::RedsysResponse::RedsysResponse(ref transaction) => {
+                let response_data: responses::RedsysPaymentsResponse = to_connector_response_data(
+                    &transaction.ds_merchant_parameters.clone().expose(),
+                )?;
+
+                if let Some(ds_response) = response_data.ds_response {
+                    let attempt_status = AttemptStatus::try_from(ds_response.clone())?;
+
+                    Ok(Self {
+                        resource_common_data: PaymentFlowData {
+                            status: attempt_status,
+                            ..item.router_data.resource_common_data
+                        },
+                        response: Ok(PaymentsResponseData::TransactionResponse {
+                            resource_id: ResponseId::ConnectorTransactionId(
+                                response_data.ds_order.clone(),
+                            ),
+                            redirection_data: None,
+                            mandate_reference: None,
+                            connector_metadata: None,
+                            network_txn_id: None,
+                            connector_response_reference_id: Some(response_data.ds_order),
+                            incremental_authorization_allowed: None,
+                            status_code: item.http_code,
+                        }),
+                        ..item.router_data
+                    })
+                } else {
+                    Err(errors::ConnectorError::ResponseHandlingFailed)
+                        .attach_printable("Missing ds_response in final payment result")?
+                }
+            }
+            responses::RedsysResponse::RedsysErrorResponse(ref err) => Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status: AttemptStatus::Failure,
+                    ..item.router_data.resource_common_data
+                },
+                response: Err(domain_types::router_data::ErrorResponse {
+                    code: err.error_code.clone(),
+                    message: err.error_code.clone(),
+                    reason: Some(err.error_code.clone()),
+                    status_code: item.http_code,
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                }),
+                ..item.router_data
+            }),
+        }
     }
 }
 
@@ -951,5 +1601,73 @@ impl
             response,
             ..item.router_data
         })
+    }
+}
+
+// Helper implementations for address data conversion
+impl requests::RedsysBillingData {
+    pub fn try_from_address(
+        address: Option<&domain_types::payment_address::Address>,
+    ) -> Result<Option<Self>, domain_types::errors::ConnectorError> {
+        match address {
+            Some(addr) => {
+                let address_details = addr.address.as_ref();
+                if let Some(details) = address_details {
+                    // Apply state code mapping (converts long names to short codes)
+                    let state = details.state.as_ref().and_then(|state_val| {
+                        let state_str = state_val.peek();
+                        domain_types::utils::convert_spain_state_to_code(state_str)
+                            .ok()
+                            .map(Secret::new)
+                    });
+
+                    Ok(Some(Self {
+                        bill_addr_city: details.city.clone(),
+                        bill_addr_country: details.country.map(|c| c.to_string()),
+                        bill_addr_line1: details.line1.clone(),
+                        bill_addr_line2: details.line2.clone(),
+                        bill_addr_line3: details.line3.clone(),
+                        bill_addr_postal_code: details.zip.clone(),
+                        bill_addr_state: state,
+                    }))
+                } else {
+                    Ok(None)
+                }
+            }
+            None => Ok(None),
+        }
+    }
+}
+
+impl requests::RedsysShippingData {
+    pub fn try_from_address(
+        address: Option<&domain_types::payment_address::Address>,
+    ) -> Result<Option<Self>, domain_types::errors::ConnectorError> {
+        match address {
+            Some(addr) => {
+                let address_details = addr.address.as_ref();
+                if let Some(details) = address_details {
+                    let state = details.state.as_ref().and_then(|state_val| {
+                        let state_str = state_val.peek();
+                        domain_types::utils::convert_spain_state_to_code(state_str)
+                            .ok()
+                            .map(Secret::new)
+                    });
+
+                    Ok(Some(Self {
+                        ship_addr_city: details.city.clone(),
+                        ship_addr_country: details.country.map(|c| c.to_string()),
+                        ship_addr_line1: details.line1.clone(),
+                        ship_addr_line2: details.line2.clone(),
+                        ship_addr_line3: details.line3.clone(),
+                        ship_addr_postal_code: details.zip.clone(),
+                        ship_addr_state: state,
+                    }))
+                } else {
+                    Ok(None)
+                }
+            }
+            None => Ok(None),
+        }
     }
 }

@@ -42,11 +42,12 @@ mod responses;
 pub mod transformers;
 
 use requests::{
-    RedsysCaptureRequest, RedsysPreAuthenticateRequest, RedsysRefundRequest, RedsysVoidRequest,
+    RedsysAuthenticateRequest, RedsysCaptureRequest, RedsysPostAuthenticateRequest,
+    RedsysPreAuthenticateRequest, RedsysRefundRequest, RedsysVoidRequest,
 };
 use responses::{
-    RedsysCaptureResponse, RedsysPreAuthenticateResponse, RedsysRefundResponse, RedsysSyncResponse,
-    RedsysVoidResponse,
+    RedsysAuthenticateResponse, RedsysCaptureResponse, RedsysPostAuthenticateResponse,
+    RedsysPreAuthenticateResponse, RedsysRefundResponse, RedsysVoidResponse,
 };
 
 pub(crate) mod headers {
@@ -179,6 +180,18 @@ macros::create_all_prerequisites!(
             response_body: RedsysPreAuthenticateResponse,
             router_data: RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
         ),
+        (
+            flow: Authenticate,
+            request_body: RedsysAuthenticateRequest,
+            response_body: RedsysAuthenticateResponse,
+            router_data: RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PostAuthenticate,
+            request_body: RedsysPostAuthenticateRequest,
+            response_body: RedsysPostAuthenticateResponse,
+            router_data: RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        ),
     (
         flow: Capture,
         request_body: RedsysCaptureRequest,
@@ -299,6 +312,64 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}/sis/rest/iniciaPeticionREST", self.connector_base_url_payments(req)))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Redsys,
+    curl_request: Json(RedsysAuthenticateRequest),
+    curl_response: RedsysAuthenticateResponse,
+    flow_name: Authenticate,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthenticateData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/sis/rest/trataPeticionREST", self.connector_base_url_payments(req)))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Redsys,
+    curl_request: Json(RedsysPostAuthenticateRequest),
+    curl_response: RedsysPostAuthenticateResponse,
+    flow_name: PostAuthenticate,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsPostAuthenticateData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/sis/rest/trataPeticionREST", self.connector_base_url_payments(req)))
         }
     }
 );
@@ -734,16 +805,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Redsys<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
         PaymentCreateOrderData,
@@ -767,16 +828,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         VoidPC,
         PaymentFlowData,
         PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Redsys<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
     > for Redsys<T>
 {
