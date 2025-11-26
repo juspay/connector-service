@@ -2,7 +2,6 @@ use common_enums::enums;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     ext_traits::ValueExt,
-    pii,
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
 };
 use domain_types::{
@@ -19,7 +18,7 @@ use domain_types::{
     utils,
 };
 use error_stack::{report, ResultExt};
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize, Serializer};
 
 use crate::{connectors::fiserv::FiservRouterData, types::ResponseRouterData};
@@ -443,34 +442,6 @@ pub struct FiservSessionObject {
     pub terminal_id: Secret<String>,
 }
 
-// The TryFrom<&Option<pii::SecretSerdeValue>> for FiservSessionObject might not be needed
-// if FiservSessionObject is always parsed from the string within connector_meta_data directly
-// in the TryFrom implementations for FiservPaymentsRequest, FiservCaptureRequest, etc.
-impl TryFrom<&Option<pii::SecretSerdeValue>> for FiservSessionObject {
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(meta_data: &Option<pii::SecretSerdeValue>) -> Result<Self, Self::Error> {
-        let secret_value_str = meta_data
-            .as_ref()
-            .ok_or_else(|| {
-                report!(ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data (FiservSessionObject)"
-                })
-            })
-            .and_then(|secret_value| match secret_value.peek() {
-                serde_json::Value::String(s) => Ok(s.clone()),
-                _ => Err(report!(ConnectorError::InvalidConnectorConfig {
-                    config: "FiservSessionObject in connector_meta_data was not a JSON string",
-                })),
-            })?;
-
-        serde_json::from_str(&secret_value_str).change_context(
-            ConnectorError::InvalidConnectorConfig {
-                config: "Deserializing FiservSessionObject from connector_meta_data string",
-            },
-        )
-    }
-}
-
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservVoidRequest {
@@ -674,21 +645,16 @@ impl<
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        let session: FiservSessionObject = router_data
+        let metadata = router_data
             .resource_common_data
             .connector_meta_data
-            .as_ref()
-            .ok_or_else(|| {
-                report!(ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data"
-                })
-            })
-            .and_then(|meta| {
-                FiservSessionObject::try_from(&Some(meta.clone())).map_err(|e| {
-                    e.change_context(ConnectorError::MissingRequiredField {
-                        field_name: "connector_meta_data",
-                    })
-                })
+            .clone()
+            .ok_or(ConnectorError::RequestEncodingFailed)?;
+        let session: FiservSessionObject = metadata
+            .expose()
+            .parse_value("FiservSessionObject")
+            .change_context(ConnectorError::InvalidConnectorConfig {
+                config: "Merchant connector account metadata",
             })?;
 
         let merchant_details = MerchantDetails {
@@ -696,19 +662,18 @@ impl<
             terminal_id: Some(session.terminal_id.clone()),
         };
 
-        // Use FloatMajorUnitForConnector to properly convert minor to major unit
-        let converter = FloatMajorUnitForConnector;
-
-        let amount_major = converter
+        let total = item
+            .connector
+            .amount_converter
             .convert(
                 router_data.request.minor_amount_to_capture,
                 router_data.request.currency,
             )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorError::AmountConversionFailed)?;
 
         Ok(Self {
             amount: Amount {
-                total: amount_major,
+                total,
                 currency: router_data.request.currency.to_string(),
             },
             order: Some(FiservOrderRequest { order_id }),
