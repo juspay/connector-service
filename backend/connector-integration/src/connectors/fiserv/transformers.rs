@@ -1,3 +1,4 @@
+use crate::{connectors::fiserv::FiservRouterData, types::ResponseRouterData};
 use common_enums::enums;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
@@ -19,9 +20,8 @@ use domain_types::{
 };
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, Secret};
-use serde::{Deserialize, Serialize, Serializer};
-
-use crate::{connectors::fiserv::FiservRouterData, types::ResponseRouterData};
+use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
+use serde_json::Value;
 
 impl<
         T: PaymentMethodDataTypes
@@ -421,14 +421,6 @@ pub struct FiservCaptureRequest {
     pub transaction_details: TransactionDetails,
     pub merchant_details: MerchantDetails,
     pub reference_transaction_details: ReferenceTransactionDetails,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    order: Option<FiservOrderRequest>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FiservOrderRequest {
-    order_id: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -439,7 +431,22 @@ pub struct ReferenceTransactionDetails {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FiservSessionObject {
+    #[serde(deserialize_with = "deserialize_terminal_id")]
     pub terminal_id: Secret<String>,
+}
+
+fn deserialize_terminal_id<'de, D>(deserializer: D) -> Result<Secret<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value: Value = Deserialize::deserialize(deserializer)?;
+    let id_str = match value {
+        Value::String(s) => Ok(s),
+        Value::Number(n) => Ok(n.to_string()),
+        _ => Err(Error::custom("invalid type for terminal_id")),
+    }?;
+
+    Ok(id_str.into())
 }
 
 #[derive(Debug, Serialize)]
@@ -636,15 +643,6 @@ impl<
         let router_data = item.router_data;
         let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_auth_type)?;
 
-        let order_id = router_data
-            .request
-            .connector_metadata
-            .clone()
-            .as_ref()
-            .and_then(|v| v.get("order_id"))
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
-
         let metadata = router_data
             .resource_common_data
             .connector_meta_data
@@ -676,7 +674,6 @@ impl<
                 total,
                 currency: router_data.request.currency.to_string(),
             },
-            order: Some(FiservOrderRequest { order_id }),
             transaction_details: TransactionDetails {
                 capture_flag: Some(true),
                 reversal_reason_code: None,
