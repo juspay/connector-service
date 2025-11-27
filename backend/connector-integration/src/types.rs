@@ -24,7 +24,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
 
     fn convert_connector(connector_name: ConnectorEnum) -> BoxedConnector<T> {
         match connector_name {
-             ConnectorEnum::Adyen => Box::new(connectors::Adyen::new()),
+            ConnectorEnum::Adyen => Box::new(connectors::Adyen::new()),
             ConnectorEnum::Bluesnap => Box::new(connectors::Bluesnap::new()),
             ConnectorEnum::Razorpay => Box::new(connectors::Razorpay::new()),
             ConnectorEnum::RazorpayV2 => Box::new(connectors::RazorpayV2::new()),
