@@ -209,7 +209,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: SetupMandate,
-            request_body: BamboraapacSetupMandateRequest<T>,
+            request_body: BamboraapacSetupMandateRequest,
             response_body: BamboraapacSetupMandateResponse,
             response_format: xml,
             router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
@@ -336,7 +336,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 .unwrap_or_else(|| "Unknown error".to_string()),
             reason: response.error_message,
             attempt_status: None,
-            connector_transaction_id: response.transaction_id,
+            connector_transaction_id: None,
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
@@ -468,7 +468,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_headers, get_error_response_v2, get_content_type],
     connector: Bamboraapac,
-    curl_request: SoapXml(BamboraapacSetupMandateRequest<T>),
+    curl_request: SoapXml(BamboraapacSetupMandateRequest),
     curl_response: BamboraapacSetupMandateResponse,
     flow_name: SetupMandate,
     resource_common_data: PaymentFlowData,

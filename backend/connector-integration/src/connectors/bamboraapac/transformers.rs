@@ -263,7 +263,6 @@ pub struct PaymentResponse {
 pub struct BamboraapacErrorResponse {
     pub error_code: Option<String>,
     pub error_message: Option<String>,
-    pub transaction_id: Option<String>,
 }
 
 impl Default for BamboraapacErrorResponse {
@@ -271,7 +270,6 @@ impl Default for BamboraapacErrorResponse {
         Self {
             error_code: Some("UNKNOWN_ERROR".to_string()),
             error_message: Some("Unknown error occurred".to_string()),
-            transaction_id: None,
         }
     }
 }
@@ -1255,14 +1253,7 @@ use domain_types::connector_types::SetupMandateRequestData;
 
 // SetupMandate Request Structure (Customer Registration without payment)
 #[derive(Debug, Clone)]
-pub struct BamboraapacSetupMandateRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> {
+pub struct BamboraapacSetupMandateRequest {
     pub customer_storage_number: Option<String>,
     pub cust_number: String,
     pub card_number: Secret<String>,
@@ -1271,7 +1262,6 @@ pub struct BamboraapacSetupMandateRequest<
     pub card_holder_name: Secret<String>,
     pub username: Secret<String>,
     pub password: Secret<String>,
-    _phantom: std::marker::PhantomData<T>,
 }
 
 // SetupMandate Response Structure (Outer SOAP envelope)
@@ -1325,7 +1315,7 @@ impl<
             SetupMandateRequestData<T>,
             PaymentsResponseData,
         >,
-    > for BamboraapacSetupMandateRequest<T>
+    > for BamboraapacSetupMandateRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
@@ -1376,7 +1366,6 @@ impl<
             )?,
             username: auth.username,
             password: auth.password,
-            _phantom: std::marker::PhantomData,
         })
     }
 }
@@ -1819,14 +1808,7 @@ impl GetSoapXml for BamboraapacSyncRequest {
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > GetSoapXml for BamboraapacSetupMandateRequest<T>
+impl GetSoapXml for BamboraapacSetupMandateRequest
 {
     fn to_soap_xml(&self) -> String {
         format!(
@@ -2091,7 +2073,7 @@ impl<
             >,
             T,
         >,
-    > for BamboraapacSetupMandateRequest<T>
+    > for BamboraapacSetupMandateRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
