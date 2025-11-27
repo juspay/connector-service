@@ -2729,10 +2729,11 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
+        let config = get_config_from_request(&request)?;
         grpc_logging_wrapper(
             request,
             &service_name,
-            self.config.clone(),
+            config,
             FlowName::SdkSessionToken,
             |request_data| async move { self.internal_sdk_session_token(request_data).await },
         )

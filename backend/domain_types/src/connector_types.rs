@@ -2753,28 +2753,13 @@ pub enum SessionToken {
     Paypal(Box<PaypalSessionTokenResponse>),
     /// The session response structure for Apple Pay
     ApplePay(Box<ApplepaySessionTokenResponse>),
-    /// Whenever there is no session token response or an error in session response
-    NoSessionTokenReceived,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
 pub enum GpaySessionTokenResponse {
-    /// Google pay response involving third party sdk
-    ThirdPartyResponse(GooglePayThirdPartySdk),
     /// Google pay session response for non third party sdk
     GooglePaySession(GooglePaySessionResponse),
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub struct GooglePayThirdPartySdk {
-    /// Identifier for the delayed session response
-    pub delayed_session_token: bool,
-    /// The name of the connector
-    pub connector: String,
-    /// The next action for the sdk (ex: calling confirm or sync call)
-    pub sdk_next_action: SdkNextAction,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -2811,7 +2796,7 @@ pub struct GpayTransactionInfo {
     /// The total price status (ex: 'FINAL')
     pub total_price_status: String,
     /// The total price
-    pub total_price: StringMajorUnit,
+    pub total_price: MinorUnit,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -3040,8 +3025,8 @@ pub struct AmountInfo {
     /// A value that indicates whether the line item(Ex: total, tax, discount, or grand total) is final or pending.
     #[serde(rename = "type")]
     pub total_type: Option<String>,
-    /// The total amount for the payment in majot unit string (Ex: 38.02)
-    pub amount: StringMajorUnit,
+    /// The total amount
+    pub amount: MinorUnit,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -3066,7 +3051,7 @@ pub struct PaypalTransactionInfo {
     /// Currency code
     pub currency_code: Currency,
     /// Total price
-    pub total_price: StringMajorUnit,
+    pub total_price: MinorUnit,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

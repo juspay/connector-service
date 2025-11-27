@@ -1265,12 +1265,7 @@ message SessionToken {
     GpaySessionTokenResponse google_pay = 1;
     PaypalSessionTokenResponse paypal = 2;
     ApplepaySessionTokenResponse apple_pay = 3;
-    NoSessionTokenReceived no_session_token_received = 4;
   }
-}
-
-message NoSessionTokenReceived {
-
 }
 
 // -------------------------
@@ -1278,10 +1273,7 @@ message NoSessionTokenReceived {
 // -------------------------
 
 message GpaySessionTokenResponse {
-  oneof response {
-    GooglePayThirdPartySdk third_party_response = 1;
-    GooglePaySessionResponse google_pay_session = 2;
-  }
+  GooglePaySessionResponse google_pay_session = 1;
 }
 
 message GooglePayThirdPartySdk {
@@ -1355,7 +1347,7 @@ message GpayTransactionInfo {
   CountryAlpha2 country_code = 1;
   Currency currency_code = 2;
   string total_price_status = 3;
-  string total_price = 4; // StringMajorUnit
+  int64 total_price = 4; // MinorUnit
 }
 
 // -------------------------
@@ -1402,15 +1394,12 @@ message ApplePayPaymentRequest {
   repeated string merchant_capabilities = 4;
   repeated string supported_networks = 5;
   optional string merchant_identifier = 6;
-  optional ApplePayBillingContactFields required_billing_contact_fields = 7;
-  optional ApplePayShippingContactFields required_shipping_contact_fields = 8;
-  optional ApplePayRecurringPaymentRequest recurring_payment_request = 9;
 }
 
 message AmountInfo {
   string label = 1;
   optional string total_type = 2;
-  string amount = 3; // StringMajorUnit
+  int64 amount = 3; // MinorUnit
 }
 
 message ApplePayBillingContactFields {
@@ -1436,7 +1425,7 @@ message ApplePayRecurringPaymentRequest {
 }
 
 message ApplePayRegularBillingRequest {
-  string amount = 1; // StringMajorUnit
+  int64 amount = 1; // MinorUnit
   string label = 2;
   ApplePayPaymentTiming payment_timing = 3;
   optional int64 recurring_payment_start_date = 4;
@@ -1475,7 +1464,7 @@ message PaypalSessionTokenResponse {
 message PaypalTransactionInfo {
   PaypalFlow flow = 1;
   Currency currency_code = 2;
-  string total_price = 3; // StringMajorUnit
+  int64 total_price = 3; // MinorUnit
 }
 
 enum PaypalFlow {
@@ -1487,12 +1476,8 @@ enum PaypalFlow {
 // Common Session Token Types
 // -------------------------
 
-message SdkNextAction {
-  NextActionCall next_action = 1;
-}
-
-enum NextActionCall {
-  NEXT_ACTION_CALL_UNSPECIFIED = 0;
+enum SdkNextAction {
+  NEXT_ACTION_UNSPECIFIED = 0;
   POST_SESSION_TOKENS = 1;
   CONFIRM = 2;
 }
@@ -1920,7 +1905,7 @@ message PaymentServiceSdkSessionTokenRequest {
   optional SecretString customer_name = 10; // Name of the customer
 
   // Account-Specific Configuration
-  map<string, string> merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  SecretString merchant_account_metadata = 17;; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Placeholder

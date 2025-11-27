@@ -3,7 +3,7 @@ use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     ext_traits::{OptionExt, ValueExt},
     pii,
-    types::{AmountConvertor, MinorUnit, StringMajorUnit, StringMajorUnitForConnector},
+    types::{MinorUnit, StringMajorUnit},
 };
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, SdkSessionToken, Void},
@@ -1749,14 +1749,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                 total: AmountInfo {
                                     label: payment_request_data.label,
                                     total_type: None,
-                                    amount: StringMajorUnitForConnector
-                                        .convert(
-                                            item.router_data.request.amount,
-                                            item.router_data.request.currency,
-                                        )
-                                        .change_context(
-                                            errors::ConnectorError::AmountConversionFailed,
-                                        )?,
+                                    amount: item.router_data.request.amount,
                                 },
                                 merchant_capabilities: Some(
                                     payment_request_data.merchant_capabilities,
@@ -1814,14 +1807,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                     )?,
                                     currency_code: item.router_data.request.currency,
                                     total_price_status: GooglePayPriceStatus::Final.to_string(),
-                                    total_price: StringMajorUnitForConnector
-                                        .convert(
-                                            item.router_data.request.amount,
-                                            item.router_data.request.currency,
-                                        )
-                                        .change_context(
-                                            errors::ConnectorError::AmountConversionFailed,
-                                        )?,
+                                    total_price: item.router_data.request.amount,
                                 },
                                 secrets: Some(SecretInfoToInitiateSdk {
                                     display: res.data.create_client_token.client_token.clone(),
@@ -1857,14 +1843,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                             transaction_info: Some(PaypalTransactionInfo {
                                 flow: PaypalFlow::Checkout.into(),
                                 currency_code: item.router_data.request.currency,
-                                total_price: StringMajorUnitForConnector
-                                    .convert(
-                                        item.router_data.request.amount,
-                                        item.router_data.request.currency,
-                                    )
-                                    .change_context(
-                                        errors::ConnectorError::AmountConversionFailed,
-                                    )?,
+                                total_price: item.router_data.request.amount,
                             }),
                         }))
                     }
