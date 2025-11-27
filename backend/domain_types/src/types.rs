@@ -5265,7 +5265,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
-            access_token: access_token,
+            access_token,
             session_token: value.session_token,
             reference_id: None,
             payment_method_token: value
