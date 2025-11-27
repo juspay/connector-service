@@ -1808,8 +1808,7 @@ impl GetSoapXml for BamboraapacSyncRequest {
     }
 }
 
-impl GetSoapXml for BamboraapacSetupMandateRequest
-{
+impl GetSoapXml for BamboraapacSetupMandateRequest {
     fn to_soap_xml(&self) -> String {
         format!(
             r#"
