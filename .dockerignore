@@ -14,10 +14,6 @@ recipe.json
 .idea/
 *.swp
 
-# Git
-.git/
-.gitignore
-
 # Docker-related
 Dockerfile*
 .dockerignore
