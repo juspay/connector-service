@@ -641,6 +641,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let last_name = router_data.resource_common_data.get_optional_billing_last_name()
             .unwrap_or_else(|| Secret::new("NA".to_string()));
 
+        // Use state code conversion (e.g., "California" -> "CA") for US/CA
+        let state = router_data
+            .resource_common_data
+            .get_billing_address()
+            .ok()
+            .and_then(|addr| addr.to_state_code_as_optional().ok())
+            .flatten();
+
         let billing_address = NuveiBillingAddress {
             email,
             first_name,
@@ -650,7 +658,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             city: router_data.resource_common_data.get_optional_billing_city(),
             address: router_data.resource_common_data.get_optional_billing_line1(),
             zip: router_data.resource_common_data.get_optional_billing_zip(),
-            state: router_data.resource_common_data.get_optional_billing_state(),
+            state,
         };
 
         // Get device details - ipAddress is required by Nuvei
