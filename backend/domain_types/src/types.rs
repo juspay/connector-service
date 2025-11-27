@@ -102,6 +102,7 @@ use crate::{
 pub struct Connectors {
     // Added pub
     pub adyen: ConnectorParams,
+    pub forte: ConnectorParams,
     pub razorpay: ConnectorParams,
     pub razorpayv2: ConnectorParams,
     pub fiserv: ConnectorParams,
