@@ -150,6 +150,7 @@ pub struct Connectors {
     pub trustpayments: ConnectorParams,
     pub globalpay: ConnectorParams,
     pub nmi: ConnectorParams,
+    pub shift4: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
