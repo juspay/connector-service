@@ -421,6 +421,14 @@ pub struct FiservCaptureRequest {
     pub transaction_details: TransactionDetails,
     pub merchant_details: MerchantDetails,
     pub reference_transaction_details: ReferenceTransactionDetails,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    order: Option<FiservOrderRequest>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservOrderRequest {
+    order_id: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -668,12 +676,20 @@ impl<
                 router_data.request.currency,
             )
             .change_context(ConnectorError::AmountConversionFailed)?;
+        let order_id = router_data
+            .request
+            .connector_metadata
+            .as_ref()
+            .and_then(|v| v.get("order_id"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
 
         Ok(Self {
             amount: Amount {
                 total,
                 currency: router_data.request.currency.to_string(),
             },
+            order: Some(FiservOrderRequest { order_id }),
             transaction_details: TransactionDetails {
                 capture_flag: Some(true),
                 reversal_reason_code: None,
