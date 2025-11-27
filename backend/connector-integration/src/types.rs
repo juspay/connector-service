@@ -49,7 +49,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Cryptopay => Box::new(connectors::Cryptopay::new()),
             ConnectorEnum::Helcim => Box::new(connectors::Helcim::new()),
             ConnectorEnum::Multisafepay => Box::new(connectors::Multisafepay::new()),
-            ConnectorEnum::Iatapay => Box::new(Iatapay::new()),
+            ConnectorEnum::Iatapay => Box::new(connectors::Iatapay::new()),
             ConnectorEnum::Authipay => Box::new(connectors::Authipay::new()),
             ConnectorEnum::Stax => Box::new(connectors::Stax::new()),
             ConnectorEnum::Fiservemea => Box::new(connectors::Fiservemea::new()),
