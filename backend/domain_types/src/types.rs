@@ -149,6 +149,7 @@ pub struct Connectors {
     pub hipay: ConnectorParams,
     pub trustpayments: ConnectorParams,
     pub globalpay: ConnectorParams,
+    pub nmi: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
@@ -4919,6 +4920,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
             minor_amount_to_capture: minor_amount,
             currency: common_enums::Currency::foreign_try_from(value.currency())?,
             connector_transaction_id,
+            merchant_reference_payment_id: value.merchant_reference_payment_id,
             multiple_capture_data,
             connector_metadata: (!value.connector_metadata.is_empty()).then(|| {
                 serde_json::Value::Object(

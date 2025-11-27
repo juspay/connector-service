@@ -4,6 +4,17 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.11.27.0
+
+### Bug Fixes
+
+- **Rapyd:** Authorize diff check fix ([#323](https://github.com/juspay/connector-service/pull/323)) ([`38d44bc`](https://github.com/juspay/connector-service/commit/38d44bcfaaf4a888cec3a98a04b0e58e941cab3a))
+- Merchant_reference_payment_id proto change ([#322](https://github.com/juspay/connector-service/pull/322)) ([`353a686`](https://github.com/juspay/connector-service/commit/353a686b17246eaa7e305fe77d1dab373d01cf3a))
+
+**Full Changelog:** [`2025.11.26.0...2025.11.27.0`](https://github.com/juspay/connector-service/compare/2025.11.26.0...2025.11.27.0)
+
+- - -
+
 ## 2025.11.26.0
 
 ### Bug Fixes

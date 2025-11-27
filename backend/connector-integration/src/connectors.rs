@@ -137,5 +137,8 @@ pub use self::globalpay::Globalpay;
 pub mod billwerk;
 pub use self::billwerk::Billwerk;
 
+pub mod nmi;
+pub use self::nmi::Nmi;
+
 pub mod forte;
 pub use self::forte::Forte;
