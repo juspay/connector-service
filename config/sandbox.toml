@@ -21,12 +21,20 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+bluesnap.base_url = "https://sandbox.bluesnap.com"
+bluesnap.secondary_base_url = "https://sandpay.bluesnap.com"
+multisafepay.base_url = "https://testapi.multisafepay.com/v1/json"
 authipay.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
 stax.base_url = "https://apiprod.fattlabs.com"
+trustpayments.base_url = "https://webservices.securetrading.net"
 fiservemea.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
 datatrans.base_url = "https://api.sandbox.datatrans.com"
 silverflow.base_url = "https://api-sbx.silverflow.co/v1"
 celero.base_url = "https://sandbox.gotnpgateway.com"
+hipay.base_url = "https://stage-secure-gateway.hipay-tpp.com/rest/"
+hipay.secondary_base_url = "https://stage-secure2-vault.hipay-tpp.com/rest/v2/token"
+hipay.third_base_url = "https://stage-api-gateway.hipay.com/"
+globalpay.base_url = "https://apis.sandbox.globalpay.com/ucp"
 adyen.base_url = "https://checkout-test.adyen.com/"
 adyen.dispute_base_url = "https://ca-test.adyen.com/"
 razorpay.base_url = "https://api.razorpay.com/"
@@ -61,10 +69,13 @@ trustpay.base_url_bank_redirects = "https://aapi.trustpay.eu/"
 stripe.base_url = "https://api.stripe.com/"
 cybersource.base_url = "https://apitest.cybersource.com/"
 worldpay.base_url = "https://try.access.worldpay.com/"
-worldpayvantiv.base_url = "https://www.testvantivcnp.com/sandbox/new/sandbox/communicator/online"
-worldpayvantiv.secondary_base_url = "https://www.testvantivcnp.com/sandbox"
-bamboraapac.base_url = "https://demo.ippayments.com.au/interface/api"
+worldpayvantiv.base_url = "https://transact.vantivprelive.com/vap/communicator/online"
+worldpayvantiv.secondary_base_url = "https://onlinessr.vantivprelive.com"
 paypal.base_url = "https://api-m.sandbox.paypal.com/"
+paysafe.base_url = "https://api.test.paysafe.com/paymenthub/"
+billwerk.base_url = "https://api.reepay.com/"
+billwerk.secondary_base_url = "https://card.reepay.com/"
+bamboraapac.base_url = "https://demo.ippayments.com.au/interface/api"
 
 # Generic Events Configuration
 [events]

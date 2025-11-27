@@ -79,9 +79,7 @@ impl RequestContent {
             Self::Xml(i) => quick_xml::se::to_string(&i).unwrap_or_default().into(),
             Self::FormData(_) => String::new().into(),
             // For RawBytes (e.g., SOAP XML), convert to UTF-8 string for logging
-            Self::RawBytes(bytes) => String::from_utf8(bytes.clone())
-                .unwrap_or_default()
-                .into(),
+            Self::RawBytes(bytes) => String::from_utf8(bytes.clone()).unwrap_or_default().into(),
         }
     }
 }

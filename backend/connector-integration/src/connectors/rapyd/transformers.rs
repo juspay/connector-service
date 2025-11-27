@@ -155,17 +155,11 @@ pub struct RapydPaymentsRequest<
     pub amount: FloatMajorUnit,
     pub currency: common_enums::Currency,
     pub payment_method: PaymentMethod<T>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_method_options: Option<PaymentMethodOptions>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub merchant_reference_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub capture: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub complete_payment_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub error_payment_url: Option<String>,
 }
 
@@ -186,11 +180,8 @@ pub struct PaymentMethod<
 > {
     #[serde(rename = "type")]
     pub pm_type: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub fields: Option<PaymentFields<T>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub address: Option<Address>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub digital_wallet: Option<RapydWallet>,
 }
 

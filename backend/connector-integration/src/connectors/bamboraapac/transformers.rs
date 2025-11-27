@@ -289,7 +289,6 @@ pub struct BamboraapacCaptureRequest {
     pub password: Secret<String>,
 }
 
-
 // Capture Response Structure
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "PascalCase")]
@@ -335,7 +334,6 @@ pub struct BamboraapacRefundRequest {
     pub password: Secret<String>,
 }
 
-
 // Refund Response Structure
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "PascalCase")]
@@ -379,7 +377,6 @@ pub struct BamboraapacSyncRequest {
     pub username: Secret<String>,
     pub password: Secret<String>,
 }
-
 
 // Sync Response Structure
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -487,12 +484,11 @@ impl<
             exp_month: card_data.card_exp_month.clone(),
             exp_year: card_data.get_expiry_year_4_digit(),
             cvn: card_data.card_cvc.clone(),
-            card_holder_name: card_data
-                .card_holder_name
-                .clone()
-                .ok_or(ConnectorError::MissingRequiredField {
+            card_holder_name: card_data.card_holder_name.clone().ok_or(
+                ConnectorError::MissingRequiredField {
                     field_name: "card_holder_name",
-                })?,
+                },
+            )?,
             username: auth.username,
             password: auth.password,
             _phantom: std::marker::PhantomData,
@@ -1278,7 +1274,6 @@ pub struct BamboraapacSetupMandateRequest<
     _phantom: std::marker::PhantomData<T>,
 }
 
-
 // SetupMandate Response Structure (Outer SOAP envelope)
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct BamboraapacSetupMandateResponse {
@@ -1374,12 +1369,11 @@ impl<
             card_number: Secret::new(card_number_str),
             exp_month: card_data.card_exp_month.clone(),
             exp_year: card_data.get_expiry_year_4_digit(),
-            card_holder_name: card_data
-                .card_holder_name
-                .clone()
-                .ok_or(ConnectorError::MissingRequiredField {
+            card_holder_name: card_data.card_holder_name.clone().ok_or(
+                ConnectorError::MissingRequiredField {
                     field_name: "card_holder_name",
-                })?,
+                },
+            )?,
             username: auth.username,
             password: auth.password,
             _phantom: std::marker::PhantomData,
@@ -1538,7 +1532,6 @@ pub struct BamboraapacRepeatPaymentRequest {
     pub username: Secret<String>,
     pub password: Secret<String>,
 }
-
 
 // ============================================================================
 // REPEAT PAYMENT FLOW TRANSFORMERS
@@ -1742,8 +1735,8 @@ impl GetSoapXml for BamboraapacCaptureRequest {
         };
 
         // Serialize using quick-xml
-        let capture_xml_string = quick_xml::se::to_string(&capture_xml)
-            .unwrap_or_else(|_| String::from("<Capture/>"));
+        let capture_xml_string =
+            quick_xml::se::to_string(&capture_xml).unwrap_or_else(|_| String::from("<Capture/>"));
 
         // Wrap in SOAP envelope
         format!(
@@ -1773,8 +1766,8 @@ impl GetSoapXml for BamboraapacRefundRequest {
         };
 
         // Serialize using quick-xml
-        let refund_xml_string = quick_xml::se::to_string(&refund_xml)
-            .unwrap_or_else(|_| String::from("<Refund/>"));
+        let refund_xml_string =
+            quick_xml::se::to_string(&refund_xml).unwrap_or_else(|_| String::from("<Refund/>"));
 
         // Wrap in SOAP envelope
         format!(

@@ -58,7 +58,7 @@ pub(crate) fn validate_xml_structure(xml_str: &str) -> Result<(), String> {
 
     let mut reader = Reader::from_str(xml_str);
     reader.trim_text(true);
-    reader.check_end_names(true);  // Verify open/close tags match
+    reader.check_end_names(true); // Verify open/close tags match
 
     let mut buf = Vec::new();
     loop {
