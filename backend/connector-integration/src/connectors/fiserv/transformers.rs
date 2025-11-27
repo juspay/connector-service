@@ -12,7 +12,7 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
-    payment_method_data::PaymentMethodData,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
@@ -24,9 +24,16 @@ use crate::{connectors::fiserv::FiservRouterData, types::ResponseRouterData};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservPaymentsRequest {
+pub struct FiservPaymentsRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     pub amount: Amount,
-    pub source: Source,
+    pub source: Source<T>,
     pub transaction_details: TransactionDetails,
     pub merchant_details: MerchantDetails,
     pub transaction_interaction: TransactionInteraction,
@@ -34,9 +41,16 @@ pub struct FiservPaymentsRequest {
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "sourceType")]
-pub enum Source {
+pub enum Source<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     PaymentCard {
-        card: CardData,
+        card: CardData<T>,
     },
     #[allow(dead_code)]
     GooglePay {
@@ -48,8 +62,15 @@ pub enum Source {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CardData {
-    pub card_data: cards::CardNumber,
+pub struct CardData<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
+    pub card_data: RawCardNumber<T>,
     pub expiration_month: Secret<String>,
     pub expiration_year: Secret<String>,
     pub security_code: Secret<String>,
@@ -344,17 +365,36 @@ pub struct FiservRefundSyncRequest {
 }
 
 // Implementations for FiservRouterData - needed for the macro framework
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         FiservRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
-    > for FiservPaymentsRequest
+    > for FiservPaymentsRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: FiservRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -443,10 +483,18 @@ impl
     }
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         FiservRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
         >,
     > for FiservCaptureRequest
 {
@@ -454,6 +502,7 @@ impl
     fn try_from(
         item: FiservRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
@@ -538,10 +587,18 @@ impl
     }
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         FiservRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     > for FiservSyncRequest
 {
@@ -549,6 +606,7 @@ impl
     fn try_from(
         item: FiservRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -570,10 +628,18 @@ impl
 }
 
 // Implementation for the Void request
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         FiservRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
         >,
     > for FiservVoidRequest
 {
@@ -581,6 +647,7 @@ impl
     fn try_from(
         item: FiservRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -635,15 +702,23 @@ impl
 }
 
 // Implementation for the Refund request
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
-        FiservRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>,
+        FiservRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for FiservRefundRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: FiservRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -702,15 +777,26 @@ impl
 }
 
 // Implementation for the RefundSync request
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
-        FiservRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>,
+        FiservRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
     > for FiservRefundSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: FiservRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -730,8 +816,16 @@ impl
 // Response handling TryFrom implementations for macro framework
 
 // Standard payment response handling for Authorize flow
-impl<F> TryFrom<ResponseRouterData<FiservPaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+impl<
+        F,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > TryFrom<ResponseRouterData<FiservPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
@@ -763,15 +857,15 @@ impl<F> TryFrom<ResponseRouterData<FiservPaymentsResponse, Self>>
                             .clone()
                     }),
             ),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: Some(
                 gateway_resp.transaction_processing_details.order_id.clone(),
             ),
             incremental_authorization_allowed: None,
-            raw_connector_response: None,
+            status_code: item.http_code,
         };
 
         if status == enums::AttemptStatus::Failure || status == enums::AttemptStatus::Voided {
@@ -788,7 +882,6 @@ impl<F> TryFrom<ResponseRouterData<FiservPaymentsResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -832,15 +925,15 @@ impl<F> TryFrom<ResponseRouterData<FiservCaptureResponse, Self>>
                             .clone()
                     }),
             ),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: Some(
                 gateway_resp.transaction_processing_details.order_id.clone(),
             ),
             incremental_authorization_allowed: None,
-            raw_connector_response: None,
+            status_code: item.http_code,
         };
 
         if status == enums::AttemptStatus::Failure || status == enums::AttemptStatus::Voided {
@@ -857,7 +950,6 @@ impl<F> TryFrom<ResponseRouterData<FiservCaptureResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -899,15 +991,15 @@ impl<F> TryFrom<ResponseRouterData<FiservVoidResponse, Self>>
                             .clone()
                     }),
             ),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: Some(
                 gateway_resp.transaction_processing_details.order_id.clone(),
             ),
             incremental_authorization_allowed: None,
-            raw_connector_response: None,
+            status_code: item.http_code,
         };
 
         if status == enums::AttemptStatus::Failure {
@@ -924,7 +1016,6 @@ impl<F> TryFrom<ResponseRouterData<FiservVoidResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -973,15 +1064,15 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
                             .clone()
                     }),
             ),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: Some(
                 gateway_resp.transaction_processing_details.order_id.clone(),
             ),
             incremental_authorization_allowed: None,
-            raw_connector_response: None,
+            status_code: item.http_code,
         };
 
         if status == enums::AttemptStatus::Failure || status == enums::AttemptStatus::Voided {
@@ -998,7 +1089,6 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -1038,7 +1128,7 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundResponse, Self>>
                         .clone()
                 }),
             refund_status,
-            raw_connector_response: None,
+            status_code: http_code,
         };
 
         if refund_status == enums::RefundStatus::Failure {
@@ -1055,7 +1145,6 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -1104,7 +1193,7 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundSyncResponse, Self>>
                         .clone()
                 }),
             refund_status,
-            raw_connector_response: None,
+            status_code: http_code,
         };
 
         if refund_status == enums::RefundStatus::Failure {
@@ -1121,7 +1210,6 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundSyncResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -1167,7 +1255,6 @@ impl<F, Req, Res> TryFrom<ResponseRouterData<FiservErrorResponse, Self>>
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
-            raw_connector_response: None,
         });
 
         Ok(router_data_out)

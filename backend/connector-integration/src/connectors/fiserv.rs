@@ -1,24 +1,34 @@
+use std::fmt::Debug;
+
 use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD_ENGINE, Engine};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
+    events,
     ext_traits::BytesExt,
     request::RequestContent,
     types::FloatMajorUnit,
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
+        SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
-        AcceptDisputeData, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
+    payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
@@ -28,9 +38,9 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 use ring::hmac;
+use serde::Serialize;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
@@ -55,89 +65,278 @@ mod headers {
     pub const AUTHORIZATION: &str = "Authorization";
 }
 
-impl connector_types::ConnectorServiceTrait for Fiserv {}
-impl connector_types::PaymentAuthorizeV2 for Fiserv {}
-impl connector_types::PaymentSyncV2 for Fiserv {}
-impl connector_types::PaymentVoidV2 for Fiserv {}
-impl connector_types::RefundSyncV2 for Fiserv {}
-impl connector_types::RefundV2 for Fiserv {}
-impl connector_types::PaymentCapture for Fiserv {}
-impl connector_types::ValidationTrait for Fiserv {}
-impl connector_types::PaymentOrderCreate for Fiserv {}
-impl connector_types::SetupMandateV2 for Fiserv {}
-impl connector_types::AcceptDispute for Fiserv {}
-impl connector_types::SubmitEvidenceV2 for Fiserv {}
-impl connector_types::DisputeDefend for Fiserv {}
-impl connector_types::IncomingWebhook for Fiserv {}
+// Type alias for non-generic trait implementations
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::ConnectorServiceTrait<T> for Fiserv<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentAuthorizeV2<T> for Fiserv<T>
+{
+}
 
-// Implement RSync to fix the RefundSyncV2 trait requirement
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Fiserv,
-    curl_request: Json(FiservRefundSyncRequest),
-    curl_response: FiservRefundSyncResponse,
-    flow_name: RSync,
-    resource_common_data: RefundFlowData,
-    flow_request: RefundSyncData,
-    flow_response: RefundsResponseData,
-    http_method: Post,
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<domain_types::connector_flow::RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!(
-                "{}ch/payments/v1/transaction-inquiry",
-                self.connector_base_url_refunds(req)
-            ))
-        }
-    }
-);
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentSessionToken for Fiserv<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAccessToken for Fiserv<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::CreateConnectorCustomer for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentSyncV2 for Fiserv<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentVoidV2 for Fiserv<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RefundSyncV2 for Fiserv<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RefundV2 for Fiserv<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentCapture for Fiserv<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::ValidationTrait for Fiserv<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentOrderCreate for Fiserv<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::SetupMandateV2<T> for Fiserv<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::AcceptDispute for Fiserv<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::SubmitEvidenceV2 for Fiserv<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::DisputeDefend for Fiserv<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::IncomingWebhook for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RepeatPaymentV2 for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentTokenV2<T> for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentPreAuthenticateV2<T> for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentAuthenticateV2<T> for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentPostAuthenticateV2<T> for Fiserv<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentVoidPostCaptureV2 for Fiserv<T>
+{
+}
 
 macros::create_all_prerequisites!(
     connector_name: Fiserv,
+    generic_type: T,
     api: [
         (
             flow: Authorize,
-            request_body: FiservPaymentsRequest,
+            request_body: FiservPaymentsRequest<T>,
             response_body: FiservPaymentsResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: PSync,
             request_body: FiservSyncRequest,
             response_body: FiservSyncResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
             flow: Capture,
             request_body: FiservCaptureRequest,
             response_body: FiservCaptureResponse,
-            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ),
         (
             flow: Void,
             request_body: FiservVoidRequest,
             response_body: FiservVoidResponse,
-            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
         (
             flow: Refund,
             request_body: FiservRefundRequest,
             response_body: FiservRefundResponse,
-            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
         (
             flow: RSync,
             request_body: FiservRefundSyncRequest,
             response_body: FiservRefundSyncResponse,
-            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
     amount_converters: [
@@ -229,7 +428,15 @@ macros::create_all_prerequisites!(
     }
 );
 
-impl ConnectorCommon for Fiserv {
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorCommon for Fiserv<T>
+{
     fn id(&self) -> &'static str {
         "fiserv"
     }
@@ -258,7 +465,7 @@ impl ConnectorCommon for Fiserv {
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: self::transformers::FiservErrorResponse = res
             .response
@@ -285,7 +492,6 @@ impl ConnectorCommon for Fiserv {
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
         })
     }
 }
@@ -297,19 +503,21 @@ macros::macro_connector_implementation!(
     curl_response: FiservPaymentsResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
-    flow_request: PaymentsAuthorizeData,
+    flow_request: PaymentsAuthorizeData<T>,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}ch/payments/v1/charges",
@@ -329,6 +537,8 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsSyncData,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -358,6 +568,8 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsCaptureData,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -377,7 +589,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Add implementation for Void
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Fiserv,
@@ -388,6 +599,8 @@ macros::macro_connector_implementation!(
     flow_request: PaymentVoidData,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -407,7 +620,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Add implementation for Refund
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Fiserv,
@@ -418,6 +630,8 @@ macros::macro_connector_implementation!(
     flow_request: RefundsData,
     flow_response: RefundsResponseData,
     http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -437,150 +651,607 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Implementation for empty stubs - these will need to be properly implemented later
-impl
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Fiserv,
+    curl_request: Json(FiservRefundSyncRequest),
+    curl_response: FiservRefundSyncResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<domain_types::connector_flow::RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+                "{}ch/payments/v1/transaction-inquiry",
+                self.connector_base_url_refunds(req)
+            ))
+        }
+    }
+);
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Fiserv
+    > for Fiserv<T>
 {
 }
-impl
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     ConnectorIntegrationV2<
         SetupMandate,
         PaymentFlowData,
-        SetupMandateRequestData,
+        SetupMandateRequestData<T>,
         PaymentsResponseData,
-    > for Fiserv
+    > for Fiserv<T>
 {
 }
-impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Fiserv
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Fiserv<T>
 {
 }
-impl
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Fiserv
+    for Fiserv<T>
 {
 }
-impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Fiserv
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Fiserv<T>
 {
 }
 
 // SourceVerification implementations for all flows
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         Authorize,
         PaymentFlowData,
-        PaymentsAuthorizeData,
+        PaymentsAuthorizeData<T>,
         PaymentsResponseData,
-    > for Fiserv
+    > for Fiserv<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         PSync,
         PaymentFlowData,
         PaymentsSyncData,
         PaymentsResponseData,
-    > for Fiserv
+    > for Fiserv<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         Capture,
         PaymentFlowData,
         PaymentsCaptureData,
         PaymentsResponseData,
-    > for Fiserv
+    > for Fiserv<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         Void,
         PaymentFlowData,
         PaymentVoidData,
         PaymentsResponseData,
-    > for Fiserv
+    > for Fiserv<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         Refund,
         RefundFlowData,
         RefundsData,
         RefundsResponseData,
-    > for Fiserv
+    > for Fiserv<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         RSync,
         RefundFlowData,
         RefundSyncData,
         RefundsResponseData,
-    > for Fiserv
+    > for Fiserv<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         SetupMandate,
         PaymentFlowData,
-        SetupMandateRequestData,
+        SetupMandateRequestData<T>,
         PaymentsResponseData,
-    > for Fiserv
+    > for Fiserv<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         Accept,
         DisputeFlowData,
         AcceptDisputeData,
         DisputeResponseData,
-    > for Fiserv
+    > for Fiserv<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         SubmitEvidence,
         DisputeFlowData,
         SubmitEvidenceData,
         DisputeResponseData,
-    > for Fiserv
+    > for Fiserv<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         DefendDispute,
         DisputeFlowData,
         DisputeDefendData,
         DisputeResponseData,
-    > for Fiserv
+    > for Fiserv<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         CreateOrder,
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Fiserv
+    > for Fiserv<T>
 {
 }
 
-impl ConnectorSpecifications for Fiserv {}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorSpecifications for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Fiserv<T>
+{
+}
 
 // We already have an implementation for ValidationTrait above
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Fiserv<T>
+{
+}

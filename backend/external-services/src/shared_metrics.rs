@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used)]
 use std::{
     future::Future,
     pin::Pin,
@@ -94,15 +95,17 @@ impl<S, B> Service<hyper::Request<B>> for GrpcMetricsService<S>
 where
     S: Service<hyper::Request<B>, Response = hyper::Response<B>> + Clone + Send + 'static,
     S::Future: Send + 'static,
-    S::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
+    S::Error: std::fmt::Debug,
     B: HttpBody + Send + 'static,
 {
     type Response = hyper::Response<B>;
-    type Error = S::Error;
+    type Error = tonic::Status;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx)
+        self.inner.poll_ready(cx).map_err(|e| {
+            tonic::Status::internal(format!("GrpcMetricsService inner poll_ready error: {e:?}"))
+        })
     }
 
     fn call(&mut self, mut req: hyper::Request<B>) -> Self::Future {
@@ -148,7 +151,9 @@ where
                 .with_label_values(&[&method_name, &service_name, &connector])
                 .observe(duration);
 
-            result
+            result.map_err(|e| {
+                tonic::Status::internal(format!("GrpcMetricsService inner call error: {e:?}"))
+            })
         })
     }
 }

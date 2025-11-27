@@ -2,7 +2,9 @@ use common_enums::ProductType;
 use common_utils::{ext_traits::ConfigExt, Email, MinorUnit};
 use hyperswitch_masking::{PeekInterface, Secret, SerializableSecret};
 
-use crate::utils::{missing_field_err, Error};
+use crate::utils::{
+    convert_canada_state_to_code, convert_us_state_to_code, missing_field_err, Error,
+};
 
 #[derive(Clone, Default, Debug)]
 pub struct PaymentAddress {
@@ -139,6 +141,18 @@ impl Address {
             .as_ref()
             .and_then(|billing_address| billing_address.get_optional_full_name())
     }
+
+    pub fn get_optional_first_name(&self) -> Option<Secret<String>> {
+        self.address
+            .as_ref()
+            .and_then(|billing_address| billing_address.get_optional_first_name())
+    }
+
+    pub fn get_optional_last_name(&self) -> Option<Secret<String>> {
+        self.address
+            .as_ref()
+            .and_then(|billing_address| billing_address.get_optional_last_name())
+    }
 }
 
 // used by customers also, could be moved outside
@@ -147,7 +161,7 @@ impl Address {
 #[serde(deny_unknown_fields)]
 pub struct AddressDetails {
     /// The city, district, suburb, town, or village of the address.
-    pub city: Option<String>,
+    pub city: Option<Secret<String>>,
 
     /// The two-letter ISO 3166-1 alpha-2 country code (e.g., US, GB).
     pub country: Option<common_enums::CountryAlpha2>,
@@ -185,6 +199,14 @@ impl AddressDetails {
             (Some(name), None) | (None, Some(name)) => Some(name.to_owned()),
             _ => None,
         }
+    }
+
+    pub fn get_optional_first_name(&self) -> Option<Secret<String>> {
+        self.first_name.clone()
+    }
+
+    pub fn get_optional_last_name(&self) -> Option<Secret<String>> {
+        self.last_name.clone()
     }
 
     pub fn unify_address_details(self, other: Option<&Self>) -> Self {
@@ -247,7 +269,7 @@ impl AddressDetails {
             .ok_or_else(missing_field_err("address.line1"))
     }
 
-    pub fn get_city(&self) -> Result<&String, Error> {
+    pub fn get_city(&self) -> Result<&Secret<String>, Error> {
         self.city
             .as_ref()
             .ok_or_else(missing_field_err("address.city"))
@@ -290,6 +312,33 @@ impl AddressDetails {
     }
     pub fn get_optional_country(&self) -> Option<common_enums::CountryAlpha2> {
         self.country
+    }
+
+    pub fn to_state_code(&self) -> Result<Secret<String>, Error> {
+        let country = self.get_country()?;
+        let state = self.get_state()?;
+        match country {
+            common_enums::CountryAlpha2::US => Ok(Secret::new(
+                convert_us_state_to_code(&state.peek().to_string()).to_string(),
+            )),
+            common_enums::CountryAlpha2::CA => Ok(Secret::new(
+                convert_canada_state_to_code(&state.peek().to_string()).to_string(),
+            )),
+            _ => Ok(state.clone()),
+        }
+    }
+
+    pub fn to_state_code_as_optional(&self) -> Result<Option<Secret<String>>, Error> {
+        self.state
+            .as_ref()
+            .map(|state| {
+                if state.peek().len() == 2 {
+                    Ok(state.to_owned())
+                } else {
+                    self.to_state_code()
+                }
+            })
+            .transpose()
     }
 }
 
@@ -362,6 +411,10 @@ pub struct OrderDetailsWithAmount {
     pub sub_category: Option<String>,
     /// Brand of the product that is being purchased
     pub brand: Option<String>,
+    /// Description for the item
+    pub description: Option<String>,
+    /// Unit of measure used for the item quantity.
+    pub unit_of_measure: Option<String>,
     /// Type of the product that is being purchased
     pub product_type: Option<ProductType>,
     /// The tax code for the product

@@ -3,24 +3,31 @@ pub mod transformers;
 use common_enums::AttemptStatus;
 use common_utils::{
     errors::CustomResult,
+    events,
     ext_traits::BytesExt,
     request::RequestContent,
     types::{AmountConvertor, MinorUnit},
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
+        SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
-        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
-        SetupMandateRequestData, SubmitEvidenceData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
-    payment_method_data::PaymentMethodData,
+    payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -28,9 +35,11 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::Maskable;
 use interfaces::{
-    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2,
-    events::connector_api_logs::ConnectorEvent,
+    api::ConnectorCommon,
+    connector_integration_v2::ConnectorIntegrationV2,
+    connector_types::{self},
 };
+use serde::Serialize;
 use transformers as razorpayv2;
 
 use crate::connectors::razorpay::transformers::ForeignTryFrom;
@@ -41,26 +50,45 @@ pub(crate) mod headers {
 }
 
 #[derive(Clone)]
-pub struct RazorpayV2 {
+pub struct RazorpayV2<T> {
     #[allow(dead_code)]
     pub(crate) amount_converter: &'static (dyn AmountConvertor<Output = MinorUnit> + Sync),
+    #[allow(dead_code)]
+    _phantom: std::marker::PhantomData<T>,
 }
 
-impl RazorpayV2 {
+impl<T> RazorpayV2<T> {
     pub const fn new() -> &'static Self {
         &Self {
             amount_converter: &common_utils::types::MinorUnitForConnector,
+            _phantom: std::marker::PhantomData,
         }
     }
 }
 
-impl interfaces::connector_types::ValidationTrait for RazorpayV2 {
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::ValidationTrait for RazorpayV2<T>
+{
     fn should_do_order_create(&self) -> bool {
         true
     }
 }
 
-impl ConnectorCommon for RazorpayV2 {
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorCommon for RazorpayV2<T>
+{
     fn id(&self) -> &'static str {
         "razorpayv2"
     }
@@ -88,7 +116,7 @@ impl ConnectorCommon for RazorpayV2 {
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         let response: razorpayv2::RazorpayV2ErrorResponse = res
             .response
@@ -96,7 +124,7 @@ impl ConnectorCommon for RazorpayV2 {
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         if let Some(i) = event_builder {
-            i.set_error_response_body(&response)
+            i.set_connector_response(&response)
         }
 
         let (code, message, attempt_status) = match response {
@@ -117,7 +145,7 @@ impl ConnectorCommon for RazorpayV2 {
                 (
                     "ROUTE_ERROR".to_string(),
                     message.clone(),
-                    AttemptStatus::Unknown,
+                    AttemptStatus::Failure,
                 )
             }
         };
@@ -132,18 +160,24 @@ impl ConnectorCommon for RazorpayV2 {
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
         })
     }
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for RazorpayV2
+    > for RazorpayV2<T>
 {
     fn get_headers(
         &self,
@@ -185,15 +219,16 @@ impl
             PaymentCreateOrderResponse,
         >,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let connector_router_data = razorpayv2::RazorpayV2RouterData::try_from((
-            req.request.amount,
-            &req.request,
-            Some(
-                req.resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
-            ),
-        ))?;
+        let connector_router_data: razorpayv2::RazorpayV2RouterData<&PaymentCreateOrderData, T> =
+            razorpayv2::RazorpayV2RouterData::try_from((
+                req.request.amount,
+                &req.request,
+                Some(
+                    req.resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                ),
+            ))?;
         let connector_req =
             razorpayv2::RazorpayV2CreateOrderRequest::try_from(&connector_router_data)?;
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
@@ -207,7 +242,7 @@ impl
             PaymentCreateOrderData,
             PaymentCreateOrderResponse,
         >,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
         domain_types::router_data_v2::RouterDataV2<
@@ -224,7 +259,7 @@ impl
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         if let Some(i) = event_builder {
-            i.set_response_body(&response)
+            i.set_connector_response(&response)
         }
 
         let order_response = PaymentCreateOrderResponse {
@@ -240,7 +275,7 @@ impl
     fn get_error_response_v2(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
@@ -248,7 +283,7 @@ impl
     fn get_5xx_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         let response: razorpayv2::RazorpayV2ErrorResponse = res
             .response
@@ -256,7 +291,7 @@ impl
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         if let Some(i) = event_builder {
-            i.set_error_response_body(&response)
+            i.set_connector_response(&response)
         }
 
         let (code, message) = match response {
@@ -278,20 +313,31 @@ impl
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
         })
     }
 }
 
-impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
-    for RazorpayV2
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    > for RazorpayV2<T>
 {
     fn get_headers(
         &self,
         req: &domain_types::router_data_v2::RouterDataV2<
             Authorize,
             PaymentFlowData,
-            PaymentsAuthorizeData,
+            PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
@@ -309,7 +355,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         req: &domain_types::router_data_v2::RouterDataV2<
             Authorize,
             PaymentFlowData,
-            PaymentsAuthorizeData,
+            PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
@@ -327,7 +373,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         req: &domain_types::router_data_v2::RouterDataV2<
             Authorize,
             PaymentFlowData,
-            PaymentsAuthorizeData,
+            PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         >,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
@@ -363,16 +409,16 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         data: &domain_types::router_data_v2::RouterDataV2<
             Authorize,
             PaymentFlowData,
-            PaymentsAuthorizeData,
+            PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         >,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
         domain_types::router_data_v2::RouterDataV2<
             Authorize,
             PaymentFlowData,
-            PaymentsAuthorizeData,
+            PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         >,
         errors::ConnectorError,
@@ -387,7 +433,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         match upi_response_result {
             Ok(upi_response) => {
                 if let Some(i) = event_builder {
-                    i.set_response_body(&upi_response)
+                    i.set_connector_response(&upi_response)
                 }
 
                 // Use the transformer for UPI response handling
@@ -407,7 +453,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                     .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
                 if let Some(i) = event_builder {
-                    i.set_response_body(&response)
+                    i.set_connector_response(&response)
                 }
 
                 // Use the transformer for regular response handling
@@ -425,7 +471,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
     fn get_error_response_v2(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
@@ -433,40 +479,343 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
     fn get_5xx_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 }
 
 // Implement required traits for ConnectorServiceTrait
-impl interfaces::connector_types::PaymentAuthorizeV2 for RazorpayV2 {}
-impl interfaces::connector_types::PaymentSyncV2 for RazorpayV2 {}
-impl interfaces::connector_types::PaymentOrderCreate for RazorpayV2 {}
-impl interfaces::connector_types::PaymentVoidV2 for RazorpayV2 {}
-impl interfaces::connector_types::IncomingWebhook for RazorpayV2 {}
-impl interfaces::connector_types::RefundV2 for RazorpayV2 {}
-impl interfaces::connector_types::PaymentCapture for RazorpayV2 {}
-impl interfaces::connector_types::SetupMandateV2 for RazorpayV2 {}
-impl interfaces::connector_types::AcceptDispute for RazorpayV2 {}
-impl interfaces::connector_types::RefundSyncV2 for RazorpayV2 {}
-impl interfaces::connector_types::DisputeDefend for RazorpayV2 {}
-impl interfaces::connector_types::SubmitEvidenceV2 for RazorpayV2 {}
-impl interfaces::connector_types::ConnectorServiceTrait for RazorpayV2 {}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::PaymentAuthorizeV2<T> for RazorpayV2<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::PaymentSyncV2 for RazorpayV2<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::PaymentOrderCreate for RazorpayV2<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::PaymentVoidV2 for RazorpayV2<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::IncomingWebhook for RazorpayV2<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::RefundV2 for RazorpayV2<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::PaymentCapture for RazorpayV2<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::SetupMandateV2<T> for RazorpayV2<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::AcceptDispute for RazorpayV2<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::RefundSyncV2 for RazorpayV2<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::DisputeDefend for RazorpayV2<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::SubmitEvidenceV2 for RazorpayV2<T>
+{
+}
+// Type alias for non-generic trait implementations
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for RazorpayV2<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::ConnectorServiceTrait<T> for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::PaymentSessionToken for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::PaymentAccessToken for RazorpayV2<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::CreateConnectorCustomer for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::PaymentTokenV2<T> for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::RepeatPaymentV2 for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::PaymentPreAuthenticateV2<T> for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::PaymentAuthenticateV2<T> for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::PaymentPostAuthenticateV2<T> for RazorpayV2<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::PaymentVoidPostCaptureV2 for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for RazorpayV2<T>
+{
+}
 
 // Stub implementations for flows not yet implemented
-impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for RazorpayV2
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for RazorpayV2<T>
 {
 }
 
-impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for RazorpayV2
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for RazorpayV2<T>
 {
 }
 
-impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for RazorpayV2
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for RazorpayV2<T>
 {
     fn get_http_method(&self) -> common_utils::Method {
         common_utils::Method::Get
@@ -546,7 +895,7 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
             PaymentsSyncData,
             PaymentsResponseData,
         >,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
         domain_types::router_data_v2::RouterDataV2<
@@ -564,7 +913,7 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         if let Some(i) = event_builder {
-            i.set_response_body(&sync_response)
+            i.set_connector_response(&sync_response)
         }
 
         // Use the transformer for PSync response handling
@@ -580,7 +929,7 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
     fn get_error_response_v2(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
@@ -588,24 +937,38 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
     fn get_5xx_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     ConnectorIntegrationV2<
         SetupMandate,
         PaymentFlowData,
-        SetupMandateRequestData,
+        SetupMandateRequestData<T>,
         PaymentsResponseData,
-    > for RazorpayV2
+    > for RazorpayV2<T>
 {
 }
 
-impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for RazorpayV2
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for RazorpayV2<T>
 {
     fn get_http_method(&self) -> common_utils::Method {
         common_utils::Method::Get
@@ -667,7 +1030,7 @@ impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRespon
             RefundSyncData,
             RefundsResponseData,
         >,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
         domain_types::router_data_v2::RouterDataV2<
@@ -684,10 +1047,9 @@ impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRespon
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         if let Some(i) = event_builder {
-            i.set_response_body(&response)
+            i.set_connector_response(&response)
         }
 
-        // Use the transformer for refund response handling
         RouterDataV2::foreign_try_from((
             response,
             data.clone(),
@@ -700,7 +1062,7 @@ impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRespon
     fn get_error_response_v2(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
@@ -708,14 +1070,21 @@ impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRespon
     fn get_5xx_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 }
 
-impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    for RazorpayV2
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    for RazorpayV2<T>
 {
     fn get_headers(
         &self,
@@ -745,11 +1114,10 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = &req.resource_common_data.connectors.razorpayv2.base_url;
-
-        // Extract payment ID from connector_transaction_id
-        let payment_id = &req.request.connector_transaction_id;
-
-        Ok(format!("{base_url}v1/payments/{payment_id}/refund"))
+        let connector_payment_id = &req.request.connector_transaction_id;
+        Ok(format!(
+            "{base_url}v1/payments/{connector_payment_id}/refund"
+        ))
     }
 
     fn get_request_body(
@@ -761,11 +1129,14 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
             RefundsResponseData,
         >,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let connector_router_data = razorpayv2::RazorpayV2RouterData::try_from((
-            req.request.minor_refund_amount,
-            &req.request,
-            None,
-        ))?;
+        let converted_amount = self
+            .amount_converter
+            .convert(req.request.minor_refund_amount, req.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        let connector_router_data = razorpayv2::RazorpayV2RouterData::<
+            &RefundsData,
+            DefaultPCIHolder,
+        >::try_from((converted_amount, &req.request, None))?;
         let connector_req = razorpayv2::RazorpayV2RefundRequest::try_from(&connector_router_data)?;
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
     }
@@ -778,7 +1149,7 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
             RefundsData,
             RefundsResponseData,
         >,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
         domain_types::router_data_v2::RouterDataV2<
@@ -795,10 +1166,9 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         if let Some(i) = event_builder {
-            i.set_response_body(&response)
+            i.set_connector_response(&response)
         }
 
-        // Use the transformer for refund response handling
         RouterDataV2::foreign_try_from((
             response,
             data.clone(),
@@ -811,7 +1181,7 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
     fn get_error_response_v2(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
@@ -819,135 +1189,476 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
     fn get_5xx_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 }
 
-impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for RazorpayV2
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for RazorpayV2<T>
 {
 }
 
-impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for RazorpayV2
-{
-}
-
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for RazorpayV2
+    for RazorpayV2<T>
 {
 }
 
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for RazorpayV2<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for RazorpayV2<T>
+{
+}
 // SourceVerification implementations for all flows
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         Authorize,
         PaymentFlowData,
-        PaymentsAuthorizeData,
+        PaymentsAuthorizeData<T>,
         PaymentsResponseData,
-    > for RazorpayV2
+    > for RazorpayV2<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         PSync,
         PaymentFlowData,
         PaymentsSyncData,
         PaymentsResponseData,
-    > for RazorpayV2
+    > for RazorpayV2<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         Capture,
         PaymentFlowData,
         PaymentsCaptureData,
         PaymentsResponseData,
-    > for RazorpayV2
+    > for RazorpayV2<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         Void,
         PaymentFlowData,
         PaymentVoidData,
         PaymentsResponseData,
-    > for RazorpayV2
+    > for RazorpayV2<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         Refund,
         RefundFlowData,
         RefundsData,
         RefundsResponseData,
-    > for RazorpayV2
+    > for RazorpayV2<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         RSync,
         RefundFlowData,
         RefundSyncData,
         RefundsResponseData,
-    > for RazorpayV2
+    > for RazorpayV2<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         SetupMandate,
         PaymentFlowData,
-        SetupMandateRequestData,
+        SetupMandateRequestData<T>,
         PaymentsResponseData,
-    > for RazorpayV2
+    > for RazorpayV2<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         Accept,
         DisputeFlowData,
         AcceptDisputeData,
         DisputeResponseData,
-    > for RazorpayV2
+    > for RazorpayV2<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         SubmitEvidence,
         DisputeFlowData,
         SubmitEvidenceData,
         DisputeResponseData,
-    > for RazorpayV2
+    > for RazorpayV2<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         DefendDispute,
         DisputeFlowData,
         DisputeDefendData,
         DisputeResponseData,
-    > for RazorpayV2
+    > for RazorpayV2<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         CreateOrder,
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for RazorpayV2
+    > for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > domain_types::connector_types::ConnectorSpecifications for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for RazorpayV2<T>
 {
 }

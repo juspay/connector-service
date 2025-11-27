@@ -14,6 +14,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   typos:
     name: Spell check
@@ -24,6 +27,8 @@ jobs:
 
       - name: Spell check
         uses: crate-ci/typos@master
+        with:
+          config: ./.typos.toml
 
   check:
     name: Compilation Check
@@ -51,6 +56,82 @@ jobs:
 
       - name: Run Clippy
         run: cargo clippy --all-features --all-targets
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    env:
+        RUSTFLAGS: "-D warnings"
+        RUN_TESTS: ${{ (github.event_name == 'push') || ((github.event_name == 'pull_request') && (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name)) || (github.event_name == 'merge_group') }}
+
+    steps:
+      - name: Skip tests for PRs from forks
+        if: ${{ env.RUN_TESTS == 'false' }}
+        shell: bash
+        run: echo 'Skipping tests for PRs from forks'
+
+      - name: Checkout code
+        if: ${{ env.RUN_TESTS == 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        if: ${{ env.RUN_TESTS == 'true' }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install Protoc
+        if: ${{ env.RUN_TESTS == 'true' }}
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: Swatinem/rust-cache@v2.7.8
+        if: ${{ env.RUN_TESTS == 'true' }}
+        with:
+          cache-on-failure: true
+
+      - name: Install nextest
+        if: ${{ env.RUN_TESTS == 'true' }}
+        uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+          checksum: true
+
+      - name: Download Encrypted Connector Credentials from S3 and Decrypt
+        if: ${{ env.RUN_TESTS == 'true' }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.CONNECTOR_CREDS_AWS_ACCESS_KEY_ID }}
+          AWS_REGION: ${{ secrets.CONNECTOR_CREDS_AWS_REGION }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.CONNECTOR_CREDS_AWS_SECRET_ACCESS_KEY }}
+          CONNECTOR_AUTH_PASSPHRASE: ${{ secrets.CONNECTOR_AUTH_PASSPHRASE }}
+          CONNECTOR_CREDS_S3_BUCKET_URI: ${{ secrets.CONNECTOR_CREDS_S3_BUCKET_URI}}
+          DESTINATION_FILE_NAME: "creds.json.gpg"
+          S3_SOURCE_FILE_NAME: "1a2fe2af-cfdf-477d-8d32-3e64a46d3d85.json.gpg"
+        shell: bash
+        run: |
+          mkdir -p ".github/secrets" ".github/test"
+
+          aws s3 cp "${CONNECTOR_CREDS_S3_BUCKET_URI}/${S3_SOURCE_FILE_NAME}" ".github/secrets/${DESTINATION_FILE_NAME}"
+          gpg --quiet --batch --yes --decrypt --passphrase="${CONNECTOR_AUTH_PASSPHRASE}" --output ".github/test/creds.json" ".github/secrets/${DESTINATION_FILE_NAME}"
+
+      - name: Set connector credentials path in environment
+        if: ${{ env.RUN_TESTS == 'true' }}
+        shell: bash
+        run: |
+          # Only set the environment variable if the credentials file exists
+          if [[ -f ".github/test/creds.json" ]]; then
+            echo "CONNECTOR_AUTH_FILE_PATH=${{ github.workspace }}/.github/test/creds.json" >> $GITHUB_ENV
+            echo "Connector credentials available for tests"
+          else
+            echo "No connector credentials available - tests will use default values"
+          fi
+
+      - name: Run Tests
+        if: ${{ env.RUN_TESTS == 'true' }}
+        shell: bash
+        run: cargo nextest run --config-file .nextest.toml --profile ci
 
   formatting:
     name: Check formatting

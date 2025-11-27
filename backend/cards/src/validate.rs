@@ -297,6 +297,43 @@ where
     }
 }
 
+impl prost::Message for CardNumber {
+    fn encode_raw(&self, buf: &mut impl bytes::BufMut) {
+        if !self.0.peek().is_empty() {
+            prost::encoding::string::encode(1, self.0.peek(), buf);
+        }
+    }
+
+    fn merge_field(
+        &mut self,
+        tag: u32,
+        wire_type: prost::encoding::WireType,
+        buf: &mut impl bytes::Buf,
+        ctx: prost::encoding::DecodeContext,
+    ) -> Result<(), prost::DecodeError> {
+        if tag == 1 {
+            let mut temp_string = String::new();
+            prost::encoding::string::merge(wire_type, &mut temp_string, buf, ctx)?;
+            *self = CardNumber(StrongSecret::new(temp_string));
+            Ok(())
+        } else {
+            prost::encoding::skip_field(wire_type, tag, buf, ctx)
+        }
+    }
+
+    fn encoded_len(&self) -> usize {
+        if !self.0.peek().is_empty() {
+            prost::encoding::string::encoded_len(1, self.0.peek())
+        } else {
+            0
+        }
+    }
+
+    fn clear(&mut self) {
+        *self = CardNumber::default();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
@@ -419,6 +456,12 @@ impl<'de> Deserialize<'de> for CardExpirationMonth {
 
 #[derive(Clone, Debug, Serialize)]
 pub struct CardExpirationYear(StrongSecret<u16>);
+
+impl CardExpirationYear {
+    pub fn get_year(&self) -> u16 {
+        *self.0.peek()
+    }
+}
 
 impl TryFrom<u16> for CardExpirationYear {
     type Error = error_stack::Report<ValidationError>;

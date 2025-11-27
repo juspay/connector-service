@@ -1,11 +1,14 @@
 use std::collections::HashSet;
 
-use crate::{payment_method_data::PaymentMethodData, router_response_types::RedirectForm};
+use crate::{
+    payment_method_data::{DefaultPCIHolder, PaymentMethodData},
+    router_response_types::RedirectForm,
+};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct RedirectionFormData {
     pub redirect_form: RedirectForm,
-    pub payment_method_data: Option<PaymentMethodData>,
+    pub payment_method_data: Option<PaymentMethodData<DefaultPCIHolder>>,
     pub amount: String,
     pub currency: String,
 }

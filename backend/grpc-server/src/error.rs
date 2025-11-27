@@ -107,7 +107,8 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | Self::RoutingRulesParsingError
             | Self::FailedAtConnector { .. }
             | Self::AmountConversionFailed
-            | Self::GenericError { .. } => {
+            | Self::GenericError { .. }
+            | Self::MandatePaymentDataMismatch { .. } => {
                 ApplicationErrorResponse::InternalServerError(ApiError {
                     sub_code: "INTERNAL_SERVER_ERROR".to_string(),
                     error_identifier: 500,
@@ -279,7 +280,7 @@ pub struct PaymentAuthorizationError {
     pub status: grpc_api_types::payments::PaymentStatus,
     pub error_message: Option<String>,
     pub error_code: Option<String>,
-    pub raw_connector_response: Option<String>,
+    pub status_code: Option<u32>,
 }
 
 impl PaymentAuthorizationError {
@@ -287,13 +288,13 @@ impl PaymentAuthorizationError {
         status: grpc_api_types::payments::PaymentStatus,
         error_message: Option<String>,
         error_code: Option<String>,
-        raw_connector_response: Option<String>,
+        status_code: Option<u32>,
     ) -> Self {
         Self {
             status,
             error_message,
             error_code,
-            raw_connector_response,
+            status_code,
         }
     }
 }
@@ -309,7 +310,18 @@ impl From<PaymentAuthorizationError> for PaymentServiceAuthorizeResponse {
             status: error.status.into(),
             error_message: error.error_message,
             error_code: error.error_code,
-            raw_connector_response: error.raw_connector_response,
+            error_reason: None,
+            status_code: error.status_code.unwrap_or(500),
+            response_headers: std::collections::HashMap::new(),
+            connector_metadata: std::collections::HashMap::new(),
+            raw_connector_response: None,
+            raw_connector_request: None,
+            state: None,
+            mandate_reference: None,
+            minor_amount_capturable: None,
+            minor_captured_amount: None,
+            captured_amount: None,
+            connector_response: None,
         }
     }
 }

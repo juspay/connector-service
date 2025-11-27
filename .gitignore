@@ -406,6 +406,9 @@ $RECYCLE.BIN/
 **/*.swo
 **/.env.local
 
+# Credentials files
+.github/test/creds.json
+
 # DrawIO files
 **/*.drawio.bkp
 gen/**

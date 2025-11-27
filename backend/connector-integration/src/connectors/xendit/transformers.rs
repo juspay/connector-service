@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
-use cards::CardNumber;
 use common_enums::Currency;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     pii,
     request::Method,
-    types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
+    types::FloatMajorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, Capture},
@@ -16,16 +15,20 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     errors::{self, ConnectorError},
-    payment_method_data::PaymentMethodData,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
+    router_request_types::{AuthoriseIntegrityObject, RefundIntegrityObject},
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::xendit::XenditRouterData, types::ResponseRouterData};
+use crate::{
+    connectors::xendit::{XenditAmountConvertor, XenditRouterData},
+    types::ResponseRouterData,
+};
 
 pub trait ForeignTryFrom<F>: Sized {
     type Error;
@@ -41,8 +44,15 @@ pub struct ChannelProperties {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct CardInformation {
-    pub card_number: CardNumber,
+pub struct CardInformation<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
+    pub card_number: RawCardNumber<T>,
     pub expiry_month: Secret<String>,
     pub expiry_year: Secret<String>,
     pub cvv: Secret<String>,
@@ -52,9 +62,16 @@ pub struct CardInformation {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct CardInfo {
+pub struct CardInfo<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     pub channel_properties: ChannelProperties,
-    pub card_information: CardInformation,
+    pub card_information: CardInformation<T>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -71,14 +88,28 @@ pub enum PaymentMethodType {
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
-pub enum PaymentMethod {
-    Card(CardPaymentRequest),
+pub enum PaymentMethod<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
+    Card(CardPaymentRequest<T>),
 }
 #[derive(Serialize, Deserialize, Debug)]
-pub struct CardPaymentRequest {
+pub struct CardPaymentRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     #[serde(rename = "type")]
     pub payment_type: PaymentMethodType,
-    pub card: CardInfo,
+    pub card: CardInfo<T>,
     pub reusability: TransactionType,
     pub reference_id: Secret<String>,
 }
@@ -120,7 +151,7 @@ pub struct XenditPaymentResponse {
     pub payment_method: PaymentMethodInfo,
     pub failure_code: Option<String>,
     pub reference_id: Secret<String>,
-    pub amount: Option<FloatMajorUnit>,
+    pub amount: FloatMajorUnit,
     pub currency: Currency,
 }
 
@@ -142,12 +173,19 @@ impl TryFrom<&ConnectorAuthType> for XenditAuthType {
 
 // Basic Request Structure from Hyperswitch Xendit
 #[derive(Serialize, Deserialize, Debug, Default)]
-pub struct XenditPaymentsRequest {
+pub struct XenditPaymentsRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     pub amount: FloatMajorUnit,
     pub currency: common_enums::Currency,
     pub capture_method: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub payment_method: Option<PaymentMethod>,
+    pub payment_method: Option<PaymentMethod<T>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_method_id: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -229,7 +267,16 @@ pub struct XenditErrorResponse {
                                 // errors: Option<Vec<XenditErrorDetail>>
 }
 
-fn is_auto_capture(data: &PaymentsAuthorizeData) -> Result<bool, ConnectorError> {
+fn is_auto_capture<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
+    data: &PaymentsAuthorizeData<T>,
+) -> Result<bool, ConnectorError> {
     match data.capture_method {
         Some(common_enums::CaptureMethod::Automatic) | None => Ok(true),
         Some(common_enums::CaptureMethod::Manual) => Ok(false),
@@ -264,18 +311,51 @@ fn map_payment_response_to_attempt_status(
     }
 }
 
+impl From<PaymentStatus> for common_enums::AttemptStatus {
+    fn from(status: PaymentStatus) -> Self {
+        match status {
+            PaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            PaymentStatus::Succeeded | PaymentStatus::Verified => {
+                common_enums::AttemptStatus::Charged
+            }
+            PaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            PaymentStatus::RequiresAction => common_enums::AttemptStatus::AuthenticationPending,
+            PaymentStatus::AwaitingCapture => common_enums::AttemptStatus::Authorized,
+        }
+    }
+}
+
 // Transformer for Request: RouterData -> XenditPaymentsRequest
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         XenditRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
-    > for XenditPaymentsRequest
+    > for XenditPaymentsRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: XenditRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let card_data = match &item.router_data.request.payment_method_data {
@@ -290,13 +370,11 @@ impl
         let router_data = &item.router_data;
 
         let currency = item.router_data.request.currency;
-        let converter = FloatMajorUnitForConnector;
-        let amount = converter
-            .convert(
-                router_data.request.minor_amount,
-                router_data.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+        let amount = XenditAmountConvertor::convert(
+            router_data.request.minor_amount,
+            router_data.request.currency,
+        )
+        .change_context(ConnectorError::RequestEncodingFailed)?;
 
         let payment_method = Some(PaymentMethod::Card(CardPaymentRequest {
             payment_type: PaymentMethodType::CARD,
@@ -337,8 +415,16 @@ impl
     }
 }
 
-impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+impl<
+        F,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -354,7 +440,7 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
             is_auto_capture(&router_data.request)?,
         );
 
-        let response = if status == common_enums::AttemptStatus::Failure {
+        let payment_response = if status == common_enums::AttemptStatus::Failure {
             Err(ErrorResponse {
                 code: response
                     .failure_code
@@ -375,43 +461,52 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             })
         } else {
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
                 redirection_data: match response.actions {
-                    Some(actions) if !actions.is_empty() => {
-                        actions.first().map_or(Box::new(None), |single_action| {
-                            Box::new(Some(RedirectForm::Form {
-                                endpoint: single_action.url.clone(),
-                                method: match single_action.method {
-                                    MethodType::Get => Method::Get,
-                                    MethodType::Post => Method::Post,
-                                },
-                                form_fields: HashMap::new(),
-                            }))
+                    Some(actions) if !actions.is_empty() => actions.first().map(|single_action| {
+                        Box::new(RedirectForm::Form {
+                            endpoint: single_action.url.clone(),
+                            method: match single_action.method {
+                                MethodType::Get => Method::Get,
+                                MethodType::Post => Method::Post,
+                            },
+                            form_fields: HashMap::new(),
                         })
-                    }
-                    _ => Box::new(None),
+                    }),
+                    _ => None,
                 },
                 mandate_reference: match is_mandate_payment(&router_data.request) {
-                    true => Box::new(Some(MandateReference {
+                    true => Some(Box::new(MandateReference {
                         connector_mandate_id: Some(response.payment_method.id.expose()),
                         payment_method_id: None,
                     })),
-                    false => Box::new(None),
+                    false => None,
                 },
                 connector_metadata: None,
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.reference_id.peek().to_string()),
                 incremental_authorization_allowed: None,
-                raw_connector_response: None,
+                status_code: http_code,
             })
         };
 
+        let response_amount =
+            XenditAmountConvertor::convert_back(response.amount, response.currency)?;
+
+        let response_integrity_object = Some(AuthoriseIntegrityObject {
+            amount: response_amount,
+            currency: response.currency,
+        });
+
         Ok(Self {
-            response,
+            response: payment_response,
+            request: PaymentsAuthorizeData {
+                integrity_object: response_integrity_object,
+                ..router_data.request
+            },
             resource_common_data: PaymentFlowData {
                 status,
                 ..router_data.resource_common_data
@@ -458,20 +553,20 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
                         network_advice_code: None,
                         network_decline_code: None,
                         network_error_message: None,
-                        raw_connector_response: None,
                     })
                 } else {
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::NoResponseId,
-                        redirection_data: Box::new(None),
-                        mandate_reference: Box::new(None),
+                        redirection_data: None,
+                        mandate_reference: None,
                         connector_metadata: None,
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
-                        raw_connector_response: None,
+                        status_code: http_code,
                     })
                 };
+
                 Ok(Self {
                     response,
                     resource_common_data: PaymentFlowData {
@@ -505,10 +600,18 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
     }
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         XenditRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
         >,
     > for XenditPaymentsCaptureRequest
 {
@@ -516,19 +619,28 @@ impl
     fn try_from(
         item: XenditRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
-        let converter = FloatMajorUnitForConnector;
-        let amount = converter
-            .convert(
-                item.router_data.request.minor_amount_to_capture,
-                item.router_data.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+        let amount = XenditAmountConvertor::convert(
+            item.router_data.request.minor_amount_to_capture,
+            item.router_data.request.currency,
+        )
+        .change_context(ConnectorError::RequestEncodingFailed)?;
         Ok(Self {
             capture_amount: amount,
         })
     }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct XenditCaptureResponse {
+    pub id: String,
+    pub status: PaymentStatus,
+    pub actions: Option<Vec<Action>>,
+    pub payment_method: PaymentMethodInfo,
+    pub failure_code: Option<String>,
+    pub reference_id: Secret<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -536,61 +648,59 @@ pub struct XenditPaymentsCaptureRequest {
     pub capture_amount: FloatMajorUnit,
 }
 
-impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
+impl<F> TryFrom<ResponseRouterData<XenditCaptureResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<XenditPaymentResponse, Self>,
+        item: ResponseRouterData<XenditCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let ResponseRouterData {
-            response,
-            router_data,
-            http_code,
-        } = item;
-        let status = map_payment_response_to_attempt_status(response.clone(), true);
+        let status = common_enums::AttemptStatus::from(item.response.status);
         let response = if status == common_enums::AttemptStatus::Failure {
             Err(ErrorResponse {
-                code: response
+                code: item
+                    .response
                     .failure_code
                     .clone()
                     .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
-                message: response
+                message: item
+                    .response
                     .failure_code
                     .clone()
                     .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
                 reason: Some(
-                    response
+                    item.response
                         .failure_code
                         .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
                 ),
                 attempt_status: None,
                 connector_transaction_id: None,
-                status_code: http_code,
+                status_code: item.http_code,
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             })
         } else {
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::NoResponseId,
-                redirection_data: Box::new(None),
-                mandate_reference: Box::new(None),
+                redirection_data: None,
+                mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
-                connector_response_reference_id: Some(response.reference_id.peek().to_string()),
+                connector_response_reference_id: Some(
+                    item.response.reference_id.peek().to_string(),
+                ),
                 incremental_authorization_allowed: None,
-                raw_connector_response: None,
+                status_code: item.http_code,
             })
         };
         Ok(Self {
-            response,
             resource_common_data: PaymentFlowData {
                 status,
-                ..router_data.resource_common_data
+                ..item.router_data.resource_common_data
             },
-            ..router_data
+            response,
+            ..item.router_data
         })
     }
 }
@@ -602,20 +712,30 @@ pub struct XenditRefundRequest {
     pub reason: String,
 }
 
-impl<F> TryFrom<XenditRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>>>
+impl<
+        F,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<XenditRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
     for XenditRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: XenditRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>>,
+        item: XenditRouterData<
+            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
-        let converter = FloatMajorUnitForConnector;
-        let amount = converter
-            .convert(
-                item.router_data.request.minor_refund_amount,
-                item.router_data.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+        let amount = XenditAmountConvertor::convert(
+            item.router_data.request.minor_refund_amount,
+            item.router_data.request.currency,
+        )
+        .change_context(ConnectorError::RequestEncodingFailed)?;
         Ok(Self {
             amount: amount.to_owned(),
             payment_request_id: item.router_data.request.connector_transaction_id.clone(),
@@ -629,7 +749,7 @@ pub struct RefundResponse {
     pub id: String,
     pub status: RefundStatus,
     pub amount: FloatMajorUnit,
-    pub currency: String,
+    pub currency: Currency,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -650,14 +770,29 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
         let ResponseRouterData {
             response,
             router_data,
-            http_code: _http_code,
+            http_code,
         } = item;
+
+        let response_amount =
+            XenditAmountConvertor::convert_back(response.amount, response.currency)?;
+
+        let response_integrity_object = {
+            Some(RefundIntegrityObject {
+                refund_amount: response_amount,
+                currency: response.currency,
+            })
+        };
+
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: response.id,
                 refund_status: common_enums::RefundStatus::from(response.status),
-                raw_connector_response: None,
+                status_code: http_code,
             }),
+            request: RefundsData {
+                integrity_object: response_integrity_object,
+                ..router_data.request
+            },
             ..router_data
         })
     }
@@ -681,20 +816,29 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
         let ResponseRouterData {
             response,
             router_data,
-            http_code: _http_code,
+            http_code,
         } = item;
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: response.id,
                 refund_status: common_enums::RefundStatus::from(response.status),
-                raw_connector_response: None,
+                status_code: http_code,
             }),
             ..router_data
         })
     }
 }
 
-fn is_mandate_payment(item: &PaymentsAuthorizeData) -> bool {
+fn is_mandate_payment<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
+    item: &PaymentsAuthorizeData<T>,
+) -> bool {
     (item.setup_future_usage == Some(common_enums::enums::FutureUsage::OffSession))
         || item
             .mandate_id

@@ -5,16 +5,17 @@ use std::{
 
 use base64::Engine;
 use common_enums::{CurrencyUnit, PaymentMethodType};
-use common_utils::{consts, AmountConvertor, CustomResult, MinorUnit};
+use common_utils::{consts, metadata::MaskedMetadata, AmountConvertor, CustomResult, MinorUnit};
 use error_stack::{report, Result, ResultExt};
+use hyperswitch_masking::ExposeInterface;
 use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
 use time::PrimitiveDateTime;
 
 use crate::{
-    errors::{self, ParsingError},
-    payment_method_data::{Card, PaymentMethodData},
+    errors::{self, ApiError, ApplicationErrorResponse, ParsingError},
+    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::ErrorResponse,
     router_response_types::Response,
     types::PaymentMethodDataType,
@@ -103,7 +104,6 @@ pub fn handle_json_response_deserialization_failure(
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
-            raw_connector_response: Some(response_data),
         }),
     }
 }
@@ -170,7 +170,7 @@ pub fn base64_decode(
         .change_context(errors::ConnectorError::ResponseDeserializationFailed)
 }
 
-pub(crate) fn to_currency_base_unit(
+pub fn to_currency_base_unit(
     amount: i64,
     currency: common_enums::Currency,
 ) -> core::result::Result<String, error_stack::Report<errors::ConnectorError>> {
@@ -188,6 +188,13 @@ pub fn get_unimplemented_payment_method_error_message(connector: &str) -> String
 pub fn get_header_key_value<'a>(
     key: &str,
     headers: &'a actix_web::http::header::HeaderMap,
+) -> CustomResult<&'a str, errors::ConnectorError> {
+    get_header_field(headers.get(key))
+}
+
+pub fn get_http_header<'a>(
+    key: &str,
+    headers: &'a http::HeaderMap,
 ) -> CustomResult<&'a str, errors::ConnectorError> {
     get_header_field(headers.get(key))
 }
@@ -212,6 +219,7 @@ pub fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
         | common_enums::AttemptStatus::AuthorizationFailed
         | common_enums::AttemptStatus::CaptureFailed
         | common_enums::AttemptStatus::VoidFailed
+        | common_enums::AttemptStatus::Expired
         | common_enums::AttemptStatus::Failure => true,
         common_enums::AttemptStatus::Started
         | common_enums::AttemptStatus::RouterDeclined
@@ -222,7 +230,10 @@ pub fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
         | common_enums::AttemptStatus::Authorizing
         | common_enums::AttemptStatus::CodInitiated
         | common_enums::AttemptStatus::Voided
+        | common_enums::AttemptStatus::VoidedPostCapture
         | common_enums::AttemptStatus::VoidInitiated
+        | common_enums::AttemptStatus::VoidPostCaptureInitiated
+        | common_enums::AttemptStatus::PartiallyAuthorized
         | common_enums::AttemptStatus::CaptureInitiated
         | common_enums::AttemptStatus::AutoRefunded
         | common_enums::AttemptStatus::PartialCharged
@@ -237,10 +248,13 @@ pub fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
     }
 }
 
-pub fn get_card_details(
-    payment_method_data: PaymentMethodData,
+pub fn get_card_details<T>(
+    payment_method_data: PaymentMethodData<T>,
     connector_name: &'static str,
-) -> Result<Card, errors::ConnectorError> {
+) -> Result<Card<T>, errors::ConnectorError>
+where
+    T: PaymentMethodDataTypes,
+{
     match payment_method_data {
         PaymentMethodData::Card(details) => Ok(details),
         _ => Err(errors::ConnectorError::NotSupported {
@@ -250,12 +264,15 @@ pub fn get_card_details(
     }
 }
 
-pub fn is_mandate_supported(
-    selected_pmd: PaymentMethodData,
+pub fn is_mandate_supported<T>(
+    selected_pmd: PaymentMethodData<T>,
     payment_method_type: Option<PaymentMethodType>,
     mandate_implemented_pmds: HashSet<PaymentMethodDataType>,
     connector: &'static str,
-) -> core::result::Result<(), Error> {
+) -> core::result::Result<(), Error>
+where
+    T: PaymentMethodDataTypes,
+{
     if mandate_implemented_pmds.contains(&PaymentMethodDataType::from(selected_pmd.clone())) {
         Ok(())
     } else {
@@ -307,6 +324,33 @@ pub enum CardIssuer {
     CartesBancaires,
 }
 
+// Helper function for extracting connector request reference ID
+pub(crate) fn extract_connector_request_reference_id(
+    identifier: &Option<grpc_api_types::payments::Identifier>,
+) -> String {
+    identifier
+        .as_ref()
+        .and_then(|id| id.id_type.as_ref())
+        .and_then(|id_type| match id_type {
+            grpc_api_types::payments::identifier::IdType::Id(id) => Some(id.clone()),
+            _ => None,
+        })
+        .unwrap_or_default()
+}
+
+// Helper function for extracting connector request reference ID
+pub(crate) fn extract_optional_connector_request_reference_id(
+    identifier: &Option<grpc_api_types::payments::Identifier>,
+) -> Option<String> {
+    identifier
+        .as_ref()
+        .and_then(|id| id.id_type.as_ref())
+        .and_then(|id_type| match id_type {
+            grpc_api_types::payments::identifier::IdType::Id(id) => Some(id.clone()),
+            _ => None,
+        })
+}
+
 #[track_caller]
 pub fn get_card_issuer(card_number: &str) -> core::result::Result<CardIssuer, Error> {
     for (k, v) in CARD_REGEX.iter() {
@@ -346,3 +390,132 @@ static CARD_REGEX: LazyLock<HashMap<CardIssuer, core::result::Result<Regex, rege
         map.insert(CardIssuer::CarteBlanche, Regex::new(r"^389[0-9]{11}$"));
         map
     });
+
+/// Helper function for extracting merchant ID from metadata
+pub fn extract_merchant_id_from_metadata(
+    metadata: &MaskedMetadata,
+) -> Result<common_utils::id_type::MerchantId, ApplicationErrorResponse> {
+    let merchant_id_secret = metadata
+        .get(common_utils::consts::X_MERCHANT_ID)
+        .ok_or_else(|| {
+            ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_MERCHANT_ID".to_owned(),
+                error_identifier: 400,
+                error_message: "Missing merchant ID in request metadata".to_owned(),
+                error_object: None,
+            })
+        })?;
+
+    let merchant_id_str = merchant_id_secret.expose();
+
+    Ok(merchant_id_str
+        .parse::<common_utils::id_type::MerchantId>()
+        .map_err(|e| {
+            ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_MERCHANT_ID".to_owned(),
+                error_identifier: 400,
+                error_message: format!("Failed to parse merchant ID from header: {e}"),
+                error_object: None,
+            })
+        })?)
+}
+
+/// Convert US state names to their 2-letter abbreviations
+pub fn convert_us_state_to_code(state: &str) -> String {
+    // If already 2 characters, assume it's already an abbreviation
+    if state.len() == 2 {
+        return state.to_uppercase();
+    }
+
+    // Convert full state names to abbreviations (case-insensitive)
+    match state.to_lowercase().trim() {
+        "alabama" => "AL".to_string(),
+        "alaska" => "AK".to_string(),
+        "american samoa" => "AS".to_string(),
+        "arizona" => "AZ".to_string(),
+        "arkansas" => "AR".to_string(),
+        "california" => "CA".to_string(),
+        "colorado" => "CO".to_string(),
+        "connecticut" => "CT".to_string(),
+        "delaware" => "DE".to_string(),
+        "district of columbia" | "columbia" => "DC".to_string(),
+        "federated states of micronesia" | "micronesia" => "FM".to_string(),
+        "florida" => "FL".to_string(),
+        "georgia" => "GA".to_string(),
+        "guam" => "GU".to_string(),
+        "hawaii" => "HI".to_string(),
+        "idaho" => "ID".to_string(),
+        "illinois" => "IL".to_string(),
+        "indiana" => "IN".to_string(),
+        "iowa" => "IA".to_string(),
+        "kansas" => "KS".to_string(),
+        "kentucky" => "KY".to_string(),
+        "louisiana" => "LA".to_string(),
+        "maine" => "ME".to_string(),
+        "marshall islands" => "MH".to_string(),
+        "maryland" => "MD".to_string(),
+        "massachusetts" => "MA".to_string(),
+        "michigan" => "MI".to_string(),
+        "minnesota" => "MN".to_string(),
+        "mississippi" => "MS".to_string(),
+        "missouri" => "MO".to_string(),
+        "montana" => "MT".to_string(),
+        "nebraska" => "NE".to_string(),
+        "nevada" => "NV".to_string(),
+        "new hampshire" => "NH".to_string(),
+        "new jersey" => "NJ".to_string(),
+        "new mexico" => "NM".to_string(),
+        "new york" => "NY".to_string(),
+        "north carolina" => "NC".to_string(),
+        "north dakota" => "ND".to_string(),
+        "northern mariana islands" => "MP".to_string(),
+        "ohio" => "OH".to_string(),
+        "oklahoma" => "OK".to_string(),
+        "oregon" => "OR".to_string(),
+        "palau" => "PW".to_string(),
+        "pennsylvania" => "PA".to_string(),
+        "puerto rico" => "PR".to_string(),
+        "rhode island" => "RI".to_string(),
+        "south carolina" => "SC".to_string(),
+        "south dakota" => "SD".to_string(),
+        "tennessee" => "TN".to_string(),
+        "texas" => "TX".to_string(),
+        "utah" => "UT".to_string(),
+        "vermont" => "VT".to_string(),
+        "virgin islands" => "VI".to_string(),
+        "virginia" => "VA".to_string(),
+        "washington" => "WA".to_string(),
+        "west virginia" => "WV".to_string(),
+        "wisconsin" => "WI".to_string(),
+        "wyoming" => "WY".to_string(),
+        // If no match found, return original (might be international or invalid)
+        _ => state.to_string(),
+    }
+}
+
+/// Convert Canadian province/territory names to their 2-letter abbreviations
+pub fn convert_canada_state_to_code(state: &str) -> String {
+    // If already 2 characters, assume it's already an abbreviation
+    if state.len() == 2 {
+        return state.to_uppercase();
+    }
+
+    // Convert full province/territory names to abbreviations (case-insensitive)
+    match state.to_lowercase().trim() {
+        "alberta" => "AB".to_string(),
+        "british columbia" => "BC".to_string(),
+        "manitoba" => "MB".to_string(),
+        "new brunswick" => "NB".to_string(),
+        "newfoundland and labrador" | "newfoundland" => "NL".to_string(),
+        "northwest territories" => "NT".to_string(),
+        "nova scotia" => "NS".to_string(),
+        "nunavut" => "NU".to_string(),
+        "ontario" => "ON".to_string(),
+        "prince edward island" => "PE".to_string(),
+        "quebec" | "québec" => "QC".to_string(),
+        "saskatchewan" => "SK".to_string(),
+        "yukon" => "YT".to_string(),
+        // If no match found, return original
+        _ => state.to_string(),
+    }
+}

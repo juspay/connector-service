@@ -4,9 +4,13 @@ use cards::{
     validate::{CardExpirationMonth, CardExpirationYear},
     NetworkToken,
 };
-use common_utils::ext_traits::{OptionExt, ValueExt};
+use common_utils::{
+    errors::ValidationError,
+    ext_traits::{OptionExt, ValueExt},
+    MinorUnit,
+};
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 
 use crate::utils::missing_field_err;
 
@@ -146,7 +150,6 @@ pub struct ErrorResponse {
     pub network_decline_code: Option<String>,
     pub network_advice_code: Option<String>,
     pub network_error_message: Option<String>,
-    pub raw_connector_response: Option<String>,
 }
 
 impl Default for ErrorResponse {
@@ -161,7 +164,6 @@ impl Default for ErrorResponse {
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
-            raw_connector_response: None,
         }
     }
 }
@@ -178,7 +180,6 @@ impl ErrorResponse {
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
-            raw_connector_response: None,
         }
     }
 }
@@ -193,32 +194,41 @@ pub struct ApplePayCryptogramData {
 #[derive(Debug, Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ApplePayPredecryptData {
-    pub application_primary_account_number: Secret<String>,
-    pub application_expiration_date: String,
+    pub application_primary_account_number: cards::CardNumber,
+    pub application_expiration_month: Secret<String>,
+    pub application_expiration_year: Secret<String>,
     pub currency_code: String,
-    pub transaction_amount: i64,
+    pub transaction_amount: MinorUnit,
     pub device_manufacturer_identifier: Secret<String>,
     pub payment_data_type: Secret<String>,
     pub payment_data: ApplePayCryptogramData,
 }
 
 impl ApplePayPredecryptData {
-    pub fn get_four_digit_expiry_year(&self) -> Result<Secret<String>, Error> {
-        Ok(Secret::new(format!(
-            "20{}",
-            self.application_expiration_date
-                .get(0..2)
-                .ok_or(crate::errors::ConnectorError::RequestEncodingFailed)?
-        )))
+    /// Get the four-digit expiration year from the Apple Pay pre-decrypt data
+    pub fn get_four_digit_expiry_year(&self) -> Secret<String> {
+        let mut year = self.application_expiration_year.peek().clone();
+        if year.len() == 2 {
+            year = format!("20{year}");
+        }
+        Secret::new(year)
     }
 
-    pub fn get_expiry_month(&self) -> Result<Secret<String>, Error> {
-        Ok(Secret::new(
-            self.application_expiration_date
-                .get(2..4)
-                .ok_or(crate::errors::ConnectorError::RequestEncodingFailed)?
-                .to_owned(),
-        ))
+    /// Get the expiration month from the Apple Pay pre-decrypt data
+    pub fn get_expiry_month(&self) -> Result<Secret<String>, ValidationError> {
+        let month_str = self.application_expiration_month.peek();
+        let month = month_str
+            .parse::<u8>()
+            .map_err(|_| ValidationError::InvalidValue {
+                message: format!("Failed to parse expiry month: {month_str}"),
+            })?;
+
+        if !(1..=12).contains(&month) {
+            return Err(ValidationError::InvalidValue {
+                message: format!("Invalid expiry month: {month}. Must be between 1 and 12"),
+            });
+        }
+        Ok(self.application_expiration_month.clone())
     }
 }
 
@@ -333,4 +343,65 @@ impl RecurringMandatePaymentData {
         self.original_payment_authorized_currency
             .ok_or_else(missing_field_err("original_payment_authorized_currency"))
     }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ConnectorResponseData {
+    pub additional_payment_method_data: Option<AdditionalPaymentMethodConnectorResponse>,
+    extended_authorization_response_data: Option<ExtendedAuthorizationResponseData>,
+    is_overcapture_enabled: Option<bool>,
+}
+
+impl ConnectorResponseData {
+    pub fn with_additional_payment_method_data(
+        additional_payment_method_data: AdditionalPaymentMethodConnectorResponse,
+    ) -> Self {
+        Self {
+            additional_payment_method_data: Some(additional_payment_method_data),
+            extended_authorization_response_data: None,
+            is_overcapture_enabled: None,
+        }
+    }
+    pub fn new(
+        additional_payment_method_data: Option<AdditionalPaymentMethodConnectorResponse>,
+        is_overcapture_enabled: Option<bool>,
+        extended_authorization_response_data: Option<ExtendedAuthorizationResponseData>,
+    ) -> Self {
+        Self {
+            additional_payment_method_data,
+            extended_authorization_response_data,
+            is_overcapture_enabled,
+        }
+    }
+
+    pub fn get_extended_authorization_response_data(
+        &self,
+    ) -> Option<&ExtendedAuthorizationResponseData> {
+        self.extended_authorization_response_data.as_ref()
+    }
+
+    pub fn is_overcapture_enabled(&self) -> Option<bool> {
+        self.is_overcapture_enabled
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub enum AdditionalPaymentMethodConnectorResponse {
+    Card {
+        /// Details regarding the authentication details of the connector, if this is a 3ds payment.
+        authentication_data: Option<serde_json::Value>,
+        /// Various payment checks that are done for a payment
+        payment_checks: Option<serde_json::Value>,
+        /// Card Network returned by the processor
+        card_network: Option<String>,
+        /// Domestic(Co-Branded) Card network returned by the processor
+        domestic_network: Option<String>,
+    },
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ExtendedAuthorizationResponseData {
+    pub extended_authentication_applied: Option<bool>,
+    pub extended_authorization_last_applied_at: Option<time::PrimitiveDateTime>,
+    pub capture_before: Option<time::PrimitiveDateTime>,
 }

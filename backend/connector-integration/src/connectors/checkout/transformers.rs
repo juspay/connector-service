@@ -12,7 +12,7 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     errors::{self, ConnectorError},
-    payment_method_data::PaymentMethodData,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
@@ -53,10 +53,17 @@ pub enum CheckoutSourceTypes {
 
 // Card source structure
 #[derive(Debug, Serialize)]
-pub struct CardSource {
+pub struct CardSource<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     #[serde(rename = "type")]
     pub source_type: CheckoutSourceTypes,
-    pub number: cards::CardNumber,
+    pub number: RawCardNumber<T>,
     pub expiry_month: Secret<String>,
     pub expiry_year: Secret<String>,
     pub cvv: Secret<String>,
@@ -64,8 +71,15 @@ pub struct CardSource {
 
 // Simple payment request structure
 #[derive(Debug, Serialize)]
-pub struct CheckoutPaymentsRequest {
-    pub source: CardSource,
+pub struct CheckoutPaymentsRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
+    pub source: CardSource<T>,
     pub amount: MinorUnit,
     pub currency: String,
     pub processing_channel_id: Secret<String>,
@@ -374,17 +388,36 @@ impl TryFrom<&ConnectorAuthType> for CheckoutAuthType {
 }
 
 // Payment request conversion
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         super::CheckoutRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
-    > for CheckoutPaymentsRequest
+    > for CheckoutPaymentsRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: super::CheckoutRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -432,19 +465,27 @@ impl
 }
 
 // Payment response conversion
-impl<F>
+impl<
+        F,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         ResponseRouterData<
             CheckoutPaymentsResponse,
-            RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         >,
-    > for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+    > for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<
             CheckoutPaymentsResponse,
-            RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
@@ -476,7 +517,6 @@ impl<F>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             });
         } else {
             let connector_meta =
@@ -485,13 +525,13 @@ impl<F>
             // Handle successful response
             router_data.response = Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
-                redirection_data: Box::new(None),
-                mandate_reference: Box::new(None),
+                redirection_data: None,
+                mandate_reference: None,
                 connector_metadata: Some(connector_meta),
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.reference.unwrap_or(response.id)),
                 incremental_authorization_allowed: None,
-                raw_connector_response: None,
+                status_code: http_code,
             });
         }
 
@@ -500,10 +540,18 @@ impl<F>
 }
 
 // Implementation for PaymentCaptureRequest
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         super::CheckoutRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
         >,
     > for PaymentCaptureRequest
 {
@@ -511,6 +559,7 @@ impl
     fn try_from(
         item: super::CheckoutRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -542,10 +591,18 @@ impl
 }
 
 // Implementation for RefundRequest
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         super::CheckoutRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
         >,
     > for RefundRequest
 {
@@ -553,6 +610,7 @@ impl
     fn try_from(
         item: super::CheckoutRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -563,10 +621,18 @@ impl
 }
 
 // Implementation for PaymentVoidRequest with the router data generated by the macro
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         super::CheckoutRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
         >,
     > for PaymentVoidRequest
 {
@@ -574,6 +640,7 @@ impl
     fn try_from(
         item: super::CheckoutRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let connector_transaction_id = item.router_data.request.connector_transaction_id.clone();
@@ -671,13 +738,13 @@ impl<F>
 
         router_data.response = Ok(PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(resource_id),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: Some(connector_meta),
             network_txn_id: None,
             connector_response_reference_id: response.reference,
             incremental_authorization_allowed: None,
-            raw_connector_response: None,
+            status_code: http_code,
         });
 
         Ok(router_data)
@@ -722,13 +789,13 @@ impl<F>
 
         router_data.response = Ok(PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(response.action_id.clone()),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: Some(connector_meta),
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
-            raw_connector_response: None,
+            status_code: http_code,
         });
 
         Ok(router_data)
@@ -787,7 +854,6 @@ impl<F>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             });
         } else {
             // Always include the connector metadata in the response
@@ -798,13 +864,13 @@ impl<F>
 
             router_data.response = Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
-                redirection_data: Box::new(None),
-                mandate_reference: Box::new(None),
+                redirection_data: None,
+                mandate_reference: None,
                 connector_metadata: Some(connector_meta),
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.reference.unwrap_or(response.id)),
                 incremental_authorization_allowed: None,
-                raw_connector_response: None,
+                status_code: http_code,
             });
         }
 
@@ -847,7 +913,7 @@ impl<F>
         router_data.response = Ok(RefundsResponseData {
             connector_refund_id: checkout_refund_response.response.action_id,
             refund_status,
-            raw_connector_response: None,
+            status_code: http_code,
         });
 
         Ok(router_data)
@@ -873,7 +939,7 @@ impl<F>
         let ResponseRouterData {
             response,
             router_data,
-            http_code: _,
+            http_code,
         } = item;
 
         // Get the refund status using the From implementation
@@ -883,7 +949,7 @@ impl<F>
         router_data.response = Ok(RefundsResponseData {
             connector_refund_id: response.action_id,
             refund_status,
-            raw_connector_response: None,
+            status_code: http_code,
         });
 
         Ok(router_data)
@@ -891,10 +957,18 @@ impl<F>
 }
 
 // Implementation for CheckoutSyncRequest with CheckoutRouterData - needed for PSync flow
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         super::CheckoutRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     > for CheckoutSyncRequest
 {
@@ -902,6 +976,7 @@ impl
     fn try_from(
         _item: super::CheckoutRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {})
@@ -909,10 +984,18 @@ impl
 }
 
 // Implementation for CheckoutRefundSyncRequest with CheckoutRouterData
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         super::CheckoutRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
         >,
     > for CheckoutRefundSyncRequest
 {
@@ -920,6 +1003,7 @@ impl
     fn try_from(
         _item: super::CheckoutRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {})
@@ -945,7 +1029,7 @@ impl<F>
         let ResponseRouterData {
             response,
             router_data,
-            http_code: _,
+            http_code,
         } = item;
 
         // Get the refund status using the From implementation
@@ -955,7 +1039,7 @@ impl<F>
         router_data.response = Ok(RefundsResponseData {
             connector_refund_id: response.action_id.clone(),
             refund_status,
-            raw_connector_response: None,
+            status_code: http_code,
         });
 
         Ok(router_data)

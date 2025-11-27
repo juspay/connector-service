@@ -6,13 +6,28 @@ pub mod errors;
 pub mod ext_traits;
 pub mod fp_utils;
 pub mod id_type;
+pub mod lineage;
 pub mod macros;
+pub mod metadata;
 pub mod new_types;
 pub mod pii;
 pub mod request;
 pub mod types;
 // Re-export commonly used items
-pub use errors::{CustomResult, ParsingError, ValidationError};
+pub use errors::{CustomResult, EventPublisherError, ParsingError, ValidationError};
+#[cfg(feature = "kafka")]
+pub use event_publisher::{emit_event_with_config, init_event_publisher};
+
+#[cfg(not(feature = "kafka"))]
+pub fn init_event_publisher(_config: &events::EventConfig) -> CustomResult<(), ()> {
+    Ok(())
+}
+#[cfg(not(feature = "kafka"))]
+pub fn emit_event_with_config(_event: events::Event, _config: &events::EventConfig) {
+    // No-op when kafka feature is disabled
+}
+
+pub use global_id::{CellId, GlobalPaymentId};
 pub use id_type::{CustomerId, MerchantId};
 pub use pii::{Email, SecretSerdeValue};
 pub use request::{Method, Request, RequestContent};
@@ -24,6 +39,8 @@ pub mod events;
 pub mod global_id;
 
 pub mod consts;
+#[cfg(feature = "kafka")]
+pub mod event_publisher;
 
 fn generate_ref_id_with_default_length<const MAX_LENGTH: u8, const MIN_LENGTH: u8>(
     prefix: &str,

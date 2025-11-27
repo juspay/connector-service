@@ -789,7 +789,6 @@ impl From<ApiErrorResponse> for crate::router_data::ErrorResponse {
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
-            raw_connector_response: None,
         }
     }
 }
@@ -806,7 +805,7 @@ pub enum ConnectorError {
     RequestEncodingFailedWithReason(String),
     #[error("Parsing failed")]
     ParsingFailed,
-    #[error("Integrity check failed")]
+    #[error("Integrity check failed: {field_names}")]
     IntegrityCheckFailed {
         field_names: String,
         connector_transaction_id: Option<String>,
@@ -922,6 +921,8 @@ pub enum ConnectorError {
         error_message: String,
         error_object: serde_json::Value,
     },
+    #[error("Field {fields} doesn't match with the ones used during mandate creation")]
+    MandatePaymentDataMismatch { fields: String },
 }
 
 impl ConnectorError {

@@ -1,17 +1,16 @@
-use std::sync::Arc;
+use std::fmt::Debug;
 
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
-    connector_flow::{FlowName, RSync},
+    connector_flow::{FlowName as DomainFlowName, RSync},
     connector_types::{RefundFlowData, RefundSyncData, RefundsResponseData},
     errors::{ApiError, ApplicationErrorResponse},
+    payment_method_data::DefaultPCIHolder,
     router_data::ConnectorAuthType,
-    types::generate_refund_sync_response,
     utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
-use external_services;
 use grpc_api_types::payments::{
     refund_service_server::RefundService, RefundResponse, RefundServiceGetRequest,
     RefundServiceTransformRequest, RefundServiceTransformResponse, WebhookEventType,
@@ -19,23 +18,21 @@ use grpc_api_types::payments::{
 };
 
 use crate::{
-    configs::Config,
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
-    utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
+    request::RequestData,
+    utils,
 };
 // Helper trait for refund operations
 trait RefundOperationsInternal {
     async fn internal_get(
         &self,
-        request: tonic::Request<RefundServiceGetRequest>,
+        request: RequestData<RefundServiceGetRequest>,
     ) -> Result<tonic::Response<RefundResponse>, tonic::Status>;
 }
 
-#[derive(Debug)]
-pub struct Refunds {
-    pub config: Arc<Config>,
-}
+#[derive(Debug, Clone)]
+pub struct Refunds;
 
 impl RefundOperationsInternal for Refunds {
     implement_connector_operation!(
@@ -49,7 +46,7 @@ impl RefundOperationsInternal for Refunds {
         response_data_type: RefundsResponseData,
         request_data_constructor: RefundSyncData::foreign_try_from,
         common_flow_data_constructor: RefundFlowData::foreign_try_from,
-        generate_response_fn: generate_refund_sync_response,
+        generate_response_fn: domain_types::types::generate_refund_sync_response,
         all_keys_required: None
     );
 }
@@ -61,7 +58,7 @@ impl RefundService for Refunds {
         fields(
             name = common_utils::consts::NAME,
             service_name = tracing::field::Empty,
-            service_method = FlowName::Rsync.to_string(),
+            service_method = DomainFlowName::Rsync.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -72,7 +69,7 @@ impl RefundService for Refunds {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::Rsync.to_string(),
+            flow = DomainFlowName::Rsync.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -81,7 +78,20 @@ impl RefundService for Refunds {
         &self,
         request: tonic::Request<RefundServiceGetRequest>,
     ) -> Result<tonic::Response<RefundResponse>, tonic::Status> {
-        self.internal_get(request).await
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "RefundService".to_string());
+        let config = utils::get_config_from_request(&request)?;
+        Box::pin(utils::grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            common_utils::events::FlowName::Rsync,
+            |request_data| async move { self.internal_get(request_data).await },
+        ))
+        .await
     }
 
     #[tracing::instrument(
@@ -89,7 +99,7 @@ impl RefundService for Refunds {
         fields(
             name = common_utils::consts::NAME,
             service_name = tracing::field::Empty,
-            service_method = FlowName::IncomingWebhook.to_string(),
+            service_method = DomainFlowName::IncomingWebhook.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -100,80 +110,85 @@ impl RefundService for Refunds {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::IncomingWebhook.to_string(),
+            flow = DomainFlowName::IncomingWebhook.to_string(),
         )
     )]
     async fn transform(
         &self,
         request: tonic::Request<RefundServiceTransformRequest>,
     ) -> Result<tonic::Response<RefundServiceTransformResponse>, tonic::Status> {
+        let config = utils::get_config_from_request(&request)?;
         let service_name = request
             .extensions()
             .get::<String>()
             .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
-        grpc_logging_wrapper(request, &service_name, |request| async {
-            let connector =
-                connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-            let connector_auth_details =
-                auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-            let payload = request.into_inner();
+            .unwrap_or_else(|| "RefundService".to_string());
+        utils::grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            common_utils::events::FlowName::IncomingWebhook,
+            |request_data| async move {
+                let payload = request_data.payload;
+                let connector = request_data.extracted_metadata.connector;
+                let connector_auth_details = request_data.extracted_metadata.connector_auth_type;
 
-            let request_details = payload
-                .request_details
-                .map(domain_types::connector_types::RequestDetails::foreign_try_from)
-                .ok_or_else(|| {
-                    tonic::Status::invalid_argument("missing request_details in the payload")
-                })?
-                .map_err(|e| e.into_grpc_status())?;
+                let request_details = payload
+                    .request_details
+                    .map(domain_types::connector_types::RequestDetails::foreign_try_from)
+                    .ok_or_else(|| {
+                        tonic::Status::invalid_argument("missing request_details in the payload")
+                    })?
+                    .map_err(|e| e.into_grpc_status())?;
 
-            let webhook_secrets = payload
-                .webhook_secrets
-                .map(|details| {
-                    domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
-                        details,
+                let webhook_secrets = payload
+                    .webhook_secrets
+                    .map(|details| {
+                        domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
+                            details,
+                        )
+                        .map_err(|e| e.into_grpc_status())
+                    })
+                    .transpose()?;
+
+                // Get connector data
+                let connector_data = ConnectorData::get_connector_by_name(&connector);
+
+                let source_verified = connector_data
+                    .connector
+                    .verify_webhook_source(
+                        request_details.clone(),
+                        webhook_secrets.clone(),
+                        Some(connector_auth_details.clone()),
                     )
-                    .map_err(|e| e.into_grpc_status())
-                })
-                .transpose()?;
+                    .switch()
+                    .map_err(|e| e.into_grpc_status())?;
 
-            // Get connector data
-            let connector_data = ConnectorData::get_connector_by_name(&connector);
-
-            let source_verified = connector_data
-                .connector
-                .verify_webhook_source(
-                    request_details.clone(),
-                    webhook_secrets.clone(),
-                    Some(connector_auth_details.clone()),
+                let content = get_refunds_webhook_content(
+                    connector_data,
+                    request_details,
+                    webhook_secrets,
+                    Some(connector_auth_details),
                 )
-                .switch()
+                .await
                 .map_err(|e| e.into_grpc_status())?;
 
-            let content = get_refunds_webhook_content(
-                connector_data,
-                request_details,
-                webhook_secrets,
-                Some(connector_auth_details),
-            )
-            .await
-            .map_err(|e| e.into_grpc_status())?;
+                let response = RefundServiceTransformResponse {
+                    event_type: WebhookEventType::WebhookRefundSuccess.into(),
+                    content: Some(content),
+                    source_verified,
+                    response_ref_id: None,
+                };
 
-            let response = RefundServiceTransformResponse {
-                event_type: WebhookEventType::WebhookRefund.into(),
-                content: Some(content),
-                source_verified,
-                response_ref_id: None,
-            };
-
-            Ok(tonic::Response::new(response))
-        })
+                Ok(tonic::Response::new(response))
+            },
+        )
         .await
     }
 }
 
 async fn get_refunds_webhook_content(
-    connector_data: ConnectorData,
+    connector_data: ConnectorData<DefaultPCIHolder>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,

@@ -1,5 +1,5 @@
 [package]
-name = "cards"
+name = "ucs_cards"
 description = "Types to handle card masking and validation"
 version = "0.1.0"
 edition = "2021"
@@ -10,10 +10,12 @@ serde = { version = "1.0.189", features = ["derive"] }
 thiserror = "1.0.69"
 time = "0.3.41"
 regex = "1.11.1"
+bytes = "1"
+prost = "0.13"
 
 # First party crates
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "masking" }
-common_utils = { path = "../common_utils" }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking" }
+common_utils = { path = "../common_utils", package = "ucs_common_utils" }
 
 
 [dev-dependencies]

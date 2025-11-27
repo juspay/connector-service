@@ -1,27 +1,36 @@
 pub mod transformers;
 
+use std::fmt::Debug;
+
 use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
+    events,
     ext_traits::ByteSliceExt,
-    request::RequestContent,
     types::FloatMajorUnit,
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
+        SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
-        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
+    payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
@@ -30,12 +39,12 @@ use domain_types::{
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
+use serde::Serialize;
 use transformers::{
-    self as xendit, RefundResponse, RefundResponse as RefundSyncResponse, XenditErrorResponse,
-    XenditPaymentResponse, XenditPaymentResponse as XenditCaptureResponse,
-    XenditPaymentsCaptureRequest, XenditPaymentsRequest, XenditRefundRequest, XenditResponse,
+    self as xendit, RefundResponse, RefundResponse as RefundSyncResponse, XenditCaptureResponse,
+    XenditErrorResponse, XenditPaymentResponse, XenditPaymentsCaptureRequest,
+    XenditPaymentsRequest, XenditRefundRequest, XenditResponse,
 };
 
 use super::macros;
@@ -50,114 +59,240 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
-impl ConnectorCommon for Xendit {
-    fn id(&self) -> &'static str {
-        "xendit"
-    }
-
-    fn get_currency_unit(&self) -> CurrencyUnit {
-        CurrencyUnit::Base
-    }
-
-    fn common_get_content_type(&self) -> &'static str {
-        "application/json"
-    }
-
-    fn get_auth_header(
-        &self,
-        auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let auth = xendit::XenditAuthType::try_from(auth_type)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-        let encoded_api_key = BASE64_ENGINE.encode(format!("{}:", auth.api_key.peek()));
-
-        Ok(vec![(
-            headers::AUTHORIZATION.to_string(),
-            format!("Basic {encoded_api_key}").into_masked(),
-        )])
-    }
-
-    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
-        ""
-    }
-
-    fn build_error_response(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: XenditErrorResponse = res
-            .response
-            .parse_struct("XenditErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        with_error_response_body!(event_builder, response);
-
-        Ok(ErrorResponse {
-            status_code: res.status_code,
-            code: response
-                .error_code
-                .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
-            message: response
-                .message
-                .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
-            reason: response.reason,
-            attempt_status: None,
-            connector_transaction_id: None,
-            network_advice_code: None,
-            network_decline_code: None,
-            network_error_message: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
-        })
-    }
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::ConnectorServiceTrait<T> for Xendit<T>
+{
 }
 
-//marker traits
-impl connector_types::ConnectorServiceTrait for Xendit {}
-impl connector_types::PaymentAuthorizeV2 for Xendit {}
-impl connector_types::PaymentSyncV2 for Xendit {}
-impl connector_types::PaymentVoidV2 for Xendit {}
-impl connector_types::RefundSyncV2 for Xendit {}
-impl connector_types::RefundV2 for Xendit {}
-impl connector_types::PaymentCapture for Xendit {}
-impl connector_types::ValidationTrait for Xendit {}
-impl connector_types::PaymentOrderCreate for Xendit {}
-impl connector_types::SetupMandateV2 for Xendit {}
-impl connector_types::AcceptDispute for Xendit {}
-impl connector_types::SubmitEvidenceV2 for Xendit {}
-impl connector_types::DisputeDefend for Xendit {}
-impl connector_types::IncomingWebhook for Xendit {}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentSessionToken for Xendit<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAccessToken for Xendit<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::CreateConnectorCustomer for Xendit<T>
+{
+}
 
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentAuthorizeV2<T> for Xendit<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentSyncV2 for Xendit<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentVoidV2 for Xendit<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RefundSyncV2 for Xendit<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RefundV2 for Xendit<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentCapture for Xendit<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::SetupMandateV2<T> for Xendit<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::AcceptDispute for Xendit<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::SubmitEvidenceV2 for Xendit<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::DisputeDefend for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RepeatPaymentV2 for Xendit<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentVoidPostCaptureV2 for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentTokenV2<T> for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentPreAuthenticateV2<T> for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentAuthenticateV2<T> for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentPostAuthenticateV2<T> for Xendit<T>
+{
+}
+
+macros::create_amount_converter_wrapper!(connector_name: Xendit, amount_type: FloatMajorUnit);
 macros::create_all_prerequisites!(
-    connector_name: Xendit,
+    connector_name:  Xendit,
+    generic_type: T,
     api: [
         (
             flow: Authorize,
-            request_body: XenditPaymentsRequest,
+            request_body: XenditPaymentsRequest<T>,
             response_body: XenditPaymentResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: PSync,
             response_body: XenditResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
             flow: Capture,
             request_body: XenditPaymentsCaptureRequest,
             response_body: XenditCaptureResponse,
-            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ),
         (
             flow: Refund,
             request_body: XenditRefundRequest,
             response_body: RefundResponse,
-            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
         (
             flow: RSync,
             response_body: RefundSyncResponse,
-            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
     amount_converters: [
@@ -196,6 +331,75 @@ macros::create_all_prerequisites!(
     }
 );
 
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorCommon for Xendit<T>
+{
+    fn id(&self) -> &'static str {
+        "xendit"
+    }
+
+    fn get_currency_unit(&self) -> CurrencyUnit {
+        CurrencyUnit::Base
+    }
+
+    fn common_get_content_type(&self) -> &'static str {
+        "application/json"
+    }
+
+    fn get_auth_header(
+        &self,
+        auth_type: &ConnectorAuthType,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let auth = xendit::XenditAuthType::try_from(auth_type)
+            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+        let encoded_api_key = BASE64_ENGINE.encode(format!("{}:", auth.api_key.peek()));
+
+        Ok(vec![(
+            headers::AUTHORIZATION.to_string(),
+            format!("Basic {encoded_api_key}").into_masked(),
+        )])
+    }
+
+    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
+        ""
+    }
+
+    fn build_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        let response: XenditErrorResponse = res
+            .response
+            .parse_struct("XenditErrorResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        with_error_response_body!(event_builder, response);
+
+        Ok(ErrorResponse {
+            status_code: res.status_code,
+            code: response
+                .error_code
+                .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
+            message: response
+                .message
+                .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
+            reason: response.reason,
+            attempt_status: None,
+            connector_transaction_id: None,
+            network_advice_code: None,
+            network_decline_code: None,
+            network_error_message: None,
+        })
+    }
+}
+
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Xendit,
@@ -203,26 +407,27 @@ macros::macro_connector_implementation!(
     curl_response: XenditResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
-    flow_request: PaymentsAuthorizeData,
+    flow_request: PaymentsAuthorizeData<T>,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}/payment_requests", self.connector_base_url_payments(req)))
         }
     }
 );
 
-// Macro implementations for PSync, Capture, Refund, and RSync flows
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Xendit,
@@ -232,6 +437,8 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsSyncData,
     flow_response: PaymentsResponseData,
     http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -267,6 +474,8 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsCaptureData,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -301,6 +510,8 @@ macros::macro_connector_implementation!(
     flow_request: RefundsData,
     flow_response: RefundsResponseData,
     http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -329,6 +540,8 @@ macros::macro_connector_implementation!(
     flow_request: RefundSyncData,
     flow_response: RefundsResponseData,
     http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -349,154 +562,600 @@ macros::macro_connector_implementation!(
     }
 );
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::ValidationTrait for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentOrderCreate for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Xendit
+    > for Xendit<T>
 {
 }
 
-impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Xendit
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Xendit<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Xendit
+    for Xendit<T>
 {
 }
 
-impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Xendit
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Xendit<T>
 {
 }
 
-impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Xendit
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Xendit<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Xendit<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     ConnectorIntegrationV2<
         SetupMandate,
         PaymentFlowData,
-        SetupMandateRequestData,
+        SetupMandateRequestData<T>,
         PaymentsResponseData,
-    > for Xendit
+    > for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Xendit<T>
 {
 }
 
 // SourceVerification implementations for all flows
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         Authorize,
         PaymentFlowData,
-        PaymentsAuthorizeData,
+        PaymentsAuthorizeData<T>,
         PaymentsResponseData,
-    > for Xendit
+    > for Xendit<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         PSync,
         PaymentFlowData,
         PaymentsSyncData,
         PaymentsResponseData,
-    > for Xendit
+    > for Xendit<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         Capture,
         PaymentFlowData,
         PaymentsCaptureData,
         PaymentsResponseData,
-    > for Xendit
+    > for Xendit<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         Void,
         PaymentFlowData,
         PaymentVoidData,
         PaymentsResponseData,
-    > for Xendit
+    > for Xendit<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         Refund,
         RefundFlowData,
         RefundsData,
         RefundsResponseData,
-    > for Xendit
+    > for Xendit<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         RSync,
         RefundFlowData,
         RefundSyncData,
         RefundsResponseData,
-    > for Xendit
+    > for Xendit<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         SetupMandate,
         PaymentFlowData,
-        SetupMandateRequestData,
+        SetupMandateRequestData<T>,
         PaymentsResponseData,
-    > for Xendit
+    > for Xendit<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         Accept,
         DisputeFlowData,
         AcceptDisputeData,
         DisputeResponseData,
-    > for Xendit
+    > for Xendit<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         SubmitEvidence,
         DisputeFlowData,
         SubmitEvidenceData,
         DisputeResponseData,
-    > for Xendit
+    > for Xendit<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         DefendDispute,
         DisputeFlowData,
         DisputeDefendData,
         DisputeResponseData,
-    > for Xendit
+    > for Xendit<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         CreateOrder,
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Xendit
+    > for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::IncomingWebhook for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Xendit<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Xendit<T>
 {
 }
