@@ -104,6 +104,12 @@ pub enum ContractType {
     Cit,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum NexixpayPaymentRequestActionType {
+    Verify,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RecurrenceRequest {
@@ -126,6 +132,8 @@ pub struct NexixpayPaymentsRequest {
     #[serde(rename = "threeDSAuthData")]
     pub three_ds_auth_data: Option<NexixpayThreeDSAuthData>,
     pub recurrence: RecurrenceRequest,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub action_type: Option<NexixpayPaymentRequestActionType>,
 }
 
 #[derive(Debug, Serialize)]
@@ -319,6 +327,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             contract_type: None,
         };
 
+        // Set action_type to VERIFY for zero-amount transactions (setup mandate/card verification)
+        let action_type = if item.request.minor_amount == MinorUnit::zero() {
+            Some(NexixpayPaymentRequestActionType::Verify)
+        } else {
+            None
+        };
+
         Ok(Self {
             operation_id,
             order,
@@ -326,6 +341,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             capture_type,
             three_ds_auth_data,
             recurrence,
+            action_type,
         })
     }
 }
@@ -941,6 +957,8 @@ pub struct NexixpayPreAuthenticateRequest {
     pub card: NexixpayPreAuthCardData,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub recurrence: Option<NexixpayRecurrence>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub action_type: Option<NexixpayPaymentRequestActionType>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1165,10 +1183,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             contract_type: None,
         });
 
+        // Set action_type to VERIFY for zero-amount transactions (setup mandate/card verification)
+        let action_type = if item.request.amount == MinorUnit::zero() {
+            Some(NexixpayPaymentRequestActionType::Verify)
+        } else {
+            None
+        };
+
         Ok(Self {
             order,
             card,
             recurrence,
+            action_type,
         })
     }
 }
