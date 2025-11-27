@@ -1443,8 +1443,9 @@ message PaymentServiceAuthorizeOnlyRequest {
 
   // Payment Method Token
   optional string payment_method_token = 40;
-  // Access Token
-  optional string access_token = 41;
+
+  // Send the connector order identifier here if an order was created before authorize
+  optional string order_id = 41;
 }
 
 // Response message for a payment authorization.
@@ -1942,6 +1943,11 @@ message PaymentServiceRegisterRequest {
 
   // State Information
   optional ConnectorState state = 31; // State data for access token storage and other connector-specific state
+
+  // Payment Method Token
+  optional string payment_method_token = 32;
+  // Send the connector order identifier here if an order was created before authorize
+  optional string order_id = 33;
 }
 
 // Response message for a mandate setup operation.
