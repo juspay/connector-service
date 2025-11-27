@@ -24,6 +24,7 @@ mitm_proxy_enabled = false
 bluesnap.base_url = "https://ws.bluesnap.com"
 bluesnap.secondary_base_url = "https://pay.bluesnap.com"
 multisafepay.base_url = "https://testapi.multisafepay.com/v1/json"
+nmi.base_url = "https://secure.nmi.com"
 authipay.base_url = "https://prod.emea.api.fiservapps.com/ipp/payments-gateway/v2/payments"
 stax.base_url = "https://apiprod.fattlabs.com"
 trustpayments.base_url = "https://webservices.securetrading.net"
