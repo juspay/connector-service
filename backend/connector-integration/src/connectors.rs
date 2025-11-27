@@ -136,3 +136,6 @@ pub use self::globalpay::Globalpay;
 
 pub mod billwerk;
 pub use self::billwerk::Billwerk;
+
+pub mod iatapay;
+pub use self::iatapay::Iatapay;
