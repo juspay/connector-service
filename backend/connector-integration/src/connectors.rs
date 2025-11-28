@@ -145,3 +145,6 @@ pub use self::forte::Forte;
 
 pub mod shift4;
 pub use self::shift4::Shift4;
+
+pub mod revolut;
+pub use self::revolut::Revolut;
