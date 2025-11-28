@@ -109,6 +109,7 @@ billwerk.secondary_base_url = "https://card.reepay.com/"
 nuvei.base_url = "https://ppp-test.nuvei.com/ppp/api/v1"
 bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
 powertranz.base_url = "https://staging.ptranz.com/api"
+revolut.base_url = "https://sandbox-merchant.revolut.com/"
 
 # Generic Events Configuration
 [events]

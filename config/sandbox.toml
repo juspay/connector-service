@@ -87,6 +87,7 @@ nuvei.base_url = "https://ppp-test.nuvei.com/ppp/api/v1"
 bamboraapac.base_url = "https://demo.ippayments.com.au/interface/api"
 bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
 powertranz.base_url = "https://staging.ptranz.com/api"
+revolut.base_url = "https://sandbox-oba-auth.revolut.com/"
 
 # Generic Events Configuration
 [events]

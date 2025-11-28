@@ -172,3 +172,6 @@ pub use self::powertranz::Powertranz;
 
 pub mod bambora;
 pub use self::bambora::Bambora;
+
+pub mod revolut;
+pub use self::revolut::Revolut;
