@@ -113,6 +113,9 @@ pub use self::bluesnap::Bluesnap;
 pub mod authipay;
 pub use self::authipay::Authipay;
 
+pub mod bamboraapac;
+pub use self::bamboraapac::Bamboraapac;
+
 pub mod silverflow;
 pub use self::silverflow::Silverflow;
 

@@ -42,6 +42,37 @@ pub trait GetFormData {
     fn get_form_data(&self) -> reqwest::multipart::Form;
 }
 
+/// Trait for converting request structures into SOAP XML format
+/// Implement this trait for request types that need to be sent as SOAP/XML
+pub trait GetSoapXml {
+    /// Converts the implementing type into a SOAP XML string
+    /// The output should be properly formatted and escaped XML
+    fn to_soap_xml(&self) -> String;
+}
+
+/// Helper function to validate XML is well-formed
+/// This catches malformed XML before sending to the connector
+#[inline]
+pub(crate) fn validate_xml_structure(xml_str: &str) -> Result<(), String> {
+    use quick_xml::{events::Event, Reader};
+
+    let mut reader = Reader::from_str(xml_str);
+    reader.trim_text(true);
+    reader.check_end_names(true); // Verify open/close tags match
+
+    let mut buf = Vec::new();
+    loop {
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Eof) => break,
+            Err(e) => return Err(format!("XML validation failed: {}", e)),
+            _ => {}
+        }
+        buf.clear();
+    }
+
+    Ok(())
+}
+
 pub struct NoRequestBody;
 pub struct NoRequestBodyTemplating;
 
@@ -156,6 +187,41 @@ macro_rules! expand_fn_get_request_body {
                 let request = bridge.request_body(input_data)?;
                 let form_data = <$curl_req as GetFormData>::get_form_data(&request);
                 Ok(Some(macro_types::RequestContent::FormData(form_data)))
+            }
+        }
+    };
+    (
+        $connector: ident,
+        $curl_req: ty,
+        SoapXml,
+        $curl_res: ty,
+        $flow: ident,
+        $resource_common_data: ty,
+        $request: ty,
+        $response: ty
+    ) => {
+        paste::paste! {
+            fn get_request_body(
+                &self,
+                req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
+            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError>
+            {
+                let bridge = self.[< $flow:snake >];
+                let input_data = [<$connector RouterData>] {
+                    connector: self.to_owned(),
+                    router_data: req.clone(),
+                };
+                let request = bridge.request_body(input_data)?;
+                let soap_xml = <$curl_req as GetSoapXml>::to_soap_xml(&request);
+
+                // Validate XML structure before sending
+                crate::connectors::macros::validate_xml_structure(&soap_xml)
+                    .map_err(|e| {
+                        error_stack::report!(errors::ConnectorError::RequestEncodingFailed)
+                            .attach_printable(e)
+                    })?;
+
+                Ok(Some(macro_types::RequestContent::RawBytes(soap_xml.into_bytes())))
             }
         }
     };
@@ -762,6 +828,92 @@ macro_rules! impl_templating_mixed {
             }
         }
     };
+
+    // Pattern for generic request with XML response parsing
+    (
+        connector: $connector: ident,
+        curl_request: $base_req: ident<$req_generic: ident>,
+        curl_response: $curl_res: ident,
+        router_data: $router_data: ty,
+        generic_type: $generic_type: tt,
+        response_format: xml,
+    ) => {
+        paste::paste!{
+            pub struct [<$base_req Templating>];
+            pub struct [<$curl_res Templating>];
+
+            impl<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> BridgeRequestResponse for Bridge<[<$base_req Templating>], [<$curl_res Templating>], $generic_type>{
+                type RequestBody = $base_req<$generic_type>;
+                type ResponseBody = $curl_res;
+                type ConnectorInputData = [<$connector RouterData>]<$router_data, $generic_type>;
+
+                fn response(
+                    &self,
+                    bytes: bytes::Bytes,
+                ) -> CustomResult<Self::ResponseBody, errors::ConnectorError> {
+                    use common_utils::ext_traits::XmlExt;
+                    use error_stack::ResultExt;
+
+                    if bytes.is_empty() {
+                        return Err(errors::ConnectorError::ResponseDeserializationFailed.into());
+                    }
+
+                    let response_str = String::from_utf8(bytes.to_vec())
+                        .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+                        .attach_printable("Failed to convert response bytes to UTF-8 string")?;
+
+                    response_str
+                        .as_str()
+                        .parse_xml::<Self::ResponseBody>()
+                        .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+                        .attach_printable("Failed to parse XML response")
+                }
+            }
+        }
+    };
+
+    // Pattern for non-generic request with XML response parsing
+    (
+        connector: $connector: ident,
+        curl_request: $base_req: ident,
+        curl_response: $curl_res: ident,
+        router_data: $router_data: ty,
+        generic_type: $generic_type: tt,
+        response_format: xml,
+    ) => {
+        paste::paste!{
+            pub struct [<$base_req Templating>];
+            pub struct [<$curl_res Templating>];
+
+            impl<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> BridgeRequestResponse for Bridge<[<$base_req Templating>], [<$curl_res Templating>], $generic_type>{
+                type RequestBody = $base_req;
+                type ResponseBody = $curl_res;
+                type ConnectorInputData = [<$connector RouterData>]<$router_data, $generic_type>;
+
+                fn response(
+                    &self,
+                    bytes: bytes::Bytes,
+                ) -> CustomResult<Self::ResponseBody, errors::ConnectorError> {
+                    use common_utils::ext_traits::XmlExt;
+                    use error_stack::ResultExt;
+
+                    if bytes.is_empty() {
+                        return Err(errors::ConnectorError::ResponseDeserializationFailed.into());
+                    }
+
+                    let response_str = String::from_utf8(bytes.to_vec())
+                        .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+                        .attach_printable("Failed to convert response bytes to UTF-8 string")?;
+
+                    response_str
+                        .as_str()
+                        .parse_xml::<Self::ResponseBody>()
+                        .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+                        .attach_printable("Failed to parse XML response")
+                }
+            }
+        }
+    };
 }
 pub(crate) use impl_templating_mixed;
 
@@ -817,6 +969,7 @@ macro_rules! create_all_prerequisites {
                     flow: $flow_name: ident,
                     $(request_body: $flow_request: ident $(<$generic_param: ident>)?,)?
                     response_body: $flow_response: ident,
+                    $(response_format: $response_format:ident,)?
                     router_data: $router_data_type: ty,
                 )
             ),*
@@ -835,6 +988,7 @@ macro_rules! create_all_prerequisites {
                 connector: $connector,
                 $(request_body: $flow_request $(<$generic_param>)?,)?
                 response_body: $flow_response,
+                $(response_format: $response_format,)?
                 router_data: $router_data_type,
                 generic_type: $generic_type,
             );
@@ -888,7 +1042,26 @@ macro_rules! create_all_prerequisites {
 pub(crate) use create_all_prerequisites;
 
 macro_rules! create_all_prerequisites_impl_templating {
-    // Pattern with request body
+    // Pattern with request body and XML response format
+    (
+        connector: $connector: ident,
+        request_body: $flow_request: ident $(<$generic_param: ident>)?,
+        response_body: $flow_response: ident,
+        response_format: xml,
+        router_data: $router_data_type: ty,
+        generic_type: $generic_type: tt,
+    ) => {
+        crate::connectors::macros::impl_templating_mixed!(
+            connector: $connector,
+            curl_request: $flow_request $(<$generic_param>)?,
+            curl_response: $flow_response,
+            router_data: $router_data_type,
+            generic_type: $generic_type,
+            response_format: xml,
+        );
+    };
+
+    // Pattern with request body (default JSON response format)
     (
         connector: $connector: ident,
         request_body: $flow_request: ident $(<$generic_param: ident>)?,
