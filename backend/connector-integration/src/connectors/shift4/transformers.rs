@@ -14,7 +14,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 // Import the connector's RouterData wrapper type created by the macro
@@ -52,22 +52,38 @@ pub struct ApiErrorResponse {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Shift4PaymentsRequest<T: PaymentMethodDataTypes> {
     pub amount: MinorUnit,
     pub currency: Currency,
-    #[serde(flatten)]
-    pub card: Shift4CardData<T>,
     pub captured: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<serde_json::Value>,
+    #[serde(flatten)]
+    pub payment_method: Shift4PaymentMethod<T>,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum Shift4PaymentMethod<T: PaymentMethodDataTypes> {
+    Card(Shift4CardPayment<T>),
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4CardPayment<T: PaymentMethodDataTypes> {
+    pub card: Shift4CardData<T>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Shift4CardData<T: PaymentMethodDataTypes> {
-    #[serde(rename = "card[number]")]
-    pub card_number: RawCardNumber<T>,
-    #[serde(rename = "card[expMonth]")]
-    pub card_exp_month: Secret<String>,
-    #[serde(rename = "card[expYear]")]
-    pub card_exp_year: Secret<String>,
+    pub number: RawCardNumber<T>,
+    pub exp_month: Secret<String>,
+    pub exp_year: Secret<String>,
+    pub cardholder_name: Secret<String>,
 }
 
 impl<T: PaymentMethodDataTypes>
@@ -99,15 +115,42 @@ impl<T: PaymentMethodDataTypes>
             .is_auto_capture()
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
+        // Get cardholder name from address/billing info if available
+        let cardholder_name = item
+            .resource_common_data
+            .address
+            .get_payment_method_billing()
+            .and_then(|billing| {
+                billing.get_optional_first_name().map(|first| {
+                    let last = billing
+                        .get_optional_last_name()
+                        .map(|l| l.expose())
+                        .unwrap_or_default();
+                    Secret::new(format!("{} {}", first.expose(), last).trim().to_string())
+                })
+            })
+            .or_else(|| {
+                item.request
+                    .customer_name
+                    .as_ref()
+                    .map(|name| Secret::new(name.clone()))
+            })
+            .unwrap_or_else(|| Secret::new("".to_string()));
+
         Ok(Self {
             amount: item.request.minor_amount,
             currency: item.request.currency,
-            card: Shift4CardData {
-                card_number: card_data.card_number.clone(),
-                card_exp_month: card_data.card_exp_month.clone(),
-                card_exp_year: card_data.card_exp_year.clone(),
-            },
             captured,
+            description: item.resource_common_data.description.clone(),
+            metadata: item.request.metadata.clone(),
+            payment_method: Shift4PaymentMethod::Card(Shift4CardPayment {
+                card: Shift4CardData {
+                    number: card_data.card_number.clone(),
+                    exp_month: card_data.card_exp_month.clone(),
+                    exp_year: card_data.card_exp_year.clone(),
+                    cardholder_name,
+                },
+            }),
         })
     }
 }
@@ -115,9 +158,11 @@ impl<T: PaymentMethodDataTypes>
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Shift4PaymentsResponse {
     pub id: String,
-    pub status: Shift4PaymentStatus,
+    pub currency: String,
     pub amount: MinorUnit,
+    pub status: Shift4PaymentStatus,
     pub captured: bool,
+    pub refunded: bool,
     pub flow: Option<FlowResponse>,
 }
 

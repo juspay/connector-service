@@ -246,7 +246,7 @@ macros::create_all_prerequisites!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Shift4,
-    curl_request: FormUrlEncoded(Shift4PaymentsRequest<T>),
+    curl_request: Json(Shift4PaymentsRequest<T>),
     curl_response: Shift4AuthorizeResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
@@ -260,14 +260,8 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            // Use form-urlencoded content type for authorize
-            let mut header = vec![(
-                headers::CONTENT_TYPE.to_string(),
-                "application/x-www-form-urlencoded".to_string().into(),
-            )];
-            let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
-            header.append(&mut auth_header);
-            Ok(header)
+            // Use JSON content type for authorize (matches Hyperswitch)
+            self.build_headers(req)
         }
 
         fn get_url(
