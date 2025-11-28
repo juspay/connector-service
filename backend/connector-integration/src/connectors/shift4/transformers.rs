@@ -128,7 +128,11 @@ impl<T: PaymentMethodDataTypes>
                     .as_ref()
                     .map(|name| Secret::new(name.clone()))
             })
-            .unwrap_or_else(|| Secret::new("".to_string()));
+            .ok_or_else(|| {
+                error_stack::report!(errors::ConnectorError::MissingRequiredField {
+                    field_name: "cardholder_name"
+                })
+            })?;
 
         Ok(Self {
             amount: item.request.minor_amount,
