@@ -21,6 +21,7 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+shift4.base_url = "https://api.shift4.com"
 bluesnap.base_url = "https://sandbox.bluesnap.com"
 bluesnap.secondary_base_url = "https://sandpay.bluesnap.com"
 multisafepay.base_url = "https://testapi.multisafepay.com/v1/json"
