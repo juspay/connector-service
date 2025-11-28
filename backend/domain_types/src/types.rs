@@ -55,6 +55,17 @@ fn convert_merchant_metadata_to_json(metadata: &HashMap<String, String>) -> serd
     serde_json::Value::Object(metadata_map)
 }
 
+fn to_json_value(v: String) -> serde_json::Value {
+    if let Ok(n) = v.parse::<i64>() {
+        return serde_json::Value::Number(n.into());
+    }
+    if let Ok(f) = v.parse::<f64>() {
+        return serde_json::Value::Number(serde_json::Number::from_f64(f).unwrap());
+    }
+    // Otherwise, it's a string
+    serde_json::Value::String(v)
+}
+
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use crate::{
     connector_flow::{
@@ -1399,7 +1410,7 @@ impl<
                     value
                         .metadata
                         .into_iter()
-                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .map(|(k, v)| (k, to_json_value(v)))
                         .collect(),
                 ))
             },
