@@ -2,7 +2,7 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
-use grpc_server::{app, configs};
+use server::{app, configs};
 mod common;
 mod utils;
 

@@ -47,7 +47,7 @@
 #![allow(clippy::panic)]
 
 use cards::CardNumber;
-use grpc_server::{app, configs};
+use server::{app, configs};
 mod common;
 mod utils;
 use std::{

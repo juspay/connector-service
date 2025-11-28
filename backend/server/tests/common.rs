@@ -38,7 +38,7 @@ impl AutoClient for RefundServiceClient<Channel> {
 ///
 /// Will panic if the socket file cannot be created or removed
 pub async fn server_and_client_stub<T>(
-    service: grpc_server::app::Service,
+    service: server::app::Service,
 ) -> Result<(impl Future<Output = ()>, T), Box<dyn std::error::Error>>
 where
     T: AutoClient,

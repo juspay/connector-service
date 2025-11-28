@@ -4,7 +4,7 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
 
-use grpc_server::{app, configs};
+use server::{app, configs};
 use hyperswitch_masking::{ExposeInterface, Secret};
 mod common;
 mod utils;

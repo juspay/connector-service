@@ -2,7 +2,7 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
-use grpc_server::{app, configs};
+use server::{app, configs};
 use hyperswitch_masking::Secret;
 mod common;
 mod utils;

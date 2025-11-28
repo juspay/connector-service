@@ -6,8 +6,7 @@ use external_services::shared_metrics as metrics;
 use grpc_api_types::{
     health_check::health_server,
     payments::{
-        dispute_service_handler, dispute_service_server, payment_service_handler,
-        payment_service_server, refund_service_handler, refund_service_server,
+        dispute_service_server, payment_service_server, refund_service_server,
     },
 };
 use tokio::{
@@ -89,10 +88,10 @@ pub async fn server_builder(config: configs::Config) -> Result<(), Configuration
 }
 
 pub struct Service {
-    pub health_check_service: crate::server::health_check::HealthCheck,
-    pub payments_service: crate::server::payments::Payments,
-    pub refunds_service: crate::server::refunds::Refunds,
-    pub disputes_service: crate::server::disputes::Disputes,
+    pub health_check_service: crate::grpc::health_check::HealthCheck,
+    pub payments_service: crate::grpc::payments::Payments,
+    pub refunds_service: crate::grpc::refunds::Refunds,
+    pub disputes_service: crate::grpc::disputes::Disputes,
 }
 
 impl Service {
@@ -112,14 +111,14 @@ impl Service {
         }
 
         Self {
-            health_check_service: crate::server::health_check::HealthCheck,
-            payments_service: crate::server::payments::Payments {
+            health_check_service: crate::grpc::health_check::HealthCheck,
+            payments_service: crate::grpc::payments::Payments {
                 config: Arc::clone(&config),
             },
-            refunds_service: crate::server::refunds::Refunds {
+            refunds_service: crate::grpc::refunds::Refunds {
                 config: Arc::clone(&config),
             },
-            disputes_service: crate::server::disputes::Disputes { config },
+            disputes_service: crate::grpc::disputes::Disputes { config },
         }
     }
 
@@ -151,11 +150,9 @@ impl Service {
             http::HeaderName::from_static(consts::X_REQUEST_ID),
         );
 
-        let router = axum::Router::new()
-            .route("/health", axum::routing::get(|| async { "health is good" }))
-            .merge(payment_service_handler(self.payments_service))
-            .merge(refund_service_handler(self.refunds_service))
-            .merge(dispute_service_handler(self.disputes_service))
+        let app_state = crate::http::AppState::new(self.payments_service);
+
+        let router = crate::http::create_router(app_state)
             .layer(logging_layer)
             .layer(request_id_layer)
             .layer(propagate_request_id_layer);

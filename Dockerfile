@@ -82,7 +82,7 @@ USER rustuser
 
 # Copy built binary and config
 RUN mkdir -p bin config
-COPY --from=builder /app/target/release/grpc-server bin/grpc-server
+COPY --from=builder /app/target/release/server bin/server
 COPY --from=builder /app/config config
 
-ENTRYPOINT ["/app/bin/grpc-server"]
+ENTRYPOINT ["/app/bin/server"]

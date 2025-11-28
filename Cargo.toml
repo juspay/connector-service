@@ -4,7 +4,7 @@ members = [
   "backend/grpc-api-types",
   "backend/connector-integration",
   "backend/external-services",
-  "backend/grpc-server", 
+  "backend/server", 
   "sdk/rust-grpc-client",
   "backend/common_enums",
   "backend/common_utils",

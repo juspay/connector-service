@@ -1,4 +1,4 @@
-use grpc_server::{self, app, configs, logger};
+use server::{self, app, configs, logger};
 
 #[allow(clippy::unwrap_in_result)]
 #[tokio::main]
@@ -9,8 +9,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = configs::Config::new().expect("Failed while parsing config");
     let _guard = logger::setup(
         &config.log,
-        grpc_server::service_name!(),
-        [grpc_server::service_name!(), "grpc_server", "tower_http"],
+        server::service_name!(),
+        [server::service_name!(), "grpc_server", "tower_http"],
     );
 
     let metrics_server = app::metrics_server_builder(config.clone());
