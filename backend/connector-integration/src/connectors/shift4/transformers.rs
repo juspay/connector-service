@@ -105,7 +105,7 @@ impl<T: PaymentMethodDataTypes>
             PaymentMethodData::Card(card) => card,
             _ => {
                 return Err(error_stack::report!(errors::ConnectorError::NotSupported {
-                    message: "Payment method not supported".to_string(),
+                    message: "Payment method".to_string(),
                     connector: "Shift4",
                 }))
             }
