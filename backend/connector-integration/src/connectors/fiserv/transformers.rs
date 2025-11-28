@@ -541,7 +541,11 @@ impl<
             total,
             currency: item.router_data.request.currency.to_string(),
         };
-        let metadata = item.router_data.request.merchant_account_metadata.unwrap();
+        let metadata = item
+            .router_data
+            .request
+            .merchant_account_metadata
+            .ok_or(ConnectorError::RequestEncodingFailed)?;
         let session: FiservSessionObject = metadata
             .expose()
             .parse_value("FiservSessionObject")
