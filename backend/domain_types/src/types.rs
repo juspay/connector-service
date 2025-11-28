@@ -102,6 +102,7 @@ use crate::{
 pub struct Connectors {
     // Added pub
     pub adyen: ConnectorParams,
+    pub forte: ConnectorParams,
     pub razorpay: ConnectorParams,
     pub razorpayv2: ConnectorParams,
     pub fiserv: ConnectorParams,
@@ -149,6 +150,7 @@ pub struct Connectors {
     pub trustpayments: ConnectorParams,
     pub globalpay: ConnectorParams,
     pub nmi: ConnectorParams,
+    pub shift4: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]

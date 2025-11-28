@@ -24,6 +24,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
 
     fn convert_connector(connector_name: ConnectorEnum) -> BoxedConnector<T> {
         match connector_name {
+            ConnectorEnum::Forte => Box::new(connectors::Forte::new()),
             ConnectorEnum::Adyen => Box::new(connectors::Adyen::new()),
             ConnectorEnum::Bluesnap => Box::new(connectors::Bluesnap::new()),
             ConnectorEnum::Razorpay => Box::new(connectors::Razorpay::new()),
@@ -72,6 +73,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Paysafe => Box::new(connectors::Paysafe::new()),
             ConnectorEnum::Paypal => Box::new(connectors::Paypal::new()),
             ConnectorEnum::Billwerk => Box::new(connectors::Billwerk::new()),
+            ConnectorEnum::Shift4 => Box::new(connectors::Shift4::new()),
         }
     }
 }
