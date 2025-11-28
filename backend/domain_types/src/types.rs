@@ -2452,6 +2452,9 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
+        let connector_meta_data = common_utils::pii::SecretSerdeValue::new(
+            convert_merchant_metadata_to_json(&value.merchant_account_metadata),
+        );
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -2468,7 +2471,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            connector_meta_data: Some(connector_meta_data),
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -5022,7 +5025,9 @@ impl
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
-
+        let connector_meta_data = common_utils::pii::SecretSerdeValue::new(
+            convert_merchant_metadata_to_json(&value.merchant_account_metadata),
+        );
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "PAYMENT_ID".to_string(),
@@ -5038,7 +5043,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            connector_meta_data: Some(connector_meta_data),
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
