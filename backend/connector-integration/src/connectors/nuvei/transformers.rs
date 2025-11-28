@@ -214,6 +214,10 @@ pub struct NuveiBillingAddress {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub address: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub address_line2: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address_line3: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub zip: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub state: Option<Secret<String>>,
@@ -657,6 +661,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             phone: router_data.resource_common_data.get_optional_billing_phone_number(),
             city: router_data.resource_common_data.get_optional_billing_city(),
             address: router_data.resource_common_data.get_optional_billing_line1(),
+            address_line2: router_data.resource_common_data.get_optional_billing_line2(),
+            address_line3: None, // No line3 method available in resource_common_data
             zip: router_data.resource_common_data.get_optional_billing_zip(),
             state,
         };
@@ -1341,13 +1347,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         // Extract relatedTransactionId from connector_transaction_id
         let related_transaction_id = router_data.request.connector_transaction_id.clone();
 
-        // Generate checksum: merchantId + merchantSiteId + clientRequestId + clientUniqueId + relatedTransactionId + timeStamp + merchantSecretKey
+        // Generate checksum: merchantId + merchantSiteId + clientRequestId + clientUniqueId + "" + "" + relatedTransactionId + "" + "" + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
             merchant_id.peek(),
             merchant_site_id.peek(),
             &client_request_id,
             &client_unique_id,
+            "", // amount (empty for void)
+            "", // currency (empty for void)
             &related_transaction_id,
+            "", // authCode (empty)
+            "", // comment (empty)
             &time_stamp,
         ]);
 
