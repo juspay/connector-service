@@ -288,6 +288,7 @@ pub enum FlowName {
     PreAuthenticate,
     Authenticate,
     PostAuthenticate,
+    SdkSessionToken,
     Unknown,
 }
 
@@ -316,6 +317,7 @@ impl FlowName {
             Self::PreAuthenticate => "PreAuthenticate",
             Self::Authenticate => "Authenticate",
             Self::PostAuthenticate => "PostAuthenticate",
+            Self::SdkSessionToken => "SdkSessionToken",
             Self::Unknown => "Unknown",
         }
     }

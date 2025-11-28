@@ -58,6 +58,9 @@ pub struct PostAuthenticate;
 #[derive(Debug, Clone)]
 pub struct VoidPC;
 
+#[derive(Debug, Clone)]
+pub struct SdkSessionToken;
+
 #[derive(strum::Display)]
 #[strum(serialize_all = "snake_case")]
 pub enum FlowName {
@@ -83,4 +86,5 @@ pub enum FlowName {
     PreAuthenticate,
     Authenticate,
     PostAuthenticate,
+    SdkSessionToken,
 }

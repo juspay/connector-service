@@ -365,3 +365,6 @@ pub struct PostAuthenticateIntegrityObject {
     pub amount: MinorUnit,
     pub currency: Currency,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct SdkSessionTokenIntegrityObject {}
