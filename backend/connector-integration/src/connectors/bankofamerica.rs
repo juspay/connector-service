@@ -3,6 +3,7 @@ use super::macros;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
+    events,
     ext_traits::BytesExt,
     request::Method,
     types::StringMajorUnit,
@@ -15,17 +16,17 @@ use domain_types::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
         PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void,
+        SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
@@ -46,14 +47,14 @@ use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
 
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
 };
 
 use crate::{connectors::bankofamerica, types::ResponseRouterData, with_error_response_body};
 use transformers::{
     BankOfAmericaAuthType, BankOfAmericaCaptureRequest, BankOfAmericaErrorResponse,
-    BankOfAmericaPaymentsResponse, BankOfAmericaPaymentsResponseForCapture, BankOfAmericaPaymentsResponseForSetupMandate,
-    BankOfAmericaPaymentsResponseForVoid, BankOfAmericaTransactionResponse, BankOfAmericaVoidRequestForVoid,
+    BankOfAmericaPaymentsResponse, BankOfAmericaPaymentsResponseForCapture,
+    BankOfAmericaPaymentsResponseForSetupMandate, BankOfAmericaPaymentsResponseForVoid,
+    BankOfAmericaTransactionResponse, BankOfAmericaVoidRequestForVoid,
     BankofamericaPaymentsRequest, BankofamericaPaymentsRequestForSetupMandate,
 };
 
@@ -73,6 +74,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Bankofamerica<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidPostCaptureV2 for Bankofamerica<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -157,7 +162,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: Result<
             bankofamerica::BankOfAmericaErrorResponse,
@@ -244,9 +249,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 })
             }
             Err(error_msg) => {
-                if let Some(event) = event_builder {
-                    event.set_error(serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code}))
-                };
+                let error_data = serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code});
+                with_error_response_body!(event_builder, error_data);
                 tracing::error!(deserialization_error =? error_msg);
                 domain_types::utils::handle_json_response_deserialization_failure(
                     res,
@@ -256,10 +260,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         }
     }
 }
-
-
-
-
 
 // Stub implementations for unsupported flows
 
@@ -305,8 +305,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // Stub implementations for unsupported flows
 // Removed PSync stub - now implemented below
-
-
 
 impl<
         T: PaymentMethodDataTypes
@@ -385,7 +383,6 @@ impl<
     for Bankofamerica<T>
 {
 }
-
 
 impl<
         T: PaymentMethodDataTypes
@@ -514,6 +511,16 @@ impl<
         PostAuthenticate,
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Bankofamerica<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
         PaymentsResponseData,
     > for Bankofamerica<T>
 {
@@ -710,6 +717,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Bankofamerica<T>
+{
+}
+
 macros::create_all_prerequisites!(
     connector_name: Bankofamerica,
     generic_type: T,
@@ -897,7 +914,6 @@ macros::create_all_prerequisites!(
         }
     }
 );
-
 
 // 1. Authorize
 macros::macro_connector_implementation!(

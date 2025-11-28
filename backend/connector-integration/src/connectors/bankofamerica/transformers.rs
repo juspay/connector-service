@@ -30,10 +30,7 @@ use domain_types::{
         self, ApplePayWalletData, GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes,
         RawCardNumber, SamsungPayWalletData, WalletData,
     },
-    router_data::{
-        ApplePayPredecryptData, ConnectorAuthType,
-        ErrorResponse, PaymentMethodToken,
-    },
+    router_data::{ApplePayPredecryptData, ConnectorAuthType, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
     utils::{is_payment_failure, CardIssuer},
 };
@@ -347,7 +344,7 @@ fn build_bill_to(
                 first_name: addr.first_name.remove_new_line(),
                 last_name: addr.last_name.remove_new_line(),
                 address1: addr.line1.remove_new_line(),
-                locality: addr.city.remove_new_line(),
+                locality: addr.city.remove_new_line().map(|s| s.expose()),
                 administrative_area: addr.to_state_code_as_optional().unwrap_or_else(|_| {
                     addr.state
                         .remove_new_line()
@@ -2100,7 +2097,7 @@ impl<
             .request
             .metadata
             .clone()
-            .map(|metadata| convert_metadata_to_merchant_defined_info(metadata));
+            .map(convert_metadata_to_merchant_defined_info);
         let payment_information = PaymentInformation::try_from(&ccard)?;
         let processing_information = ProcessingInformation::try_from((item, None, None))?;
         Ok(Self {
@@ -2373,7 +2370,7 @@ impl<
             .request
             .metadata
             .clone()
-            .map(|metadata| convert_metadata_to_merchant_defined_info(metadata));
+            .map(convert_metadata_to_merchant_defined_info);
         let payment_information = match item
             .router_data
             .resource_common_data
@@ -2484,14 +2481,14 @@ impl<
             },
         )?;
 
-        let expiration_year = apple_pay_data.get_four_digit_expiry_year()?;
+        let expiration_year = apple_pay_data.get_four_digit_expiry_year();
 
         Ok(Self::ApplePay(Box::new(ApplePayPaymentInformation {
             tokenized_card: TokenizedCard {
                 number: apple_pay_data
                     .application_primary_account_number
                     .clone()
-                    .expose()
+                    .peek()
                     .parse::<cards::CardNumber>()
                     .map_err(|err| {
                         tracing::error!(
@@ -2556,7 +2553,7 @@ impl<
             .request
             .metadata
             .clone()
-            .map(|metadata| convert_metadata_to_merchant_defined_info(metadata));
+            .map(convert_metadata_to_merchant_defined_info);
         let payment_information = PaymentInformation::try_from(&google_pay_data)?;
         let processing_information =
             ProcessingInformation::try_from((item, Some(PaymentSolution::GooglePay), None))?;

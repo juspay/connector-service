@@ -92,7 +92,7 @@ pub enum ConnectorEnum {
     Trustpayments,
     Globalpay,
     Nmi,
-    Bankofamerica
+    Bankofamerica,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
