@@ -14,7 +14,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 // Import the connector's RouterData wrapper type created by the macro
@@ -104,9 +104,10 @@ impl<T: PaymentMethodDataTypes>
         let card_data = match &item.request.payment_method_data {
             PaymentMethodData::Card(card) => card,
             _ => {
-                return Err(error_stack::report!(
-                    errors::ConnectorError::NotImplemented("Payment method not supported".into())
-                ))
+                return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                    message: "Payment method not supported".to_string(),
+                    connector: "Shift4",
+                }))
             }
         };
 
@@ -120,15 +121,7 @@ impl<T: PaymentMethodDataTypes>
             .resource_common_data
             .address
             .get_payment_method_billing()
-            .and_then(|billing| {
-                billing.get_optional_first_name().map(|first| {
-                    let last = billing
-                        .get_optional_last_name()
-                        .map(|l| l.expose())
-                        .unwrap_or_default();
-                    Secret::new(format!("{} {}", first.expose(), last).trim().to_string())
-                })
-            })
+            .and_then(|billing| billing.get_optional_full_name())
             .or_else(|| {
                 item.request
                     .customer_name
@@ -158,7 +151,7 @@ impl<T: PaymentMethodDataTypes>
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Shift4PaymentsResponse {
     pub id: String,
-    pub currency: String,
+    pub currency: Currency,
     pub amount: MinorUnit,
     pub status: Shift4PaymentStatus,
     pub captured: bool,
