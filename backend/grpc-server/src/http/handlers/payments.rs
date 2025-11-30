@@ -4,14 +4,31 @@ use axum::{
     Json,
 };
 use grpc_api_types::payments::{
-    DisputeResponse, PaymentServiceAuthenticateRequest, PaymentServiceAuthenticateResponse, PaymentServiceAuthorizeOnlyRequest, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse, PaymentServiceCreateAccessTokenRequest, PaymentServiceCreateAccessTokenResponse, PaymentServiceCreateConnectorCustomerRequest, PaymentServiceCreateConnectorCustomerResponse, PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceCreatePaymentMethodTokenRequest, PaymentServiceCreatePaymentMethodTokenResponse, PaymentServiceCreateSessionTokenRequest, PaymentServiceCreateSessionTokenResponse, PaymentServiceDisputeRequest, PaymentServiceGetRequest, PaymentServiceGetResponse, PaymentServicePostAuthenticateRequest, PaymentServicePostAuthenticateResponse, PaymentServicePreAuthenticateRequest, PaymentServicePreAuthenticateResponse, PaymentServiceRefundRequest, PaymentServiceRegisterRequest, PaymentServiceRegisterResponse, PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse, PaymentServiceTransformRequest, PaymentServiceTransformResponse, PaymentServiceVoidPostCaptureRequest, PaymentServiceVoidPostCaptureResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse, payment_service_server::PaymentService
+    payment_service_server::PaymentService, DisputeResponse, PaymentServiceAuthenticateRequest,
+    PaymentServiceAuthenticateResponse, PaymentServiceAuthorizeOnlyRequest,
+    PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
+    PaymentServiceCaptureResponse, PaymentServiceCreateAccessTokenRequest,
+    PaymentServiceCreateAccessTokenResponse, PaymentServiceCreateConnectorCustomerRequest,
+    PaymentServiceCreateConnectorCustomerResponse, PaymentServiceCreateOrderRequest,
+    PaymentServiceCreateOrderResponse, PaymentServiceCreatePaymentMethodTokenRequest,
+    PaymentServiceCreatePaymentMethodTokenResponse, PaymentServiceCreateSessionTokenRequest,
+    PaymentServiceCreateSessionTokenResponse, PaymentServiceDisputeRequest,
+    PaymentServiceGetRequest, PaymentServiceGetResponse, PaymentServicePostAuthenticateRequest,
+    PaymentServicePostAuthenticateResponse, PaymentServicePreAuthenticateRequest,
+    PaymentServicePreAuthenticateResponse, PaymentServiceRefundRequest,
+    PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
+    PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
+    PaymentServiceTransformRequest, PaymentServiceTransformResponse,
+    PaymentServiceVoidPostCaptureRequest, PaymentServiceVoidPostCaptureResponse,
+    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse,
 };
 
+use crate::configs::Config;
 use crate::http::{
-    error::HttpError, http_headers_to_grpc_metadata, state::AppState, transfer_config_to_grpc_request, utils::ValidatedJson,
+    error::HttpError, http_headers_to_grpc_metadata, state::AppState,
+    transfer_config_to_grpc_request, utils::ValidatedJson,
 };
 use std::sync::Arc;
-use crate::configs::Config;
 
 pub async fn authorize(
     Extension(config): Extension<Arc<Config>>,
@@ -105,7 +122,10 @@ pub async fn void_post_capture(
         message: status.message().to_string(),
     })?;
     *grpc_request.metadata_mut() = grpc_metadata;
-    let grpc_response = state.payments_service.void_post_capture(grpc_request).await?;
+    let grpc_response = state
+        .payments_service
+        .void_post_capture(grpc_request)
+        .await?;
     Ok(Json(grpc_response.into_inner()))
 }
 
@@ -156,7 +176,10 @@ pub async fn create_session_token(
         message: status.message().to_string(),
     })?;
     *grpc_request.metadata_mut() = grpc_metadata;
-    let grpc_response = state.payments_service.create_session_token(grpc_request).await?;
+    let grpc_response = state
+        .payments_service
+        .create_session_token(grpc_request)
+        .await?;
     Ok(Json(grpc_response.into_inner()))
 }
 
@@ -173,7 +196,10 @@ pub async fn create_connector_customer(
         message: status.message().to_string(),
     })?;
     *grpc_request.metadata_mut() = grpc_metadata;
-    let grpc_response = state.payments_service.create_connector_customer(grpc_request).await?;
+    let grpc_response = state
+        .payments_service
+        .create_connector_customer(grpc_request)
+        .await?;
     Ok(Json(grpc_response.into_inner()))
 }
 
@@ -190,7 +216,10 @@ pub async fn create_payment_method_token(
         message: status.message().to_string(),
     })?;
     *grpc_request.metadata_mut() = grpc_metadata;
-    let grpc_response = state.payments_service.create_payment_method_token(grpc_request).await?;
+    let grpc_response = state
+        .payments_service
+        .create_payment_method_token(grpc_request)
+        .await?;
     Ok(Json(grpc_response.into_inner()))
 }
 
@@ -241,7 +270,10 @@ pub async fn repeat_everything(
         message: status.message().to_string(),
     })?;
     *grpc_request.metadata_mut() = grpc_metadata;
-    let grpc_response = state.payments_service.repeat_everything(grpc_request).await?;
+    let grpc_response = state
+        .payments_service
+        .repeat_everything(grpc_request)
+        .await?;
     Ok(Json(grpc_response.into_inner()))
 }
 
@@ -292,7 +324,10 @@ pub async fn pre_authenticate(
         message: status.message().to_string(),
     })?;
     *grpc_request.metadata_mut() = grpc_metadata;
-    let grpc_response = state.payments_service.pre_authenticate(grpc_request).await?;
+    let grpc_response = state
+        .payments_service
+        .pre_authenticate(grpc_request)
+        .await?;
     Ok(Json(grpc_response.into_inner()))
 }
 
@@ -326,7 +361,10 @@ pub async fn post_authenticate(
         message: status.message().to_string(),
     })?;
     *grpc_request.metadata_mut() = grpc_metadata;
-    let grpc_response = state.payments_service.post_authenticate(grpc_request).await?;
+    let grpc_response = state
+        .payments_service
+        .post_authenticate(grpc_request)
+        .await?;
     Ok(Json(grpc_response.into_inner()))
 }
 
@@ -343,7 +381,10 @@ pub async fn create_access_token(
         message: status.message().to_string(),
     })?;
     *grpc_request.metadata_mut() = grpc_metadata;
-    let grpc_response = state.payments_service.create_access_token(grpc_request).await?;
+    let grpc_response = state
+        .payments_service
+        .create_access_token(grpc_request)
+        .await?;
     Ok(Json(grpc_response.into_inner()))
 }
 

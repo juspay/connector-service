@@ -3,9 +3,7 @@ use common_utils::consts;
 use external_services::shared_metrics as metrics;
 use grpc_api_types::{
     health_check::health_server,
-    payments::{
-        dispute_service_server, payment_service_server, refund_service_server,
-    },
+    payments::{dispute_service_server, payment_service_server, refund_service_server},
 };
 use std::{future::Future, net, sync::Arc};
 use tokio::{
@@ -16,7 +14,8 @@ use tonic::transport::Server;
 use tower_http::{request_id::MakeRequestUuid, trace as tower_trace};
 
 use crate::{
-    config_overrides::RequestExtensionsLayer, configs, error::ConfigurationError, http::config_middleware::HttpRequestExtensionsLayer, logger, utils,
+    config_overrides::RequestExtensionsLayer, configs, error::ConfigurationError,
+    http::config_middleware::HttpRequestExtensionsLayer, logger, utils,
 };
 
 /// # Panics

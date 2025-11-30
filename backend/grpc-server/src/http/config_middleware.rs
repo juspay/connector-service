@@ -1,10 +1,5 @@
 use crate::{configs::Config, utils::merge_config_with_override};
-use axum::{
-    body::Body,
-    extract::Request,
-    http::StatusCode,
-    response::Response,
-};
+use axum::{body::Body, extract::Request, http::StatusCode, response::Response};
 use std::{
     future::Future,
     pin::Pin,
@@ -12,6 +7,18 @@ use std::{
     task::{Context, Poll},
 };
 use tower::{Layer, Service};
+
+fn create_error_response(message: &str) -> Response<Body> {
+    Response::builder()
+        .status(StatusCode::INTERNAL_SERVER_ERROR)
+        .body(Body::from(message.to_string()))
+        .unwrap_or_else(|_| {
+            // Single fallback - no nested unwrap needed
+            let mut response = Response::new(Body::from("Internal server error"));
+            *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+            response
+        })
+}
 
 // HTTP middleware layer for adding config to request extensions
 #[derive(Clone)]
@@ -45,7 +52,9 @@ pub struct HttpRequestExtensionsMiddleware<S> {
 
 impl<S> Service<Request<Body>> for HttpRequestExtensionsMiddleware<S>
 where
-    S: Service<Request<Body>, Response = Response, Error = std::convert::Infallible> + Send + 'static,
+    S: Service<Request<Body>, Response = Response, Error = std::convert::Infallible>
+        + Send
+        + 'static,
     S::Future: Send + 'static,
 {
     type Response = S::Response;
@@ -73,12 +82,9 @@ where
                 ) {
                     Ok(cfg) => cfg,
                     Err(e) => {
-                        let error_response = Response::builder()
-                            .status(StatusCode::INTERNAL_SERVER_ERROR)
-                            .body(Body::from(format!(
-                                "Failed to merge config with override config: {e:?}"
-                            )))
-                            .unwrap();
+                        let error_response = create_error_response(&format!(
+                            "Failed to merge config with override config: {e:?}"
+                        ));
                         let fut = async move { Ok(error_response) };
                         return Box::pin(fut);
                     }

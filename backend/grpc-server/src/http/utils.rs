@@ -9,14 +9,14 @@ use serde::de::DeserializeOwned;
 use std::sync::Arc;
 use tonic::metadata::{Ascii, MetadataMap, MetadataValue};
 
-use crate::configs::Config;
 use super::error::HttpError;
+use crate::configs::Config;
 
 /// Converts HTTP headers to gRPC metadata
 /// Extracts relevant headers and adds them to the gRPC metadata map
 pub fn http_headers_to_grpc_metadata(
     http_headers: &HeaderMap,
-) -> Result<MetadataMap, tonic::Status> {
+) -> Result<MetadataMap, Box<tonic::Status>> {
     let mut metadata = MetadataMap::new();
 
     // Required headers - these must be present
@@ -63,21 +63,21 @@ pub fn http_headers_to_grpc_metadata(
 fn convert_header_to_metadata(
     header_name: &str,
     header_value: &HeaderValue,
-) -> Result<MetadataValue<Ascii>, tonic::Status> {
+) -> Result<MetadataValue<Ascii>, Box<tonic::Status>> {
     header_value
         .to_str()
         .map_err(|e| {
-            tonic::Status::invalid_argument(format!(
+            Box::new(tonic::Status::invalid_argument(format!(
                 "Invalid header value for {}: {}",
                 header_name, e
-            ))
+            )))
         })
         .and_then(|s| {
             MetadataValue::try_from(s).map_err(|e| {
-                tonic::Status::invalid_argument(format!(
+                Box::new(tonic::Status::invalid_argument(format!(
                     "Cannot convert header {} to metadata: {}",
                     header_name, e
-                ))
+                )))
             })
         })
 }
