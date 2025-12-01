@@ -66,21 +66,18 @@ pub fn create_router(state: AppState) -> Router {
         .route("/payments/transform", post(handlers::payments::transform))
         // RefundService routes
         .route("/refunds/get", post(handlers::refunds::get_refund))
-        .route("/refunds/transform", post(handlers::refunds::transform_refund))
+        .route(
+            "/refunds/transform",
+            post(handlers::refunds::transform_refund),
+        )
         // DisputeService routes
         .route(
             "/disputes/submit_evidence",
             post(handlers::disputes::submit_evidence),
         )
         .route("/disputes/get", post(handlers::disputes::get_dispute))
-        .route(
-            "/disputes/defend",
-            post(handlers::disputes::defend_dispute),
-        )
-        .route(
-            "/disputes/accept",
-            post(handlers::disputes::accept_dispute),
-        )
+        .route("/disputes/defend", post(handlers::disputes::defend_dispute))
+        .route("/disputes/accept", post(handlers::disputes::accept_dispute))
         .route(
             "/disputes/transform",
             post(handlers::disputes::transform_dispute),
