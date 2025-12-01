@@ -266,12 +266,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
     fn get_connector_error_type(
         &self,
-        error_code: String,
+        _error_code: String,
         _error_message: String,
     ) -> ConnectorErrorType {
-        match error_code.as_str() {
-            _ => ConnectorErrorType::UnknownError,
-        }
+        ConnectorErrorType::UnknownError
     }
 }
 
