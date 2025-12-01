@@ -113,6 +113,9 @@ pub use self::bluesnap::Bluesnap;
 pub mod authipay;
 pub use self::authipay::Authipay;
 
+pub mod bamboraapac;
+pub use self::bamboraapac::Bamboraapac;
+
 pub mod silverflow;
 pub use self::silverflow::Silverflow;
 
@@ -139,3 +142,12 @@ pub use self::billwerk::Billwerk;
 
 pub mod iatapay;
 pub use self::iatapay::Iatapay;
+
+pub mod nmi;
+pub use self::nmi::Nmi;
+
+pub mod forte;
+pub use self::forte::Forte;
+
+pub mod shift4;
+pub use self::shift4::Shift4;
