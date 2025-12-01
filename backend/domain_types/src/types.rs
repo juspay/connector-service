@@ -88,7 +88,7 @@ use crate::{
         VaultTokenHolder,
     },
     router_data::{
-        AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ConnectorResponseData,
+        self, AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ConnectorResponseData,
         RecurringMandatePaymentData,
     },
     router_data_v2::RouterDataV2,
@@ -102,6 +102,7 @@ use crate::{
 pub struct Connectors {
     // Added pub
     pub adyen: ConnectorParams,
+    pub forte: ConnectorParams,
     pub razorpay: ConnectorParams,
     pub razorpayv2: ConnectorParams,
     pub fiserv: ConnectorParams,
@@ -140,6 +141,7 @@ pub struct Connectors {
     pub datatrans: ConnectorParams,
     pub bluesnap: ConnectorParams,
     pub authipay: ConnectorParams,
+    pub bamboraapac: ConnectorParams,
     pub silverflow: ConnectorParams,
     pub celero: ConnectorParams,
     pub paypal: ConnectorParams,
@@ -149,6 +151,8 @@ pub struct Connectors {
     pub trustpayments: ConnectorParams,
     pub globalpay: ConnectorParams,
     pub nuvei: ConnectorParams,
+    pub nmi: ConnectorParams,
+    pub shift4: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
@@ -2215,7 +2219,11 @@ impl
                     .collect::<Result<Vec<_>, _>>()
             })
             .transpose()?;
-
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(AccessTokenResponseData::from);
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -2255,9 +2263,9 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
-            access_token: None,
-            session_token: None,
-            reference_id: None,
+            access_token,
+            session_token: value.session_token,
+            reference_id: value.order_id,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -2446,6 +2454,9 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
+        let connector_meta_data = common_utils::pii::SecretSerdeValue::new(
+            convert_merchant_metadata_to_json(&value.merchant_account_metadata),
+        );
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -2462,7 +2473,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            connector_meta_data: Some(connector_meta_data),
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -5016,7 +5027,9 @@ impl
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
-
+        let connector_meta_data = common_utils::pii::SecretSerdeValue::new(
+            convert_merchant_metadata_to_json(&value.merchant_account_metadata),
+        );
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "PAYMENT_ID".to_string(),
@@ -5032,7 +5045,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            connector_meta_data: Some(connector_meta_data),
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -5228,7 +5241,11 @@ impl
         };
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
-
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(AccessTokenResponseData::from);
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -5258,10 +5275,12 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
-            access_token: None,
-            session_token: None,
+            access_token,
+            session_token: value.session_token,
             reference_id: None,
-            payment_method_token: None,
+            payment_method_token: value
+                .payment_method_token
+                .map(|pmt| router_data::PaymentMethodToken::Token(Secret::new(pmt))),
             preprocessing_id: None,
             connector_api_version: None,
             test_mode,
@@ -5381,7 +5400,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
                     error_object: None,
                 }))?,
             statement_descriptor: None,
-            merchant_order_reference_id: None,
+            merchant_order_reference_id: value.merchant_order_reference_id,
             merchant_account_metadata: (!value.merchant_account_metadata.is_empty()).then(|| {
                 common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
                     &value.merchant_account_metadata,

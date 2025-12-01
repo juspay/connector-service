@@ -4,6 +4,33 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.01.0
+
+### Features
+
+- **connector:** [SHIFT4] Connector Integration ([#326](https://github.com/juspay/connector-service/pull/326)) ([`2d652a8`](https://github.com/juspay/connector-service/commit/2d652a8fc693cddc5a3a56cc5071dd7c02291af4))
+
+**Full Changelog:** [`2025.11.28.0...2025.12.01.0`](https://github.com/juspay/connector-service/compare/2025.11.28.0...2025.12.01.0)
+
+- - -
+
+## 2025.11.28.0
+
+### Features
+
+- **connector:**
+  - [NMI] Connector Integration ([#300](https://github.com/juspay/connector-service/pull/300)) ([`45ac195`](https://github.com/juspay/connector-service/commit/45ac1957892fc34560bf3e26c502d0e6d6cb849b))
+  - Add Forte Connector ([#238](https://github.com/juspay/connector-service/pull/238)) ([`3599dc8`](https://github.com/juspay/connector-service/commit/3599dc8fdf30e04394a1175578e166b92e129abd))
+- Enhance gRPC payment requests with order_id, payment_method_token, and access_token support ([#325](https://github.com/juspay/connector-service/pull/325)) ([`7f28be8`](https://github.com/juspay/connector-service/commit/7f28be871568f5937975a99bde14ce47736fd81e))
+
+### Bug Fixes
+
+- Removed git from dockerignore to add build versions in health check ([#84](https://github.com/juspay/connector-service/pull/84)) ([`8cccab2`](https://github.com/juspay/connector-service/commit/8cccab2e07bd38588a66f683423442727dc93a0d))
+
+**Full Changelog:** [`2025.11.27.0...2025.11.28.0`](https://github.com/juspay/connector-service/compare/2025.11.27.0...2025.11.28.0)
+
+- - -
+
 ## 2025.11.27.0
 
 ### Bug Fixes
