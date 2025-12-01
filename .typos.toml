@@ -7,11 +7,18 @@ extend-ignore-re = [
 [default.extend-identifiers]
 ACI = "ACI" # Name of a connector
 BA = "BA" # Bosnia and Herzegovina country code
+CAF = "CAF" # Central African Republic (ISO 3166-1 alpha-3)
 FO = "FO" # Faroe Islands (the) country code
 JOD = "JOD" # Jordan
 Jod = "Jod" # Jordan
 iin = "iin" # iin
+LSO = "LSO" # Lesotho (ISO 3166-1 alpha-3)
+NAM = "NAM" # Namibia (ISO 3166-1 alpha-3)
 PN = "PN" # Pitcairn Islands
+SOM = "SOM" # Somalia (ISO 3166-1 alpha-3)
+SUR = "SUR" # Suriname (ISO 3166-1 alpha-3)
+THA = "THA" # Thailand (ISO 3166-1 alpha-3)
+TTO = "TTO" # Trinidad and Tobago (ISO 3166-1 alpha-3)
 jus = "jus" # Juspay
 FPR = "FPR" # Fraud Prevention Rules
 
