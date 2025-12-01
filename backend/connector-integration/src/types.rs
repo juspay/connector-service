@@ -74,6 +74,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Paypal => Box::new(connectors::Paypal::new()),
             ConnectorEnum::Billwerk => Box::new(connectors::Billwerk::new()),
             ConnectorEnum::Shift4 => Box::new(connectors::Shift4::new()),
+            ConnectorEnum::Bamboraapac => Box::new(connectors::Bamboraapac::new()),
         }
     }
 }
