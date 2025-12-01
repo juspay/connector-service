@@ -167,8 +167,7 @@ pub type IatapaySyncResponse = IatapayPaymentsResponse;
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CheckoutMethods {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub redirect: Option<RedirectMethod>,
+    pub redirect: RedirectMethod,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -387,49 +386,63 @@ impl<
             });
         }
 
-        // Determine redirection data or QR code metadata
-        let (redirection_data, connector_metadata) = match &response.checkout_methods {
-            Some(checkout_methods) => match &checkout_methods.redirect {
-                Some(redirect) if redirect.redirect_url.to_lowercase().ends_with("qr") => {
-                    // QR code flow - store in metadata
-                    let mut metadata_map = HashMap::new();
-                    metadata_map.insert(
-                        "qr_code_url".to_string(),
-                        Value::String(redirect.redirect_url.clone()),
-                    );
-                    let metadata_value = serde_json::to_value(metadata_map)
-                        .change_context(ConnectorError::ResponseHandlingFailed)?;
-                    (None, Some(metadata_value))
-                }
-                Some(redirect) => {
-                    // Standard redirect flow
-                    (
-                        Some(Box::new(RedirectForm::Form {
-                            endpoint: redirect.redirect_url.clone(),
-                            method: Method::Get,
-                            form_fields: HashMap::new(),
-                        })),
-                        None,
-                    )
-                }
-                None => (None, None),
-            },
-            None => (None, None),
-        };
+        // Build payment response data based on checkout methods
+        let payments_response_data = match &response.checkout_methods {
+            Some(checkout_methods) => {
+                let form_fields = HashMap::new();
+                let (connector_metadata, redirection_data) =
+                    match checkout_methods.redirect.redirect_url.to_lowercase().ends_with("qr") {
+                        true => {
+                            // QR code flow - store in metadata
+                            let mut metadata_map = HashMap::new();
+                            metadata_map.insert(
+                                "qr_code_url".to_string(),
+                                Value::String(checkout_methods.redirect.redirect_url.clone()),
+                            );
+                            let metadata_value = serde_json::to_value(metadata_map)
+                                .change_context(ConnectorError::ResponseHandlingFailed)?;
+                            (Some(metadata_value), None)
+                        }
+                        false => {
+                            // Standard redirect flow
+                            (
+                                None,
+                                Some(Box::new(RedirectForm::Form {
+                                    endpoint: checkout_methods.redirect.redirect_url.clone(),
+                                    method: Method::Get,
+                                    form_fields,
+                                })),
+                            )
+                        }
+                    };
 
-        // Build success response
-        let payments_response_data = PaymentsResponseData::TransactionResponse {
-            resource_id: match response.iata_payment_id.clone() {
-                Some(id) => ResponseId::ConnectorTransactionId(id),
-                None => ResponseId::NoResponseId,
+                PaymentsResponseData::TransactionResponse {
+                    resource_id: match response.iata_payment_id.clone() {
+                        Some(id) => ResponseId::ConnectorTransactionId(id),
+                        None => ResponseId::NoResponseId,
+                    },
+                    redirection_data,
+                    mandate_reference: None,
+                    connector_metadata,
+                    network_txn_id: None,
+                    connector_response_reference_id: response.merchant_payment_id.clone(),
+                    incremental_authorization_allowed: None,
+                    status_code: item.http_code,
+                }
+            }
+            None => PaymentsResponseData::TransactionResponse {
+                resource_id: match response.iata_payment_id.clone() {
+                    Some(id) => ResponseId::ConnectorTransactionId(id),
+                    None => ResponseId::NoResponseId,
+                },
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: response.merchant_payment_id.clone(),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
             },
-            redirection_data,
-            mandate_reference: None,
-            connector_metadata,
-            network_txn_id: None,
-            connector_response_reference_id: response.merchant_payment_id.clone(),
-            incremental_authorization_allowed: None,
-            status_code: item.http_code,
         };
 
         Ok(Self {
