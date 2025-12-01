@@ -20,10 +20,9 @@ use super::NuveiRouterData;
 // Auth Type
 #[derive(Debug, Clone)]
 pub struct NuveiAuthType {
-    pub api_key: Secret<String>,
-    pub merchant_id: Option<Secret<String>>,
-    pub merchant_site_id: Option<Secret<String>>,
-    pub merchant_secret_key: Option<Secret<String>>,
+    pub(super) merchant_id: Secret<String>,
+    pub(super) merchant_site_id: Secret<String>,
+    pub(super) merchant_secret: Secret<String>,
 }
 
 impl TryFrom<&ConnectorAuthType> for NuveiAuthType {
@@ -36,25 +35,9 @@ impl TryFrom<&ConnectorAuthType> for NuveiAuthType {
                 api_secret,
                 key1
             } => Ok(Self {
-                api_key: api_key.clone(),
-                merchant_id: Some(api_key.clone()),
-                merchant_site_id: Some(key1.clone()),
-                merchant_secret_key: Some(api_secret.clone()),
-            }),
-            ConnectorAuthType::BodyKey {
-                api_key,
-                key1
-            } => Ok(Self {
-                api_key: api_key.clone(),
-                merchant_id: Some(api_key.clone()),
-                merchant_site_id: Some(key1.clone()),
-                merchant_secret_key: None,
-            }),
-            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
-                api_key: api_key.clone(),
-                merchant_id: None,
-                merchant_site_id: None,
-                merchant_secret_key: None,
+                merchant_id: api_key.clone(),
+                merchant_site_id: key1.clone(),
+                merchant_secret: api_secret.clone(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
@@ -66,9 +49,7 @@ impl NuveiAuthType {
         use sha2::{Sha256, Digest};
 
         let mut concatenated = params.join("");
-        if let Some(secret_key) = &self.merchant_secret_key {
-            concatenated.push_str(secret_key.peek());
-        }
+        concatenated.push_str(self.merchant_secret.peek());
 
         let mut hasher = Sha256::new();
         hasher.update(concatenated.as_bytes());
@@ -446,25 +427,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         // Extract auth data
         let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
 
-        let merchant_id = auth.merchant_id.clone()
-            .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
-        let merchant_site_id = auth.merchant_site_id.clone()
-            .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
-
         let time_stamp = NuveiAuthType::get_timestamp();
         let client_request_id = router_data.resource_common_data.connector_request_reference_id.clone();
 
         // Generate checksum for getSessionToken: merchantId + merchantSiteId + clientRequestId + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
-            merchant_id.peek(),
-            merchant_site_id.peek(),
+            auth.merchant_id.peek(),
+            auth.merchant_site_id.peek(),
             &client_request_id,
             &time_stamp,
         ]);
 
         Ok(Self {
-            merchant_id,
-            merchant_site_id,
+            merchant_id: auth.merchant_id,
+            merchant_site_id: auth.merchant_site_id,
             client_request_id,
             time_stamp,
             checksum,
@@ -545,11 +521,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         // Extract auth data
         let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
 
-        let merchant_id = auth.merchant_id.clone()
-            .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
-        let merchant_site_id = auth.merchant_site_id.clone()
-            .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
-
         let time_stamp = NuveiAuthType::get_timestamp();
 
         // Per Hyperswitch pattern: ALWAYS send both transaction_id AND client_unique_id
@@ -565,16 +536,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         // Generate checksum for getTransactionDetails (per Hyperswitch)
         // Checksum order: merchantId + merchantSiteId + transactionId + clientUniqueId + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
-            merchant_id.peek(),
-            merchant_site_id.peek(),
+            auth.merchant_id.peek(),
+            auth.merchant_site_id.peek(),
             &transaction_id,
             &client_unique_id,
             &time_stamp,
         ]);
 
         Ok(Self {
-            merchant_id,
-            merchant_site_id,
+            merchant_id: auth.merchant_id,
+            merchant_site_id: auth.merchant_site_id,
             client_unique_id,
             transaction_id,
             time_stamp,
@@ -597,11 +568,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         // Extract auth data
         let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
-
-        let merchant_id = auth.merchant_id.clone()
-            .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
-        let merchant_site_id = auth.merchant_site_id.clone()
-            .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
 
         // Extract payment method data
         let payment_option = match &router_data.request.payment_method_data {
@@ -703,8 +669,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         // Generate checksum: merchantId + merchantSiteId + clientRequestId + amount + currency + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
-            merchant_id.peek(),
-            merchant_site_id.peek(),
+            auth.merchant_id.peek(),
+            auth.merchant_site_id.peek(),
             &client_request_id,
             &amount.get_amount_as_string(),
             &currency,
@@ -713,8 +679,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         Ok(Self {
             session_token: Some(session_token),
-            merchant_id,
-            merchant_site_id,
+            merchant_id: auth.merchant_id,
+            merchant_site_id: auth.merchant_site_id,
             client_request_id,
             amount,
             currency,
@@ -833,11 +799,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         // Extract auth data
         let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
 
-        let merchant_id = auth.merchant_id.clone()
-            .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
-        let merchant_site_id = auth.merchant_site_id.clone()
-            .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
-
         let time_stamp = NuveiAuthType::get_timestamp();
         let client_request_id = router_data.resource_common_data.connector_request_reference_id.clone();
         let client_unique_id = router_data.resource_common_data.connector_request_reference_id.clone();
@@ -860,8 +821,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         // Generate checksum: merchantId + merchantSiteId + clientRequestId + clientUniqueId + amount + currency + relatedTransactionId + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
-            merchant_id.peek(),
-            merchant_site_id.peek(),
+            auth.merchant_id.peek(),
+            auth.merchant_site_id.peek(),
             &client_request_id,
             &client_unique_id,
             &amount.get_amount_as_string(),
@@ -871,8 +832,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         ]);
 
         Ok(Self {
-            merchant_id,
-            merchant_site_id,
+            merchant_id: auth.merchant_id,
+            merchant_site_id: auth.merchant_site_id,
             client_request_id,
             client_unique_id,
             amount,
@@ -1072,11 +1033,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         // Extract auth data
         let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
 
-        let merchant_id = auth.merchant_id.clone()
-            .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
-        let merchant_site_id = auth.merchant_site_id.clone()
-            .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
-
         let time_stamp = NuveiAuthType::get_timestamp();
         let client_request_id = router_data.resource_common_data.connector_request_reference_id.clone();
         let client_unique_id = router_data.resource_common_data.connector_request_reference_id.clone();
@@ -1093,8 +1049,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         // Generate checksum: merchantId + merchantSiteId + clientRequestId + clientUniqueId + amount + currency + relatedTransactionId + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
-            merchant_id.peek(),
-            merchant_site_id.peek(),
+            auth.merchant_id.peek(),
+            auth.merchant_site_id.peek(),
             &client_request_id,
             &client_unique_id,
             &amount.get_amount_as_string(),
@@ -1104,8 +1060,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         ]);
 
         Ok(Self {
-            merchant_id,
-            merchant_site_id,
+            merchant_id: auth.merchant_id,
+            merchant_site_id: auth.merchant_site_id,
             client_request_id,
             client_unique_id,
             amount,
@@ -1132,11 +1088,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         // Extract auth data
         let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
 
-        let merchant_id = auth.merchant_id.clone()
-            .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
-        let merchant_site_id = auth.merchant_site_id.clone()
-            .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
-
         let time_stamp = NuveiAuthType::get_timestamp();
 
         // Per Hyperswitch pattern: ALWAYS send both transaction_id AND client_unique_id
@@ -1152,16 +1103,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         // Generate checksum for getTransactionDetails (per Hyperswitch PSync pattern)
         // Checksum order: merchantId + merchantSiteId + clientUniqueId + timeStamp + transactionId + merchantSecretKey
         let checksum = auth.generate_checksum(&[
-            merchant_id.peek(),
-            merchant_site_id.peek(),
+            auth.merchant_id.peek(),
+            auth.merchant_site_id.peek(),
             &client_unique_id,
             &time_stamp,
             &transaction_id,
         ]);
 
         Ok(Self {
-            merchant_id,
-            merchant_site_id,
+            merchant_id: auth.merchant_id,
+            merchant_site_id: auth.merchant_site_id,
             client_unique_id,
             transaction_id,
             time_stamp,
@@ -1335,11 +1286,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         // Extract auth data
         let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
 
-        let merchant_id = auth.merchant_id.clone()
-            .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
-        let merchant_site_id = auth.merchant_site_id.clone()
-            .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
-
         let time_stamp = NuveiAuthType::get_timestamp();
         let client_request_id = router_data.resource_common_data.connector_request_reference_id.clone();
         let client_unique_id = router_data.resource_common_data.connector_request_reference_id.clone();
@@ -1349,8 +1295,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         // Generate checksum: merchantId + merchantSiteId + clientRequestId + clientUniqueId + "" + "" + relatedTransactionId + "" + "" + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
-            merchant_id.peek(),
-            merchant_site_id.peek(),
+            auth.merchant_id.peek(),
+            auth.merchant_site_id.peek(),
             &client_request_id,
             &client_unique_id,
             "", // amount (empty for void)
@@ -1362,8 +1308,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         ]);
 
         Ok(Self {
-            merchant_id,
-            merchant_site_id,
+            merchant_id: auth.merchant_id,
+            merchant_site_id: auth.merchant_site_id,
             client_request_id,
             client_unique_id,
             related_transaction_id,
