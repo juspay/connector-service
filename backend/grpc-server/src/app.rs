@@ -151,7 +151,11 @@ impl Service {
         );
 
         let config_override_layer = HttpRequestExtensionsLayer::new(base_config.clone());
-        let app_state = crate::http::AppState::new(self.payments_service);
+        let app_state = crate::http::AppState::new(
+            self.payments_service,
+            self.refunds_service,
+            self.disputes_service,
+        );
         let router = crate::http::create_router(app_state)
             .layer(logging_layer)
             .layer(request_id_layer)
