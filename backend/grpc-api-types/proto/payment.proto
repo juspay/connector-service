@@ -2109,6 +2109,7 @@ message PaymentServicePreAuthenticateRequest {
   // URLs for Redirection
   optional string return_url = 11; // URL to redirect after authentication
   optional string continue_redirection_url = 12; // URL to complete authorization
+  optional string webhook_url = 13; // Server-to-server webhook callback URL for async notifications (e.g., 3DS Method completion)
 
   // Contextual Information
   optional BrowserInformation browser_info = 14; // Information about the customer's browser

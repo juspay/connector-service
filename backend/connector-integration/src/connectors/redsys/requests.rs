@@ -97,26 +97,16 @@ pub enum RedsysThreeDsInfo {
     AuthenticationData,
 }
 
+/// Indicates whether the 3DSMethod has been executed
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum RedsysThreeDSCompInd {
+    ///  Y = Completed successfully
     Y,
+    ///  N = Completed with errors
     N,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RedsysThreeDsInvokeData {
-    pub three_ds_method_url: String,
-    pub three_ds_method_data: String,
-    pub message_version: String,
-    pub directory_server_id: String,
-    pub three_ds_method_data_submission: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ThreeDsInvokeExempt {
-    pub three_d_s_server_trans_i_d: String,
-    pub message_version: String,
+    ///  U = 3DSMethod not executed
+    U,
 }
 
 #[derive(Debug, Serialize)]
@@ -168,5 +158,10 @@ pub struct RedsysSyncRequest {
     pub ds_transaction_type: String,
 }
 
-// Note: PSync and RSync use SOAP XML and are implemented manually in redsys.rs
-// They don't use request type structs - the SOAP XML is built directly as Vec<u8>
+#[derive(Debug, Serialize)]
+pub struct RedsysThreedsInvokeRequest {
+    #[serde(rename = "threeDSServerTransID")]
+    pub three_d_s_server_trans_i_d: String,
+    #[serde(rename = "threeDSMethodNotificationURL")]
+    pub three_d_s_method_notification_u_r_l: String,
+}
