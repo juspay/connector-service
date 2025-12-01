@@ -390,31 +390,35 @@ impl<
         let payments_response_data = match &response.checkout_methods {
             Some(checkout_methods) => {
                 let form_fields = HashMap::new();
-                let (connector_metadata, redirection_data) =
-                    match checkout_methods.redirect.redirect_url.to_lowercase().ends_with("qr") {
-                        true => {
-                            // QR code flow - store in metadata
-                            let mut metadata_map = HashMap::new();
-                            metadata_map.insert(
-                                "qr_code_url".to_string(),
-                                Value::String(checkout_methods.redirect.redirect_url.clone()),
-                            );
-                            let metadata_value = serde_json::to_value(metadata_map)
-                                .change_context(ConnectorError::ResponseHandlingFailed)?;
-                            (Some(metadata_value), None)
-                        }
-                        false => {
-                            // Standard redirect flow
-                            (
-                                None,
-                                Some(Box::new(RedirectForm::Form {
-                                    endpoint: checkout_methods.redirect.redirect_url.clone(),
-                                    method: Method::Get,
-                                    form_fields,
-                                })),
-                            )
-                        }
-                    };
+                let (connector_metadata, redirection_data) = match checkout_methods
+                    .redirect
+                    .redirect_url
+                    .to_lowercase()
+                    .ends_with("qr")
+                {
+                    true => {
+                        // QR code flow - store in metadata
+                        let mut metadata_map = HashMap::new();
+                        metadata_map.insert(
+                            "qr_code_url".to_string(),
+                            Value::String(checkout_methods.redirect.redirect_url.clone()),
+                        );
+                        let metadata_value = serde_json::to_value(metadata_map)
+                            .change_context(ConnectorError::ResponseHandlingFailed)?;
+                        (Some(metadata_value), None)
+                    }
+                    false => {
+                        // Standard redirect flow
+                        (
+                            None,
+                            Some(Box::new(RedirectForm::Form {
+                                endpoint: checkout_methods.redirect.redirect_url.clone(),
+                                method: Method::Get,
+                                form_fields,
+                            })),
+                        )
+                    }
+                };
 
                 PaymentsResponseData::TransactionResponse {
                     resource_id: match response.iata_payment_id.clone() {
