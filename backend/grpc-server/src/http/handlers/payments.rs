@@ -35,114 +35,139 @@ http_handler!(
     authorize,
     PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse,
-    authorize
+    authorize,
+    payments_service
 );
 http_handler!(
     authorize_only,
     PaymentServiceAuthorizeOnlyRequest,
     PaymentServiceAuthorizeResponse,
-    authorize_only
+    authorize_only,
+    payments_service
 );
 http_handler!(
     capture,
     PaymentServiceCaptureRequest,
     PaymentServiceCaptureResponse,
-    capture
+    capture,
+    payments_service
 );
 http_handler!(
     void,
     PaymentServiceVoidRequest,
     PaymentServiceVoidResponse,
-    void
+    void,
+    payments_service
 );
 http_handler!(
     void_post_capture,
     PaymentServiceVoidPostCaptureRequest,
     PaymentServiceVoidPostCaptureResponse,
-    void_post_capture
+    void_post_capture,
+    payments_service
 );
 http_handler!(
     get_payment,
     PaymentServiceGetRequest,
     PaymentServiceGetResponse,
-    get
+    get,
+    payments_service
 );
 http_handler!(
     create_order,
     PaymentServiceCreateOrderRequest,
     PaymentServiceCreateOrderResponse,
-    create_order
+    create_order,
+    payments_service
 );
 http_handler!(
     create_session_token,
     PaymentServiceCreateSessionTokenRequest,
     PaymentServiceCreateSessionTokenResponse,
-    create_session_token
+    create_session_token,
+    payments_service
 );
 http_handler!(
     create_connector_customer,
     PaymentServiceCreateConnectorCustomerRequest,
     PaymentServiceCreateConnectorCustomerResponse,
-    create_connector_customer
+    create_connector_customer,
+    payments_service
 );
 http_handler!(
     create_payment_method_token,
     PaymentServiceCreatePaymentMethodTokenRequest,
     PaymentServiceCreatePaymentMethodTokenResponse,
-    create_payment_method_token
+    create_payment_method_token,
+    payments_service
 );
 http_handler!(
     register,
     PaymentServiceRegisterRequest,
     PaymentServiceRegisterResponse,
-    register
+    register,
+    payments_service
 );
 http_handler!(
     register_only,
     PaymentServiceRegisterRequest,
     PaymentServiceRegisterResponse,
-    register_only
+    register_only,
+    payments_service
 );
 http_handler!(
     repeat_everything,
     PaymentServiceRepeatEverythingRequest,
     PaymentServiceRepeatEverythingResponse,
-    repeat_everything
+    repeat_everything,
+    payments_service
 );
-http_handler!(refund, PaymentServiceRefundRequest, RefundResponse, refund);
+http_handler!(
+    refund,
+    PaymentServiceRefundRequest,
+    RefundResponse,
+    refund,
+    payments_service
+);
 http_handler!(
     dispute,
     PaymentServiceDisputeRequest,
     DisputeResponse,
-    dispute
+    dispute,
+    payments_service
 );
 http_handler!(
     pre_authenticate,
     PaymentServicePreAuthenticateRequest,
     PaymentServicePreAuthenticateResponse,
-    pre_authenticate
+    pre_authenticate,
+    payments_service
 );
 http_handler!(
     authenticate,
     PaymentServiceAuthenticateRequest,
     PaymentServiceAuthenticateResponse,
-    authenticate
+    authenticate,
+    payments_service
 );
 http_handler!(
     post_authenticate,
     PaymentServicePostAuthenticateRequest,
     PaymentServicePostAuthenticateResponse,
-    post_authenticate
+    post_authenticate,
+    payments_service
 );
 http_handler!(
     create_access_token,
     PaymentServiceCreateAccessTokenRequest,
     PaymentServiceCreateAccessTokenResponse,
-    create_access_token
+    create_access_token,
+    payments_service
 );
 http_handler!(
     transform,
     PaymentServiceTransformRequest,
     PaymentServiceTransformResponse,
-    transform
+    transform,
+    payments_service
 );
