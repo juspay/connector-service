@@ -118,10 +118,7 @@ impl From<IatapayPaymentStatus> for AttemptStatus {
 // ===== REQUEST STRUCTURES =====
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct IatapayPaymentsRequest<T>
-where
-    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static,
-{
+pub struct IatapayPaymentsRequest {
     pub merchant_id: Secret<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub merchant_payment_id: Option<String>,
@@ -133,8 +130,6 @@ where
     pub notification_url: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payer_info: Option<PayerInfo>,
-    #[serde(skip)]
-    _phantom: std::marker::PhantomData<T>,
 }
 
 #[derive(Debug, Serialize)]
@@ -251,7 +246,7 @@ impl<
             >,
             T,
         >,
-    > for IatapayPaymentsRequest<T>
+    > for IatapayPaymentsRequest
 {
     type Error = Report<ConnectorError>;
 
@@ -326,7 +321,6 @@ impl<
             },
             notification_url: webhook_url,
             payer_info,
-            _phantom: std::marker::PhantomData,
         })
     }
 }
@@ -394,37 +388,34 @@ impl<
         }
 
         // Determine redirection data or QR code metadata
-        let (redirection_data, connector_metadata) =
-            if let Some(checkout_methods) = &response.checkout_methods {
-                if let Some(redirect) = &checkout_methods.redirect {
-                    // Check if URL ends with "qr" for QR code flow
-                    if redirect.redirect_url.to_lowercase().ends_with("qr") {
-                        // QR code flow - store in metadata
-                        let mut metadata_map = HashMap::new();
-                        metadata_map.insert(
-                            "qr_code_url".to_string(),
-                            Value::String(redirect.redirect_url.clone()),
-                        );
-                        let metadata_value = serde_json::to_value(metadata_map)
-                            .change_context(ConnectorError::ResponseHandlingFailed)?;
-                        (None, Some(metadata_value))
-                    } else {
-                        // Standard redirect flow
-                        (
-                            Some(Box::new(RedirectForm::Form {
-                                endpoint: redirect.redirect_url.clone(),
-                                method: Method::Get,
-                                form_fields: HashMap::new(),
-                            })),
-                            None,
-                        )
-                    }
-                } else {
-                    (None, None)
+        let (redirection_data, connector_metadata) = match &response.checkout_methods {
+            Some(checkout_methods) => match &checkout_methods.redirect {
+                Some(redirect) if redirect.redirect_url.to_lowercase().ends_with("qr") => {
+                    // QR code flow - store in metadata
+                    let mut metadata_map = HashMap::new();
+                    metadata_map.insert(
+                        "qr_code_url".to_string(),
+                        Value::String(redirect.redirect_url.clone()),
+                    );
+                    let metadata_value = serde_json::to_value(metadata_map)
+                        .change_context(ConnectorError::ResponseHandlingFailed)?;
+                    (None, Some(metadata_value))
                 }
-            } else {
-                (None, None)
-            };
+                Some(redirect) => {
+                    // Standard redirect flow
+                    (
+                        Some(Box::new(RedirectForm::Form {
+                            endpoint: redirect.redirect_url.clone(),
+                            method: Method::Get,
+                            form_fields: HashMap::new(),
+                        })),
+                        None,
+                    )
+                }
+                None => (None, None),
+            },
+            None => (None, None),
+        };
 
         // Build success response
         let payments_response_data = PaymentsResponseData::TransactionResponse {
@@ -572,35 +563,21 @@ pub struct IatapayRefundRequest {
 pub struct IatapayRefundResponse {
     pub iata_refund_id: String,
     pub status: IatapayRefundStatus,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub merchant_refund_id: Option<String>,
     pub amount: FloatMajorUnit,
     pub currency: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub bank_transfer_description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub failure_code: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub failure_details: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub lock_reason: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub creation_date_time: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub finish_date_time: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub update_date_time: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub clearance_date_time: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub iata_payment_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub merchant_payment_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_amount: Option<FloatMajorUnit>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub merchant_id: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub account_country: Option<String>,
 }
 
