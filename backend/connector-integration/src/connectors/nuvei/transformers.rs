@@ -56,55 +56,9 @@ impl NuveiAuthType {
         format!("{:x}", hasher.finalize())
     }
 
-    pub fn get_timestamp() -> String {
-        // Generate timestamp in YYYYMMDDHHmmss format
-        use std::time::SystemTime;
-        let now = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
-
-        // Convert to datetime components (UTC)
-        // Using simple calculation for UTC time
-        let days_since_epoch = now / 86400;
-        let seconds_today = now % 86400;
-
-        let hours = (seconds_today / 3600) % 24;
-        let minutes = (seconds_today / 60) % 60;
-        let seconds = seconds_today % 60;
-
-        // Calculate year, month, day (simplified Gregorian calendar)
-        let mut year = 1970;
-        let mut remaining_days = days_since_epoch;
-
-        loop {
-            let days_in_year = if (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0) { 366 } else { 365 };
-            if remaining_days < days_in_year {
-                break;
-            }
-            remaining_days -= days_in_year;
-            year += 1;
-        }
-
-        let is_leap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
-        let month_days = if is_leap {
-            [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-        } else {
-            [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-        };
-
-        let mut month = 1;
-        let mut day = remaining_days + 1;
-
-        for (i, &days) in month_days.iter().enumerate() {
-            if day <= days {
-                month = i + 1;
-                break;
-            }
-            day -= days;
-        }
-
-        format!("{:04}{:02}{:02}{:02}{:02}{:02}", year, month, day, hours, minutes, seconds)
+    pub fn get_timestamp() -> common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss> {
+        // Generate timestamp in YYYYMMDDHHmmss format using common_utils date_time
+        common_utils::date_time::DateTime::from(common_utils::date_time::now())
     }
 }
 
@@ -115,7 +69,7 @@ pub struct NuveiSessionTokenRequest {
     pub merchant_id: Secret<String>,
     pub merchant_site_id: Secret<String>,
     pub client_request_id: String,
-    pub time_stamp: String,
+    pub time_stamp: common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss>,
     pub checksum: String,
 }
 
@@ -152,7 +106,7 @@ pub struct NuveiPaymentRequest<T: PaymentMethodDataTypes + std::fmt::Debug + std
     pub transaction_type: TransactionType,
     pub device_details: NuveiDeviceDetails,
     pub billing_address: NuveiBillingAddress,
-    pub time_stamp: String,
+    pub time_stamp: common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss>,
     pub checksum: String,
 }
 
@@ -269,7 +223,7 @@ pub struct NuveiSyncRequest {
     pub merchant_site_id: Secret<String>,
     pub client_unique_id: String,
     pub transaction_id: String,
-    pub time_stamp: String,
+    pub time_stamp: common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss>,
     pub checksum: String,
 }
 
@@ -312,7 +266,7 @@ pub struct NuveiCaptureRequest {
     pub amount: StringMajorUnit,
     pub currency: String,
     pub related_transaction_id: String,
-    pub time_stamp: String,
+    pub time_stamp: common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss>,
     pub checksum: String,
 }
 
@@ -341,7 +295,7 @@ pub struct NuveiRefundRequest {
     pub amount: StringMajorUnit,
     pub currency: String,
     pub related_transaction_id: String,
-    pub time_stamp: String,
+    pub time_stamp: common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss>,
     pub checksum: String,
 }
 
@@ -364,7 +318,7 @@ pub struct NuveiRefundSyncRequest {
     pub merchant_site_id: Secret<String>,
     pub client_unique_id: String,
     pub transaction_id: String,
-    pub time_stamp: String,
+    pub time_stamp: common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss>,
     pub checksum: String,
 }
 
@@ -388,7 +342,7 @@ pub struct NuveiVoidRequest {
     pub client_request_id: String,
     pub client_unique_id: String,
     pub related_transaction_id: String,
-    pub time_stamp: String,
+    pub time_stamp: common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss>,
     pub checksum: String,
 }
 
@@ -435,7 +389,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             auth.merchant_id.peek(),
             auth.merchant_site_id.peek(),
             &client_request_id,
-            &time_stamp,
+            &time_stamp.to_string(),
         ]);
 
         Ok(Self {
@@ -533,14 +487,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             }
         };
 
-        // Generate checksum for getTransactionDetails (per Hyperswitch)
-        // Checksum order: merchantId + merchantSiteId + transactionId + clientUniqueId + timeStamp + merchantSecretKey
+        // Generate checksum for getTransactionDetails: merchantId + merchantSiteId + transactionId + clientUniqueId + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
             auth.merchant_id.peek(),
             auth.merchant_site_id.peek(),
             &transaction_id,
             &client_unique_id,
-            &time_stamp,
+            &time_stamp.to_string(),
         ]);
 
         Ok(Self {
@@ -674,7 +627,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             &client_request_id,
             &amount.get_amount_as_string(),
             &currency,
-            &time_stamp,
+            &time_stamp.to_string(),
         ]);
 
         Ok(Self {
@@ -828,7 +781,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             &amount.get_amount_as_string(),
             &currency,
             &related_transaction_id,
-            &time_stamp,
+            &time_stamp.to_string(),
         ]);
 
         Ok(Self {
@@ -1056,7 +1009,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             &amount.get_amount_as_string(),
             &currency,
             &related_transaction_id,
-            &time_stamp,
+            &time_stamp.to_string(),
         ]);
 
         Ok(Self {
@@ -1106,7 +1059,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             auth.merchant_id.peek(),
             auth.merchant_site_id.peek(),
             &client_unique_id,
-            &time_stamp,
+            &time_stamp.to_string(),
             &transaction_id,
         ]);
 
@@ -1304,7 +1257,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             &related_transaction_id,
             "", // authCode (empty)
             "", // comment (empty)
-            &time_stamp,
+            &time_stamp.to_string(),
         ]);
 
         Ok(Self {
