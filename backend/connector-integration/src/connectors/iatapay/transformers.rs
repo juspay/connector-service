@@ -67,17 +67,11 @@ pub struct IatapayAuthUpdateRequest {
 }
 
 impl IatapayAuthUpdateRequest {
-    pub fn new() -> Self {
+    pub fn new(grant_type: String) -> Self {
         Self {
-            grant_type: "client_credentials".to_string(),
+            grant_type,
             scope: "payment".to_string(),
         }
-    }
-}
-
-impl Default for IatapayAuthUpdateRequest {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -434,12 +428,10 @@ impl<
 
         // Build success response
         let payments_response_data = PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(
-                response
-                    .iata_payment_id
-                    .clone()
-                    .unwrap_or_else(|| "unknown".to_string()),
-            ),
+            resource_id: match response.iata_payment_id.clone() {
+                Some(id) => ResponseId::ConnectorTransactionId(id),
+                None => ResponseId::NoResponseId,
+            },
             redirection_data,
             mandate_reference: None,
             connector_metadata,
@@ -506,46 +498,14 @@ impl
         }
 
         // Determine redirection data or QR code metadata (for PSync, these should be None typically)
-        let (redirection_data, connector_metadata) =
-            if let Some(checkout_methods) = &response.checkout_methods {
-                if let Some(redirect) = &checkout_methods.redirect {
-                    // Check if URL ends with "qr" for QR code flow
-                    if redirect.redirect_url.to_lowercase().ends_with("qr") {
-                        // QR code flow - store in metadata
-                        let mut metadata_map = HashMap::new();
-                        metadata_map.insert(
-                            "qr_code_url".to_string(),
-                            Value::String(redirect.redirect_url.clone()),
-                        );
-                        let metadata_value = serde_json::to_value(metadata_map)
-                            .change_context(ConnectorError::ResponseHandlingFailed)?;
-                        (None, Some(metadata_value))
-                    } else {
-                        // Standard redirect flow
-                        (
-                            Some(Box::new(RedirectForm::Form {
-                                endpoint: redirect.redirect_url.clone(),
-                                method: Method::Get,
-                                form_fields: HashMap::new(),
-                            })),
-                            None,
-                        )
-                    }
-                } else {
-                    (None, None)
-                }
-            } else {
-                (None, None)
-            };
+        let (redirection_data, connector_metadata) = (None, None);
 
         // Build success response
         let payments_response_data = PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(
-                response
-                    .iata_payment_id
-                    .clone()
-                    .unwrap_or_else(|| "unknown".to_string()),
-            ),
+            resource_id: match response.iata_payment_id.clone() {
+                Some(id) => ResponseId::ConnectorTransactionId(id),
+                None => ResponseId::NoResponseId,
+            },
             redirection_data,
             mandate_reference: None,
             connector_metadata,
@@ -577,6 +537,19 @@ pub enum IatapayRefundStatus {
     Settled,
     Cleared,
     Failed,
+}
+
+impl From<IatapayRefundStatus> for RefundStatus {
+    fn from(status: IatapayRefundStatus) -> Self {
+        match status {
+            IatapayRefundStatus::Created
+            | IatapayRefundStatus::Locked
+            | IatapayRefundStatus::Initiated
+            | IatapayRefundStatus::Authorized => Self::Pending,
+            IatapayRefundStatus::Settled | IatapayRefundStatus::Cleared => Self::Success,
+            IatapayRefundStatus::Failed => Self::Failure,
+        }
+    }
 }
 
 // ===== REFUND REQUEST STRUCTURE =====
@@ -707,14 +680,7 @@ impl
         let mut router_data = item.router_data;
         let response = item.response;
 
-        let refund_status = match response.status {
-            IatapayRefundStatus::Created
-            | IatapayRefundStatus::Locked
-            | IatapayRefundStatus::Initiated
-            | IatapayRefundStatus::Authorized => RefundStatus::Pending,
-            IatapayRefundStatus::Settled | IatapayRefundStatus::Cleared => RefundStatus::Success,
-            IatapayRefundStatus::Failed => RefundStatus::Failure,
-        };
+        let refund_status = RefundStatus::from(response.status.clone());
 
         // Check if refund failed and return error response
         router_data.response = if refund_status == RefundStatus::Failure {
@@ -767,14 +733,7 @@ impl
         let response = item.response;
 
         // Map status using the same logic as Refund
-        let refund_status = match response.status {
-            IatapayRefundStatus::Created
-            | IatapayRefundStatus::Locked
-            | IatapayRefundStatus::Initiated
-            | IatapayRefundStatus::Authorized => RefundStatus::Pending,
-            IatapayRefundStatus::Settled | IatapayRefundStatus::Cleared => RefundStatus::Success,
-            IatapayRefundStatus::Failed => RefundStatus::Failure,
-        };
+        let refund_status = RefundStatus::from(response.status.clone());
 
         // Check if refund failed and return error response
         router_data.response = if refund_status == RefundStatus::Failure {
@@ -830,7 +789,7 @@ impl<
     type Error = Report<ConnectorError>;
 
     fn try_from(
-        _item: crate::connectors::iatapay::IatapayRouterData<
+        item: crate::connectors::iatapay::IatapayRouterData<
             RouterDataV2<
                 domain_types::connector_flow::CreateAccessToken,
                 PaymentFlowData,
@@ -840,7 +799,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        Ok(Self::new())
+        Ok(Self::new(item.router_data.request.grant_type.clone()))
     }
 }
 
