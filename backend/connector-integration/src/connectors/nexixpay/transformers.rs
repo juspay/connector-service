@@ -190,9 +190,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Extract card data
         let card_data = match &item.request.payment_method_data {
             PaymentMethodData::Card(card) => card,
-            _ => Err(errors::ConnectorError::NotImplemented(
-                "Payment method not supported".to_string(),
-            ))?,
+            payment_method_data => Err(errors::ConnectorError::NotSupported {
+                message: format!("Payment method {:?}", payment_method_data),
+                connector: "Nexixpay",
+            })?,
         };
 
         // Build card data structure using utility function for expiry date
@@ -240,7 +241,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .get_payment_method_billing()
             .and_then(|billing| {
                 billing.address.as_ref().map(|addr| {
-                    let country = addr.country.map(convert_country_alpha2_to_alpha3);
+                    let country = addr
+                        .country
+                        .map(common_enums::CountryAlpha2::from_alpha2_to_alpha3);
                     let name = match (&addr.first_name, &addr.last_name) {
                         (Some(first), Some(last)) => {
                             Some(Secret::new(format!("{} {}", first.peek(), last.peek())))
@@ -542,8 +545,6 @@ impl
 pub struct NexixpayCaptureRequest {
     pub amount: MinorUnit,
     pub currency: common_enums::Currency,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -563,17 +564,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let item = &value.router_data;
-        // Validate that we have connector_transaction_id (from authorization)
-        // Extract the operation ID from ResponseId
-        let _operation_id = match &item.request.connector_transaction_id {
-            ResponseId::ConnectorTransactionId(id) => id.clone(),
-            ResponseId::EncodedData(id) => id.clone(), // Handle encoded data variant
-            ResponseId::NoResponseId => {
-                return Err(error_stack::report!(
-                    errors::ConnectorError::MissingConnectorTransactionID
-                ))
-            }
-        };
 
         // Convert amount - handle partial vs full capture
         let capture_amount = item.request.minor_amount_to_capture;
@@ -581,7 +571,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Ok(Self {
             amount: capture_amount,
             currency: item.request.currency,
-            description: None, // Description not available in PaymentsCaptureData
         })
     }
 }
@@ -610,7 +599,8 @@ impl
         >,
     ) -> Result<Self, Self::Error> {
         // Capture response is minimal - only operationId and time
-        // Status is assumed to be successful if 200 OK received
+        // Capture call does not return status in their response, so we return Pending
+        // Status must be verified via PSync
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -624,7 +614,7 @@ impl
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
-                status: AttemptStatus::Charged, // Capture succeeded
+                status: AttemptStatus::Pending, // Capture call does not return status in their response
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -975,7 +965,7 @@ pub struct NexixpayBillingAddress {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub post_code: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub country: Option<String>, // Alpha-3 country code as String
+    pub country: Option<common_enums::CountryAlpha3>,
 }
 
 #[derive(Debug, Serialize)]
@@ -990,24 +980,7 @@ pub struct NexixpayShippingAddress {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub post_code: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub country: Option<String>, // Alpha-3 country code as String
-}
-
-// Helper function to convert CountryAlpha2 to Alpha-3 string
-// Following Hyperswitch NexiXPay implementation
-fn convert_country_alpha2_to_alpha3(country: common_enums::CountryAlpha2) -> String {
-    match country {
-        common_enums::CountryAlpha2::IT => "ITA".to_string(),
-        common_enums::CountryAlpha2::US => "USA".to_string(),
-        common_enums::CountryAlpha2::GB => "GBR".to_string(),
-        common_enums::CountryAlpha2::DE => "DEU".to_string(),
-        common_enums::CountryAlpha2::FR => "FRA".to_string(),
-        common_enums::CountryAlpha2::ES => "ESP".to_string(),
-        common_enums::CountryAlpha2::CA => "CAN".to_string(),
-        common_enums::CountryAlpha2::AU => "AUS".to_string(),
-        // Add more mappings as needed - for now, return the Alpha2 code as fallback
-        _ => format!("{:?}", country),
-    }
+    pub country: Option<common_enums::CountryAlpha3>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1062,9 +1035,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             },
         )? {
             PaymentMethodData::Card(card) => card,
-            _ => Err(errors::ConnectorError::NotImplemented(
-                "Payment method not supported for 3DS".to_string(),
-            ))?,
+            payment_method_data => Err(errors::ConnectorError::NotSupported {
+                message: format!("Payment method {:?} for 3DS", payment_method_data),
+                connector: "Nexixpay",
+            })?,
         };
 
         // Build card data structure using utility function for expiry date
@@ -1083,8 +1057,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .get_payment_method_billing()
             .and_then(|billing| {
                 billing.address.as_ref().map(|addr| {
-                    // Convert CountryAlpha2 to Alpha-3 string
-                    let country = addr.country.map(convert_country_alpha2_to_alpha3);
+                    // Convert CountryAlpha2 to Alpha-3
+                    let country = addr
+                        .country
+                        .map(common_enums::CountryAlpha2::from_alpha2_to_alpha3);
 
                     // Combine first_name and last_name for the name field
                     let name = match (&addr.first_name, &addr.last_name) {
