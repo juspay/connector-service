@@ -21,9 +21,11 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+shift4.base_url = "https://api.shift4.com"
 bluesnap.base_url = "https://ws.bluesnap.com"
 bluesnap.secondary_base_url = "https://pay.bluesnap.com"
 multisafepay.base_url = "https://testapi.multisafepay.com/v1/json"
+nmi.base_url = "https://secure.nmi.com"
 authipay.base_url = "https://prod.emea.api.fiservapps.com/ipp/payments-gateway/v2/payments"
 stax.base_url = "https://apiprod.fattlabs.com"
 trustpayments.base_url = "https://webservices.securetrading.net"
@@ -48,6 +50,7 @@ phonepe.base_url = "https://api.phonepe.com/apis/hermes/"
 cashfree.base_url = "https://sandbox.cashfree.com/"
 fiuu.base_url = "https://pay.merchant.razer.com/"
 payload.base_url = "https://api.payload.com"
+forte.base_url = "https://api.forte.net/v3"
 payu.base_url = "https://secure.payu.com/api/"
 paytm.base_url = "https://secure.paytmpayments.com/"
 cashtocode.base_url = "https://cluster14.api.cashtocode.com"
