@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.01.0
+
+### Features
+
+- **connector:** [SHIFT4] Connector Integration ([#326](https://github.com/juspay/connector-service/pull/326)) ([`2d652a8`](https://github.com/juspay/connector-service/commit/2d652a8fc693cddc5a3a56cc5071dd7c02291af4))
+
+**Full Changelog:** [`2025.11.28.0...2025.12.01.0`](https://github.com/juspay/connector-service/compare/2025.11.28.0...2025.12.01.0)
+
+- - -
+
 ## 2025.11.28.0
 
 ### Features
