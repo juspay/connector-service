@@ -154,3 +154,6 @@ pub use self::shift4::Shift4;
 
 pub mod nexixpay;
 pub use self::nexixpay::Nexixpay;
+
+pub mod airwallex;
+pub use self::airwallex::Airwallex;
