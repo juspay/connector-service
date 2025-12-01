@@ -1,4 +1,3 @@
-
 use common_utils::{
     consts, errors::CustomResult, events, ext_traits::BytesExt, types::StringMajorUnit,
 };
@@ -38,10 +37,10 @@ use std::fmt::Debug;
 pub mod transformers;
 
 use transformers::{
-    NuveiErrorResponse, NuveiPaymentRequest, NuveiPaymentResponse, NuveiSyncRequest, NuveiSyncResponse,
-    NuveiCaptureRequest, NuveiCaptureResponse, NuveiRefundRequest, NuveiRefundResponse,
-    NuveiRefundSyncRequest, NuveiRefundSyncResponse, NuveiVoidRequest, NuveiVoidResponse,
-    NuveiSessionTokenRequest, NuveiSessionTokenResponse,
+    NuveiCaptureRequest, NuveiCaptureResponse, NuveiErrorResponse, NuveiPaymentRequest,
+    NuveiPaymentResponse, NuveiRefundRequest, NuveiRefundResponse, NuveiRefundSyncRequest,
+    NuveiRefundSyncResponse, NuveiSessionTokenRequest, NuveiSessionTokenResponse, NuveiSyncRequest,
+    NuveiSyncResponse, NuveiVoidRequest, NuveiVoidResponse,
 };
 
 use crate::utils::{ConnectorErrorType, ConnectorErrorTypeMapping};
@@ -306,8 +305,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 }
                 Ok(ErrorResponse {
                     status_code: res.status_code,
-                    code: response_data.err_code.unwrap_or(consts::NO_ERROR_CODE.to_string()),
-                    message: response_data.reason.clone().unwrap_or(consts::NO_ERROR_MESSAGE.to_string()),
+                    code: response_data
+                        .err_code
+                        .unwrap_or(consts::NO_ERROR_CODE.to_string()),
+                    message: response_data
+                        .reason
+                        .clone()
+                        .unwrap_or(consts::NO_ERROR_MESSAGE.to_string()),
                     reason: response_data.reason,
                     attempt_status: None,
                     connector_transaction_id: None,
@@ -604,8 +608,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>
-    for Nuvei<T>
+    ConnectorIntegrationV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Nuvei<T>
 {
 }
 
