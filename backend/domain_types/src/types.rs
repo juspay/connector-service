@@ -151,6 +151,7 @@ pub struct Connectors {
     pub globalpay: ConnectorParams,
     pub nmi: ConnectorParams,
     pub shift4: ConnectorParams,
+    pub revolut: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
