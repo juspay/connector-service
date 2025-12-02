@@ -637,33 +637,69 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: powertranz::PowertranzErrorResponse = if res.response.is_empty() {
-            powertranz::PowertranzErrorResponse::default()
-        } else {
+        // Try to parse as payment/refund response first (has iso_response_code)
+        let error_response = if let Ok(payment_response) =
             res.response
-                .parse_struct("PowertranzErrorResponse")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?
+                .parse_struct::<powertranz::PowertranzPaymentsResponse>("PowertranzPaymentsResponse")
+        {
+            with_response_body!(event_builder, payment_response);
+            powertranz::build_powertranz_error_response(
+                &payment_response.errors,
+                &payment_response.iso_response_code,
+                &payment_response.response_message,
+                res.status_code,
+            )
+        } else if let Ok(refund_response) = res.response.parse_struct::<powertranz::PowertranzRefundResponse>(
+            "PowertranzRefundResponse",
+        ) {
+            with_response_body!(event_builder, refund_response);
+            powertranz::build_powertranz_error_response(
+                &refund_response.errors,
+                &refund_response.iso_response_code,
+                &refund_response.response_message,
+                res.status_code,
+            )
+        } else {
+            // Fallback to basic error response
+            let response: powertranz::PowertranzErrorResponse = if res.response.is_empty() {
+                powertranz::PowertranzErrorResponse::default()
+            } else {
+                res.response
+                    .parse_struct("PowertranzErrorResponse")
+                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?
+            };
+
+            with_response_body!(event_builder, response);
+
+            let first_error = response.errors.first();
+            Some(ErrorResponse {
+                status_code: res.status_code,
+                code: first_error
+                    .map(|e| e.code.clone())
+                    .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
+                message: first_error
+                    .map(|e| e.message.clone())
+                    .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
+                reason: first_error.map(|e| e.message.clone()),
+                attempt_status: None,
+                connector_transaction_id: None,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+            })
         };
 
-        with_response_body!(event_builder, response);
-
-        let first_error = response.errors.first();
-
-        Ok(ErrorResponse {
+        Ok(error_response.unwrap_or_else(|| ErrorResponse {
             status_code: res.status_code,
-            code: first_error
-                .map(|e| e.code.clone())
-                .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
-            message: first_error
-                .map(|e| e.message.clone())
-                .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
-            reason: first_error.map(|e| e.message.clone()),
+            code: NO_ERROR_CODE.to_string(),
+            message: NO_ERROR_MESSAGE.to_string(),
+            reason: None,
             attempt_status: None,
             connector_transaction_id: None,
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
-        })
+        }))
     }
 }
 

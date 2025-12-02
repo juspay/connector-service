@@ -134,32 +134,86 @@ pub struct PowertranzError {
 // Error Response Types
 // ============================================================================
 
+/// PowerTranz ISO response codes that indicate success
+/// Reference: Hyperswitch powertranz implementation
+const ISO_SUCCESS_CODES: [&str; 7] = [
+    "00",  // Approved or completed successfully
+    "3D0", // 3D Secure authentication successful
+    "3D1", // 3D Secure authentication attempted
+    "HP0", // HostedPay success
+    "TK0", // Token success
+    "SP4", // Split payment success
+    "FC0", // Fraud check success
+];
+
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct PowertranzErrorResponse {
     pub errors: Vec<PowertranzError>,
 }
 
+/// Build error response from PowerTranz response
+///
+/// Error handling precedence:
+/// 1. If `errors` object exists - use first error's code and message
+/// 2. If ISO response code is not in success codes - use ISO code and response message
+/// 3. Otherwise - return None (successful response)
+pub fn build_powertranz_error_response(
+    errors: &Option<Vec<PowertranzError>>,
+    iso_response_code: &str,
+    response_message: &str,
+    status_code: u16,
+) -> Option<domain_types::router_data::ErrorResponse> {
+    use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
+
+    if let Some(errors) = errors {
+        if !errors.is_empty() {
+            let first_error = errors.first();
+            return Some(domain_types::router_data::ErrorResponse {
+                status_code,
+                code: first_error
+                    .map(|e| e.code.clone())
+                    .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
+                message: first_error
+                    .map(|e| e.message.clone())
+                    .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
+                reason: Some(
+                    errors
+                        .iter()
+                        .map(|error| format!("{} : {}", error.code, error.message))
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                ),
+                attempt_status: None,
+                connector_transaction_id: None,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+            });
+        }
+    }
+
+    // Check ISO response code if no errors object
+    if !ISO_SUCCESS_CODES.contains(&iso_response_code) {
+        return Some(domain_types::router_data::ErrorResponse {
+            status_code,
+            code: iso_response_code.to_string(),
+            message: response_message.to_string(),
+            reason: Some(response_message.to_string()),
+            attempt_status: None,
+            connector_transaction_id: None,
+            network_decline_code: None,
+            network_advice_code: None,
+            network_error_message: None,
+        });
+    }
+
+    None
+}
+
 // ============================================================================
 // Request Transformers
 // ============================================================================
-
-// Helper function to convert currency string to numeric ISO 4217 code
-fn get_currency_numeric_code(currency: &str) -> String {
-    match currency {
-        "USD" => "840",
-        "EUR" => "978",
-        "GBP" => "826",
-        "JPY" => "392",
-        "CAD" => "124",
-        "AUD" => "036",
-        "CHF" => "756",
-        "CNY" => "156",
-        "INR" => "356",
-        _ => currency, // Fallback to original if not found
-    }
-    .to_string()
-}
 
 impl<
         T: PaymentMethodDataTypes
@@ -196,7 +250,8 @@ impl<
     ) -> Result<Self, Self::Error> {
         let request_data = &item.router_data.request;
         let amount = request_data.amount.get_amount_as_i64() as f64 / 100.0;
-        let currency_code = get_currency_numeric_code(&request_data.currency.to_string());
+        // Use ISO 4217 numeric code (e.g., "840" for USD)
+        let currency_code = request_data.currency.iso_4217().to_string();
 
         match &request_data.payment_method_data {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
