@@ -2265,7 +2265,9 @@ impl
             access_token,
             session_token: value.session_token,
             reference_id: value.order_id,
-            payment_method_token: None,
+            payment_method_token: value
+                .payment_method_token
+                .map(|pmt| router_data::PaymentMethodToken::Token(Secret::new(pmt))),
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: value.test_mode,
