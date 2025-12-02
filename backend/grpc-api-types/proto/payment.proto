@@ -504,6 +504,7 @@ enum Connector {
   CELERO = 99;
   TRUSTPAYMENTS = 100;
   PAYSAFE = 101;
+  BARCLAYCARD = 102;
 }
 
 // Payment method types.
