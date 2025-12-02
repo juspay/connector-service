@@ -601,46 +601,41 @@ impl<
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::GooglePayThirdPartySdk(
                     google_pay_sdk_wallet,
-                ) => {
-                    Ok(PaymentMethodData::Wallet(
-                        payment_method_data::WalletData::GooglePayThirdPartySdk(
-                            Box::new(payment_method_data::GooglePayThirdPartySdkData {
-                                token: google_pay_sdk_wallet.token.map(|t| Secret::new(t.expose())),
-                            }),
-                        ),
-                    ))
-                }
+                ) => Ok(PaymentMethodData::Wallet(
+                    payment_method_data::WalletData::GooglePayThirdPartySdk(Box::new(
+                        payment_method_data::GooglePayThirdPartySdkData {
+                            token: google_pay_sdk_wallet.token.map(|t| Secret::new(t.expose())),
+                        },
+                    )),
+                )),
                 grpc_api_types::payments::payment_method::PaymentMethod::ApplePayThirdPartySdk(
                     apple_pay_sdk_wallet,
-                ) => {
-                    Ok(PaymentMethodData::Wallet(
-                        payment_method_data::WalletData::ApplePayThirdPartySdk(
-                            Box::new(payment_method_data::ApplePayThirdPartySdkData {
-                                token: apple_pay_sdk_wallet.token.map(|t| Secret::new(t.expose())),
-                            }),
-                        ),
-                    ))
-                }
+                ) => Ok(PaymentMethodData::Wallet(
+                    payment_method_data::WalletData::ApplePayThirdPartySdk(Box::new(
+                        payment_method_data::ApplePayThirdPartySdkData {
+                            token: apple_pay_sdk_wallet.token.map(|t| Secret::new(t.expose())),
+                        },
+                    )),
+                )),
                 grpc_api_types::payments::payment_method::PaymentMethod::PaypalSdk(
                     paypal_sdk_wallet,
-                ) => {
-                    Ok(PaymentMethodData::Wallet(
-                        payment_method_data::WalletData::PaypalSdk(
-                            payment_method_data::PayPalWalletData {
-                                token: paypal_sdk_wallet.token
-                                    .ok_or_else(|| {
-                                        ApplicationErrorResponse::BadRequest(ApiError {
-                                            sub_code: "MISSING_PAYPAL_SDK_TOKEN".to_owned(),
-                                            error_identifier: 400,
-                                            error_message: "PayPal SDK token is required".to_owned(),
-                                            error_object: None,
-                                        })
-                                    })?
-                                    .expose(),
-                            },
-                        ),
-                    ))
-                }
+                ) => Ok(PaymentMethodData::Wallet(
+                    payment_method_data::WalletData::PaypalSdk(
+                        payment_method_data::PayPalWalletData {
+                            token: paypal_sdk_wallet
+                                .token
+                                .ok_or_else(|| {
+                                    ApplicationErrorResponse::BadRequest(ApiError {
+                                        sub_code: "MISSING_PAYPAL_SDK_TOKEN".to_owned(),
+                                        error_identifier: 400,
+                                        error_message: "PayPal SDK token is required".to_owned(),
+                                        error_object: None,
+                                    })
+                                })?
+                                .expose(),
+                        },
+                    ),
+                )),
                 grpc_api_types::payments::payment_method::PaymentMethod::PaypalRedirect(
                     paypal_redirect,
                 ) => Ok(PaymentMethodData::Wallet(
@@ -3006,8 +3001,10 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 }),
                 redirection_data: None,
                 network_txn_id: None,
-                response_ref_id: err.connector_transaction_id.map(|id| grpc_api_types::payments::Identifier {
-                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                response_ref_id: err.connector_transaction_id.map(|id| {
+                    grpc_api_types::payments::Identifier {
+                        id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                    }
                 }),
                 mandate_reference: None,
                 incremental_authorization_allowed: None,
