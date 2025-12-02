@@ -226,7 +226,7 @@ pub struct AuthenticationErrorInformation {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum BarclaycardErrorResponse {
-    AuthenticationError(BarclaycardAuthenticationErrorResponse),
-    ServerError(BarclaycardServerErrorResponse),
-    StandardError(BarclaycardStandardErrorResponse),
+    Authentication(BarclaycardAuthenticationErrorResponse),
+    Server(BarclaycardServerErrorResponse),
+    Standard(BarclaycardStandardErrorResponse),
 }

@@ -953,7 +953,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         match response {
-            responses::BarclaycardErrorResponse::StandardError(error_response) => {
+            responses::BarclaycardErrorResponse::Standard(error_response) => {
                 with_error_response_body!(event_builder, error_response);
 
                 let detailed_error_info =
@@ -1004,7 +1004,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     network_error_message: None,
                 })
             }
-            responses::BarclaycardErrorResponse::ServerError(server_error) => {
+            responses::BarclaycardErrorResponse::Server(server_error) => {
                 with_error_response_body!(event_builder, server_error);
 
                 let attempt_status = match server_error.reason {
@@ -1037,7 +1037,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     network_error_message: None,
                 })
             }
-            responses::BarclaycardErrorResponse::AuthenticationError(auth_error) => {
+            responses::BarclaycardErrorResponse::Authentication(auth_error) => {
                 with_error_response_body!(event_builder, auth_error);
 
                 Ok(ErrorResponse {
