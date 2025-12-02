@@ -5416,11 +5416,13 @@ impl ForeignTryFrom<grpc_api_types::payments::CustomerAcceptance> for mandates::
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(mandates::CustomerAcceptance {
             acceptance_type: mandates::AcceptanceType::foreign_try_from(value.acceptance_type())?,
-            accepted_at: time::OffsetDateTime::from_unix_timestamp(value.accepted_at).ok()
-                .map(|offset_dt| {
-                    time::PrimitiveDateTime::new(offset_dt.date(), offset_dt.time())
-            }),
-            online: value.online_mandate_details.map(mandates::OnlineMandate::foreign_try_from).transpose()?,
+            accepted_at: time::OffsetDateTime::from_unix_timestamp(value.accepted_at)
+                .ok()
+                .map(|offset_dt| time::PrimitiveDateTime::new(offset_dt.date(), offset_dt.time())),
+            online: value
+                .online_mandate_details
+                .map(mandates::OnlineMandate::foreign_try_from)
+                .transpose()?,
         })
     }
 }
@@ -5430,11 +5432,8 @@ impl ForeignTryFrom<grpc_api_types::payments::OnlineMandate> for mandates::Onlin
     fn foreign_try_from(
         value: grpc_api_types::payments::OnlineMandate,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let ip_address = value
-            .ip_address
-            .map(Secret::new);
         Ok(mandates::OnlineMandate {
-            ip_address: ip_address,
+            ip_address: value.ip_address.map(Secret::new),
             user_agent: value.user_agent,
         })
     }
@@ -5448,15 +5447,15 @@ impl ForeignTryFrom<grpc_api_types::payments::AcceptanceType> for mandates::Acce
         match value {
             grpc_payment_types::AcceptanceType::Offline => Ok(mandates::AcceptanceType::Offline),
             grpc_payment_types::AcceptanceType::Online => Ok(mandates::AcceptanceType::Online),
-            grpc_payment_types::AcceptanceType::Unspecified => Err(
-                ApplicationErrorResponse::BadRequest(ApiError {
+            grpc_payment_types::AcceptanceType::Unspecified => {
+                Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_ACCEPTANCE_TYPE".to_owned(),
                     error_identifier: 400,
                     error_message: "Acceptance type must be specified".to_owned(),
                     error_object: None,
                 })
-                .into(),
-            ),
+                .into())
+            }
         }
     }
 }
