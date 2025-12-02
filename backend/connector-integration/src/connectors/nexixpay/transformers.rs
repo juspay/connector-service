@@ -61,13 +61,18 @@ pub struct NexixpayErrorResponse {
 // Used to pass data between 3DS flow steps (PreAuthenticate -> PostAuthenticate -> Authorize)
 // Based on Hyperswitch implementation pattern
 
+/// Payment flow intent for determining which operation ID to use in PSync
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub enum NexixpayPaymentIntent {
+    Capture,
+    Cancel,
+    Authorize,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NexixpayConnectorMetaData {
-    /// operationId from PreAuthenticate (/init) - used in Authorize (/payment)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub authorization_operation_id: Option<String>,
-
     /// 3DS authentication result (CAVV, ECI, XID) from PostAuthenticate (/validate)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub three_d_s_auth_result: Option<NexixpayThreeDSAuthResult>,
@@ -75,6 +80,21 @@ pub struct NexixpayConnectorMetaData {
     /// PaRes (3DS authentication response) from redirect
     #[serde(skip_serializing_if = "Option::is_none")]
     pub three_d_s_auth_response: Option<Secret<String>>,
+
+    /// operationId from PreAuthenticate (/init) - used in Authorize (/payment)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authorization_operation_id: Option<String>,
+
+    /// operationId from Capture operation
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub capture_operation_id: Option<String>,
+
+    /// operationId from Cancel/Void operation
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cancel_operation_id: Option<String>,
+
+    /// Payment flow type for PSync operations - required by Hyperswitch
+    pub psync_flow: NexixpayPaymentIntent,
 }
 
 // Note: NexixpayThreeDSAuthResult is defined later in the file
@@ -442,11 +462,77 @@ impl<T: PaymentMethodDataTypes>
             })
             .or(operation.payment_end_to_end_id.clone());
 
-        // Build connector metadata with network-specific fields for reconciliation
-        let connector_metadata = operation
-            .additional_data
+        // Build connector metadata by merging structural metadata with payment response data
+        // CRITICAL: Must preserve structural metadata (psyncFlow, operationIds) for PSync compatibility
+        let existing_metadata = item
+            .router_data
+            .resource_common_data
+            .connector_meta_data
             .as_ref()
-            .and_then(|data| serde_json::to_value(data).ok());
+            .and_then(|meta| meta.peek().as_object())
+            .cloned()
+            .unwrap_or_default();
+
+        let mut merged_metadata = serde_json::Map::new();
+
+        // Preserve structural metadata from PreAuthenticate/PostAuthenticate
+        if let Some(three_ds_auth_result) = existing_metadata.get("threeDSAuthResult") {
+            merged_metadata.insert(
+                "threeDSAuthResult".to_string(),
+                three_ds_auth_result.clone(),
+            );
+        }
+        if let Some(three_ds_auth_response) = existing_metadata.get("threeDSAuthResponse") {
+            merged_metadata.insert(
+                "threeDSAuthResponse".to_string(),
+                three_ds_auth_response.clone(),
+            );
+        }
+        if let Some(auth_operation_id) = existing_metadata.get("authorizationOperationId") {
+            merged_metadata.insert(
+                "authorizationOperationId".to_string(),
+                auth_operation_id.clone(),
+            );
+        }
+        if let Some(capture_operation_id) = existing_metadata.get("captureOperationId") {
+            merged_metadata.insert(
+                "captureOperationId".to_string(),
+                capture_operation_id.clone(),
+            );
+        }
+        if let Some(cancel_operation_id) = existing_metadata.get("cancelOperationId") {
+            merged_metadata.insert("cancelOperationId".to_string(), cancel_operation_id.clone());
+        }
+        if let Some(psync_flow) = existing_metadata.get("psyncFlow") {
+            merged_metadata.insert("psyncFlow".to_string(), psync_flow.clone());
+        }
+
+        // Add payment response data from additional_data
+        if let Some(additional_data) = &operation.additional_data {
+            for (key, value) in additional_data {
+                merged_metadata.insert(key.clone(), value.clone());
+            }
+        }
+
+        // Ensure structural metadata always exists with defaults if not present
+        if !merged_metadata.contains_key("authorizationOperationId") {
+            merged_metadata.insert(
+                "authorizationOperationId".to_string(),
+                serde_json::Value::String(operation.operation_id.clone()),
+            );
+        }
+        if !merged_metadata.contains_key("psyncFlow") {
+            merged_metadata.insert(
+                "psyncFlow".to_string(),
+                serde_json::Value::String("Authorize".to_string()),
+            );
+        }
+
+        let connector_metadata = if !merged_metadata.is_empty() {
+            Some(serde_json::Value::Object(merged_metadata))
+        } else {
+            None
+        };
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -602,12 +688,32 @@ impl
         // Capture call does not return status in their response, so we return Pending
         // Status must be verified via PSync
 
+        // Update metadata to include capture operation ID and set psync_flow to Capture
+        // This is required for PSync compatibility with Hyperswitch
+        let existing_metadata = item
+            .router_data
+            .resource_common_data
+            .connector_meta_data
+            .as_ref()
+            .and_then(|meta| meta.peek().as_object())
+            .cloned()
+            .unwrap_or_default();
+
+        let updated_metadata = Some(serde_json::json!({
+            "threeDSAuthResult": existing_metadata.get("threeDSAuthResult"),
+            "threeDSAuthResponse": existing_metadata.get("threeDSAuthResponse"),
+            "authorizationOperationId": existing_metadata.get("authorizationOperationId"),
+            "captureOperationId": item.response.operation_id.clone(),
+            "cancelOperationId": existing_metadata.get("cancelOperationId"),
+            "psyncFlow": "Capture"
+        }));
+
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.operation_id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
-                connector_metadata: None,
+                connector_metadata: updated_metadata,
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
@@ -802,12 +908,32 @@ impl
     ) -> Result<Self, Self::Error> {
         // CRITICAL: NexiXPay void response is minimal (only operationId and time)
 
+        // Update metadata to include cancel operation ID and set psync_flow to Cancel
+        // This is required for PSync compatibility with Hyperswitch
+        let existing_metadata = item
+            .router_data
+            .resource_common_data
+            .connector_meta_data
+            .as_ref()
+            .and_then(|meta| meta.peek().as_object())
+            .cloned()
+            .unwrap_or_default();
+
+        let updated_metadata = Some(serde_json::json!({
+            "threeDSAuthResult": existing_metadata.get("threeDSAuthResult"),
+            "threeDSAuthResponse": existing_metadata.get("threeDSAuthResponse"),
+            "authorizationOperationId": existing_metadata.get("authorizationOperationId"),
+            "captureOperationId": existing_metadata.get("captureOperationId"),
+            "cancelOperationId": item.response.operation_id.clone(),
+            "psyncFlow": "Cancel"
+        }));
+
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.operation_id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
-                connector_metadata: None,
+                connector_metadata: updated_metadata,
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
@@ -1209,6 +1335,9 @@ impl<T: PaymentMethodDataTypes>
             authorization_operation_id: Some(operation.operation_id.clone()),
             three_d_s_auth_result: None, // Will be filled by PostAuthenticate
             three_d_s_auth_response: None, // Will be filled by PostAuthenticate
+            capture_operation_id: None,  // Will be filled by Capture operation
+            cancel_operation_id: None,   // Will be filled by Void operation
+            psync_flow: NexixpayPaymentIntent::Authorize, // Default to Authorize for PreAuthenticate
         }));
 
         // Build authentication data with redirect form if needed
