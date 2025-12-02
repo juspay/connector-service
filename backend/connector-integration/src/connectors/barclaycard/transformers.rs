@@ -362,8 +362,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::RequestEncodingFailed)?
             .trim_matches('"')
             .to_string();
-        let card_number = serde_json::from_str::<cards::CardNumber>(&format!("\"{}\"", card_number_str))
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        let card_number =
+            serde_json::from_str::<cards::CardNumber>(&format!("\"{}\"", card_number_str))
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         let payment_information =
             requests::PaymentInformation::Cards(Box::new(requests::CardPaymentInformation {
@@ -469,6 +470,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             )
             .change_context(errors::ConnectorError::ParsingFailed)?;
 
+        let merchant_defined_information = router_data
+            .request
+            .connector_metadata
+            .clone()
+            .map(convert_metadata_to_merchant_defined_info);
+
         Ok(Self {
             order_information: requests::OrderInformation {
                 amount_details: requests::Amount {
@@ -484,7 +491,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         .clone(),
                 ),
             },
-            merchant_defined_information: None,
+            merchant_defined_information,
         })
     }
 }
@@ -525,6 +532,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             )
             .change_context(errors::ConnectorError::ParsingFailed)?;
 
+        let merchant_defined_information = router_data
+            .request
+            .connector_metadata
+            .clone()
+            .map(|metadata| convert_metadata_to_merchant_defined_info(metadata.expose()));
+
         Ok(Self {
             client_reference_information: requests::ClientReferenceInformation {
                 code: Some(
@@ -545,7 +558,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     },
                 )?,
             },
-            merchant_defined_information: None,
+            merchant_defined_information,
         })
     }
 }
