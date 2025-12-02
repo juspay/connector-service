@@ -1992,7 +1992,6 @@ pub struct PaymentsCaptureData {
     pub minor_amount_to_capture: MinorUnit,
     pub currency: Currency,
     pub connector_transaction_id: ResponseId,
-    pub merchant_reference_payment_id: Option<String>,
     pub multiple_capture_data: Option<MultipleCaptureRequestData>,
     pub connector_metadata: Option<serde_json::Value>,
     pub integrity_object: Option<CaptureIntegrityObject>,
