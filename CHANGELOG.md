@@ -4,6 +4,20 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.02.0
+
+### Features
+
+- **connector:** Added bamboraapac integration ([#298](https://github.com/juspay/connector-service/pull/298)) ([`3234bf0`](https://github.com/juspay/connector-service/commit/3234bf08c17ce07011e233a063cedd147c330b6b))
+
+### Bug Fixes
+
+- **Fiserv:** Authorize, Capture, Void, Refund diff check for connector Fiserv ([#314](https://github.com/juspay/connector-service/pull/314)) ([`458cab4`](https://github.com/juspay/connector-service/commit/458cab4afbdddc69e500e19ef13d9a1d62d650d7))
+
+**Full Changelog:** [`2025.12.01.0...2025.12.02.0`](https://github.com/juspay/connector-service/compare/2025.12.01.0...2025.12.02.0)
+
+- - -
+
 ## 2025.12.01.0
 
 ### Features

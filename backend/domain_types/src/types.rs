@@ -151,6 +151,7 @@ pub struct Connectors {
     pub trustpayments: ConnectorParams,
     pub globalpay: ConnectorParams,
     pub nuvei: ConnectorParams,
+    pub iatapay: ConnectorParams,
     pub nmi: ConnectorParams,
     pub shift4: ConnectorParams,
 }

@@ -143,6 +143,9 @@ pub use self::billwerk::Billwerk;
 pub mod nuvei;
 pub use self::nuvei::Nuvei;
 
+pub mod iatapay;
+pub use self::iatapay::Iatapay;
+
 pub mod nmi;
 pub use self::nmi::Nmi;
 
