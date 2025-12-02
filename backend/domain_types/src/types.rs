@@ -599,6 +599,48 @@ impl<
                         payment_method_data::WalletData::GooglePay(wallet_data),
                     ))
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::GooglePayThirdPartySdk(
+                    google_pay_sdk_wallet,
+                ) => {
+                    Ok(PaymentMethodData::Wallet(
+                        payment_method_data::WalletData::GooglePayThirdPartySdk(
+                            Box::new(payment_method_data::GooglePayThirdPartySdkData {
+                                token: google_pay_sdk_wallet.token.map(|t| Secret::new(t.expose())),
+                            }),
+                        ),
+                    ))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::ApplePayThirdPartySdk(
+                    apple_pay_sdk_wallet,
+                ) => {
+                    Ok(PaymentMethodData::Wallet(
+                        payment_method_data::WalletData::ApplePayThirdPartySdk(
+                            Box::new(payment_method_data::ApplePayThirdPartySdkData {
+                                token: apple_pay_sdk_wallet.token.map(|t| Secret::new(t.expose())),
+                            }),
+                        ),
+                    ))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::PaypalSdk(
+                    paypal_sdk_wallet,
+                ) => {
+                    Ok(PaymentMethodData::Wallet(
+                        payment_method_data::WalletData::PaypalSdk(
+                            payment_method_data::PayPalWalletData {
+                                token: paypal_sdk_wallet.token
+                                    .ok_or_else(|| {
+                                        ApplicationErrorResponse::BadRequest(ApiError {
+                                            sub_code: "MISSING_PAYPAL_SDK_TOKEN".to_owned(),
+                                            error_identifier: 400,
+                                            error_message: "PayPal SDK token is required".to_owned(),
+                                            error_object: None,
+                                        })
+                                    })?
+                                    .expose(),
+                            },
+                        ),
+                    ))
+                }
                 grpc_api_types::payments::payment_method::PaymentMethod::PaypalRedirect(
                     paypal_redirect,
                 ) => Ok(PaymentMethodData::Wallet(
@@ -795,6 +837,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 // ============================================================================
                 grpc_api_types::payments::payment_method::PaymentMethod::ApplePay(_) => Ok(Some(PaymentMethodType::ApplePay)),
                 grpc_api_types::payments::payment_method::PaymentMethod::GooglePay(_) => Ok(Some(PaymentMethodType::GooglePay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::ApplePayThirdPartySdk(_) => Ok(Some(PaymentMethodType::ApplePay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::GooglePayThirdPartySdk(_) => Ok(Some(PaymentMethodType::GooglePay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::PaypalSdk(_) => Ok(Some(PaymentMethodType::Paypal)),
                 grpc_api_types::payments::payment_method::PaymentMethod::AmazonPayRedirect(_) => Ok(Some(PaymentMethodType::AmazonPay)),
                 grpc_api_types::payments::payment_method::PaymentMethod::CashappQr(_) => Ok(Some(PaymentMethodType::Cashapp)),
                 grpc_api_types::payments::payment_method::PaymentMethod::PaypalRedirect(_) => Ok(Some(PaymentMethodType::Paypal)),
@@ -3036,6 +3081,18 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for common_enums::P
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::GooglePay(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::ApplePayThirdPartySdk(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::GooglePayThirdPartySdk(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::PaypalSdk(_)),
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
