@@ -9,7 +9,6 @@ use common_utils::{
     events,
     ext_traits::ByteSliceExt,
 };
-use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
@@ -35,20 +34,20 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
 use serde::Serialize;
 use transformers as powertranz;
 use transformers::{
-    PowertranzCaptureRequest, PowertranzPaymentsRequest, PowertranzPaymentsResponse,
-    PowertranzPaymentsResponse as PowertranzPaymentsSyncResponse,
+    PowertranzCaptureRequest, PowertranzCaptureResponse, PowertranzPaymentsRequest,
+    PowertranzPaymentsResponse, PowertranzPaymentsResponse as PowertranzPaymentsSyncResponse,
+    PowertranzRSyncResponse, PowertranzRefundRequest, PowertranzRefundResponse,
     PowertranzVoidRequest, PowertranzVoidResponse,
-    PowertranzCaptureResponse, PowertranzRefundRequest,
-    PowertranzRefundResponse, PowertranzRSyncResponse,
 };
 
-use crate::{with_response_body, types::ResponseRouterData};
+use crate::{types::ResponseRouterData, with_response_body};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";

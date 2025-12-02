@@ -1,9 +1,9 @@
 use common_enums::enums;
 use domain_types::{
     connector_types::{
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsSyncData, PaymentVoidData,
-        PaymentsResponseData, RefundsData, RefundSyncData, RefundsResponseData, ResponseId,
-        PaymentFlowData, RefundFlowData,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -11,7 +11,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Secret, PeekInterface};
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::powertranz::PowertranzRouterData, types::ResponseRouterData};
@@ -134,18 +134,10 @@ pub struct PowertranzError {
 // Error Response Types
 // ============================================================================
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct PowertranzErrorResponse {
     pub errors: Vec<PowertranzError>,
-}
-
-impl Default for PowertranzErrorResponse {
-    fn default() -> Self {
-        Self {
-            errors: Vec::new(),
-        }
-    }
 }
 
 // ============================================================================
@@ -165,17 +157,42 @@ fn get_currency_numeric_code(currency: &str) -> String {
         "CNY" => "156",
         "INR" => "356",
         _ => currency, // Fallback to original if not found
-    }.to_string()
+    }
+    .to_string()
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-    TryFrom<PowertranzRouterData<RouterDataV2<domain_types::connector_flow::Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
-    for PowertranzPaymentsRequest
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
+    TryFrom<
+        PowertranzRouterData<
+            RouterDataV2<
+                domain_types::connector_flow::Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for PowertranzPaymentsRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: PowertranzRouterData<RouterDataV2<domain_types::connector_flow::Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        item: PowertranzRouterData<
+            RouterDataV2<
+                domain_types::connector_flow::Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let request_data = &item.router_data.request;
         let amount = request_data.amount.get_amount_as_i64() as f64 / 100.0;
@@ -190,11 +207,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 } else {
                     year
                 };
-                let card_expiration = format!(
-                    "{}{}",
-                    year_suffix,
-                    &card_data.card_exp_month.peek()
-                );
+                let card_expiration =
+                    format!("{}{}", year_suffix, &card_data.card_exp_month.peek());
 
                 Ok(Self {
                     transaction_identifier: uuid::Uuid::new_v4().to_string(),
@@ -207,7 +221,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                         card_cvv: card_data.card_cvc.clone(),
                         card_expiration: Secret::new(card_expiration),
                     },
-                    order_identifier: item.router_data.resource_common_data.connector_request_reference_id.clone(),
+                    order_identifier: item
+                        .router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
                     extended_data: None,
                 })
             }
@@ -219,13 +237,38 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<PowertranzRouterData<RouterDataV2<domain_types::connector_flow::Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
-    for PowertranzCaptureRequest
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
+    TryFrom<
+        PowertranzRouterData<
+            RouterDataV2<
+                domain_types::connector_flow::Capture,
+                PaymentFlowData,
+                PaymentsCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for PowertranzCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: PowertranzRouterData<RouterDataV2<domain_types::connector_flow::Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+        item: PowertranzRouterData<
+            RouterDataV2<
+                domain_types::connector_flow::Capture,
+                PaymentFlowData,
+                PaymentsCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let amount = item.router_data.request.amount_to_capture as f64 / 100.0;
 
@@ -241,40 +284,82 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<PowertranzRouterData<RouterDataV2<domain_types::connector_flow::Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for PowertranzVoidRequest
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
+    TryFrom<
+        PowertranzRouterData<
+            RouterDataV2<
+                domain_types::connector_flow::Void,
+                PaymentFlowData,
+                PaymentVoidData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for PowertranzVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: PowertranzRouterData<RouterDataV2<domain_types::connector_flow::Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+        item: PowertranzRouterData<
+            RouterDataV2<
+                domain_types::connector_flow::Void,
+                PaymentFlowData,
+                PaymentVoidData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            transaction_identifier: item
-                .router_data
-                .request
-                .connector_transaction_id
-                .clone(),
+            transaction_identifier: item.router_data.request.connector_transaction_id.clone(),
         })
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<PowertranzRouterData<RouterDataV2<domain_types::connector_flow::Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for PowertranzRefundRequest
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
+    TryFrom<
+        PowertranzRouterData<
+            RouterDataV2<
+                domain_types::connector_flow::Refund,
+                RefundFlowData,
+                RefundsData,
+                RefundsResponseData,
+            >,
+            T,
+        >,
+    > for PowertranzRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: PowertranzRouterData<RouterDataV2<domain_types::connector_flow::Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: PowertranzRouterData<
+            RouterDataV2<
+                domain_types::connector_flow::Refund,
+                RefundFlowData,
+                RefundsData,
+                RefundsResponseData,
+            >,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let amount = item.router_data.request.refund_amount as f64 / 100.0;
 
         Ok(Self {
-            transaction_identifier: item
-                .router_data
-                .request
-                .connector_transaction_id
-                .clone(),
+            transaction_identifier: item.router_data.request.connector_transaction_id.clone(),
             total_amount: Some(amount),
             refund: true,
         })
@@ -285,8 +370,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 // Response Transformers
 // ============================================================================
 
-impl<T: PaymentMethodDataTypes, F>
-    TryFrom<ResponseRouterData<PowertranzPaymentsResponse, Self>>
+impl<T: PaymentMethodDataTypes, F> TryFrom<ResponseRouterData<PowertranzPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -301,9 +385,7 @@ impl<T: PaymentMethodDataTypes, F>
         } = item;
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    response.transaction_identifier,
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(response.transaction_identifier),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -317,8 +399,7 @@ impl<T: PaymentMethodDataTypes, F>
     }
 }
 
-impl<F>
-    TryFrom<ResponseRouterData<PowertranzPaymentsSyncResponse, Self>>
+impl<F> TryFrom<ResponseRouterData<PowertranzPaymentsSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -333,9 +414,7 @@ impl<F>
         } = item;
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    response.transaction_identifier,
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(response.transaction_identifier),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -349,8 +428,7 @@ impl<F>
     }
 }
 
-impl<F>
-    TryFrom<ResponseRouterData<PowertranzCaptureResponse, Self>>
+impl<F> TryFrom<ResponseRouterData<PowertranzCaptureResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -365,9 +443,7 @@ impl<F>
         } = item;
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    response.transaction_identifier,
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(response.transaction_identifier),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -381,8 +457,7 @@ impl<F>
     }
 }
 
-impl<F>
-    TryFrom<ResponseRouterData<PowertranzVoidResponse, Self>>
+impl<F> TryFrom<ResponseRouterData<PowertranzVoidResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -397,9 +472,7 @@ impl<F>
         } = item;
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    response.transaction_identifier,
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(response.transaction_identifier),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -413,8 +486,7 @@ impl<F>
     }
 }
 
-impl<F>
-    TryFrom<ResponseRouterData<PowertranzRefundResponse, Self>>
+impl<F> TryFrom<ResponseRouterData<PowertranzRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -444,8 +516,7 @@ impl<F>
     }
 }
 
-impl<F>
-    TryFrom<ResponseRouterData<PowertranzRSyncResponse, Self>>
+impl<F> TryFrom<ResponseRouterData<PowertranzRSyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
