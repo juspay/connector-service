@@ -92,6 +92,7 @@ pub enum ConnectorEnum {
     Hipay,
     Trustpayments,
     Globalpay,
+    Iatapay,
     Nmi,
     Shift4,
 }
@@ -150,6 +151,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Hipay => Ok(Self::Hipay),
             grpc_api_types::payments::Connector::Trustpayments => Ok(Self::Trustpayments),
             grpc_api_types::payments::Connector::Globalpay => Ok(Self::Globalpay),
+            grpc_api_types::payments::Connector::Iatapay => Ok(Self::Iatapay),
             grpc_api_types::payments::Connector::Nmi => Ok(Self::Nmi),
             grpc_api_types::payments::Connector::Shift4 => Ok(Self::Shift4),
             grpc_api_types::payments::Connector::Unspecified => {
