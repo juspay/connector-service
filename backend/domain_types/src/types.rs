@@ -2838,7 +2838,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
     info!("Payment authorize response status: {:?}", status);
-    let order_id = router_data_v2.resource_common_data.reference_id.clone();
+    let _order_id = router_data_v2.resource_common_data.reference_id.clone();
     let response_headers = router_data_v2
         .resource_common_data
         .get_connector_response_headers_as_map();
@@ -2997,7 +2997,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
             let status = err
                 .attempt_status
                 .map(grpc_api_types::payments::PaymentStatus::foreign_from)
-                .unwrap_or_default();
+                .unwrap_or_else(|| grpc_api_types::payments::PaymentStatus::foreign_from(status));
             PaymentServiceAuthorizeResponse {
                 transaction_id: Some(grpc_api_types::payments::Identifier {
                     id_type: Some(
@@ -3006,7 +3006,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 }),
                 redirection_data: None,
                 network_txn_id: None,
-                response_ref_id: order_id.map(|id| grpc_api_types::payments::Identifier {
+                response_ref_id: err.connector_transaction_id.map(|id| grpc_api_types::payments::Identifier {
                     id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                 }),
                 mandate_reference: None,
@@ -7185,7 +7185,7 @@ pub fn generate_repeat_payment_response(
             let status = err
                 .attempt_status
                 .map(grpc_api_types::payments::PaymentStatus::foreign_from)
-                .unwrap_or_default();
+                .unwrap_or_else(|| grpc_api_types::payments::PaymentStatus::foreign_from(status));
             Ok(
                 grpc_api_types::payments::PaymentServiceRepeatEverythingResponse {
                     transaction_id: Some(grpc_api_types::payments::Identifier {
