@@ -53,14 +53,10 @@ pub(crate) mod headers {
 
 macros::create_amount_converter_wrapper!(connector_name: Barclaycard, amount_type: StringMajorUnit);
 
-// ===== CONNECTOR SERVICE TRAIT IMPLEMENTATIONS =====
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Barclaycard<T>
 {
 }
-
-// ===== PAYMENT FLOW TRAIT IMPLEMENTATIONS =====
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Barclaycard<T>
@@ -82,7 +78,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== ADVANCED FLOW TRAIT IMPLEMENTATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SetupMandateV2<T> for Barclaycard<T>
 {
@@ -113,7 +108,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== AUTHENTICATION FLOW TRAIT IMPLEMENTATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentPreAuthenticateV2<T> for Barclaycard<T>
 {
@@ -129,7 +123,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== DISPUTE FLOW TRAIT IMPLEMENTATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::AcceptDispute for Barclaycard<T>
 {
@@ -145,7 +138,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== WEBHOOK TRAIT IMPLEMENTATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Barclaycard<T>
 {
@@ -190,7 +182,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
-// ===== OTHER TRAIT IMPLEMENTATIONS =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidPostCaptureV2 for Barclaycard<T>
 {
@@ -200,8 +191,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::CreateConnectorCustomer for Barclaycard<T>
 {
 }
-
-// ===== REFUND FLOW TRAIT IMPLEMENTATIONS =====
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Barclaycard<T>
@@ -213,17 +202,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== VALIDATION TRAIT IMPLEMENTATIONS =====
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Barclaycard<T>
 {
 }
-
-// ===== STUB CONNECTOR INTEGRATION V2 IMPLEMENTATIONS =====
-
-// These empty implementations are required by ConnectorServiceTrait but are not used
-// since we only implement core payment flows (Authorize, Capture, Void, PSync, Refund, RSync)
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -733,8 +715,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// ===== SOURCE VERIFICATION IMPLEMENTATIONS =====
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Authorize,
@@ -934,8 +914,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Barclaycard<T>
 {
 }
-
-// ===== CONNECTOR COMMON IMPLEMENTATION =====
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Barclaycard<T>

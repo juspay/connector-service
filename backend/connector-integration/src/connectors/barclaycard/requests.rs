@@ -4,8 +4,6 @@ use common_utils::{pii, types::StringMajorUnit};
 use hyperswitch_masking::Secret;
 use serde::Serialize;
 
-// ===== PAYMENT REQUEST STRUCTS =====
-
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BarclaycardPaymentsRequest {
@@ -92,8 +90,6 @@ pub struct ClientReferenceInformation {
     pub code: Option<String>,
 }
 
-// ===== CAPTURE REQUEST =====
-
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderInformation {
@@ -108,8 +104,6 @@ pub struct BarclaycardCaptureRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub merchant_defined_information: Option<Vec<MerchantDefinedInformation>>,
 }
-
-// ===== VOID REQUEST =====
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -126,8 +120,6 @@ pub struct ReversalInformation {
     pub amount_details: Amount,
     pub reason: String,
 }
-
-// ===== REFUND REQUEST =====
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

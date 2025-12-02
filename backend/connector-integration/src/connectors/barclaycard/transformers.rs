@@ -20,8 +20,6 @@ use serde::Serialize;
 use super::{requests, responses, BarclaycardRouterData};
 use crate::{types::ResponseRouterData, utils::is_refund_failure};
 
-// ===== AUTH TYPE =====
-
 #[derive(Debug, Clone)]
 pub struct BarclaycardAuthType {
     pub api_key: Secret<String>,
@@ -47,8 +45,6 @@ impl TryFrom<&ConnectorAuthType> for BarclaycardAuthType {
         }
     }
 }
-
-// ===== HELPER FUNCTIONS =====
 
 fn get_barclaycard_card_type(card_network: common_enums::CardNetwork) -> Option<&'static str> {
     match card_network {
@@ -310,8 +306,6 @@ fn get_error_response(
     }
 }
 
-// ===== REQUEST TRANSFORMERS =====
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BarclaycardRouterData<
@@ -343,7 +337,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .convert(router_data.request.amount, router_data.request.currency)
             .change_context(errors::ConnectorError::ParsingFailed)?;
 
-        // Get payment method data
         let ccard = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => Ok(card),
             _ => Err(errors::ConnectorError::NotImplemented(
@@ -351,7 +344,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             )),
         }?;
 
-        // Build card payment information
         let card_network = ccard.card_network.clone();
         let card_type = card_network
             .and_then(get_barclaycard_card_type)
@@ -378,7 +370,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 },
             }));
 
-        // Build billing information
         let email = router_data
             .resource_common_data
             .address
@@ -399,7 +390,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let bill_to = build_bill_to(billing, email)?;
 
-        // Build order information
         let order_information = requests::OrderInformationWithBill {
             amount_details: requests::Amount {
                 total_amount: amount,
@@ -408,7 +398,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             bill_to: Some(bill_to),
         };
 
-        // Build processing information
         let processing_information = requests::ProcessingInformation {
             commerce_indicator: "internet".to_string(),
             capture: Some(matches!(
@@ -419,7 +408,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             cavv_algorithm: Some("2".to_string()), // Always set to "2" for card payments
         };
 
-        // Build client reference information
         let client_reference_information = requests::ClientReferenceInformation {
             code: Some(
                 router_data
@@ -429,7 +417,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             ),
         };
 
-        // Build merchant defined information
         let merchant_defined_information = router_data
             .request
             .metadata
@@ -600,8 +587,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         })
     }
 }
-
-// ===== RESPONSE TRANSFORMERS =====
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
