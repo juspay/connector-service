@@ -90,6 +90,7 @@ pub enum ConnectorEnum {
     Hipay,
     Trustpayments,
     Globalpay,
+    Powertranz,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {

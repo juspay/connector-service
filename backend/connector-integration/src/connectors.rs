@@ -136,3 +136,6 @@ pub use self::globalpay::Globalpay;
 
 pub mod billwerk;
 pub use self::billwerk::Billwerk;
+
+pub mod powertranz;
+pub use self::powertranz::Powertranz;
