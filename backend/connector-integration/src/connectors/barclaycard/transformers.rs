@@ -317,7 +317,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             >,
             T,
         >,
-    > for requests::BarclaycardPaymentsRequest
+    > for requests::BarclaycardPaymentsRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -349,19 +349,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .and_then(get_barclaycard_card_type)
             .map(|s| s.to_string());
 
-        // Convert generic T::Inner to CardNumber by serializing to JSON string
-        let card_number_str = serde_json::to_string(&ccard.card_number.clone().0)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?
-            .trim_matches('"')
-            .to_string();
-        let card_number =
-            serde_json::from_str::<cards::CardNumber>(&format!("\"{}\"", card_number_str))
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-
         let payment_information =
             requests::PaymentInformation::Cards(Box::new(requests::CardPaymentInformation {
                 card: requests::Card {
-                    number: card_number,
+                    number: ccard.card_number.clone(),
                     expiration_month: ccard.card_exp_month.clone(),
                     expiration_year: ccard.get_expiry_year_4_digit(),
                     security_code: ccard.card_cvc.clone(),

@@ -353,7 +353,7 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: Authorize,
-            request_body: BarclaycardPaymentsRequest,
+            request_body: BarclaycardPaymentsRequest<T>,
             response_body: BarclaycardAuthorizeResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
@@ -516,7 +516,7 @@ macros::create_all_prerequisites!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Barclaycard,
-    curl_request: Json(BarclaycardPaymentsRequest),
+    curl_request: Json(BarclaycardPaymentsRequest<T>),
     curl_response: BarclaycardAuthorizeResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,

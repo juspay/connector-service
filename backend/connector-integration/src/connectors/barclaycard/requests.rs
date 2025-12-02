@@ -1,14 +1,16 @@
-use cards::CardNumber;
 use common_enums::CountryAlpha2;
 use common_utils::{pii, types::StringMajorUnit};
+use domain_types::payment_method_data::{PaymentMethodDataTypes, RawCardNumber};
 use hyperswitch_masking::Secret;
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BarclaycardPaymentsRequest {
+pub struct BarclaycardPaymentsRequest<
+    T: PaymentMethodDataTypes + std::marker::Sync + std::marker::Send + 'static + Serialize,
+> {
     pub processing_information: ProcessingInformation,
-    pub payment_information: PaymentInformation,
+    pub payment_information: PaymentInformation<T>,
     pub order_information: OrderInformationWithBill,
     pub client_reference_information: ClientReferenceInformation,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -35,20 +37,26 @@ pub struct MerchantDefinedInformation {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CardPaymentInformation {
-    pub card: Card,
+pub struct CardPaymentInformation<
+    T: PaymentMethodDataTypes + std::marker::Sync + std::marker::Send + 'static + Serialize,
+> {
+    pub card: Card<T>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
-pub enum PaymentInformation {
-    Cards(Box<CardPaymentInformation>),
+pub enum PaymentInformation<
+    T: PaymentMethodDataTypes + std::marker::Sync + std::marker::Send + 'static + Serialize,
+> {
+    Cards(Box<CardPaymentInformation<T>>),
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Card {
-    pub number: CardNumber,
+pub struct Card<
+    T: PaymentMethodDataTypes + std::marker::Sync + std::marker::Send + 'static + Serialize,
+> {
+    pub number: RawCardNumber<T>,
     pub expiration_month: Secret<String>,
     pub expiration_year: Secret<String>,
     pub security_code: Secret<String>,
