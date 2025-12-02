@@ -43,10 +43,8 @@ use transformers::{
     NuveiSyncResponse, NuveiVoidRequest, NuveiVoidResponse,
 };
 
-
 use super::macros;
 use crate::types::ResponseRouterData;
-
 
 // Local headers module
 mod headers {
