@@ -43,10 +43,10 @@ use transformers::{
     NuveiSyncResponse, NuveiVoidRequest, NuveiVoidResponse,
 };
 
-use crate::utils::{ConnectorErrorType, ConnectorErrorTypeMapping};
 
 use super::macros;
 use crate::types::ResponseRouterData;
+
 
 // Local headers module
 mod headers {
@@ -260,18 +260,6 @@ macros::macro_connector_implementation!(
         }
     }
 );
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorErrorTypeMapping for Nuvei<T>
-{
-    fn get_connector_error_type(
-        &self,
-        _error_code: String,
-        _error_message: String,
-    ) -> ConnectorErrorType {
-        ConnectorErrorType::UnknownError
-    }
-}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Nuvei<T>
