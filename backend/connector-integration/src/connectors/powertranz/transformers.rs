@@ -97,11 +97,19 @@ pub struct PowertranzRefundRequest {
 #[serde(rename_all = "PascalCase")]
 pub struct PowertranzPaymentsResponse {
     pub transaction_type: u8,
-    pub approved: bool,
+    /// Approved field is present in authorize/capture/void responses but not in sync responses
+    #[serde(default)]
+    pub approved: Option<bool>,
     pub transaction_identifier: String,
     #[serde(rename = "IsoResponseCode")]
     pub iso_response_code: String,
     pub response_message: String,
+    /// Authorization code (present in sync responses)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authorization_code: Option<String>,
+    /// RRN - Retrieval Reference Number (present in sync responses)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rrn: Option<String>,
     pub errors: Option<Vec<PowertranzError>>,
 }
 
@@ -113,7 +121,9 @@ pub type PowertranzVoidResponse = PowertranzPaymentsResponse;
 #[serde(rename_all = "PascalCase")]
 pub struct PowertranzRefundResponse {
     pub transaction_type: u8,
-    pub approved: bool,
+    /// Approved field is present in refund responses but not in sync responses
+    #[serde(default)]
+    pub approved: Option<bool>,
     pub transaction_identifier: String,
     #[serde(rename = "IsoResponseCode")]
     pub iso_response_code: String,
@@ -150,6 +160,36 @@ const ISO_SUCCESS_CODES: [&str; 7] = [
 #[serde(rename_all = "PascalCase")]
 pub struct PowertranzErrorResponse {
     pub errors: Vec<PowertranzError>,
+}
+
+/// Determine payment status from PowerTranz response
+///
+/// Maps PowerTranz transaction type and approval status to payment status
+fn get_payment_status(
+    transaction_type: u8,
+    approved: Option<bool>,
+    iso_response_code: &str,
+) -> enums::AttemptStatus {
+    use enums::AttemptStatus;
+
+    // Determine if transaction is approved
+    let is_approved = approved.unwrap_or_else(|| ISO_SUCCESS_CODES.contains(&iso_response_code));
+
+    if !is_approved {
+        return AttemptStatus::Failure;
+    }
+
+    // Transaction types from PowerTranz API:
+    // 1 = Authorization (pre-auth)
+    // 2 = Capture
+    // 3 = Void
+    // 4 = Refund
+    match transaction_type {
+        1 => AttemptStatus::Authorized, // Authorization
+        2 => AttemptStatus::Charged,    // Capture
+        3 => AttemptStatus::Voided,     // Void
+        _ => AttemptStatus::Pending,    // Unknown or other types
+    }
 }
 
 /// Build error response from PowerTranz response
@@ -467,6 +507,14 @@ impl<F> TryFrom<ResponseRouterData<PowertranzPaymentsSyncResponse, Self>>
             router_data,
             http_code,
         } = item;
+
+        // Determine payment status from transaction type and ISO code
+        let status = get_payment_status(
+            response.transaction_type,
+            response.approved,
+            &response.iso_response_code,
+        );
+
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.transaction_identifier),
@@ -478,6 +526,10 @@ impl<F> TryFrom<ResponseRouterData<PowertranzPaymentsSyncResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: http_code,
             }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
             ..router_data
         })
     }
@@ -554,7 +606,11 @@ impl<F> TryFrom<ResponseRouterData<PowertranzRefundResponse, Self>>
             router_data,
             http_code,
         } = item;
-        let refund_status = if response.approved {
+        // Determine approval status: use approved field if present, otherwise check ISO code
+        let is_approved = response
+            .approved
+            .unwrap_or_else(|| ISO_SUCCESS_CODES.contains(&response.iso_response_code.as_str()));
+        let refund_status = if is_approved {
             enums::RefundStatus::Success
         } else {
             enums::RefundStatus::Failure
@@ -584,7 +640,11 @@ impl<F> TryFrom<ResponseRouterData<PowertranzRSyncResponse, Self>>
             router_data,
             http_code,
         } = item;
-        let refund_status = if response.approved {
+        // Determine approval status: use approved field if present, otherwise check ISO code
+        let is_approved = response
+            .approved
+            .unwrap_or_else(|| ISO_SUCCESS_CODES.contains(&response.iso_response_code.as_str()));
+        let refund_status = if is_approved {
             enums::RefundStatus::Success
         } else {
             enums::RefundStatus::Failure
