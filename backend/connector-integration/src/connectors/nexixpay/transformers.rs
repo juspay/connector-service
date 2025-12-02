@@ -463,7 +463,9 @@ impl<T: PaymentMethodDataTypes>
 
         // Build connector metadata - preserve existing structural data and add payment response data
         // Following connector-service pattern: don't overwrite, just add data
-        let mut metadata_map = item.router_data.resource_common_data
+        let mut metadata_map = item
+            .router_data
+            .resource_common_data
             .connector_meta_data
             .as_ref()
             .and_then(|meta| meta.peek().as_object())
@@ -478,10 +480,16 @@ impl<T: PaymentMethodDataTypes>
         // Ensure structural metadata always exists for PSync compatibility
         // Add missing fields with defaults if not present from PreAuthenticate
         if !metadata_map.contains_key("authorizationOperationId") {
-            metadata_map.insert("authorizationOperationId".to_string(), serde_json::Value::String(operation.operation_id.clone()));
+            metadata_map.insert(
+                "authorizationOperationId".to_string(),
+                serde_json::Value::String(operation.operation_id.clone()),
+            );
         }
         if !metadata_map.contains_key("psyncFlow") {
-            metadata_map.insert("psyncFlow".to_string(), serde_json::Value::String("Authorize".to_string()));
+            metadata_map.insert(
+                "psyncFlow".to_string(),
+                serde_json::Value::String("Authorize".to_string()),
+            );
         }
 
         let connector_metadata = if !metadata_map.is_empty() {
