@@ -7193,6 +7193,7 @@ pub fn generate_payment_sdk_session_token_response(
                         session_token: grpc_session_token,
                         error_message: None,
                         error_code: None,
+                        error_reason: None,
                         raw_connector_response,
                         status_code: status_code as u32,
                         raw_connector_request,
@@ -7212,6 +7213,7 @@ pub fn generate_payment_sdk_session_token_response(
             session_token: None,
             error_message: Some(e.message),
             error_code: Some(e.code),
+            error_reason: e.reason,
             raw_connector_response,
             status_code: e.status_code as u32,
             raw_connector_request,
@@ -7256,7 +7258,7 @@ impl ForeignTryFrom<GpaySessionTokenResponse>
                         allowed_payment_methods: session
                             .allowed_payment_methods
                             .into_iter()
-                            .map(|p| grpc_api_types::payments::GpayAllowedPaymentMethods::from(p))
+                            .map(grpc_api_types::payments::GpayAllowedPaymentMethods::from)
                             .collect(),
                         transaction_info: Some(grpc_api_types::payments::GpayTransactionInfo {
                             country_code: grpc_api_types::payments::CountryAlpha2::foreign_try_from(
@@ -7276,8 +7278,8 @@ impl ForeignTryFrom<GpaySessionTokenResponse>
                         .into(),
                         secrets: session.secrets.map(|s| {
                             grpc_api_types::payments::SecretInfoToInitiateSdk {
-                                display: Some(s.display.into()),
-                                payment: s.payment.map(|p| p.into()),
+                                display: Some(s.display),
+                                payment: s.payment,
                             }
                         }),
                     }),
@@ -7316,11 +7318,6 @@ impl From<GpayAllowedPaymentMethods> for grpc_api_types::payments::GpayAllowedPa
                             .tokenization_specification
                             .parameters
                             .gateway_merchant_id,
-                        stripe_version: value.tokenization_specification.parameters.stripe_version,
-                        stripe_publishable_key: value
-                            .tokenization_specification
-                            .parameters
-                            .stripe_publishable_key,
                         protocol_version: value
                             .tokenization_specification
                             .parameters
@@ -7328,8 +7325,7 @@ impl From<GpayAllowedPaymentMethods> for grpc_api_types::payments::GpayAllowedPa
                         public_key: value
                             .tokenization_specification
                             .parameters
-                            .public_key
-                            .map(|s| s.into()),
+                            .public_key,
                     }),
                 },
             ),
@@ -7356,8 +7352,8 @@ impl ForeignTryFrom<ApplePaySessionResponse> for grpc_api_types::payments::Apple
             ApplePaySessionResponse::ThirdPartySdk(third_party) => {
                 grpc_api_types::payments::ThirdPartySdkSessionResponse {
                     secrets: Some(grpc_api_types::payments::SecretInfoToInitiateSdk {
-                        display: Some(third_party.secrets.display.into()),
-                        payment: third_party.secrets.payment.map(|p| p.into()),
+                        display: Some(third_party.secrets.display),
+                        payment: third_party.secrets.payment,
                     }),
                 }
             }

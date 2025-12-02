@@ -36,6 +36,8 @@ use crate::{
     unimplemented_payment_method, utils,
 };
 
+pub const BRAINTREE_CONNECTOR_NAME: &str = "braintree";
+
 pub mod constants {
     pub const CHANNEL_CODE: &str = "HyperSwitchBT_Ecom";
     pub const CLIENT_TOKEN_MUTATION: &str = "mutation createClientToken($input: CreateClientTokenInput!) { createClientToken(input: $input) { clientToken}}";
@@ -1699,16 +1701,15 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
             BraintreeSessionResponse::SessionTokenResponse(res) => {
                 let session_token = match item.router_data.request.payment_method_type {
                     Some(common_enums::PaymentMethodType::ApplePay) => {
-                        let payment_request_data: PaymentRequestMetadata = if let Some(
-                            connector_meta,
-                        ) = item
+                        let payment_request_data: PaymentRequestMetadata = match item
                             .router_data
                             .resource_common_data
                             .connector_meta_data
                             .clone()
                         {
-                            let meta_value: serde_json::Value = connector_meta.expose();
-                            meta_value
+                            Some(connector_meta) => {
+                                let meta_value: serde_json::Value = connector_meta.expose();
+                                meta_value
                                     .get("apple_pay_combined")
                                     .ok_or(errors::ConnectorError::NoConnectorMetaData)
                                     .attach_printable("Missing apple_pay_combined metadata")?
@@ -1724,9 +1725,9 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                     .attach_printable(
                                         "Failed to parse apple_pay_combined.manual.payment_request_data metadata",
                                     )?
-                        } else {
-                            return Err(errors::ConnectorError::NoConnectorMetaData)
-                                .attach_printable("connector_meta_data is None");
+                            },
+                            None => Err(errors::ConnectorError::NoConnectorMetaData)
+                                .attach_printable("connector_meta_data is None")?
                         };
 
                         let session_token_data = Some(ApplePaySessionResponse::ThirdPartySdk(
@@ -1760,7 +1761,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                 required_shipping_contact_fields: None,
                                 recurring_payment_request: None,
                             }),
-                            connector: "braintree".to_string(),
+                            connector: BRAINTREE_CONNECTOR_NAME.to_string(),
                             delayed_session_token: false,
                             sdk_next_action: SdkNextAction {
                                 next_action: NextActionCall::Confirm,
@@ -1814,7 +1815,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                     payment: None,
                                 }),
                                 delayed_session_token: false,
-                                connector: "braintree".to_string(),
+                                connector: BRAINTREE_CONNECTOR_NAME.to_string(),
                                 sdk_next_action: SdkNextAction {
                                     next_action: NextActionCall::Confirm,
                                 },
@@ -1832,7 +1833,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                             .attach_printable("Failed to parse paypal_sdk metadata.".to_string())?;
 
                         SessionToken::Paypal(Box::new(PaypalSessionTokenResponse {
-                            connector: "braintree".to_string(),
+                            connector: BRAINTREE_CONNECTOR_NAME.to_string(),
                             session_token: paypal_sdk_data.data.client_id,
                             sdk_next_action: SdkNextAction {
                                 next_action: NextActionCall::Confirm,

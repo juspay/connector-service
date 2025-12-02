@@ -1337,10 +1337,8 @@ message GpayTokenizationSpecification {
 message GpayTokenParameters {
   optional string gateway = 1;
   optional string gateway_merchant_id = 2;
-  optional string stripe_version = 3;
-  optional string stripe_publishable_key = 4;
-  optional string protocol_version = 5;
-  optional SecretString public_key = 6;
+  optional string protocol_version = 3;
+  optional SecretString public_key = 4;
 }
 
 message GpayTransactionInfo {
@@ -1883,7 +1881,7 @@ message PaymentServiceVoidPostCaptureResponse {
   optional Identifier response_ref_id = 5; // Response reference ID for tracking
 }
 
-// Placeholder
+// Creates a session object or a session token for wallets like Apple Pay, Google Pay, etc.
 message PaymentServiceSdkSessionTokenRequest {
   // Identification
   Identifier request_ref_id = 1; // Reference ID for tracking
@@ -1908,11 +1906,12 @@ message PaymentServiceSdkSessionTokenRequest {
   SecretString merchant_account_metadata = 17;; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
-// Placeholder
+// Response message for a sdk session token operation.
 message PaymentServiceSdkSessionTokenResponse {
   SessionToken session_token = 1;
   optional string error_code = 2; // Error code if the post-authentication failed
   optional string error_message = 3; // Error message if the post-authentication failed
+  optional string error_reason = 7; // Detailed reason for the error
   uint32 status_code = 4; // HTTP status code from the connector
   // Raw Response
   optional SecretString raw_connector_response = 5; // Raw response from the connector for debugging
