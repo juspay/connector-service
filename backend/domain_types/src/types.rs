@@ -7322,10 +7322,7 @@ impl From<GpayAllowedPaymentMethods> for grpc_api_types::payments::GpayAllowedPa
                             .tokenization_specification
                             .parameters
                             .protocol_version,
-                        public_key: value
-                            .tokenization_specification
-                            .parameters
-                            .public_key,
+                        public_key: value.tokenization_specification.parameters.public_key,
                     }),
                 },
             ),

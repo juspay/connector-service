@@ -1725,9 +1725,9 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                     .attach_printable(
                                         "Failed to parse apple_pay_combined.manual.payment_request_data metadata",
                                     )?
-                            },
+                            }
                             None => Err(errors::ConnectorError::NoConnectorMetaData)
-                                .attach_printable("connector_meta_data is None")?
+                                .attach_printable("connector_meta_data is None")?,
                         };
 
                         let session_token_data = Some(ApplePaySessionResponse::ThirdPartySdk(
