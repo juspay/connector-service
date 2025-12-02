@@ -1,5 +1,5 @@
 {
-  description = "Rust development environment";
+  description = "Rust development environment for the Connector Service Project";
 
   # Inputs are external dependencies/sources your flake depends on
   inputs = {
