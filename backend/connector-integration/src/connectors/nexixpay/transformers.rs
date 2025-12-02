@@ -736,9 +736,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let item = &value.router_data;
-        // Extract connector_transaction_id (operationId from authorization)
-        // Already a String in PaymentVoidData
-        let _operation_id = &item.request.connector_transaction_id;
 
         // CRITICAL: For void, we need to send the full authorized amount
         // This is extracted from the request data (required for NexiXPay void)
@@ -928,7 +925,7 @@ impl
 #[serde(rename_all = "camelCase")]
 pub struct NexixpayPreAuthenticateRequest {
     pub order: NexixpayPreAuthOrder,
-    pub card: NexixpayPreAuthCardData,
+    pub card: NexixpayCardData,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub recurrence: Option<NexixpayRecurrence>,
 }
@@ -984,15 +981,6 @@ pub struct NexixpayShippingAddress {
 }
 
 #[derive(Debug, Serialize)]
-pub struct NexixpayPreAuthCardData {
-    pub pan: Secret<String>,
-    #[serde(rename = "expiryDate")]
-    pub expiry_date: Secret<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cvv: Option<Secret<String>>,
-}
-
-#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NexixpayRecurrence {
     pub action: String,
@@ -1042,7 +1030,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         // Build card data structure using utility function for expiry date
-        let card = NexixpayPreAuthCardData {
+        let card = NexixpayCardData {
             pan: Secret::new(card_data.card_number.peek().to_string()),
             expiry_date: card_data
                 .get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?,
