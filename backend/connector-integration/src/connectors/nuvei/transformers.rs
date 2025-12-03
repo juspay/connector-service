@@ -90,6 +90,15 @@ pub struct NuveiSessionTokenResponse {
     pub client_request_id: Option<String>,
 }
 
+// URL Details for redirect URLs
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NuveiUrlDetails {
+    pub success_url: String,
+    pub failure_url: String,
+    pub pending_url: String,
+}
+
 // Payment Request
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -106,7 +115,7 @@ pub struct NuveiPaymentRequest<
     pub merchant_site_id: Secret<String>,
     pub client_request_id: String,
     pub amount: StringMajorUnit,
-    pub currency: String,
+    pub currency: common_enums::Currency,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_token_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -115,6 +124,8 @@ pub struct NuveiPaymentRequest<
     pub transaction_type: TransactionType,
     pub device_details: NuveiDeviceDetails,
     pub billing_address: NuveiBillingAddress,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url_details: Option<NuveiUrlDetails>,
     pub time_stamp: common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss>,
     pub checksum: String,
 }
@@ -287,7 +298,7 @@ pub struct NuveiCaptureRequest {
     pub client_request_id: String,
     pub client_unique_id: String,
     pub amount: StringMajorUnit,
-    pub currency: String,
+    pub currency: common_enums::Currency,
     pub related_transaction_id: String,
     pub time_stamp: common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss>,
     pub checksum: String,
@@ -316,7 +327,7 @@ pub struct NuveiRefundRequest {
     pub client_request_id: String,
     pub client_unique_id: String,
     pub amount: StringMajorUnit,
-    pub currency: String,
+    pub currency: common_enums::Currency,
     pub related_transaction_id: String,
     pub time_stamp: common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss>,
     pub checksum: String,
@@ -364,6 +375,8 @@ pub struct NuveiVoidRequest {
     pub merchant_site_id: Secret<String>,
     pub client_request_id: String,
     pub client_unique_id: String,
+    pub amount: StringMajorUnit,
+    pub currency: common_enums::Currency,
     pub related_transaction_id: String,
     pub time_stamp: common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss>,
     pub checksum: String,
@@ -707,6 +720,13 @@ impl<
             .and_then(|addr| addr.to_state_code_as_optional().ok())
             .flatten();
 
+        // Get address_line3 directly from billing address
+        let address_line3 = router_data
+            .resource_common_data
+            .get_optional_billing()
+            .and_then(|billing| billing.address.as_ref())
+            .and_then(|addr| addr.line3.clone());
+
         let billing_address = NuveiBillingAddress {
             email,
             first_name,
@@ -722,7 +742,7 @@ impl<
             address_line2: router_data
                 .resource_common_data
                 .get_optional_billing_line2(),
-            address_line3: None, // No line3 method available in resource_common_data
+            address_line3,
             zip: router_data.resource_common_data.get_optional_billing_zip(),
             state,
         };
@@ -754,7 +774,7 @@ impl<
             )
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
-        let currency = router_data.request.currency.to_string();
+        let currency = router_data.request.currency;
 
         // Extract session token from PaymentFlowData
         // The CreateSessionToken flow runs before Authorize and populates this field
@@ -770,13 +790,25 @@ impl<
         let transaction_type =
             TransactionType::get_from_capture_method(router_data.request.capture_method, &amount);
 
+        // Build urlDetails from router_return_url if available
+        let url_details =
+            router_data
+                .request
+                .router_return_url
+                .as_ref()
+                .map(|url| NuveiUrlDetails {
+                    success_url: url.clone(),
+                    failure_url: url.clone(),
+                    pending_url: url.clone(),
+                });
+
         // Generate checksum: merchantId + merchantSiteId + clientRequestId + amount + currency + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
             auth.merchant_id.peek(),
             auth.merchant_site_id.peek(),
             &client_request_id,
             &amount.get_amount_as_string(),
-            &currency,
+            &currency.to_string(),
             &time_stamp.to_string(),
         ]);
 
@@ -798,6 +830,7 @@ impl<
             transaction_type,
             device_details,
             billing_address,
+            url_details,
             time_stamp,
             checksum,
         })
@@ -979,7 +1012,7 @@ impl<
             )
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
-        let currency = router_data.request.currency.to_string();
+        let currency = router_data.request.currency;
 
         // Generate checksum: merchantId + merchantSiteId + clientRequestId + clientUniqueId + amount + currency + relatedTransactionId + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
@@ -988,7 +1021,7 @@ impl<
             &client_request_id,
             &client_unique_id,
             &amount.get_amount_as_string(),
-            &currency,
+            &currency.to_string(),
             &related_transaction_id,
             &time_stamp.to_string(),
         ]);
@@ -1261,7 +1294,7 @@ impl<
             )
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
-        let currency = router_data.request.currency.to_string();
+        let currency = router_data.request.currency;
 
         // Generate checksum: merchantId + merchantSiteId + clientRequestId + clientUniqueId + amount + currency + relatedTransactionId + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
@@ -1270,7 +1303,7 @@ impl<
             &client_request_id,
             &client_unique_id,
             &amount.get_amount_as_string(),
-            &currency,
+            &currency.to_string(),
             &related_transaction_id,
             &time_stamp.to_string(),
         ]);
@@ -1570,14 +1603,38 @@ impl<
         // Extract relatedTransactionId from connector_transaction_id
         let related_transaction_id = router_data.request.connector_transaction_id.clone();
 
-        // Generate checksum: merchantId + merchantSiteId + clientRequestId + clientUniqueId + "" + "" + relatedTransactionId + "" + "" + timeStamp + merchantSecretKey
+        // Extract amount and currency from the request
+        // For void, we need to send the original transaction amount and currency
+        let minor_amount =
+            router_data
+                .request
+                .amount
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "amount",
+                })?;
+
+        let currency =
+            router_data
+                .request
+                .currency
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "currency",
+                })?;
+
+        let amount = item
+            .connector
+            .amount_converter_webhooks
+            .convert(minor_amount, currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        // Generate checksum: merchantId + merchantSiteId + clientRequestId + clientUniqueId + amount + currency + relatedTransactionId + "" + "" + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
             auth.merchant_id.peek(),
             auth.merchant_site_id.peek(),
             &client_request_id,
             &client_unique_id,
-            "", // amount (empty for void)
-            "", // currency (empty for void)
+            &amount.get_amount_as_string(),
+            &currency.to_string(),
             &related_transaction_id,
             "", // authCode (empty)
             "", // comment (empty)
@@ -1589,6 +1646,8 @@ impl<
             merchant_site_id: auth.merchant_site_id,
             client_request_id,
             client_unique_id,
+            amount,
+            currency,
             related_transaction_id,
             time_stamp,
             checksum,
