@@ -206,6 +206,7 @@ fn create_payment_void_request(transaction_id: &str, amount: i64) -> PaymentServ
         amount: Some(amount),
         currency: Some(i32::from(Currency::Usd)),
         state: None,
+        merchant_account_metadata: Default::default(),
     }
 }
 

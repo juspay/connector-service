@@ -92,8 +92,10 @@ pub enum ConnectorEnum {
     Hipay,
     Trustpayments,
     Globalpay,
+    Iatapay,
     Nmi,
     Shift4,
+    Nexixpay,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -150,8 +152,10 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Hipay => Ok(Self::Hipay),
             grpc_api_types::payments::Connector::Trustpayments => Ok(Self::Trustpayments),
             grpc_api_types::payments::Connector::Globalpay => Ok(Self::Globalpay),
+            grpc_api_types::payments::Connector::Iatapay => Ok(Self::Iatapay),
             grpc_api_types::payments::Connector::Nmi => Ok(Self::Nmi),
             grpc_api_types::payments::Connector::Shift4 => Ok(Self::Shift4),
+            grpc_api_types::payments::Connector::Nexixpay => Ok(Self::Nexixpay),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -1992,7 +1996,6 @@ pub struct PaymentsCaptureData {
     pub minor_amount_to_capture: MinorUnit,
     pub currency: Currency,
     pub connector_transaction_id: ResponseId,
-    pub merchant_reference_payment_id: Option<String>,
     pub multiple_capture_data: Option<MultipleCaptureRequestData>,
     pub connector_metadata: Option<serde_json::Value>,
     pub integrity_object: Option<CaptureIntegrityObject>,

@@ -1588,6 +1588,9 @@ message PaymentServiceVoidRequest {
 
   // State Information
   optional ConnectorState state = 10; // State data for access token storage and other connector-specific state
+
+    // Account-Specific Configuration
+  map<string, string> merchant_account_metadata = 11; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for a payment void operation.
@@ -1678,8 +1681,8 @@ message PaymentServiceCaptureRequest {
   // State Information
   optional ConnectorState state = 10; // State data for access token storage and other connector-specific state
 
-  // Merchant's original payment ID for connectors that need it (e.g., Worldpay)
-  optional string merchant_reference_payment_id = 11;
+    // Account-Specific Configuration
+  map<string, string> merchant_account_metadata = 12; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for a payment capture operation.
