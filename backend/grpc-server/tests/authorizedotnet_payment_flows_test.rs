@@ -433,7 +433,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         browser_info: None,
         capture_method: None,
         state: None,
-        merchant_account_metadata: HashMap::new(),
+        merchant_account_metadata: None,
     }
 }
 
