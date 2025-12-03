@@ -93,7 +93,7 @@ use crate::{
     },
     router_data_v2::RouterDataV2,
     router_request_types,
-    router_request_types::BrowserInformation,
+    router_request_types::{AuthenticationData, BrowserInformation},
     router_response_types,
     utils::{extract_merchant_id_from_metadata, ForeignFrom, ForeignTryFrom},
 };
@@ -153,6 +153,7 @@ pub struct Connectors {
     pub iatapay: ConnectorParams,
     pub nmi: ConnectorParams,
     pub shift4: ConnectorParams,
+    pub redsys: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
@@ -2541,6 +2542,42 @@ impl ForeignTryFrom<router_request_types::AuthenticationData>
             }),
             message_version: value.message_version.map(|v| v.to_string()),
             ds_transaction_id: value.ds_trans_id,
+            trans_status,
+            acs_transaction_id: value.acs_transaction_id,
+            transaction_id: value.transaction_id,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::AuthenticationData>
+    for router_request_types::AuthenticationData
+{
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        value: grpc_api_types::payments::AuthenticationData,
+    ) -> error_stack::Result<Self, Self::Error> {
+        let trans_status = value.trans_status.map(|ts| {
+            common_enums::TransactionStatus::foreign_from(
+                grpc_api_types::payments::TransactionStatus::try_from(ts).unwrap_or_default(),
+            )
+        });
+        Ok(Self {
+            ucaf_collection_indicator: value.ucaf_collection_indicator,
+            eci: value.eci,
+            cavv: value.cavv.map(hyperswitch_masking::Secret::new),
+            threeds_server_transaction_id: value.threeds_server_transaction_id.and_then(|id| {
+                match id.id_type {
+                    Some(grpc_api_types::payments::identifier::IdType::Id(id_str)) => Some(id_str),
+                    Some(grpc_api_types::payments::identifier::IdType::EncodedData(_))
+                    | Some(grpc_api_types::payments::identifier::IdType::NoResponseIdMarker(_))
+                    | None => None,
+                }
+            }),
+            message_version: value.message_version.and_then(|v| {
+                use std::str::FromStr;
+                common_utils::types::SemanticVersion::from_str(&v).ok()
+            }),
+            ds_trans_id: value.ds_transaction_id,
             trans_status,
             acs_transaction_id: value.acs_transaction_id,
             transaction_id: value.transaction_id,
@@ -7338,12 +7375,21 @@ impl<
                     ))
                 })
                 .transpose()?,
+            webhook_url: value.webhook_url,
             browser_info: value
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             enrolled_for_3ds,
             redirect_response,
+            capture_method: value
+                .capture_method
+                .map(|cm| {
+                    common_enums::CaptureMethod::foreign_try_from(
+                        grpc_api_types::payments::CaptureMethod::try_from(cm).unwrap_or_default(),
+                    )
+                })
+                .transpose()?,
         })
     }
 }
@@ -7450,6 +7496,18 @@ impl<
                 .transpose()?,
             enrolled_for_3ds: false,
             redirect_response,
+            capture_method: value
+                .capture_method
+                .map(|cm| {
+                    common_enums::CaptureMethod::foreign_try_from(
+                        grpc_api_types::payments::CaptureMethod::try_from(cm).unwrap_or_default(),
+                    )
+                })
+                .transpose()?,
+            authentication_data: value
+                .authentication_data
+                .map(AuthenticationData::try_from)
+                .transpose()?,
         })
     }
 }
@@ -7549,12 +7607,24 @@ impl<
                     ))
                 })
                 .transpose()?,
+            authentication_data: value
+                .authentication_data
+                .map(router_request_types::AuthenticationData::foreign_try_from)
+                .transpose()?,
             browser_info: value
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             enrolled_for_3ds: false,
             redirect_response,
+            capture_method: value
+                .capture_method
+                .map(|cm| {
+                    common_enums::CaptureMethod::foreign_try_from(
+                        grpc_api_types::payments::CaptureMethod::try_from(cm).unwrap_or_default(),
+                    )
+                })
+                .transpose()?,
         })
     }
 }

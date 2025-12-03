@@ -130,6 +130,24 @@ impl ToTokenData for grpc_api_types::payments::CardDetails {
         }
     }
 }
+
+/// Helper function to convert connector_meta_data to HashMap<String, String>
+fn convert_connector_metadata_to_hashmap(
+    connector_meta_data: &Option<SecretSerdeValue>,
+) -> HashMap<String, String> {
+    connector_meta_data
+        .as_ref()
+        .and_then(|meta| {
+            let value = meta.clone().expose();
+            value.as_object().map(|obj| {
+                obj.iter()
+                    .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
+                    .collect()
+            })
+        })
+        .unwrap_or_default()
+}
+
 // Helper trait for payment operations
 trait PaymentOperationsInternal {
     async fn internal_void_payment(
@@ -4173,7 +4191,9 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                         }))?,
                     })
                     .transpose()?,
-                connector_metadata: HashMap::new(),
+                connector_metadata: convert_connector_metadata_to_hashmap(
+                    &router_data_v2.resource_common_data.connector_meta_data,
+                ),
                 response_ref_id: connector_response_reference_id.map(|id| {
                     grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
@@ -4220,7 +4240,9 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 status_code: err.status_code.into(),
                 response_headers,
                 raw_connector_response,
-                connector_metadata: HashMap::new(),
+                connector_metadata: convert_connector_metadata_to_hashmap(
+                    &router_data_v2.resource_common_data.connector_meta_data,
+                ),
                 state: None,
             }
         }
@@ -4397,7 +4419,9 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                         }))?,
                     })
                     .transpose()?,
-                connector_metadata: HashMap::new(),
+                connector_metadata: convert_connector_metadata_to_hashmap(
+                    &router_data_v2.resource_common_data.connector_meta_data,
+                ),
                 authentication_data: authentication_data.map(ForeignFrom::foreign_from),
                 status: grpc_status.into(),
                 error_message: None,
@@ -4441,7 +4465,9 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                 status_code: err.status_code.into(),
                 raw_connector_response,
                 response_headers,
-                connector_metadata: HashMap::new(),
+                connector_metadata: convert_connector_metadata_to_hashmap(
+                    &router_data_v2.resource_common_data.connector_meta_data,
+                ),
                 state: None,
             }
         }
@@ -4476,7 +4502,9 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
             } => PaymentServicePostAuthenticateResponse {
                 transaction_id: None,
                 redirection_data: None,
-                connector_metadata: HashMap::new(),
+                connector_metadata: convert_connector_metadata_to_hashmap(
+                    &router_data_v2.resource_common_data.connector_meta_data,
+                ),
                 network_txn_id: None,
                 response_ref_id: connector_response_reference_id.map(|id| {
                     grpc_api_types::payments::Identifier {
@@ -4527,7 +4555,9 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                 status_code: err.status_code.into(),
                 response_headers,
                 raw_connector_response,
-                connector_metadata: HashMap::new(),
+                connector_metadata: convert_connector_metadata_to_hashmap(
+                    &router_data_v2.resource_common_data.connector_meta_data,
+                ),
                 state: None,
             }
         }
