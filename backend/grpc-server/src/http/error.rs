@@ -38,13 +38,23 @@ impl IntoResponse for HttpError {
 impl From<tonic::Status> for HttpError {
     fn from(status: tonic::Status) -> Self {
         let http_status = match status.code() {
+            tonic::Code::Ok => StatusCode::OK,
+            tonic::Code::Cancelled => StatusCode::REQUEST_TIMEOUT,
+            tonic::Code::Unknown => StatusCode::INTERNAL_SERVER_ERROR,
             tonic::Code::InvalidArgument => StatusCode::BAD_REQUEST,
+            tonic::Code::DeadlineExceeded => StatusCode::GATEWAY_TIMEOUT,
             tonic::Code::NotFound => StatusCode::NOT_FOUND,
             tonic::Code::AlreadyExists => StatusCode::CONFLICT,
             tonic::Code::PermissionDenied => StatusCode::FORBIDDEN,
-            tonic::Code::Unauthenticated => StatusCode::UNAUTHORIZED,
+            tonic::Code::ResourceExhausted => StatusCode::TOO_MANY_REQUESTS,
+            tonic::Code::FailedPrecondition => StatusCode::PRECONDITION_FAILED,
+            tonic::Code::Aborted => StatusCode::CONFLICT,
+            tonic::Code::OutOfRange => StatusCode::RANGE_NOT_SATISFIABLE,
             tonic::Code::Unimplemented => StatusCode::NOT_IMPLEMENTED,
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
+            tonic::Code::Internal => StatusCode::INTERNAL_SERVER_ERROR,
+            tonic::Code::Unavailable => StatusCode::SERVICE_UNAVAILABLE,
+            tonic::Code::DataLoss => StatusCode::INTERNAL_SERVER_ERROR,
+            tonic::Code::Unauthenticated => StatusCode::UNAUTHORIZED,
         };
 
         Self {
