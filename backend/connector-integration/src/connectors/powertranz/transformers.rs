@@ -1,4 +1,5 @@
 use common_enums::enums;
+use common_utils::types::FloatMajorUnit;
 use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
@@ -48,7 +49,7 @@ impl TryFrom<&ConnectorAuthType> for PowertranzAuthType {
 #[serde(rename_all = "PascalCase")]
 pub struct PowertranzPaymentsRequest {
     pub transaction_identifier: String,
-    pub total_amount: f64,
+    pub total_amount: FloatMajorUnit,
     pub currency_code: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub three_d_secure: Option<bool>,
@@ -72,7 +73,7 @@ pub struct PowertranzSource {
 #[serde(rename_all = "PascalCase")]
 pub struct PowertranzCaptureRequest {
     pub transaction_identifier: String,
-    pub total_amount: f64,
+    pub total_amount: Option<FloatMajorUnit>,
 }
 
 #[derive(Debug, Serialize)]
@@ -85,8 +86,8 @@ pub struct PowertranzVoidRequest {
 #[serde(rename_all = "PascalCase")]
 pub struct PowertranzRefundRequest {
     pub transaction_identifier: String,
-    pub total_amount: Option<f64>,
-    pub refund: bool,
+    pub total_amount: Option<FloatMajorUnit>,
+    pub refund: Option<bool>,
 }
 
 // ============================================================================
@@ -165,6 +166,8 @@ pub struct PowertranzErrorResponse {
 /// Determine payment status from PowerTranz response
 ///
 /// Maps PowerTranz transaction type and approval status to payment status
+/// Transaction types:
+/// 1 = Auth, 2 = Sale, 3 = Capture, 4 = Void, 5 = Refund
 fn get_payment_status(
     transaction_type: u8,
     approved: Option<bool>,
@@ -175,20 +178,46 @@ fn get_payment_status(
     // Determine if transaction is approved
     let is_approved = approved.unwrap_or_else(|| ISO_SUCCESS_CODES.contains(&iso_response_code));
 
-    if !is_approved {
-        return AttemptStatus::Failure;
-    }
+    // Check if this is a 3DS flow
+    let is_3ds = iso_response_code.starts_with("3D");
 
-    // Transaction types from PowerTranz API:
-    // 1 = Authorization (pre-auth)
-    // 2 = Capture
-    // 3 = Void
-    // 4 = Refund
     match transaction_type {
-        1 => AttemptStatus::Authorized, // Authorization
-        2 => AttemptStatus::Charged,    // Capture
-        3 => AttemptStatus::Voided,     // Void
-        _ => AttemptStatus::Pending,    // Unknown or other types
+        // Auth
+        1 => match is_approved {
+            true => AttemptStatus::Authorized,
+            false => match is_3ds {
+                true => AttemptStatus::AuthenticationPending,
+                false => AttemptStatus::Failure,
+            },
+        },
+        // Sale
+        2 => match is_approved {
+            true => AttemptStatus::Charged,
+            false => match is_3ds {
+                true => AttemptStatus::AuthenticationPending,
+                false => AttemptStatus::Failure,
+            },
+        },
+        // Capture
+        3 => match is_approved {
+            true => AttemptStatus::Charged,
+            false => AttemptStatus::Failure,
+        },
+        // Void
+        4 => match is_approved {
+            true => AttemptStatus::Voided,
+            false => AttemptStatus::VoidFailed,
+        },
+        // Refund
+        5 => match is_approved {
+            true => AttemptStatus::AutoRefunded,
+            false => AttemptStatus::Failure,
+        },
+        // Risk Management or other
+        _ => match is_approved {
+            true => AttemptStatus::Pending,
+            false => AttemptStatus::Failure,
+        },
     }
 }
 
@@ -289,21 +318,15 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let request_data = &item.router_data.request;
-        let amount = request_data.amount.get_amount_as_i64() as f64 / 100.0;
+        let amount = FloatMajorUnit(request_data.amount.get_amount_as_i64() as f64 / 100.0);
         // Use ISO 4217 numeric code (e.g., "840" for USD)
         let currency_code = request_data.currency.iso_4217().to_string();
 
         match &request_data.payment_method_data {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
                 // Format: YYMM (e.g., "3012" for December 2030 = year 30, month 12)
-                let year = card_data.card_exp_year.peek();
-                let year_suffix = if year.len() >= 2 {
-                    &year[year.len() - 2..]
-                } else {
-                    year
-                };
-                let card_expiration =
-                    format!("{}{}", year_suffix, &card_data.card_exp_month.peek());
+                let year_yy = card_data.get_card_expiry_year_2_digit()?;
+                let card_expiration = format!("{}{}", year_yy.peek(), &card_data.card_exp_month.peek());
 
                 Ok(Self {
                     transaction_identifier: uuid::Uuid::new_v4().to_string(),
@@ -324,9 +347,10 @@ impl<
                     extended_data: None,
                 })
             }
-            _ => Err(errors::ConnectorError::NotImplemented(
-                "Payment method not supported".to_string(),
-            )
+            _ => Err(errors::ConnectorError::NotSupported {
+                message: format!("Payment method not supported"),
+                connector: "powertranz",
+            }
             .into()),
         }
     }
@@ -365,7 +389,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = item.router_data.request.amount_to_capture as f64 / 100.0;
+        let amount = FloatMajorUnit(item.router_data.request.amount_to_capture as f64 / 100.0);
 
         Ok(Self {
             transaction_identifier: item
@@ -374,7 +398,7 @@ impl<
                 .connector_transaction_id
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?,
-            total_amount: amount,
+            total_amount: Some(amount),
         })
     }
 }
@@ -451,12 +475,12 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = item.router_data.request.refund_amount as f64 / 100.0;
+        let amount = FloatMajorUnit(item.router_data.request.refund_amount as f64 / 100.0);
 
         Ok(Self {
             transaction_identifier: item.router_data.request.connector_transaction_id.clone(),
             total_amount: Some(amount),
-            refund: true,
+            refund: Some(true),
         })
     }
 }
