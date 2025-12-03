@@ -1,6 +1,6 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
-use common_utils::{self, types::MinorUnit};
+use common_utils::{self, errors::CustomResult, types::MinorUnit};
 use domain_types::{
     connector_flow::{
         Authorize, Capture, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund, Void,
@@ -17,6 +17,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_request_types::AuthenticationData,
 };
+use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -95,6 +96,30 @@ pub struct NexixpayConnectorMetaData {
 
     /// Payment flow type for PSync operations - required by Hyperswitch
     pub psync_flow: NexixpayPaymentIntent,
+}
+
+pub fn get_payment_id(
+    metadata: Option<serde_json::Value>,
+    payment_intent: Option<NexixpayPaymentIntent>,
+) -> CustomResult<String, errors::ConnectorError> {
+    let connector_metadata = metadata.ok_or(errors::ConnectorError::MissingRequiredField {
+        field_name: "connector_meta_data",
+    })?;
+    let nexixpay_meta_data =
+        serde_json::from_value::<NexixpayConnectorMetaData>(connector_metadata)
+            .change_context(errors::ConnectorError::ParsingFailed)?;
+    let payment_flow = payment_intent.unwrap_or(nexixpay_meta_data.psync_flow);
+    let payment_id = match payment_flow {
+        NexixpayPaymentIntent::Cancel => nexixpay_meta_data.cancel_operation_id,
+        NexixpayPaymentIntent::Capture => nexixpay_meta_data.capture_operation_id,
+        NexixpayPaymentIntent::Authorize => nexixpay_meta_data.authorization_operation_id,
+    };
+    payment_id.ok_or_else(|| {
+        errors::ConnectorError::MissingRequiredField {
+            field_name: "operation_id",
+        }
+        .into()
+    })
 }
 
 // Note: NexixpayThreeDSAuthResult is defined later in the file
@@ -463,7 +488,7 @@ impl<T: PaymentMethodDataTypes>
             .or(operation.payment_end_to_end_id.clone());
 
         // Build connector metadata - preserve existing structural data and add payment response data
-        // Following connector-service pattern: don't overwrite, just add data
+        // Following working commit pattern: don't overwrite, just add data
         let mut metadata_map = item
             .router_data
             .resource_common_data
@@ -504,7 +529,7 @@ impl<T: PaymentMethodDataTypes>
                 resource_id: ResponseId::ConnectorTransactionId(operation.operation_id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
-                connector_metadata,
+                connector_metadata: connector_metadata.clone(),
                 network_txn_id,
                 connector_response_reference_id: Some(operation.order_id.clone()),
                 incremental_authorization_allowed: None,
@@ -512,6 +537,7 @@ impl<T: PaymentMethodDataTypes>
             }),
             resource_common_data: PaymentFlowData {
                 status,
+                connector_meta_data: connector_metadata.clone().map(Secret::new),
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -653,15 +679,43 @@ impl
         // Capture call does not return status in their response, so we return Pending
         // Status must be verified via PSync
 
-        // Following Cybersource pattern: simple response metadata
-        let connector_metadata = None;
+        // Build connector metadata - preserve existing structural data and add capture response data
+        // Following working commit pattern: don't overwrite, just add data
+        let mut metadata_map = item
+            .router_data
+            .resource_common_data
+            .connector_meta_data
+            .as_ref()
+            .and_then(|meta| meta.peek().as_object())
+            .cloned()
+            .unwrap_or_default();
+
+        // Add capture operation data
+        metadata_map.insert(
+            "captureOperationId".to_string(),
+            serde_json::Value::String(item.response.operation_id.clone()),
+        );
+
+        // Ensure structural metadata always exists for PSync compatibility
+        if !metadata_map.contains_key("psyncFlow") {
+            metadata_map.insert(
+                "psyncFlow".to_string(),
+                serde_json::Value::String(NexixpayPaymentIntent::Capture.to_string()),
+            );
+        }
+
+        let connector_metadata = if !metadata_map.is_empty() {
+            Some(serde_json::Value::Object(metadata_map))
+        } else {
+            None
+        };
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.operation_id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
-                connector_metadata,
+                connector_metadata: connector_metadata.clone(),
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
@@ -669,6 +723,7 @@ impl
             }),
             resource_common_data: PaymentFlowData {
                 status: AttemptStatus::Pending, // Capture call does not return status in their response
+                connector_meta_data: connector_metadata.clone().map(Secret::new),
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -856,15 +911,43 @@ impl
     ) -> Result<Self, Self::Error> {
         // CRITICAL: NexiXPay void response is minimal (only operationId and time)
 
-        // Following Cybersource pattern: simple response metadata
-        let connector_metadata = None;
+        // Build connector metadata - preserve existing structural data and add void response data
+        // Following working commit pattern: don't overwrite, just add data
+        let mut metadata_map = item
+            .router_data
+            .resource_common_data
+            .connector_meta_data
+            .as_ref()
+            .and_then(|meta| meta.peek().as_object())
+            .cloned()
+            .unwrap_or_default();
+
+        // Add void/cancel operation data
+        metadata_map.insert(
+            "cancelOperationId".to_string(),
+            serde_json::Value::String(item.response.operation_id.clone()),
+        );
+
+        // Ensure structural metadata always exists for PSync compatibility
+        if !metadata_map.contains_key("psyncFlow") {
+            metadata_map.insert(
+                "psyncFlow".to_string(),
+                serde_json::Value::String(NexixpayPaymentIntent::Cancel.to_string()),
+            );
+        }
+
+        let connector_metadata = if !metadata_map.is_empty() {
+            Some(serde_json::Value::Object(metadata_map))
+        } else {
+            None
+        };
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.operation_id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
-                connector_metadata,
+                connector_metadata: connector_metadata.clone(),
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
@@ -872,6 +955,7 @@ impl
             }),
             resource_common_data: PaymentFlowData {
                 status: AttemptStatus::Voided, // Void succeeded
+                connector_meta_data: connector_metadata.clone().map(Secret::new),
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -1261,14 +1345,14 @@ impl<T: PaymentMethodDataTypes>
         };
 
         // Build connector metadata to store operationId for Authorize (/payment)
-        // Following Hyperswitch pattern: store authorization_operation_id
+        // CRITICAL FIX: Following exact Hyperswitch pattern with proper psync_flow initialization
         let connector_metadata = Some(serde_json::json!(NexixpayConnectorMetaData {
             authorization_operation_id: Some(operation.operation_id.clone()),
             three_d_s_auth_result: None, // Will be filled by PostAuthenticate
             three_d_s_auth_response: None, // Will be filled by PostAuthenticate
             capture_operation_id: None,  // Will be filled by Capture operation
             cancel_operation_id: None,   // Will be filled by Void operation
-            psync_flow: NexixpayPaymentIntent::Authorize, // Default to Authorize for PreAuthenticate
+            psync_flow: NexixpayPaymentIntent::Authorize, // CRITICAL: Must be present for later parsing
         }));
 
         // Build authentication data with redirect form if needed
@@ -1516,6 +1600,9 @@ impl<T: PaymentMethodDataTypes>
             .and_then(|redirect_payload| redirect_payload.pa_res)
             .map(|secret| secret.expose());
 
+        // CRITICAL FIX: PostAuthenticate doesn't touch metadata at all like working commit
+        // Only returns authentication_data with PaRes and operationId
+
         Ok(Self {
             response: Ok(PaymentsResponseData::PostAuthenticateResponse {
                 authentication_data: response.three_ds_auth_result.as_ref().map(|auth_result| {
@@ -1533,7 +1620,7 @@ impl<T: PaymentMethodDataTypes>
                             .as_ref()
                             .and_then(|v| v.parse::<common_utils::types::SemanticVersion>().ok()),
                         // CRITICAL FIX: Store PaRes in ds_trans_id (unused field)
-                        ds_trans_id: pa_res,
+                        ds_trans_id: pa_res.clone(),
                         acs_transaction_id: None,
                         // CRITICAL FIX: Store operationId in transaction_id for Authorize flow
                         transaction_id: Some(operation.operation_id.clone()),

@@ -340,8 +340,22 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let operation_id = req.request.get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+            // TRY dynamic operation_id selection first, fallback to connector_transaction_id if metadata missing
+            let operation_id = if let Some(metadata) = req.resource_common_data.connector_meta_data.as_ref() {
+                // Try to use dynamic selection based on psync_flow
+                nexixpay::get_payment_id(
+                    Some(metadata.peek().clone()),
+                    None // Use psync_flow from metadata
+                ).unwrap_or_else(|_| {
+                    // Fallback to connector_transaction_id if dynamic selection fails
+                    req.request.get_connector_transaction_id()
+                        .unwrap_or_else(|_| "unknown".to_string())
+                })
+            } else {
+                // No metadata available, use connector_transaction_id
+                req.request.get_connector_transaction_id()
+                    .change_context(errors::ConnectorError::MissingConnectorTransactionID)?
+            };
             Ok(format!("{}/operations/{}", self.connector_base_url_payments(req), operation_id))
         }
     }
