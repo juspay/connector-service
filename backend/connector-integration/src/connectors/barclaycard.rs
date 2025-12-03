@@ -407,11 +407,11 @@ macros::create_all_prerequisites!(
                 merchant_account,
                 api_secret,
             } = auth;
-            let is_post_method = matches!(http_method, Method::Post);
-            let digest_str = if is_post_method { "digest " } else { "" };
+            let is_post_or_put_method = matches!(http_method, Method::Post | Method::Put);
+            let digest_str = if is_post_or_put_method { "digest " } else { "" };
             let headers = format!("host date (request-target) {digest_str}{V_C_MERCHANT_ID}");
-            let request_target = if is_post_method {
-                format!("(request-target): post {resource}\ndigest: SHA-256={payload}\n")
+            let request_target = if is_post_or_put_method {
+                format!("(request-target): {} {resource}\ndigest: SHA-256={payload}\n", http_method.as_str().to_lowercase())
             } else {
                 format!("(request-target): get {resource}\n")
             };
