@@ -4,6 +4,20 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.03.1
+
+### Bug Fixes
+
+- Fix Customer_Acceptance conversion from proto to connector_type ([#338](https://github.com/juspay/connector-service/pull/338)) ([`cd8fa9f`](https://github.com/juspay/connector-service/commit/cd8fa9f8c94e97f39ce9593bbd193814888df8d6))
+
+### Miscellaneous Tasks
+
+- Add trigger to push image to ghcr when tag is created ([#341](https://github.com/juspay/connector-service/pull/341)) ([`0f8fe65`](https://github.com/juspay/connector-service/commit/0f8fe6523aa6fca996e53affb78aee588a6827d8))
+
+**Full Changelog:** [`2025.12.03.0...2025.12.03.1`](https://github.com/juspay/connector-service/compare/2025.12.03.0...2025.12.03.1)
+
+- - -
+
 ## 2025.12.03.0
 
 ### Features
