@@ -4,6 +4,49 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.03.1
+
+### Bug Fixes
+
+- Fix Customer_Acceptance conversion from proto to connector_type ([#338](https://github.com/juspay/connector-service/pull/338)) ([`cd8fa9f`](https://github.com/juspay/connector-service/commit/cd8fa9f8c94e97f39ce9593bbd193814888df8d6))
+
+### Miscellaneous Tasks
+
+- Add trigger to push image to ghcr when tag is created ([#341](https://github.com/juspay/connector-service/pull/341)) ([`0f8fe65`](https://github.com/juspay/connector-service/commit/0f8fe6523aa6fca996e53affb78aee588a6827d8))
+
+**Full Changelog:** [`2025.12.03.0...2025.12.03.1`](https://github.com/juspay/connector-service/compare/2025.12.03.0...2025.12.03.1)
+
+- - -
+
+## 2025.12.03.0
+
+### Features
+
+- **connector:** [IATAPAY] Connector Integration ([#304](https://github.com/juspay/connector-service/pull/304)) ([`01c575f`](https://github.com/juspay/connector-service/commit/01c575f41e61e5017b046edf41a9362d994275e3))
+
+### Bug Fixes
+
+- Reverting merchant_reference_payment_id field addition ([#336](https://github.com/juspay/connector-service/pull/336)) ([`eb91720`](https://github.com/juspay/connector-service/commit/eb9172021118181c7566960b4a8b25e3d7b290ba))
+- Populate payment method token for AuthorizeOnly request ([#337](https://github.com/juspay/connector-service/pull/337)) ([`12ad641`](https://github.com/juspay/connector-service/commit/12ad641d908d0ec567fa968361bdd4bc54afd39e))
+
+**Full Changelog:** [`2025.12.02.0...2025.12.03.0`](https://github.com/juspay/connector-service/compare/2025.12.02.0...2025.12.03.0)
+
+- - -
+
+## 2025.12.02.0
+
+### Features
+
+- **connector:** Added bamboraapac integration ([#298](https://github.com/juspay/connector-service/pull/298)) ([`3234bf0`](https://github.com/juspay/connector-service/commit/3234bf08c17ce07011e233a063cedd147c330b6b))
+
+### Bug Fixes
+
+- **Fiserv:** Authorize, Capture, Void, Refund diff check for connector Fiserv ([#314](https://github.com/juspay/connector-service/pull/314)) ([`458cab4`](https://github.com/juspay/connector-service/commit/458cab4afbdddc69e500e19ef13d9a1d62d650d7))
+
+**Full Changelog:** [`2025.12.01.0...2025.12.02.0`](https://github.com/juspay/connector-service/compare/2025.12.01.0...2025.12.02.0)
+
+- - -
+
 ## 2025.12.01.0
 
 ### Features

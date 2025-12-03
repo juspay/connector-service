@@ -140,6 +140,9 @@ pub use self::globalpay::Globalpay;
 pub mod billwerk;
 pub use self::billwerk::Billwerk;
 
+pub mod iatapay;
+pub use self::iatapay::Iatapay;
+
 pub mod nmi;
 pub use self::nmi::Nmi;
 
@@ -148,3 +151,6 @@ pub use self::forte::Forte;
 
 pub mod shift4;
 pub use self::shift4::Shift4;
+
+pub mod nexixpay;
+pub use self::nexixpay::Nexixpay;
