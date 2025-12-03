@@ -344,8 +344,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Globalpay<T>
 {
-    fn should_do_access_token(&self) -> bool {
-        true // Enable OAuth flow - framework will call CreateAccessToken before payment flows
+    fn should_do_access_token(&self, _payment_method: common_enums::PaymentMethod) -> bool {
+        true
     }
 }
 

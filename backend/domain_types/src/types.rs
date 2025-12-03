@@ -92,7 +92,7 @@ use crate::{
         VaultTokenHolder,
     },
     router_data::{
-        AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ConnectorResponseData,
+        self, AdditionalPaymentMethodConnectorResponse, ConnectorAuthType, ConnectorResponseData,
         RecurringMandatePaymentData,
     },
     router_data_v2::RouterDataV2,
@@ -106,6 +106,7 @@ use crate::{
 pub struct Connectors {
     // Added pub
     pub adyen: ConnectorParams,
+    pub forte: ConnectorParams,
     pub razorpay: ConnectorParams,
     pub razorpayv2: ConnectorParams,
     pub fiserv: ConnectorParams,
@@ -144,13 +145,18 @@ pub struct Connectors {
     pub datatrans: ConnectorParams,
     pub bluesnap: ConnectorParams,
     pub authipay: ConnectorParams,
+    pub bamboraapac: ConnectorParams,
     pub silverflow: ConnectorParams,
     pub celero: ConnectorParams,
     pub paypal: ConnectorParams,
     pub stax: ConnectorParams,
+    pub billwerk: ConnectorParams,
     pub hipay: ConnectorParams,
     pub trustpayments: ConnectorParams,
     pub globalpay: ConnectorParams,
+    pub iatapay: ConnectorParams,
+    pub nmi: ConnectorParams,
+    pub shift4: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
@@ -2253,7 +2259,11 @@ impl
                     .collect::<Result<Vec<_>, _>>()
             })
             .transpose()?;
-
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(AccessTokenResponseData::from);
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -2293,10 +2303,12 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
-            access_token: None,
-            session_token: None,
-            reference_id: None,
-            payment_method_token: None,
+            access_token,
+            session_token: value.session_token,
+            reference_id: value.order_id,
+            payment_method_token: value
+                .payment_method_token
+                .map(|pmt| router_data::PaymentMethodToken::Token(Secret::new(pmt))),
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: value.test_mode,
@@ -2484,6 +2496,9 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
+        let connector_meta_data = common_utils::pii::SecretSerdeValue::new(
+            convert_merchant_metadata_to_json(&value.merchant_account_metadata),
+        );
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -2500,7 +2515,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            connector_meta_data: Some(connector_meta_data),
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -5098,7 +5113,9 @@ impl
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
-
+        let connector_meta_data = common_utils::pii::SecretSerdeValue::new(
+            convert_merchant_metadata_to_json(&value.merchant_account_metadata),
+        );
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "PAYMENT_ID".to_string(),
@@ -5114,7 +5131,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            connector_meta_data: Some(connector_meta_data),
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -5377,7 +5394,11 @@ impl
         };
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
-
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(AccessTokenResponseData::from);
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -5407,10 +5428,12 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
-            access_token: None,
-            session_token: None,
+            access_token,
+            session_token: value.session_token,
             reference_id: None,
-            payment_method_token: None,
+            payment_method_token: value
+                .payment_method_token
+                .map(|pmt| router_data::PaymentMethodToken::Token(Secret::new(pmt))),
             preprocessing_id: None,
             connector_api_version: None,
             test_mode,
@@ -5530,7 +5553,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
                     error_object: None,
                 }))?,
             statement_descriptor: None,
-            merchant_order_reference_id: None,
+            merchant_order_reference_id: value.merchant_order_reference_id,
             merchant_account_metadata: (!value.merchant_account_metadata.is_empty()).then(|| {
                 common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
                     &value.merchant_account_metadata,
@@ -5543,13 +5566,51 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
 impl ForeignTryFrom<grpc_api_types::payments::CustomerAcceptance> for mandates::CustomerAcceptance {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
-        _value: grpc_api_types::payments::CustomerAcceptance,
+        value: grpc_api_types::payments::CustomerAcceptance,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(mandates::CustomerAcceptance {
-            acceptance_type: mandates::AcceptanceType::Offline,
-            accepted_at: None,
-            online: None,
+            acceptance_type: mandates::AcceptanceType::foreign_try_from(value.acceptance_type())?,
+            accepted_at: time::OffsetDateTime::from_unix_timestamp(value.accepted_at)
+                .ok()
+                .map(|offset_dt| time::PrimitiveDateTime::new(offset_dt.date(), offset_dt.time())),
+            online: value
+                .online_mandate_details
+                .map(mandates::OnlineMandate::foreign_try_from)
+                .transpose()?,
         })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::OnlineMandate> for mandates::OnlineMandate {
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        value: grpc_api_types::payments::OnlineMandate,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(mandates::OnlineMandate {
+            ip_address: value.ip_address.map(Secret::new),
+            user_agent: value.user_agent,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::AcceptanceType> for mandates::AcceptanceType {
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        value: grpc_api_types::payments::AcceptanceType,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_payment_types::AcceptanceType::Offline => Ok(mandates::AcceptanceType::Offline),
+            grpc_payment_types::AcceptanceType::Online => Ok(mandates::AcceptanceType::Online),
+            grpc_payment_types::AcceptanceType::Unspecified => {
+                Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSPECIFIED_ACCEPTANCE_TYPE".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Acceptance type must be specified".to_owned(),
+                    error_object: None,
+                })
+                .into())
+            }
+        }
     }
 }
 
@@ -6531,17 +6592,10 @@ impl
         let address = value
             .address
             .map(|addr| {
-                // Convert grpc Address to payment_address Address first
-                let payment_addr = payment_address::Address::foreign_try_from(addr.clone())
-                    .unwrap_or_else(|_| payment_address::Address::default());
                 // Then create PaymentAddress
-                payment_address::PaymentAddress::new(
-                    Some(payment_addr.clone()),
-                    Some(payment_addr.clone()),
-                    Some(payment_addr),
-                    Some(false),
-                )
+                payment_address::PaymentAddress::foreign_try_from(addr)
             })
+            .transpose()?
             .unwrap_or_else(payment_address::PaymentAddress::default);
 
         Ok(Self {
@@ -6693,14 +6747,21 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
-
+        let address = value
+            .address
+            .map(|addr| {
+                // Then create PaymentAddress
+                payment_address::PaymentAddress::foreign_try_from(addr)
+            })
+            .transpose()?
+            .unwrap_or_else(payment_address::PaymentAddress::default);
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
             attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
             status: common_enums::AttemptStatus::Pending,
             payment_method: common_enums::PaymentMethod::Card, // Default for connector customer creation
-            address: payment_address::PaymentAddress::default(), // Default address
+            address,                                           // Default address
             auth_type: common_enums::AuthenticationType::default(),
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,

@@ -45,6 +45,7 @@ use url::Url;
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
     Adyen,
+    Forte,
     Razorpay,
     RazorpayV2,
     Fiserv,
@@ -52,6 +53,7 @@ pub enum ConnectorEnum {
     Xendit,
     Checkout,
     Authorizedotnet,
+    Bamboraapac,
     Mifinity,
     Phonepe,
     Cashfree,
@@ -87,9 +89,13 @@ pub enum ConnectorEnum {
     Celero,
     Paypal,
     Stax,
+    Billwerk,
     Hipay,
     Trustpayments,
     Globalpay,
+    Iatapay,
+    Nmi,
+    Shift4,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -100,12 +106,14 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         match connector {
             grpc_api_types::payments::Connector::Adyen => Ok(Self::Adyen),
+            grpc_api_types::payments::Connector::Forte => Ok(Self::Forte),
             grpc_api_types::payments::Connector::Razorpay => Ok(Self::Razorpay),
             grpc_api_types::payments::Connector::Fiserv => Ok(Self::Fiserv),
             grpc_api_types::payments::Connector::Elavon => Ok(Self::Elavon),
             grpc_api_types::payments::Connector::Xendit => Ok(Self::Xendit),
             grpc_api_types::payments::Connector::Checkout => Ok(Self::Checkout),
             grpc_api_types::payments::Connector::Authorizedotnet => Ok(Self::Authorizedotnet),
+            grpc_api_types::payments::Connector::Bamboraapac => Ok(Self::Bamboraapac),
             grpc_api_types::payments::Connector::Phonepe => Ok(Self::Phonepe),
             grpc_api_types::payments::Connector::Cashfree => Ok(Self::Cashfree),
             grpc_api_types::payments::Connector::Paytm => Ok(Self::Paytm),
@@ -140,9 +148,13 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Celero => Ok(Self::Celero),
             grpc_api_types::payments::Connector::Paypal => Ok(Self::Paypal),
             grpc_api_types::payments::Connector::Stax => Ok(Self::Stax),
+            grpc_api_types::payments::Connector::Billwerk => Ok(Self::Billwerk),
             grpc_api_types::payments::Connector::Hipay => Ok(Self::Hipay),
             grpc_api_types::payments::Connector::Trustpayments => Ok(Self::Trustpayments),
             grpc_api_types::payments::Connector::Globalpay => Ok(Self::Globalpay),
+            grpc_api_types::payments::Connector::Iatapay => Ok(Self::Iatapay),
+            grpc_api_types::payments::Connector::Nmi => Ok(Self::Nmi),
+            grpc_api_types::payments::Connector::Shift4 => Ok(Self::Shift4),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
