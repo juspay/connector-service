@@ -20,6 +20,17 @@ use serde::Serialize;
 use super::{requests, responses, BarclaycardRouterData};
 use crate::{types::ResponseRouterData, utils::is_refund_failure};
 
+/// CAVV (Cardholder Authentication Verification Value) Algorithm
+///
+/// Barclaycard (Cybersource whitelabel) includes cavv_algorithm in ProcessingInformation
+/// (unlike Cybersource which puts it only in 3DS-specific structures).
+///
+/// Value "2" = CVV with Authentication Transaction Number (ATN) - Standard for card payments
+/// - This field is sent even for non-3DS payments (Barclaycard API requirement/recommendation)
+/// - Barclaycard accepts and ignores it when no actual 3DS/CAVV data is present
+/// - If 3DS were implemented in future, this would indicate the algorithm to use
+const CAVV_ALGORITHM_ATN: &str = "2";
+
 #[derive(Debug, Clone)]
 pub struct BarclaycardAuthType {
     pub api_key: Secret<String>,
@@ -66,6 +77,11 @@ fn get_barclaycard_card_type(card_network: common_enums::CardNetwork) -> Option<
     }
 }
 
+/// Truncates a string to the specified maximum length
+///
+/// Barclaycard (Cybersource whitelabel) has a 20-character limit on the administrativeArea field.
+/// Truncation prevents payment failures while maintaining address verification.
+/// Most state names/codes are under 20 characters, so this rarely causes issues.
 fn truncate_string(state: &Secret<String>, max_len: usize) -> Secret<String> {
     let exposed = state.clone().expose();
     let truncated = exposed.get(..max_len).unwrap_or(&exposed);
@@ -89,7 +105,7 @@ fn build_bill_to(
             address
                 .state
                 .as_ref()
-                .map(|state| truncate_string(state, 20))
+                .map(|state| truncate_string(state, 20)) // NOTE: Cybersource connector throws error if billing state exceeds 20 characters. Since Barclaycard is Cybersource just whitelisting, we truncate if state exceeds 20 characters, so truncation is done to avoid payment failure
         })
         .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
             field_name: "billing_address.state",
@@ -135,6 +151,13 @@ fn build_bill_to(
     })
 }
 
+/// Converts metadata JSON to Barclaycard's merchant-defined information format
+///
+/// Barclaycard (Cybersource whitelabel) accepts custom merchant metadata as key-value pairs.
+/// The silent failure (unwrap_or) is intentional:
+/// - Metadata is optional and non-critical for payment processing
+/// - Input is already valid JSON (serde_json::Value), so parsing rarely fails
+/// - Better to continue payment without metadata than to fail the entire payment
 fn convert_metadata_to_merchant_defined_info(
     metadata: serde_json::Value,
 ) -> Vec<requests::MerchantDefinedInformation> {
@@ -396,7 +419,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 Some(common_enums::CaptureMethod::Automatic) | None
             )),
             payment_solution: None, // Only set for wallet payments (GooglePay="012", ApplePay="001")
-            cavv_algorithm: Some("2".to_string()), // Always set to "2" for card payments
+            cavv_algorithm: Some(CAVV_ALGORITHM_ATN.to_string()),
         };
 
         let client_reference_information = requests::ClientReferenceInformation {

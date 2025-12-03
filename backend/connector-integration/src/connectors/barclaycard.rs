@@ -411,7 +411,7 @@ macros::create_all_prerequisites!(
             let digest_str = if is_post_or_put_method { "digest " } else { "" };
             let headers = format!("host date (request-target) {digest_str}{V_C_MERCHANT_ID}");
             let request_target = if is_post_or_put_method {
-                format!("(request-target): {} {resource}\ndigest: SHA-256={payload}\n", http_method.as_str().to_lowercase())
+                format!("(request-target): {} {resource}\ndigest: SHA-256={payload}\n", http_method.to_string().to_lowercase())
             } else {
                 format!("(request-target): get {resource}\n")
             };
