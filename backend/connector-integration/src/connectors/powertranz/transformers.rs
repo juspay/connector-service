@@ -478,6 +478,14 @@ impl<T: PaymentMethodDataTypes, F> TryFrom<ResponseRouterData<PowertranzPayments
             router_data,
             http_code,
         } = item;
+
+        // Determine payment status from transaction type and ISO code
+        let status = get_payment_status(
+            response.transaction_type,
+            response.approved,
+            &response.iso_response_code,
+        );
+
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.transaction_identifier),
@@ -489,6 +497,10 @@ impl<T: PaymentMethodDataTypes, F> TryFrom<ResponseRouterData<PowertranzPayments
                 incremental_authorization_allowed: None,
                 status_code: http_code,
             }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
             ..router_data
         })
     }
@@ -548,6 +560,14 @@ impl<F> TryFrom<ResponseRouterData<PowertranzCaptureResponse, Self>>
             router_data,
             http_code,
         } = item;
+
+        // Determine payment status
+        let status = get_payment_status(
+            response.transaction_type,
+            response.approved,
+            &response.iso_response_code,
+        );
+
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.transaction_identifier),
@@ -559,6 +579,10 @@ impl<F> TryFrom<ResponseRouterData<PowertranzCaptureResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: http_code,
             }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
             ..router_data
         })
     }
@@ -577,6 +601,14 @@ impl<F> TryFrom<ResponseRouterData<PowertranzVoidResponse, Self>>
             router_data,
             http_code,
         } = item;
+
+        // Determine payment status
+        let status = get_payment_status(
+            response.transaction_type,
+            response.approved,
+            &response.iso_response_code,
+        );
+
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.transaction_identifier),
@@ -588,6 +620,10 @@ impl<F> TryFrom<ResponseRouterData<PowertranzVoidResponse, Self>>
                 incremental_authorization_allowed: None,
                 status_code: http_code,
             }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
             ..router_data
         })
     }
