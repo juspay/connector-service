@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./add_connector.sh:*)",
+      "Bash(grace/rulesbook/codegen/add_connector.sh:*)",
+      "Bash(cargo build:*)",
+      "Bash(tee:*)",
+      "Bash(killall:*)",
+      "Bash(cargo buildall:*)",
+      "Bash(make:*)",
+      "Bash(cargo check:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(grpcurl:*)",
+      "Bash(lsof:*)",
+      "Bash(localhost:8080 ucs.v2.PaymentService/Authorize)",
+      "Bash(curl:*)",
+      "Bash(pkill:*)",
+      "Bash(localhost:8000 ucs.v2.PaymentService/Authorize)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "WebSearch",
+      "Bash(xargs ps:*)",
+      "Bash(cargo run:*)",
+      "Bash(kill:*)",
+      "Bash(xargs kill:*)",
+      "Bash(xargs -I {} sh -c 'echo \"\"\"\"Process: {}\"\"\"\" && lsof -p $(echo {} | awk \"\"\"\"{print \\$2}\"\"\"\")')",
+      "Bash(cat:*)",
+      "Bash(cargo test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
