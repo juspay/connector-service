@@ -20,6 +20,7 @@ use domain_types::{
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use strum::Display;
 
 // Import the wrapper type created by macros
 use super::NexixpayRouterData;
@@ -62,7 +63,7 @@ pub struct NexixpayErrorResponse {
 // Based on Hyperswitch implementation pattern
 
 /// Payment flow intent for determining which operation ID to use in PSync
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Display)]
 pub enum NexixpayPaymentIntent {
     Capture,
     Cancel,
@@ -488,7 +489,7 @@ impl<T: PaymentMethodDataTypes>
         if !metadata_map.contains_key("psyncFlow") {
             metadata_map.insert(
                 "psyncFlow".to_string(),
-                serde_json::Value::String("Authorize".to_string()),
+                serde_json::Value::String(NexixpayPaymentIntent::Authorize.to_string()),
             );
         }
 
