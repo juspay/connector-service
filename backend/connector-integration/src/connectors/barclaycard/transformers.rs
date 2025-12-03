@@ -112,41 +112,13 @@ fn build_bill_to(
         })?;
 
     Ok(requests::BillTo {
-        first_name: address.first_name.clone().ok_or(
-            errors::ConnectorError::MissingRequiredField {
-                field_name: "billing.address.first_name",
-            },
-        )?,
-        last_name: address.last_name.clone().ok_or(
-            errors::ConnectorError::MissingRequiredField {
-                field_name: "billing.address.last_name",
-            },
-        )?,
-        address1: address
-            .line1
-            .clone()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "billing.address.line1",
-            })?,
-        locality: address
-            .city
-            .clone()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "billing.address.city",
-            })?
-            .expose(),
+        first_name: address.get_first_name()?.clone(),
+        last_name: address.get_last_name()?.clone(),
+        address1: address.get_line1()?.clone(),
+        locality: address.get_city()?.clone().expose(),
         administrative_area,
-        postal_code: address
-            .zip
-            .clone()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "billing.address.zip",
-            })?,
-        country: address
-            .country
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "billing.address.country",
-            })?,
+        postal_code: address.get_zip()?.clone(),
+        country: *address.get_country()?,
         email,
     })
 }
@@ -386,13 +358,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let email = router_data
             .resource_common_data
-            .address
-            .get_payment_method_billing()
-            .and_then(|billing| billing.email.clone())
-            .or(router_data.request.email.clone())
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "email",
-            })?;
+            .get_billing_email()
+            .or(router_data.request.get_email())?;
 
         let billing = router_data
             .resource_common_data
