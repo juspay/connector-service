@@ -363,6 +363,9 @@ pub struct PaymentFlowData {
     pub connector_response: Option<ConnectorResponseData>,
     pub recurring_mandate_payment_data: Option<RecurringMandatePaymentData>,
     pub order_details: Option<Vec<payment_address::OrderDetailsWithAmount>>,
+    pub l2_l3_data: Option<Box<L2L3Data>>,
+    // stores the authorized amount in case of partial authorization
+    pub authorized_amount: Option<MinorUnit>,
 }
 
 impl PaymentFlowData {
@@ -819,6 +822,140 @@ impl PaymentFlowData {
     }
 }
 
+impl L2L3Data {
+    pub fn get_shipping_country(&self) -> Option<common_enums::enums::CountryAlpha2> {
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.country)
+    }
+
+    pub fn get_shipping_city(&self) -> Option<Secret<String>> {
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.city.clone())
+    }
+
+    pub fn get_shipping_state(&self) -> Option<Secret<String>> {
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.state.clone())
+    }
+
+    pub fn get_shipping_zip(&self) -> Option<Secret<String>> {
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.zip.clone())
+    }
+
+    pub fn get_shipping_address_line1(&self) -> Option<Secret<String>> {
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.line1.clone())
+    }
+
+    pub fn get_shipping_address_line2(&self) -> Option<Secret<String>> {
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.line2.clone())
+    }
+
+    pub fn get_order_date(&self) -> Option<time::PrimitiveDateTime> {
+        self.order_info.as_ref().and_then(|order| order.order_date)
+    }
+
+    pub fn get_order_details(&self) -> Option<Vec<payment_address::OrderDetailsWithAmount>> {
+        self.order_info
+            .as_ref()
+            .and_then(|order| order.order_details.clone())
+    }
+
+    pub fn get_merchant_order_reference_id(&self) -> Option<String> {
+        self.order_info
+            .as_ref()
+            .and_then(|order| order.merchant_order_reference_id.clone())
+    }
+
+    pub fn get_discount_amount(&self) -> Option<MinorUnit> {
+        self.order_info
+            .as_ref()
+            .and_then(|order| order.discount_amount)
+    }
+
+    pub fn get_shipping_cost(&self) -> Option<MinorUnit> {
+        self.order_info
+            .as_ref()
+            .and_then(|order| order.shipping_cost)
+    }
+
+    pub fn get_duty_amount(&self) -> Option<MinorUnit> {
+        self.order_info.as_ref().and_then(|order| order.duty_amount)
+    }
+
+    pub fn get_customer_tax_registration_id(&self) -> Option<Secret<String>> {
+        self.tax_info
+            .as_ref()
+            .and_then(|tax| tax.customer_tax_registration_id.clone())
+    }
+
+    pub fn get_merchant_tax_registration_id(&self) -> Option<Secret<String>> {
+        self.tax_info
+            .as_ref()
+            .and_then(|tax| tax.merchant_tax_registration_id.clone())
+    }
+
+    pub fn get_shipping_amount_tax(&self) -> Option<MinorUnit> {
+        self.tax_info
+            .as_ref()
+            .and_then(|tax| tax.shipping_amount_tax)
+    }
+
+    pub fn get_order_tax_amount(&self) -> Option<MinorUnit> {
+        self.tax_info.as_ref().and_then(|tax| tax.order_tax_amount)
+    }
+
+    pub fn get_customer_id(&self) -> Option<common_utils::id_type::CustomerId> {
+        self.customer_info
+            .as_ref()
+            .and_then(|customer| customer.customer_id.clone())
+    }
+
+    pub fn get_customer_email(&self) -> Option<common_utils::pii::Email> {
+        self.customer_info
+            .as_ref()
+            .and_then(|customer| customer.customer_email.clone())
+    }
+
+    pub fn get_customer_name(&self) -> Option<Secret<String>> {
+        self.customer_info
+            .as_ref()
+            .and_then(|customer| customer.customer_name.clone())
+    }
+
+    pub fn get_customer_phone_number(&self) -> Option<Secret<String>> {
+        self.customer_info
+            .as_ref()
+            .and_then(|customer| customer.customer_phone_number.clone())
+    }
+
+    pub fn get_customer_phone_country_code(&self) -> Option<String> {
+        self.customer_info
+            .as_ref()
+            .and_then(|customer| customer.customer_phone_country_code.clone())
+    }
+    pub fn get_billing_city(&self) -> Option<String> {
+        self.billing_details
+            .as_ref()
+            .and_then(|billing| billing.address_city.clone())
+    }
+
+    pub fn get_shipping_origin_zip(&self) -> Option<Secret<String>> {
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.origin_zip.clone())
+    }
+
+}
+
 impl RawConnectorRequestResponse for PaymentFlowData {
     fn set_raw_connector_response(&mut self, response: Option<Secret<String>>) {
         self.raw_connector_response = response;
@@ -975,6 +1112,8 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub setup_mandate_details: Option<MandateData>,
     pub merchant_account_metadata: Option<common_utils::pii::SecretSerdeValue>,
     pub connector_testing_data: Option<common_utils::pii::SecretSerdeValue>,
+    pub payment_channel: Option<common_enums::PaymentChannel>,
+    pub enable_partial_authorization: Option<bool>,
 }
 
 impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
@@ -1244,12 +1383,33 @@ pub enum PaymentsResponseData {
         connector_response_reference_id: Option<String>,
         status_code: u16,
     },
+    MultipleCaptureResponse {
+        capture_sync_response_list: HashMap<String, CaptureSyncResponse>,
+    },
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct MandateReference {
     pub connector_mandate_id: Option<String>,
     pub payment_method_id: Option<String>,
+    pub connector_mandate_request_reference_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum CaptureSyncResponse {
+    Success {
+        resource_id: ResponseId,
+        status: common_enums::AttemptStatus,
+        connector_response_reference_id: Option<String>,
+        amount: Option<MinorUnit>,
+    },
+    Error {
+        code: String,
+        message: String,
+        reason: Option<String>,
+        status_code: u16,
+        amount: Option<MinorUnit>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -2649,4 +2809,45 @@ pub struct RecurringMandatePaymentData {
     pub original_payment_authorized_amount: Option<MinorUnit>,
     pub original_payment_authorized_currency: Option<common_enums::Currency>,
     pub mandate_metadata: Option<common_utils::pii::SecretSerdeValue>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct L2L3Data {
+    pub order_info: Option<OrderInfo>,
+    pub tax_info: Option<TaxInfo>,
+    pub customer_info: Option<CustomerInfo>,
+    pub shipping_details: Option<AddressDetails>,
+    pub billing_details: Option<BillingDetails>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrderInfo {
+    pub order_date: Option<time::PrimitiveDateTime>,
+    pub order_details: Option<Vec<payment_address::OrderDetailsWithAmount>>,
+    pub merchant_order_reference_id: Option<String>,
+    pub discount_amount: Option<MinorUnit>,
+    pub shipping_cost: Option<MinorUnit>,
+    pub duty_amount: Option<MinorUnit>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaxInfo {
+    pub tax_status: Option<common_enums::TaxStatus>,
+    pub customer_tax_registration_id: Option<Secret<String>>,
+    pub merchant_tax_registration_id: Option<Secret<String>>,
+    pub shipping_amount_tax: Option<MinorUnit>,
+    pub order_tax_amount: Option<MinorUnit>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomerInfo {
+    pub customer_id: Option<common_utils::id_type::CustomerId>,
+    pub customer_email: Option<common_utils::pii::Email>,
+    pub customer_name: Option<Secret<String>>,
+    pub customer_phone_number: Option<Secret<String>>,
+    pub customer_phone_country_code: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BillingDetails {
+    pub address_city: Option<String>,
 }

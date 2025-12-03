@@ -1745,6 +1745,7 @@ where
                         None => None,
                     },
                     payment_method_id: None,
+                    connector_mandate_request_reference_id: None,
                 })),
                 status_code: item.http_code,
                 connector_metadata: Some(connector_meta),

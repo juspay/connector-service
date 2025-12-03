@@ -1815,3 +1815,19 @@ pub enum DynamicContentType {
     FormUrlEncoded,
     FormData,
 }
+
+#[derive(Clone, Debug, Default)]
+/// Describes the channel through which the payment was initiated.
+pub enum PaymentChannel {
+    #[default]
+    Ecommerce,
+    MailOrder,
+    TelephoneOrder,
+    Other(String),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum TaxStatus {
+    Taxable,
+    Exempt,
+}

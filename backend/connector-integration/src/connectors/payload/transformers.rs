@@ -524,6 +524,7 @@ fn handle_payment_response<F, T>(
                 connector_payment_method_id.map(|id| MandateReference {
                     connector_mandate_id: Some(id),
                     payment_method_id: None,
+                    connector_mandate_request_reference_id: None,
                 })
             } else {
                 None

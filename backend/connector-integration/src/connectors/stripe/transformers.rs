@@ -2698,7 +2698,7 @@ where
             MandateReference {
                 connector_mandate_id,
                 payment_method_id,
-                //mandate_metadata,
+                connector_mandate_request_reference_id: None,
             }
         });
 
@@ -2970,6 +2970,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentIntentSyncResponse, Self>>
                 MandateReference {
                     connector_mandate_id: Some(payment_method_id.clone()),
                     payment_method_id: Some(payment_method_id),
+                    connector_mandate_request_reference_id: None,
                 }
             });
 
@@ -3087,6 +3088,7 @@ impl<F, T> TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
             MandateReference {
                 connector_mandate_id,
                 payment_method_id,
+                connector_mandate_request_reference_id: None,
             }
         });
         let status = common_enums::AttemptStatus::from(item.response.status);
