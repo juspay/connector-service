@@ -1,8 +1,6 @@
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-// ===== ERROR RESPONSE STRUCTS =====
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BarclaycardErrorInformationResponse {
@@ -23,8 +21,6 @@ pub struct Details {
     pub field: String,
     pub reason: String,
 }
-
-// ===== PAYMENT RESPONSE STRUCTS =====
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
@@ -114,13 +110,9 @@ pub struct ClientRiskInformationRules {
     pub name: Option<Secret<String>>,
 }
 
-// ===== TYPE ALIASES TO AVOID TEMPLATE DUPLICATES =====
-
 pub type BarclaycardAuthorizeResponse = BarclaycardPaymentsResponse;
 pub type BarclaycardCaptureResponse = BarclaycardPaymentsResponse;
 pub type BarclaycardVoidResponse = BarclaycardPaymentsResponse;
-
-// ===== PSYNC RESPONSE =====
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -138,8 +130,6 @@ pub struct BarclaycardTransactionResponse {
 pub struct ApplicationInformation {
     pub status: Option<BarclaycardPaymentStatus>,
 }
-
-// ===== REFUND RESPONSE STRUCTS =====
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -162,8 +152,6 @@ pub enum BarclaycardRefundStatus {
     TwoZeroOne,
 }
 
-// ===== RSYNC RESPONSE =====
-
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BarclaycardRsyncResponse {
@@ -177,8 +165,6 @@ pub struct BarclaycardRsyncResponse {
 pub struct RsyncApplicationInformation {
     pub status: Option<BarclaycardRefundStatus>,
 }
-
-// ===== ADDITIONAL ERROR RESPONSE VARIANTS =====
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
