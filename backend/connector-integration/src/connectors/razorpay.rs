@@ -28,7 +28,7 @@ use domain_types::{
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSessionData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData,
         RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RequestDetails, ResponseId,
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData, SupportedPaymentMethodsExt, WebhookDetailsResponse,
@@ -1346,7 +1346,7 @@ impl<
     ConnectorIntegrationV2<
         SdkSessionToken,
         PaymentFlowData,
-        PaymentsSessionData,
+        PaymentsSdkSessionTokenData,
         PaymentsResponseData,
     > for Razorpay<T>
 {
@@ -1687,7 +1687,7 @@ impl<
     interfaces::verification::SourceVerification<
         SdkSessionToken,
         PaymentFlowData,
-        PaymentsSessionData,
+        PaymentsSdkSessionTokenData,
         PaymentsResponseData,
     > for Razorpay<T>
 {

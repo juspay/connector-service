@@ -1224,7 +1224,7 @@ pub enum PaymentsResponseData {
         incremental_authorization_allowed: Option<bool>,
         status_code: u16,
     },
-    SessionResponse {
+    SdkSessionTokenResponse {
         session_token: SessionToken,
         status_code: u16,
     },
@@ -1318,7 +1318,7 @@ pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
 }
 
 #[derive(Debug, Clone)]
-pub struct PaymentsSessionData {
+pub struct PaymentsSdkSessionTokenData {
     pub amount: MinorUnit,
     pub currency: common_enums::Currency,
     pub country: Option<common_enums::CountryAlpha2>,

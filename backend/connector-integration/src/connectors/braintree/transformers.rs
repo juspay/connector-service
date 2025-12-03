@@ -14,7 +14,7 @@ use domain_types::{
         GpayTransactionInfo, MandateReference, NextActionCall, PaymentFlowData,
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentRequestMetadata,
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSessionData, PaymentsSyncData, PaypalSdkSessionTokenData,
+        PaymentsSdkSessionTokenData, PaymentsSyncData, PaypalSdkSessionTokenData,
         PaypalSessionTokenResponse, PaypalTransactionInfo, RefundFlowData, RefundSyncData,
         RefundsData, RefundsResponseData, ResponseId, SdkNextAction, SecretInfoToInitiateSdk,
         SessionToken, ThirdPartySdkSessionResponse,
@@ -1654,7 +1654,7 @@ impl<
             RouterDataV2<
                 SdkSessionToken,
                 PaymentFlowData,
-                PaymentsSessionData,
+                PaymentsSdkSessionTokenData,
                 PaymentsResponseData,
             >,
             T,
@@ -1667,7 +1667,7 @@ impl<
             RouterDataV2<
                 SdkSessionToken,
                 PaymentFlowData,
-                PaymentsSessionData,
+                PaymentsSdkSessionTokenData,
                 PaymentsResponseData,
             >,
             T,
@@ -1689,7 +1689,7 @@ impl<
 }
 
 impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsSessionData, PaymentsResponseData>
+    for RouterDataV2<F, PaymentFlowData, PaymentsSdkSessionTokenData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -1860,7 +1860,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                 };
 
                 Ok(Self {
-                    response: Ok(PaymentsResponseData::SessionResponse {
+                    response: Ok(PaymentsResponseData::SdkSessionTokenResponse {
                         session_token,
                         status_code: item.http_code,
                     }),

@@ -12,7 +12,7 @@ use domain_types::{
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
         PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSessionData, PaymentsSyncData, RefundFlowData,
+        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
         RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
@@ -120,7 +120,7 @@ pub trait SdkSessionTokenV2:
     ConnectorIntegrationV2<
     connector_flow::SdkSessionToken,
     PaymentFlowData,
-    PaymentsSessionData,
+    PaymentsSdkSessionTokenData,
     PaymentsResponseData,
 >
 {

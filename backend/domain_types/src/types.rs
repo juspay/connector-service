@@ -73,10 +73,10 @@ use crate::{
         PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSessionData, PaymentsSyncData,
-        PaypalFlow, PaypalTransactionInfo, RawConnectorRequestResponse, RefundFlowData,
-        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId, SessionToken, SessionTokenRequestData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, PaypalFlow, PaypalTransactionInfo, RawConnectorRequestResponse,
+        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SessionToken, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
         WebhookDetailsResponse,
     },
@@ -4932,7 +4932,7 @@ pub fn generate_refund_response(
     }
 }
 
-impl ForeignTryFrom<PaymentServiceSdkSessionTokenRequest> for PaymentsSessionData {
+impl ForeignTryFrom<PaymentServiceSdkSessionTokenRequest> for PaymentsSdkSessionTokenData {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
@@ -7177,7 +7177,7 @@ pub fn generate_payment_sdk_session_token_response(
     router_data_v2: RouterDataV2<
         SdkSessionToken,
         PaymentFlowData,
-        PaymentsSessionData,
+        PaymentsSdkSessionTokenData,
         PaymentsResponseData,
     >,
 ) -> Result<PaymentServiceSdkSessionTokenResponse, error_stack::Report<ApplicationErrorResponse>> {
@@ -7194,7 +7194,7 @@ pub fn generate_payment_sdk_session_token_response(
     match transaction_response {
         Ok(response) => {
             match response {
-                PaymentsResponseData::SessionResponse {
+                PaymentsResponseData::SdkSessionTokenResponse {
                     session_token,
                     status_code,
                 } => {

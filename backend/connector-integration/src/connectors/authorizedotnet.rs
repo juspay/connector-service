@@ -19,7 +19,7 @@ use domain_types::{
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSessionData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData,
         RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
         RequestDetails, ResponseId, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
@@ -1120,7 +1120,7 @@ impl<
     ConnectorIntegrationV2<
         SdkSessionToken,
         PaymentFlowData,
-        PaymentsSessionData,
+        PaymentsSdkSessionTokenData,
         PaymentsResponseData,
     > for Authorizedotnet<T>
 {
@@ -1447,7 +1447,11 @@ impl<
             + 'static
             + Serialize,
     >
-    SourceVerification<SdkSessionToken, PaymentFlowData, PaymentsSessionData, PaymentsResponseData>
-    for Authorizedotnet<T>
+    SourceVerification<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
+    > for Authorizedotnet<T>
 {
 }

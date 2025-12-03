@@ -12,7 +12,7 @@ use domain_types::connector_types::{
     PaymentCreateOrderData, PaymentMethodTokenizationData, PaymentVoidData,
     PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
     PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-    PaymentsSessionData, PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData,
+    PaymentsSdkSessionTokenData, PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData,
     SessionTokenRequestData, SetupMandateRequestData, SubmitEvidenceData,
 };
 use domain_types::{
@@ -166,7 +166,7 @@ impl_check_integrity!(PaymentsAuthenticateData<S>);
 impl_check_integrity!(PaymentsPostAuthenticateData<S>);
 impl_check_integrity!(PaymentsPreAuthenticateData<S>);
 impl_check_integrity!(ConnectorCustomerData);
-impl_check_integrity!(PaymentsSessionData);
+impl_check_integrity!(PaymentsSdkSessionTokenData);
 
 // ========================================================================
 // GET INTEGRITY OBJECT IMPLEMENTATIONS
@@ -380,7 +380,7 @@ impl GetIntegrityObject<AccessTokenIntegrityObject> for AccessTokenRequestData {
     }
 }
 
-impl GetIntegrityObject<SdkSessionTokenIntegrityObject> for PaymentsSessionData {
+impl GetIntegrityObject<SdkSessionTokenIntegrityObject> for PaymentsSdkSessionTokenData {
     fn get_response_integrity_object(&self) -> Option<SdkSessionTokenIntegrityObject> {
         None // Sdk session token responses don't have integrity objects
     }

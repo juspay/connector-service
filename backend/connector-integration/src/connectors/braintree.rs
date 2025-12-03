@@ -25,7 +25,7 @@ use domain_types::{
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSessionData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
@@ -309,7 +309,7 @@ macros::create_all_prerequisites!(
             flow: SdkSessionToken,
             request_body: BraintreeClientTokenRequest,
             response_body: BraintreeSessionResponse,
-            router_data: RouterDataV2<SdkSessionToken, PaymentFlowData, PaymentsSessionData , PaymentsResponseData>,
+            router_data: RouterDataV2<SdkSessionToken, PaymentFlowData, PaymentsSdkSessionTokenData , PaymentsResponseData>,
         ),
         (
             flow: Refund,
@@ -485,7 +485,7 @@ macros::macro_connector_implementation!(
     curl_response: BraintreeSessionResponse,
     flow_name: SdkSessionToken,
     resource_common_data: PaymentFlowData,
-    flow_request: PaymentsSessionData,
+    flow_request: PaymentsSdkSessionTokenData,
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
@@ -493,13 +493,13 @@ macros::macro_connector_implementation!(
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<SdkSessionToken, PaymentFlowData, PaymentsSessionData , PaymentsResponseData>,
+            req: &RouterDataV2<SdkSessionToken, PaymentFlowData, PaymentsSdkSessionTokenData , PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
-            req: &RouterDataV2<SdkSessionToken, PaymentFlowData, PaymentsSessionData , PaymentsResponseData>,
+            req: &RouterDataV2<SdkSessionToken, PaymentFlowData, PaymentsSdkSessionTokenData , PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
              Ok(self.connector_base_url_payments(req).to_string())
         }
@@ -905,7 +905,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         SdkSessionToken,
         PaymentFlowData,
-        PaymentsSessionData,
+        PaymentsSdkSessionTokenData,
         PaymentsResponseData,
     > for Braintree<T>
 {
