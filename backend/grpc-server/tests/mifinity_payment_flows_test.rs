@@ -7,15 +7,18 @@ use hyperswitch_masking::{ExposeInterface, Secret};
 mod common;
 mod utils;
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    collections::HashMap,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
         identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
-        AuthenticationType, CaptureMethod, Currency, Identifier, MifinityWallet, PaymentMethod,
-        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceGetRequest,
-        PaymentStatus,
+        AuthenticationType, CaptureMethod, Currency, Identifier, Metadata, MifinityWallet,
+        PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        PaymentServiceGetRequest, PaymentStatus,
     },
 };
 use tonic::{transport::Channel, Request};
@@ -98,9 +101,11 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         language_preference: Some("en-US".to_string()),
     };
 
-    // Create connector metadata JSON string
-    let connector_meta_data = format!(
-        "{{\"brand_id\":\"{TEST_BRAND_ID}\",\"destination_account_number\":\"{TEST_DESTINATION_ACCOUNT_NUMBER}\"}}"
+    let mut metadata_map = HashMap::new();
+    metadata_map.insert("brand_id".to_string(), TEST_BRAND_ID.to_string());
+    metadata_map.insert(
+        "destination_account_number".to_string(),
+        TEST_DESTINATION_ACCOUNT_NUMBER.to_string(),
     );
 
     PaymentServiceAuthorizeRequest {
@@ -139,11 +144,11 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         enrolled_for_3ds: false,
         request_incremental_authorization: false,
         capture_method: Some(i32::from(capture_method)),
-        metadata: {
-            let mut metadata = std::collections::HashMap::new();
-            metadata.insert("connector_meta_data".to_string(), connector_meta_data);
-            metadata
-        },
+        metadata: Some(Metadata {
+            content: Some(
+                serde_json::from_value(serde_json::to_value(metadata_map).unwrap()).unwrap(),
+            ),
+        }),
         // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         ..Default::default()
     }

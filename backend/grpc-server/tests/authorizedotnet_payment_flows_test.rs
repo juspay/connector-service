@@ -11,19 +11,20 @@ mod utils;
 
 use std::{
     any::Any,
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
 
 use cards::CardNumber;
+use common_utils::custom_serde::prost_types_wrapper::SerializableStruct;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
         identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
         AcceptanceType, Address, AuthenticationType, BrowserInformation, CaptureMethod,
         CardDetails, CountryAlpha2, Currency, CustomerAcceptance, FutureUsage, Identifier,
-        MandateReference, PaymentAddress, PaymentMethod, PaymentMethodType,
+        MandateReference, Metadata, PaymentAddress, PaymentMethod, PaymentMethodType,
         PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
         PaymentServiceRegisterRequest, PaymentServiceRepeatEverythingRequest,
@@ -31,6 +32,7 @@ use grpc_api_types::{
         RefundServiceGetRequest, RefundStatus,
     },
 };
+use prost_types::{value::Kind, Value};
 use rand::{distributions::Alphanumeric, Rng};
 use tonic::{transport::Channel, Request};
 use uuid::Uuid;
@@ -185,12 +187,16 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
     };
 
     // Create metadata matching your JSON format
-    let mut metadata = HashMap::new();
-    metadata.insert("order_type".to_string(), "recurring".to_string());
-    metadata.insert(
+    let mut metadata_map = HashMap::new();
+    metadata_map.insert("order_type".to_string(), "recurring".to_string());
+    metadata_map.insert(
         "customer_note".to_string(),
         "Monthly subscription payment".to_string(),
     );
+
+    let metadata = Some(Metadata {
+        content: Some(serde_json::from_value(serde_json::to_value(metadata_map).unwrap()).unwrap()),
+    });
 
     PaymentServiceRepeatEverythingRequest {
         request_ref_id: Some(request_ref_id),
@@ -206,7 +212,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         browser_info: None,
         test_mode: None,
         payment_method_type: None,
-        merchant_account_metadata: HashMap::new(),
+        merchant_account_metadata: None,
         state: None,
         recurring_mandate_payment_data: None,
         address: None,
@@ -376,9 +382,11 @@ fn create_payment_authorize_request(
     }
 
     // Set the connector metadata (Base64 encoded)
-    let mut metadata = HashMap::new();
-    metadata.insert("metadata".to_string(), BASE64_METADATA.to_string());
-    request.metadata = metadata;
+    let mut metadata_map = HashMap::new();
+    metadata_map.insert("metadata".to_string(), BASE64_METADATA.to_string());
+    request.metadata = Some(Metadata {
+        content: Some(serde_json::from_value(serde_json::to_value(metadata_map).unwrap()).unwrap()),
+    });
 
     request
 }
@@ -421,7 +429,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         amount_to_capture: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
-        connector_metadata: HashMap::new(),
+        connector_metadata: None,
         browser_info: None,
         capture_method: None,
         state: None,
@@ -467,13 +475,18 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
     };
 
     // Create refund metadata with credit card information as required by Authorize.net
-    let mut refund_metadata = HashMap::new();
-    refund_metadata.insert(
+    let mut refund_metadata_map = HashMap::new();
+    refund_metadata_map.insert(
           "refund_metadata".to_string(),
           format!(
               "{{\"creditCard\":{{\"cardNumber\":\"{TEST_CARD_NUMBER}\",\"expirationDate\":\"2025-12\"}}}}",
           ),
       );
+    let refund_metadata = Some(Metadata {
+        content: Some(
+            serde_json::from_value(serde_json::to_value(refund_metadata_map).unwrap()).unwrap(),
+        ),
+    });
 
     PaymentServiceRefundRequest {
         request_ref_id: Some(request_ref_id),
@@ -488,11 +501,11 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         webhook_url: None,
         merchant_account_id: None,
         capture_method: None,
-        metadata: HashMap::new(),
+        metadata: None,
         refund_metadata,
         browser_info: None,
         state: None,
-        merchant_account_metadata: HashMap::new(),
+        merchant_account_metadata: None,
     }
 }
 
@@ -512,9 +525,9 @@ fn create_refund_get_request(transaction_id: &str, refund_id: &str) -> RefundSer
         refund_id: refund_id.to_string(),
         browser_info: None,
         refund_reason: None,
-        refund_metadata: HashMap::new(),
+        refund_metadata: None,
         state: None,
-        merchant_account_metadata: HashMap::new(),
+        merchant_account_metadata: None,
     }
 }
 
@@ -591,7 +604,7 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
     });
 
     // Set empty connector metadata
-    request.metadata = HashMap::new();
+    request.metadata = None;
 
     request
 }

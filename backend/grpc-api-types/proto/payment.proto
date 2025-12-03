@@ -3,9 +3,14 @@ syntax = "proto3";
 package ucs.v2;
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
 import "payment_methods.proto";
 
 option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
+
+message Metadata {
+  google.protobuf.Struct content = 1;
+}
 
 // ============================================================================
 // COMMON MESSAGES
@@ -1273,7 +1278,7 @@ message PaymentServiceCreateAccessTokenRequest {
   Connector connector = 2; // The connector to create the access token for
 
   // Account-Specific Configuration
-  map<string, string> merchant_account_metadata = 3; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  Metadata merchant_account_metadata = 3; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for creating an access token.
@@ -1323,7 +1328,7 @@ message PaymentServiceAuthorizeRequest {
   optional AuthenticationData authentication_data = 15; // Additional authentication data
 
   // Metadata
-  map<string, string> metadata = 16; // Additional metadata for the connector
+  Metadata metadata = 16; // Additional metadata for the connector
 
   // URLs for Redirection and Webhooks
   optional string return_url = 17; // URL to redirect after payment
@@ -1352,7 +1357,7 @@ message PaymentServiceAuthorizeRequest {
   optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
 
   // Account-Specific Configuration
-  map<string, string> merchant_account_metadata = 33; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  Metadata merchant_account_metadata = 33; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 
   // Mandate Setup Details
   optional SetupMandateDetails setup_mandate_details = 34; // Setup mandate details for the authorization
@@ -1398,7 +1403,7 @@ message PaymentServiceAuthorizeOnlyRequest {
   optional AuthenticationData authentication_data = 15; // Additional authentication data
 
   // Metadata
-  map<string, string> metadata = 16; // Additional metadata for the connector
+  Metadata metadata = 16; // Additional metadata for the connector
 
   // URLs for Redirection and Webhooks
   optional string return_url = 17; // URL to redirect after payment
@@ -1427,7 +1432,7 @@ message PaymentServiceAuthorizeOnlyRequest {
   optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
 
   // Account-Specific Configuration
-  map<string, string> merchant_account_metadata = 33; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  Metadata merchant_account_metadata = 33; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 
   // Mandate Setup Details
   optional SetupMandateDetails setup_mandate_details = 34; // Setup mandate details for the authorization
@@ -1584,7 +1589,7 @@ message PaymentServiceVoidRequest {
   optional Currency currency = 8; // Currency of the void amount
 
   // Metadata
-  map<string, string> connector_metadata = 9; // Additional metadata for the connector
+  Metadata connector_metadata = 9; // Additional metadata for the connector
 
   // State Information
   optional ConnectorState state = 10; // State data for access token storage and other connector-specific state
@@ -1664,7 +1669,7 @@ message PaymentServiceCaptureRequest {
   Currency currency = 4; // Currency of the amount to capture
 
   // Metadata
-  map<string, string> connector_metadata = 5; // Additional metadata for the connector
+  Metadata connector_metadata = 5; // Additional metadata for the connector
 
   // Multiple Capture Information
   optional MultipleCaptureRequestData multiple_capture_data = 6; // Data for multiple capture scenarios
@@ -1731,7 +1736,7 @@ message PaymentServiceCreateOrderRequest {
   optional string webhook_url = 4; // URL for webhook notifications
 
   // Metadata
-  map<string, string> metadata = 5; // Additional metadata for the connector
+  Metadata metadata = 5; // Additional metadata for the connector
 }
 
 // Response message for create order operation.
@@ -1777,8 +1782,8 @@ message PaymentServiceRefundRequest {
   optional CaptureMethod capture_method = 12; // Capture method related to the original payment
 
   // Metadata
-  map<string, string> metadata = 13; // Metadata specific to the connector
-  map<string, string> refund_metadata = 14; // Metadata specific to the refund
+  Metadata metadata = 13; // Metadata specific to the connector
+  Metadata refund_metadata = 14; // Metadata specific to the refund
 
   // Browser Information
   optional BrowserInformation browser_info = 15; // Browser information, if relevant
@@ -1787,7 +1792,7 @@ message PaymentServiceRefundRequest {
   optional ConnectorState state = 17; // State data for access token storage and other connector-specific state
 
   // Account-Specific Configuration
-  map<string, string> merchant_account_metadata = 18; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  Metadata merchant_account_metadata = 18; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for a refund operation (unified for both Create and Get).
@@ -1824,8 +1829,8 @@ message RefundResponse {
   optional string customer_name = 16; // Name of the customer
   optional SecretString email = 17; // Email address of the customer
   optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
-  map<string, string> metadata = 19; // Additional metadata from the connector
-  map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector
+  Metadata metadata = 19; // Additional metadata from the connector
+  Metadata refund_metadata = 20; // Refund-specific metadata from the connector
 
   // State Information
   optional ConnectorState state = 24; // State data for access token storage and other connector-specific state
@@ -1911,7 +1916,7 @@ message PaymentServiceRegisterRequest {
   optional AuthenticationData authentication_data = 11; // Additional authentication data
 
   // Metadata
-  map<string, string> metadata = 12; // Additional metadata for the connector
+  Metadata metadata = 12; // Additional metadata for the connector
 
   // URLs for Redirection and Webhooks
   optional string return_url = 13; // URL to redirect after setup
@@ -1939,7 +1944,7 @@ message PaymentServiceRegisterRequest {
   optional PaymentExperience payment_experience = 28; // Preferred payment experience
 
   // Account-Specific Configuration
-  map<string, string> merchant_account_metadata = 30; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  Metadata merchant_account_metadata = 30; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 
   // State Information
   optional ConnectorState state = 31; // State data for access token storage and other connector-specific state
@@ -1997,7 +2002,7 @@ message PaymentServiceRepeatEverythingRequest {
 
   // Optional fields
   optional string merchant_order_reference_id = 6; // Merchant's reference ID for the order
-  map<string, string> metadata = 7; // Additional metadata for the connector
+  Metadata metadata = 7; // Additional metadata for the connector
   optional string webhook_url = 8; // URL for webhook notifications
   optional string return_url = 17; // URL to redirect after payment
   optional string description = 18; // An arbitrary string attached to the payment. Often useful for displaying to users or for your internal record-keeping
@@ -2019,7 +2024,7 @@ message PaymentServiceRepeatEverythingRequest {
   optional PaymentMethodType payment_method_type = 15; // Indicates the sub type of payment method. Eg: 'google_pay' & 'apple_pay'
 
   // Account-Specific Configuration
-  map<string, string> merchant_account_metadata = 33; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  Metadata merchant_account_metadata = 33; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 
   // Behavioral Flags and Preferences
   optional bool off_session = 16; // Indicates if off-session process
@@ -2104,7 +2109,7 @@ message PaymentServicePreAuthenticateRequest {
   bool enrolled_for_3ds = 9; // Indicates if the customer is enrolled for 3D Secure
 
   // Metadata
-  map<string, string> metadata = 10; // Additional metadata for the connector
+  Metadata metadata = 10; // Additional metadata for the connector
 
   // URLs for Redirection
   optional string return_url = 11; // URL to redirect after authentication
@@ -2117,7 +2122,7 @@ message PaymentServicePreAuthenticateRequest {
   optional ConnectorState state = 15; // State data for access token storage and other connector-specific state
 
   // Account-Specific Configuration
-  map<string, string> merchant_account_metadata = 16; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  Metadata merchant_account_metadata = 16; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for pre-authentication step
@@ -2172,7 +2177,7 @@ message PaymentServiceAuthenticateRequest {
   optional AuthenticationData authentication_data = 9; // Additional authentication data from previous steps
 
   // Metadata
-  map<string, string> metadata = 10; // Additional metadata for the connector
+  Metadata metadata = 10; // Additional metadata for the connector
 
   // URLs for Redirection
   optional string return_url = 11; // URL to redirect after authentication
@@ -2188,7 +2193,7 @@ message PaymentServiceAuthenticateRequest {
   optional RedirectionResponse redirection_response = 16; // Redirection Response from client browser
 
   // Account-Specific Configuration
-  map<string, string> merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  Metadata merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for authentication step
@@ -2246,7 +2251,7 @@ message PaymentServicePostAuthenticateRequest {
   optional AuthenticationData authentication_data = 9; // Authentication data from previous steps
 
   // Metadata
-  map<string, string> metadata = 10; // Additional metadata for the connector
+  Metadata metadata = 10; // Additional metadata for the connector
 
   // URLs for Redirection
   optional string return_url = 11; // URL to redirect after authentication
@@ -2262,7 +2267,7 @@ message PaymentServicePostAuthenticateRequest {
   optional RedirectionResponse redirection_response = 16; // Redirection Response from client browser
 
   // Account-Specific Configuration
-  map<string, string> merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  Metadata merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for post-authentication step
@@ -2310,7 +2315,7 @@ message PaymentServiceCreateSessionTokenRequest {
   int64 minor_amount = 4; // The minor amount for the payment (e.g., cents)
 
   // Optional metadata for the connector
-  map<string, string> metadata = 5; // Additional metadata for the connector
+  Metadata metadata = 5; // Additional metadata for the connector
 
   // State Information
   optional ConnectorState state = 6; // State data for access token storage and other connector-specific state
@@ -2388,13 +2393,13 @@ message RefundServiceGetRequest {
   optional BrowserInformation browser_info = 5; // Information about the customer's browser
 
 // Metadata
-  map<string, string> refund_metadata = 7; // Metadata specific to the refund sync
+  Metadata refund_metadata = 7; // Metadata specific to the refund sync
 
 // State Information
   optional ConnectorState state = 8; // State data for access token storage and other connector-specific state
 
 // Account-Specific Configuration
-  map<string, string> merchant_account_metadata = 9; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  Metadata merchant_account_metadata = 9; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Legacy alias for backward compatibility - use RefundResponse instead
@@ -2428,8 +2433,8 @@ message PaymentServiceRefundResponse {
   optional string customer_name = 16; // Name of the customer
   optional SecretString email = 17; // Email address of the customer
   optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
-  map<string, string> metadata = 19; // Additional metadata from the connector
-  map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector
+  Metadata metadata = 19; // Additional metadata from the connector
+  Metadata refund_metadata = 20; // Refund-specific metadata from the connector
 
   // State Information
   optional ConnectorState state = 21; // State data for access token storage and other connector-specific state
@@ -2466,8 +2471,8 @@ message RefundServiceGetResponse {
   optional string customer_name = 16; // Name of the customer
   optional SecretString email = 17; // Email address of the customer
   optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
-  map<string, string> metadata = 19; // Additional metadata from the connector
-  map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector
+  Metadata metadata = 19; // Additional metadata from the connector
+  Metadata refund_metadata = 20; // Refund-specific metadata from the connector
 }
 
 // Request message for RefundService.Transform RPC
@@ -2708,7 +2713,7 @@ message PaymentServiceCreatePaymentMethodTokenRequest {
   Identifier request_ref_id = 1; // Reference ID for tracking
 
   // Account-Specific Configuration
-  map<string, string> merchant_account_metadata = 3; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  Metadata merchant_account_metadata = 3; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 
   // Payment Information
   int64 amount = 4; // The amount for the payment in major currency units
@@ -2725,7 +2730,7 @@ message PaymentServiceCreatePaymentMethodTokenRequest {
   optional PaymentAddress address = 11; // Customer address details
 
   // Additional Metadata
-  map<string, string> metadata = 12; // Additional metadata for the connector
+  Metadata metadata = 12; // Additional metadata for the connector
 }
 
 // Response message for creating a payment method token.
@@ -2752,7 +2757,7 @@ message PaymentServiceCreateConnectorCustomerRequest {
   Identifier request_ref_id = 1; // Reference ID for tracking
 
   // Account-Specific Configuration
-  map<string, string> merchant_account_metadata = 3; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  Metadata merchant_account_metadata = 3; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 
   // Customer Information
   optional string customer_name = 4; // Name of the customer
@@ -2764,7 +2769,7 @@ message PaymentServiceCreateConnectorCustomerRequest {
   optional PaymentAddress address = 8; // Customer address details
 
   // Additional Metadata
-  map<string, string> metadata = 9; // Additional metadata for the connector
+  Metadata metadata = 9; // Additional metadata for the connector
 }
 
 // Response message for creating a connector customer.

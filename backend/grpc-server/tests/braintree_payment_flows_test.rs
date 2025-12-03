@@ -17,7 +17,7 @@ use grpc_api_types::{
     payments::{
         identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
         refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails,
-        Currency, Identifier, PaymentMethod, PaymentServiceAuthorizeRequest,
+        Currency, Identifier, Metadata, PaymentMethod, PaymentServiceAuthorizeRequest,
         PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
         PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentStatus, RefundResponse,
         RefundServiceGetRequest, RefundStatus,
@@ -138,8 +138,11 @@ fn create_payment_authorize_request(
         bank_code: None,
         nick_name: None,
     };
-    let mut metadata = HashMap::new();
-    metadata.insert("merchant_account_id".to_string(), "Anand".to_string());
+    let mut metadata_map = HashMap::new();
+    metadata_map.insert("merchant_account_id".to_string(), "Anand".to_string());
+    let metadata = Some(Metadata {
+        content: Some(serde_json::from_value(serde_json::to_value(metadata_map).unwrap()).unwrap()),
+    });
     PaymentServiceAuthorizeRequest {
         amount: TEST_AMOUNT,
         minor_amount: TEST_AMOUNT,
@@ -237,10 +240,15 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
 
 // Helper function to create a refund sync request
 fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundServiceGetRequest {
-    let mut refund_metadata = HashMap::new();
-    refund_metadata.insert("merchant_account_id".to_string(), "Anand".to_string());
-    refund_metadata.insert("merchant_config_currency".to_string(), "USD".to_string());
-    refund_metadata.insert("currency".to_string(), "USD".to_string());
+    let mut refund_metadata_map = HashMap::new();
+    refund_metadata_map.insert("merchant_account_id".to_string(), "Anand".to_string());
+    refund_metadata_map.insert("merchant_config_currency".to_string(), "USD".to_string());
+    refund_metadata_map.insert("currency".to_string(), "USD".to_string());
+    let refund_metadata = Some(Metadata {
+        content: Some(
+            serde_json::from_value(serde_json::to_value(refund_metadata_map).unwrap()).unwrap(),
+        ),
+    });
 
     RefundServiceGetRequest {
         transaction_id: Some(Identifier {
@@ -254,7 +262,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         browser_info: None,
         refund_metadata,
         state: None,
-        merchant_account_metadata: HashMap::new(),
+        merchant_account_metadata: None,
     }
 }
 

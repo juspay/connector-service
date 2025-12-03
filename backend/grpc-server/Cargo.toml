@@ -69,6 +69,7 @@ build_info = { git = "https://github.com/juspay/framework-libs-rs", rev = "24356
 ] }
 
 [dev-dependencies]
+prost-types = "0.12.3"
 tokio-stream = { version = "0.1.17", features = ["net"] }
 tower = { version = "0.5.2" }
 tempfile = "3.19.1"

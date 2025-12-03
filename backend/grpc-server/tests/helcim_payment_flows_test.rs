@@ -19,9 +19,10 @@ use grpc_api_types::{
     payments::{
         identifier::IdType, payment_method, payment_service_client::PaymentServiceClient, Address,
         AuthenticationType, BrowserInformation, CaptureMethod, CardDetails, CountryAlpha2,
-        Currency, Identifier, PaymentAddress, PaymentMethod, PaymentServiceAuthorizeRequest,
-        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
-        PaymentServiceVoidRequest, PaymentStatus,
+        Currency, Identifier, Metadata, PaymentAddress, PaymentMethod,
+        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceVoidRequest,
+        PaymentStatus,
     },
 };
 use tonic::{transport::Channel, Request};
@@ -218,11 +219,14 @@ fn create_payment_authorize_request_with_amount(
         bank_code: None,
         nick_name: None,
     };
-    let mut metadata = HashMap::new();
-    metadata.insert(
+    let mut metadata_map = HashMap::new();
+    metadata_map.insert(
         "description".to_string(),
         "Its my first payment request".to_string(),
     );
+    let metadata = Some(Metadata {
+        content: Some(serde_json::from_value(serde_json::to_value(metadata_map).unwrap()).unwrap()),
+    });
     PaymentServiceAuthorizeRequest {
         amount,
         minor_amount: amount,

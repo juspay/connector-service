@@ -13,6 +13,7 @@ use std::{
 };
 
 use cards::CardNumber;
+use grpc_api_types::payments::Metadata;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
@@ -242,12 +243,16 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         payment_method_id: None,
     };
 
-    let mut metadata = HashMap::new();
-    metadata.insert("order_type".to_string(), "recurring".to_string());
-    metadata.insert(
+    let mut metadata_map = HashMap::new();
+    metadata_map.insert("order_type".to_string(), "recurring".to_string());
+    metadata_map.insert(
         "customer_note".to_string(),
         "Recurring payment using saved payment method".to_string(),
     );
+
+    let metadata = Some(Metadata {
+        content: Some(serde_json::from_value(serde_json::to_value(metadata_map).unwrap()).unwrap()),
+    });
 
     PaymentServiceRepeatEverythingRequest {
         request_ref_id: Some(Identifier {
@@ -265,7 +270,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         browser_info: None,
         test_mode: None,
         payment_method_type: None,
-        merchant_account_metadata: HashMap::new(),
+        merchant_account_metadata: None,
         state: None,
         ..Default::default()
     }
@@ -334,7 +339,7 @@ fn create_register_request_with_prefix(prefix: &str) -> PaymentServiceRegisterRe
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id(prefix))),
         }),
-        metadata: HashMap::new(),
+        metadata: None,
         ..Default::default()
     }
 }

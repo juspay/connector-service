@@ -23,6 +23,7 @@ base64 = "0.21"
 rand = "0.8.5"
 bytes = "1.6.0"
 regex = "1.11.1"
+prost-types = "0.13"
 
 
 utoipa = { version = "4.2.0", features = ["preserve_order", "preserve_path_order"] }

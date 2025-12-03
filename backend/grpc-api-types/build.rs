@@ -10,6 +10,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create a basic prost config and add your extern_path configuration
     let mut config = prost_build::Config::new();
+
+    // Use custom SerializableStruct wrapper to handle serde serialization
+    // This replaces the default prost_types::Struct with our custom wrapper
+    config.extern_path(
+        ".google.protobuf.Struct",
+        "::common_utils::custom_serde::prost_types_wrapper::SerializableStruct",
+    );
+
     config.extern_path(".ucs.v2.CardNumberType", "::cards::CardNumber");
     config.extern_path(
         ".ucs.v2.SecretString",
