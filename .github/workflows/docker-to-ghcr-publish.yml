@@ -2,6 +2,12 @@ name: Docker Build and Push to GHCR
 
 on:
   workflow_dispatch:
+  
+  # Automatically run when nightly tags are created.
+  # Accepts formats like: 2025.12.03.0 or 2025.01.09.12
+  push:
+    tags:
+      - "20[0-9][0-9].[0-1][0-9].[0-3][0-9].*"
 
 jobs:
   build-and-push-dockerfile:

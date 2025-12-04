@@ -660,6 +660,7 @@ pub async fn call_connector_api(
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
                     Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
             }
@@ -680,6 +681,7 @@ pub async fn call_connector_api(
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
                     Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
             }
@@ -700,6 +702,7 @@ pub async fn call_connector_api(
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
                     Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
             }
@@ -720,6 +723,7 @@ pub async fn call_connector_api(
                         client.body(xml_body).header("Content-Type", "text/xml")
                     }
                     Some(RequestContent::FormData(form)) => client.multipart(form),
+                    Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
                 }
             }
@@ -1045,11 +1049,23 @@ fn extract_raw_connector_request(connector_request: &Request) -> String {
     // Extract actual body content
     let body_content = match connector_request.body.as_ref() {
         Some(request) => {
-            let inner_value = request.get_inner_value();
-            serde_json::from_str(&inner_value.expose()).unwrap_or_else(|_| {
-                tracing::warn!("failed to parse JSON body in extract_raw_connector_request");
-                json!({ "error": "failed to parse JSON body" })
-            })
+            match request {
+                // For RawBytes (e.g., SOAP XML), use the string directly without JSON parsing
+                RequestContent::RawBytes(_) => {
+                    serde_json::Value::String(request.get_inner_value().expose())
+                }
+                // For other content types, try to parse as JSON
+                RequestContent::Json(_)
+                | RequestContent::FormUrlEncoded(_)
+                | RequestContent::FormData(_)
+                | RequestContent::Xml(_) => {
+                    let exposed_value = request.get_inner_value().expose();
+                    serde_json::from_str(&exposed_value).unwrap_or_else(|_| {
+                        tracing::warn!("failed to parse body as JSON, treating as string in extract_raw_connector_request");
+                        serde_json::Value::String(exposed_value)
+                    })
+                }
+            }
         }
         None => serde_json::Value::Null,
     };
