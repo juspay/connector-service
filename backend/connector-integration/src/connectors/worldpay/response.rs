@@ -45,6 +45,9 @@ pub struct AuthorizedResponse {
     pub token: Option<MandateToken>,
     /// Network transaction ID
     pub scheme_reference: Option<Secret<String>>,
+    /// 3DS authentication data (returned after successful authentication)
+    #[serde(rename = "threeDS", skip_serializing_if = "Option::is_none")]
+    pub three_ds: Option<ThreeDSAuthResult>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -87,6 +90,34 @@ pub struct ThreeDsResponse {
     pub version: Option<String>,
     pub eci: Option<String>,
     pub applied: Option<String>,
+}
+
+/// 3DS authentication result returned in authorized response
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreeDSAuthResult {
+    /// Authentication outcome: "authenticated" | "authenticationOutage"
+    pub outcome: String,
+    /// Issuer response type: "challenged" | "frictionless"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issuer_response: Option<String>,
+    /// 3DS version (e.g., "2.1.0")
+    pub version: String,
+    /// Electronic Commerce Indicator (e.g., "05")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub eci: Option<String>,
+    /// ACS transaction ID
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub acs_transaction_id: Option<String>,
+    /// Directory Server transaction ID
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ds_transaction_id: Option<String>,
+    /// Authentication status: Y/N/U/A/C/R/I
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    /// CAVV - Cardholder Authentication Verification Value
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authentication_value: Option<Secret<String>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

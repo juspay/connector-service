@@ -1491,8 +1491,11 @@ where
             extract_redirection_data(&item.response)?;
         let _connector_metadata = extract_three_ds_metadata(&item.response);
 
+        // Extract 3DS authentication data from the response
+        let authentication_data = extract_authentication_data(&item.response);
+
         let response = Ok(PaymentsResponseData::PostAuthenticateResponse {
-            authentication_data: None,
+            authentication_data,
             connector_response_reference_id,
             status_code: item.http_code,
         });
@@ -1505,6 +1508,75 @@ where
             response,
             ..item.router_data
         })
+    }
+}
+
+/// Extract 3DS authentication data from Worldpay response
+fn extract_authentication_data(
+    response: &WorldpayPaymentsResponse,
+) -> Option<domain_types::router_request_types::AuthenticationData> {
+    match &response.other_fields {
+        // Successful authorization with 3DS data
+        Some(WorldpayPaymentResponseFields::AuthorizedResponse(auth_resp)) => {
+            auth_resp.three_ds.as_ref().map(|tds| {
+                domain_types::router_request_types::AuthenticationData {
+                    trans_status: Some(map_3ds_status(&tds.status)),
+                    eci: tds.eci.clone(),
+                    cavv: tds.authentication_value.clone(),
+                    ucaf_collection_indicator: None,
+                    threeds_server_transaction_id: None,
+                    message_version: Some(parse_semantic_version(&tds.version)),
+                    ds_trans_id: tds.ds_transaction_id.clone(),
+                    acs_transaction_id: tds.acs_transaction_id.clone(),
+                    transaction_id: tds.ds_transaction_id.clone(),
+                }
+            })
+        }
+        // Failed authentication with partial 3DS data
+        Some(WorldpayPaymentResponseFields::RefusedResponse(refused)) => {
+            refused.three_ds.as_ref().map(|tds| {
+                domain_types::router_request_types::AuthenticationData {
+                    trans_status: Some(common_enums::TransactionStatus::Failure),
+                    eci: tds.eci.clone(),
+                    cavv: None,
+                    ucaf_collection_indicator: None,
+                    threeds_server_transaction_id: None,
+                    message_version: tds.version.as_ref().map(|v| parse_semantic_version(v)),
+                    ds_trans_id: None,
+                    acs_transaction_id: None,
+                    transaction_id: None,
+                }
+            })
+        }
+        _ => None,
+    }
+}
+
+/// Parse Worldpay 3DS version string to SemanticVersion
+fn parse_semantic_version(version: &str) -> common_utils::types::SemanticVersion {
+    let parts: Vec<u64> = version
+        .split('.')
+        .filter_map(|s| s.parse().ok())
+        .collect();
+
+    common_utils::types::SemanticVersion::new(
+        parts.first().copied().unwrap_or(2),
+        parts.get(1).copied().unwrap_or(1),
+        parts.get(2).copied().unwrap_or(0),
+    )
+}
+
+/// Map Worldpay 3DS status to TransactionStatus
+fn map_3ds_status(status: &Option<String>) -> common_enums::TransactionStatus {
+    match status.as_ref().map(|s| s.as_str()) {
+        Some("Y") => common_enums::TransactionStatus::Success,
+        Some("N") => common_enums::TransactionStatus::Failure,
+        Some("U") => common_enums::TransactionStatus::VerificationNotPerformed,
+        Some("A") => common_enums::TransactionStatus::NotVerified,
+        Some("C") => common_enums::TransactionStatus::ChallengeRequired,
+        Some("R") => common_enums::TransactionStatus::Rejected,
+        Some("I") => common_enums::TransactionStatus::InformationOnly,
+        _ => common_enums::TransactionStatus::VerificationNotPerformed,
     }
 }
 
