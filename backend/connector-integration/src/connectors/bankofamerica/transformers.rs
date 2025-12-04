@@ -3,7 +3,7 @@ use serde_json::Value;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     pii,
-    types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
+    types::StringMajorUnit,
 };
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
@@ -252,25 +252,6 @@ pub enum PaymentSolution {
     ApplePay,
     GooglePay,
     SamsungPay,
-}
-
-pub trait RemoveNewLine {
-    fn remove_new_line(&self) -> Self;
-}
-
-impl RemoveNewLine for Option<Secret<String>> {
-    fn remove_new_line(&self) -> Self {
-        self.clone().map(|masked_value| {
-            let new_string = masked_value.expose().replace("\n", " ");
-            Secret::new(new_string)
-        })
-    }
-}
-
-impl RemoveNewLine for Option<String> {
-    fn remove_new_line(&self) -> Self {
-        self.clone().map(|value| value.replace("\n", " "))
-    }
 }
 
 fn build_bill_to(
@@ -709,7 +690,6 @@ impl<
         )?;
         let order_information = OrderInformationWithBill::try_from((&item, Some(bill_to)))?;
         let processing_information = ProcessingInformation::try_from((&item, None, None))?;
-        let client_reference_information = ClientReferenceInformation::from(&item);
         let payment_information = PaymentInformation::try_from((&item, ccard))?;
         let merchant_defined_information = item
             .router_data
@@ -722,7 +702,14 @@ impl<
             processing_information,
             payment_information,
             order_information,
-            client_reference_information,
+            client_reference_information: ClientReferenceInformation {
+                code: Some(
+                    item.router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                ),
+            },
             merchant_defined_information,
             consumer_authentication_information: None,
         })
@@ -776,7 +763,7 @@ impl<
                             item.router_data.request.minor_refund_amount,
                             item.router_data.request.currency,
                         )
-                        .change_context(ConnectorError::RequestEncodingFailed)?,
+                        .change_context(ConnectorError::AmountConversionFailed)?,
                     currency: item.router_data.request.currency,
                 },
             },
@@ -1450,16 +1437,6 @@ fn get_boa_card_type(card_network: common_enums::CardNetwork) -> Option<&'static
     }
 }
 
-impl<T> TryFrom<(StringMajorUnit, T)> for BankOfAmericaRouterData<T> {
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from((amount, item): (StringMajorUnit, T)) -> Result<Self, Self::Error> {
-        Ok(Self {
-            amount,
-            router_data: item,
-        })
-    }
-}
-
 impl From<PaymentSolution> for String {
     fn from(solution: PaymentSolution) -> Self {
         let payment_solution = match solution {
@@ -1468,48 +1445,6 @@ impl From<PaymentSolution> for String {
             PaymentSolution::SamsungPay => "008",
         };
         payment_solution.to_string()
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    From<
-        &BankofamericaRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for ClientReferenceInformation
-{
-    fn from(
-        item: &BankofamericaRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    ) -> Self {
-        Self {
-            code: Some(
-                item.router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
-            ),
-        }
     }
 }
 
@@ -1963,7 +1898,6 @@ impl<
         };
 
         let order_information = OrderInformationWithBill::try_from(item)?;
-        let client_reference_information = ClientReferenceInformation::from(item);
         let merchant_defined_information = item
             .router_data
             .request
@@ -1976,55 +1910,17 @@ impl<
             processing_information,
             payment_information,
             order_information,
-            client_reference_information,
+            client_reference_information: ClientReferenceInformation {
+                code: Some(
+                    item.router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                ),
+            },
             consumer_authentication_information: None,
             merchant_defined_information,
         })
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    From<(
-        BankofamericaRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-        Option<BillTo>,
-    )> for OrderInformationWithBill
-{
-    fn from(
-        (item, bill_to): (
-            BankofamericaRouterData<
-                RouterDataV2<
-                    Authorize,
-                    PaymentFlowData,
-                    PaymentsAuthorizeData<T>,
-                    PaymentsResponseData,
-                >,
-                T,
-            >,
-            Option<BillTo>,
-        ),
-    ) -> Self {
-        Self {
-            amount_details: Amount {
-                total_amount: StringMajorUnit::zero(),
-                currency: item.router_data.request.currency,
-            },
-            bill_to,
-        }
     }
 }
 
@@ -2065,13 +1961,14 @@ impl<
             Option<BillTo>,
         ),
     ) -> Result<Self, Self::Error> {
-        let converter = StringMajorUnitForConnector;
-        let amount = converter
+        let amount = item
+            .connector
+            .amount_converter
             .convert(
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorError::AmountConversionFailed)?;
         Ok(Self {
             amount_details: Amount {
                 total_amount: amount,
@@ -2079,48 +1976,6 @@ impl<
             },
             bill_to,
         })
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    From<
-        &BankofamericaRouterData<
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for ClientReferenceInformation
-{
-    fn from(
-        item: &BankofamericaRouterData<
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    ) -> Self {
-        Self {
-            code: Some(
-                item.router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
-            ),
-        }
     }
 }
 
@@ -2194,58 +2049,6 @@ impl<
                 card_type,
             },
         })))
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        BankofamericaRouterData<
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for OrderInformationWithBill
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        item: BankofamericaRouterData<
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let email = item
-            .router_data
-            .request
-            .get_email()
-            .or(item.router_data.resource_common_data.get_billing_email())?;
-        let bill_to = build_bill_to(
-            item.router_data.resource_common_data.get_optional_billing(),
-            email,
-        )?;
-        Ok(Self {
-            amount_details: Amount {
-                total_amount: StringMajorUnit::zero(),
-                currency: item.router_data.request.currency,
-            },
-            bill_to: Some(bill_to),
-        })
     }
 }
 
