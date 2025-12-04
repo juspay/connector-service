@@ -510,7 +510,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // Macros Framework - Amount Converter and Prerequisites
 // ============================================================================
 
-macros::create_amount_converter_wrapper!(connector_name: Powertranz, amount_type: MinorUnit);
+macros::create_amount_converter_wrapper!(connector_name: Powertranz, amount_type: FloatMajorUnit);
 
 use super::macros;
 macros::create_all_prerequisites!(

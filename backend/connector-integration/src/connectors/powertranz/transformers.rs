@@ -15,7 +15,10 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::powertranz::PowertranzRouterData, types::ResponseRouterData};
+use crate::{
+    connectors::powertranz::{PowertranzAmountConvertor, PowertranzRouterData},
+    types::ResponseRouterData,
+};
 
 // ============================================================================
 // Auth Types
@@ -318,7 +321,7 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let request_data = &item.router_data.request;
-        let amount = FloatMajorUnit(request_data.amount.get_amount_as_i64() as f64 / 100.0);
+        let amount = PowertranzAmountConvertor::convert(request_data.amount, request_data.currency)?;
         // Use ISO 4217 numeric code (e.g., "840" for USD)
         let currency_code = request_data.currency.iso_4217().to_string();
 
@@ -348,7 +351,7 @@ impl<
                 })
             }
             _ => Err(errors::ConnectorError::NotSupported {
-                message: format!("Payment method not supported"),
+                message: format!("Payment method"),
                 connector: "powertranz",
             }
             .into()),
@@ -389,12 +392,14 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = FloatMajorUnit(item.router_data.request.amount_to_capture as f64 / 100.0);
+        let request_data = &item.router_data.request;
+        let amount = PowertranzAmountConvertor::convert(
+            common_utils::types::MinorUnit::new(request_data.amount_to_capture),
+            request_data.currency,
+        )?;
 
         Ok(Self {
-            transaction_identifier: item
-                .router_data
-                .request
+            transaction_identifier: request_data
                 .connector_transaction_id
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?,
@@ -475,10 +480,14 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = FloatMajorUnit(item.router_data.request.refund_amount as f64 / 100.0);
+        let request_data = &item.router_data.request;
+        let amount = PowertranzAmountConvertor::convert(
+            common_utils::types::MinorUnit::new(request_data.refund_amount),
+            request_data.currency,
+        )?;
 
         Ok(Self {
-            transaction_identifier: item.router_data.request.connector_transaction_id.clone(),
+            transaction_identifier: request_data.connector_transaction_id.clone(),
             total_amount: Some(amount),
             refund: Some(true),
         })
