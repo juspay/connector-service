@@ -3816,6 +3816,9 @@ impl
             raw_connector_request: None,
             connector_response_headers: None,
             access_token,
+            payment_method: common_enums::PaymentMethod::foreign_try_from(
+                value.payment_method.unwrap_or_default(),
+            )?,
         })
     }
 }
@@ -3854,6 +3857,9 @@ impl
             raw_connector_request: None,
             connector_response_headers: None,
             access_token,
+            payment_method: common_enums::PaymentMethod::foreign_try_from(
+                value.payment_method.unwrap_or_default(),
+            )?,
         })
     }
 }
@@ -3888,6 +3894,9 @@ impl
             raw_connector_request: None,
             connector_response_headers: None,
             access_token,
+            payment_method: common_enums::PaymentMethod::foreign_try_from(
+                value.payment_method.unwrap_or_default(),
+            )?,
         })
     }
 }
@@ -3926,6 +3935,9 @@ impl
             raw_connector_request: None,
             connector_response_headers: None,
             access_token,
+            payment_method: common_enums::PaymentMethod::foreign_try_from(
+                value.payment_method.unwrap_or_default(),
+            )?,
         })
     }
 }

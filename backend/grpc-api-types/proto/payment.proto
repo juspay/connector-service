@@ -2058,6 +2058,8 @@ message PaymentServiceRefundRequest {
 
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 18; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+
+  optional PaymentMethod payment_method = 19; // Payment method to be used
 }
 
 // Response message for a refund operation (unified for both Create and Get).
@@ -2665,6 +2667,8 @@ message RefundServiceGetRequest {
 
 // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 9; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+
+optional PaymentMethod payment_method = 10; // Payment method to be used
 }
 
 // Legacy alias for backward compatibility - use RefundResponse instead
