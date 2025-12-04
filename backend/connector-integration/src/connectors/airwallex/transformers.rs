@@ -1,6 +1,6 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, Currency, RefundStatus};
-use common_utils::types::StringMajorUnit;
+use common_utils::types::{FloatMajorUnit, StringMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -15,32 +15,26 @@ use domain_types::{
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-
-// Airwallex connector configuration constants
-pub mod connector_config {
-    pub const PARTNER_TYPE: &str = "hyperswitch-connector";
-    pub const API_VERSION: &str = "v2024.12";
-}
 
 #[derive(Debug, Clone)]
 pub struct AirwallexAuthType {
-    pub x_api_key: Secret<String>,
-    pub x_client_id: Secret<String>,
+    pub api_key: Secret<String>,
+    pub client_id: Secret<String>,
 }
 
 impl TryFrom<&ConnectorAuthType> for AirwallexAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                x_api_key: api_key.to_owned(),
-                x_client_id: key1.to_owned(),
-            }),
-            _ => Err(error_stack::report!(
+        if let ConnectorAuthType::BodyKey { api_key, key1 } = auth_type {
+            Ok(Self {
+                api_key: api_key.clone(),
+                client_id: key1.clone(),
+            })
+        } else {
+            Err(error_stack::report!(
                 errors::ConnectorError::FailedToObtainAuthType
-            )),
+            ))
         }
     }
 }
@@ -54,7 +48,8 @@ pub struct AirwallexErrorResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AirwallexAccessTokenResponse {
     pub token: Secret<String>,
-    pub expires_at: Option<String>,
+    #[serde(with = "common_utils::custom_serde::iso8601")]
+    pub expires_at: time::PrimitiveDateTime,
 }
 
 // Empty request body for CreateAccessToken - Airwallex requires empty JSON object {}
@@ -73,33 +68,22 @@ pub struct AirwallexPaymentsRequest {
 // New unified request type for macro pattern that includes payment intent creation and confirmation
 #[derive(Debug, Serialize)]
 pub struct AirwallexPaymentRequest {
-    // Request ID for payment intent creation
+    // Request ID for confirm request
     pub request_id: String,
-    // Amount in major currency units (following hyperswitch pattern)
-    pub amount: StringMajorUnit,
-    pub currency: Currency,
     // Payment method data for confirm step
     pub payment_method: AirwallexPaymentMethod,
-    // Auto-confirm the payment intent
-    pub confirm: Option<bool>,
-    pub return_url: Option<String>,
-    // Merchant order reference
-    pub merchant_order_id: String,
-    // Device data for fraud detection
-    pub device_data: Option<AirwallexDeviceData>,
     // Options for payment processing
     pub payment_method_options: Option<AirwallexPaymentOptions>,
-    // UCS identification for Airwallex whitelisting
-    pub referrer_data: Option<AirwallexReferrerData>,
+    pub return_url: Option<String>,
+    // Device data for fraud detection
+    pub device_data: Option<AirwallexDeviceData>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct AirwallexPaymentMethod {
+    pub card: AirwallexCardData,
     #[serde(rename = "type")]
-    pub method_type: String,
-    // Remove flatten to create proper nesting: card details under 'card' field
-    pub card: Option<AirwallexCardData>,
-    // Other payment methods (wallet, pay_later, bank_redirect) not implemented yet
+    pub payment_method_type: AirwallexPaymentType,
 }
 
 // Removed old AirwallexPaymentMethodData enum - now using individual Option fields for cleaner serialization
@@ -115,6 +99,21 @@ pub struct AirwallexCardData {
 
 // Note: Wallet, PayLater, and BankRedirect data structures removed
 // as they are not implemented yet. Only card payments are supported.
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AirwallexPaymentType {
+    Card,
+    Googlepay,
+    Paypal,
+    Klarna,
+    Atome,
+    Trustly,
+    Blik,
+    Ideal,
+    Skrill,
+    BankTransfer,
+}
 
 #[derive(Debug, Serialize)]
 pub struct AirwallexDeviceData {
@@ -187,19 +186,19 @@ impl<
         let payment_method = match item.router_data.request.payment_method_data.clone() {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
                 AirwallexPaymentMethod {
-                    method_type: "card".to_string(),
-                    card: Some(AirwallexCardData {
+                    card: AirwallexCardData {
                         number: Secret::new(card_data.card_number.peek().to_string()),
                         expiry_month: card_data.card_exp_month.clone(),
                         expiry_year: card_data.get_expiry_year_4_digit(),
                         cvc: card_data.card_cvc.clone(),
                         name: card_data.card_holder_name.map(|name| name.expose()),
-                    }),
+                    },
+                    payment_method_type: AirwallexPaymentType::Card,
                 }
             }
             _ => {
                 return Err(errors::ConnectorError::NotSupported {
-                    message: "Only card payments are supported by Airwallex connector".to_string(),
+                    message: "Payment Method".to_string(),
                     connector: "Airwallex",
                 }
                 .into())
@@ -230,84 +229,36 @@ impl<
                 user_agent: browser_info.user_agent.clone(),
             });
 
-        // Create referrer data for Airwallex identification
-        let referrer_data = Some(AirwallexReferrerData {
-            r_type: connector_config::PARTNER_TYPE.to_string(),
-            version: connector_config::API_VERSION.to_string(),
-        });
-
-        // Check if we're in 2-step flow (like Razorpay V2 pattern)
-        let (request_id, amount, currency, confirm, merchant_order_id) =
-            if let Some(_reference_id) = &item.router_data.resource_common_data.reference_id {
-                // 2-step flow: this is a confirm call, reference_id is the payment intent ID
-                // For confirm endpoint, we don't need amount/currency as they're already set in the intent
-                (
-                    format!(
-                        "confirm_{}",
-                        item.router_data
-                            .resource_common_data
-                            .connector_request_reference_id
-                    ),
-                    StringMajorUnit::zero(), // Zero amount for confirm flow - amount already established in CreateOrder
-                    item.router_data.request.currency,
-                    None, // Don't set confirm flag, it's implied by the /confirm endpoint
-                    item.router_data
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone(),
-                )
-            } else {
-                // Unified flow: create and confirm in one call
-                (
-                    item.router_data
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone(),
-                    item.connector
-                        .amount_converter
-                        .convert(
-                            item.router_data.request.minor_amount,
-                            item.router_data.request.currency,
-                        )
-                        .map_err(|e| {
-                            errors::ConnectorError::RequestEncodingFailedWithReason(format!(
-                                "Amount conversion failed: {}",
-                                e
-                            ))
-                        })?,
-                    item.router_data.request.currency,
-                    Some(true), // Auto-confirm for UCS pattern
-                    item.router_data
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone(),
-                )
-            };
+        // Generate unique request_id for Authorize/confirm step
+        // Different from CreateOrder to avoid Airwallex duplicate_request error
+        let request_id = format!(
+            "confirm_{}",
+            item.router_data
+                .resource_common_data
+                .connector_request_reference_id
+        );
 
         Ok(Self {
             request_id,
-            amount,
-            currency,
             payment_method,
-            confirm,
-            return_url: item.router_data.request.get_router_return_url().ok(),
-            merchant_order_id,
-            device_data,
             payment_method_options,
-            referrer_data,
+            return_url: item.router_data.request.get_router_return_url().ok(),
+            device_data,
         })
     }
 }
 
-// New unified response type for macro pattern
+// Unified response type for all payment operations (Authorize, PSync, Capture, Void)
 #[derive(Debug, Deserialize, Serialize)]
-pub struct AirwallexPaymentResponse {
+pub struct AirwallexPaymentsResponse {
     pub id: String,
     pub status: AirwallexPaymentStatus,
-    pub amount: Option<i64>, // Amount from API response (minor units)
-    pub currency: Option<String>,
+    pub amount: Option<FloatMajorUnit>,
+    pub currency: Option<Currency>,
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
+    // Latest payment attempt information
+    pub latest_payment_attempt: Option<AirwallexPaymentAttempt>,
     // Payment method information
     pub payment_method: Option<AirwallexPaymentMethodInfo>,
     // Next action for 3DS or other redirects
@@ -315,7 +266,7 @@ pub struct AirwallexPaymentResponse {
     // Payment intent details
     pub payment_intent_id: Option<String>,
     // Capture information
-    pub captured_amount: Option<i64>, // Captured amount from API response (minor units)
+    pub captured_amount: Option<FloatMajorUnit>,
     // Authorization code from processor
     pub authorization_code: Option<String>,
     // Network transaction ID
@@ -324,40 +275,19 @@ pub struct AirwallexPaymentResponse {
     pub processor_response: Option<AirwallexProcessorResponse>,
     // Risk information
     pub risk_score: Option<String>,
+    // Void-specific fields
+    pub cancelled_at: Option<String>,
+    pub cancellation_reason: Option<String>,
 }
 
-// Sync response struct - reuses same structure as payment response since it's the same endpoint
-#[derive(Debug, Deserialize, Serialize)]
-pub struct AirwallexSyncResponse {
-    pub id: String,
-    pub status: AirwallexPaymentStatus,
-    pub amount: Option<i64>, // Amount from API response (minor units)
-    pub currency: Option<String>,
-    pub created_at: Option<String>,
-    pub updated_at: Option<String>,
-    // Latest payment attempt information
-    pub latest_payment_attempt: Option<AirwallexPaymentAttempt>,
-    // Payment method information
-    pub payment_method: Option<AirwallexPaymentMethodInfo>,
-    // Payment intent details
-    pub payment_intent_id: Option<String>,
-    // Capture information
-    pub captured_amount: Option<i64>, // Captured amount from API response (minor units)
-    // Authorization code from processor
-    pub authorization_code: Option<String>,
-    // Network transaction ID
-    pub network_transaction_id: Option<String>,
-    // Processor response
-    pub processor_response: Option<AirwallexProcessorResponse>,
-    // Risk information
-    pub risk_score: Option<String>,
-}
+// Type alias - reuse the same response structure for PSync
+pub type AirwallexSyncResponse = AirwallexPaymentsResponse;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AirwallexPaymentAttempt {
     pub id: Option<String>,
     pub status: Option<AirwallexPaymentStatus>,
-    pub amount: Option<i64>, // Amount from API response (minor units)
+    pub amount: Option<FloatMajorUnit>,
     pub payment_method: Option<AirwallexPaymentMethodInfo>,
     pub authorization_code: Option<String>,
     pub network_transaction_id: Option<String>,
@@ -372,6 +302,8 @@ pub enum AirwallexPaymentStatus {
     RequiresPaymentMethod,
     RequiresCustomerAction,
     RequiresCapture,
+    Authorized,       // Payment authorized (from latest_payment_attempt)
+    Paid,             // Payment paid/captured (from latest_payment_attempt)
     CaptureRequested, // Payment captured but settlement in progress
     Processing,
     Succeeded,
@@ -417,11 +349,42 @@ pub struct AirwallexProcessorResponse {
     pub network_code: Option<String>,
 }
 
+// Helper function to get payment status from Airwallex status (following Hyperswitch pattern)
+fn get_payment_status(
+    status: &AirwallexPaymentStatus,
+    next_action: &Option<AirwallexNextAction>,
+) -> AttemptStatus {
+    match status {
+        AirwallexPaymentStatus::Succeeded => AttemptStatus::Charged,
+        AirwallexPaymentStatus::Failed => AttemptStatus::Failure,
+        AirwallexPaymentStatus::Processing => AttemptStatus::Pending,
+        AirwallexPaymentStatus::RequiresPaymentMethod => AttemptStatus::PaymentMethodAwaited,
+        AirwallexPaymentStatus::RequiresCustomerAction => {
+            // Check next_action to determine specific pending state based on action_type
+            next_action
+                .as_ref()
+                .map_or(AttemptStatus::AuthenticationPending, |action| match action
+                    .action_type
+                    .as_str()
+                {
+                    "device_data_collection" => AttemptStatus::DeviceDataCollectionPending,
+                    _ => AttemptStatus::AuthenticationPending,
+                })
+        }
+        AirwallexPaymentStatus::RequiresCapture => AttemptStatus::Authorized,
+        AirwallexPaymentStatus::Authorized => AttemptStatus::Authorized,
+        AirwallexPaymentStatus::Paid => AttemptStatus::Charged,
+        AirwallexPaymentStatus::Cancelled => AttemptStatus::Voided,
+        AirwallexPaymentStatus::CaptureRequested => AttemptStatus::Charged,
+        AirwallexPaymentStatus::Settled => AttemptStatus::Charged,
+    }
+}
+
 // New response transformer that addresses PR #240 critical issues
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         ResponseRouterData<
-            AirwallexPaymentResponse,
+            AirwallexPaymentsResponse,
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -435,7 +398,7 @@ impl<T: PaymentMethodDataTypes>
 
     fn try_from(
         item: ResponseRouterData<
-            AirwallexPaymentResponse,
+            AirwallexPaymentsResponse,
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -444,57 +407,7 @@ impl<T: PaymentMethodDataTypes>
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        let status = match item.response.status {
-            AirwallexPaymentStatus::Succeeded => {
-                // Verify both authorization and clearing/settlement status
-                if let Some(processor_response) = &item.response.processor_response {
-                    // Check processor-level status for additional validation
-                    match processor_response.code.as_deref() {
-                        Some("00") | Some("0000") => AttemptStatus::Charged, // Standard approval codes
-                        Some("pending") => AttemptStatus::AuthorizationFailed, // Authorization succeeded but settlement pending
-                        Some(decline_code) if decline_code.starts_with('0') => {
-                            AttemptStatus::Charged
-                        }
-                        _ => AttemptStatus::AuthorizationFailed, // Authorization failed at processor level
-                    }
-                } else {
-                    // If payment succeeded but we don't have processor details, assume charged
-                    AttemptStatus::Charged
-                }
-            }
-            AirwallexPaymentStatus::RequiresCapture => {
-                // Payment authorized but not captured yet
-                AttemptStatus::Authorized
-            }
-            AirwallexPaymentStatus::CaptureRequested => {
-                // Payment captured, settlement in progress - treat as charged
-                AttemptStatus::Charged
-            }
-            AirwallexPaymentStatus::RequiresCustomerAction => {
-                // 3DS authentication or other customer action needed
-                AttemptStatus::AuthenticationPending
-            }
-            AirwallexPaymentStatus::RequiresPaymentMethod => {
-                // Payment method validation failed
-                AttemptStatus::PaymentMethodAwaited
-            }
-            AirwallexPaymentStatus::Processing => {
-                // Payment is being processed
-                AttemptStatus::Pending
-            }
-            AirwallexPaymentStatus::Failed => {
-                // Payment explicitly failed
-                AttemptStatus::Failure
-            }
-            AirwallexPaymentStatus::Settled => {
-                // Payment fully settled - final successful state
-                AttemptStatus::Charged
-            }
-            AirwallexPaymentStatus::Cancelled => {
-                // Payment was cancelled
-                AttemptStatus::Voided
-            }
-        };
+        let status = get_payment_status(&item.response.status, &item.response.next_action);
 
         // Handle 3DS redirection for customer action required
         // For now, set to None - will be implemented in a separate flow
@@ -506,61 +419,15 @@ impl<T: PaymentMethodDataTypes>
             .network_transaction_id
             .or(item.response.authorization_code.clone());
 
-        // Build connector metadata with network-specific fields
-        let connector_metadata = {
-            let mut metadata = HashMap::new();
-
-            if let Some(auth_code) = &item.response.authorization_code {
-                metadata.insert(
-                    "authorization_code".to_string(),
-                    serde_json::Value::String(auth_code.clone()),
-                );
-            }
-
-            if let Some(risk_score) = &item.response.risk_score {
-                metadata.insert(
-                    "risk_score".to_string(),
-                    serde_json::Value::String(risk_score.clone()),
-                );
-            }
-
-            if let Some(processor) = &item.response.processor_response {
-                if let Some(decline_code) = &processor.decline_code {
-                    metadata.insert(
-                        "decline_code".to_string(),
-                        serde_json::Value::String(decline_code.clone()),
-                    );
-                }
-                if let Some(network_code) = &processor.network_code {
-                    metadata.insert(
-                        "network_code".to_string(),
-                        serde_json::Value::String(network_code.clone()),
-                    );
-                }
-            }
-
-            if metadata.is_empty() {
-                None
-            } else {
-                Some(metadata)
-            }
-        };
-
-        // Network response fields for better error handling (PR #240 Issue #4)
-        let (_network_decline_code, _network_error_message) =
-            if let Some(processor) = &item.response.processor_response {
-                (processor.decline_code.clone(), processor.message.clone())
-            } else {
-                (None, None)
-            };
+        // Following hyperswitch pattern - no connector_metadata
+        let connector_metadata = None;
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id),
                 redirection_data,
                 mandate_reference: None,
-                connector_metadata: connector_metadata
-                    .map(|m| serde_json::Value::Object(m.into_iter().collect())),
+                connector_metadata,
                 network_txn_id,
                 connector_response_reference_id: item.response.payment_intent_id,
                 incremental_authorization_allowed: Some(false), // Airwallex doesn't support incremental auth
@@ -575,7 +442,6 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-// PSync response transformer that addresses PR #240 critical issues
 impl
     TryFrom<
         ResponseRouterData<
@@ -592,69 +458,9 @@ impl
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Address PR #240 Issue #1 & #2: Proper status mapping
-        // DON'T assume all status: "success" means successful - Check detailed status values
-        // Handle authorization + clearing status properly - Check both payment intent status and processor codes
-        let status = match item.response.status {
-            AirwallexPaymentStatus::Succeeded => {
-                // Address PR #240 Issue #3: Action Array Handling
-                // Check latest_payment_attempt if available for more detailed status
-                if let Some(latest_attempt) = &item.response.latest_payment_attempt {
-                    if let Some(attempt_status) = &latest_attempt.status {
-                        match attempt_status {
-                            AirwallexPaymentStatus::Succeeded => {
-                                // Verify processor-level status for additional validation
-                                if let Some(processor_response) = &latest_attempt.processor_response
-                                {
-                                    match processor_response.code.as_deref() {
-                                        Some("00") | Some("0000") => AttemptStatus::Charged,
-                                        Some("pending") => AttemptStatus::AuthorizationFailed,
-                                        Some(decline_code) if decline_code.starts_with('0') => {
-                                            AttemptStatus::Charged
-                                        }
-                                        _ => AttemptStatus::AuthorizationFailed,
-                                    }
-                                } else {
-                                    AttemptStatus::Charged
-                                }
-                            }
-                            AirwallexPaymentStatus::RequiresCapture => AttemptStatus::Authorized,
-                            AirwallexPaymentStatus::Failed => AttemptStatus::Failure,
-                            _ => {
-                                // Fallback to main payment status
-                                AttemptStatus::Charged
-                            }
-                        }
-                    } else {
-                        AttemptStatus::Charged
-                    }
-                } else {
-                    // Verify processor-level status for additional validation
-                    if let Some(processor_response) = &item.response.processor_response {
-                        match processor_response.code.as_deref() {
-                            Some("00") | Some("0000") => AttemptStatus::Charged,
-                            Some("pending") => AttemptStatus::AuthorizationFailed,
-                            Some(decline_code) if decline_code.starts_with('0') => {
-                                AttemptStatus::Charged
-                            }
-                            _ => AttemptStatus::AuthorizationFailed,
-                        }
-                    } else {
-                        AttemptStatus::Charged
-                    }
-                }
-            }
-            AirwallexPaymentStatus::RequiresCapture => AttemptStatus::Authorized,
-            AirwallexPaymentStatus::CaptureRequested => AttemptStatus::Charged,
-            AirwallexPaymentStatus::RequiresCustomerAction => AttemptStatus::AuthenticationPending,
-            AirwallexPaymentStatus::RequiresPaymentMethod => AttemptStatus::PaymentMethodAwaited,
-            AirwallexPaymentStatus::Processing => AttemptStatus::Pending,
-            AirwallexPaymentStatus::Failed => AttemptStatus::Failure,
-            AirwallexPaymentStatus::Settled => AttemptStatus::Charged,
-            AirwallexPaymentStatus::Cancelled => AttemptStatus::Voided,
-        };
+        // Use the same simple status mapping as hyperswitch
+        let status = get_payment_status(&item.response.status, &item.response.next_action);
 
-        // Address PR #240 Issue #4: Network Specific Fields
         // Extract network transaction ID (check latest_payment_attempt first, then main response)
         let network_txn_id = item
             .response
@@ -670,84 +476,15 @@ impl
             })
             .or(item.response.authorization_code.clone());
 
-        // Build connector metadata with network-specific fields (from latest attempt if available)
-        let connector_metadata = {
-            let mut metadata = HashMap::new();
-
-            // Prefer latest attempt data over main response data
-            let auth_code = item
-                .response
-                .latest_payment_attempt
-                .as_ref()
-                .and_then(|attempt| attempt.authorization_code.as_ref())
-                .or(item.response.authorization_code.as_ref());
-
-            if let Some(auth_code) = auth_code {
-                metadata.insert(
-                    "authorization_code".to_string(),
-                    serde_json::Value::String(auth_code.clone()),
-                );
-            }
-
-            if let Some(risk_score) = &item.response.risk_score {
-                metadata.insert(
-                    "risk_score".to_string(),
-                    serde_json::Value::String(risk_score.clone()),
-                );
-            }
-
-            // Processor response data (prefer latest attempt)
-            let processor_response = item
-                .response
-                .latest_payment_attempt
-                .as_ref()
-                .and_then(|attempt| attempt.processor_response.as_ref())
-                .or(item.response.processor_response.as_ref());
-
-            if let Some(processor) = processor_response {
-                if let Some(decline_code) = &processor.decline_code {
-                    metadata.insert(
-                        "decline_code".to_string(),
-                        serde_json::Value::String(decline_code.clone()),
-                    );
-                }
-                if let Some(network_code) = &processor.network_code {
-                    metadata.insert(
-                        "network_code".to_string(),
-                        serde_json::Value::String(network_code.clone()),
-                    );
-                }
-            }
-
-            if metadata.is_empty() {
-                None
-            } else {
-                Some(metadata)
-            }
-        };
-
-        // Network response fields for better error handling (PR #240 Issue #4)
-        let processor_response = item
-            .response
-            .latest_payment_attempt
-            .as_ref()
-            .and_then(|attempt| attempt.processor_response.as_ref())
-            .or(item.response.processor_response.as_ref());
-
-        let (_network_decline_code, _network_error_message) =
-            if let Some(processor) = processor_response {
-                (processor.decline_code.clone(), processor.message.clone())
-            } else {
-                (None, None)
-            };
+        // Following hyperswitch pattern - no connector_metadata
+        let connector_metadata = None;
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id),
                 redirection_data: None, // PSync doesn't handle redirections
                 mandate_reference: None,
-                connector_metadata: connector_metadata
-                    .map(|m| serde_json::Value::Object(m.into_iter().collect())),
+                connector_metadata,
                 network_txn_id,
                 connector_response_reference_id: item.response.payment_intent_id,
                 incremental_authorization_allowed: Some(false), // Airwallex doesn't support incremental auth
@@ -769,31 +506,8 @@ pub struct AirwallexCaptureRequest {
     pub request_id: String,      // Unique identifier for this capture request
 }
 
-// Reuse the same response structure as payment response since capture returns updated payment intent
-#[derive(Debug, Deserialize, Serialize)]
-pub struct AirwallexCaptureResponse {
-    pub id: String,
-    pub status: AirwallexPaymentStatus,
-    pub amount: Option<i64>, // Amount from API response (minor units)
-    pub captured_amount: Option<i64>, // Captured amount from API response (minor units)
-    pub currency: Option<String>,
-    pub created_at: Option<String>,
-    pub updated_at: Option<String>,
-    // Payment method information
-    pub payment_method: Option<AirwallexPaymentMethodInfo>,
-    // Payment intent details
-    pub payment_intent_id: Option<String>,
-    // Authorization code from processor
-    pub authorization_code: Option<String>,
-    // Network transaction ID
-    pub network_transaction_id: Option<String>,
-    // Processor response
-    pub processor_response: Option<AirwallexProcessorResponse>,
-    // Risk information
-    pub risk_score: Option<String>,
-    // Latest payment attempt information
-    pub latest_payment_attempt: Option<AirwallexPaymentAttempt>,
-}
+// Type alias - reuse the same response structure for Capture
+pub type AirwallexCaptureResponse = AirwallexPaymentsResponse;
 
 // Request transformer for Capture flow
 impl<
@@ -837,10 +551,12 @@ impl<
                 ))
             })?;
 
-        // Generate unique request_id for idempotency
+        // Generate unique request_id for idempotency using connector_request_reference_id
         let request_id = format!(
             "capture_{}",
-            item.router_data.resource_common_data.payment_id
+            item.router_data
+                .resource_common_data
+                .connector_request_reference_id
         );
 
         Ok(Self { amount, request_id })
@@ -864,85 +580,8 @@ impl
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Address PR #240 Issue #1 & #2: Enhanced Capture Status Logic
-        // DON'T assume all status: "success" means successful capture
-        // Check both capture status AND detailed response with action type verification
-        let status = match item.response.status {
-            AirwallexPaymentStatus::Succeeded => {
-                // Verify capture was successful by checking captured amount exists
-                if item.response.captured_amount.unwrap_or(0) > 0 {
-                    // Additional verification with processor-level status
-                    if let Some(processor_response) = &item.response.processor_response {
-                        match processor_response.code.as_deref() {
-                            Some("00") | Some("0000") => AttemptStatus::Charged, // Standard capture approval codes
-                            Some("pending") => AttemptStatus::Pending, // Capture processing
-                            Some(decline_code) if decline_code.starts_with('0') => {
-                                AttemptStatus::Charged
-                            }
-                            _ => AttemptStatus::Failure, // Capture failed at processor level
-                        }
-                    } else {
-                        AttemptStatus::Charged // Valid capture amount confirmed
-                    }
-                } else {
-                    AttemptStatus::Failure // No captured amount means capture failed
-                }
-            }
-            AirwallexPaymentStatus::Processing => {
-                // Capture is being processed - check for partial capture
-                if item.response.captured_amount.unwrap_or(0) > 0 {
-                    AttemptStatus::Charged // Partial capture succeeded
-                } else {
-                    AttemptStatus::Pending // Still processing
-                }
-            }
-            AirwallexPaymentStatus::RequiresCapture => {
-                // Payment is still in requires capture state - capture may have failed
-                AttemptStatus::Failure
-            }
-            AirwallexPaymentStatus::Failed => {
-                // Explicit failure
-                AttemptStatus::Failure
-            }
-            AirwallexPaymentStatus::Cancelled => {
-                // Payment was cancelled
-                AttemptStatus::Voided
-            }
-            _ => {
-                // Handle any other statuses as failure for capture flow
-                AttemptStatus::Failure
-            }
-        };
-
-        // Address PR #240 Issue #3: Action Array Handling
-        // Check latest_payment_attempt if available for detailed capture status
-        let refined_status = if let Some(latest_attempt) = &item.response.latest_payment_attempt {
-            if let Some(attempt_status) = &latest_attempt.status {
-                match attempt_status {
-                    AirwallexPaymentStatus::Succeeded => {
-                        // Verify processor-level status for capture confirmation
-                        if let Some(processor_response) = &latest_attempt.processor_response {
-                            match processor_response.code.as_deref() {
-                                Some("00") | Some("0000") => AttemptStatus::Charged,
-                                Some("pending") => AttemptStatus::Pending,
-                                Some(decline_code) if decline_code.starts_with('0') => {
-                                    AttemptStatus::Charged
-                                }
-                                _ => AttemptStatus::Failure,
-                            }
-                        } else {
-                            status // Use main status if no processor details
-                        }
-                    }
-                    AirwallexPaymentStatus::Failed => AttemptStatus::Failure,
-                    _ => status, // Use main status for other attempt statuses
-                }
-            } else {
-                status
-            }
-        } else {
-            status
-        };
+        // Use the same simple status mapping as hyperswitch
+        let status = get_payment_status(&item.response.status, &item.response.next_action);
 
         // Address PR #240 Issue #4: Network Specific Fields
         // Extract network transaction ID (prefer latest attempt, then main response)
@@ -960,105 +599,22 @@ impl
             })
             .or(item.response.authorization_code.clone());
 
-        // Build connector metadata with capture-specific and network fields
-        let connector_metadata = {
-            let mut metadata = HashMap::new();
-
-            // Capture-specific fields
-            if let Some(captured_amount) = &item.response.captured_amount {
-                metadata.insert(
-                    "captured_amount".to_string(),
-                    serde_json::Value::Number(serde_json::Number::from(*captured_amount)),
-                );
-            }
-
-            // Authorization code (prefer latest attempt)
-            let auth_code = item
-                .response
-                .latest_payment_attempt
-                .as_ref()
-                .and_then(|attempt| attempt.authorization_code.as_ref())
-                .or(item.response.authorization_code.as_ref());
-
-            if let Some(auth_code) = auth_code {
-                metadata.insert(
-                    "authorization_code".to_string(),
-                    serde_json::Value::String(auth_code.clone()),
-                );
-            }
-
-            if let Some(risk_score) = &item.response.risk_score {
-                metadata.insert(
-                    "risk_score".to_string(),
-                    serde_json::Value::String(risk_score.clone()),
-                );
-            }
-
-            // Processor response data (prefer latest attempt)
-            let processor_response = item
-                .response
-                .latest_payment_attempt
-                .as_ref()
-                .and_then(|attempt| attempt.processor_response.as_ref())
-                .or(item.response.processor_response.as_ref());
-
-            if let Some(processor) = processor_response {
-                if let Some(decline_code) = &processor.decline_code {
-                    metadata.insert(
-                        "decline_code".to_string(),
-                        serde_json::Value::String(decline_code.clone()),
-                    );
-                }
-                if let Some(network_code) = &processor.network_code {
-                    metadata.insert(
-                        "network_code".to_string(),
-                        serde_json::Value::String(network_code.clone()),
-                    );
-                }
-                if let Some(code) = &processor.code {
-                    metadata.insert(
-                        "processor_code".to_string(),
-                        serde_json::Value::String(code.clone()),
-                    );
-                }
-            }
-
-            if metadata.is_empty() {
-                None
-            } else {
-                Some(metadata)
-            }
-        };
-
-        // Network response fields for better error handling
-        let processor_response = item
-            .response
-            .latest_payment_attempt
-            .as_ref()
-            .and_then(|attempt| attempt.processor_response.as_ref())
-            .or(item.response.processor_response.as_ref());
-
-        let (_network_decline_code, _network_error_message) =
-            if let Some(processor) = processor_response {
-                (processor.decline_code.clone(), processor.message.clone())
-            } else {
-                (None, None)
-            };
+        // Following hyperswitch pattern - no connector_metadata
+        let connector_metadata = None;
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id),
                 redirection_data: None, // Capture doesn't involve redirections
                 mandate_reference: None,
-                connector_metadata: connector_metadata
-                    .map(|m| serde_json::Value::Object(m.into_iter().collect())),
+                connector_metadata,
                 network_txn_id,
                 connector_response_reference_id: item.response.payment_intent_id,
                 incremental_authorization_allowed: Some(false), // Airwallex doesn't support incremental auth
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
-                status: refined_status,
+                status,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -1078,12 +634,12 @@ pub struct AirwallexRefundRequest {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AirwallexRefundResponse {
-    pub id: String,                                 // Refund ID
-    pub request_id: Option<String>,                 // Echo back request ID
-    pub payment_intent_id: Option<String>,          // Original payment intent ID
-    pub payment_attempt_id: Option<String>,         // Original payment attempt ID
-    pub amount: Option<f64>,                        // Refund amount from API response
-    pub currency: Option<String>,                   // Currency code
+    pub id: String,                         // Refund ID
+    pub request_id: Option<String>,         // Echo back request ID
+    pub payment_intent_id: Option<String>,  // Original payment intent ID
+    pub payment_attempt_id: Option<String>, // Original payment attempt ID
+    pub amount: Option<FloatMajorUnit>,
+    pub currency: Option<Currency>,                 // Currency code
     pub reason: Option<String>,                     // Refund reason
     pub status: AirwallexRefundStatus,              // RECEIVED, ACCEPTED, SETTLED, FAILED
     pub created_at: Option<String>,                 // Creation timestamp
@@ -1145,14 +701,12 @@ impl<
                 ))
             })?;
 
-        // Generate unique request_id for idempotency
+        // Generate unique request_id for idempotency using connector_request_reference_id
         let request_id = format!(
             "refund_{}",
             item.router_data
                 .resource_common_data
-                .refund_id
-                .as_ref()
-                .unwrap_or(&"unknown".to_string())
+                .connector_request_reference_id
         );
 
         Ok(Self {
@@ -1181,10 +735,7 @@ impl
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Address PR #240 Issue #1: Enhanced Refund Status Logic
-        // DON'T assume all refund actions with status: "success" are successful
-        // Check multiple layers for comprehensive validation
-        let status = map_airwallex_refund_status(&item.response.status, &item.response);
+        let status = RefundStatus::from(item.response.status);
 
         Ok(Self {
             response: Ok(RefundsResponseData {
@@ -1193,7 +744,7 @@ impl
                 status_code: item.http_code,
             }),
             resource_common_data: RefundFlowData {
-                status, // Use the same refund status for the flow data
+                status,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -1223,27 +774,16 @@ impl
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Address PR #240 Critical Issues for RSync:
-        // 1. REFUND STATUS LOGIC - Apply EXACT same validation as Refund flow
-        // 2. ACTION ARRAY HANDLING - Parse and validate any action arrays in sync response
-        // 3. NETWORK SPECIFIC FIELDS - Extract all necessary network fields
-
-        // Use the SAME comprehensive status mapping function to ensure consistency
-        // This prevents the exact issues identified in PR #240
-        let status = map_airwallex_refund_status(&item.response.status, &item.response);
-
-        // Additional validation for RSync specific edge cases
-        // Ensure we're not returning success for stale data or inconsistent states
-        let validated_status = validate_rsync_status(status, &item.response);
+        let status = RefundStatus::from(item.response.status);
 
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.id,
-                refund_status: validated_status,
+                refund_status: status,
                 status_code: item.http_code,
             }),
             resource_common_data: RefundFlowData {
-                status: validated_status,
+                status,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -1251,100 +791,14 @@ impl
     }
 }
 
-// Address PR #240 Issue #3: Action Array Handling and status validation for RSync
-// This function provides additional validation layer for RSync to prevent stale or inconsistent status
-fn validate_rsync_status(
-    status: RefundStatus,
-    response: &AirwallexRefundSyncResponse,
-) -> RefundStatus {
-    match status {
-        RefundStatus::Success => {
-            // Additional validation for success state in RSync
-            // Verify all expected fields are present for a truly successful refund
-            if response.acquirer_reference_number.is_some()
-                && response.amount.unwrap_or(0.0) > 0.0
-                && response.failure_details.is_none()
-            {
-                RefundStatus::Success
-            } else {
-                // If any validation fails, mark as failure
-                RefundStatus::Failure
-            }
-        }
-        RefundStatus::Pending => {
-            // For pending status, ensure minimum required fields are present
-            if response.amount.unwrap_or(0.0) > 0.0 && response.failure_details.is_none() {
-                RefundStatus::Pending
-            } else {
-                RefundStatus::Failure
-            }
-        }
-        RefundStatus::Failure => {
-            // Keep failure status
-            RefundStatus::Failure
-        }
-        RefundStatus::ManualReview => {
-            // Manual review status should be preserved
-            RefundStatus::ManualReview
-        }
-        RefundStatus::TransactionFailure => {
-            // Transaction failure should be preserved
-            RefundStatus::TransactionFailure
-        }
-    }
-}
-
-// Address PR #240 Issue #1: Comprehensive refund status validation
-// This function implements robust status checking to avoid the issues identified in PR #240
-fn map_airwallex_refund_status(
-    status: &AirwallexRefundStatus,
-    response: &AirwallexRefundResponse,
-) -> RefundStatus {
-    match status {
-        AirwallexRefundStatus::Received => {
-            // Check if refund is actually processed or just received
-            // Validate amount exists and is greater than 0
-            if response.amount.unwrap_or(0.0) > 0.0 {
-                // Also check that no failure details are present
-                if response.failure_details.is_none() {
-                    RefundStatus::Pending
-                } else {
-                    RefundStatus::Failure
-                }
-            } else {
-                RefundStatus::Failure
-            }
-        }
-        AirwallexRefundStatus::Accepted => {
-            // Validate that acquirer_reference_number exists and failure_details is None
-            // This addresses the issue of not checking detailed response fields
-            if response.acquirer_reference_number.is_some() && response.failure_details.is_none() {
-                // Check amount is valid
-                if response.amount.unwrap_or(0.0) > 0.0 {
-                    RefundStatus::Pending // Will be settled later
-                } else {
-                    RefundStatus::Failure
-                }
-            } else {
-                RefundStatus::Failure
-            }
-        }
-        AirwallexRefundStatus::Settled => {
-            // Final success state - but still validate thoroughly
-            // Check no failure details and valid amount
-            if response.failure_details.is_none() {
-                if response.amount.unwrap_or(0.0) > 0.0 {
-                    RefundStatus::Success
-                } else {
-                    RefundStatus::Failure
-                }
-            } else {
-                RefundStatus::Failure
-            }
-        }
-        AirwallexRefundStatus::Failed => {
-            // Explicit failure
-            RefundStatus::Failure
+// Simple status mapping following Hyperswitch pattern
+// Trust the Airwallex API to return correct status
+impl From<AirwallexRefundStatus> for RefundStatus {
+    fn from(status: AirwallexRefundStatus) -> Self {
+        match status {
+            AirwallexRefundStatus::Settled => Self::Success,
+            AirwallexRefundStatus::Failed => Self::Failure,
+            AirwallexRefundStatus::Received | AirwallexRefundStatus::Accepted => Self::Pending,
         }
     }
 }
@@ -1357,31 +811,8 @@ pub struct AirwallexVoidRequest {
     pub request_id: String,                  // Unique identifier for idempotency
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct AirwallexVoidResponse {
-    pub id: String,                          // Payment intent ID
-    pub status: AirwallexPaymentStatus,      // Should be CANCELLED
-    pub amount: Option<i64>, // Original payment amount from API response (minor units)
-    pub currency: Option<String>, // Currency code
-    pub created_at: Option<String>, // Original creation timestamp
-    pub updated_at: Option<String>, // Cancellation timestamp
-    pub cancelled_at: Option<String>, // Specific cancellation timestamp
-    pub cancellation_reason: Option<String>, // Echo back cancellation reason
-    // Payment method information
-    pub payment_method: Option<AirwallexPaymentMethodInfo>,
-    // Payment intent details
-    pub payment_intent_id: Option<String>,
-    // Authorization code from processor
-    pub authorization_code: Option<String>,
-    // Network transaction ID
-    pub network_transaction_id: Option<String>,
-    // Processor response
-    pub processor_response: Option<AirwallexProcessorResponse>,
-    // Risk information
-    pub risk_score: Option<String>,
-    // Latest payment attempt information
-    pub latest_payment_attempt: Option<AirwallexPaymentAttempt>,
-}
+// Type alias - reuse the same response structure for Void
+pub type AirwallexVoidResponse = AirwallexPaymentsResponse;
 
 // Request transformer for Void flow
 impl<
@@ -1415,8 +846,13 @@ impl<
             .clone()
             .or_else(|| Some("Voided by merchant".to_string()));
 
-        // Generate unique request_id for idempotency
-        let request_id = format!("void_{}", item.router_data.resource_common_data.payment_id);
+        // Generate unique request_id for idempotency using connector_request_reference_id
+        let request_id = format!(
+            "void_{}",
+            item.router_data
+                .resource_common_data
+                .connector_request_reference_id
+        );
 
         Ok(Self {
             cancellation_reason,
@@ -1442,13 +878,7 @@ impl
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Address PR #240 Critical Issues for Void Operations:
-        // 1. Enhanced Void Status Logic - Don't assume success based on simple status
-        // 2. Authorization + Clearing Status validation
-        // 3. Network Fields extraction
-        // 4. Comprehensive validation for void completion
-
-        let status = map_airwallex_void_status(&item.response.status, &item.response);
+        let status = get_payment_status(&item.response.status, &item.response.next_action);
 
         // Address PR #240 Issue #4: Network Specific Fields
         // Extract network transaction ID (prefer latest attempt, then main response)
@@ -1466,90 +896,15 @@ impl
             })
             .or(item.response.authorization_code.clone());
 
-        // Build connector metadata with void-specific and network fields
-        let connector_metadata = {
-            let mut metadata = std::collections::HashMap::new();
-
-            // Void-specific fields
-            if let Some(cancelled_at) = &item.response.cancelled_at {
-                metadata.insert(
-                    "cancelled_at".to_string(),
-                    serde_json::Value::String(cancelled_at.clone()),
-                );
-            }
-
-            if let Some(cancellation_reason) = &item.response.cancellation_reason {
-                metadata.insert(
-                    "cancellation_reason".to_string(),
-                    serde_json::Value::String(cancellation_reason.clone()),
-                );
-            }
-
-            // Authorization code (prefer latest attempt)
-            let auth_code = item
-                .response
-                .latest_payment_attempt
-                .as_ref()
-                .and_then(|attempt| attempt.authorization_code.as_ref())
-                .or(item.response.authorization_code.as_ref());
-
-            if let Some(auth_code) = auth_code {
-                metadata.insert(
-                    "authorization_code".to_string(),
-                    serde_json::Value::String(auth_code.clone()),
-                );
-            }
-
-            if let Some(risk_score) = &item.response.risk_score {
-                metadata.insert(
-                    "risk_score".to_string(),
-                    serde_json::Value::String(risk_score.clone()),
-                );
-            }
-
-            // Processor response data (prefer latest attempt)
-            let processor_response = item
-                .response
-                .latest_payment_attempt
-                .as_ref()
-                .and_then(|attempt| attempt.processor_response.as_ref())
-                .or(item.response.processor_response.as_ref());
-
-            if let Some(processor) = processor_response {
-                if let Some(decline_code) = &processor.decline_code {
-                    metadata.insert(
-                        "decline_code".to_string(),
-                        serde_json::Value::String(decline_code.clone()),
-                    );
-                }
-                if let Some(network_code) = &processor.network_code {
-                    metadata.insert(
-                        "network_code".to_string(),
-                        serde_json::Value::String(network_code.clone()),
-                    );
-                }
-                if let Some(code) = &processor.code {
-                    metadata.insert(
-                        "processor_code".to_string(),
-                        serde_json::Value::String(code.clone()),
-                    );
-                }
-            }
-
-            if metadata.is_empty() {
-                None
-            } else {
-                Some(metadata)
-            }
-        };
+        // Following hyperswitch pattern - no connector_metadata for void
+        let connector_metadata = None;
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id),
                 redirection_data: None, // Void doesn't involve redirections
                 mandate_reference: None,
-                connector_metadata: connector_metadata
-                    .map(|m| serde_json::Value::Object(m.into_iter().collect())),
+                connector_metadata,
                 network_txn_id,
                 connector_response_reference_id: item.response.payment_intent_id,
                 incremental_authorization_allowed: Some(false), // Airwallex doesn't support incremental auth
@@ -1564,80 +919,8 @@ impl
     }
 }
 
-// Address PR #240 Issue #1: Comprehensive void status validation
-// This function implements robust void status checking to avoid the critical issues identified in PR #240
-fn map_airwallex_void_status(
-    status: &AirwallexPaymentStatus,
-    response: &AirwallexVoidResponse,
-) -> AttemptStatus {
-    match status {
-        AirwallexPaymentStatus::Cancelled => {
-            // Enhanced validation for void success - don't assume success based on status alone
-            // Validate cancelled_at timestamp exists for confirmation
-            if response.cancelled_at.is_some() {
-                // Additional validation: Check no error fields and valid cancellation reason processing
-                if let Some(processor_response) = &response.processor_response {
-                    // Check processor-level status for void confirmation
-                    match processor_response.code.as_deref() {
-                        Some("00") | Some("0000") => AttemptStatus::Voided, // Standard void approval codes
-                        Some("cancelled") | Some("voided") => AttemptStatus::Voided, // Direct void confirmation
-                        Some(decline_code) if decline_code.starts_with('0') => {
-                            AttemptStatus::Voided
-                        }
-                        None => AttemptStatus::Voided, // No processor code but valid cancelled_at means successful void
-                        _ => AttemptStatus::VoidFailed, // Void failed at processor level
-                    }
-                } else {
-                    // No processor response but has cancelled_at timestamp - likely successful void
-                    AttemptStatus::Voided
-                }
-            } else {
-                // No cancelled_at timestamp means void not completed successfully
-                AttemptStatus::VoidFailed
-            }
-        }
-        AirwallexPaymentStatus::RequiresPaymentMethod
-        | AirwallexPaymentStatus::RequiresCustomerAction
-        | AirwallexPaymentStatus::RequiresCapture => {
-            // These statuses indicate payment is still in a voidable state but void action may be in progress
-            // Check if void is actually being processed
-            if response.cancellation_reason.is_some() {
-                AttemptStatus::VoidInitiated // Void request received and being processed
-            } else {
-                AttemptStatus::VoidFailed // No void action detected
-            }
-        }
-        AirwallexPaymentStatus::CaptureRequested => {
-            // Payment capture has been requested but not yet settled - still voidable
-            // Check if void is actually being processed
-            if response.cancellation_reason.is_some() {
-                AttemptStatus::VoidInitiated // Void request received and being processed
-            } else {
-                AttemptStatus::VoidFailed // No void action detected
-            }
-        }
-        AirwallexPaymentStatus::Processing => {
-            // Payment in processing - check if void is being applied
-            if response.cancellation_reason.is_some() {
-                AttemptStatus::VoidInitiated
-            } else {
-                AttemptStatus::VoidFailed
-            }
-        }
-        AirwallexPaymentStatus::Succeeded => {
-            // Payment already succeeded - void not possible
-            AttemptStatus::VoidFailed
-        }
-        AirwallexPaymentStatus::Settled => {
-            // Payment already settled - void not possible
-            AttemptStatus::VoidFailed
-        }
-        AirwallexPaymentStatus::Failed => {
-            // Payment already failed - no need to void
-            AttemptStatus::VoidFailed
-        }
-    }
-}
+// Removed over-engineered validation - use simple get_payment_status instead
+// The Airwallex API is trusted to return correct status (following Hyperswitch pattern)
 
 // Implementation for confirm request type (2-step flow)
 impl<
@@ -1678,19 +961,19 @@ impl<
         let payment_method = match item.router_data.request.payment_method_data.clone() {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
                 AirwallexPaymentMethod {
-                    method_type: "card".to_string(),
-                    card: Some(AirwallexCardData {
+                    card: AirwallexCardData {
                         number: Secret::new(card_data.card_number.peek().to_string()),
                         expiry_month: card_data.card_exp_month.clone(),
                         expiry_year: card_data.get_expiry_year_4_digit(),
                         cvc: card_data.card_cvc.clone(),
                         name: card_data.card_holder_name.map(|name| name.expose()),
-                    }),
+                    },
+                    payment_method_type: AirwallexPaymentType::Card,
                 }
             }
             _ => {
                 return Err(errors::ConnectorError::NotSupported {
-                    message: "Only card payments are supported by Airwallex connector".to_string(),
+                    message: "Payment Method".to_string(),
                     connector: "Airwallex",
                 }
                 .into())
@@ -1794,8 +1077,8 @@ pub struct AirwallexIntentRequest {
 pub struct AirwallexIntentResponse {
     pub id: String,
     pub request_id: Option<String>,
-    pub amount: Option<i64>, // Amount from API response (minor units)
-    pub currency: Option<String>,
+    pub amount: Option<FloatMajorUnit>,
+    pub currency: Option<Currency>,
     pub merchant_order_id: Option<String>,
     pub status: AirwallexPaymentStatus,
     pub created_at: Option<String>,
@@ -1842,8 +1125,8 @@ impl<
     ) -> Result<Self, Self::Error> {
         // Create referrer data for Airwallex identification
         let referrer_data = AirwallexReferrerData {
-            r_type: connector_config::PARTNER_TYPE.to_string(),
-            version: connector_config::API_VERSION.to_string(),
+            r_type: "hyperswitch".to_string(),
+            version: "1.0.0".to_string(),
         };
 
         // Convert amount using the same converter as other flows
@@ -1864,12 +1147,16 @@ impl<
         // For now, no order data - can be enhanced later when order details are needed
         let order = None;
 
-        Ok(Self {
-            request_id: item
-                .router_data
+        // Generate unique request_id for CreateOrder step
+        let request_id = format!(
+            "create_{}",
+            item.router_data
                 .resource_common_data
                 .connector_request_reference_id
-                .clone(),
+        );
+
+        Ok(Self {
+            request_id,
             amount,
             currency: item.router_data.request.currency,
             merchant_order_id: item
@@ -1932,6 +1219,8 @@ impl
             AirwallexPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
             AirwallexPaymentStatus::Cancelled => common_enums::AttemptStatus::Voided,
             AirwallexPaymentStatus::RequiresCapture => common_enums::AttemptStatus::Authorized,
+            AirwallexPaymentStatus::Authorized => common_enums::AttemptStatus::Authorized,
+            AirwallexPaymentStatus::Paid => common_enums::AttemptStatus::Charged,
             AirwallexPaymentStatus::CaptureRequested => common_enums::AttemptStatus::Charged,
         };
 
@@ -2027,10 +1316,12 @@ impl
     ) -> Result<Self, Self::Error> {
         let mut router_data = item.router_data;
 
+        let expires = (item.response.expires_at - common_utils::date_time::now()).whole_seconds();
+
         router_data.response = Ok(domain_types::connector_types::AccessTokenResponseData {
             access_token: item.response.token.expose(),
             token_type: Some("Bearer".to_string()),
-            expires_in: None, // Airwallex doesn't provide explicit expiry in seconds, only timestamp
+            expires_in: Some(expires),
         });
 
         Ok(router_data)
