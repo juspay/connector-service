@@ -1,10 +1,7 @@
-use base64::Engine;
-use jsonwebtoken as jwt;
 use serde_json::Value;
 
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    ext_traits::OptionExt,
     pii,
     types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
 };
@@ -12,10 +9,7 @@ pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::genera
 
 pub const FLUID_DATA_DESCRIPTOR_FOR_SAMSUNG_PAY: &str = "FID=COMMON.SAMSUNG.INAPP.PAYMENT";
 
-use crate::{
-    connectors::bankofamerica::BankofamericaRouterData, types::ResponseRouterData,
-    unimplemented_payment_method, utils,
-};
+use crate::{connectors::bankofamerica::BankofamericaRouterData, types::ResponseRouterData, utils};
 use cards;
 use common_enums;
 use domain_types::{
@@ -28,15 +22,14 @@ use domain_types::{
     errors::{self, ConnectorError},
     payment_address::Address,
     payment_method_data::{
-        self, ApplePayWalletData, GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes,
-        RawCardNumber, SamsungPayWalletData, WalletData,
+        self, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
-    router_data::{ApplePayPredecryptData, ConnectorAuthType, ErrorResponse, PaymentMethodToken},
+    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     utils::{is_payment_failure, CardIssuer},
 };
-use error_stack::{report, ResultExt};
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use error_stack::ResultExt;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize)]
@@ -131,11 +124,6 @@ pub enum PaymentInformation<
         + Serialize,
 > {
     Cards(Box<CardPaymentInformation<T>>),
-    GooglePay(Box<GooglePayPaymentInformation>),
-    ApplePay(Box<ApplePayPaymentInformation>),
-    ApplePayToken(Box<ApplePayTokenPaymentInformation>),
-    MandatePayment(Box<MandatePaymentInformation>),
-    SamsungPay(Box<SamsungPayPaymentInformation>),
 }
 
 #[derive(Debug, Serialize)]
@@ -171,22 +159,10 @@ pub struct Card<
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct GooglePayPaymentInformation {
-    fluid_data: FluidData,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct FluidData {
     value: Secret<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     descriptor: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ApplePayPaymentInformation {
-    tokenized_card: TokenizedCard,
 }
 
 #[derive(Debug, Serialize)]
@@ -209,19 +185,6 @@ pub enum TransactionType {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ApplePayTokenPaymentInformation {
-    fluid_data: FluidData,
-    tokenized_card: ApplePayTokenizedCard,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ApplePayTokenizedCard {
-    transaction_type: TransactionType,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct MandatePaymentInformation {
     payment_instrument: BankOfAmericaPaymentInstrument,
 }
@@ -229,19 +192,6 @@ pub struct MandatePaymentInformation {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BankOfAmericaPaymentInstrument {
     id: Secret<String>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SamsungPayPaymentInformation {
-    fluid_data: FluidData,
-    tokenized_card: SamsungPayTokenizedCard,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SamsungPayTokenizedCard {
-    transaction_type: TransactionType,
 }
 
 #[derive(Debug, Serialize)]
@@ -264,7 +214,7 @@ pub struct BillTo {
     first_name: Option<Secret<String>>,
     last_name: Option<Secret<String>>,
     address1: Option<Secret<String>>,
-    locality: Option<String>,
+    locality: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     administrative_area: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -282,12 +232,12 @@ pub struct ClientReferenceInformation {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BankOfAmericaConsumerAuthInformation {
-    ucaf_collection_indicator: Option<String>,
-    cavv: Option<String>,
+    ucaf_collection_indicator: Option<Secret<String>>,
+    cavv: Option<Secret<String>>,
     ucaf_authentication_data: Option<Secret<String>>,
-    xid: Option<String>,
+    xid: Option<Secret<String>>,
     directory_server_transaction_id: Option<Secret<String>>,
-    specification_version: Option<String>,
+    specification_version: Option<Secret<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -337,29 +287,30 @@ fn build_bill_to(
         country: None,
         email: email.clone(),
     };
+
     Ok(address_details
         .and_then(|addr| {
-            addr.address.as_ref().map(|addr| BillTo {
-                first_name: addr.first_name.remove_new_line(),
-                last_name: addr.last_name.remove_new_line(),
-                address1: addr.line1.remove_new_line(),
-                locality: addr.city.clone().map(|c| c.expose()),
-                administrative_area: addr.to_state_code_as_optional().ok().flatten().or_else(
-                    || {
-                        addr.state
-                            .remove_new_line()
-                            .as_ref()
-                            .map(|state| truncate_string(state, 20))
-                    },
-                ),
-                postal_code: addr.zip.remove_new_line(),
-                country: addr.country,
-                email,
+            addr.address.as_ref().map(|addr| {
+                let administrative_area = addr.to_state_code_as_optional().unwrap_or_else(|_| {
+                    addr.state
+                        .clone()
+                        .map(|state| Secret::new(format!("{:.20}", state.expose())))
+                });
+
+                BillTo {
+                    first_name: addr.first_name.clone(),
+                    last_name: addr.last_name.clone(),
+                    address1: addr.line1.clone(),
+                    locality: addr.city.clone().map(|city| Secret::new(city.expose())),
+                    administrative_area,
+                    postal_code: addr.zip.clone(),
+                    country: addr.country,
+                    email,
+                }
             })
         })
         .unwrap_or(default_address))
 }
-
 fn convert_metadata_to_merchant_defined_info(metadata: Value) -> Vec<MerchantDefinedInformation> {
     let hashmap: std::collections::BTreeMap<String, Value> =
         serde_json::from_str(&metadata.to_string()).unwrap_or(std::collections::BTreeMap::new());
@@ -373,12 +324,6 @@ fn convert_metadata_to_merchant_defined_info(metadata: Value) -> Vec<MerchantDef
         iter += 1;
     }
     vector
-}
-
-fn truncate_string(state: &Secret<String>, max_len: usize) -> Secret<String> {
-    let exposed = state.clone().expose();
-    let truncated = exposed.get(..max_len).unwrap_or(&exposed);
-    Secret::new(truncated.to_string())
 }
 
 pub fn get_error_reason(
@@ -652,9 +597,9 @@ impl<
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Card(ccard) => Self::try_from((item, ccard)),
             PaymentMethodData::Wallet(wallet_data) => match wallet_data {
-                WalletData::ApplePay(apple_pay_data) => Self::try_from((&item, apple_pay_data)),
-                WalletData::GooglePay(google_pay_data) => Self::try_from((&item, google_pay_data)),
-                WalletData::AliPayQr(_)
+                WalletData::ApplePay(_)
+                | WalletData::GooglePay(_)
+                | WalletData::AliPayQr(_)
                 | WalletData::AliPayRedirect(_)
                 | WalletData::AliPayHkRedirect(_)
                 | WalletData::AmazonPayRedirect(_)
@@ -1717,183 +1662,6 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<(
-        &BankofamericaRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-        Box<ApplePayPredecryptData>,
-        ApplePayWalletData,
-    )> for BankofamericaPaymentsRequest<T>
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        item: (
-            &BankofamericaRouterData<
-                RouterDataV2<
-                    Authorize,
-                    PaymentFlowData,
-                    PaymentsAuthorizeData<T>,
-                    PaymentsResponseData,
-                >,
-                T,
-            >,
-            Box<ApplePayPredecryptData>,
-            ApplePayWalletData,
-        ),
-    ) -> Result<Self, Self::Error> {
-        let (item, apple_pay_data, apple_pay_wallet_data) = item;
-        let email = item
-            .router_data
-            .request
-            .get_email()
-            .or(item.router_data.resource_common_data.get_billing_email())?;
-        let bill_to = build_bill_to(
-            item.router_data.resource_common_data.get_optional_billing(),
-            email,
-        )?;
-        let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
-        let processing_information = ProcessingInformation::try_from((
-            item,
-            Some(PaymentSolution::ApplePay),
-            Some(apple_pay_wallet_data.payment_method.network.clone()),
-        ))?;
-        let client_reference_information = ClientReferenceInformation::from(item);
-        let payment_information = PaymentInformation::try_from(&apple_pay_data)?;
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .metadata
-            .clone()
-            .map(convert_metadata_to_merchant_defined_info);
-        let ucaf_collection_indicator = match apple_pay_wallet_data
-            .payment_method
-            .network
-            .to_lowercase()
-            .as_str()
-        {
-            "mastercard" => Some("2".to_string()),
-            _ => None,
-        };
-        Ok(Self {
-            processing_information,
-            payment_information,
-            order_information,
-            client_reference_information,
-            merchant_defined_information,
-            consumer_authentication_information: Some(BankOfAmericaConsumerAuthInformation {
-                ucaf_collection_indicator,
-                cavv: None,
-                ucaf_authentication_data: None,
-                xid: None,
-                directory_server_transaction_id: None,
-                specification_version: None,
-            }),
-        })
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<(
-        &BankofamericaRouterData<
-            RouterDataV2<
-                domain_types::connector_flow::Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-        ApplePayWalletData,
-    )> for BankofamericaPaymentsRequest<T>
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        (item, apple_pay_wallet_data): (
-            &BankofamericaRouterData<
-                RouterDataV2<
-                    Authorize,
-                    PaymentFlowData,
-                    PaymentsAuthorizeData<T>,
-                    PaymentsResponseData,
-                >,
-                T,
-            >,
-            ApplePayWalletData,
-        ),
-    ) -> Result<Self, Self::Error> {
-        let email = item
-            .router_data
-            .request
-            .get_email()
-            .or(item.router_data.resource_common_data.get_billing_email())?;
-        let bill_to = build_bill_to(
-            item.router_data.resource_common_data.get_optional_billing(),
-            email,
-        )?;
-        let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
-        let processing_information = ProcessingInformation::try_from((
-            item,
-            Some(PaymentSolution::ApplePay),
-            Some(apple_pay_wallet_data.payment_method.network.clone()),
-        ))?;
-        let client_reference_information = ClientReferenceInformation::from(item);
-        let payment_information = PaymentInformation::try_from(&apple_pay_wallet_data)?;
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .metadata
-            .clone()
-            .map(convert_metadata_to_merchant_defined_info);
-        let ucaf_collection_indicator = match apple_pay_wallet_data
-            .payment_method
-            .network
-            .to_lowercase()
-            .as_str()
-        {
-            "mastercard" => Some("2".to_string()),
-            _ => None,
-        };
-        Ok(Self {
-            processing_information,
-            payment_information,
-            order_information,
-            client_reference_information,
-            merchant_defined_information,
-            consumer_authentication_information: Some(BankOfAmericaConsumerAuthInformation {
-                ucaf_collection_indicator,
-                cavv: None,
-                ucaf_authentication_data: None,
-                xid: None,
-                directory_server_transaction_id: None,
-                specification_version: None,
-            }),
-        })
-    }
-}
-
 fn map_boa_attempt_status(
     (status, auto_capture): (BankofamericaPaymentStatus, bool),
 ) -> common_enums::AttemptStatus {
@@ -2091,9 +1859,9 @@ impl<
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Card(card_data) => Self::try_from((&item, card_data)),
             PaymentMethodData::Wallet(wallet_data) => match wallet_data {
-                WalletData::ApplePay(apple_pay_data) => Self::try_from((&item, apple_pay_data)),
-                WalletData::GooglePay(google_pay_data) => Self::try_from((&item, google_pay_data)),
-                WalletData::AliPayQr(_)
+                WalletData::ApplePay(_)
+                | WalletData::GooglePay(_)
+                | WalletData::AliPayQr(_)
                 | WalletData::AliPayRedirect(_)
                 | WalletData::AliPayHkRedirect(_)
                 | WalletData::AmazonPayRedirect(_)
@@ -2437,280 +2205,6 @@ impl<
             + 'static
             + Serialize,
     >
-    TryFrom<(
-        &BankofamericaRouterData<
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-        ApplePayWalletData,
-    )> for BankofamericaPaymentsRequest<T>
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        (item, apple_pay_data): (
-            &BankofamericaRouterData<
-                RouterDataV2<
-                    SetupMandate,
-                    PaymentFlowData,
-                    SetupMandateRequestData<T>,
-                    PaymentsResponseData,
-                >,
-                T,
-            >,
-            ApplePayWalletData,
-        ),
-    ) -> Result<Self, Self::Error> {
-        let order_information = OrderInformationWithBill::try_from(item)?;
-        let client_reference_information = ClientReferenceInformation::from(item);
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .metadata
-            .clone()
-            .map(convert_metadata_to_merchant_defined_info);
-        let payment_information = match item
-            .router_data
-            .resource_common_data
-            .payment_method_token
-            .clone()
-        {
-            Some(payment_method_token) => match payment_method_token {
-                PaymentMethodToken::ApplePayDecrypt(decrypt_data) => {
-                    PaymentInformation::try_from(&decrypt_data)?
-                }
-                PaymentMethodToken::Token(_) => Err(unimplemented_payment_method!(
-                    "Apple Pay",
-                    "Manual",
-                    "Bank Of America"
-                ))?,
-                PaymentMethodToken::PazeDecrypt(_) => {
-                    Err(unimplemented_payment_method!("Paze", "Bank Of America"))?
-                }
-                PaymentMethodToken::GooglePayDecrypt(_) => Err(unimplemented_payment_method!(
-                    "Google Pay",
-                    "Bank Of America"
-                ))?,
-            },
-            None => PaymentInformation::try_from(&apple_pay_data)?,
-        };
-        let processing_information: ProcessingInformation = ProcessingInformation::try_from((
-            item,
-            Some(PaymentSolution::ApplePay),
-            Some(apple_pay_data.payment_method.network.clone()),
-        ))?;
-        let ucaf_collection_indicator = match apple_pay_data
-            .payment_method
-            .network
-            .to_lowercase()
-            .as_str()
-        {
-            "mastercard" => Some("2".to_string()),
-            _ => None,
-        };
-        let consumer_authentication_information = Some(BankOfAmericaConsumerAuthInformation {
-            ucaf_collection_indicator,
-            cavv: None,
-            ucaf_authentication_data: None,
-            xid: None,
-            directory_server_transaction_id: None,
-            specification_version: None,
-        });
-
-        Ok(Self {
-            processing_information,
-            payment_information,
-            order_information,
-            client_reference_information,
-            merchant_defined_information,
-            consumer_authentication_information,
-        })
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<&ApplePayWalletData> for PaymentInformation<T>
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(apple_pay_data: &ApplePayWalletData) -> Result<Self, Self::Error> {
-        let apple_pay_encrypted_data = apple_pay_data
-            .payment_data
-            .get_encrypted_apple_pay_payment_data_mandatory()
-            .change_context(errors::ConnectorError::MissingRequiredField {
-                field_name: "Apple pay encrypted data",
-            })?;
-
-        Ok(Self::ApplePayToken(Box::new(
-            ApplePayTokenPaymentInformation {
-                fluid_data: FluidData {
-                    value: Secret::from(apple_pay_encrypted_data.clone()),
-                    descriptor: None,
-                },
-                tokenized_card: ApplePayTokenizedCard {
-                    transaction_type: TransactionType::ApplePay,
-                },
-            },
-        )))
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<&Box<ApplePayPredecryptData>> for PaymentInformation<T>
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(apple_pay_data: &Box<ApplePayPredecryptData>) -> Result<Self, Self::Error> {
-        let expiration_month = apple_pay_data.get_expiry_month().change_context(
-            errors::ConnectorError::InvalidDataFormat {
-                field_name: "expiration_month",
-            },
-        )?;
-
-        let expiration_year = apple_pay_data.get_four_digit_expiry_year();
-
-        Ok(Self::ApplePay(Box::new(ApplePayPaymentInformation {
-            tokenized_card: TokenizedCard {
-                number: apple_pay_data
-                    .application_primary_account_number
-                    .clone()
-                    .peek()
-                    .parse::<cards::CardNumber>()
-                    .map_err(|err| {
-                        tracing::error!(
-                            "Failed to parse Apple Pay account number as CardNumber: {:?}",
-                            err
-                        );
-                        report!(ConnectorError::RequestEncodingFailed)
-                    })?,
-                cryptogram: apple_pay_data
-                    .payment_data
-                    .online_payment_cryptogram
-                    .clone(),
-                transaction_type: TransactionType::ApplePay,
-                expiration_year,
-                expiration_month,
-            },
-        })))
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<(
-        &BankofamericaRouterData<
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-        GooglePayWalletData,
-    )> for BankofamericaPaymentsRequest<T>
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        (item, google_pay_data): (
-            &BankofamericaRouterData<
-                RouterDataV2<
-                    SetupMandate,
-                    PaymentFlowData,
-                    SetupMandateRequestData<T>,
-                    PaymentsResponseData,
-                >,
-                T,
-            >,
-            GooglePayWalletData,
-        ),
-    ) -> Result<Self, Self::Error> {
-        let order_information = OrderInformationWithBill::try_from(item)?;
-        let client_reference_information = ClientReferenceInformation::from(item);
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .metadata
-            .clone()
-            .map(convert_metadata_to_merchant_defined_info);
-        let payment_information = PaymentInformation::try_from(&google_pay_data)?;
-        let processing_information =
-            ProcessingInformation::try_from((item, Some(PaymentSolution::GooglePay), None))?;
-
-        Ok(Self {
-            processing_information,
-            payment_information,
-            order_information,
-            client_reference_information,
-            merchant_defined_information,
-            consumer_authentication_information: None,
-        })
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<&GooglePayWalletData> for PaymentInformation<T>
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(google_pay_data: &GooglePayWalletData) -> Result<Self, Self::Error> {
-        Ok(Self::GooglePay(Box::new(GooglePayPaymentInformation {
-            fluid_data: FluidData {
-                value: Secret::from(
-                    BASE64_ENGINE.encode(
-                        google_pay_data
-                            .tokenization_data
-                            .get_encrypted_google_pay_token()
-                            .change_context(errors::ConnectorError::MissingRequiredField {
-                                field_name: "gpay wallet_token",
-                            })?
-                            .clone(),
-                    ),
-                ),
-                descriptor: None,
-            },
-        })))
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
     TryFrom<
         BankofamericaRouterData<
             RouterDataV2<
@@ -2751,262 +2245,6 @@ impl<
                 currency: item.router_data.request.currency,
             },
             bill_to: Some(bill_to),
-        })
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<(
-        &BankofamericaRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-        String,
-    )> for BankofamericaPaymentsRequest<T>
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        (item, connector_mandate_id): (
-            &BankofamericaRouterData<
-                RouterDataV2<
-                    Authorize,
-                    PaymentFlowData,
-                    PaymentsAuthorizeData<T>,
-                    PaymentsResponseData,
-                >,
-                T,
-            >,
-            String,
-        ),
-    ) -> Result<Self, Self::Error> {
-        let processing_information = ProcessingInformation::try_from((item, None, None))?;
-        let payment_instrument = BankOfAmericaPaymentInstrument {
-            id: connector_mandate_id.into(),
-        };
-        let bill_to = item.router_data.request.get_email().ok().and_then(|email| {
-            build_bill_to(
-                item.router_data.resource_common_data.get_optional_billing(),
-                email,
-            )
-            .ok()
-        });
-        let order_information = OrderInformationWithBill::try_from((item, bill_to))?;
-        let payment_information =
-            PaymentInformation::MandatePayment(Box::new(MandatePaymentInformation {
-                payment_instrument,
-            }));
-        let client_reference_information = ClientReferenceInformation::from(item);
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .metadata
-            .clone()
-            .map(convert_metadata_to_merchant_defined_info);
-        Ok(Self {
-            processing_information,
-            payment_information,
-            order_information,
-            client_reference_information,
-            merchant_defined_information,
-            consumer_authentication_information: None,
-        })
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<(
-        &BankofamericaRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-        GooglePayWalletData,
-    )> for BankofamericaPaymentsRequest<T>
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        (item, google_pay_data): (
-            &BankofamericaRouterData<
-                RouterDataV2<
-                    Authorize,
-                    PaymentFlowData,
-                    PaymentsAuthorizeData<T>,
-                    PaymentsResponseData,
-                >,
-                T,
-            >,
-            GooglePayWalletData,
-        ),
-    ) -> Result<Self, Self::Error> {
-        let email = item.router_data.request.get_email()?;
-        let bill_to = build_bill_to(
-            item.router_data.resource_common_data.get_optional_billing(),
-            email,
-        )?;
-        let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
-        let payment_information = PaymentInformation::try_from(&google_pay_data)?;
-        let processing_information =
-            ProcessingInformation::try_from((item, Some(PaymentSolution::GooglePay), None))?;
-        let client_reference_information = ClientReferenceInformation::from(item);
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .metadata
-            .clone()
-            .map(convert_metadata_to_merchant_defined_info);
-
-        Ok(Self {
-            processing_information,
-            payment_information,
-            order_information,
-            client_reference_information,
-            merchant_defined_information,
-            consumer_authentication_information: None,
-        })
-    }
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SamsungPayFluidDataValue {
-    public_key_hash: Secret<String>,
-    version: String,
-    data: Secret<String>,
-}
-
-fn get_samsung_pay_fluid_data_value(
-    samsung_pay_token_data: &payment_method_data::SamsungPayTokenData,
-) -> Result<SamsungPayFluidDataValue, error_stack::Report<errors::ConnectorError>> {
-    let samsung_pay_header = jwt::decode_header(samsung_pay_token_data.data.clone().peek())
-        .change_context(errors::ConnectorError::RequestEncodingFailed)
-        .attach_printable("Failed to decode samsung pay header")?;
-
-    let samsung_pay_kid_optional = samsung_pay_header.kid;
-
-    let samsung_pay_fluid_data_value = SamsungPayFluidDataValue {
-        public_key_hash: Secret::new(
-            samsung_pay_kid_optional
-                .get_required_value("samsung pay public_key_hash")
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?
-                .to_string(),
-        ),
-        version: samsung_pay_token_data.version.clone(),
-        data: Secret::new(BASE64_ENGINE.encode(samsung_pay_token_data.data.peek())),
-    };
-    Ok(samsung_pay_fluid_data_value)
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<(
-        &BankofamericaRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-        Box<SamsungPayWalletData>,
-    )> for BankofamericaPaymentsRequest<T>
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        (item, samsung_pay_data): (
-            &BankofamericaRouterData<
-                RouterDataV2<
-                    Authorize,
-                    PaymentFlowData,
-                    PaymentsAuthorizeData<T>,
-                    PaymentsResponseData,
-                >,
-                T,
-            >,
-            Box<SamsungPayWalletData>,
-        ),
-    ) -> Result<Self, Self::Error> {
-        let email = item
-            .router_data
-            .request
-            .get_email()
-            .or(item.router_data.resource_common_data.get_billing_email())?;
-        let bill_to = build_bill_to(
-            item.router_data.resource_common_data.get_optional_billing(),
-            email,
-        )?;
-        let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
-
-        let samsung_pay_fluid_data_value =
-            get_samsung_pay_fluid_data_value(&samsung_pay_data.payment_credential.token_data)?;
-
-        let samsung_pay_fluid_data_str = serde_json::to_string(&samsung_pay_fluid_data_value)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)
-            .attach_printable("Failed to serialize samsung pay fluid data")?;
-
-        let payment_information =
-            PaymentInformation::SamsungPay(Box::new(SamsungPayPaymentInformation {
-                fluid_data: FluidData {
-                    value: Secret::new(BASE64_ENGINE.encode(samsung_pay_fluid_data_str)),
-                    descriptor: Some(BASE64_ENGINE.encode(FLUID_DATA_DESCRIPTOR_FOR_SAMSUNG_PAY)),
-                },
-                tokenized_card: SamsungPayTokenizedCard {
-                    transaction_type: TransactionType::SamsungPay,
-                },
-            }));
-
-        let processing_information = ProcessingInformation::try_from((
-            item,
-            Some(PaymentSolution::SamsungPay),
-            Some(samsung_pay_data.payment_credential.card_brand.to_string()),
-        ))?;
-        let client_reference_information = ClientReferenceInformation::from(item);
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .metadata
-            .clone()
-            .map(convert_metadata_to_merchant_defined_info);
-
-        Ok(Self {
-            processing_information,
-            payment_information,
-            order_information,
-            client_reference_information,
-            consumer_authentication_information: None,
-            merchant_defined_information,
         })
     }
 }
