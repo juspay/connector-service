@@ -1,6 +1,5 @@
 use base64::Engine;
 use jsonwebtoken as jwt;
-use serde_json::Value;
 
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
@@ -10,7 +9,11 @@ use common_utils::{
 };
 
 use crate::unimplemented_payment_method;
-use crate::{connectors::cybersource::CybersourceRouterData, types::ResponseRouterData, utils};
+use crate::{
+    connectors::cybersource::CybersourceRouterData,
+    types::ResponseRouterData,
+    utils::{self, convert_metadata_to_merchant_defined_info, MerchantDefinedInformation},
+};
 use cards;
 use domain_types::{
     connector_flow::{
@@ -624,13 +627,6 @@ impl From<router_request_types::AuthenticationData> for CybersourceConsumerAuthI
 pub enum EffectiveAuthenticationType {
     CH,
     FR,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MerchantDefinedInformation {
-    key: u8,
-    value: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -1269,21 +1265,6 @@ fn build_bill_to(
             })
         })
         .unwrap_or(default_address))
-}
-
-fn convert_metadata_to_merchant_defined_info(metadata: Value) -> Vec<MerchantDefinedInformation> {
-    let hashmap: std::collections::BTreeMap<String, Value> =
-        serde_json::from_str(&metadata.to_string()).unwrap_or(std::collections::BTreeMap::new());
-    let mut vector = Vec::new();
-    let mut iter = 1;
-    for (key, value) in hashmap {
-        vector.push(MerchantDefinedInformation {
-            key: iter,
-            value: format!("{key}={value}"),
-        });
-        iter += 1;
-    }
-    vector
 }
 
 impl From<common_enums::DecoupledAuthenticationType> for EffectiveAuthenticationType {

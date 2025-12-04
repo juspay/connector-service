@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 
-use common_utils::types::{AmountConvertor, StringMajorUnitForConnector};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -13,12 +12,14 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
-use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::Serialize;
 
-use super::{requests, responses, BarclaycardRouterData};
-use crate::{types::ResponseRouterData, utils::is_refund_failure};
+use super::{requests, responses, BarclaycardAmountConvertor, BarclaycardRouterData};
+use crate::{
+    types::ResponseRouterData,
+    utils::{convert_metadata_to_merchant_defined_info, is_refund_failure},
+};
 
 /// CAVV (Cardholder Authentication Verification Value) Algorithm
 ///
@@ -121,30 +122,6 @@ fn build_bill_to(
         country: *address.get_country()?,
         email,
     })
-}
-
-/// Converts metadata JSON to Barclaycard's merchant-defined information format
-///
-/// Barclaycard (Cybersource whitelabel) accepts custom merchant metadata as key-value pairs.
-/// The silent failure (unwrap_or) is intentional:
-/// - Metadata is optional and non-critical for payment processing
-/// - Input is already valid JSON (serde_json::Value), so parsing rarely fails
-/// - Better to continue payment without metadata than to fail the entire payment
-fn convert_metadata_to_merchant_defined_info(
-    metadata: serde_json::Value,
-) -> Vec<requests::MerchantDefinedInformation> {
-    let hashmap: std::collections::BTreeMap<String, serde_json::Value> =
-        serde_json::from_str(&metadata.to_string()).unwrap_or(std::collections::BTreeMap::new());
-    let mut vector = Vec::new();
-    let mut iter = 1;
-    for (key, value) in hashmap {
-        vector.push(requests::MerchantDefinedInformation {
-            key: iter,
-            value: format!("{key}={value}"),
-        });
-        iter += 1;
-    }
-    vector
 }
 
 fn map_barclaycard_attempt_status(
@@ -328,9 +305,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let amount = StringMajorUnitForConnector
-            .convert(router_data.request.amount, router_data.request.currency)
-            .change_context(errors::ConnectorError::ParsingFailed)?;
+        let amount = BarclaycardAmountConvertor::convert(
+            router_data.request.amount,
+            router_data.request.currency,
+        )?;
 
         let ccard = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => Ok(card),
@@ -431,12 +409,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &value.router_data;
-        let amount = StringMajorUnitForConnector
-            .convert(
-                router_data.request.minor_amount_to_capture,
-                router_data.request.currency,
-            )
-            .change_context(errors::ConnectorError::ParsingFailed)?;
+        let amount = BarclaycardAmountConvertor::convert(
+            router_data.request.minor_amount_to_capture,
+            router_data.request.currency,
+        )?;
 
         let merchant_defined_information = router_data
             .request
@@ -488,17 +464,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .ok_or(errors::ConnectorError::MissingRequiredField {
                     field_name: "currency",
                 })?;
-        let amount = StringMajorUnitForConnector
-            .convert(
-                router_data
-                    .request
-                    .amount
-                    .ok_or(errors::ConnectorError::MissingRequiredField {
-                        field_name: "amount",
-                    })?,
-                currency,
-            )
-            .change_context(errors::ConnectorError::ParsingFailed)?;
+        let amount = BarclaycardAmountConvertor::convert(
+            router_data
+                .request
+                .amount
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "amount",
+                })?,
+            currency,
+        )?;
 
         let merchant_defined_information = router_data
             .request
@@ -548,12 +522,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let amount = StringMajorUnitForConnector
-            .convert(
-                router_data.request.minor_refund_amount,
-                router_data.request.currency,
-            )
-            .change_context(errors::ConnectorError::ParsingFailed)?;
+        let amount = BarclaycardAmountConvertor::convert(
+            router_data.request.minor_refund_amount,
+            router_data.request.currency,
+        )?;
 
         Ok(Self {
             order_information: requests::OrderInformation {

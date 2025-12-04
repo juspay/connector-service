@@ -4,6 +4,8 @@ use domain_types::payment_method_data::{PaymentMethodDataTypes, RawCardNumber};
 use hyperswitch_masking::Secret;
 use serde::Serialize;
 
+use crate::utils::MerchantDefinedInformation;
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BarclaycardPaymentsRequest<
@@ -26,13 +28,6 @@ pub struct ProcessingInformation {
     pub payment_solution: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cavv_algorithm: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MerchantDefinedInformation {
-    pub key: u8,
-    pub value: String,
 }
 
 #[derive(Debug, Serialize)]
