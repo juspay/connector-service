@@ -208,6 +208,115 @@ fn get_error_reason(
     }
 }
 
+/// Common response transformer for Authorize, Capture, and Void flows
+///
+/// This helper consolidates the shared logic for processing Barclaycard payment responses
+/// across different payment flows. The only variation is the auto_capture flag which affects
+/// status mapping.
+fn transform_payment_response<F, Req>(
+    item: ResponseRouterData<
+        responses::BarclaycardPaymentsResponse,
+        RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
+    >,
+    auto_capture: bool,
+) -> Result<
+    RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
+    error_stack::Report<errors::ConnectorError>,
+> {
+    match item.response {
+        responses::BarclaycardPaymentsResponse::ClientReferenceInformation(info_response) => {
+            let status = map_barclaycard_attempt_status((
+                info_response
+                    .status
+                    .clone()
+                    .unwrap_or(responses::BarclaycardPaymentStatus::StatusNotReceived),
+                auto_capture,
+            ));
+
+            let response = if domain_types::utils::is_payment_failure(status) {
+                Err(get_error_response(
+                    &info_response.error_information,
+                    &info_response.processor_information,
+                    &info_response.risk_information,
+                    Some(status),
+                    item.http_code,
+                    info_response.id.clone(),
+                ))
+            } else {
+                Ok(PaymentsResponseData::TransactionResponse {
+                    resource_id: ResponseId::ConnectorTransactionId(info_response.id.clone()),
+                    redirection_data: None,
+                    mandate_reference: None,
+                    connector_metadata: None,
+                    network_txn_id: None,
+                    connector_response_reference_id: Some(
+                        info_response
+                            .client_reference_information
+                            .code
+                            .unwrap_or(info_response.id.clone()),
+                    ),
+                    incremental_authorization_allowed: None,
+                    status_code: item.http_code,
+                })
+            };
+
+            Ok(RouterDataV2 {
+                response,
+                resource_common_data: PaymentFlowData {
+                    status,
+                    ..item.router_data.resource_common_data
+                },
+                ..item.router_data
+            })
+        }
+        responses::BarclaycardPaymentsResponse::ErrorInformation(error_response) => {
+            let detailed_error_info = error_response
+                .error_information
+                .details
+                .as_ref()
+                .map(|details| {
+                    details
+                        .iter()
+                        .map(|d| format!("{} : {}", d.field, d.reason))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                });
+
+            let reason = get_error_reason(
+                error_response.error_information.message.clone(),
+                detailed_error_info,
+                None,
+            );
+
+            Ok(RouterDataV2 {
+                response: Err(ErrorResponse {
+                    code: error_response
+                        .error_information
+                        .reason
+                        .clone()
+                        .unwrap_or_else(|| common_utils::consts::NO_ERROR_CODE.to_string()),
+                    message: error_response
+                        .error_information
+                        .reason
+                        .unwrap_or_else(|| common_utils::consts::NO_ERROR_MESSAGE.to_string()),
+                    reason,
+                    status_code: item.http_code,
+                    attempt_status: None,
+                    connector_transaction_id: Some(error_response.id),
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    network_error_message: None,
+                }),
+                resource_common_data: PaymentFlowData {
+                    status: common_enums::AttemptStatus::Failure,
+                    ..item.router_data.resource_common_data
+                },
+                ..item.router_data
+            })
+        }
+    }
+}
+
 fn get_error_response(
     error_data: &Option<responses::BarclaycardErrorInformation>,
     processor_information: &Option<responses::ClientProcessorInformation>,
@@ -567,103 +676,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        match item.response {
-            responses::BarclaycardAuthorizeResponse::ClientReferenceInformation(info_response) => {
-                let status = map_barclaycard_attempt_status((
-                    info_response
-                        .status
-                        .clone()
-                        .unwrap_or(responses::BarclaycardPaymentStatus::StatusNotReceived),
-                    matches!(
-                        item.router_data.request.capture_method,
-                        Some(common_enums::CaptureMethod::Automatic) | None
-                    ),
-                ));
-
-                let response = if domain_types::utils::is_payment_failure(status) {
-                    Err(get_error_response(
-                        &info_response.error_information,
-                        &info_response.processor_information,
-                        &info_response.risk_information,
-                        Some(status),
-                        item.http_code,
-                        info_response.id.clone(),
-                    ))
-                } else {
-                    Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(info_response.id.clone()),
-                        redirection_data: None,
-                        mandate_reference: None,
-                        connector_metadata: None,
-                        network_txn_id: None,
-                        connector_response_reference_id: Some(
-                            info_response
-                                .client_reference_information
-                                .code
-                                .clone()
-                                .unwrap_or(info_response.id.clone()),
-                        ),
-                        incremental_authorization_allowed: None,
-                        status_code: item.http_code,
-                    })
-                };
-
-                Ok(Self {
-                    response,
-                    resource_common_data: PaymentFlowData {
-                        status,
-                        ..item.router_data.resource_common_data
-                    },
-                    ..item.router_data
-                })
-            }
-            responses::BarclaycardPaymentsResponse::ErrorInformation(error_response) => {
-                let detailed_error_info =
-                    error_response
-                        .error_information
-                        .details
-                        .as_ref()
-                        .map(|details| {
-                            details
-                                .iter()
-                                .map(|d| format!("{} : {}", d.field, d.reason))
-                                .collect::<Vec<_>>()
-                                .join(", ")
-                        });
-
-                let reason = get_error_reason(
-                    error_response.error_information.message.clone(),
-                    detailed_error_info,
-                    None,
-                );
-
-                Ok(Self {
-                    response: Err(ErrorResponse {
-                        code: error_response
-                            .error_information
-                            .reason
-                            .clone()
-                            .unwrap_or_else(|| common_utils::consts::NO_ERROR_CODE.to_string()),
-                        message: error_response
-                            .error_information
-                            .reason
-                            .unwrap_or_else(|| common_utils::consts::NO_ERROR_MESSAGE.to_string()),
-                        reason,
-                        status_code: item.http_code,
-                        attempt_status: None,
-                        connector_transaction_id: Some(error_response.id),
-                        network_advice_code: None,
-                        network_decline_code: None,
-                        network_error_message: None,
-                    }),
-                    resource_common_data: PaymentFlowData {
-                        status: common_enums::AttemptStatus::Failure,
-                        ..item.router_data.resource_common_data
-                    },
-                    ..item.router_data
-                })
-            }
-        }
+        let auto_capture = matches!(
+            item.router_data.request.capture_method,
+            Some(common_enums::CaptureMethod::Automatic) | None
+        );
+        transform_payment_response(item, auto_capture)
     }
 }
 
@@ -683,99 +700,7 @@ impl
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        match item.response {
-            responses::BarclaycardPaymentsResponse::ClientReferenceInformation(info_response) => {
-                let status = map_barclaycard_attempt_status((
-                    info_response
-                        .status
-                        .clone()
-                        .unwrap_or(responses::BarclaycardPaymentStatus::StatusNotReceived),
-                    true,
-                ));
-
-                let response = if domain_types::utils::is_payment_failure(status) {
-                    Err(get_error_response(
-                        &info_response.error_information,
-                        &info_response.processor_information,
-                        &info_response.risk_information,
-                        Some(status),
-                        item.http_code,
-                        info_response.id.clone(),
-                    ))
-                } else {
-                    Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(info_response.id.clone()),
-                        redirection_data: None,
-                        mandate_reference: None,
-                        connector_metadata: None,
-                        network_txn_id: None,
-                        connector_response_reference_id: Some(
-                            info_response
-                                .client_reference_information
-                                .code
-                                .unwrap_or(info_response.id.clone()),
-                        ),
-                        incremental_authorization_allowed: None,
-                        status_code: item.http_code,
-                    })
-                };
-
-                Ok(Self {
-                    response,
-                    resource_common_data: PaymentFlowData {
-                        status,
-                        ..item.router_data.resource_common_data
-                    },
-                    ..item.router_data
-                })
-            }
-            responses::BarclaycardPaymentsResponse::ErrorInformation(error_response) => {
-                let detailed_error_info =
-                    error_response
-                        .error_information
-                        .details
-                        .as_ref()
-                        .map(|details| {
-                            details
-                                .iter()
-                                .map(|d| format!("{} : {}", d.field, d.reason))
-                                .collect::<Vec<_>>()
-                                .join(", ")
-                        });
-
-                let reason = get_error_reason(
-                    error_response.error_information.message.clone(),
-                    detailed_error_info,
-                    None,
-                );
-
-                Ok(Self {
-                    response: Err(ErrorResponse {
-                        code: error_response
-                            .error_information
-                            .reason
-                            .clone()
-                            .unwrap_or_else(|| common_utils::consts::NO_ERROR_CODE.to_string()),
-                        message: error_response
-                            .error_information
-                            .reason
-                            .unwrap_or_else(|| common_utils::consts::NO_ERROR_MESSAGE.to_string()),
-                        reason,
-                        status_code: item.http_code,
-                        attempt_status: None,
-                        connector_transaction_id: Some(error_response.id),
-                        network_advice_code: None,
-                        network_decline_code: None,
-                        network_error_message: None,
-                    }),
-                    resource_common_data: PaymentFlowData {
-                        status: common_enums::AttemptStatus::Failure,
-                        ..item.router_data.resource_common_data
-                    },
-                    ..item.router_data
-                })
-            }
-        }
+        transform_payment_response(item, true)
     }
 }
 
@@ -795,99 +720,7 @@ impl
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        match item.response {
-            responses::BarclaycardPaymentsResponse::ClientReferenceInformation(info_response) => {
-                let status = map_barclaycard_attempt_status((
-                    info_response
-                        .status
-                        .clone()
-                        .unwrap_or(responses::BarclaycardPaymentStatus::StatusNotReceived),
-                    false,
-                ));
-
-                let response = if domain_types::utils::is_payment_failure(status) {
-                    Err(get_error_response(
-                        &info_response.error_information,
-                        &info_response.processor_information,
-                        &info_response.risk_information,
-                        Some(status),
-                        item.http_code,
-                        info_response.id.clone(),
-                    ))
-                } else {
-                    Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(info_response.id.clone()),
-                        redirection_data: None,
-                        mandate_reference: None,
-                        connector_metadata: None,
-                        network_txn_id: None,
-                        connector_response_reference_id: Some(
-                            info_response
-                                .client_reference_information
-                                .code
-                                .unwrap_or(info_response.id.clone()),
-                        ),
-                        incremental_authorization_allowed: None,
-                        status_code: item.http_code,
-                    })
-                };
-
-                Ok(Self {
-                    response,
-                    resource_common_data: PaymentFlowData {
-                        status,
-                        ..item.router_data.resource_common_data
-                    },
-                    ..item.router_data
-                })
-            }
-            responses::BarclaycardPaymentsResponse::ErrorInformation(error_response) => {
-                let detailed_error_info =
-                    error_response
-                        .error_information
-                        .details
-                        .as_ref()
-                        .map(|details| {
-                            details
-                                .iter()
-                                .map(|d| format!("{} : {}", d.field, d.reason))
-                                .collect::<Vec<_>>()
-                                .join(", ")
-                        });
-
-                let reason = get_error_reason(
-                    error_response.error_information.message.clone(),
-                    detailed_error_info,
-                    None,
-                );
-
-                Ok(Self {
-                    response: Err(ErrorResponse {
-                        code: error_response
-                            .error_information
-                            .reason
-                            .clone()
-                            .unwrap_or_else(|| common_utils::consts::NO_ERROR_CODE.to_string()),
-                        message: error_response
-                            .error_information
-                            .reason
-                            .unwrap_or_else(|| common_utils::consts::NO_ERROR_MESSAGE.to_string()),
-                        reason,
-                        status_code: item.http_code,
-                        attempt_status: None,
-                        connector_transaction_id: Some(error_response.id),
-                        network_advice_code: None,
-                        network_decline_code: None,
-                        network_error_message: None,
-                    }),
-                    resource_common_data: PaymentFlowData {
-                        status: common_enums::AttemptStatus::Failure,
-                        ..item.router_data.resource_common_data
-                    },
-                    ..item.router_data
-                })
-            }
-        }
+        transform_payment_response(item, false)
     }
 }
 
