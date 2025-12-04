@@ -928,7 +928,9 @@ impl<
             }
             Some(NuveiTransactionStatus::Declined) => common_enums::AttemptStatus::Failure,
             Some(NuveiTransactionStatus::Error) => common_enums::AttemptStatus::Failure,
-            Some(NuveiTransactionStatus::Redirect) => common_enums::AttemptStatus::AuthenticationPending,
+            Some(NuveiTransactionStatus::Redirect) => {
+                common_enums::AttemptStatus::AuthenticationPending
+            }
             Some(NuveiTransactionStatus::Pending) => common_enums::AttemptStatus::Pending,
             _ => {
                 // If transaction_status is not present but status is SUCCESS, default to Pending
