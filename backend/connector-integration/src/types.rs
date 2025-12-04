@@ -52,6 +52,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Multisafepay => Box::new(connectors::Multisafepay::new()),
             ConnectorEnum::Iatapay => Box::new(connectors::Iatapay::new()),
             ConnectorEnum::Nmi => Box::new(connectors::Nmi::new()),
+            ConnectorEnum::Nexixpay => Box::new(connectors::Nexixpay::new()),
             ConnectorEnum::Authipay => Box::new(connectors::Authipay::new()),
             ConnectorEnum::Stax => Box::new(connectors::Stax::new()),
             ConnectorEnum::Fiservemea => Box::new(connectors::Fiservemea::new()),

@@ -157,6 +157,7 @@ pub struct Connectors {
     pub iatapay: ConnectorParams,
     pub nmi: ConnectorParams,
     pub shift4: ConnectorParams,
+    pub nexixpay: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
