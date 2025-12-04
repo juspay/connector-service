@@ -25,7 +25,9 @@
       "Bash(xargs kill:*)",
       "Bash(xargs -I {} sh -c 'echo \"\"\"\"Process: {}\"\"\"\" && lsof -p $(echo {} | awk \"\"\"\"{print \\$2}\"\"\"\")')",
       "Bash(cat:*)",
-      "Bash(cargo test:*)"
+      "Bash(cargo test:*)",
+      "Bash(find /Users/aditya.gupta.001/connector-service4/connector-service -name \"*.rs\" -type f -not -path \"*/target/*\" -exec grep -l \"connector_metadata\" {})",
+      "Bash(find /Users/aditya.gupta.001/connector-service4/connector-service/backend/connector-integration/src/connectors -name \"transformers.rs\" -exec grep -l \"Capture.*connector_metadata\" {} ;)"
     ],
     "deny": [],
     "ask": []

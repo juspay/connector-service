@@ -94,7 +94,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             message: response.message.clone(),
             reason: Some(response.message),
             attempt_status: None,
-            connector_transaction_id: response.numtrans,
+            connector_transaction_id: response.transaction_number,
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,

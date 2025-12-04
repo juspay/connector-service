@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
 use crate::types::ResponseRouterData;
+use crate::utils;
 
 // Import the connector's RouterData wrapper type created by the macro
 use super::PayboxRouterData;
@@ -25,11 +26,9 @@ use super::PayboxRouterData;
 // ============================================================================
 // RESPONSE TYPE ALIASES
 // ============================================================================
-// Create type aliases to avoid duplicate templating in macro expansion
 pub type PayboxAuthorizeResponse = PayboxPaymentResponse;
 pub type PayboxCaptureResponse = PayboxPaymentResponse;
 pub type PayboxVoidResponse = PayboxPaymentResponse;
-// Note: PayboxPSyncResponse and PayboxRSyncResponse are defined separately below because they have STATUS field
 
 // ============================================================================
 // AUTHENTICATION
@@ -38,8 +37,8 @@ pub type PayboxVoidResponse = PayboxPaymentResponse;
 #[derive(Debug, Clone)]
 pub struct PayboxAuthType {
     pub site: Secret<String>,
-    pub rang: Secret<String>,
-    pub cle: Secret<String>,
+    pub rank: Secret<String>,
+    pub key: Secret<String>,
     pub merchant_id: Secret<String>,
 }
 
@@ -55,8 +54,8 @@ impl TryFrom<&ConnectorAuthType> for PayboxAuthType {
                 key2,
             } => Ok(Self {
                 site: api_key.to_owned(),
-                rang: key1.to_owned(),
-                cle: api_secret.to_owned(),
+                rank: key1.to_owned(),
+                key: api_secret.to_owned(),
                 merchant_id: key2.to_owned(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
@@ -68,16 +67,20 @@ impl TryFrom<&ConnectorAuthType> for PayboxAuthType {
 // COMMON ENUMS AND TYPES
 // ============================================================================
 
-// Transaction type constants (matching Hyperswitch implementation)
-const AUTH_REQUEST: &str = "00001";          // Authorization only
-const CAPTURE_REQUEST: &str = "00002";       // Capture
-const AUTH_AND_CAPTURE_REQUEST: &str = "00003"; // Auth + Capture in one request
-const CANCEL_REQUEST: &str = "00005";        // Void/Cancel
-const REFUND_REQUEST: &str = "00014";        // Refund
-const SYNC_REQUEST: &str = "00017";          // Inquiry/Sync
+const VERSION_PAYBOX: &str = "00104";
+const AUTH_REQUEST: &str = "00001";
+const CAPTURE_REQUEST: &str = "00002";
+const AUTH_AND_CAPTURE_REQUEST: &str = "00003";
+const CANCEL_REQUEST: &str = "00005";
+const REFUND_REQUEST: &str = "00014";
+const SYNC_REQUEST: &str = "00017";
+const SUCCESS_CODE: &str = "00000";
+const PAY_ORIGIN_INTERNET: &str = "024";
 
-// PayboxStatus enum for STATUS field in inquiry responses (TYPE=00017)
-// These are French text values returned by Paybox
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PayboxMeta {
+    pub connector_request_id: String,
+}
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PayboxStatus {
     #[serde(rename = "Remboursé")]
@@ -120,18 +123,14 @@ impl From<PayboxStatus> for RefundStatus {
 // ============================================================================
 
 fn get_transaction_type(capture_method: Option<common_enums::CaptureMethod>) -> &'static str {
-    // Determines the Paybox transaction type based on capture method
-    // Following Hyperswitch implementation logic
     match capture_method {
         Some(common_enums::CaptureMethod::Automatic) => AUTH_AND_CAPTURE_REQUEST,
         Some(common_enums::CaptureMethod::Manual) => AUTH_REQUEST,
-        _ => AUTH_REQUEST, // Default to authorization only
+        _ => AUTH_REQUEST,
     }
 }
 
 fn generate_request_id() -> CustomResult<String, errors::ConnectorError> {
-    // Generate a unique request ID using timestamp
-    // Taking substring from position 4 to avoid collisions (matches Hyperswitch implementation)
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .change_context(errors::ConnectorError::RequestEncodingFailed)?
@@ -145,9 +144,7 @@ fn generate_request_id() -> CustomResult<String, errors::ConnectorError> {
 }
 
 fn generate_date_time() -> String {
-    // Format: DDMMYYYYHHMMSS
     let now = OffsetDateTime::now_utc();
-
     format!(
         "{:02}{:02}{:04}{:02}{:02}{:02}",
         now.day(),
@@ -160,7 +157,6 @@ fn generate_date_time() -> String {
 }
 
 fn get_currency_code(currency: Currency) -> CustomResult<String, errors::ConnectorError> {
-    // ISO 4217 numeric codes
     let code = match currency {
         Currency::EUR => "978",
         Currency::USD => "840",
@@ -178,30 +174,9 @@ fn get_currency_code(currency: Currency) -> CustomResult<String, errors::Connect
     Ok(code.to_string())
 }
 
-fn map_paybox_status_to_attempt_status(code: &str, transaction_type: &str) -> AttemptStatus {
-    match code {
-        "00000" => {
-            // For authorization-only requests (manual capture), return Authorized
-            // For capture/auth+capture requests, return Charged
-            match transaction_type {
-                AUTH_REQUEST => AttemptStatus::Authorized,  // Type 00001: Authorization only
-                CAPTURE_REQUEST | AUTH_AND_CAPTURE_REQUEST => AttemptStatus::Charged,  // Type 00002, 00003
-                _ => AttemptStatus::Charged,
-            }
-        }
-        "00001" | "00003" => AttemptStatus::Failure,
-        code if code.starts_with("001") => AttemptStatus::Failure,
-        _ => AttemptStatus::Failure,
-    }
-}
 
-fn map_paybox_status_to_refund_status(code: &str) -> RefundStatus {
-    match code {
-        "00000" => RefundStatus::Success,
-        "00001" | "00003" => RefundStatus::Failure,
-        code if code.starts_with("001") => RefundStatus::Failure,
-        _ => RefundStatus::Failure,
-    }
+fn get_transaction_id(numappel: Option<String>, numtrans: Option<String>) -> String {
+    numappel.or(numtrans).unwrap_or_default()
 }
 
 // ============================================================================
@@ -213,33 +188,31 @@ pub struct PayboxPaymentRequest<T> {
     #[serde(rename = "VERSION")]
     pub version: String,
     #[serde(rename = "TYPE")]
-    pub request_type: String,
+    pub transaction_type: String,
     #[serde(rename = "SITE")]
     pub site: Secret<String>,
     #[serde(rename = "RANG")]
-    pub rang: Secret<String>,
+    pub rank: Secret<String>,
     #[serde(rename = "CLE")]
-    pub cle: Secret<String>,
+    pub key: Secret<String>,
     #[serde(rename = "NUMQUESTION")]
-    pub numquestion: String,
+    pub paybox_request_number: String,
     #[serde(rename = "MONTANT")]
-    pub montant: MinorUnit,
+    pub amount: MinorUnit,
     #[serde(rename = "DEVISE")]
-    pub devise: String,
+    pub currency: String,
     #[serde(rename = "REFERENCE")]
     pub reference: String,
     #[serde(rename = "DATEQ")]
-    pub dateq: String,
+    pub date: String,
     #[serde(rename = "PORTEUR")]
-    pub porteur: Secret<String>,
+    pub card_number: Secret<String>,
     #[serde(rename = "DATEVAL")]
-    pub dateval: Secret<String>,
+    pub expiration_date: Secret<String>,
     #[serde(rename = "CVV")]
     pub cvv: Secret<String>,
     #[serde(rename = "ACTIVITE")]
-    pub activite: String,
-    // #[serde(rename = "IDENTIFIANT")]
-    // pub identifiant: Secret<String>,
+    pub activity: String,
     #[serde(skip)]
     _phantom: std::marker::PhantomData<T>,
 }
@@ -257,7 +230,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
 
         let auth = PayboxAuthType::try_from(&router_data.connector_auth_type)?;
 
-        let montant = connector
+        let amount = connector
             .amount_converter
             .convert(router_data.request.minor_amount, router_data.request.currency)
             .change_context(errors::ConnectorError::ParsingFailed)?;
@@ -275,9 +248,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
 
         let expiry_month = card.card_exp_month.peek();
         let expiry_year = card.card_exp_year.peek();
-
-        // Paybox expects MMYY format (4 digits)
-        // Take last 2 digits of year to handle both "2025" and "25" formats
         let year_last_two = if expiry_year.len() >= 2 {
             &expiry_year[expiry_year.len() - 2..]
         } else {
@@ -285,26 +255,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
         };
 
         let dateval = Secret::new(format!("{}{}", expiry_month, year_last_two));
-
-        // Determine transaction type based on capture method (following Hyperswitch)
         let transaction_type = get_transaction_type(router_data.request.capture_method);
 
         Ok(Self {
-            version: "00104".to_string(),
-            request_type: transaction_type.to_string(),
+            version: VERSION_PAYBOX.to_string(),
+            transaction_type: transaction_type.to_string(),
             site: auth.site,
-            rang: auth.rang,
-            cle: auth.cle,
-            numquestion: generate_request_id()?,
-            montant,
-            devise: get_currency_code(router_data.request.currency)?,
+            rank: auth.rank,
+            key: auth.key,
+            paybox_request_number: generate_request_id()?,
+            amount,
+            currency: get_currency_code(router_data.request.currency)?,
             reference: router_data.resource_common_data.connector_request_reference_id.clone(),
-            dateq: generate_date_time(),
-            porteur: Secret::new(card.card_number.peek().to_string()),
-            dateval,
+            date: generate_date_time(),
+            card_number: Secret::new(card.card_number.peek().to_string()),
+            expiration_date: dateval,
             cvv: card.card_cvc.clone(),
-            activite: "024".to_string(),
-            // identifiant: auth.merchant_id,
+            activity: PAY_ORIGIN_INTERNET.to_string(),
             _phantom: std::marker::PhantomData,
         })
     }
@@ -313,21 +280,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PayboxPaymentResponse {
     #[serde(rename = "NUMTRANS")]
-    pub numtrans: Option<String>,
+    pub transaction_number: Option<String>,
     #[serde(rename = "NUMAPPEL")]
-    pub numappel: Option<String>,
+    pub paybox_order_id: Option<String>,
     #[serde(rename = "NUMQUESTION")]
-    pub numquestion: Option<String>,
+    pub paybox_request_number: Option<String>,
     #[serde(rename = "SITE")]
     pub site: Option<String>,
     #[serde(rename = "RANG")]
-    pub rang: Option<String>,
+    pub rank: Option<String>,
     #[serde(rename = "AUTORISATION")]
-    pub autorisation: Option<String>,
+    pub authorization: Option<String>,
     #[serde(rename = "CODEREPONSE")]
-    pub codereponse: String,
+    pub response_code: String,
     #[serde(rename = "COMMENTAIRE")]
-    pub commentaire: Option<String>,
+    pub response_message: Option<String>,
 }
 
 impl<T: PaymentMethodDataTypes>
@@ -346,57 +313,49 @@ impl<T: PaymentMethodDataTypes>
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Determine status based on capture method and response code
-        // Match Hyperswitch logic: Manual capture returns Authorized, Auto capture returns Charged
         let is_auto_capture = matches!(
             item.router_data.request.capture_method,
             Some(common_enums::CaptureMethod::Automatic)
         );
 
-        let status = if item.response.codereponse == "00000" {
-            // Success response - differentiate based on capture method
-            if is_auto_capture {
+        let connector_transaction_id = get_transaction_id(
+            item.response.paybox_order_id.clone(),
+            item.response.transaction_number.clone(),
+        );
+
+        if item.response.response_code == SUCCESS_CODE {
+            let status = if is_auto_capture {
                 AttemptStatus::Charged
             } else {
                 AttemptStatus::Authorized
-            }
-        } else {
-            // Error response
-            map_paybox_status_to_attempt_status(&item.response.codereponse, AUTH_REQUEST)
-        };
+            };
 
-        // Store NUMTRANS in connector_metadata for future operations (void, capture, refund)
-        // NUMAPPEL is used as the main connector_transaction_id
-        // This matches Hyperswitch implementation exactly
-        let connector_metadata = item.response.numtrans.as_ref().map(|numtrans| {
-            serde_json::json!({
-                "connector_request_id": numtrans
+            let connector_metadata = item.response.transaction_number.as_ref().map(|transaction_number| {
+                serde_json::json!({
+                    "connector_request_id": transaction_number
+                })
+            });
+
+            Ok(Self {
+                response: Ok(PaymentsResponseData::TransactionResponse {
+                    resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id.clone()),
+                    redirection_data: None,
+                    mandate_reference: None,
+                    connector_metadata,
+                    network_txn_id: None,
+                    connector_response_reference_id: Some(connector_transaction_id),
+                    incremental_authorization_allowed: None,
+                    status_code: item.http_code,
+                }),
+                resource_common_data: PaymentFlowData {
+                    status,
+                    ..item.router_data.resource_common_data
+                },
+                ..item.router_data
             })
-        });
-
-        let connector_transaction_id = item
-            .response
-            .numappel
-            .or(item.response.numtrans.clone())
-            .unwrap_or_default();
-
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id.clone()),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata,
-                network_txn_id: None,
-                connector_response_reference_id: Some(connector_transaction_id),
-                incremental_authorization_allowed: None,
-                status_code: item.http_code,
-            }),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
-            ..item.router_data
-        })
+        } else {
+            Err(errors::ConnectorError::ResponseHandlingFailed.into())
+        }
     }
 }
 
@@ -409,21 +368,23 @@ pub struct PayboxSyncRequest {
     #[serde(rename = "VERSION")]
     pub version: String,
     #[serde(rename = "TYPE")]
-    pub request_type: String,
+    pub transaction_type: String,
     #[serde(rename = "SITE")]
     pub site: Secret<String>,
     #[serde(rename = "RANG")]
-    pub rang: Secret<String>,
+    pub rank: Secret<String>,
     #[serde(rename = "CLE")]
-    pub cle: Secret<String>,
+    pub key: Secret<String>,
     #[serde(rename = "NUMQUESTION")]
-    pub numquestion: String,
+    pub paybox_request_number: String,
+    #[serde(rename = "REFERENCE")]
+    pub reference: String,
     #[serde(rename = "DATEQ")]
-    pub dateq: String,
+    pub date: String,
     #[serde(rename = "NUMTRANS")]
-    pub numtrans: String,
+    pub transaction_number: String,
     #[serde(rename = "NUMAPPEL")]
-    pub numappel: String,
+    pub paybox_order_id: String,
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<PayboxRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
@@ -437,55 +398,47 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
         let router_data = item.router_data;
         let auth = PayboxAuthType::try_from(&router_data.connector_auth_type)?;
 
-        // NUMAPPEL is the connector_transaction_id
         let numappel = match &router_data.request.connector_transaction_id {
             ResponseId::ConnectorTransactionId(id) => id.clone(),
             _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into()),
         };
 
-        // Extract NUMTRANS from connector_metadata stored during authorization
-        let numtrans = router_data
-            .resource_common_data
-            .connector_meta_data
-            .as_ref()
-            .and_then(|metadata| metadata.peek().get("connector_request_id"))
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| numappel.clone());
+        let paybox_meta: PayboxMeta = utils::to_connector_meta(router_data.request.connector_meta.clone())?;
+        let numtrans = paybox_meta.connector_request_id;
 
         Ok(Self {
-            version: "00104".to_string(),
-            request_type: SYNC_REQUEST.to_string(),
+            version: VERSION_PAYBOX.to_string(),
+            transaction_type: SYNC_REQUEST.to_string(),
             site: auth.site,
-            rang: auth.rang,
-            cle: auth.cle,
-            numquestion: generate_request_id()?,
-            dateq: generate_date_time(),
-            numtrans,
-            numappel,
+            rank: auth.rank,
+            key: auth.key,
+            paybox_request_number: generate_request_id()?,
+            reference: router_data.resource_common_data.connector_request_reference_id.clone(),
+            date: generate_date_time(),
+            transaction_number: numtrans,
+            paybox_order_id: numappel,
         })
     }
 }
 
-// PayboxPSyncResponse has a STATUS field unlike other payment responses
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PayboxPSyncResponse {
     #[serde(rename = "NUMTRANS")]
-    pub numtrans: Option<String>,
+    pub transaction_number: Option<String>,
     #[serde(rename = "NUMAPPEL")]
-    pub numappel: Option<String>,
+    pub paybox_order_id: Option<String>,
     #[serde(rename = "NUMQUESTION")]
-    pub numquestion: Option<String>,
+    pub paybox_request_number: Option<String>,
     #[serde(rename = "SITE")]
     pub site: Option<String>,
     #[serde(rename = "RANG")]
-    pub rang: Option<String>,
+    pub rank: Option<String>,
     #[serde(rename = "AUTORISATION")]
-    pub autorisation: Option<String>,
+    pub authorization: Option<String>,
     #[serde(rename = "CODEREPONSE")]
-    pub codereponse: String,
+    pub response_code: String,
     #[serde(rename = "COMMENTAIRE")]
-    pub commentaire: Option<String>,
+    pub response_message: Option<String>,
     #[serde(rename = "STATUS")]
     pub status: PayboxStatus,
 }
@@ -505,15 +458,13 @@ impl TryFrom<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Convert PayboxStatus directly to AttemptStatus (matching Hyperswitch)
         let connector_payment_status = item.response.status;
         let status = AttemptStatus::from(connector_payment_status);
 
-        let connector_transaction_id = item
-            .response
-            .numtrans
-            .or(item.response.numappel)
-            .unwrap_or_default();
+        let connector_transaction_id = get_transaction_id(
+            item.response.paybox_order_id.clone(),
+            item.response.transaction_number.clone(),
+        );
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -544,27 +495,27 @@ pub struct PayboxCaptureRequest {
     #[serde(rename = "VERSION")]
     pub version: String,
     #[serde(rename = "TYPE")]
-    pub request_type: String,
+    pub transaction_type: String,
     #[serde(rename = "SITE")]
     pub site: Secret<String>,
     #[serde(rename = "RANG")]
-    pub rang: Secret<String>,
+    pub rank: Secret<String>,
     #[serde(rename = "CLE")]
-    pub cle: Secret<String>,
+    pub key: Secret<String>,
     #[serde(rename = "NUMQUESTION")]
-    pub numquestion: String,
+    pub paybox_request_number: String,
     #[serde(rename = "MONTANT")]
-    pub montant: MinorUnit,
+    pub amount: MinorUnit,
     #[serde(rename = "DEVISE")]
-    pub devise: String,
+    pub currency: String,
     #[serde(rename = "REFERENCE")]
     pub reference: String,
     #[serde(rename = "DATEQ")]
-    pub dateq: String,
+    pub date: String,
     #[serde(rename = "NUMTRANS")]
-    pub numtrans: String,
+    pub transaction_number: String,
     #[serde(rename = "NUMAPPEL")]
-    pub numappel: String,
+    pub paybox_order_id: String,
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<PayboxRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
@@ -579,23 +530,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
         let connector = item.connector;
         let auth = PayboxAuthType::try_from(&router_data.connector_auth_type)?;
 
-        // NUMAPPEL is the connector_transaction_id
         let numappel = match &router_data.request.connector_transaction_id {
             ResponseId::ConnectorTransactionId(id) => id.clone(),
             _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into()),
         };
 
-        // Extract NUMTRANS from connector_metadata stored during authorization
-        let numtrans = router_data
-            .request
-            .connector_metadata
-            .as_ref()
-            .and_then(|metadata| metadata.get("connector_request_id"))
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| numappel.clone());
+        let paybox_meta: PayboxMeta = utils::to_connector_meta_from_secret(
+            router_data
+                .resource_common_data
+                .connector_meta_data
+                .clone(),
+        )?;
+        let numtrans = paybox_meta.connector_request_id;
 
-        let montant = connector
+        let amount = connector
             .amount_converter
             .convert(
                 router_data.request.minor_amount_to_capture,
@@ -604,18 +552,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
             .change_context(errors::ConnectorError::ParsingFailed)?;
 
         Ok(Self {
-            version: "00104".to_string(),
-            request_type: CAPTURE_REQUEST.to_string(),
+            version: VERSION_PAYBOX.to_string(),
+            transaction_type: CAPTURE_REQUEST.to_string(),
             site: auth.site,
-            rang: auth.rang,
-            cle: auth.cle,
-            numquestion: generate_request_id()?,
-            montant,
-            devise: get_currency_code(router_data.request.currency)?,
+            rank: auth.rank,
+            key: auth.key,
+            paybox_request_number: generate_request_id()?,
+            amount,
+            currency: get_currency_code(router_data.request.currency)?,
             reference: router_data.resource_common_data.connector_request_reference_id.clone(),
-            dateq: generate_date_time(),
-            numtrans,
-            numappel,
+            date: generate_date_time(),
+            transaction_number: numtrans,
+            paybox_order_id: numappel,
         })
     }
 }
@@ -635,31 +583,32 @@ impl TryFrom<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Capture always uses CAPTURE_REQUEST type
-        let status = map_paybox_status_to_attempt_status(&item.response.codereponse, CAPTURE_REQUEST);
-        let connector_transaction_id = item
-            .response
-            .numtrans
-            .or(item.response.numappel)
-            .unwrap_or_default();
+        let connector_transaction_id = get_transaction_id(
+            item.response.paybox_order_id.clone(),
+            item.response.transaction_number.clone(),
+        );
 
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id.clone()),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata: None,
-                network_txn_id: None,
-                connector_response_reference_id: Some(connector_transaction_id),
-                incremental_authorization_allowed: None,
-                status_code: item.http_code,
-            }),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
-            ..item.router_data
-        })
+        if item.response.response_code == SUCCESS_CODE {
+            Ok(Self {
+                response: Ok(PaymentsResponseData::TransactionResponse {
+                    resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id.clone()),
+                    redirection_data: None,
+                    mandate_reference: None,
+                    connector_metadata: None,
+                    network_txn_id: None,
+                    connector_response_reference_id: Some(connector_transaction_id),
+                    incremental_authorization_allowed: None,
+                    status_code: item.http_code,
+                }),
+                resource_common_data: PaymentFlowData {
+                    status: AttemptStatus::Charged,
+                    ..item.router_data.resource_common_data
+                },
+                ..item.router_data
+            })
+        } else {
+            Err(errors::ConnectorError::ResponseHandlingFailed.into())
+        }
     }
 }
 
@@ -672,27 +621,27 @@ pub struct PayboxVoidRequest {
     #[serde(rename = "VERSION")]
     pub version: String,
     #[serde(rename = "TYPE")]
-    pub request_type: String,
+    pub transaction_type: String,
     #[serde(rename = "SITE")]
     pub site: Secret<String>,
     #[serde(rename = "RANG")]
-    pub rang: Secret<String>,
+    pub rank: Secret<String>,
     #[serde(rename = "CLE")]
-    pub cle: Secret<String>,
+    pub key: Secret<String>,
     #[serde(rename = "NUMQUESTION")]
-    pub numquestion: String,
+    pub paybox_request_number: String,
     #[serde(rename = "MONTANT")]
-    pub montant: MinorUnit,
+    pub amount: MinorUnit,
     #[serde(rename = "DEVISE")]
-    pub devise: String,
+    pub currency: String,
     #[serde(rename = "REFERENCE")]
     pub reference: String,
     #[serde(rename = "DATEQ")]
-    pub dateq: String,
+    pub date: String,
     #[serde(rename = "NUMTRANS")]
-    pub numtrans: String,
+    pub transaction_number: String,
     #[serde(rename = "NUMAPPEL")]
-    pub numappel: String,
+    pub paybox_order_id: String,
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<PayboxRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
@@ -707,17 +656,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
         let connector = item.connector;
         let auth = PayboxAuthType::try_from(&router_data.connector_auth_type)?;
 
-        // NUMAPPEL is the connector_transaction_id
         let numappel = router_data.request.connector_transaction_id.clone();
 
-        // Extract NUMTRANS from connector_metadata stored during authorization
-        let numtrans = router_data
-            .request
-            .connector_metadata
-            .as_ref()
-            .and_then(|metadata| metadata.peek().get("connector_request_id"))
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string())
+        // Try to get NUMTRANS from stored metadata, fallback to NUMAPPEL if not available
+        // Note: connector_metadata in request may contain merchant custom data
+        let numtrans = router_data.request.connector_metadata
+            .clone()
+            .and_then(|meta| utils::to_connector_meta_from_secret::<PayboxMeta>(Some(meta)).ok())
+            .map(|meta| meta.connector_request_id)
             .unwrap_or_else(|| numappel.clone());
 
         let amount = router_data
@@ -734,24 +680,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
                 field_name: "currency",
             })?;
 
-        let montant = connector
+        let amount = connector
             .amount_converter
             .convert(amount, currency)
             .change_context(errors::ConnectorError::ParsingFailed)?;
 
         Ok(Self {
-            version: "00104".to_string(),
-            request_type: CANCEL_REQUEST.to_string(),
+            version: VERSION_PAYBOX.to_string(),
+            transaction_type: CANCEL_REQUEST.to_string(),
             site: auth.site,
-            rang: auth.rang,
-            cle: auth.cle,
-            numquestion: generate_request_id()?,
-            montant,
-            devise: get_currency_code(currency)?,
+            rank: auth.rank,
+            key: auth.key,
+            paybox_request_number: generate_request_id()?,
+            amount,
+            currency: get_currency_code(currency)?,
             reference: router_data.resource_common_data.connector_request_reference_id.clone(),
-            dateq: generate_date_time(),
-            numtrans,
-            numappel,
+            date: generate_date_time(),
+            transaction_number: numtrans,
+            paybox_order_id: numappel,
         })
     }
 }
@@ -771,35 +717,32 @@ impl TryFrom<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let status = if item.response.codereponse == "00000" {
-            AttemptStatus::Voided
+        let connector_transaction_id = get_transaction_id(
+            item.response.paybox_order_id.clone(),
+            item.response.transaction_number.clone(),
+        );
+
+        if item.response.response_code == SUCCESS_CODE {
+            Ok(Self {
+                response: Ok(PaymentsResponseData::TransactionResponse {
+                    resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id.clone()),
+                    redirection_data: None,
+                    mandate_reference: None,
+                    connector_metadata: None,
+                    network_txn_id: None,
+                    connector_response_reference_id: Some(connector_transaction_id),
+                    incremental_authorization_allowed: None,
+                    status_code: item.http_code,
+                }),
+                resource_common_data: PaymentFlowData {
+                    status: AttemptStatus::Voided,
+                    ..item.router_data.resource_common_data
+                },
+                ..item.router_data
+            })
         } else {
-            AttemptStatus::VoidFailed
-        };
-
-        let connector_transaction_id = item
-            .response
-            .numtrans
-            .or(item.response.numappel)
-            .unwrap_or_default();
-
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id.clone()),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata: None,
-                network_txn_id: None,
-                connector_response_reference_id: Some(connector_transaction_id),
-                incremental_authorization_allowed: None,
-                status_code: item.http_code,
-            }),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
-            ..item.router_data
-        })
+            Err(errors::ConnectorError::ResponseHandlingFailed.into())
+        }
     }
 }
 
@@ -812,29 +755,29 @@ pub struct PayboxRefundRequest {
     #[serde(rename = "VERSION")]
     pub version: String,
     #[serde(rename = "TYPE")]
-    pub request_type: String,
+    pub transaction_type: String,
     #[serde(rename = "SITE")]
     pub site: Secret<String>,
     #[serde(rename = "RANG")]
-    pub rang: Secret<String>,
+    pub rank: Secret<String>,
     #[serde(rename = "CLE")]
-    pub cle: Secret<String>,
+    pub key: Secret<String>,
     #[serde(rename = "NUMQUESTION")]
-    pub numquestion: String,
+    pub paybox_request_number: String,
     #[serde(rename = "MONTANT")]
-    pub montant: MinorUnit,
+    pub amount: MinorUnit,
     #[serde(rename = "DEVISE")]
-    pub devise: String,
+    pub currency: String,
     #[serde(rename = "REFERENCE")]
     pub reference: String,
     #[serde(rename = "DATEQ")]
-    pub dateq: String,
+    pub date: String,
     #[serde(rename = "NUMTRANS")]
-    pub numtrans: String,
+    pub transaction_number: String,
     #[serde(rename = "NUMAPPEL")]
-    pub numappel: String,
+    pub paybox_order_id: String,
     #[serde(rename = "ACTIVITE")]
-    pub activite: String,
+    pub activity: String,
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<PayboxRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
@@ -849,20 +792,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
         let connector = item.connector;
         let auth = PayboxAuthType::try_from(&router_data.connector_auth_type)?;
 
-        // NUMAPPEL is the connector_transaction_id
-        let numappel = router_data
-            .request
-            .connector_transaction_id
-            .clone();
+        let numappel = router_data.request.connector_transaction_id.clone();
 
-        // Extract NUMTRANS from connector_metadata stored during authorization
-        let numtrans = router_data
-            .request
-            .connector_metadata
-            .as_ref()
-            .and_then(|metadata| metadata.get("connector_request_id"))
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string())
+        // Try to get NUMTRANS from stored metadata, fallback to NUMAPPEL if not available
+        // Note: connector_metadata in request may contain merchant custom data
+        let numtrans = router_data.request.connector_metadata
+            .clone()
+            .and_then(|meta| utils::to_connector_meta::<PayboxMeta>(Some(meta)).ok())
+            .map(|meta| meta.connector_request_id)
             .unwrap_or_else(|| numappel.clone());
 
         let amount = connector
@@ -870,22 +807,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
             .convert(router_data.request.minor_refund_amount, router_data.request.currency)
             .change_context(errors::ConnectorError::ParsingFailed)?;
 
-        let montant = amount;
-
         Ok(Self {
-            version: "00104".to_string(),
-            request_type: REFUND_REQUEST.to_string(),
+            version: VERSION_PAYBOX.to_string(),
+            transaction_type: REFUND_REQUEST.to_string(),
             site: auth.site,
-            rang: auth.rang,
-            cle: auth.cle,
-            numquestion: generate_request_id()?,
-            montant,
-            devise: get_currency_code(router_data.request.currency)?,
+            rank: auth.rank,
+            key: auth.key,
+            paybox_request_number: generate_request_id()?,
+            amount,
+            currency: get_currency_code(router_data.request.currency)?,
             reference: router_data.resource_common_data.connector_request_reference_id.clone(),
-            dateq: generate_date_time(),
-            numtrans,
-            numappel,
-            activite: "024".to_string(),
+            date: generate_date_time(),
+            transaction_number: numtrans,
+            paybox_order_id: numappel,
+            activity: PAY_ORIGIN_INTERNET.to_string(),
         })
     }
 }
@@ -893,21 +828,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PayboxRefundResponse {
     #[serde(rename = "NUMTRANS")]
-    pub numtrans: Option<String>,
+    pub transaction_number: Option<String>,
     #[serde(rename = "NUMAPPEL")]
-    pub numappel: Option<String>,
+    pub paybox_order_id: Option<String>,
     #[serde(rename = "NUMQUESTION")]
-    pub numquestion: Option<String>,
+    pub paybox_request_number: Option<String>,
     #[serde(rename = "SITE")]
     pub site: Option<String>,
     #[serde(rename = "RANG")]
-    pub rang: Option<String>,
+    pub rank: Option<String>,
     #[serde(rename = "AUTORISATION")]
-    pub autorisation: Option<String>,
+    pub authorization: Option<String>,
     #[serde(rename = "CODEREPONSE")]
-    pub codereponse: String,
+    pub response_code: String,
     #[serde(rename = "COMMENTAIRE")]
-    pub commentaire: Option<String>,
+    pub response_message: Option<String>,
 }
 
 impl TryFrom<
@@ -925,32 +860,27 @@ impl TryFrom<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // For refund execute, always return Pending on success (matching Hyperswitch)
-        // The actual status is determined by refund sync
-        let refund_status = if item.response.codereponse == "00000" {
-            RefundStatus::Pending
+        let connector_refund_id = get_transaction_id(
+            item.response.paybox_order_id.clone(),
+            item.response.transaction_number.clone(),
+        );
+
+        if item.response.response_code == SUCCESS_CODE {
+            Ok(Self {
+                response: Ok(RefundsResponseData {
+                    connector_refund_id,
+                    refund_status: RefundStatus::Pending,
+                    status_code: item.http_code,
+                }),
+                resource_common_data: RefundFlowData {
+                    status: RefundStatus::Pending,
+                    ..item.router_data.resource_common_data
+                },
+                ..item.router_data
+            })
         } else {
-            map_paybox_status_to_refund_status(&item.response.codereponse)
-        };
-
-        let connector_refund_id = item
-            .response
-            .numtrans
-            .or(item.response.numappel)
-            .unwrap_or_default();
-
-        Ok(Self {
-            response: Ok(RefundsResponseData {
-                connector_refund_id,
-                refund_status,
-                status_code: item.http_code,
-            }),
-            resource_common_data: RefundFlowData {
-                status: refund_status,
-                ..item.router_data.resource_common_data
-            },
-            ..item.router_data
-        })
+            Err(errors::ConnectorError::ResponseHandlingFailed.into())
+        }
     }
 }
 
@@ -963,21 +893,21 @@ pub struct PayboxRefundSyncRequest {
     #[serde(rename = "VERSION")]
     pub version: String,
     #[serde(rename = "TYPE")]
-    pub request_type: String,
+    pub transaction_type: String,
     #[serde(rename = "SITE")]
     pub site: Secret<String>,
     #[serde(rename = "RANG")]
-    pub rang: Secret<String>,
+    pub rank: Secret<String>,
     #[serde(rename = "CLE")]
-    pub cle: Secret<String>,
+    pub key: Secret<String>,
     #[serde(rename = "NUMQUESTION")]
-    pub numquestion: String,
+    pub paybox_request_number: String,
     #[serde(rename = "DATEQ")]
-    pub dateq: String,
+    pub date: String,
     #[serde(rename = "NUMTRANS")]
-    pub numtrans: String,
+    pub transaction_number: String,
     #[serde(rename = "NUMAPPEL")]
-    pub numappel: String,
+    pub paybox_order_id: String,
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<PayboxRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
@@ -994,38 +924,37 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
         let connector_refund_id = router_data.request.connector_refund_id.clone();
 
         Ok(Self {
-            version: "00104".to_string(),
-            request_type: SYNC_REQUEST.to_string(),
+            version: VERSION_PAYBOX.to_string(),
+            transaction_type: SYNC_REQUEST.to_string(),
             site: auth.site,
-            rang: auth.rang,
-            cle: auth.cle,
-            numquestion: generate_request_id()?,
-            dateq: generate_date_time(),
-            numtrans: connector_refund_id.clone(),
-            numappel: connector_refund_id,
+            rank: auth.rank,
+            key: auth.key,
+            paybox_request_number: generate_request_id()?,
+            date: generate_date_time(),
+            transaction_number: connector_refund_id.clone(),
+            paybox_order_id: connector_refund_id,
         })
     }
 }
 
-// PayboxRSyncResponse has a STATUS field for inquiry responses (TYPE=00017)
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PayboxRSyncResponse {
     #[serde(rename = "NUMTRANS")]
-    pub numtrans: Option<String>,
+    pub transaction_number: Option<String>,
     #[serde(rename = "NUMAPPEL")]
-    pub numappel: Option<String>,
+    pub paybox_order_id: Option<String>,
     #[serde(rename = "NUMQUESTION")]
-    pub numquestion: Option<String>,
+    pub paybox_request_number: Option<String>,
     #[serde(rename = "SITE")]
     pub site: Option<String>,
     #[serde(rename = "RANG")]
-    pub rang: Option<String>,
+    pub rank: Option<String>,
     #[serde(rename = "AUTORISATION")]
-    pub autorisation: Option<String>,
+    pub authorization: Option<String>,
     #[serde(rename = "CODEREPONSE")]
-    pub codereponse: String,
+    pub response_code: String,
     #[serde(rename = "COMMENTAIRE")]
-    pub commentaire: Option<String>,
+    pub response_message: Option<String>,
     #[serde(rename = "STATUS")]
     pub status: PayboxStatus,
 }
@@ -1045,15 +974,13 @@ impl TryFrom<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Convert PayboxStatus directly to RefundStatus (matching Hyperswitch)
         let connector_refund_status = item.response.status;
         let refund_status = RefundStatus::from(connector_refund_status);
 
-        let connector_refund_id = item
-            .response
-            .numtrans
-            .or(item.response.numappel)
-            .unwrap_or_default();
+        let connector_refund_id = get_transaction_id(
+            item.response.paybox_order_id.clone(),
+            item.response.transaction_number.clone(),
+        );
 
         Ok(Self {
             response: Ok(RefundsResponseData {
@@ -1081,5 +1008,5 @@ pub struct PayboxErrorResponse {
     #[serde(rename = "COMMENTAIRE")]
     pub message: String,
     #[serde(rename = "NUMTRANS")]
-    pub numtrans: Option<String>,
+    pub transaction_number: Option<String>,
 }
