@@ -1936,12 +1936,15 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
         value: grpc_api_types::payments::Address,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let country_code = value.country_alpha2_code();
-        let country = if matches!(country_code, grpc_api_types::payments::CountryAlpha2::Unspecified) {
+        let country = if matches!(
+            country_code,
+            grpc_api_types::payments::CountryAlpha2::Unspecified
+        ) {
             None
         } else {
             Some(common_enums::CountryAlpha2::foreign_try_from(country_code)?)
         };
-        
+
         Ok(Self {
             country,
             city: value.city,

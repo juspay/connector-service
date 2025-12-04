@@ -935,7 +935,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let connector_payment_id = req.request.connector_transaction_id.clone();
-            
+
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_refunds(req),
                 req.resource_common_data.test_mode,

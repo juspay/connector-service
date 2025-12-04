@@ -3872,7 +3872,6 @@ struct AdyenMetadata {
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct AdyenConnectorMetadataObject {
     pub endpoint_prefix: Option<String>,
 }
@@ -3883,10 +3882,12 @@ impl TryFrom<&Option<common_utils::pii::SecretSerdeValue>> for AdyenConnectorMet
         meta_data: &Option<common_utils::pii::SecretSerdeValue>,
     ) -> Result<Self, Self::Error> {
         match meta_data {
-            Some(metadata) => crate::utils::to_connector_meta_from_secret::<Self>(Some(metadata.clone()))
-                .change_context(errors::ConnectorError::InvalidConnectorConfig {
-                    config: "metadata",
-                }),
+            Some(metadata) => {
+                crate::utils::to_connector_meta_from_secret::<Self>(Some(metadata.clone()))
+                    .change_context(errors::ConnectorError::InvalidConnectorConfig {
+                        config: "metadata",
+                    })
+            }
             None => Ok(Self::default()),
         }
     }
