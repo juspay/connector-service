@@ -35,7 +35,10 @@ use time::{Duration, OffsetDateTime};
 use url::Url;
 
 use super::AdyenRouterData;
-use crate::{types::ResponseRouterData, utils::is_manual_capture};
+use crate::{
+    types::ResponseRouterData,
+    utils::{is_manual_capture, to_connector_meta_from_secret},
+};
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub enum Currency {
@@ -3882,12 +3885,10 @@ impl TryFrom<&Option<common_utils::pii::SecretSerdeValue>> for AdyenConnectorMet
         meta_data: &Option<common_utils::pii::SecretSerdeValue>,
     ) -> Result<Self, Self::Error> {
         match meta_data {
-            Some(metadata) => {
-                crate::utils::to_connector_meta_from_secret::<Self>(Some(metadata.clone()))
-                    .change_context(errors::ConnectorError::InvalidConnectorConfig {
-                        config: "metadata",
-                    })
-            }
+            Some(metadata) => to_connector_meta_from_secret::<Self>(Some(metadata.clone()))
+                .change_context(errors::ConnectorError::InvalidConnectorConfig {
+                    config: "metadata",
+                }),
             None => Ok(Self::default()),
         }
     }
