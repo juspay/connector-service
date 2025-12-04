@@ -120,6 +120,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SdkSessionTokenV2 for Powertranz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAccessToken for Powertranz<T>
 {
 }
@@ -220,6 +225,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
+    > for Powertranz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::SdkSessionToken,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
     > for Powertranz<T>
 {
 }
@@ -448,6 +463,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
+        domain_types::connector_flow::SdkSessionToken,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
+    > for Powertranz<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
         PaymentMethodToken,
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
@@ -638,10 +663,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         // Try to parse as payment/refund response first (has iso_response_code)
-        let error_response = if let Ok(payment_response) =
-            res.response
-                .parse_struct::<powertranz::PowertranzPaymentsResponse>("PowertranzPaymentsResponse")
-        {
+        let error_response = if let Ok(payment_response) = res
+            .response
+            .parse_struct::<powertranz::PowertranzPaymentsResponse>(
+            "PowertranzPaymentsResponse",
+        ) {
             with_response_body!(event_builder, payment_response);
             powertranz::build_powertranz_error_response(
                 &payment_response.errors,
@@ -649,9 +675,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 &payment_response.response_message,
                 res.status_code,
             )
-        } else if let Ok(refund_response) = res.response.parse_struct::<powertranz::PowertranzRefundResponse>(
-            "PowertranzRefundResponse",
-        ) {
+        } else if let Ok(refund_response) = res
+            .response
+            .parse_struct::<powertranz::PowertranzRefundResponse>("PowertranzRefundResponse")
+        {
             with_response_body!(event_builder, refund_response);
             powertranz::build_powertranz_error_response(
                 &refund_response.errors,

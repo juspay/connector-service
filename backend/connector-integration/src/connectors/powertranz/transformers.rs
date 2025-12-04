@@ -321,7 +321,8 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let request_data = &item.router_data.request;
-        let amount = PowertranzAmountConvertor::convert(request_data.amount, request_data.currency)?;
+        let amount =
+            PowertranzAmountConvertor::convert(request_data.amount, request_data.currency)?;
         // Use ISO 4217 numeric code (e.g., "840" for USD)
         let currency_code = request_data.currency.iso_4217().to_string();
 
@@ -329,7 +330,8 @@ impl<
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
                 // Format: YYMM (e.g., "3012" for December 2030 = year 30, month 12)
                 let year_yy = card_data.get_card_expiry_year_2_digit()?;
-                let card_expiration = format!("{}{}", year_yy.peek(), &card_data.card_exp_month.peek());
+                let card_expiration =
+                    format!("{}{}", year_yy.peek(), &card_data.card_exp_month.peek());
 
                 Ok(Self {
                     transaction_identifier: uuid::Uuid::new_v4().to_string(),
@@ -351,7 +353,7 @@ impl<
                 })
             }
             _ => Err(errors::ConnectorError::NotSupported {
-                message: format!("Payment method"),
+                message: "Payment method not supported".to_string(),
                 connector: "powertranz",
             }
             .into()),
