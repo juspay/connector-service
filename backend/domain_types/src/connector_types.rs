@@ -953,7 +953,6 @@ impl L2L3Data {
             .as_ref()
             .and_then(|address| address.origin_zip.clone())
     }
-
 }
 
 impl RawConnectorRequestResponse for PaymentFlowData {

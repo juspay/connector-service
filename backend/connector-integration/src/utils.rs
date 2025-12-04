@@ -1,9 +1,14 @@
 pub mod xml_utils;
-use common_utils::{errors::{ReportSwitchExt, ParsingError}, ext_traits::ValueExt, types::MinorUnit, CustomResult};
+use common_utils::{
+    errors::{ParsingError, ReportSwitchExt},
+    ext_traits::ValueExt,
+    types::MinorUnit,
+    CustomResult,
+};
 use domain_types::{
     connector_types::{
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsSyncData,
-        RepeatPaymentData, SetupMandateRequestData, CaptureSyncResponse, ResponseId,
+        CaptureSyncResponse, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsSyncData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,

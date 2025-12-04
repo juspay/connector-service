@@ -25,8 +25,8 @@ use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
-    router_response_types::Response,
     router_request_types::SyncRequestType,
+    router_response_types::Response,
     types::Connectors,
 };
 use error_stack::ResultExt;
@@ -36,14 +36,19 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    ActionResponse, PaymentsRequest, CheckoutErrorResponse, PaymentCaptureRequest,
-    PaymentCaptureResponse, PaymentVoidRequest, PaymentVoidResponse, RefundRequest, CheckoutRefundResponse,
-    PaymentsResponse, PaymentsResponse as PSyncResponse,
+    ActionResponse, CheckoutErrorResponse, CheckoutRefundResponse, PaymentCaptureRequest,
+    PaymentCaptureResponse, PaymentVoidRequest, PaymentVoidResponse, PaymentsRequest,
+    PaymentsResponse, PaymentsResponse as PSyncResponse, RefundRequest,
 };
 
 use super::macros;
-use crate::{types::ResponseRouterData, utils::{get_error_code_error_message_based_on_priority, ConnectorErrorType, ConnectorErrorTypeMapping},
-    with_error_response_body, 
+use crate::{
+    types::ResponseRouterData,
+    utils::{
+        get_error_code_error_message_based_on_priority, ConnectorErrorType,
+        ConnectorErrorTypeMapping,
+    },
+    with_error_response_body,
 };
 
 pub(crate) mod headers {
@@ -476,7 +481,7 @@ macros::macro_connector_implementation!(
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
-    flow_response: PaymentsResponse,
+    flow_response: PaymentsResponseData,
     http_method: Get,
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
@@ -1198,7 +1203,8 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > ConnectorErrorTypeMapping for Checkout<T> {
+    > ConnectorErrorTypeMapping for Checkout<T>
+{
     fn get_connector_error_type(
         &self,
         error_code: String,
