@@ -1772,20 +1772,19 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                         }))
                     }
                     Some(common_enums::PaymentMethodType::GooglePay) => {
-                        let gpay_data: GpaySessionTokenData = if let Some(connector_meta) = item
+                        let gpay_data: GpaySessionTokenData = match item
                             .router_data
                             .resource_common_data
                             .connector_meta_data
                             .clone()
                         {
-                            connector_meta
+                            Some(connector_meta) => connector_meta
                                 .expose()
                                 .parse_value("GpaySessionTokenData")
                                 .change_context(errors::ConnectorError::ParsingFailed)
-                                .attach_printable("Failed to parse gpay metadata")?
-                        } else {
-                            return Err(errors::ConnectorError::NoConnectorMetaData)
-                                .attach_printable("connector_meta_data is None");
+                                .attach_printable("Failed to parse gpay metadata")?,
+                            None => Err(errors::ConnectorError::NoConnectorMetaData)
+                                .attach_printable("connector_meta_data is None")?,
                         };
 
                         SessionToken::GooglePay(Box::new(
