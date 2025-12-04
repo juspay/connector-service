@@ -164,7 +164,7 @@ pub struct NuveiCard<
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NuveiDeviceDetails {
-    pub ip_address: String,
+    pub ip_address: Secret<String, pii::IpAddress>,
 }
 
 #[derive(Debug, Serialize)]
@@ -172,10 +172,12 @@ pub struct NuveiDeviceDetails {
 pub struct NuveiBillingAddress {
     // Required fields per Nuvei documentation
     pub email: pii::Email,
-    pub first_name: Secret<String>,
-    pub last_name: Secret<String>,
     pub country: String,
     // Optional fields
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub first_name: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_name: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub phone: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -678,7 +680,9 @@ impl<
                     .resource_common_data
                     .get_optional_billing_full_name()
                     .or(router_data.request.customer_name.clone().map(Secret::new))
-                    .unwrap_or(Secret::new("".to_string()));
+                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                        field_name: "billing_address.first_name and billing_address.last_name or customer_name",
+                    })?;
 
                 NuveiPaymentOption {
                     card: NuveiCard {
@@ -716,24 +720,19 @@ impl<
                 field_name: "billing_address.country",
             })?;
 
-        // Get first and last name from billing, with fallback to cardholder name or default
+        // Get first and last name from billing (optional fields)
         let first_name = router_data
             .resource_common_data
-            .get_optional_billing_first_name()
-            .unwrap_or_else(|| Secret::new("NA".to_string()));
+            .get_optional_billing_first_name();
 
         let last_name = router_data
             .resource_common_data
-            .get_optional_billing_last_name()
-            .unwrap_or_else(|| Secret::new("NA".to_string()));
+            .get_optional_billing_last_name();
 
         // Use state code conversion (e.g., "California" -> "CA") for US/CA
         let state = router_data
             .resource_common_data
-            .get_billing_address()
-            .ok()
-            .and_then(|addr| addr.to_state_code_as_optional().ok())
-            .flatten();
+            .get_optional_billing_state();
 
         // Get address_line3 directly from billing address
         let address_line3 = router_data
@@ -767,11 +766,17 @@ impl<
             .request
             .browser_info
             .as_ref()
-            .and_then(|browser| browser.ip_address.as_ref())
-            .map(|ip| ip.to_string())
-            .unwrap_or_else(|| "0.0.0.0".to_string()); // Default IP if not provided
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "browser_info",
+            })?
+            .ip_address
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "browser_info.ip_address",
+            })?;
 
-        let device_details = NuveiDeviceDetails { ip_address };
+        let device_details = NuveiDeviceDetails {
+            ip_address: Secret::new(ip_address.to_string()),
+        };
 
         let time_stamp = NuveiAuthType::get_timestamp();
         let client_request_id = router_data
@@ -1383,14 +1388,13 @@ impl<
             return Err(errors::ConnectorError::MissingConnectorTransactionID.into());
         }
 
-        // Generate checksum for getTransactionDetails (per Hyperswitch PSync pattern)
-        // Checksum order: merchantId + merchantSiteId + clientUniqueId + timeStamp + transactionId + merchantSecretKey
+        // Generate checksum for getTransactionDetails: merchantId + merchantSiteId + transactionId + clientUniqueId + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
             auth.merchant_id.peek(),
             auth.merchant_site_id.peek(),
+            &transaction_id,
             &client_unique_id,
             &time_stamp.to_string(),
-            &transaction_id,
         ]);
 
         Ok(Self {
