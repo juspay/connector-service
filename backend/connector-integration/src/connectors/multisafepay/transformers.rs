@@ -444,13 +444,9 @@ pub struct GatewayInfo<T: PaymentMethodDataTypes> {
     pub card_number: RawCardNumber<T>,
     pub card_expiry_date: i64, // Format: YYMM as integer
     pub card_cvc: Secret<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub card_holder_name: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub flexible_3d: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub moto: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub term_url: Option<String>,
 }
 
@@ -564,7 +560,7 @@ impl<
                     card_number: card_data.card_number.clone(),
                     card_expiry_date,
                     card_cvc: card_data.card_cvc.clone(),
-                    card_holder_name: card_data.card_holder_name.clone(),
+                    card_holder_name: None,
                     flexible_3d: None,
                     moto: None,
                     term_url: None,
@@ -639,11 +635,7 @@ impl<
             gateway,
             currency: item.request.currency,
             amount: item.request.minor_amount,
-            description: item
-                .request
-                .statement_descriptor
-                .clone()
-                .unwrap_or_else(|| "Payment".to_string()),
+            description: item.resource_common_data.get_description()?,
             payment_options,
             customer,
             gateway_info,
@@ -703,7 +695,7 @@ impl<T: PaymentMethodDataTypes>
                     card_number: card_data.card_number.clone(),
                     card_expiry_date,
                     card_cvc: card_data.card_cvc.clone(),
-                    card_holder_name: card_data.card_holder_name.clone(),
+                    card_holder_name: None,
                     flexible_3d: None,
                     moto: None,
                     term_url: None,
@@ -778,11 +770,7 @@ impl<T: PaymentMethodDataTypes>
             gateway,
             currency: item.request.currency,
             amount: item.request.minor_amount,
-            description: item
-                .request
-                .statement_descriptor
-                .clone()
-                .unwrap_or_else(|| "Payment".to_string()),
+            description: item.resource_common_data.get_description()?,
             payment_options,
             customer,
             gateway_info,
