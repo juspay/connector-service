@@ -4,6 +4,20 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.04.0
+
+### Features
+
+- **connector:** [NEXIXPAY] Connector Integration ([#324](https://github.com/juspay/connector-service/pull/324)) ([`3f1b331`](https://github.com/juspay/connector-service/commit/3f1b331b04e061c5ec7d3f9d4b3f601a9bc6bec8))
+
+### Bug Fixes
+
+- Diff correction for multisafepay ([#332](https://github.com/juspay/connector-service/pull/332)) ([`136f32f`](https://github.com/juspay/connector-service/commit/136f32f3daf276a7d4d1584ed93d10d3b7bb5e10))
+
+**Full Changelog:** [`2025.12.03.1...2025.12.04.0`](https://github.com/juspay/connector-service/compare/2025.12.03.1...2025.12.04.0)
+
+- - -
+
 ## 2025.12.03.1
 
 ### Bug Fixes
