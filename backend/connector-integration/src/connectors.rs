@@ -151,3 +151,6 @@ pub use self::forte::Forte;
 
 pub mod shift4;
 pub use self::shift4::Shift4;
+
+pub mod bambora;
+pub use self::bambora::Bambora;
