@@ -6536,6 +6536,7 @@ impl<T: PaymentMethodDataTypes> From<&PaymentsAuthorizeData<T>>
             setup_mandate_details: data.setup_mandate_details.clone(),
             mandate_id: data.mandate_id.clone(),
             integrity_object: None,
+            merchant_account_metadata: data.merchant_account_metadata.clone(),
         }
     }
 }
@@ -6682,6 +6683,12 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreatePaymentMethodT
             setup_mandate_details: None,
             integrity_object: None,
             split_payments: None,
+            merchant_account_metadata: (!value.merchant_account_metadata.is_empty())
+                .then(|| {
+                    common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
+                        &value.merchant_account_metadata,
+                    ))
+                }),
         })
     }
 }
@@ -6740,7 +6747,7 @@ impl
                 }))?,
             connector_customer: None,
             description: None,
-            return_url: None,
+            return_url: value.return_url,
             connector_meta_data: None,
             amount_captured: None,
             minor_amount_captured: None,
