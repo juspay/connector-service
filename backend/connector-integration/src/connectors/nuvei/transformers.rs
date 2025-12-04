@@ -81,7 +81,7 @@ pub struct NuveiSessionTokenRequest {
 pub struct NuveiSessionTokenResponse {
     pub session_token: Option<String>,
     pub internal_request_id: Option<i64>,
-    pub status: String,
+    pub status: NuveiPaymentStatus,
     pub err_code: Option<i32>,
     pub reason: Option<String>,
     pub merchant_id: Option<String>,
@@ -198,8 +198,8 @@ pub struct NuveiBillingAddress {
 pub struct NuveiPaymentResponse {
     pub order_id: Option<String>,
     pub transaction_id: Option<String>,
-    pub transaction_status: Option<String>,
-    pub status: String,
+    pub transaction_status: Option<NuveiTransactionStatus>,
+    pub status: NuveiPaymentStatus,
     pub err_code: Option<i32>,
     pub reason: Option<String>,
     #[serde(rename = "gwErrorCode")]
@@ -213,18 +213,32 @@ pub struct NuveiPaymentResponse {
     pub internal_request_id: Option<i64>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(rename_all = "UPPERCASE")]
 pub enum NuveiPaymentStatus {
-    #[serde(rename = "APPROVED")]
-    Approved,
-    #[serde(rename = "DECLINED")]
-    Declined,
-    #[serde(rename = "ERROR")]
+    Success,
+    Failed,
     Error,
-    #[serde(rename = "REDIRECT")]
+    #[default]
+    Processing,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum NuveiTransactionStatus {
+    #[serde(alias = "Approved", alias = "APPROVED")]
+    Approved,
+    #[serde(alias = "Declined", alias = "DECLINED")]
+    Declined,
+    #[serde(alias = "Filter Error", alias = "ERROR", alias = "Error")]
+    Error,
+    #[serde(alias = "Redirect", alias = "REDIRECT")]
     Redirect,
-    #[serde(rename = "PENDING")]
+    #[serde(alias = "Pending", alias = "PENDING")]
     Pending,
+    #[serde(alias = "Processing", alias = "PROCESSING")]
+    #[default]
+    Processing,
 }
 
 // Transaction Type for initPayment
@@ -265,7 +279,7 @@ pub struct NuveiSyncRequest {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NuveiSyncResponse {
-    pub status: String,
+    pub status: NuveiPaymentStatus,
     pub err_code: Option<i32>,
     pub reason: Option<String>,
     pub internal_request_id: Option<i64>,
@@ -279,7 +293,7 @@ pub struct NuveiSyncResponse {
 #[serde(rename_all = "camelCase")]
 pub struct NuveiTransactionDetails {
     pub transaction_id: Option<String>,
-    pub transaction_status: Option<String>,
+    pub transaction_status: Option<NuveiTransactionStatus>,
     pub auth_code: Option<String>,
     pub client_unique_id: Option<String>,
     pub date: Option<String>,
@@ -312,8 +326,8 @@ pub struct NuveiCaptureResponse {
     pub merchant_site_id: Option<String>,
     pub internal_request_id: Option<i64>,
     pub transaction_id: Option<String>,
-    pub status: String,
-    pub transaction_status: Option<String>,
+    pub status: NuveiPaymentStatus,
+    pub transaction_status: Option<NuveiTransactionStatus>,
     pub err_code: Option<i32>,
     pub reason: Option<String>,
 }
@@ -338,8 +352,8 @@ pub struct NuveiRefundRequest {
 #[serde(rename_all = "camelCase")]
 pub struct NuveiRefundResponse {
     pub transaction_id: Option<String>,
-    pub transaction_status: Option<String>,
-    pub status: String,
+    pub transaction_status: Option<NuveiTransactionStatus>,
+    pub status: NuveiPaymentStatus,
     pub err_code: Option<i32>,
     pub reason: Option<String>,
 }
@@ -361,8 +375,8 @@ pub struct NuveiRefundSyncRequest {
 #[serde(rename_all = "camelCase")]
 pub struct NuveiRefundSyncResponse {
     pub transaction_id: Option<String>,
-    pub transaction_status: Option<String>,
-    pub status: String,
+    pub transaction_status: Option<NuveiTransactionStatus>,
+    pub status: NuveiPaymentStatus,
     pub err_code: Option<i32>,
     pub reason: Option<String>,
 }
@@ -387,8 +401,8 @@ pub struct NuveiVoidRequest {
 #[serde(rename_all = "camelCase")]
 pub struct NuveiVoidResponse {
     pub transaction_id: Option<String>,
-    pub transaction_status: Option<String>,
-    pub status: String,
+    pub transaction_status: Option<NuveiTransactionStatus>,
+    pub status: NuveiPaymentStatus,
     pub err_code: Option<i32>,
     pub reason: Option<String>,
 }
@@ -502,7 +516,7 @@ impl
         let router_data = &item.router_data;
 
         // Check if the overall request status is SUCCESS or ERROR
-        if response.status.to_uppercase() == "ERROR" {
+        if matches!(response.status, NuveiPaymentStatus::Error) {
             let error_code = response.err_code.map(|c| c.to_string()).unwrap_or_default();
             let error_message = response
                 .reason
@@ -677,9 +691,10 @@ impl<
                 }
             }
             _ => {
-                return Err(errors::ConnectorError::NotImplemented(
-                    "Payment method not supported".to_string(),
-                )
+                return Err(errors::ConnectorError::NotSupported {
+                    message: "Payment method not supported".to_string(),
+                    connector: "nuvei",
+                }
                 .into())
             }
         };
@@ -875,7 +890,7 @@ impl<
         let router_data = &item.router_data;
 
         // Check if the overall request status is SUCCESS or ERROR
-        if response.status.to_uppercase() == "ERROR" {
+        if matches!(response.status, NuveiPaymentStatus::Error) {
             let error_code = response.err_code.map(|c| c.to_string()).unwrap_or_default();
             let error_message = response
                 .reason
@@ -903,21 +918,21 @@ impl<
         }
 
         // Map transaction status to attempt status
-        let status = match response.transaction_status.as_deref() {
-            Some("APPROVED") => {
+        let status = match response.transaction_status {
+            Some(NuveiTransactionStatus::Approved) => {
                 if router_data.request.is_auto_capture()? {
                     common_enums::AttemptStatus::Charged
                 } else {
                     common_enums::AttemptStatus::Authorized
                 }
             }
-            Some("DECLINED") => common_enums::AttemptStatus::Failure,
-            Some("ERROR") => common_enums::AttemptStatus::Failure,
-            Some("REDIRECT") => common_enums::AttemptStatus::AuthenticationPending,
-            Some("PENDING") => common_enums::AttemptStatus::Pending,
+            Some(NuveiTransactionStatus::Declined) => common_enums::AttemptStatus::Failure,
+            Some(NuveiTransactionStatus::Error) => common_enums::AttemptStatus::Failure,
+            Some(NuveiTransactionStatus::Redirect) => common_enums::AttemptStatus::AuthenticationPending,
+            Some(NuveiTransactionStatus::Pending) => common_enums::AttemptStatus::Pending,
             _ => {
                 // If transaction_status is not present but status is SUCCESS, default to Pending
-                if response.status.to_uppercase() == "SUCCESS" {
+                if matches!(response.status, NuveiPaymentStatus::Success) {
                     common_enums::AttemptStatus::Pending
                 } else {
                     common_enums::AttemptStatus::Failure
@@ -1061,7 +1076,7 @@ impl
         let router_data = &item.router_data;
 
         // Check if the overall request status is SUCCESS or ERROR
-        if response.status.to_uppercase() == "ERROR" {
+        if matches!(response.status, NuveiPaymentStatus::Error) {
             let error_code = response.err_code.map(|c| c.to_string()).unwrap_or_default();
             let error_message = response
                 .reason
@@ -1099,8 +1114,8 @@ impl
         )?;
 
         // Map transaction status to attempt status
-        let status = match transaction_details.transaction_status.as_deref() {
-            Some("APPROVED") | Some("Approved") => {
+        let status = match transaction_details.transaction_status {
+            Some(NuveiTransactionStatus::Approved) => {
                 // For PSync, we need to determine if it was authorized or captured
                 // Check transaction_type: "Auth" means authorized only, "Sale" means captured
                 match transaction_details.transaction_type.as_deref() {
@@ -1109,15 +1124,15 @@ impl
                     _ => common_enums::AttemptStatus::Charged, // Default to Charged for unknown types
                 }
             }
-            Some("DECLINED") | Some("Declined") => common_enums::AttemptStatus::Failure,
-            Some("ERROR") | Some("Error") => common_enums::AttemptStatus::Failure,
-            Some("REDIRECT") | Some("Redirect") => {
+            Some(NuveiTransactionStatus::Declined) => common_enums::AttemptStatus::Failure,
+            Some(NuveiTransactionStatus::Error) => common_enums::AttemptStatus::Failure,
+            Some(NuveiTransactionStatus::Redirect) => {
                 common_enums::AttemptStatus::AuthenticationPending
             }
-            Some("PENDING") | Some("Pending") => common_enums::AttemptStatus::Pending,
+            Some(NuveiTransactionStatus::Pending) => common_enums::AttemptStatus::Pending,
             _ => {
                 // If transaction_status is not present but status is SUCCESS, default to Pending
-                if response.status.to_uppercase() == "SUCCESS" {
+                if matches!(response.status, NuveiPaymentStatus::Success) {
                     common_enums::AttemptStatus::Pending
                 } else {
                     common_enums::AttemptStatus::Failure
@@ -1174,7 +1189,7 @@ impl
         let router_data = &item.router_data;
 
         // Check if the overall request status is SUCCESS or ERROR
-        if response.status.to_uppercase() == "ERROR" {
+        if matches!(response.status, NuveiPaymentStatus::Error) {
             let error_code = response.err_code.map(|c| c.to_string()).unwrap_or_default();
             let error_message = response
                 .reason
@@ -1202,14 +1217,14 @@ impl
         }
 
         // Map transaction status to attempt status
-        let status = match response.transaction_status.as_deref() {
-            Some("APPROVED") => common_enums::AttemptStatus::Charged,
-            Some("DECLINED") => common_enums::AttemptStatus::Failure,
-            Some("ERROR") => common_enums::AttemptStatus::Failure,
-            Some("PENDING") => common_enums::AttemptStatus::Pending,
+        let status = match response.transaction_status {
+            Some(NuveiTransactionStatus::Approved) => common_enums::AttemptStatus::Charged,
+            Some(NuveiTransactionStatus::Declined) => common_enums::AttemptStatus::Failure,
+            Some(NuveiTransactionStatus::Error) => common_enums::AttemptStatus::Failure,
+            Some(NuveiTransactionStatus::Pending) => common_enums::AttemptStatus::Pending,
             _ => {
                 // If transaction_status is not present but status is SUCCESS, default to Charged
-                if response.status.to_uppercase() == "SUCCESS" {
+                if matches!(response.status, NuveiPaymentStatus::Success) {
                     common_enums::AttemptStatus::Charged
                 } else {
                     common_enums::AttemptStatus::Failure
@@ -1408,7 +1423,7 @@ impl
         let router_data = &item.router_data;
 
         // Check if the overall request status is SUCCESS or ERROR
-        if response.status.to_uppercase() == "ERROR" {
+        if matches!(response.status, NuveiPaymentStatus::Error) {
             let error_code = response.err_code.map(|c| c.to_string()).unwrap_or_default();
             let error_message = response
                 .reason
@@ -1436,14 +1451,14 @@ impl
         }
 
         // Map transaction status to refund status
-        let refund_status = match response.transaction_status.as_deref() {
-            Some("APPROVED") => common_enums::RefundStatus::Success,
-            Some("DECLINED") => common_enums::RefundStatus::Failure,
-            Some("ERROR") => common_enums::RefundStatus::Failure,
-            Some("PENDING") => common_enums::RefundStatus::Pending,
+        let refund_status = match response.transaction_status {
+            Some(NuveiTransactionStatus::Approved) => common_enums::RefundStatus::Success,
+            Some(NuveiTransactionStatus::Declined) => common_enums::RefundStatus::Failure,
+            Some(NuveiTransactionStatus::Error) => common_enums::RefundStatus::Failure,
+            Some(NuveiTransactionStatus::Pending) => common_enums::RefundStatus::Pending,
             _ => {
                 // If transaction_status is not present but status is SUCCESS, default to Success
-                if response.status.to_uppercase() == "SUCCESS" {
+                if matches!(response.status, NuveiPaymentStatus::Success) {
                     common_enums::RefundStatus::Success
                 } else {
                     common_enums::RefundStatus::Failure
@@ -1495,7 +1510,7 @@ impl
         let router_data = &item.router_data;
 
         // Check if the overall request status is SUCCESS or ERROR
-        if response.status.to_uppercase() == "ERROR" {
+        if matches!(response.status, NuveiPaymentStatus::Error) {
             let error_code = response.err_code.map(|c| c.to_string()).unwrap_or_default();
             let error_message = response
                 .reason
@@ -1523,14 +1538,14 @@ impl
         }
 
         // Map transaction status to refund status
-        let refund_status = match response.transaction_status.as_deref() {
-            Some("APPROVED") => common_enums::RefundStatus::Success,
-            Some("DECLINED") => common_enums::RefundStatus::Failure,
-            Some("ERROR") => common_enums::RefundStatus::Failure,
-            Some("PENDING") => common_enums::RefundStatus::Pending,
+        let refund_status = match response.transaction_status {
+            Some(NuveiTransactionStatus::Approved) => common_enums::RefundStatus::Success,
+            Some(NuveiTransactionStatus::Declined) => common_enums::RefundStatus::Failure,
+            Some(NuveiTransactionStatus::Error) => common_enums::RefundStatus::Failure,
+            Some(NuveiTransactionStatus::Pending) => common_enums::RefundStatus::Pending,
             _ => {
                 // If transaction_status is not present but status is SUCCESS, default to Success
-                if response.status.to_uppercase() == "SUCCESS" {
+                if matches!(response.status, NuveiPaymentStatus::Success) {
                     common_enums::RefundStatus::Success
                 } else {
                     common_enums::RefundStatus::Failure
@@ -1676,7 +1691,7 @@ impl
         let router_data = &item.router_data;
 
         // Check if the overall request status is SUCCESS or ERROR
-        if response.status.to_uppercase() == "ERROR" {
+        if matches!(response.status, NuveiPaymentStatus::Error) {
             let error_code = response.err_code.map(|c| c.to_string()).unwrap_or_default();
             let error_message = response
                 .reason
@@ -1704,14 +1719,14 @@ impl
         }
 
         // Map transaction status to attempt status
-        let status = match response.transaction_status.as_deref() {
-            Some("APPROVED") => common_enums::AttemptStatus::Voided,
-            Some("DECLINED") => common_enums::AttemptStatus::VoidFailed,
-            Some("ERROR") => common_enums::AttemptStatus::VoidFailed,
-            Some("PENDING") => common_enums::AttemptStatus::Pending,
+        let status = match response.transaction_status {
+            Some(NuveiTransactionStatus::Approved) => common_enums::AttemptStatus::Voided,
+            Some(NuveiTransactionStatus::Declined) => common_enums::AttemptStatus::VoidFailed,
+            Some(NuveiTransactionStatus::Error) => common_enums::AttemptStatus::VoidFailed,
+            Some(NuveiTransactionStatus::Pending) => common_enums::AttemptStatus::Pending,
             _ => {
                 // If transaction_status is not present but status is SUCCESS, default to Voided
-                if response.status.to_uppercase() == "SUCCESS" {
+                if matches!(response.status, NuveiPaymentStatus::Success) {
                     common_enums::AttemptStatus::Voided
                 } else {
                     common_enums::AttemptStatus::VoidFailed
