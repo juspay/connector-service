@@ -1752,6 +1752,7 @@ pub fn get_adyen_response(
         .map(|mandate_id| MandateReference {
             connector_mandate_id: Some(mandate_id.expose()),
             payment_method_id: None,
+            connector_mandate_request_reference_id: None,
         });
     let network_txn_id = response.additional_data.and_then(|additional_data| {
         additional_data
@@ -2034,6 +2035,7 @@ pub fn get_webhook_response(
         .map(|mandate_id| MandateReference {
             connector_mandate_id: Some(mandate_id.clone().expose()),
             payment_method_id: response.recurring_shopper_reference.clone(),
+            connector_mandate_request_reference_id: None,
         });
     let payments_response_data = PaymentsResponseData::TransactionResponse {
         resource_id: ResponseId::ConnectorTransactionId(

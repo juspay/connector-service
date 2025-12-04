@@ -499,6 +499,7 @@ impl<
                             Box::new(MandateReference {
                                 connector_mandate_id: Some(pm.id.clone().expose()),
                                 payment_method_id: None,
+                                connector_mandate_request_reference_id: None,
                             })
                         }),
                         connector_metadata: None,
@@ -715,6 +716,7 @@ impl<
                             Box::new(MandateReference {
                                 connector_mandate_id: Some(pm.id.clone().expose()),
                                 payment_method_id: None,
+                                connector_mandate_request_reference_id: None,
                             })
                         }),
                         connector_metadata: None,
@@ -750,6 +752,7 @@ impl<
                             Box::new(MandateReference {
                                 connector_mandate_id: Some(pm.id.clone().expose()),
                                 payment_method_id: None,
+                                connector_mandate_request_reference_id: None,
                             })
                         }),
                         connector_metadata: None,

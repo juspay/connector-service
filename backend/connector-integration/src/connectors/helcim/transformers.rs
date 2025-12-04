@@ -735,6 +735,7 @@ impl<
         let mandate_reference = MandateReference {
             connector_mandate_id: Some(item.response.transaction_id.to_string()),
             payment_method_id: None,
+            connector_mandate_request_reference_id: None,
         };
 
         Ok(Self {

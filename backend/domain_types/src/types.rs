@@ -1423,6 +1423,8 @@ impl<
             request_extended_authorization: value.request_extended_authorization,
             merchant_account_metadata,
             connector_testing_data,
+            payment_channel: None,
+            enable_partial_authorization: None,
         })
     }
 }
@@ -1607,6 +1609,8 @@ impl<
             request_extended_authorization: value.request_extended_authorization,
             merchant_account_metadata,
             connector_testing_data,
+            payment_channel: None,
+            enable_partial_authorization: None,
         })
     }
 }
@@ -1947,6 +1951,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
             state: value.state,
             first_name: value.first_name,
             last_name: value.last_name,
+            origin_zip: None,
         })
     }
 }
@@ -1987,6 +1992,11 @@ impl ForeignTryFrom<grpc_api_types::payments::OrderDetailsWithAmount> for OrderD
                     common_enums::ProductType::foreign_from(grpc_product_type)
                 }),
             product_tax_code: item.product_tax_code,
+            commodity_code: None,
+            sku: None,
+            upc: None,
+            unit_discount_amount: None,
+            total_amount: None,
         })
     }
 }
@@ -2053,6 +2063,8 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
+            l2_l3_data: None,
+            authorized_amount: None,
         })
     }
 }
@@ -2164,6 +2176,8 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             vault_headers,
             recurring_mandate_payment_data: None,
             order_details,
+            l2_l3_data: None,
+            authorized_amount: None,
         })
     }
 }
@@ -2283,6 +2297,8 @@ impl
             vault_headers,
             recurring_mandate_payment_data: None,
             order_details,
+            l2_l3_data: None,
+            authorized_amount: None,
         })
     }
 }
@@ -2360,6 +2376,8 @@ impl
             vault_headers: None,
             recurring_mandate_payment_data: None,
             order_details: None,
+            l2_l3_data: None,
+            authorized_amount: None,
         })
     }
 }
@@ -2432,6 +2450,8 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
+            l2_l3_data: None,
+            authorized_amount: None,
         })
     }
 }
@@ -2497,6 +2517,8 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
+            l2_l3_data: None,
+            authorized_amount: None,
         })
     }
 }
@@ -3150,6 +3172,8 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
+            l2_l3_data: None,
+            authorized_amount: None,
         })
     }
 }
@@ -4456,6 +4480,8 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
+            l2_l3_data: None,
+            authorized_amount: None,
         })
     }
 }
@@ -5003,6 +5029,8 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
+            l2_l3_data: None,
+            authorized_amount: None,
         })
     }
 }
@@ -5068,6 +5096,8 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
+            l2_l3_data: None,
+            authorized_amount: None,
         })
     }
 }
@@ -5296,6 +5326,8 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
+            l2_l3_data: None,
+            authorized_amount: None,
         })
     }
 }
@@ -5898,6 +5930,8 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
+            l2_l3_data: None,
+            authorized_amount: None,
         })
     }
 }
@@ -6356,6 +6390,8 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
+            l2_l3_data: None,
+            authorized_amount: None,
         })
     }
 }
@@ -6495,6 +6531,8 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
+            l2_l3_data: None,
+            authorized_amount: None,
         })
     }
 }
@@ -6640,6 +6678,8 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
+            l2_l3_data: None,
+            authorized_amount: None,
         })
     }
 }
@@ -6860,6 +6900,8 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
+            l2_l3_data: None,
+            authorized_amount: None,
         })
     }
 }
@@ -7637,6 +7679,8 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
+            l2_l3_data: None,
+            authorized_amount: None,
         })
     }
 }
@@ -7718,6 +7762,8 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
+            l2_l3_data: None,
+            authorized_amount: None,
         })
     }
 }
@@ -7799,6 +7845,8 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
+            l2_l3_data: None,
+            authorized_amount: None,
         })
     }
 }

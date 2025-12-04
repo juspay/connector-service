@@ -549,6 +549,7 @@ impl<T: PaymentMethodDataTypes>
                 .map(|token| MandateReference {
                     connector_mandate_id: Some(token.peek().to_string()),
                     payment_method_id: None,
+                    connector_mandate_request_reference_id: None,
                 });
 
         let mut router_data = item.router_data;

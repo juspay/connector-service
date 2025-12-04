@@ -603,6 +603,7 @@ impl<F, T> TryFrom<ResponseRouterData<NoonPaymentsResponse, Self>>
             Box::new(MandateReference {
                 connector_mandate_id: Some(subscription_data.identifier.expose()),
                 payment_method_id: None,
+                connector_mandate_request_reference_id: None,
             })
         });
         Ok(Self {
@@ -1349,6 +1350,7 @@ impl<
             Box::new(MandateReference {
                 connector_mandate_id: Some(subscription_data.identifier.expose()),
                 payment_method_id: None,
+                connector_mandate_request_reference_id: None,
             })
         });
         Ok(Self {

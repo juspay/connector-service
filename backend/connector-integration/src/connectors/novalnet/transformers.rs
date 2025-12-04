@@ -700,6 +700,7 @@ impl<
                             .map(|id| MandateReference {
                                 connector_mandate_id: Some(id.clone()),
                                 payment_method_id: None,
+                                connector_mandate_request_reference_id: None,
                             })
                             .map(Box::new),
                         connector_metadata: None,
@@ -820,6 +821,7 @@ impl<
                             .map(|id| MandateReference {
                                 connector_mandate_id: Some(id.clone()),
                                 payment_method_id: None,
+                                connector_mandate_request_reference_id: None,
                             })
                             .map(Box::new),
                         connector_metadata: None,
@@ -917,6 +919,7 @@ impl
                             .map(|id| MandateReference {
                                 connector_mandate_id: Some(id.clone()),
                                 payment_method_id: None,
+                                connector_mandate_request_reference_id: None,
                             })
                             .map(Box::new),
                         connector_metadata: None,
@@ -1422,6 +1425,7 @@ impl<F> TryFrom<ResponseRouterData<NovalnetPSyncResponse, Self>>
                             .map(|id| MandateReference {
                                 connector_mandate_id: Some(id.clone()),
                                 payment_method_id: None,
+                                connector_mandate_request_reference_id: None,
                             })
                             .map(Box::new),
                         connector_metadata: None,
@@ -2320,6 +2324,7 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                                 .map(|id| MandateReference {
                                     connector_mandate_id: Some(id.clone()),
                                     payment_method_id: None,
+                                    connector_mandate_request_reference_id: None,
                                 })
                                 .map(Box::new),
                             status_code: 200,
