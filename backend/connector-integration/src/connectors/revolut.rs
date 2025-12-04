@@ -40,8 +40,9 @@ use interfaces::{
 use serde::Serialize;
 use transformers as revolut;
 use transformers::{
-    RevolutOrderCreateRequest, RevolutOrderCreateResponse,
+    RevolutCaptureRequest, RevolutOrderCreateRequest, RevolutOrderCreateResponse,
     RevolutOrderCreateResponse as RevolutPSyncResponse,
+    RevolutOrderCreateResponse as RevolutCaptureResponse,
 };
 
 pub(crate) mod headers {
@@ -484,12 +485,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Revolut<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
     for Revolut<T>
 {
@@ -626,6 +621,12 @@ macros::create_all_prerequisites!(
             flow: PSync,
             response_body: RevolutPSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
+            flow: Capture,
+            request_body: RevolutCaptureRequest,
+            response_body: RevolutCaptureResponse,
+            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -715,6 +716,45 @@ macros::macro_connector_implementation!(
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}/api/orders/{order_id}"))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Revolut,
+    curl_request: Json(RevolutCaptureRequest),
+    curl_response: RevolutCaptureResponse,
+    flow_name: Capture,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsCaptureData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let mut headers = self.build_headers(req)?;
+            
+            headers.push((
+                "Revolut-Api-Version".to_string(),
+                "2025-10-16".to_string().into(),
+            ));
+            Ok(headers)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let order_id = req.request.connector_transaction_id
+                .get_connector_transaction_id()
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+            let base_url = self.connector_base_url(req);
+            Ok(format!("{base_url}/api/orders/{order_id}/capture"))
         }
     }
 );

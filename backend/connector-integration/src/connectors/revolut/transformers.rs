@@ -1,10 +1,11 @@
 use crate::connectors::revolut::RevolutRouterData;
 use domain_types::{
-    connector_flow::{Authorize, PSync},
+    connector_flow::{Authorize, Capture, PSync},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, ResponseId,
     },
-    errors::ConnectorError,
+    errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
@@ -12,6 +13,7 @@ use domain_types::{
 };
 
 use crate::types::ResponseRouterData;
+use common_enums::AttemptStatus;
 use common_utils::types::MinorUnit;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
@@ -715,5 +717,87 @@ fn map_order_state(state: RevolutOrderState) -> common_enums::AttemptStatus {
         RevolutOrderState::Cancelled => common_enums::AttemptStatus::Voided,
         RevolutOrderState::Pending => common_enums::AttemptStatus::AuthenticationPending,
         RevolutOrderState::Processing => common_enums::AttemptStatus::Pending,
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct RevolutCaptureRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub amount: Option<MinorUnit>,
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        RevolutRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for RevolutCaptureRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: RevolutRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Amount is optional - if not provided, Revolut captures full authorized amount
+        let amount = Some(item.router_data.request.minor_amount_to_capture);
+
+        Ok(Self { amount })
+    }
+}
+
+impl<F>
+    TryFrom<
+        ResponseRouterData<
+            RevolutOrderCreateResponse,
+            RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        >,
+    > for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        value: ResponseRouterData<RevolutOrderCreateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+
+        let status = match response.state {
+            RevolutOrderState::Completed => AttemptStatus::Charged,
+            RevolutOrderState::Authorised => AttemptStatus::Authorized,
+            RevolutOrderState::Processing => AttemptStatus::Pending,
+            RevolutOrderState::Pending => AttemptStatus::Pending,
+            RevolutOrderState::Failed => AttemptStatus::Failure,
+            RevolutOrderState::Cancelled => AttemptStatus::Voided,
+        };
+
+        let connector_transaction_id = response
+            .payments
+            .and_then(|payments| payments.first().map(|p| p.id.clone()))
+            .unwrap_or_else(|| response.id.clone());
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
+                redirection_data: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: Some(response.id),
+                incremental_authorization_allowed: None,
+                mandate_reference: None,
+                status_code: http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
+            ..router_data
+        })
     }
 }
