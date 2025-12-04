@@ -2482,10 +2482,10 @@ pub fn get_address_info(
         add.address.as_ref().map(
             |a| -> Result<Address, error_stack::Report<domain_types::errors::ConnectorError>> {
                 Ok(Address {
-                    city: a.city.clone().unwrap(),
-                    country: a.country.unwrap(),
-                    house_number_or_name: a.line1.clone().unwrap(),
-                    postal_code: a.zip.clone().unwrap(),
+                    city: a.get_city()?.to_owned(),
+                    country: a.get_country()?.to_owned(),
+                    house_number_or_name: a.get_line1()?.to_owned(),
+                    postal_code: a.get_zip()?.to_owned(),
                     state_or_province: a.state.clone(),
                     street: a.line2.clone(),
                 })
@@ -3869,6 +3869,27 @@ struct AdyenMetadata {
     pub store: Option<String>,
     #[serde(alias = "platform_chargeback_logic")]
     pub platform_chargeback_logic: Option<AdyenPlatformChargeBackLogicMetadata>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenConnectorMetadataObject {
+    pub endpoint_prefix: Option<String>,
+}
+
+impl TryFrom<&Option<common_utils::pii::SecretSerdeValue>> for AdyenConnectorMetadataObject {
+    type Error = Error;
+    fn try_from(
+        meta_data: &Option<common_utils::pii::SecretSerdeValue>,
+    ) -> Result<Self, Self::Error> {
+        match meta_data {
+            Some(metadata) => crate::utils::to_connector_meta_from_secret::<Self>(Some(metadata.clone()))
+                .change_context(errors::ConnectorError::InvalidConnectorConfig {
+                    config: "metadata",
+                }),
+            None => Ok(Self::default()),
+        }
+    }
 }
 
 fn get_adyen_metadata(metadata: Option<serde_json::Value>) -> AdyenMetadata {

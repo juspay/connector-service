@@ -271,6 +271,25 @@ macros::create_all_prerequisites!(
     }
 );
 
+fn build_env_specific_endpoint(
+    base_url: &str,
+    test_mode: Option<bool>,
+    connector_metadata: &Option<common_utils::pii::SecretSerdeValue>,
+) -> CustomResult<String, errors::ConnectorError> {
+    if test_mode.unwrap_or(true) {
+        Ok(base_url.to_string())
+    } else {
+        let adyen_connector_metadata_object =
+            transformers::AdyenConnectorMetadataObject::try_from(connector_metadata)?;
+        let endpoint_prefix = adyen_connector_metadata_object.endpoint_prefix.ok_or(
+            errors::ConnectorError::InvalidConnectorConfig {
+                config: "metadata.endpoint_prefix",
+            },
+        )?;
+        Ok(base_url.replace("{{merchant_endpoint_prefix}}", &endpoint_prefix))
+    }
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Adyen<T>
 {
@@ -916,7 +935,15 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let connector_payment_id = req.request.connector_transaction_id.clone();
-            Ok(format!("{}{}/payments/{}/refunds", self.connector_base_url_refunds(req), ADYEN_API_VERSION, connector_payment_id))
+            
+            let endpoint = build_env_specific_endpoint(
+                self.connector_base_url_refunds(req),
+                req.resource_common_data.test_mode,
+                &req.resource_common_data.connector_meta_data,
+            )?;
+            Ok(format!(
+                "{endpoint}{ADYEN_API_VERSION}/payments/{connector_payment_id}/refunds",
+            ))
         }
     }
 );
