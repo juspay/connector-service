@@ -6683,12 +6683,11 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreatePaymentMethodT
             setup_mandate_details: None,
             integrity_object: None,
             split_payments: None,
-            merchant_account_metadata: (!value.merchant_account_metadata.is_empty())
-                .then(|| {
-                    common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
-                        &value.merchant_account_metadata,
-                    ))
-                }),
+            merchant_account_metadata: (!value.merchant_account_metadata.is_empty()).then(|| {
+                common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
+                    &value.merchant_account_metadata,
+                ))
+            }),
         })
     }
 }
