@@ -2992,7 +2992,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
             let status = err
                 .attempt_status
                 .map(grpc_api_types::payments::PaymentStatus::foreign_from)
-                .unwrap_or_else(|| grpc_api_types::payments::PaymentStatus::foreign_from(status));
+                .unwrap_or_default();
             PaymentServiceAuthorizeResponse {
                 transaction_id: Some(grpc_api_types::payments::Identifier {
                     id_type: Some(
@@ -7182,7 +7182,7 @@ pub fn generate_repeat_payment_response(
             let status = err
                 .attempt_status
                 .map(grpc_api_types::payments::PaymentStatus::foreign_from)
-                .unwrap_or_else(|| grpc_api_types::payments::PaymentStatus::foreign_from(status));
+                .unwrap_or_default();
             Ok(
                 grpc_api_types::payments::PaymentServiceRepeatEverythingResponse {
                     transaction_id: Some(grpc_api_types::payments::Identifier {
