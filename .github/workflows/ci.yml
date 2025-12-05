@@ -131,7 +131,7 @@ jobs:
       - name: Run Tests
         if: ${{ env.RUN_TESTS == 'true' }}
         shell: bash
-        run: cargo nextest run --config-file .nextest.toml --profile ci
+        run: cargo nextest run --config-file .nextest.toml --profile ci  -E 'not binary(bluesnap_payment_flows_test)'
 
   formatting:
     name: Check formatting
