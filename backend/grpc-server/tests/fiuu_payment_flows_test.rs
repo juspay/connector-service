@@ -239,6 +239,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_reason: None,
         request_ref_id: None,
         browser_info: None,
+        test_mode: Some(true),
         refund_metadata: std::collections::HashMap::new(),
         state: None,
         merchant_account_metadata: std::collections::HashMap::new(),

@@ -41,14 +41,17 @@ message PaymentMethod {
     // DIGITAL WALLETS (10-29) - Direct variants
     AppleWallet apple_pay = 10;                         // Apple Pay
     GoogleWallet google_pay = 11;                       // Google Pay
-    AmazonPayRedirectWallet amazon_pay_redirect = 12;   // Amazon Pay
-    CashappQrWallet cashapp_qr = 13;                    // Cash App
-    PaypalRedirectWallet paypal_redirect = 14;          // PayPal
-    WeChatPayQrWallet we_chat_pay_qr = 15;              // WeChat Pay
-    AliPayRedirectWallet ali_pay_redirect = 16;         // AliPay
-    RevolutPayWallet revolut_pay = 17;                  // Revolut Pay
-    MifinityWallet mifinity = 18;                       // Mifinity
-    Bluecode bluecode = 19;                             // Bluecode
+    ApplePayThirdPartySdkWallet apple_pay_third_party_sdk = 12;  // Apple Pay Third Party SDK
+    GooglePayThirdPartySdkWallet google_pay_third_party_sdk = 13; // Google Pay Third Party SDK
+    PaypalSdkWallet paypal_sdk = 14;                    // PayPal SDK
+    AmazonPayRedirectWallet amazon_pay_redirect = 15;   // Amazon Pay
+    CashappQrWallet cashapp_qr = 16;                    // Cash App
+    PaypalRedirectWallet paypal_redirect = 17;          // PayPal
+    WeChatPayQrWallet we_chat_pay_qr = 18;              // WeChat Pay
+    AliPayRedirectWallet ali_pay_redirect = 19;         // AliPay
+    RevolutPayWallet revolut_pay = 20;                  // Revolut Pay
+    MifinityWallet mifinity = 21;                       // Mifinity
+    Bluecode bluecode = 22;                             // Bluecode
     
     // UPI METHODS (30-39) - Direct variants
     UpiCollect upi_collect = 30;                        // UPI Collect
@@ -471,6 +474,24 @@ message RevolutPayWallet {
 }
 
 message Bluecode {
+}
+
+// Apple Pay Third Party SDK - Apple Pay with token from third-party SDK
+message ApplePayThirdPartySdkWallet {
+  // Payment token from third-party SDK
+  optional SecretString token = 1;
+}
+
+// Google Pay Third Party SDK - Google Pay with token from third-party SDK  
+message GooglePayThirdPartySdkWallet {
+  // Payment token from third-party SDK
+  optional SecretString token = 1;
+}
+
+// PayPal SDK - PayPal payment with SDK token
+message PaypalSdkWallet {
+  // Payment token from PayPal SDK
+  optional SecretString token = 1;
 }
 
 // ============================================================================
