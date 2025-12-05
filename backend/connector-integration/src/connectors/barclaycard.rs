@@ -99,6 +99,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SdkSessionTokenV2 for Barclaycard<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAccessToken for Barclaycard<T>
 {
 }
@@ -333,6 +338,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         domain_types::connector_types::SessionTokenRequestData,
         domain_types::connector_types::SessionTokenResponseData,
+    > for Barclaycard<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::SdkSessionToken,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
     > for Barclaycard<T>
 {
 }
@@ -901,6 +916,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         domain_types::connector_types::SessionTokenRequestData,
         domain_types::connector_types::SessionTokenResponseData,
+    > for Barclaycard<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::SdkSessionToken,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
     > for Barclaycard<T>
 {
 }

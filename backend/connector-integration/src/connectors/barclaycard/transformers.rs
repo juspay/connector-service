@@ -270,17 +270,18 @@ fn transform_payment_response<F, Req>(
             })
         }
         responses::BarclaycardPaymentsResponse::ErrorInformation(error_response) => {
-            let detailed_error_info = error_response
-                .error_information
-                .details
-                .as_ref()
-                .map(|details| {
-                    details
-                        .iter()
-                        .map(|d| format!("{} : {}", d.field, d.reason))
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                });
+            let detailed_error_info =
+                error_response
+                    .error_information
+                    .details
+                    .as_ref()
+                    .map(|details| {
+                        details
+                            .iter()
+                            .map(|d| format!("{} : {}", d.field, d.reason))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    });
 
             let reason = get_error_reason(
                 error_response.error_information.message.clone(),
