@@ -247,7 +247,6 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
     }
 }
 
-#[ignore]
 #[tokio::test]
 async fn test_health() {
     grpc_test!(client, HealthClient<Channel>, {
@@ -263,7 +262,6 @@ async fn test_health() {
     });
 }
 
-#[ignore]
 #[tokio::test]
 async fn test_payment_authorization_auto_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
@@ -287,7 +285,6 @@ async fn test_payment_authorization_auto_capture() {
     });
 }
 
-#[ignore]
 #[tokio::test]
 async fn test_payment_authorization_manual_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
@@ -342,7 +339,6 @@ async fn test_payment_authorization_manual_capture() {
     });
 }
 
-#[ignore]
 #[tokio::test]
 async fn test_payment_sync() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
@@ -388,7 +384,6 @@ async fn test_payment_sync() {
     });
 }
 
-#[ignore]
 #[tokio::test]
 async fn test_refund() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
@@ -431,7 +426,6 @@ async fn test_refund() {
     });
 }
 
-#[ignore]
 #[tokio::test]
 async fn test_refund_sync() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
@@ -482,7 +476,6 @@ async fn test_refund_sync() {
     });
 }
 
-#[ignore]
 #[tokio::test]
 async fn test_payment_void() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
