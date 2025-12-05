@@ -43,6 +43,7 @@ trait DisputeOperationsInternal {
     ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status>;
 }
 
+#[derive(Clone)]
 pub struct Disputes;
 
 impl DisputeOperationsInternal for Disputes {
