@@ -50,6 +50,7 @@ use transformers::{
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
+    pub(crate) const REVOLUT_API_VERSION: &str = "Revolut-Api-Version";
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -631,7 +632,7 @@ macros::create_all_prerequisites!(
                     "application/json".to_string().into(),
                 ),
                 (
-                    "Revolut-Api-Version".to_string(),
+                    headers::REVOLUT_API_VERSION.to_string(),
                     REVOLUT_API_VERSION.to_string().into(),
                 ),
             ];

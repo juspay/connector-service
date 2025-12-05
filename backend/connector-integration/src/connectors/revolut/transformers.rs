@@ -13,7 +13,7 @@ use domain_types::{
 
 use crate::types::ResponseRouterData;
 use common_utils::types::MinorUnit;
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use time::Date;
@@ -99,7 +99,6 @@ pub struct RevolutLineItemDiscount {
     pub amount: MinorUnit,
 }
 
-#[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RevolutLineItemTax {
     pub name: String,
@@ -117,12 +116,12 @@ pub struct RevolutShipping {
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RevolutAddress {
-    pub street_line_1: Option<String>,
-    pub street_line_2: Option<String>,
-    pub region: Option<String>,
-    pub city: Option<String>,
-    pub country_code: Option<String>,
-    pub postcode: Option<String>,
+    pub street_line_1: Option<Secret<String>>,
+    pub street_line_2: Option<Secret<String>>,
+    pub region: Option<Secret<String>>,
+    pub city: Option<Secret<String>>,
+    pub country_code: Option<common_enums::CountryAlpha2>,
+    pub postcode: Option<Secret<String>>,
 }
 
 #[serde_with::skip_serializing_none]
@@ -138,7 +137,7 @@ pub struct RevolutContact {
 pub struct RevolutShipment {
     pub shipping_company_name: String,
     pub tracking_number: String,
-    pub estimated_delivery_date: Option<String>,
+    pub estimated_delivery_date: Option<Date>,
     pub tracking_url: Option<url::Url>,
 }
 
@@ -193,10 +192,8 @@ pub struct RevolutOrderCreateResponse {
     #[serde(rename = "type")]
     pub order_type: RevolutOrderType,
     pub state: RevolutOrderState,
-    #[serde(with = "common_utils::custom_serde::iso8601")]
-    pub created_at: time::PrimitiveDateTime,
-    #[serde(with = "common_utils::custom_serde::iso8601")]
-    pub updated_at: time::PrimitiveDateTime,
+    pub created_at: String,
+    pub updated_at: String,
     pub description: Option<String>,
     pub capture_mode: Option<RevolutCaptureMode>,
     pub cancel_authorised_after: Option<String>,
@@ -257,10 +254,8 @@ pub struct RevolutPayment {
     pub state: RevolutPaymentState,
     pub decline_reason: Option<RevolutDeclineReason>,
     pub bank_message: Option<String>,
-    #[serde(with = "common_utils::custom_serde::iso8601")]
-    pub created_at: time::PrimitiveDateTime,
-    #[serde(with = "common_utils::custom_serde::iso8601")]
-    pub updated_at: time::PrimitiveDateTime,
+    pub created_at: String,
+    pub updated_at: String,
     pub token: Option<Secret<String>>,
     pub amount: MinorUnit,
     pub currency: common_enums::Currency,
@@ -477,68 +472,6 @@ pub struct RevolutThreeDsFingerprintChallenge {
     pub fingerprint_data: String,
 }
 
-#[allow(dead_code)]
-#[serde_with::skip_serializing_none]
-#[derive(Debug, Serialize)]
-pub struct RevolutPaymentsRequest<T: PaymentMethodDataTypes> {
-    pub saved_payment_method: RevolutSavedPaymentMethod,
-    #[serde(skip)]
-    pub _phantom: std::marker::PhantomData<T>,
-}
-
-#[allow(dead_code)]
-#[serde_with::skip_serializing_none]
-#[derive(Debug, Serialize)]
-pub struct RevolutSavedPaymentMethod {
-    #[serde(rename = "type")]
-    pub payment_method_type: RevolutPaymentMethodType,
-    pub id: String,
-    pub initiator: RevolutPaymentInitiator,
-    pub environment: Option<RevolutEnvironment>,
-}
-
-#[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum RevolutPaymentMethodType {
-    Card,
-    RevolutPay,
-}
-
-#[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum RevolutPaymentInitiator {
-    Customer,
-    Merchant,
-}
-
-#[allow(dead_code)]
-#[serde_with::skip_serializing_none]
-#[derive(Debug, Serialize)]
-pub struct RevolutEnvironment {
-    #[serde(rename = "type")]
-    pub env_type: String, // "browser"
-    pub time_zone_utc_offset: i32,
-    pub color_depth: i32,
-    pub screen_width: i32,
-    pub screen_height: i32,
-    pub java_enabled: bool,
-    pub challenge_window_width: Option<i32>,
-    pub browser_url: Option<String>,
-}
-
-#[allow(dead_code)]
-#[serde_with::skip_serializing_none]
-#[derive(Debug, Deserialize, Serialize)]
-pub struct RevolutPaymentsResponse {
-    pub id: String,
-    pub order_id: String,
-    pub payment_method: RevolutPaymentMethod,
-    pub state: RevolutPaymentState,
-    pub authentication_challenge: Option<RevolutAuthenticationChallenge>,
-}
-
 impl TryFrom<&ConnectorAuthType> for RevolutAuthType {
     type Error = error_stack::Report<ConnectorError>;
 
@@ -580,63 +513,52 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
-        let customer = if let Some(customer_id) = &router_data.request.customer_id {
-            Some(RevolutCustomer {
-                id: Some(customer_id.get_string_repr().to_string()),
-                full_name: router_data
-                    .request
-                    .customer_name
-                    .as_ref()
-                    .map(|name| Secret::new(name.clone())),
-                phone: None,
-                email: router_data.request.email.clone(),
-                date_of_birth: None,
-            })
-        } else if router_data.request.email.is_some() || router_data.request.customer_name.is_some()
-        {
-            Some(RevolutCustomer {
-                id: None,
-                full_name: router_data
-                    .request
-                    .customer_name
-                    .as_ref()
-                    .map(|name| Secret::new(name.clone())),
-                phone: None,
-                email: router_data.request.email.clone(),
-                date_of_birth: None,
-            })
-        } else {
-            None
-        };
+        let customer = Some(RevolutCustomer {
+            id: None,
+            full_name: router_data
+                .resource_common_data
+                .get_billing_full_name()
+                .ok(),
+            phone: router_data
+                .resource_common_data
+                .get_billing_phone_number()
+                .ok(),
+            email: router_data.resource_common_data.get_billing_email().ok(),
+            date_of_birth: None,
+        });
 
-        let shipping = router_data
-            .resource_common_data
-            .address
-            .get_shipping()
-            .and_then(|shipping_address| {
-                shipping_address
-                    .address
-                    .as_ref()
-                    .map(|addr| RevolutShipping {
-                        address: Some(RevolutAddress {
-                            street_line_1: addr.line1.as_ref().map(|l| l.peek().to_string()),
-                            street_line_2: addr.line2.as_ref().map(|l| l.peek().to_string()),
-                            region: addr.state.as_ref().map(|s| s.peek().to_string()),
-                            city: addr.city.as_ref().map(|c| c.peek().to_string()),
-                            country_code: addr.country.map(|c| c.to_string()),
-                            postcode: addr.zip.as_ref().map(|z| z.peek().to_string()),
-                        }),
-                        contact: Some(RevolutContact {
-                            full_name: shipping_address.get_optional_full_name(),
-                            phone: shipping_address
-                                .phone
-                                .as_ref()
-                                .and_then(|p| p.number.clone()),
-                            email: shipping_address.email.clone(),
-                        }),
-                        shipments: None,
-                    })
-            });
+        let shipping = Some(RevolutShipping {
+            address: Some(RevolutAddress {
+                street_line_1: router_data
+                    .resource_common_data
+                    .get_optional_shipping_line1(),
+                street_line_2: router_data
+                    .resource_common_data
+                    .get_optional_shipping_line2(),
+                region: router_data
+                    .resource_common_data
+                    .get_optional_shipping_state(),
+                city: router_data
+                    .resource_common_data
+                    .get_optional_shipping_city(),
+                country_code: router_data
+                    .resource_common_data
+                    .get_optional_shipping_country(),
+                postcode: router_data.resource_common_data.get_optional_shipping_zip(),
+            }),
+            contact: Some(RevolutContact {
+                full_name: router_data
+                    .resource_common_data
+                    .get_optional_shipping_full_name(),
+                phone: router_data
+                    .resource_common_data
+                    .get_optional_shipping_phone_number(),
+                email: router_data
+                    .resource_common_data
+                    .get_optional_shipping_email(),
+            }),
+            shipments: None,
+        });
 
         let capture_mode = if router_data.request.is_auto_capture()? {
             Some(RevolutCaptureMode::Automatic)
