@@ -9,11 +9,7 @@ use common_utils::{
 };
 
 use crate::unimplemented_payment_method;
-use crate::{
-    connectors::cybersource::CybersourceRouterData,
-    types::ResponseRouterData,
-    utils::{self, convert_metadata_to_merchant_defined_info, MerchantDefinedInformation},
-};
+use crate::{connectors::cybersource::CybersourceRouterData, types::ResponseRouterData, utils};
 use cards;
 use domain_types::{
     connector_flow::{
@@ -407,7 +403,7 @@ pub struct CybersourcePaymentsRequest<
     #[serde(skip_serializing_if = "Option::is_none")]
     consumer_authentication_information: Option<CybersourceConsumerAuthInformation>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    merchant_defined_information: Option<Vec<MerchantDefinedInformation>>,
+    merchant_defined_information: Option<Vec<utils::MerchantDefinedInformation>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1354,7 +1350,7 @@ impl<
             .request
             .metadata
             .clone()
-            .map(convert_metadata_to_merchant_defined_info);
+            .map(utils::convert_metadata_to_merchant_defined_info);
 
         let consumer_authentication_information = item
             .router_data
@@ -1447,7 +1443,7 @@ impl<
             .request
             .metadata
             .clone()
-            .map(convert_metadata_to_merchant_defined_info);
+            .map(utils::convert_metadata_to_merchant_defined_info);
 
         Ok(Self {
             processing_information,
@@ -1564,7 +1560,7 @@ impl<
             .request
             .metadata
             .clone()
-            .map(convert_metadata_to_merchant_defined_info);
+            .map(utils::convert_metadata_to_merchant_defined_info);
 
         Ok(Self {
             processing_information,
@@ -1667,7 +1663,7 @@ impl<
             .request
             .metadata
             .clone()
-            .map(convert_metadata_to_merchant_defined_info);
+            .map(utils::convert_metadata_to_merchant_defined_info);
         let ucaf_collection_indicator = match apple_pay_wallet_data
             .payment_method
             .network
@@ -1781,7 +1777,7 @@ impl<
             .request
             .metadata
             .clone()
-            .map(convert_metadata_to_merchant_defined_info);
+            .map(utils::convert_metadata_to_merchant_defined_info);
 
         Ok(Self {
             processing_information,
@@ -1879,7 +1875,7 @@ impl<
             .request
             .metadata
             .clone()
-            .map(convert_metadata_to_merchant_defined_info);
+            .map(utils::convert_metadata_to_merchant_defined_info);
 
         let ucaf_collection_indicator =
             match google_pay_data.info.card_network.to_lowercase().as_str() {
@@ -2006,7 +2002,7 @@ impl<
             .request
             .metadata
             .clone()
-            .map(convert_metadata_to_merchant_defined_info);
+            .map(utils::convert_metadata_to_merchant_defined_info);
 
         let ucaf_collection_indicator =
             match google_pay_data.info.card_network.to_lowercase().as_str() {
@@ -2105,7 +2101,7 @@ impl<
             .request
             .metadata
             .clone()
-            .map(convert_metadata_to_merchant_defined_info);
+            .map(utils::convert_metadata_to_merchant_defined_info);
 
         Ok(Self {
             processing_information,
@@ -2272,7 +2268,7 @@ impl<
                             ));
                             let merchant_defined_information =
                                 item.router_data.request.metadata.clone().map(|metadata| {
-                                    convert_metadata_to_merchant_defined_info(metadata)
+                                    utils::convert_metadata_to_merchant_defined_info(metadata)
                                 });
                             let ucaf_collection_indicator = match apple_pay_data
                                 .payment_method
@@ -2547,7 +2543,7 @@ pub struct CybersourcePaymentsCaptureRequest {
     order_information: OrderInformationWithBill,
     client_reference_information: ClientReferenceInformation,
     #[serde(skip_serializing_if = "Option::is_none")]
-    merchant_defined_information: Option<Vec<MerchantDefinedInformation>>,
+    merchant_defined_information: Option<Vec<utils::MerchantDefinedInformation>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -2584,7 +2580,7 @@ impl<
             .request
             .connector_metadata
             .clone()
-            .map(convert_metadata_to_merchant_defined_info);
+            .map(utils::convert_metadata_to_merchant_defined_info);
 
         let is_final = matches!(
             item.router_data.request.capture_method,
@@ -2639,7 +2635,7 @@ pub struct CybersourceVoidRequest {
     client_reference_information: ClientReferenceInformation,
     reversal_information: ReversalInformation,
     #[serde(skip_serializing_if = "Option::is_none")]
-    merchant_defined_information: Option<Vec<MerchantDefinedInformation>>,
+    merchant_defined_information: Option<Vec<utils::MerchantDefinedInformation>>,
     // The connector documentation does not mention the merchantDefinedInformation field for Void requests. But this has been still added because it works!
 }
 
@@ -2678,7 +2674,7 @@ impl<
             .connector_metadata
             .clone()
             .map(|connector_metadata| {
-                convert_metadata_to_merchant_defined_info(connector_metadata.expose())
+                utils::convert_metadata_to_merchant_defined_info(connector_metadata.expose())
             });
 
         let currency = value.router_data.request.currency.unwrap();
@@ -4514,7 +4510,7 @@ pub struct CybersourceRepeatPaymentRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     consumer_authentication_information: Option<CybersourceConsumerAuthInformation>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    merchant_defined_information: Option<Vec<MerchantDefinedInformation>>,
+    merchant_defined_information: Option<Vec<utils::MerchantDefinedInformation>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -4613,7 +4609,7 @@ impl<
             .map(|metadata_map| {
                 serde_json::to_value(metadata_map)
                     .change_context(errors::ConnectorError::RequestEncodingFailed)
-                    .map(convert_metadata_to_merchant_defined_info)
+                    .map(utils::convert_metadata_to_merchant_defined_info)
             })
             .transpose()?;
         Ok(Self {
