@@ -16,10 +16,7 @@ use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::Serialize;
 
 use super::{requests, responses, BarclaycardAmountConvertor, BarclaycardRouterData};
-use crate::{
-    types::ResponseRouterData,
-    utils::{convert_metadata_to_merchant_defined_info, is_refund_failure},
-};
+use crate::{types::ResponseRouterData, utils};
 
 /// CAVV (Cardholder Authentication Verification Value) Algorithm
 ///
@@ -490,7 +487,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .request
             .metadata
             .clone()
-            .map(convert_metadata_to_merchant_defined_info);
+            .map(utils::convert_metadata_to_merchant_defined_info);
 
         Ok(Self {
             processing_information,
@@ -528,7 +525,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .request
             .connector_metadata
             .clone()
-            .map(convert_metadata_to_merchant_defined_info);
+            .map(utils::convert_metadata_to_merchant_defined_info);
 
         Ok(Self {
             order_information: requests::OrderInformation {
@@ -588,7 +585,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .request
             .connector_metadata
             .clone()
-            .map(|metadata| convert_metadata_to_merchant_defined_info(metadata.expose()));
+            .map(|metadata| utils::convert_metadata_to_merchant_defined_info(metadata.expose()));
 
         Ok(Self {
             client_reference_information: requests::ClientReferenceInformation {
@@ -835,7 +832,7 @@ impl
         let refund_status =
             map_barclaycard_refund_status(item.response.status.clone(), error_reason);
 
-        let response = if is_refund_failure(refund_status) {
+        let response = if utils::is_refund_failure(refund_status) {
             Err(get_error_response(
                 &item.response.error_information,
                 &None,
@@ -889,7 +886,7 @@ impl
 
                 let refund_status = map_barclaycard_refund_status(status.clone(), error_reason);
 
-                if is_refund_failure(refund_status) {
+                if utils::is_refund_failure(refund_status) {
                     if status == responses::BarclaycardRefundStatus::Voided {
                         Err(get_error_response(
                             &Some(responses::BarclaycardErrorInformation {

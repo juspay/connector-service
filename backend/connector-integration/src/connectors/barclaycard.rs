@@ -146,45 +146,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Barclaycard<T>
 {
-    fn verify_webhook_source(
-        &self,
-        _request: domain_types::connector_types::RequestDetails,
-        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> CustomResult<bool, errors::ConnectorError> {
-        Err(errors::ConnectorError::WebhooksNotImplemented.into())
-    }
-
-    fn get_event_type(
-        &self,
-        _request: domain_types::connector_types::RequestDetails,
-        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> CustomResult<domain_types::connector_types::EventType, errors::ConnectorError> {
-        Err(errors::ConnectorError::WebhooksNotImplemented.into())
-    }
-
-    fn process_payment_webhook(
-        &self,
-        _request: domain_types::connector_types::RequestDetails,
-        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> CustomResult<domain_types::connector_types::WebhookDetailsResponse, errors::ConnectorError>
-    {
-        Err(errors::ConnectorError::WebhooksNotImplemented.into())
-    }
-
-    fn process_refund_webhook(
-        &self,
-        _request: domain_types::connector_types::RequestDetails,
-        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> CustomResult<
-        domain_types::connector_types::RefundWebhookDetailsResponse,
-        errors::ConnectorError,
-    > {
-        Err(errors::ConnectorError::WebhooksNotImplemented.into())
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
