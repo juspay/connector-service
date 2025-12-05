@@ -659,8 +659,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Paypal,
-    curl_request: Json(PaypalRefundRequest),
-    curl_response: RefundResponse,
+    curl_request: Json(paypal::PaypalRefundRequest),
+    curl_response: paypal::RefundResponse,
     flow_name: Refund,
     resource_common_data: RefundFlowData,
     flow_request: RefundsData,
@@ -697,7 +697,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Paypal,
-    curl_response: RefundSyncResponse,
+    curl_response: paypal::RefundSyncResponse,
     flow_name: RSync,
     resource_common_data: RefundFlowData,
     flow_request: RefundSyncData,

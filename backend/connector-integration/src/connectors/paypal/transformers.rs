@@ -965,8 +965,44 @@ impl<
             PaymentMethodData::GiftCard(ref giftcard_data) => {
                 Self::try_from(giftcard_data.as_ref())
             }
-            PaymentMethodData::MandatePayment
-            | PaymentMethodData::Reward
+            PaymentMethodData::MandatePayment => {
+                let payment_method_type =
+                    item.router_data
+                        .request
+                        .payment_method_type
+                        .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                            field_name: "payment_method_type",
+                        })?;
+
+                let connector_mandate_id = item.router_data.request.connector_mandate_id().ok_or(
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "connector_mandate_id",
+                    },
+                )?;
+
+                let payment_source = match payment_method_type {
+                    common_enums::PaymentMethodType::Card => Ok(Some(PaymentSourceItem::Card(
+                        CardRequest::CardVaultStruct(VaultStruct {
+                            vault_id: connector_mandate_id.into(),
+                        }),
+                    ))),
+                    common_enums::PaymentMethodType::Paypal => Ok(Some(PaymentSourceItem::Paypal(
+                        PaypalRedirectionRequest::PaypalVaultStruct(VaultStruct {
+                            vault_id: connector_mandate_id.into(),
+                        }),
+                    ))),
+                    _ => Err(errors::ConnectorError::NotImplemented(
+                        utils::get_unimplemented_payment_method_error_message("paypal"),
+                    )),
+                };
+
+                Ok(Self {
+                    intent,
+                    purchase_units,
+                    payment_source: payment_source?,
+                })
+            }
+            PaymentMethodData::Reward
             | PaymentMethodData::RealTimePayment(_)
             | PaymentMethodData::MobilePayment(_)
             | PaymentMethodData::Crypto(_)
