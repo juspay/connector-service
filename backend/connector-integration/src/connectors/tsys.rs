@@ -3,7 +3,7 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::MinorUnit};
+use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
         Authenticate, Authorize, Capture, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund,
@@ -30,9 +30,10 @@ use interfaces::{
 use serde::Serialize;
 
 use self::transformers::{
-    RefundResponse, TsysErrorResponse, TsysPaymentsCancelRequest, TsysPaymentsCaptureRequest,
-    TsysPaymentsRequest, TsysPaymentsResponse, TsysPSyncRequest, TsysPSyncResponse,
-    TsysRSyncRequest, TsysRSyncResponse, TsysRefundRequest,
+    RefundResponse, TsysAuthorizeResponse, TsysCaptureResponse, TsysErrorResponse,
+    TsysPaymentsCancelRequest, TsysPaymentsCaptureRequest, TsysPaymentsRequest,
+    TsysPSyncRequest, TsysPSyncResponse, TsysRSyncRequest, TsysRSyncResponse, TsysRefundRequest,
+    TsysVoidResponse,
 };
 use crate::{connectors::macros, types::ResponseRouterData, with_error_response_body};
 
@@ -162,6 +163,69 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+// ===== SOURCE VERIFICATION STUB =====
+// Empty SourceVerification implementations for all flows
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<SdkSessionToken, PaymentFlowData, PaymentsSdkSessionTokenData, PaymentsResponseData>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Tsys<T>
+{
+}
+
 // ===== MACRO-BASED CONNECTOR IMPLEMENTATION =====
 // Define connector struct and bridges for all flows
 macros::create_all_prerequisites!(
@@ -171,7 +235,7 @@ macros::create_all_prerequisites!(
         (
             flow: Authorize,
             request_body: TsysPaymentsRequest<T>,
-            response_body: TsysPaymentsResponse,
+            response_body: TsysAuthorizeResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
@@ -183,13 +247,13 @@ macros::create_all_prerequisites!(
         (
             flow: Capture,
             request_body: TsysPaymentsCaptureRequest,
-            response_body: TsysPaymentsResponse,
+            response_body: TsysCaptureResponse,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ),
         (
             flow: Void,
             request_body: TsysPaymentsCancelRequest,
-            response_body: TsysPaymentsResponse,
+            response_body: TsysVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
         (
@@ -231,6 +295,22 @@ macros::create_all_prerequisites!(
         ) -> &'a str {
             &req.resource_common_data.connectors.tsys.base_url
         }
+
+        pub fn get_url_payments<F, Req, Res>(
+            &self,
+            req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url_payments(req);
+            Ok(format!("{}servlets/transnox_api_server", base_url))
+        }
+
+        pub fn get_url_refunds<F, Req, Res>(
+            &self,
+            req: &RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url_refunds(req);
+            Ok(format!("{}servlets/transnox_api_server", base_url))
+        }
     }
 );
 
@@ -241,7 +321,7 @@ macros::macro_connector_implementation!(
     connector_default_implementations: [get_headers, get_content_type, get_error_response_v2],
     connector: Tsys,
     curl_request: Json(TsysPaymentsRequest<T>),
-    curl_response: TsysPaymentsResponse,
+    curl_response: TsysAuthorizeResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthorizeData<T>,
@@ -254,20 +334,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}servlets/transnox_api_server", base_url))
-        }
-
-        fn get_request_body(
-            &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Option<common_utils::request::RequestContent>, errors::ConnectorError> {
-            let connector_router_data = transformers::TsysRouterData {
-                amount: req.request.minor_amount.clone(),
-                router_data: req,
-            };
-            let request = transformers::TsysPaymentsRequest::try_from(&connector_router_data)?;
-            Ok(Some(common_utils::request::RequestContent::Json(Box::new(request))))
+            self.get_url_payments(req)
         }
     }
 );
@@ -290,8 +357,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}servlets/transnox_api_server", base_url))
+            self.get_url_payments(req)
         }
     }
 );
@@ -301,7 +367,7 @@ macros::macro_connector_implementation!(
     connector_default_implementations: [get_headers, get_content_type, get_error_response_v2],
     connector: Tsys,
     curl_request: Json(TsysPaymentsCaptureRequest),
-    curl_response: TsysPaymentsResponse,
+    curl_response: TsysCaptureResponse,
     flow_name: Capture,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsCaptureData,
@@ -314,20 +380,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}servlets/transnox_api_server", base_url))
-        }
-
-        fn get_request_body(
-            &self,
-            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<Option<common_utils::request::RequestContent>, errors::ConnectorError> {
-            let connector_router_data = transformers::TsysRouterData {
-                amount: req.request.minor_amount_to_capture.clone(),
-                router_data: req,
-            };
-            let request = transformers::TsysPaymentsCaptureRequest::try_from(&connector_router_data)?;
-            Ok(Some(common_utils::request::RequestContent::Json(Box::new(request))))
+            self.get_url_payments(req)
         }
     }
 );
@@ -337,7 +390,7 @@ macros::macro_connector_implementation!(
     connector_default_implementations: [get_headers, get_content_type, get_error_response_v2],
     connector: Tsys,
     curl_request: Json(TsysPaymentsCancelRequest),
-    curl_response: TsysPaymentsResponse,
+    curl_response: TsysVoidResponse,
     flow_name: Void,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentVoidData,
@@ -350,8 +403,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}servlets/transnox_api_server", base_url))
+            self.get_url_payments(req)
         }
     }
 );
@@ -374,20 +426,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url_refunds(req);
-            Ok(format!("{}servlets/transnox_api_server", base_url))
-        }
-
-        fn get_request_body(
-            &self,
-            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Option<common_utils::request::RequestContent>, errors::ConnectorError> {
-            let connector_router_data = transformers::TsysRouterData {
-                amount: MinorUnit::new(req.request.refund_amount),
-                router_data: req,
-            };
-            let request = transformers::TsysRefundRequest::try_from(&connector_router_data)?;
-            Ok(Some(common_utils::request::RequestContent::Json(Box::new(request))))
+            self.get_url_refunds(req)
         }
     }
 );
@@ -410,8 +449,264 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url_refunds(req);
-            Ok(format!("{}servlets/transnox_api_server", base_url))
+            self.get_url_refunds(req)
         }
     }
 );
+
+// ===== TRAIT IMPLEMENTATIONS FOR SUPPORTED FLOWS =====
+// These traits are auto-implemented based on ConnectorIntegrationV2, but we need explicit impls
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAuthorizeV2<T> for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSyncV2 for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentCapture for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidV2 for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundV2 for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundSyncV2 for Tsys<T>
+{
+}
+
+// ===== EMPTY IMPLEMENTATIONS FOR UNSUPPORTED FLOWS =====
+// These are required by ConnectorServiceTrait but not supported by TSYS
+
+use domain_types::connector_flow::{
+    Accept, CreateAccessToken, CreateConnectorCustomer, CreateOrder, CreateSessionToken,
+    DefendDispute, RepeatPayment, SetupMandate, SubmitEvidence, VoidPC,
+};
+use domain_types::connector_types::{
+    AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+    ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+    PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentMethodTokenResponse,
+    PaymentMethodTokenizationData, PaymentsCancelPostCaptureData, RepeatPaymentData,
+    SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+    SubmitEvidenceData,
+};
+
+// Order Create
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentOrderCreate for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
+    for Tsys<T>
+{
+}
+
+// Access Token
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAccessToken for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>
+    for Tsys<T>
+{
+}
+
+// Session Token
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSessionToken for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
+    for Tsys<T>
+{
+}
+
+// Setup Mandate
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SetupMandateV2<T> for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+    for Tsys<T>
+{
+}
+
+// Payment Method Token
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<domain_types::connector_flow::PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentTokenV2<T> for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<domain_types::connector_flow::PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
+    for Tsys<T>
+{
+}
+
+// Repeat Payment
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RepeatPaymentV2 for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Tsys<T>
+{
+}
+
+// Void Post Capture
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidPostCaptureV2 for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    for Tsys<T>
+{
+}
+
+// Dispute Flows
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SubmitEvidenceV2 for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::DisputeDefend for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::AcceptDispute for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Tsys<T>
+{
+}
+
+// Webhooks
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::IncomingWebhook for Tsys<T>
+{
+}
+
+// Create Connector Customer
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>
+    for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::CreateConnectorCustomer for Tsys<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>
+    for Tsys<T>
+{
+}
+
+// ===== CONNECTOR SERVICE TRAIT IMPLEMENTATION =====
+// Now that all required traits are implemented, we can implement ConnectorServiceTrait
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ConnectorServiceTrait<T> for Tsys<T>
+{
+}
