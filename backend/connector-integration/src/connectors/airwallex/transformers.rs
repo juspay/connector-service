@@ -58,13 +58,6 @@ pub struct AirwallexAccessTokenRequest {
     // Empty struct that serializes to {} - Airwallex API requirement
 }
 
-#[derive(Debug, Serialize)]
-pub struct AirwallexPaymentsRequest {
-    pub amount: StringMajorUnit,
-    pub currency: Currency,
-    pub reference: String,
-}
-
 // New unified request type for macro pattern that includes payment intent creation and confirmation
 #[derive(Debug, Serialize)]
 pub struct AirwallexPaymentRequest {
