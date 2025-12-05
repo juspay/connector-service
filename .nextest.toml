@@ -7,4 +7,4 @@ fail-fast = false
 [profile.ci]
 status-level = "all"
 # Skip bluesnap payment flow tests to avoid flaky CI failures
-filter = 'not test(~bluesnap_payment_flows_test)'
+filter-expr = 'not test(~bluesnap_payment_flows_test)'
