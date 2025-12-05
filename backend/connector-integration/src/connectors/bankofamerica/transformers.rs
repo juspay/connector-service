@@ -8,6 +8,7 @@ use common_utils::{
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 pub const FLUID_DATA_DESCRIPTOR_FOR_SAMSUNG_PAY: &str = "FID=COMMON.SAMSUNG.INAPP.PAYMENT";
+const MAX_STATE_LENGTH: usize = 20;
 
 use crate::{connectors::bankofamerica::BankofamericaRouterData, types::ResponseRouterData, utils};
 use cards;
@@ -243,7 +244,7 @@ pub struct BankOfAmericaConsumerAuthInformation {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MerchantDefinedInformation {
-    key: u8,
+    key: usize,
     value: String,
 }
 
@@ -272,10 +273,18 @@ fn build_bill_to(
     Ok(address_details
         .and_then(|addr| {
             addr.address.as_ref().map(|addr| {
-                let administrative_area = addr.to_state_code_as_optional().unwrap_or_else(|_| {
-                    addr.state
-                        .clone()
-                        .map(|state| Secret::new(format!("{:.20}", state.expose())))
+                let administrative_area = addr.to_state_code_as_optional().unwrap_or_else(|err| {
+                    tracing::warn!(
+                        ?err,
+                        "Failed to convert state to code, using raw state value"
+                    );
+                    addr.state.clone().map(|state| {
+                        Secret::new(format!(
+                            "{:.width$}",
+                            state.expose(),
+                            width = MAX_STATE_LENGTH
+                        ))
+                    })
                 });
 
                 BillTo {
@@ -292,19 +301,20 @@ fn build_bill_to(
         })
         .unwrap_or(default_address))
 }
+
 fn convert_metadata_to_merchant_defined_info(metadata: Value) -> Vec<MerchantDefinedInformation> {
-    let hashmap: std::collections::BTreeMap<String, Value> =
-        serde_json::from_str(&metadata.to_string()).unwrap_or(std::collections::BTreeMap::new());
-    let mut vector = Vec::new();
-    let mut iter = 1;
-    for (key, value) in hashmap {
-        vector.push(MerchantDefinedInformation {
-            key: iter,
-            value: format!("{key}={value}"),
-        });
-        iter += 1;
-    }
-    vector
+    metadata
+        .as_object()
+        .map(|map| {
+            map.iter()
+                .enumerate()
+                .map(|(index, (key, value))| MerchantDefinedInformation {
+                    key: index + 1,
+                    value: format!("{}_{}", key, value.as_str().unwrap_or(&value.to_string())),
+                })
+                .collect::<Vec<MerchantDefinedInformation>>()
+        })
+        .unwrap_or_default()
 }
 
 pub fn get_error_reason(

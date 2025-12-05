@@ -10,6 +10,7 @@ use common_utils::{
 };
 use std::fmt::Debug;
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
+const UNAUTHORIZED_STATUS_CODE: u16 = 401;
 
 use domain_types::{
     connector_flow::{
@@ -625,7 +626,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             Report<common_utils::errors::ParsingError>,
         > = res.response.parse_struct("Bankofamerica ErrorResponse");
 
-        let error_message = if res.status_code == 401 {
+        let error_message = if res.status_code == UNAUTHORIZED_STATUS_CODE {
             headers::CONNECTOR_UNAUTHORIZED_ERROR.to_string()
         } else {
             NO_ERROR_MESSAGE.to_string()
@@ -779,11 +780,12 @@ macros::create_all_prerequisites!(
         let host = bankofamerica_host
             .host_str()
             .ok_or(errors::ConnectorError::RequestEncodingFailed)?;
-        let path: String = self
-            .get_url(req)?
-            .chars()
-            .skip(base_url.len() - 1)
-            .collect();
+        let url = self.get_url(req)?;
+        let skip_len = base_url.len().saturating_sub(1);
+        if url.len() <= skip_len {
+            return Err(errors::ConnectorError::InvalidDataFormat { field_name: "url" }.into());
+        }
+        let path: String = url.chars().skip(skip_len).collect();
         let sha256 = self.generate_digest(
             bankofamerica_req
                 .map(|req| req.get_inner_value().expose())
@@ -1019,7 +1021,10 @@ macros::macro_connector_implementation!(
         &self,
         req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
-        let connector_payment_id = req.request.connector_transaction_id.clone();
+        let connector_payment_id = &req.request.connector_transaction_id;
+        if connector_payment_id.is_empty() {
+            return Err(errors::ConnectorError::MissingConnectorTransactionID.into());
+        }
         Ok(format!(
             "{}pts/v2/payments/{connector_payment_id}/reversals",
             self.connector_base_url_payments(req)
@@ -1084,7 +1089,10 @@ macros::macro_connector_implementation!(
         &self,
         req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
-        let connector_payment_id = req.request.connector_transaction_id.clone();
+        let connector_payment_id = &req.request.connector_transaction_id;
+        if connector_payment_id.is_empty() {
+            return Err(errors::ConnectorError::MissingConnectorTransactionID.into());
+        }
         Ok(format!(
             "{}pts/v2/payments/{connector_payment_id}/refunds",
             self.connector_base_url_refunds(req)
