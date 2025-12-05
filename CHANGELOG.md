@@ -4,6 +4,20 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.05.0
+
+### Features
+
+- **core:** Added SdkSessionToken Flow support ([#310](https://github.com/juspay/connector-service/pull/310)) ([`3cca3a3`](https://github.com/juspay/connector-service/commit/3cca3a3050e7681deece72cb8fc7216c847de1f1))
+
+### Bug Fixes
+
+- **bluesnap:** Address `merchantTransactionId` being `IRRELEVANT_ATTEMPT_ID` instead of actual `attempt_id` ([#342](https://github.com/juspay/connector-service/pull/342)) ([`937acfd`](https://github.com/juspay/connector-service/commit/937acfd79b35a46a215235676ca5a8b3d6fdfc7d))
+
+**Full Changelog:** [`2025.12.04.0...2025.12.05.0`](https://github.com/juspay/connector-service/compare/2025.12.04.0...2025.12.05.0)
+
+- - -
+
 ## 2025.12.04.0
 
 ### Features
