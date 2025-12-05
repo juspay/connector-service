@@ -143,7 +143,7 @@ fn create_payment_authorize_request(
         card_issuing_country_alpha2: None,
         bank_code: None,
         nick_name: None,
-    });
+    };
 
     request.payment_method = Some(PaymentMethod {
         payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
@@ -212,7 +212,7 @@ fn create_payment_authorize_request(
     }
 
     // Set connector metadata (empty for generic template)
-    request.metadata = HashMap::new();
+    request.metadata = None;
 
     request
 }
@@ -265,8 +265,8 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         minor_refund_amount: TEST_AMOUNT,
         reason: None,
         webhook_url: None,
-        metadata: HashMap::new(),
-        refund_metadata: HashMap::new(),
+        metadata: None,
+        refund_metadata: None,
         browser_info: None,
         merchant_account_id: None,
         capture_method: None,
@@ -305,14 +305,13 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
         card_issuing_country_alpha2: None,
         bank_code: None,
         nick_name: None,
-    });
+    };
 
     PaymentServiceRegisterRequest {
         minor_amount: Some(TEST_AMOUNT),
         currency: i32::from(Currency::Usd),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Card(card_details))
-            })),
+            payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
         customer_name: Some(TEST_CARD_HOLDER.to_string()),
         email: Some(TEST_EMAIL.to_string().into()),
@@ -335,7 +334,7 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
                 phone_number: None,
                 phone_country_code: None,
                 email: Some(TEST_EMAIL.to_string().into()),
-card_details),
+            }),
             shipping_address: None,
         }),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
@@ -344,7 +343,7 @@ card_details),
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("mandate_{}", get_timestamp()))),
         }),
-        metadata: HashMap::new(),
+        metadata: None,
         ..Default::default()
     }
 }
@@ -358,12 +357,18 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
     };
 
     // Create metadata matching your JSON format
-    let mut metadata = HashMap::new();
-    metadata.insert("order_type".to_string(), "recurring".to_string());
-    metadata.insert(
+    let mut metadata_map = HashMap::new();
+    metadata_map.insert("order_type".to_string(), "recurring".to_string());
+    metadata_map.insert(
         "customer_note".to_string(),
         "Monthly subscription payment".to_string(),
     );
+
+    let metadata = Some(grpc_api_types::payments::Metadata {
+        content: Some(
+            serde_json::from_value(serde_json::to_value(metadata_map).unwrap()).unwrap(),
+        ),
+    });
 
     PaymentServiceRepeatEverythingRequest {
         request_ref_id: Some(Identifier {
@@ -381,7 +386,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         browser_info: None,
         test_mode: None,
         payment_method_type: None,
-        merchant_account_metadata: HashMap::new(),
+        merchant_account_metadata: None,
         state: None,
         ..Default::default()
     }

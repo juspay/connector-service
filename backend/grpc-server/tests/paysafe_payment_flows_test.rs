@@ -57,11 +57,12 @@ use std::{
 };
 
 use grpc_api_types::{
+    self,
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
         identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
         refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails,
-        Currency, Identifier, PaymentMethod, PaymentServiceAuthorizeRequest,
+        Currency, Identifier, Metadata, PaymentMethod, PaymentServiceAuthorizeRequest,
         PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
         PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentStatus, RefundResponse,
         RefundServiceGetRequest, RefundStatus,
@@ -250,7 +251,12 @@ fn create_payment_authorize_request(
         enrolled_for_3ds: false,
         request_incremental_authorization: false,
         capture_method: Some(i32::from(capture_method)),
-        merchant_account_metadata,
+        merchant_account_metadata: Some(Metadata {
+            content: Some(
+                serde_json::from_value(serde_json::to_value(merchant_account_metadata).unwrap())
+                    .unwrap(),
+            ),
+        }),
         ..Default::default()
     }
 }
@@ -328,8 +334,12 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
             id_type: Some(IdType::Id(format!("rsync_ref_{}", get_timestamp_micros()))),
         }),
         browser_info: None,
-        refund_metadata,
-        merchant_account_metadata: Default::default(),
+        refund_metadata: Some(Metadata {
+            content: Some(
+                serde_json::from_value(serde_json::to_value(refund_metadata).unwrap()).unwrap(),
+            ),
+        }),
+        merchant_account_metadata: None,
         state: None,
     }
 }
