@@ -82,7 +82,14 @@ pub struct TsysPaymentAuthSaleRequest<T: PaymentMethodDataTypes> {
 }
 
 // TryFrom for macro compatibility - owned TsysRouterData
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         TsysRouterData<
             RouterDataV2<
@@ -121,9 +128,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                     transaction_amount: item.request.minor_amount.get_amount_as_i64(),
                     currency_code: item.request.currency,
                     card_number: card_data.card_number.clone(),
-                    expiration_date: card_data.get_card_expiry_month_year_2_digit_with_delimiter("/".to_owned())?,
+                    expiration_date: card_data
+                        .get_card_expiry_month_year_2_digit_with_delimiter("/".to_owned())?,
                     cvv2: card_data.card_cvc.clone(),
-                    order_number: item.resource_common_data.connector_request_reference_id.clone(),
+                    order_number: item
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
                     terminal_capability: "ICC_CHIP_READ_ONLY".to_string(),
                     terminal_operating_environment: "ON_MERCHANT_PREMISES_ATTENDED".to_string(),
                     cardholder_authentication_method: "NOT_AUTHENTICATED".to_string(),
@@ -224,10 +235,14 @@ impl<T: PaymentMethodDataTypes>
     TryFrom<
         ResponseRouterData<
             TsysAuthorizeResponse,
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         >,
-    >
-    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -281,7 +296,8 @@ impl<T: PaymentMethodDataTypes>
 }
 
 // TryFrom for Capture flow
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             TsysCaptureResponse,
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -325,7 +341,8 @@ impl TryFrom<
 }
 
 // TryFrom for Void flow
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             TsysVoidResponse,
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -399,13 +416,28 @@ pub struct TsysPSyncRequest(TsysSyncRequest);
 #[serde(transparent)]
 pub struct TsysPSyncResponse(TsysSyncResponse);
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TsysRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
-    for TsysPSyncRequest
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        TsysRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    > for TsysPSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item_data: TsysRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
+        item_data: TsysRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let item = &item_data.router_data;
         let auth: TsysAuthType = TsysAuthType::try_from(&item.connector_auth_type)?;
@@ -473,7 +505,10 @@ pub struct TsysSyncResponse {
     search_transaction_response: SearchResponseTypes,
 }
 
-fn get_payments_sync_response(connector_response: &TsysPaymentsSyncResponse, http_code: u16) -> PaymentsResponseData {
+fn get_payments_sync_response(
+    connector_response: &TsysPaymentsSyncResponse,
+    http_code: u16,
+) -> PaymentsResponseData {
     PaymentsResponseData::TransactionResponse {
         resource_id: ResponseId::ConnectorTransactionId(
             connector_response
@@ -496,7 +531,8 @@ fn get_payments_sync_response(connector_response: &TsysPaymentsSyncResponse, htt
     }
 }
 
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             TsysPSyncResponse,
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -557,7 +593,15 @@ pub struct TsysPaymentsCaptureRequest {
 }
 
 // TryFrom for macro compatibility - owned TsysRouterData
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
         TsysRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
             T,
@@ -578,7 +622,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         let capture = TsysCaptureRequest {
             device_id: auth.device_id,
             transaction_key: auth.transaction_key,
-            transaction_id: item.request.connector_transaction_id
+            transaction_id: item
+                .request
+                .connector_transaction_id
                 .clone()
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?,
@@ -612,13 +658,28 @@ pub struct TsysPaymentsCancelRequest {
     void: TsysCancelRequest,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TsysRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for TsysPaymentsCancelRequest
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        TsysRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for TsysPaymentsCancelRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item_data: TsysRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+        item_data: TsysRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let item = &item_data.router_data;
         let auth: TsysAuthType = TsysAuthType::try_from(&item.connector_auth_type)?;
@@ -657,13 +718,25 @@ pub struct TsysRefundRequest {
 }
 
 // TryFrom for macro compatibility - owned TsysRouterData
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TsysRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for TsysRefundRequest
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        TsysRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    > for TsysRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item_data: TsysRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item_data: TsysRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let item = &item_data.router_data;
         let auth: TsysAuthType = TsysAuthType::try_from(&item.connector_auth_type)?;
@@ -705,7 +778,8 @@ pub struct RefundResponse {
     return_response: TsysResponseTypes,
 }
 
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             RefundResponse,
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -749,13 +823,25 @@ pub struct TsysRSyncRequest(TsysSyncRequest);
 #[serde(transparent)]
 pub struct TsysRSyncResponse(TsysSyncResponse);
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<TsysRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
-    for TsysRSyncRequest
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        TsysRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
+    > for TsysRSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item_data: TsysRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
+        item_data: TsysRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let item = &item_data.router_data;
         let auth: TsysAuthType = TsysAuthType::try_from(&item.connector_auth_type)?;
@@ -771,7 +857,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             TsysRSyncResponse,
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,

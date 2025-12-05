@@ -31,9 +31,8 @@ use serde::Serialize;
 
 use self::transformers::{
     RefundResponse, TsysAuthorizeResponse, TsysCaptureResponse, TsysErrorResponse,
-    TsysPaymentsCancelRequest, TsysPaymentsCaptureRequest, TsysPaymentsRequest,
-    TsysPSyncRequest, TsysPSyncResponse, TsysRSyncRequest, TsysRSyncResponse, TsysRefundRequest,
-    TsysVoidResponse,
+    TsysPSyncRequest, TsysPSyncResponse, TsysPaymentsCancelRequest, TsysPaymentsCaptureRequest,
+    TsysPaymentsRequest, TsysRSyncRequest, TsysRSyncResponse, TsysRefundRequest, TsysVoidResponse,
 };
 use crate::{connectors::macros, types::ResponseRouterData, with_error_response_body};
 
@@ -167,62 +166,102 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // Empty SourceVerification implementations for all flows
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Tsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Tsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Tsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<SdkSessionToken, PaymentFlowData, PaymentsSdkSessionTokenData, PaymentsResponseData>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
+    > for Tsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    > for Tsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        PSync,
+        PaymentFlowData,
+        PaymentsSyncData,
+        PaymentsResponseData,
+    > for Tsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        Capture,
+        PaymentFlowData,
+        PaymentsCaptureData,
+        PaymentsResponseData,
+    > for Tsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        Void,
+        PaymentFlowData,
+        PaymentVoidData,
+        PaymentsResponseData,
+    > for Tsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        Refund,
+        RefundFlowData,
+        RefundsData,
+        RefundsResponseData,
+    > for Tsys<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        RSync,
+        RefundFlowData,
+        RefundSyncData,
+        RefundsResponseData,
+    > for Tsys<T>
 {
 }
 
@@ -498,14 +537,17 @@ use domain_types::connector_types::{
     ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
     PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentMethodTokenResponse,
     PaymentMethodTokenizationData, PaymentsCancelPostCaptureData, RepeatPaymentData,
-    SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-    SubmitEvidenceData,
+    SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
 };
 
 // Order Create
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
-    for Tsys<T>
+    ConnectorIntegrationV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Tsys<T>
 {
 }
 
@@ -515,15 +557,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Tsys<T>
 {
 }
 
 // Access Token
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>
-    for Tsys<T>
+    ConnectorIntegrationV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Tsys<T>
 {
 }
 
@@ -533,15 +583,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Tsys<T>
 {
 }
 
 // Session Token
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
-    for Tsys<T>
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Tsys<T>
 {
 }
 
@@ -551,15 +609,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Tsys<T>
 {
 }
 
 // Setup Mandate
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
-    for Tsys<T>
+    ConnectorIntegrationV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    > for Tsys<T>
 {
 }
 
@@ -569,15 +635,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    > for Tsys<T>
 {
 }
 
 // Payment Method Token
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<domain_types::connector_flow::PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
-    for Tsys<T>
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Tsys<T>
 {
 }
 
@@ -587,8 +661,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<domain_types::connector_flow::PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Tsys<T>
 {
 }
 
@@ -605,15 +683,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Tsys<T>
 {
 }
 
 // Void Post Capture
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
-    for Tsys<T>
+    ConnectorIntegrationV2<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Tsys<T>
 {
 }
 
@@ -623,8 +709,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Tsys<T>
 {
 }
 
@@ -641,8 +731,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        SubmitEvidence,
+        DisputeFlowData,
+        SubmitEvidenceData,
+        DisputeResponseData,
+    > for Tsys<T>
 {
 }
 
@@ -658,8 +752,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        DefendDispute,
+        DisputeFlowData,
+        DisputeDefendData,
+        DisputeResponseData,
+    > for Tsys<T>
 {
 }
 
@@ -675,8 +773,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        Accept,
+        DisputeFlowData,
+        AcceptDisputeData,
+        DisputeResponseData,
+    > for Tsys<T>
 {
 }
 
@@ -688,8 +790,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // Create Connector Customer
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>
-    for Tsys<T>
+    ConnectorIntegrationV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Tsys<T>
 {
 }
 
@@ -699,8 +805,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>
-    for Tsys<T>
+    interfaces::verification::SourceVerification<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Tsys<T>
 {
 }
 
