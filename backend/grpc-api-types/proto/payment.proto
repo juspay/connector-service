@@ -2058,9 +2058,12 @@ message PaymentServiceRefundRequest {
 
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 18; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  
+  // Environment Configuration
+  optional bool test_mode = 19; // A boolean value to indicate if the connector is in Test mode
 
   // Payment Method Type
-  optional PaymentMethodType payment_method_type = 19; // Indicates the sub type of payment method. (e.g., card, bank_redirect, bank_transfer)
+  optional PaymentMethodType payment_method_type = 20; // Indicates the sub type of payment method. (e.g., card, bank_redirect, bank_transfer)
 }
 
 // Response message for a refund operation (unified for both Create and Get).
@@ -2668,9 +2671,12 @@ message RefundServiceGetRequest {
 
 // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 9; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  
+  // Environment Configuration
+  optional bool test_mode = 10; // A boolean value to indicate if the connector is in Test mode
 
   // Payment Method Type
-  optional PaymentMethodType payment_method_type = 10; // Indicates the sub type of payment method. (e.g., card, bank_redirect, bank_transfer)
+  optional PaymentMethodType payment_method_type = 11; // Indicates the sub type of payment method. (e.g., card, bank_redirect, bank_transfer)
 }
 
 // Legacy alias for backward compatibility - use RefundResponse instead

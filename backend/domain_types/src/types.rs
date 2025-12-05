@@ -1976,10 +1976,18 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
     fn foreign_try_from(
         value: grpc_api_types::payments::Address,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let country_code = value.country_alpha2_code();
+        let country = if matches!(
+            country_code,
+            grpc_api_types::payments::CountryAlpha2::Unspecified
+        ) {
+            None
+        } else {
+            Some(common_enums::CountryAlpha2::foreign_try_from(country_code)?)
+        };
+
         Ok(Self {
-            country: Some(common_enums::CountryAlpha2::foreign_try_from(
-                value.country_alpha2_code(),
-            )?),
+            country,
             city: value.city,
             line1: value.line1,
             line2: value.line2,
@@ -3806,6 +3814,15 @@ impl
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
+        let connector_meta_data = (!value.merchant_account_metadata.is_empty())
+            .then(|| {
+                serde_json::to_value(&value.merchant_account_metadata)
+                    .map(common_utils::pii::SecretSerdeValue::new)
+            })
+            .transpose()
+            .ok()
+            .flatten();
+
         let payment_method = value
             .payment_method_type
             .map(|pm_type_i32| {
@@ -3829,6 +3846,8 @@ impl
             raw_connector_request: None,
             connector_response_headers: None,
             access_token,
+            connector_meta_data,
+            test_mode: value.test_mode,
             payment_method,
         })
     }
@@ -3856,6 +3875,15 @@ impl
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
 
+        let connector_meta_data = (!value.merchant_account_metadata.is_empty())
+            .then(|| {
+                serde_json::to_value(&value.merchant_account_metadata)
+                    .map(common_utils::pii::SecretSerdeValue::new)
+            })
+            .transpose()
+            .ok()
+            .flatten();
+
         let payment_method = value
             .payment_method_type
             .map(|pm_type_i32| {
@@ -3881,6 +3909,8 @@ impl
             raw_connector_request: None,
             connector_response_headers: None,
             access_token,
+            connector_meta_data,
+            test_mode: value.test_mode,
             payment_method,
         })
     }
@@ -3905,6 +3935,15 @@ impl
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
+        let connector_meta_data = (!value.merchant_account_metadata.is_empty())
+            .then(|| {
+                serde_json::to_value(&value.merchant_account_metadata)
+                    .map(common_utils::pii::SecretSerdeValue::new)
+            })
+            .transpose()
+            .ok()
+            .flatten();
+
         let payment_method = value
             .payment_method_type
             .map(|pm_type_i32| {
@@ -3928,6 +3967,8 @@ impl
             raw_connector_request: None,
             connector_response_headers: None,
             access_token,
+            connector_meta_data,
+            test_mode: value.test_mode,
             payment_method,
         })
     }
@@ -3955,6 +3996,15 @@ impl
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
 
+        let connector_meta_data = (!value.merchant_account_metadata.is_empty())
+            .then(|| {
+                serde_json::to_value(&value.merchant_account_metadata)
+                    .map(common_utils::pii::SecretSerdeValue::new)
+            })
+            .transpose()
+            .ok()
+            .flatten();
+
         let payment_method = value
             .payment_method_type
             .map(|pm_type_i32| {
@@ -3980,6 +4030,8 @@ impl
             raw_connector_request: None,
             connector_response_headers: None,
             access_token,
+            connector_meta_data,
+            test_mode: value.test_mode,
             payment_method,
         })
     }
@@ -4124,84 +4176,6 @@ pub fn generate_accept_dispute_response(
                 raw_connector_request,
             })
         }
-    }
-}
-
-pub fn payment_method_type_to_group(
-    payment_method_type: PaymentMethodType,
-) -> Result<common_enums::PaymentMethod, ApplicationErrorResponse> {
-    match payment_method_type {
-        // Card types
-        PaymentMethodType::Card => Ok(common_enums::PaymentMethod::Card),
-
-        // Wallet types
-        PaymentMethodType::ApplePay
-        | PaymentMethodType::GooglePay
-        | PaymentMethodType::AmazonPay
-        | PaymentMethodType::Paypal
-        | PaymentMethodType::WeChatPay
-        | PaymentMethodType::AliPay
-        | PaymentMethodType::Cashapp
-        | PaymentMethodType::Bluecode
-        | PaymentMethodType::Mifinity
-        | PaymentMethodType::RevolutPay => Ok(common_enums::PaymentMethod::Wallet),
-
-        // UPI types
-        PaymentMethodType::UpiCollect | PaymentMethodType::UpiIntent => {
-            Ok(common_enums::PaymentMethod::Upi)
-        }
-
-        // PayLater types
-        PaymentMethodType::Affirm
-        | PaymentMethodType::AfterpayClearpay
-        | PaymentMethodType::Klarna
-        | PaymentMethodType::Alma
-        | PaymentMethodType::Atome => Ok(common_enums::PaymentMethod::PayLater),
-
-        // BankRedirect types
-        PaymentMethodType::BancontactCard
-        | PaymentMethodType::Ideal
-        | PaymentMethodType::Sofort
-        | PaymentMethodType::Trustly
-        | PaymentMethodType::Giropay
-        | PaymentMethodType::Eps
-        | PaymentMethodType::Przelewy24
-        | PaymentMethodType::Blik
-        | PaymentMethodType::Bizum
-        | PaymentMethodType::OpenBankingUk
-        | PaymentMethodType::OnlineBankingFpx => Ok(common_enums::PaymentMethod::BankRedirect),
-
-        // BankTransfer types
-        PaymentMethodType::Ach | PaymentMethodType::Sepa | PaymentMethodType::Bacs => {
-            Ok(common_enums::PaymentMethod::BankTransfer)
-        }
-
-        // Reward types
-        PaymentMethodType::ClassicReward | PaymentMethodType::Evoucher => {
-            Ok(common_enums::PaymentMethod::Reward)
-        }
-
-        // Crypto
-        PaymentMethodType::CryptoCurrency => Ok(common_enums::PaymentMethod::Crypto),
-
-        // RealTimePayment types
-        PaymentMethodType::DuitNow => Ok(common_enums::PaymentMethod::RealTimePayment),
-
-        // Voucher types
-        PaymentMethodType::Boleto | PaymentMethodType::Oxxo => {
-            Ok(common_enums::PaymentMethod::Voucher)
-        }
-
-        // CardRedirect
-        PaymentMethodType::CardRedirect => Ok(common_enums::PaymentMethod::CardRedirect),
-
-        _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-            sub_code: "UNSUPPORTED_PAYMENT_METHOD_TYPE".to_owned(),
-            error_identifier: 400,
-            error_message: "This payment method type cannot be mapped to a high-level category"
-                .to_owned(),
-            error_object: None,
-        })),
     }
 }
 

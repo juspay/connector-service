@@ -344,7 +344,7 @@ pub struct PaymentFlowData {
     pub return_url: Option<String>,
     pub address: payment_address::PaymentAddress,
     pub auth_type: AuthenticationType,
-    pub connector_meta_data: Option<common_utils::pii::SecretSerdeValue>,
+    pub connector_meta_data: Option<SecretSerdeValue>,
     pub amount_captured: Option<i64>,
     // minor amount for amount frameworka
     pub minor_amount_captured: Option<MinorUnit>,
@@ -1445,6 +1445,8 @@ pub struct RefundFlowData {
     pub connector_response_headers: Option<http::HeaderMap>,
     pub raw_connector_request: Option<Secret<String>>,
     pub access_token: Option<AccessTokenResponseData>,
+    pub connector_meta_data: Option<SecretSerdeValue>,
+    pub test_mode: Option<bool>,
     pub payment_method: Option<PaymentMethod>,
 }
 
