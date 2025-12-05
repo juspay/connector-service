@@ -1976,10 +1976,18 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
     fn foreign_try_from(
         value: grpc_api_types::payments::Address,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let country_code = value.country_alpha2_code();
+        let country = if matches!(
+            country_code,
+            grpc_api_types::payments::CountryAlpha2::Unspecified
+        ) {
+            None
+        } else {
+            Some(common_enums::CountryAlpha2::foreign_try_from(country_code)?)
+        };
+
         Ok(Self {
-            country: Some(common_enums::CountryAlpha2::foreign_try_from(
-                value.country_alpha2_code(),
-            )?),
+            country,
             city: value.city,
             line1: value.line1,
             line2: value.line2,
@@ -3806,6 +3814,15 @@ impl
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
+        let connector_meta_data = (!value.merchant_account_metadata.is_empty())
+            .then(|| {
+                serde_json::to_value(&value.merchant_account_metadata)
+                    .map(common_utils::pii::SecretSerdeValue::new)
+            })
+            .transpose()
+            .ok()
+            .flatten();
+
         Ok(RefundFlowData {
             status: common_enums::RefundStatus::Pending,
             refund_id: None,
@@ -3817,6 +3834,8 @@ impl
             raw_connector_request: None,
             connector_response_headers: None,
             access_token,
+            connector_meta_data,
+            test_mode: value.test_mode,
         })
     }
 }
@@ -3843,6 +3862,15 @@ impl
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
 
+        let connector_meta_data = (!value.merchant_account_metadata.is_empty())
+            .then(|| {
+                serde_json::to_value(&value.merchant_account_metadata)
+                    .map(common_utils::pii::SecretSerdeValue::new)
+            })
+            .transpose()
+            .ok()
+            .flatten();
+
         Ok(RefundFlowData {
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
@@ -3855,6 +3883,8 @@ impl
             raw_connector_request: None,
             connector_response_headers: None,
             access_token,
+            connector_meta_data,
+            test_mode: value.test_mode,
         })
     }
 }
@@ -3878,6 +3908,15 @@ impl
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
+        let connector_meta_data = (!value.merchant_account_metadata.is_empty())
+            .then(|| {
+                serde_json::to_value(&value.merchant_account_metadata)
+                    .map(common_utils::pii::SecretSerdeValue::new)
+            })
+            .transpose()
+            .ok()
+            .flatten();
+
         Ok(RefundFlowData {
             status: common_enums::RefundStatus::Pending,
             refund_id: Some(value.refund_id),
@@ -3889,6 +3928,8 @@ impl
             raw_connector_request: None,
             connector_response_headers: None,
             access_token,
+            connector_meta_data,
+            test_mode: value.test_mode,
         })
     }
 }
@@ -3915,6 +3956,15 @@ impl
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
 
+        let connector_meta_data = (!value.merchant_account_metadata.is_empty())
+            .then(|| {
+                serde_json::to_value(&value.merchant_account_metadata)
+                    .map(common_utils::pii::SecretSerdeValue::new)
+            })
+            .transpose()
+            .ok()
+            .flatten();
+
         Ok(RefundFlowData {
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
@@ -3927,6 +3977,8 @@ impl
             raw_connector_request: None,
             connector_response_headers: None,
             access_token,
+            connector_meta_data,
+            test_mode: value.test_mode,
         })
     }
 }
