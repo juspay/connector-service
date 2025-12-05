@@ -117,8 +117,29 @@ pub enum AirwallexPaymentType {
 
 #[derive(Debug, Serialize)]
 pub struct AirwallexDeviceData {
+    pub accept_header: String,
+    pub browser: AirwallexBrowser,
     pub ip_address: Option<String>,
-    pub user_agent: Option<String>,
+    pub language: String,
+    pub mobile: Option<AirwallexMobile>,
+    pub screen_color_depth: u8,
+    pub screen_height: u32,
+    pub screen_width: u32,
+    pub timezone: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AirwallexBrowser {
+    pub java_enabled: bool,
+    pub javascript_enabled: bool,
+    pub user_agent: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AirwallexMobile {
+    pub device_model: Option<String>,
+    pub os_type: Option<String>,
+    pub os_version: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -129,12 +150,6 @@ pub struct AirwallexPaymentOptions {
 #[derive(Debug, Serialize)]
 pub struct AirwallexCardOptions {
     pub auto_capture: Option<bool>,
-    pub three_ds: Option<AirwallexThreeDsOptions>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct AirwallexThreeDsOptions {
-    pub attempt_three_ds: Option<bool>,
 }
 
 // Confirm request structure for 2-step flow (only payment method data)
@@ -145,6 +160,56 @@ pub struct AirwallexConfirmRequest {
     pub payment_method_options: Option<AirwallexPaymentOptions>,
     pub return_url: Option<String>,
     pub device_data: Option<AirwallexDeviceData>,
+}
+
+// Helper function to extract device data from browser info (matching Hyperswitch pattern)
+fn get_device_data<T: domain_types::payment_method_data::PaymentMethodDataTypes>(
+    request: &domain_types::connector_types::PaymentsAuthorizeData<T>,
+) -> Result<Option<AirwallexDeviceData>, error_stack::Report<errors::ConnectorError>> {
+    let browser_info = match request.get_browser_info() {
+        Ok(info) => info,
+        Err(_) => return Ok(None), // If browser info is not available, return None instead of erroring
+    };
+
+    let browser = AirwallexBrowser {
+        java_enabled: browser_info.get_java_enabled().unwrap_or(false),
+        javascript_enabled: browser_info.get_java_script_enabled().unwrap_or(true),
+        user_agent: browser_info.get_user_agent().unwrap_or_default(),
+    };
+
+    let mobile = {
+        let device_model = browser_info.device_model.clone();
+        let os_type = browser_info.os_type.clone();
+        let os_version = browser_info.os_version.clone();
+
+        if device_model.is_some() || os_type.is_some() || os_version.is_some() {
+            Some(AirwallexMobile {
+                device_model,
+                os_type,
+                os_version,
+            })
+        } else {
+            None
+        }
+    };
+
+    Ok(Some(AirwallexDeviceData {
+        accept_header: browser_info.get_accept_header().unwrap_or_default(),
+        browser,
+        ip_address: browser_info
+            .get_ip_address()
+            .ok()
+            .map(|ip| ip.expose().to_string()),
+        language: browser_info.get_language().unwrap_or_default(),
+        mobile,
+        screen_color_depth: browser_info.get_color_depth().unwrap_or(24),
+        screen_height: browser_info.get_screen_height().unwrap_or(1080),
+        screen_width: browser_info.get_screen_width().unwrap_or(1920),
+        timezone: browser_info
+            .get_time_zone()
+            .map(|tz| tz.to_string())
+            .unwrap_or_else(|_| "0".to_string()),
+    }))
 }
 
 // Implementation for new unified request type
@@ -213,21 +278,10 @@ impl<
         let payment_method_options = Some(AirwallexPaymentOptions {
             card: Some(AirwallexCardOptions {
                 auto_capture: Some(auto_capture),
-                three_ds: Some(AirwallexThreeDsOptions {
-                    attempt_three_ds: Some(false), // 3DS not implemented yet
-                }),
             }),
         });
 
-        let device_data = item
-            .router_data
-            .request
-            .browser_info
-            .as_ref()
-            .map(|browser_info| AirwallexDeviceData {
-                ip_address: browser_info.ip_address.map(|ip| ip.to_string()),
-                user_agent: browser_info.user_agent.clone(),
-            });
+        let device_data = get_device_data(&item.router_data.request)?;
 
         // Generate unique request_id for Authorize/confirm step
         // Different from CreateOrder to avoid Airwallex duplicate_request error
@@ -988,21 +1042,10 @@ impl<
         let payment_method_options = Some(AirwallexPaymentOptions {
             card: Some(AirwallexCardOptions {
                 auto_capture: Some(auto_capture),
-                three_ds: Some(AirwallexThreeDsOptions {
-                    attempt_three_ds: Some(false), // 3DS not implemented yet
-                }),
             }),
         });
 
-        let device_data = item
-            .router_data
-            .request
-            .browser_info
-            .as_ref()
-            .map(|browser_info| AirwallexDeviceData {
-                ip_address: browser_info.ip_address.map(|ip| ip.to_string()),
-                user_agent: browser_info.user_agent.clone(),
-            });
+        let device_data = get_device_data(&item.router_data.request)?;
 
         Ok(Self {
             request_id: format!(
