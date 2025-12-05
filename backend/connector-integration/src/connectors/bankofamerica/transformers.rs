@@ -419,22 +419,19 @@ fn get_error_response(
     status_code: u16,
     transaction_id: String,
 ) -> ErrorResponse {
-    let avs_message = risk_information
-        .clone()
-        .map(|client_risk_information| {
-            client_risk_information.rules.map(|rules| {
-                rules
-                    .iter()
-                    .map(|risk_info| {
-                        risk_info.name.clone().map_or("".to_string(), |name| {
-                            format!(" , {}", name.clone().expose())
-                        })
+    let avs_message = risk_information.clone().map(|client_risk_information| {
+        client_risk_information.rules.map(|rules| {
+            rules
+                .iter()
+                .map(|risk_info| {
+                    risk_info.name.clone().map_or("".to_string(), |name| {
+                        format!(" , {}", name.clone().expose())
                     })
-                    .collect::<Vec<String>>()
-                    .join("")
-            })
+                })
+                .collect::<Vec<String>>()
+                .join("")
         })
-        .unwrap_or(Some("".to_string()));
+    });
 
     let detailed_error_info = error_data.to_owned().and_then(|error_info| {
         error_info.details.map(|error_details| {
@@ -459,7 +456,7 @@ fn get_error_response(
             .clone()
             .and_then(|error_details| error_details.message),
         detailed_error_info,
-        avs_message,
+        avs_message.flatten(),
     );
     let error_message = error_data
         .clone()
