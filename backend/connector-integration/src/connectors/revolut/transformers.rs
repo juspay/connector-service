@@ -13,9 +13,10 @@ use domain_types::{
 
 use crate::types::ResponseRouterData;
 use common_utils::types::MinorUnit;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+use time::Date;
 
 pub struct RevolutAuthType {
     pub api_key: Secret<String>,
@@ -25,21 +26,21 @@ pub struct RevolutAuthType {
 #[derive(Debug, Serialize)]
 pub struct RevolutOrderCreateRequest {
     pub amount: MinorUnit,
-    pub currency: String,
-    pub settlement_currency: Option<String>,
+    pub currency: common_enums::Currency,
+    pub settlement_currency: Option<common_enums::Currency>,
     pub description: Option<String>,
     pub customer: Option<RevolutCustomer>,
     pub enforce_challenge: Option<RevolutEnforceChallengeMode>,
     pub line_items: Option<Vec<RevolutLineItem>>,
     pub shipping: Option<RevolutShipping>,
-    pub capture_mode: Option<String>,
+    pub capture_mode: Option<RevolutCaptureMode>,
     pub cancel_authorised_after: Option<String>,
     pub location_id: Option<String>,
     pub metadata: Option<serde_json::Value>,
     pub industry_data: Option<serde_json::Value>,
     pub merchant_order_data: Option<serde_json::Value>,
     pub upcoming_payment_data: Option<serde_json::Value>,
-    pub redirect_url: Option<String>,
+    pub redirect_url: Option<url::Url>,
     pub statement_descriptor_suffix: Option<String>,
 }
 
@@ -50,7 +51,7 @@ pub struct RevolutCustomer {
     pub full_name: Option<Secret<String>>,
     pub phone: Option<Secret<String>>,
     pub email: Option<common_utils::pii::Email>,
-    pub date_of_birth: Option<String>,
+    pub date_of_birth: Option<Date>,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -65,16 +66,17 @@ pub enum RevolutEnforceChallengeMode {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RevolutLineItem {
     pub name: String,
-    pub r#type: RevolutLineItemType,
+    #[serde(rename = "type")]
+    pub line_item_type: RevolutLineItemType,
     pub quantity: RevolutLineItemQuantity,
     pub unit_price_amount: MinorUnit, //integer(int64)
     pub total_amount: MinorUnit,      //integer(int64)
     pub external_id: Option<String>,
     pub discounts: Option<Vec<RevolutLineItemDiscount>>,
     pub taxes: Option<Vec<RevolutLineItemTax>>,
-    pub image_urls: Option<Vec<String>>,
+    pub image_urls: Option<Vec<url::Url>>,
     pub description: Option<String>,
-    pub url: Option<String>,
+    pub url: Option<url::Url>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -137,14 +139,41 @@ pub struct RevolutShipment {
     pub shipping_company_name: String,
     pub tracking_number: String,
     pub estimated_delivery_date: Option<String>,
-    pub tracking_url: Option<String>,
+    pub tracking_url: Option<url::Url>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RevolutErrorCode {
+    Unauthenticated,
+    Unauthorized,
+    NotFound,
+    InvalidRequest,
+    PaymentDeclined,
+    BadRequest,
+    #[serde(other)]
+    Unknown,
+}
+
+impl From<RevolutErrorCode> for common_enums::AttemptStatus {
+    fn from(code: RevolutErrorCode) -> Self {
+        match code {
+            RevolutErrorCode::Unauthenticated => Self::AuthenticationFailed,
+            RevolutErrorCode::Unauthorized => Self::AuthorizationFailed,
+            RevolutErrorCode::NotFound => Self::Failure,
+            RevolutErrorCode::InvalidRequest => Self::Failure,
+            RevolutErrorCode::PaymentDeclined => Self::Failure,
+            RevolutErrorCode::BadRequest => Self::Failure,
+            RevolutErrorCode::Unknown => Self::Failure,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum RevolutErrorResponse {
     StandardError {
-        code: String,
+        code: RevolutErrorCode,
         message: String,
         timestamp: i64,
     },
@@ -160,19 +189,22 @@ pub enum RevolutErrorResponse {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RevolutOrderCreateResponse {
     pub id: String,
-    pub token: String,
-    pub r#type: RevolutOrderType,
+    pub token: Secret<String>,
+    #[serde(rename = "type")]
+    pub order_type: RevolutOrderType,
     pub state: RevolutOrderState,
-    pub created_at: String,
-    pub updated_at: String,
+    #[serde(with = "common_utils::custom_serde::iso8601")]
+    pub created_at: time::PrimitiveDateTime,
+    #[serde(with = "common_utils::custom_serde::iso8601")]
+    pub updated_at: time::PrimitiveDateTime,
     pub description: Option<String>,
     pub capture_mode: Option<RevolutCaptureMode>,
     pub cancel_authorised_after: Option<String>,
     pub amount: MinorUnit,
     pub outstanding_amount: Option<MinorUnit>,
     pub refunded_amount: Option<MinorUnit>,
-    pub currency: String,
-    pub settlement_currency: Option<String>,
+    pub currency: common_enums::Currency,
+    pub settlement_currency: Option<common_enums::Currency>,
     pub customer: Option<RevolutCustomer>,
     pub payments: Option<Vec<RevolutPayment>>,
     pub location_id: Option<String>,
@@ -180,8 +212,8 @@ pub struct RevolutOrderCreateResponse {
     pub industry_data: Option<serde_json::Value>,
     pub merchant_order_data: Option<RevolutMerchantOrderData>,
     pub upcoming_payment_data: Option<RevolutUpcomingPaymentData>,
-    pub checkout_url: Option<String>,
-    pub redirect_url: Option<String>,
+    pub checkout_url: Option<url::Url>,
+    pub redirect_url: Option<url::Url>,
     pub shipping: Option<RevolutShipping>,
     pub enforce_challenge: Option<RevolutEnforceChallengeMode>,
     pub line_items: Option<Vec<RevolutLineItem>>,
@@ -200,7 +232,7 @@ pub enum RevolutOrderType {
     CreditReimbursement,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, strum::Display)]
 #[serde(rename_all = "snake_case")]
 pub enum RevolutOrderState {
     Pending,
@@ -225,13 +257,15 @@ pub struct RevolutPayment {
     pub state: RevolutPaymentState,
     pub decline_reason: Option<RevolutDeclineReason>,
     pub bank_message: Option<String>,
-    pub created_at: String,
-    pub updated_at: String,
-    pub token: Option<String>,
+    #[serde(with = "common_utils::custom_serde::iso8601")]
+    pub created_at: time::PrimitiveDateTime,
+    #[serde(with = "common_utils::custom_serde::iso8601")]
+    pub updated_at: time::PrimitiveDateTime,
+    pub token: Option<Secret<String>>,
     pub amount: MinorUnit,
-    pub currency: String,
+    pub currency: common_enums::Currency,
     pub settled_amount: Option<MinorUnit>,
-    pub settled_currency: Option<String>,
+    pub settled_currency: Option<common_enums::Currency>,
     pub payment_method: Option<RevolutPaymentMethod>,
     pub authentication_challenge: Option<RevolutAuthenticationChallenge>,
     pub billing_address: Option<RevolutAddress>,
@@ -302,14 +336,15 @@ pub enum RevolutDeclineReason {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RevolutMerchantOrderData {
-    pub url: Option<String>,
+    pub url: Option<url::Url>,
     pub reference: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RevolutUpcomingPaymentData {
-    pub date: String,
-    pub payment_method_id: String,
+    #[serde(with = "common_utils::custom_serde::iso8601")]
+    pub date: time::PrimitiveDateTime,
+    pub payment_method_id: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -321,9 +356,10 @@ pub enum RevolutRiskLevel {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RevolutFee {
-    pub r#type: RevolutFeeType,
+    #[serde(rename = "type")]
+    pub fee_type: RevolutFeeType,
     pub amount: MinorUnit,
-    pub currency: String,
+    pub currency: common_enums::Currency,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -454,7 +490,8 @@ pub struct RevolutPaymentsRequest<T: PaymentMethodDataTypes> {
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Serialize)]
 pub struct RevolutSavedPaymentMethod {
-    pub r#type: RevolutPaymentMethodType,
+    #[serde(rename = "type")]
+    pub payment_method_type: RevolutPaymentMethodType,
     pub id: String,
     pub initiator: RevolutPaymentInitiator,
     pub environment: Option<RevolutEnvironment>,
@@ -480,7 +517,8 @@ pub enum RevolutPaymentInitiator {
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Serialize)]
 pub struct RevolutEnvironment {
-    pub r#type: String, // "browser"
+    #[serde(rename = "type")]
+    pub env_type: String, // "browser"
     pub time_zone_utc_offset: i32,
     pub color_depth: i32,
     pub screen_width: i32,
@@ -542,11 +580,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
-        let customer = router_data
-            .request
-            .email
-            .as_ref()
-            .map(|email| RevolutCustomer {
+        let customer = if let Some(customer_id) = &router_data.request.customer_id {
+            Some(RevolutCustomer {
+                id: Some(customer_id.get_string_repr().to_string()),
+                full_name: router_data
+                    .request
+                    .customer_name
+                    .as_ref()
+                    .map(|name| Secret::new(name.clone())),
+                phone: None,
+                email: router_data.request.email.clone(),
+                date_of_birth: None,
+            })
+        } else if router_data.request.email.is_some() || router_data.request.customer_name.is_some()
+        {
+            Some(RevolutCustomer {
                 id: None,
                 full_name: router_data
                     .request
@@ -554,29 +602,73 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     .as_ref()
                     .map(|name| Secret::new(name.clone())),
                 phone: None,
-                email: Some(email.clone()),
+                email: router_data.request.email.clone(),
                 date_of_birth: None,
+            })
+        } else {
+            None
+        };
+
+        let shipping = router_data
+            .resource_common_data
+            .address
+            .get_shipping()
+            .and_then(|shipping_address| {
+                shipping_address
+                    .address
+                    .as_ref()
+                    .map(|addr| RevolutShipping {
+                        address: Some(RevolutAddress {
+                            street_line_1: addr.line1.as_ref().map(|l| l.peek().to_string()),
+                            street_line_2: addr.line2.as_ref().map(|l| l.peek().to_string()),
+                            region: addr.state.as_ref().map(|s| s.peek().to_string()),
+                            city: addr.city.as_ref().map(|c| c.peek().to_string()),
+                            country_code: addr.country.map(|c| c.to_string()),
+                            postcode: addr.zip.as_ref().map(|z| z.peek().to_string()),
+                        }),
+                        contact: Some(RevolutContact {
+                            full_name: shipping_address.get_optional_full_name(),
+                            phone: shipping_address
+                                .phone
+                                .as_ref()
+                                .and_then(|p| p.number.clone()),
+                            email: shipping_address.email.clone(),
+                        }),
+                        shipments: None,
+                    })
             });
 
-        Ok(Self {
+        let capture_mode = if router_data.request.is_auto_capture()? {
+            Some(RevolutCaptureMode::Automatic)
+        } else {
+            Some(RevolutCaptureMode::Manual)
+        };
+
+        let request = Self {
             amount: router_data.request.amount,
-            currency: router_data.request.currency.to_string(),
+            currency: router_data.request.currency,
             settlement_currency: None,
-            description: router_data.resource_common_data.description.clone(),
+            description: router_data.request.statement_descriptor.clone(),
             customer,
             enforce_challenge: None,
             line_items: None,
-            shipping: None,
-            capture_mode: None,
+            shipping,
+            capture_mode,
             cancel_authorised_after: None,
             location_id: None,
             metadata: router_data.request.metadata.clone(),
             industry_data: None,
             merchant_order_data: None,
             upcoming_payment_data: None,
-            redirect_url: router_data.request.router_return_url.clone(),
+            redirect_url: router_data
+                .request
+                .router_return_url
+                .clone()
+                .and_then(|url| url::Url::parse(&url).ok()),
             statement_descriptor_suffix: router_data.request.statement_descriptor_suffix.clone(),
-        })
+        };
+
+        Ok(request)
     }
 }
 
@@ -608,19 +700,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let response = item.response;
 
-        let status = match response.state {
-            RevolutOrderState::Authorised => common_enums::AttemptStatus::Authorized,
-            RevolutOrderState::Completed => common_enums::AttemptStatus::Charged,
-            RevolutOrderState::Failed => common_enums::AttemptStatus::Failure,
-            RevolutOrderState::Cancelled => common_enums::AttemptStatus::Voided,
-            RevolutOrderState::Pending => common_enums::AttemptStatus::AuthenticationPending,
-            RevolutOrderState::Processing => common_enums::AttemptStatus::Pending,
-        };
+        let status = response.state.into();
 
-        let redirection_data = response
-            .checkout_url
-            .as_ref()
-            .map(|url| Box::new(RedirectForm::Uri { uri: url.clone() }));
+        let redirection_data = response.checkout_url.as_ref().map(|url| {
+            Box::new(RedirectForm::Uri {
+                uri: url.to_string(),
+            })
+        });
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -631,7 +717,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.id),
                 incremental_authorization_allowed: None,
-                status_code: 200,
+                status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -659,45 +745,50 @@ impl
         >,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
+        let state_for_error = response.state.clone();
 
-        let (status, payment_id) = if let Some(payments) = &response.payments {
-            if let Some(first_payment) = payments.first() {
-                let status = match first_payment.state {
-                    RevolutPaymentState::Authorised => common_enums::AttemptStatus::Authorized,
-                    RevolutPaymentState::Captured | RevolutPaymentState::Completed => {
-                        common_enums::AttemptStatus::Charged
-                    }
-                    RevolutPaymentState::Failed | RevolutPaymentState::Declined => {
-                        common_enums::AttemptStatus::Failure
-                    }
-                    RevolutPaymentState::Cancelled => common_enums::AttemptStatus::Voided,
-                    RevolutPaymentState::Pending => common_enums::AttemptStatus::Pending,
-                    RevolutPaymentState::AuthenticationChallenge => {
-                        common_enums::AttemptStatus::AuthenticationPending
-                    }
-                    _ => common_enums::AttemptStatus::Pending,
-                };
-                (status, Some(first_payment.id.clone()))
-            } else {
-                (map_order_state(response.state), None)
-            }
+        let (status, _payment_id) = response
+            .payments
+            .as_ref()
+            .and_then(|payments| payments.first())
+            .map(|first_payment| {
+                first_payment
+                    .state
+                    .clone()
+                    .try_into()
+                    .map(|status| (status, Some(first_payment.id.clone())))
+            })
+            .transpose()
+            .map_err(|_| ConnectorError::ResponseDeserializationFailed)?
+            .unwrap_or_else(|| (response.state.into(), None));
+
+        let redirection_data = response.checkout_url.as_ref().map(|url| {
+            Box::new(RedirectForm::Uri {
+                uri: url.to_string(),
+            })
+        });
+
+        let response_result = if domain_types::utils::is_payment_failure(status) {
+            Err(create_failure_error_response(
+                state_for_error,
+                Some(response.id.clone()),
+                item.http_code,
+            ))
         } else {
-            (map_order_state(response.state), None)
-        };
-
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    payment_id.unwrap_or_else(|| response.id.clone()),
-                ),
-                redirection_data: None,
+            Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
+                redirection_data,
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.id.clone()),
                 incremental_authorization_allowed: None,
-                status_code: 200,
-            }),
+                status_code: item.http_code,
+            })
+        };
+
+        Ok(Self {
+            response: response_result,
             resource_common_data: PaymentFlowData {
                 status,
                 ..item.router_data.resource_common_data
@@ -707,13 +798,61 @@ impl
     }
 }
 
-fn map_order_state(state: RevolutOrderState) -> common_enums::AttemptStatus {
-    match state {
-        RevolutOrderState::Authorised => common_enums::AttemptStatus::Authorized,
-        RevolutOrderState::Completed => common_enums::AttemptStatus::Charged,
-        RevolutOrderState::Failed => common_enums::AttemptStatus::Failure,
-        RevolutOrderState::Cancelled => common_enums::AttemptStatus::Voided,
-        RevolutOrderState::Pending => common_enums::AttemptStatus::AuthenticationPending,
-        RevolutOrderState::Processing => common_enums::AttemptStatus::Pending,
+impl From<RevolutOrderState> for common_enums::AttemptStatus {
+    fn from(state: RevolutOrderState) -> Self {
+        match state {
+            RevolutOrderState::Authorised => Self::Authorized,
+            RevolutOrderState::Completed => Self::Charged,
+            RevolutOrderState::Failed => Self::Failure,
+            RevolutOrderState::Cancelled => Self::Voided,
+            RevolutOrderState::Pending => Self::AuthenticationPending,
+            RevolutOrderState::Processing => Self::Pending,
+        }
+    }
+}
+
+impl TryFrom<RevolutPaymentState> for common_enums::AttemptStatus {
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(state: RevolutPaymentState) -> Result<Self, Self::Error> {
+        match state {
+            RevolutPaymentState::Authorised => Ok(Self::Authorized),
+            RevolutPaymentState::Captured | RevolutPaymentState::Completed => Ok(Self::Charged),
+            RevolutPaymentState::Failed | RevolutPaymentState::Declined => Ok(Self::Failure),
+            RevolutPaymentState::Cancelled => Ok(Self::Voided),
+            RevolutPaymentState::Pending => Ok(Self::Pending),
+            RevolutPaymentState::AuthenticationChallenge => Ok(Self::AuthenticationPending),
+            RevolutPaymentState::SoftDeclined
+            | RevolutPaymentState::AuthenticationVerified
+            | RevolutPaymentState::AuthorisationStarted
+            | RevolutPaymentState::AuthorisationPassed
+            | RevolutPaymentState::CaptureStarted
+            | RevolutPaymentState::RefundValidated
+            | RevolutPaymentState::RefundStarted
+            | RevolutPaymentState::CancellationStarted
+            | RevolutPaymentState::Declining
+            | RevolutPaymentState::Completing
+            | RevolutPaymentState::Cancelling
+            | RevolutPaymentState::Failing => Ok(Self::Pending),
+        }
+    }
+}
+
+fn create_failure_error_response<T: ToString>(
+    status: T,
+    connector_id: Option<String>,
+    http_code: u16,
+) -> domain_types::router_data::ErrorResponse {
+    let status_string = status.to_string();
+    domain_types::router_data::ErrorResponse {
+        code: status_string.clone(),
+        message: status_string.clone(),
+        reason: Some(status_string),
+        attempt_status: None,
+        connector_transaction_id: connector_id,
+        status_code: http_code,
+        network_advice_code: None,
+        network_decline_code: None,
+        network_error_message: None,
     }
 }

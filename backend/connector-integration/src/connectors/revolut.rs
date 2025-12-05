@@ -1,6 +1,9 @@
 mod transformers;
 use super::macros;
 
+const UNKNOWN_ERROR: &str = "UNKNOWN_ERROR";
+const REVOLUT_API_VERSION: &str = "2025-10-16";
+
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
@@ -33,7 +36,7 @@ use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 
 use crate::{types::ResponseRouterData, with_error_response_body};
 use error_stack::ResultExt;
-use hyperswitch_masking::{Maskable, PeekInterface};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
@@ -516,9 +519,6 @@ impl<
             + Serialize,
     > connector_types::ValidationTrait for Revolut<T>
 {
-    fn should_do_order_create(&self) -> bool {
-        false
-    }
 }
 
 impl<
@@ -546,7 +546,7 @@ impl<
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
-            format!("Bearer {}", auth.api_key.peek()).into(),
+            format!("Bearer {}", auth.api_key.peek()).into_masked(),
         )])
     }
 
@@ -568,30 +568,21 @@ impl<
 
         let (code, message, attempt_status) = match response {
             revolut::RevolutErrorResponse::StandardError { code, message, .. } => {
-                let attempt_status = match code.as_str() {
-                    "unauthenticated" => AttemptStatus::AuthenticationFailed,
-                    "unauthorized" => AttemptStatus::AuthorizationFailed,
-                    "not_found" => AttemptStatus::Failure,
-                    "invalid_request" => AttemptStatus::Failure,
-                    "payment_declined" => AttemptStatus::Failure,
-                    _ => AttemptStatus::Pending,
-                };
-                (code, message, attempt_status)
+                let attempt_status = code.clone().into();
+                let code_string = serde_json::to_string(&code)
+                    .unwrap_or_else(|_| "unknown".to_string())
+                    .trim_matches('"')
+                    .to_string();
+                (code_string, message, attempt_status)
             }
             revolut::RevolutErrorResponse::ErrorIdResponse { error_id, code, .. } => {
-                let (error_code, attempt_status) = if let Some(numeric_code) = code {
-                    let status = match numeric_code {
-                        1024 => AttemptStatus::Failure,
-                        _ => AttemptStatus::Pending,
-                    };
-                    (numeric_code.to_string(), status)
-                } else {
-                    ("UNKNOWN_ERROR".to_string(), AttemptStatus::Failure)
-                };
+                let error_code = code
+                    .map(|numeric_code| numeric_code.to_string())
+                    .unwrap_or_else(|| UNKNOWN_ERROR.to_string());
                 (
                     error_code,
                     format!("Error ID: {}", error_id),
-                    attempt_status,
+                    AttemptStatus::Failure,
                 )
             }
         };
@@ -641,7 +632,7 @@ macros::create_all_prerequisites!(
                 ),
                 (
                     "Revolut-Api-Version".to_string(),
-                    "2024-09-01".to_string().into(),
+                    REVOLUT_API_VERSION.to_string().into(),
                 ),
             ];
             let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
@@ -682,7 +673,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url(req);
-            Ok(format!("{base_url}/api/orders"))
+            Ok(format!("{base_url}api/orders"))
         }
     }
 );
@@ -714,7 +705,7 @@ macros::macro_connector_implementation!(
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
             let base_url = self.connector_base_url(req);
-            Ok(format!("{base_url}/api/orders/{order_id}"))
+            Ok(format!("{base_url}api/orders/{order_id}"))
         }
     }
 );
