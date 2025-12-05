@@ -2833,7 +2833,6 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
     info!("Payment authorize response status: {:?}", status);
-    let _order_id = router_data_v2.resource_common_data.reference_id.clone();
     let response_headers = router_data_v2
         .resource_common_data
         .get_connector_response_headers_as_map();
