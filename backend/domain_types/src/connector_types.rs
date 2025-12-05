@@ -1443,7 +1443,7 @@ pub struct RefundFlowData {
     pub connector_response_headers: Option<http::HeaderMap>,
     pub raw_connector_request: Option<Secret<String>>,
     pub access_token: Option<AccessTokenResponseData>,
-    pub payment_method: PaymentMethod,
+    pub payment_method: Option<PaymentMethod>,
 }
 
 impl RawConnectorRequestResponse for RefundFlowData {

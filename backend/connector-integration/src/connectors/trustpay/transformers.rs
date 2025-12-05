@@ -1622,7 +1622,7 @@ impl<
             )
             .change_context(ConnectorError::AmountConversionFailed)?;
         match item.router_data.resource_common_data.payment_method {
-            enums::PaymentMethod::BankRedirect => {
+            Some(enums::PaymentMethod::BankRedirect) => {
                 let auth = TrustpayAuthType::try_from(&item.router_data.connector_auth_type)
                     .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
                 Ok(Self::BankRedirectRefund(Box::new(

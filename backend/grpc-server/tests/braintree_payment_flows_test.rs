@@ -255,7 +255,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_metadata,
         state: None,
         merchant_account_metadata: HashMap::new(),
-        payment_method: None,
+        payment_method_type: None,
     }
 }
 

@@ -249,7 +249,7 @@ macros::create_all_prerequisites!(
             Self: ConnectorIntegrationV2<F, RefundFlowData, Req, Res>,
         {
             match req.resource_common_data.payment_method {
-            common_enums::PaymentMethod::BankRedirect | common_enums::PaymentMethod::BankTransfer => {
+            Some(common_enums::PaymentMethod::BankRedirect) | Some(common_enums::PaymentMethod::BankTransfer) => {
                 let token = req
                     .resource_common_data
                     .get_access_token()
@@ -619,8 +619,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> CustomResult<common_enums::DynamicContentType, errors::ConnectorError> {
         match req.resource_common_data.payment_method {
-            common_enums::PaymentMethod::BankRedirect
-            | common_enums::PaymentMethod::BankTransfer => {
+            Some(common_enums::PaymentMethod::BankRedirect)
+            | Some(common_enums::PaymentMethod::BankTransfer) => {
                 Ok(common_enums::DynamicContentType::Json)
             }
             _ => Ok(common_enums::DynamicContentType::FormUrlEncoded),
@@ -653,7 +653,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
           match req.resource_common_data.payment_method {
-            common_enums::PaymentMethod::BankRedirect | common_enums::PaymentMethod::BankTransfer => Ok(format!(
+            Some(common_enums::PaymentMethod::BankRedirect) | Some(common_enums::PaymentMethod::BankTransfer) => Ok(format!(
                 "{}{}{}{}",
                 self.connector_base_url_bank_redirects_refunds(req),
                 "api/Payments/Payment/",
@@ -694,7 +694,7 @@ macros::macro_connector_implementation!(
             .connector_refund_id
             .clone();
         match req.resource_common_data.payment_method {
-            common_enums::PaymentMethod::BankRedirect | common_enums::PaymentMethod::BankTransfer => Ok(format!(
+            Some(common_enums::PaymentMethod::BankRedirect) | Some(common_enums::PaymentMethod::BankTransfer) => Ok(format!(
                 "{}{}/{}",
                 self.connector_base_url_bank_redirects_refunds(req), "api/Payments/Payment", id
             )),
