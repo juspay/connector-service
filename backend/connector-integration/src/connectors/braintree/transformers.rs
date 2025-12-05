@@ -1,16 +1,23 @@
 use common_enums::enums;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    ext_traits::{OptionExt, ValueExt},
     pii,
     types::{MinorUnit, StringMajorUnit},
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Void},
+    connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, SdkSessionToken, Void},
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        self, AmountInfo, ApplePayPaymentRequest, ApplePaySessionResponse,
+        ApplepaySessionTokenResponse, GooglePaySessionResponse, GpayMerchantInfo,
+        GpaySessionTokenData, GpaySessionTokenResponse, GpayShippingAddressParameters,
+        GpayTransactionInfo, MandateReference, NextActionCall, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentRequestMetadata,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSdkSessionTokenData, PaymentsSyncData, PaypalSdkSessionTokenData,
+        PaypalSessionTokenResponse, PaypalTransactionInfo, RefundFlowData, RefundSyncData,
+        RefundsData, RefundsResponseData, ResponseId, SdkNextAction, SecretInfoToInitiateSdk,
+        SessionToken, ThirdPartySdkSessionResponse,
     },
     errors::{self, ConnectorError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -21,12 +28,15 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
+use strum::Display;
 use time::PrimitiveDateTime;
 
 use crate::{
     connectors::braintree::BraintreeRouterData, types::ResponseRouterData,
     unimplemented_payment_method, utils,
 };
+
+pub const BRAINTREE_CONNECTOR_NAME: &str = "braintree";
 
 pub mod constants {
     pub const CHANNEL_CODE: &str = "HyperSwitchBT_Ecom";
@@ -1319,8 +1329,15 @@ pub struct ClientTokenData {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientTokenExtensions {
+    request_id: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ClientTokenResponse {
     data: ClientTokenData,
+    extensions: ClientTokenExtensions,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -1593,6 +1610,271 @@ impl<
             },
         };
         Ok(Self { query, variables })
+    }
+}
+
+#[derive(Debug, Clone, Display, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GooglePayPriceStatus {
+    #[strum(serialize = "FINAL")]
+    Final,
+}
+
+#[derive(Debug, Clone, Display, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PaypalFlow {
+    Checkout,
+}
+
+impl From<PaypalFlow> for connector_types::PaypalFlow {
+    fn from(item: PaypalFlow) -> Self {
+        match item {
+            PaypalFlow::Checkout => Self::Checkout,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum BraintreeSessionResponse {
+    SessionTokenResponse(Box<ClientTokenResponse>),
+    ErrorResponse(Box<ErrorResponse>),
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        BraintreeRouterData<
+            RouterDataV2<
+                SdkSessionToken,
+                PaymentFlowData,
+                PaymentsSdkSessionTokenData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for BraintreeClientTokenRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: BraintreeRouterData<
+            RouterDataV2<
+                SdkSessionToken,
+                PaymentFlowData,
+                PaymentsSdkSessionTokenData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let metadata =
+            BraintreeMeta::try_from(&item.router_data.resource_common_data.connector_meta_data)?;
+        Ok(Self {
+            query: constants::CLIENT_TOKEN_MUTATION.to_owned(),
+            variables: VariableClientTokenInput {
+                input: InputClientTokenData {
+                    client_token: ClientTokenInput {
+                        merchant_account_id: metadata.merchant_account_id,
+                    },
+                },
+            },
+        })
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsSdkSessionTokenData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<BraintreeSessionResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+
+        match response {
+            BraintreeSessionResponse::SessionTokenResponse(res) => {
+                let session_token = match item.router_data.request.payment_method_type {
+                    Some(common_enums::PaymentMethodType::ApplePay) => {
+                        let payment_request_data: PaymentRequestMetadata = match item
+                            .router_data
+                            .resource_common_data
+                            .connector_meta_data
+                            .clone()
+                        {
+                            Some(connector_meta) => {
+                                let meta_value: serde_json::Value = connector_meta.expose();
+                                meta_value
+                                    .get("apple_pay_combined")
+                                    .ok_or(errors::ConnectorError::NoConnectorMetaData)
+                                    .attach_printable("Missing apple_pay_combined metadata")?
+                                    .get("manual")
+                                    .ok_or(errors::ConnectorError::NoConnectorMetaData)
+                                    .attach_printable("Missing manual metadata")?
+                                    .get("payment_request_data")
+                                    .ok_or(errors::ConnectorError::NoConnectorMetaData)
+                                    .attach_printable("Missing payment_request_data metadata")?
+                                    .clone()
+                                    .parse_value("PaymentRequestMetadata")
+                                    .change_context(errors::ConnectorError::ParsingFailed)
+                                    .attach_printable(
+                                        "Failed to parse apple_pay_combined.manual.payment_request_data metadata",
+                                    )?
+                            }
+                            None => Err(errors::ConnectorError::NoConnectorMetaData)
+                                .attach_printable("connector_meta_data is None")?,
+                        };
+
+                        let session_token_data = Some(ApplePaySessionResponse::ThirdPartySdk(
+                            ThirdPartySdkSessionResponse {
+                                secrets: SecretInfoToInitiateSdk {
+                                    display: res.data.create_client_token.client_token.clone(),
+                                    payment: None,
+                                },
+                            },
+                        ));
+                        SessionToken::ApplePay(Box::new(ApplepaySessionTokenResponse {
+                            session_token_data,
+                            payment_request_data: Some(ApplePayPaymentRequest {
+                                country_code: item.router_data.request.country.ok_or(
+                                    errors::ConnectorError::MissingRequiredField {
+                                        field_name: "country",
+                                    },
+                                )?,
+                                currency_code: item.router_data.request.currency,
+                                total: AmountInfo {
+                                    label: payment_request_data.label,
+                                    total_type: None,
+                                    amount: item.router_data.request.amount,
+                                },
+                                merchant_capabilities: Some(
+                                    payment_request_data.merchant_capabilities,
+                                ),
+                                supported_networks: Some(payment_request_data.supported_networks),
+                                merchant_identifier: None,
+                                required_billing_contact_fields: None,
+                                required_shipping_contact_fields: None,
+                                recurring_payment_request: None,
+                            }),
+                            connector: BRAINTREE_CONNECTOR_NAME.to_string(),
+                            delayed_session_token: false,
+                            sdk_next_action: SdkNextAction {
+                                next_action: NextActionCall::Confirm,
+                            },
+                            connector_reference_id: None,
+                            connector_sdk_public_key: None,
+                            connector_merchant_id: None,
+                        }))
+                    }
+                    Some(common_enums::PaymentMethodType::GooglePay) => {
+                        let gpay_data: GpaySessionTokenData = match item
+                            .router_data
+                            .resource_common_data
+                            .connector_meta_data
+                            .clone()
+                        {
+                            Some(connector_meta) => connector_meta
+                                .expose()
+                                .parse_value("GpaySessionTokenData")
+                                .change_context(errors::ConnectorError::ParsingFailed)
+                                .attach_printable("Failed to parse gpay metadata")?,
+                            None => Err(errors::ConnectorError::NoConnectorMetaData)
+                                .attach_printable("connector_meta_data is None")?,
+                        };
+
+                        SessionToken::GooglePay(Box::new(
+                            GpaySessionTokenResponse::GooglePaySession(GooglePaySessionResponse {
+                                merchant_info: GpayMerchantInfo {
+                                    merchant_name: gpay_data.data.merchant_info.merchant_name,
+                                    merchant_id: gpay_data.data.merchant_info.merchant_id,
+                                },
+                                shipping_address_required: false,
+                                email_required: false,
+                                shipping_address_parameters: GpayShippingAddressParameters {
+                                    phone_number_required: false,
+                                },
+                                allowed_payment_methods: gpay_data.data.allowed_payment_methods,
+                                transaction_info: GpayTransactionInfo {
+                                    country_code: item.router_data.request.country.ok_or(
+                                        errors::ConnectorError::MissingRequiredField {
+                                            field_name: "country",
+                                        },
+                                    )?,
+                                    currency_code: item.router_data.request.currency,
+                                    total_price_status: GooglePayPriceStatus::Final.to_string(),
+                                    total_price: item.router_data.request.amount,
+                                },
+                                secrets: Some(SecretInfoToInitiateSdk {
+                                    display: res.data.create_client_token.client_token.clone(),
+                                    payment: None,
+                                }),
+                                delayed_session_token: false,
+                                connector: BRAINTREE_CONNECTOR_NAME.to_string(),
+                                sdk_next_action: SdkNextAction {
+                                    next_action: NextActionCall::Confirm,
+                                },
+                            }),
+                        ))
+                    }
+                    Some(common_enums::PaymentMethodType::Paypal) => {
+                        let paypal_sdk_data = item
+                            .router_data
+                            .resource_common_data
+                            .connector_meta_data
+                            .clone()
+                            .parse_value::<PaypalSdkSessionTokenData>("PaypalSdkSessionTokenData")
+                            .change_context(errors::ConnectorError::NoConnectorMetaData)
+                            .attach_printable("Failed to parse paypal_sdk metadata.".to_string())?;
+
+                        SessionToken::Paypal(Box::new(PaypalSessionTokenResponse {
+                            connector: BRAINTREE_CONNECTOR_NAME.to_string(),
+                            session_token: paypal_sdk_data.data.client_id,
+                            sdk_next_action: SdkNextAction {
+                                next_action: NextActionCall::Confirm,
+                            },
+                            client_token: Some(
+                                res.data.create_client_token.client_token.clone().expose(),
+                            ),
+                            transaction_info: Some(PaypalTransactionInfo {
+                                flow: PaypalFlow::Checkout.into(),
+                                currency_code: item.router_data.request.currency,
+                                total_price: item.router_data.request.amount,
+                            }),
+                        }))
+                    }
+                    _ => {
+                        return Err(errors::ConnectorError::NotImplemented(
+                            format!(
+                                "SDK session token generation is not supported for payment method: {:?}",
+                                item.router_data.request.payment_method_type
+                            )
+                        )
+                        .into());
+                    }
+                };
+
+                Ok(Self {
+                    response: Ok(PaymentsResponseData::SdkSessionTokenResponse {
+                        session_token,
+                        status_code: item.http_code,
+                    }),
+                    ..item.router_data
+                })
+            }
+            BraintreeSessionResponse::ErrorResponse(error_response) => {
+                let err = build_error_response(error_response.errors.as_ref(), item.http_code)
+                    .map_err(|err| *err);
+                Ok(Self {
+                    response: err,
+                    ..item.router_data
+                })
+            }
+        }
     }
 }
 

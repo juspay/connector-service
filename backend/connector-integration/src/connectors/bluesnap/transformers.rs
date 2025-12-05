@@ -273,7 +273,12 @@ impl<
             transaction_fraud_info: Some(TransactionFraudInfo {
                 fraud_session_id: router_data.resource_common_data.payment_id.clone(),
             }),
-            merchant_transaction_id: Some(router_data.resource_common_data.attempt_id.clone()),
+            merchant_transaction_id: Some(
+                router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
             transaction_meta_data,
         })
     }
