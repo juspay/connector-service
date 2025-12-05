@@ -1411,7 +1411,7 @@ where
 {
     fn get_form_data(&self) -> reqwest::multipart::Form {
         // This should never be called for TrustPay since we only use Json and FormUrlEncoded
-        panic!("TrustPay does not support FormData content type")
+        reqwest::multipart::Form::new()
     }
 }
 
@@ -1587,7 +1587,7 @@ pub struct TrustpayRefundRequestBankRedirect {
 impl crate::connectors::macros::GetFormData for TrustpayRefundRequest {
     fn get_form_data(&self) -> reqwest::multipart::Form {
         // This should never be called for TrustPay since we only use Json and FormUrlEncoded
-        panic!("TrustPay does not support FormData content type")
+        reqwest::multipart::Form::new()
     }
 }
 
