@@ -332,6 +332,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_metadata,
         merchant_account_metadata: Default::default(),
         state: None,
+        payment_method_type: None,
     }
 }
 
