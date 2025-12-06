@@ -18,7 +18,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
@@ -272,25 +272,22 @@ impl std::fmt::Display for HipayOperation {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Operation {
+    Authorization,
+    Sale,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct HipayPaymentsRequest {
     pub payment_product: String,
     pub orderid: String,
-    pub operation: String,
+    pub operation: Operation,
     pub description: String,
     pub currency: common_enums::Currency,
     pub amount: StringMajorUnit,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cardtoken: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub card_security_code: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub email: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub firstname: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub lastname: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ipaddr: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub accept_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -300,9 +297,7 @@ pub struct HipayPaymentsRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cancel_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub exception_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub eci: Option<String>,
+    pub notify_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authentication_indicator: Option<String>,
 }
@@ -340,8 +335,6 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        use hyperswitch_masking::PeekInterface;
-
         // Get payment method - determine payment_product based on card network
         // Priority order (matching Hyperswitch):
         // 1. For tokenized cards: Use connector_customer (contains domestic_network from tokenization)
@@ -387,45 +380,6 @@ impl<
             }
         };
 
-        // Determine operation based on capture method
-        let operation = match item.router_data.request.capture_method {
-            Some(common_enums::CaptureMethod::Manual) => "Authorization".to_string(),
-            _ => "Sale".to_string(), // Automatic capture or default
-        };
-
-        // Extract customer information using utility functions
-        let firstname = item
-            .router_data
-            .resource_common_data
-            .get_optional_billing_first_name();
-        let lastname = item
-            .router_data
-            .resource_common_data
-            .get_optional_billing_last_name();
-
-        // Get email - convert Email type to Secret<String>
-        let email = item.router_data.request.email.as_ref().map(|e| {
-            use hyperswitch_masking::PeekInterface;
-            Secret::new(e.peek().to_string())
-        });
-
-        // Get IP address using utility function
-        let ipaddr = item
-            .router_data
-            .request
-            .get_ip_address_as_optional()
-            .map(|ip| {
-                use hyperswitch_masking::PeekInterface;
-                ip.peek().to_string()
-            });
-
-        // Get return URLs from router data
-        let accept_url = item.router_data.request.complete_authorize_url.clone();
-        let decline_url = accept_url.clone();
-        let pending_url = accept_url.clone();
-        let cancel_url = accept_url.clone();
-        let exception_url = accept_url.clone();
-
         // Convert amount to StringMajorUnit (HiPay expects string with decimals)
         let amount = item
             .connector
@@ -435,6 +389,12 @@ impl<
                 item.router_data.request.currency,
             )
             .change_context(errors::ConnectorError::AmountConversionFailed)?;
+
+        // Determine operation based on capture method (matching HS)
+        let operation = match item.router_data.request.capture_method {
+            Some(common_enums::CaptureMethod::Manual) => Operation::Authorization,
+            _ => Operation::Sale, // Automatic capture or default
+        };
 
         // Extract card token from payment_method_token if present,
         // or from connector_customer as fallback (when token is passed via gRPC)
@@ -454,12 +414,33 @@ impl<
                     .clone()
             });
 
-        // Extract CVC for tokenized payments (HiPay requires CVC with token)
-        let card_security_code = match &item.router_data.request.payment_method_data {
-            PaymentMethodData::CardToken(token_data) => token_data.card_cvc.clone(),
-            PaymentMethodData::Card(card_data) => Some(card_data.card_cvc.clone()),
-            _ => None,
-        };
+        // Build callback URLs matching HS implementation
+        // Use /redirect/response/hipay path (not /redirect/complete/hipay)
+        let base_url = item.router_data.request.complete_authorize_url.clone();
+        let redirect_base = base_url.map(|url| {
+            // Replace /redirect/complete/hipay with /redirect/response/hipay
+            url.replace("/redirect/complete/hipay", "/redirect/response/hipay")
+        });
+
+        let accept_url = redirect_base.clone();
+        let decline_url = redirect_base.clone();
+        let pending_url = redirect_base.clone();
+        let cancel_url = redirect_base.clone();
+        let notify_url = redirect_base;
+
+        // Set authentication_indicator to "0" for non-3DS (matching HS)
+        // Can be extended later to support 3DS flows
+        let authentication_indicator = Some("0".to_string());
+
+        // Use description from resource_common_data (matching HS)
+        // HS uses item.router_data.get_description() which returns this field
+        // Default to "Short Description" to match HS if not present
+        let description = item
+            .router_data
+            .resource_common_data
+            .description
+            .clone()
+            .unwrap_or_else(|| "Short Description".to_string());
 
         Ok(Self {
             payment_product,
@@ -469,27 +450,16 @@ impl<
                 .connector_request_reference_id
                 .clone(),
             operation,
-            description: item
-                .router_data
-                .request
-                .statement_descriptor
-                .clone()
-                .unwrap_or_else(|| "Payment".to_string()),
+            description,
             currency: item.router_data.request.currency,
             amount,
             cardtoken,
-            card_security_code,
-            email,
-            firstname,
-            lastname,
-            ipaddr,
             accept_url,
             decline_url,
             pending_url,
             cancel_url,
-            exception_url,
-            eci: None,
-            authentication_indicator: None,
+            notify_url,
+            authentication_indicator,
         })
     }
 }
