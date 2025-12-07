@@ -157,3 +157,6 @@ pub use self::shift4::Shift4;
 
 pub mod nexixpay;
 pub use self::nexixpay::Nexixpay;
+
+pub mod mollie;
+pub use self::mollie::Mollie;

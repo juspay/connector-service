@@ -98,6 +98,7 @@ pub enum ConnectorEnum {
     Nmi,
     Shift4,
     Nexixpay,
+    Mollie,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -159,6 +160,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Nmi => Ok(Self::Nmi),
             grpc_api_types::payments::Connector::Shift4 => Ok(Self::Shift4),
             grpc_api_types::payments::Connector::Nexixpay => Ok(Self::Nexixpay),
+            grpc_api_types::payments::Connector::Mollie => Ok(Self::Mollie),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),

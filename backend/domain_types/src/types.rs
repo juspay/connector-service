@@ -159,6 +159,7 @@ pub struct Connectors {
     pub nmi: ConnectorParams,
     pub shift4: ConnectorParams,
     pub nexixpay: ConnectorParams,
+    pub mollie: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]

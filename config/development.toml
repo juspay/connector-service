@@ -26,8 +26,11 @@ port = 8080
 [proxy]
 idle_pool_connection_timeout = 90
 bypass_proxy_urls = []
-mitm_proxy_enabled = false
-
+mitm_proxy_enabled = true
+http_url = "http://localhost:8081"
+https_url = "http://localhost:8081"
+mitm_ca_cert = """-----BEGIN CERTIFICATE-----\nMIIDNTCCAh2gAwIBAgIUAlmhlitWDI2eVKsrjTkzwnoadOUwDQYJKoZIhvcNAQEL\nBQAwKDESMBAGA1UEAwwJbWl0bXByb3h5MRIwEAYDVQQKDAltaXRtcHJveHkwHhcN\nMjUxMTA0MDc1OTIxWhcNMzUxMTA0MDc1OTIxWjAoMRIwEAYDVQQDDAltaXRtcHJv\neHkxEjAQBgNVBAoMCW1pdG1wcm94eTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC\nAQoCggEBAMT8otS4pTWtMlipL6QeMCoun0rUkXzwJGKO2u41GZT7Dy3KhYyQRpNo\n12aHGqpR0Sdt+wKyzntN44iAjHzIXdNIHy2EIa0px9WVlijukUmLSgaA6W60Kx9x\nduvQAd+s89rLdTwBjt9PAsTqsoH9M5qaiwww/R5FieH0U6JwXtwK/wmuhmGAyLA/\nh0H6ZUDO2hkkzPSOPdxmWoczP5UuP0XUGD/uUUIr6FOUx5fyYm9qm1FS0xFlX47N\nGtywFVVm+OaqnTHHwoYTMarAWctHlMPtemhPWwySItgUsOZUJKvVFfaq++2V6XSE\n9XBEee2ZpwCs5SmjBb5IviOr7mfHq5kCAwEAAaNXMFUwDwYDVR0TAQH/BAUwAwEB\n/zATBgNVHSUEDDAKBggrBgEFBQcDATAOBgNVHQ8BAf8EBAMCAQYwHQYDVR0OBBYE\nFNglBNn+Z7rvPS2T+0WqJiwoIyN6MA0GCSqGSIb3DQEBCwUAA4IBAQCqVi7HCWkG\nUTjpUf4qtAUYq0sajKh/GGJtgLZN+FUprVX2ORHIgqALSP5WmVpgRd7WPx3IUhdl\nVT3cKJrtqrqVIjnzQTaJNlOkIaIaD5NrJN5Y+dUKhjsm4kov4TBv/uEjErW+fdHO\nxb/VLWcBwL+vQdJXGT93H4SvYV1QNlppy0wfcq49usPZZQN4Pav2Xcvf3L0GJWRB\nlu81Yj1uzjCM00WaQ00TN9mi7Zw8zqmZkVZrhuVioNO/JPF18kHfoRiHoWo0AxGT\n/IDDJMLUNnu3rJDFEJt2i6ZBmAgTkzQhLYBVpN4bhFajOxO/nlG3oZLb6SPV4L/R\nRMwvyK1uMcBP\n-----END CERTIFICATE-----
+"""
 [test]
 enabled = false
 mock_server_url = "http://localhost:3000/mockGateway"
@@ -43,6 +46,8 @@ mock_server_url = "http://localhost:3000/mockGateway"
 psync = "GW_TXN_SYNC"
 
 [connectors]
+mollie.base_url = "https://api.mollie.com/v2"
+mollie.secondary_base_url = "https://api.cc.mollie.com/v1/"
 shift4.base_url = "https://api.shift4.com"
 bluesnap.base_url = "https://sandbox.bluesnap.com"
 bluesnap.secondary_base_url = "https://sandpay.bluesnap.com"
