@@ -13,7 +13,7 @@ use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateConnectorCustomer, CreateOrder,
         CreateSessionToken, DefendDispute, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund,
-        RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
+        RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, ConnectorCustomerData, ConnectorCustomerResponse,
@@ -21,10 +21,11 @@ use domain_types::{
         DisputeResponseData, EventType, PaymentCreateOrderData, PaymentCreateOrderResponse,
         PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
         PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
-        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
+        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
@@ -44,7 +45,7 @@ use interfaces::{
         PaymentAuthenticateV2, PaymentAuthorizeV2, PaymentCapture, PaymentOrderCreate,
         PaymentPostAuthenticateV2, PaymentPreAuthenticateV2, PaymentSessionToken, PaymentSyncV2,
         PaymentVoidPostCaptureV2, PaymentVoidV2, RefundSyncV2, RefundV2, RepeatPaymentV2,
-        SetupMandateV2, SubmitEvidenceV2, ValidationTrait,
+        SdkSessionTokenV2, SetupMandateV2, SubmitEvidenceV2, ValidationTrait,
     },
     verification::SourceVerification,
 };
@@ -70,6 +71,17 @@ impl<
             + 'static
             + Serialize,
     > PaymentPreAuthenticateV2<T> for Worldpayvantiv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > SdkSessionTokenV2 for Worldpayvantiv<T>
 {
 }
 
@@ -1189,6 +1201,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
+    > for Worldpayvantiv<T>
+{
+}
+
 // SourceVerification implementations for all flows
 impl<
         T: PaymentMethodDataTypes
@@ -1252,6 +1274,23 @@ impl<
             + Serialize,
     > SourceVerification<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
     for Worldpayvantiv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    SourceVerification<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
+    > for Worldpayvantiv<T>
 {
 }
 

@@ -504,6 +504,7 @@ enum Connector {
   CELERO = 99;
   TRUSTPAYMENTS = 100;
   PAYSAFE = 101;
+  BARCLAYCARD = 102;
 }
 
 // Payment method types.
@@ -1257,6 +1258,235 @@ message ConnectorResponseData {
 }
 
 // ============================================================================
+// SESSION TOKEN MESSAGES
+// ============================================================================
+
+message SessionToken {
+  oneof wallet_name {
+    GpaySessionTokenResponse google_pay = 1;
+    PaypalSessionTokenResponse paypal = 2;
+    ApplepaySessionTokenResponse apple_pay = 3;
+  }
+}
+
+// -------------------------
+// Google Pay Session Token
+// -------------------------
+
+message GpaySessionTokenResponse {
+  GooglePaySessionResponse google_pay_session = 1;
+}
+
+message GooglePayThirdPartySdk {
+  bool delayed_session_token = 1;
+  string connector = 2;
+  SdkNextAction sdk_next_action = 3;
+}
+
+message GooglePaySessionResponse {
+  GpayMerchantInfo merchant_info = 1;
+  bool shipping_address_required = 2;
+  bool email_required = 3;
+  GpayShippingAddressParameters shipping_address_parameters = 4;
+  repeated GpayAllowedPaymentMethods allowed_payment_methods = 5;
+  GpayTransactionInfo transaction_info = 6;
+  bool delayed_session_token = 7;
+  string connector = 8;
+  SdkNextAction sdk_next_action = 9;
+  optional SecretInfoToInitiateSdk secrets = 10;
+}
+
+message GpayMerchantInfo {
+  optional string merchant_id = 1;
+  string merchant_name = 2;
+}
+
+message GpayShippingAddressParameters {
+  bool phone_number_required = 1;
+}
+
+message GpayAllowedPaymentMethods {
+  string payment_method_type = 1;
+  GpayAllowedMethodsParameters parameters = 2;
+  GpayTokenizationSpecification tokenization_specification = 3;
+}
+
+message GpayAllowedMethodsParameters {
+  repeated string allowed_auth_methods = 1;
+  repeated string allowed_card_networks = 2;
+  optional bool billing_address_required = 3;
+  optional GpayBillingAddressParameters billing_address_parameters = 4;
+  optional bool assurance_details_required = 5;
+}
+
+message GpayBillingAddressParameters {
+  bool phone_number_required = 1;
+  GpayBillingAddressFormat format = 2;
+}
+
+enum GpayBillingAddressFormat {
+  BILLING_ADDRESS_FORMAT_UNSPECIFIED = 0;
+  FULL = 1;
+  MIN = 2;
+}
+
+message GpayTokenizationSpecification {
+  string token_specification_type = 1;
+  GpayTokenParameters parameters = 2;
+}
+
+message GpayTokenParameters {
+  optional string gateway = 1;
+  optional string gateway_merchant_id = 2;
+  optional string protocol_version = 3;
+  optional SecretString public_key = 4;
+}
+
+message GpayTransactionInfo {
+  CountryAlpha2 country_code = 1;
+  Currency currency_code = 2;
+  string total_price_status = 3;
+  int64 total_price = 4; // MinorUnit
+}
+
+// -------------------------
+// Apple Pay Session Token
+// -------------------------
+
+message ApplepaySessionTokenResponse {
+  optional ApplePaySessionResponse session_token_data = 1;
+  optional ApplePayPaymentRequest payment_request_data = 2;
+  string connector = 3;
+  bool delayed_session_token = 4;
+  SdkNextAction sdk_next_action = 5;
+  optional string connector_reference_id = 6;
+  optional string connector_sdk_public_key = 7;
+  optional string connector_merchant_id = 8;
+}
+
+message ApplePaySessionResponse {
+  ThirdPartySdkSessionResponse third_party_sdk = 1;
+}
+
+message ThirdPartySdkSessionResponse {
+  SecretInfoToInitiateSdk secrets = 1;
+}
+
+message NoThirdPartySdkSessionResponse {
+  uint64 epoch_timestamp = 1;
+  uint64 expires_at = 2;
+  string merchant_session_identifier = 3;
+  string nonce = 4;
+  string merchant_identifier = 5;
+  string domain_name = 6;
+  string display_name = 7;
+  string signature = 8;
+  string operational_analytics_identifier = 9;
+  uint32 retries = 10; // u8 in rust
+  string psp_id = 11;
+}
+
+message ApplePayPaymentRequest {
+  CountryAlpha2 country_code = 1;
+  Currency currency_code = 2;
+  AmountInfo total = 3;
+  repeated string merchant_capabilities = 4;
+  repeated string supported_networks = 5;
+  optional string merchant_identifier = 6;
+}
+
+message AmountInfo {
+  string label = 1;
+  optional string total_type = 2;
+  int64 amount = 3; // MinorUnit
+}
+
+message ApplePayBillingContactFields {
+  repeated ApplePayAddressParameters fields = 1;
+}
+
+message ApplePayShippingContactFields {
+  repeated ApplePayAddressParameters fields = 1;
+}
+
+enum ApplePayAddressParameters {
+  APPLE_PAY_ADDRESS_PARAMETERS_UNSPECIFIED = 0;
+  POSTAL_ADDRESS = 1;
+  PHONE = 2;
+  EMAIL = 3;
+}
+
+message ApplePayRecurringPaymentRequest {
+  string payment_description = 1;
+  ApplePayRegularBillingRequest regular_billing = 2;
+  optional string billing_agreement = 3;
+  string management_url = 4;
+}
+
+message ApplePayRegularBillingRequest {
+  int64 amount = 1; // MinorUnit
+  string label = 2;
+  ApplePayPaymentTiming payment_timing = 3;
+  optional int64 recurring_payment_start_date = 4;
+  optional int64 recurring_payment_end_date = 5;
+  optional RecurringPaymentIntervalUnit recurring_payment_interval_unit = 6;
+  optional int32 recurring_payment_interval_count = 7;
+}
+
+enum ApplePayPaymentTiming {
+  APPLE_PAY_PAYMENT_TIMING_UNSPECIFIED = 0;
+  IMMEDIATE = 1;
+  RECURRING = 2;
+}
+
+enum RecurringPaymentIntervalUnit {
+  RECURRING_PAYMENT_INTERVAL_UNIT_UNSPECIFIED = 0;
+  YEAR = 1;
+  MONTH = 2;
+  DAY = 3;
+  HOUR = 4;
+  MINUTE = 5;
+}
+
+// -------------------------
+// PayPal Session Token
+// -------------------------
+
+message PaypalSessionTokenResponse {
+  string connector = 1;
+  string session_token = 2;
+  SdkNextAction sdk_next_action = 3;
+  optional string client_token = 4;
+  optional PaypalTransactionInfo transaction_info = 5;
+}
+
+message PaypalTransactionInfo {
+  PaypalFlow flow = 1;
+  Currency currency_code = 2;
+  int64 total_price = 3; // MinorUnit
+}
+
+enum PaypalFlow {
+  PAYPAL_FLOW_UNSPECIFIED = 0;
+  Checkout = 1;
+}
+
+// -------------------------
+// Common Session Token Types
+// -------------------------
+
+enum SdkNextAction {
+  NEXT_ACTION_UNSPECIFIED = 0;
+  POST_SESSION_TOKENS = 1;
+  CONFIRM = 2;
+}
+
+message SecretInfoToInitiateSdk {
+  SecretString display = 1;
+  optional SecretString payment = 2;
+}
+
+// ============================================================================
 // SERVICE-SPECIFIC MESSAGES
 // ============================================================================
 
@@ -1445,8 +1675,9 @@ message PaymentServiceAuthorizeOnlyRequest {
 
   // Payment Method Token
   optional string payment_method_token = 40;
-  // Access Token
-  optional string access_token = 41;
+
+  // Send the connector order identifier here if an order was created before authorize
+  optional string order_id = 41;
 }
 
 // Response message for a payment authorization.
@@ -1589,6 +1820,9 @@ message PaymentServiceVoidRequest {
 
   // State Information
   optional ConnectorState state = 10; // State data for access token storage and other connector-specific state
+
+    // Account-Specific Configuration
+  map<string, string> merchant_account_metadata = 11; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for a payment void operation.
@@ -1654,6 +1888,44 @@ message PaymentServiceVoidPostCaptureResponse {
   optional Identifier response_ref_id = 5; // Response reference ID for tracking
 }
 
+// Creates a session object or a session token for wallets like Apple Pay, Google Pay, etc.
+message PaymentServiceSdkSessionTokenRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+
+  // Amount Information
+  int64 amount = 2; // The amount for the payment in major currency units
+  Currency currency = 3; // The currency for the payment, in ISO 4217 three-letter code
+  int64 minor_amount = 4; // The minor amount for the payment (e.g., cents)
+  optional int64 order_tax_amount = 5; // Tax amount for the order
+  optional int64 shipping_cost = 6; // Cost of shipping for the order
+  
+  // Payment Method Type
+  optional PaymentMethodType payment_method_type = 7; // Indicates the sub type of payment method. Eg: 'google_pay' & 'apple_pay'
+
+  optional CountryAlpha2 country_alpha2_code = 8;
+
+  // Customer Information
+  optional SecretString email = 9; // Email address of the customer
+  optional SecretString customer_name = 10; // Name of the customer
+
+  // Account-Specific Configuration
+  SecretString merchant_account_metadata = 17;; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+}
+
+// Response message for a sdk session token operation.
+message PaymentServiceSdkSessionTokenResponse {
+  SessionToken session_token = 1;
+  optional string error_code = 2; // Error code if the post-authentication failed
+  optional string error_message = 3; // Error message if the post-authentication failed
+  optional string error_reason = 7; // Detailed reason for the error
+  uint32 status_code = 4; // HTTP status code from the connector
+  // Raw Response
+  optional SecretString raw_connector_response = 5; // Raw response from the connector for debugging
+  // Raw Request
+  optional SecretString raw_connector_request = 6; // Raw request to the connector for debugging
+}
+
 // Request message for capturing a payment.
 message PaymentServiceCaptureRequest {
   // Identification
@@ -1678,6 +1950,9 @@ message PaymentServiceCaptureRequest {
 
   // State Information
   optional ConnectorState state = 10; // State data for access token storage and other connector-specific state
+
+    // Account-Specific Configuration
+  map<string, string> merchant_account_metadata = 12; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for a payment capture operation.
@@ -1786,6 +2061,9 @@ message PaymentServiceRefundRequest {
 
   // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 18; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  
+  // Environment Configuration
+  optional bool test_mode = 19; // A boolean value to indicate if the connector is in Test mode
 }
 
 // Response message for a refund operation (unified for both Create and Get).
@@ -1941,6 +2219,11 @@ message PaymentServiceRegisterRequest {
 
   // State Information
   optional ConnectorState state = 31; // State data for access token storage and other connector-specific state
+
+  // Payment Method Token
+  optional string payment_method_token = 32;
+  // Send the connector order identifier here if an order was created before authorize
+  optional string order_id = 33;
 }
 
 // Response message for a mandate setup operation.
@@ -2389,6 +2672,9 @@ message RefundServiceGetRequest {
 
 // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 9; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  
+  // Environment Configuration
+  optional bool test_mode = 10; // A boolean value to indicate if the connector is in Test mode
 }
 
 // Legacy alias for backward compatibility - use RefundResponse instead
