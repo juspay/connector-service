@@ -389,6 +389,10 @@ impl PaymentFlowData {
         self.address.get_payment_method_billing()
     }
 
+    pub fn get_optional_payment_billing(&self) -> Option<&Address> {
+        self.address.get_payment_billing()
+    }
+
     pub fn get_optional_shipping(&self) -> Option<&Address> {
         self.address.get_shipping()
     }
@@ -492,6 +496,14 @@ impl PaymentFlowData {
     pub fn get_billing_address(&self) -> Result<&AddressDetails, Error> {
         self.address
             .get_payment_method_billing()
+            .as_ref()
+            .and_then(|a| a.address.as_ref())
+            .ok_or_else(missing_field_err("billing.address"))
+    }
+
+    pub fn get_billing_address_from_payment_address(&self) -> Result<&AddressDetails, Error> {
+        self.address
+            .get_payment_billing()
             .as_ref()
             .and_then(|a| a.address.as_ref())
             .ok_or_else(missing_field_err("billing.address"))
@@ -808,6 +820,12 @@ impl PaymentFlowData {
     // Helper methods for additional headers
     pub fn get_header(&self, key: &str) -> Option<&Secret<String>> {
         self.vault_headers.as_ref().and_then(|h| h.get(key))
+    }
+
+    pub fn get_optional_payment_billing_full_name(&self) -> Option<Secret<String>> {
+        self.get_optional_payment_billing()
+            .and_then(|billing_details| billing_details.address.as_ref())
+            .and_then(|billing_address| billing_address.get_optional_full_name())
     }
 }
 

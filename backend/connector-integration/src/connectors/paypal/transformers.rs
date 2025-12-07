@@ -1,12 +1,14 @@
 use super::PaypalRouterData;
 use crate::types::ResponseRouterData;
 use base64::Engine;
-use common_utils::{request::Method, types::StringMajorUnit, CustomResult};
+use common_enums;
+use common_utils::{types::StringMajorUnit, CustomResult};
 use domain_types::{
-    connector_flow::{Authorize, Capture},
+    connector_flow::{Authorize, Capture, PostAuthenticate},
     connector_types::{
         AccessTokenResponseData, MandateReference, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, ResponseId,
+        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData,
+        ResponseId,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
@@ -783,14 +785,14 @@ impl<
                         billing_address: get_address_info(
                             item.router_data
                                 .resource_common_data
-                                .get_optional_billing()
+                                .get_optional_payment_billing()
                                 .cloned(),
                         ),
                         expiry,
                         name: item
                             .router_data
                             .resource_common_data
-                            .get_optional_billing_full_name(),
+                            .get_optional_payment_billing_full_name(),
                         number: Some(ccard.card_number.clone()),
                         security_code: Some(ccard.card_cvc.clone()),
                         attributes: Some(CardRequestAttributes {
@@ -1446,7 +1448,7 @@ pub struct PaypalThreeDsResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum PaypalPreProcessingResponse {
+pub enum PaypalPostAuthenticateResponse {
     PaypalLiabilityResponse(PaypalLiabilityResponse),
     PaypalNonLiabilityResponse(PaypalNonLiabilityResponse),
 }
@@ -1883,8 +1885,11 @@ impl<
                         resource_id: ResponseId::ConnectorTransactionId(
                             threeds_response.id.clone(),
                         ),
-                        redirection_data: link
-                            .map(|url| Box::new(RedirectForm::from((url, Method::Get)))),
+                        redirection_data: link.map(|url| {
+                            Box::new(RedirectForm::Uri {
+                                uri: url.to_string(),
+                            })
+                        }),
                         mandate_reference: None,
                         connector_metadata: Some(connector_meta),
                         network_txn_id: None,
@@ -1950,10 +1955,11 @@ impl<
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
-                redirection_data: Some(Box::new(RedirectForm::from((
-                    link.ok_or(errors::ConnectorError::ResponseDeserializationFailed)?,
-                    Method::Get,
-                )))),
+                redirection_data: Some(Box::new(RedirectForm::Uri {
+                    uri: link
+                        .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?
+                        .to_string(),
+                })),
                 mandate_reference: None,
                 connector_metadata: Some(connector_meta),
                 network_txn_id: None,
@@ -2214,6 +2220,162 @@ impl<F, T> TryFrom<ResponseRouterData<PaypalPaymentsCancelResponse, Self>>
             }),
             ..item.router_data
         })
+    }
+}
+
+// TryFrom implementation for PostAuthenticate response
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        ResponseRouterData<
+            PaypalPostAuthenticateResponse,
+            RouterDataV2<
+                PostAuthenticate,
+                PaymentFlowData,
+                PaymentsPostAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+        >,
+    >
+    for RouterDataV2<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<
+            PaypalPostAuthenticateResponse,
+            RouterDataV2<
+                PostAuthenticate,
+                PaymentFlowData,
+                PaymentsPostAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        match item.response {
+            // if card supports 3DS check for liability
+            PaypalPostAuthenticateResponse::PaypalLiabilityResponse(liability_response) => {
+                // permutation for status to continue payment
+                match (
+                    liability_response
+                        .payment_source
+                        .card
+                        .authentication_result
+                        .three_d_secure
+                        .enrollment_status
+                        .as_ref(),
+                    liability_response
+                        .payment_source
+                        .card
+                        .authentication_result
+                        .three_d_secure
+                        .authentication_status
+                        .as_ref(),
+                    &liability_response
+                        .payment_source
+                        .card
+                        .authentication_result
+                        .liability_shift,
+                ) {
+                    (
+                        Some(EnrollmentStatus::Ready),
+                        Some(AuthenticationStatus::Success),
+                        LiabilityShift::Possible,
+                    )
+                    | (
+                        Some(EnrollmentStatus::Ready),
+                        Some(AuthenticationStatus::Attempted),
+                        LiabilityShift::Possible,
+                    )
+                    | (Some(EnrollmentStatus::NotReady), None, LiabilityShift::No)
+                    | (Some(EnrollmentStatus::Unavailable), None, LiabilityShift::No)
+                    | (Some(EnrollmentStatus::Bypassed), None, LiabilityShift::No) => {
+                        // Success: Authentication checks passed
+                        Ok(Self {
+                            flow: item.router_data.flow,
+                            resource_common_data: PaymentFlowData {
+                                status: common_enums::AttemptStatus::AuthenticationSuccessful,
+                                ..item.router_data.resource_common_data
+                            },
+                            response: Ok(PaymentsResponseData::PostAuthenticateResponse {
+                                authentication_data: None,
+                                connector_response_reference_id: None,
+                                status_code: item.http_code,
+                            }),
+                            connector_auth_type: item.router_data.connector_auth_type,
+                            request: item.router_data.request,
+                        })
+                    }
+                    _ => {
+                        // Failed: Authentication checks failed
+                        let error_message = format!(
+                            "Cannot continue authentication. Connector Responded with LiabilityShift: {:?}, EnrollmentStatus: {:?}, and AuthenticationStatus: {:?}",
+                            liability_response.payment_source.card.authentication_result.liability_shift,
+                            liability_response
+                                .payment_source
+                                .card
+                                .authentication_result
+                                .three_d_secure
+                                .enrollment_status
+                                .unwrap_or(EnrollmentStatus::Null),
+                            liability_response
+                                .payment_source
+                                .card
+                                .authentication_result
+                                .three_d_secure
+                                .authentication_status
+                                .unwrap_or(AuthenticationStatus::Null),
+                        );
+
+                        Ok(Self {
+                            flow: item.router_data.flow,
+                            resource_common_data: PaymentFlowData {
+                                status: common_enums::AttemptStatus::Failure,
+                                ..item.router_data.resource_common_data
+                            },
+                            response: Err(domain_types::router_data::ErrorResponse {
+                                attempt_status: Some(common_enums::AttemptStatus::Failure),
+                                code: "authentication_failed".to_string(),
+                                message: "3DS authentication failed".to_string(),
+                                connector_transaction_id: None,
+                                reason: Some(error_message),
+                                status_code: item.http_code,
+                                network_advice_code: None,
+                                network_decline_code: None,
+                                network_error_message: None,
+                            }),
+                            connector_auth_type: item.router_data.connector_auth_type,
+                            request: item.router_data.request,
+                        })
+                    }
+                }
+            }
+            // if card does not support 3DS
+            PaypalPostAuthenticateResponse::PaypalNonLiabilityResponse(_) => Ok(Self {
+                flow: item.router_data.flow,
+                resource_common_data: PaymentFlowData {
+                    status: common_enums::AttemptStatus::AuthenticationSuccessful,
+                    ..item.router_data.resource_common_data
+                },
+                response: Ok(PaymentsResponseData::PostAuthenticateResponse {
+                    authentication_data: None,
+                    connector_response_reference_id: None,
+                    status_code: item.http_code,
+                }),
+                connector_auth_type: item.router_data.connector_auth_type,
+                request: item.router_data.request,
+            }),
+        }
     }
 }
 
