@@ -116,6 +116,9 @@ pub use self::authipay::Authipay;
 pub mod bamboraapac;
 pub use self::bamboraapac::Bamboraapac;
 
+pub mod barclaycard;
+pub use self::barclaycard::Barclaycard;
+
 pub mod silverflow;
 pub use self::silverflow::Silverflow;
 

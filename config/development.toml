@@ -48,6 +48,7 @@ psync = "GW_TXN_SYNC"
 [connectors]
 mollie.base_url = "https://api.mollie.com/v2"
 mollie.secondary_base_url = "https://api.cc.mollie.com/v1/"
+barclaycard.base_url = "https://api.smartpayfuse-test.barclaycard"
 shift4.base_url = "https://api.shift4.com"
 bluesnap.base_url = "https://sandbox.bluesnap.com"
 bluesnap.secondary_base_url = "https://sandpay.bluesnap.com"
