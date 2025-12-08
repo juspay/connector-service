@@ -12,12 +12,13 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     connectors::powertranz::{PowertranzAmountConvertor, PowertranzRouterData},
     types::ResponseRouterData,
+    utils::get_card_expiration_yymm,
 };
 
 // ============================================================================
@@ -65,8 +66,7 @@ pub struct PowertranzPaymentsRequest {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct PowertranzSource {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cardholder_name: Option<Secret<String>>,
+    pub cardholder_name: Secret<String>,
     pub card_pan: Secret<String>,
     pub card_cvv: Secret<String>,
     pub card_expiration: Secret<String>,
@@ -328,10 +328,10 @@ impl<
 
         match &request_data.payment_method_data {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
-                // Format: YYMM (e.g., "3012" for December 2030 = year 30, month 12)
-                let year_yy = card_data.get_card_expiry_year_2_digit()?;
-                let card_expiration =
-                    format!("{}{}", year_yy.peek(), &card_data.card_exp_month.peek());
+                let card_expiration = get_card_expiration_yymm(
+                    card_data.card_exp_year.clone(),
+                    card_data.card_exp_month.clone(),
+                );
 
                 Ok(Self {
                     transaction_identifier: uuid::Uuid::new_v4().to_string(),
@@ -339,10 +339,13 @@ impl<
                     currency_code,
                     three_d_secure: Some(false),
                     source: PowertranzSource {
-                        cardholder_name: card_data.card_holder_name.clone(),
+                        cardholder_name: card_data
+                            .card_holder_name
+                            .clone()
+                            .unwrap_or(Secret::new("".to_string())),
                         card_pan: Secret::new(card_data.card_number.peek().to_string()),
                         card_cvv: card_data.card_cvc.clone(),
-                        card_expiration: Secret::new(card_expiration),
+                        card_expiration,
                     },
                     order_identifier: item
                         .router_data

@@ -140,6 +140,16 @@ impl<T: PaymentMethodDataTypes> Card<T> {
             self.card_exp_month.peek()
         ))
     }
+
+
+    pub fn get_card_expiry_year_month_as_yymm(&self) -> Result<Secret<String>, ConnectorError> {
+        let year_yy = self.get_card_expiry_year_2_digit()?;
+        Ok(Secret::new(format!(
+            "{}{}",
+            year_yy.peek(),
+            self.card_exp_month.peek()
+        )))
+    }
 }
 
 impl Card<DefaultPCIHolder> {
