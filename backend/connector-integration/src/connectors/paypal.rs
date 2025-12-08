@@ -343,33 +343,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             "authorize"
         };
 
-        // Case 1: PaypalSdk wallet - complete order using SDK token
-        if let PaymentMethodData::Wallet(WalletData::PaypalSdk(paypal_wallet_data)) =
+        let base = self.connector_base_url_payments(req);
+
+        let path = if let PaymentMethodData::Wallet(WalletData::PaypalSdk(paypal_wallet_data)) =
             &req.request.payment_method_data
         {
-            return Ok(format!(
-                "{}v2/checkout/orders/{}/{}",
-                self.connector_base_url_payments(req),
-                paypal_wallet_data.token,
-                action
-            ));
-        }
+            // Case 1: PaypalSdk wallet - complete order using SDK token
+            format!("v2/checkout/orders/{}/{}", paypal_wallet_data.token, action)
+        } else if let Some(order_id) = &req.resource_common_data.reference_id {
+            // Case 2: Completing existing order
+            format!("v2/checkout/orders/{}/{}", order_id, action)
+        } else {
+            // Case 3: Creating new order
+            "v2/checkout/orders".to_owned()
+        };
 
-        // Case 2: Completing existing order - use reference_id from previous call
-        if let Some(order_id) = req.resource_common_data.reference_id.clone() {
-            return Ok(format!(
-                "{}v2/checkout/orders/{}/{}",
-                self.connector_base_url_payments(req),
-                order_id,
-                action
-            ));
-        }
-
-        // Case 3: Creating new order (like HS Authorize)
-        Ok(format!(
-            "{}v2/checkout/orders",
-            self.connector_base_url_payments(req)
-        ))
+        Ok(format!("{}{}", base, path))
     }
 
     fn get_request_body(
@@ -382,26 +371,27 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> CustomResult<Option<common_utils::request::RequestContent>, errors::ConnectorError> {
         // No body needed when completing existing order (PaypalSdk or after redirect)
-        if req.resource_common_data.reference_id.is_some() {
-            return Ok(None);
-        }
+        let body = if req.resource_common_data.reference_id.is_some()
+            || matches!(
+                req.request.payment_method_data,
+                PaymentMethodData::Wallet(WalletData::PaypalSdk(_))
+            ) {
+            None
+        } else {
+            // Build full request body for creating new order (like HS Authorize)
+            let connector_router_data = PaypalRouterData {
+                connector: self.to_owned(),
+                router_data: req.to_owned(),
+            };
+            let connector_req =
+                transformers::PaypalPaymentsRequest::try_from(connector_router_data)?;
 
-        if matches!(
-            req.request.payment_method_data,
-            PaymentMethodData::Wallet(WalletData::PaypalSdk(_))
-        ) {
-            return Ok(None);
-        }
-
-        // Build full request body for creating new order (like HS Authorize)
-        let connector_router_data = PaypalRouterData {
-            connector: self.to_owned(),
-            router_data: req.to_owned(),
+            Some(common_utils::request::RequestContent::Json(Box::new(
+                connector_req,
+            )))
         };
-        let connector_req = transformers::PaypalPaymentsRequest::try_from(connector_router_data)?;
-        Ok(Some(common_utils::request::RequestContent::Json(Box::new(
-            connector_req,
-        ))))
+
+        Ok(body)
     }
 
     fn handle_response_v2(
