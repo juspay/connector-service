@@ -947,3 +947,39 @@ pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
     })
     .ok()
 }
+
+/// Extract Android version from user agent string
+/// Example: "Mozilla/5.0 (Linux; Android 10; SM-G973F) ..." -> "10"
+pub fn split_ua(user_agent: &str) -> String {
+    user_agent
+        .split_whitespace()
+        .skip_while(|&part| part != "Android")
+        .nth(1)
+        .and_then(|version| version.strip_suffix(';'))
+        .unwrap_or("")
+        .to_string()
+}
+
+pub fn get_source_channel(user_agent: Option<&String>) -> String {
+    if let Some(ua) = user_agent {
+        if ua.contains("Android") {
+            return "ANDROID".to_string();
+        } else if ua.contains("iPhone") || ua.contains("Darwin") {
+            return "IOS".to_string();
+        }
+    }
+    "WEB".to_string()
+}
+
+pub fn get_ios_app_id(vpa_id: &str) -> Option<String> {
+    let vpa_lower = vpa_id.to_lowercase();
+    if vpa_lower.contains("tez") {
+        Some("GPAY".to_string())
+    } else if vpa_lower.contains("phonepe") {
+        Some("PHONEPE".to_string())
+    } else if vpa_lower.contains("paytm") {
+        Some("PAYTM".to_string())
+    } else {
+        None
+    }
+}
