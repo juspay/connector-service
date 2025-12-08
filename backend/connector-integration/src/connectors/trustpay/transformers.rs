@@ -1747,29 +1747,30 @@ fn handle_webhooks_refund_response(
     status_code: u16,
 ) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), errors::ConnectorError> {
     let refund_status = enums::RefundStatus::try_from(response.status)?;
-    let error = if utils::is_refund_failure(refund_status) {
-        let reason_info = response.status_reason_information.unwrap_or_default();
-        Some(ErrorResponse {
-            code: reason_info
-                .reason
-                .code
-                .clone()
-                .unwrap_or(NO_ERROR_CODE.to_string()),
-            // message vary for the same code, so relying on code alone as it is unique
-            message: reason_info
-                .reason
-                .code
-                .unwrap_or(NO_ERROR_MESSAGE.to_string()),
-            reason: reason_info.reason.reject_reason,
-            status_code,
-            attempt_status: None,
-            connector_transaction_id: response.references.payment_request_id.clone(),
-            network_advice_code: None,
-            network_decline_code: None,
-            network_error_message: None,
-        })
-    } else {
-        None
+    let error = match utils::is_refund_failure(refund_status) {
+        true => {
+            let reason_info = response.status_reason_information.unwrap_or_default();
+            Some(ErrorResponse {
+                code: reason_info
+                    .reason
+                    .code
+                    .clone()
+                    .unwrap_or(NO_ERROR_CODE.to_string()),
+                // message vary for the same code, so relying on code alone as it is unique
+                message: reason_info
+                    .reason
+                    .code
+                    .unwrap_or(NO_ERROR_MESSAGE.to_string()),
+                reason: reason_info.reason.reject_reason,
+                status_code,
+                attempt_status: None,
+                connector_transaction_id: response.references.payment_request_id.clone(),
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+            })
+        }
+        false => None,
     };
     let refund_response_data = RefundsResponseData {
         connector_refund_id: response
@@ -1787,8 +1788,8 @@ fn handle_bank_redirects_refund_response(
     status_code: u16,
 ) -> (Option<ErrorResponse>, RefundsResponseData) {
     let (refund_status, msg) = get_refund_status_from_result_info(response.result_info.result_code);
-    let error = if msg.is_some() {
-        Some(ErrorResponse {
+    let error = match msg.is_some() {
+        true => Some(ErrorResponse {
             code: response.result_info.result_code.to_string(),
             // message vary for the same code, so relying on code alone as it is unique
             message: response.result_info.result_code.to_string(),
@@ -1799,9 +1800,8 @@ fn handle_bank_redirects_refund_response(
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
-        })
-    } else {
-        None
+        }),
+        false => None,
     };
     let refund_response_data = RefundsResponseData {
         connector_refund_id: response.payment_request_id.to_string(),
@@ -1816,32 +1816,33 @@ fn handle_bank_redirects_refund_sync_response(
     status_code: u16,
 ) -> (Option<ErrorResponse>, RefundsResponseData) {
     let refund_status = enums::RefundStatus::from(response.payment_information.status);
-    let error = if utils::is_refund_failure(refund_status) {
-        let reason_info = response
-            .payment_information
-            .status_reason_information
-            .unwrap_or_default();
-        Some(ErrorResponse {
-            code: reason_info
-                .reason
-                .code
-                .clone()
-                .unwrap_or(NO_ERROR_CODE.to_string()),
-            // message vary for the same code, so relying on code alone as it is unique
-            message: reason_info
-                .reason
-                .code
-                .unwrap_or(NO_ERROR_MESSAGE.to_string()),
-            reason: reason_info.reason.reject_reason,
-            status_code,
-            attempt_status: None,
-            connector_transaction_id: None,
-            network_advice_code: None,
-            network_decline_code: None,
-            network_error_message: None,
-        })
-    } else {
-        None
+    let error = match utils::is_refund_failure(refund_status) {
+        true => {
+            let reason_info = response
+                .payment_information
+                .status_reason_information
+                .unwrap_or_default();
+            Some(ErrorResponse {
+                code: reason_info
+                    .reason
+                    .code
+                    .clone()
+                    .unwrap_or(NO_ERROR_CODE.to_string()),
+                // message vary for the same code, so relying on code alone as it is unique
+                message: reason_info
+                    .reason
+                    .code
+                    .unwrap_or(NO_ERROR_MESSAGE.to_string()),
+                reason: reason_info.reason.reject_reason,
+                status_code,
+                attempt_status: None,
+                connector_transaction_id: None,
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+            })
+        }
+        false => None,
     };
     let refund_response_data = RefundsResponseData {
         connector_refund_id: response.payment_information.references.payment_request_id,
