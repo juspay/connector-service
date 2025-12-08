@@ -43,6 +43,7 @@ impl TryFrom<&ConnectorAuthType> for AirwallexAuthType {
 pub struct AirwallexErrorResponse {
     pub code: String,
     pub message: String,
+    pub source: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -87,7 +88,7 @@ pub struct AirwallexCardData {
     pub expiry_month: Secret<String>,
     pub expiry_year: Secret<String>,
     pub cvc: Secret<String>,
-    pub name: Option<String>,
+    pub name: Option<Secret<String>>,
 }
 
 // Note: Wallet, PayLater, and BankRedirect data structures removed
@@ -112,7 +113,7 @@ pub enum AirwallexPaymentType {
 pub struct AirwallexDeviceData {
     pub accept_header: String,
     pub browser: AirwallexBrowser,
-    pub ip_address: Option<String>,
+    pub ip_address: Option<Secret<String>>,
     pub language: String,
     pub mobile: Option<AirwallexMobile>,
     pub screen_color_depth: u8,
@@ -192,7 +193,7 @@ fn get_device_data<T: domain_types::payment_method_data::PaymentMethodDataTypes>
         ip_address: browser_info
             .get_ip_address()
             .ok()
-            .map(|ip| ip.expose().to_string()),
+            .map(|ip| Secret::new(ip.expose().to_string())),
         language: browser_info.get_language().unwrap_or_default(),
         mobile,
         screen_color_depth: browser_info.get_color_depth().unwrap_or(24),
@@ -249,7 +250,9 @@ impl<
                         expiry_month: card_data.card_exp_month.clone(),
                         expiry_year: card_data.get_expiry_year_4_digit(),
                         cvc: card_data.card_cvc.clone(),
-                        name: card_data.card_holder_name.map(|name| name.expose()),
+                        name: card_data
+                            .card_holder_name
+                            .map(|name| Secret::new(name.expose())),
                     },
                     payment_method_type: AirwallexPaymentType::Card,
                 }
@@ -370,8 +373,8 @@ pub struct AirwallexPaymentMethodInfo {
 pub struct AirwallexCardInfo {
     pub last4: Option<String>,
     pub brand: Option<String>,
-    pub exp_month: Option<String>,
-    pub exp_year: Option<String>,
+    pub exp_month: Option<Secret<String>>,
+    pub exp_year: Option<Secret<String>>,
     pub fingerprint: Option<String>,
 }
 
@@ -1013,7 +1016,9 @@ impl<
                         expiry_month: card_data.card_exp_month.clone(),
                         expiry_year: card_data.get_expiry_year_4_digit(),
                         cvc: card_data.card_cvc.clone(),
-                        name: card_data.card_holder_name.map(|name| name.expose()),
+                        name: card_data
+                            .card_holder_name
+                            .map(|name| Secret::new(name.expose())),
                     },
                     payment_method_type: AirwallexPaymentType::Card,
                 }
@@ -1079,9 +1084,9 @@ pub struct AirwallexProductData {
 
 #[derive(Debug, Serialize)]
 pub struct AirwallexShippingData {
-    pub first_name: Option<String>,
-    pub last_name: Option<String>,
-    pub phone_number: Option<String>,
+    pub first_name: Option<Secret<String>>,
+    pub last_name: Option<Secret<String>>,
+    pub phone_number: Option<Secret<String>>,
     pub shipping_method: Option<String>,
     pub address: Option<AirwallexAddressData>,
 }
@@ -1089,10 +1094,10 @@ pub struct AirwallexShippingData {
 #[derive(Debug, Serialize)]
 pub struct AirwallexAddressData {
     pub country_code: String,
-    pub state: Option<String>,
-    pub city: Option<String>,
-    pub street: Option<String>,
-    pub postcode: Option<String>,
+    pub state: Option<Secret<String>>,
+    pub city: Option<Secret<String>>,
+    pub street: Option<Secret<String>>,
+    pub postcode: Option<Secret<String>>,
 }
 
 // CreateOrder request structure (Step 1 - Intent creation without payment method)

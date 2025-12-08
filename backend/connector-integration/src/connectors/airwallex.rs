@@ -934,11 +934,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         with_error_response_body!(event_builder, response);
 
+        let error_message = match response.source {
+            Some(ref source) => format!("{} {}", response.message, source),
+            None => response.message.clone(),
+        };
+
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.code,
-            message: response.message,
-            reason: None,
+            message: error_message.clone(),
+            reason: Some(error_message),
             attempt_status: None,
             connector_transaction_id: None,
             network_decline_code: None,
