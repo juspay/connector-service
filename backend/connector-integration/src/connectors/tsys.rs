@@ -535,8 +535,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== EMPTY IMPLEMENTATIONS FOR UNSUPPORTED FLOWS =====
-// These are required by ConnectorServiceTrait but not supported by TSYS
+
 
 // Order Create
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
