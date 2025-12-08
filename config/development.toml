@@ -43,6 +43,7 @@ mock_server_url = "http://localhost:3000/mockGateway"
 psync = "GW_TXN_SYNC"
 
 [connectors]
+barclaycard.base_url = "https://api.smartpayfuse-test.barclaycard"
 mollie.base_url = "https://api.mollie.com/v2"
 mollie.secondary_base_url = "https://api.cc.mollie.com/v1/"
 shift4.base_url = "https://api.shift4.com"
