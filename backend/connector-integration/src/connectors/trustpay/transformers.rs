@@ -1,5 +1,5 @@
 use crate::utils::{self, ErrorCodeAndMessage};
-use crate::{connectors::trustpay::TrustpayRouterData, types::ResponseRouterData};
+use crate::{connectors, connectors::trustpay::TrustpayRouterData, types::ResponseRouterData};
 use common_enums::enums;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
@@ -1400,7 +1400,7 @@ fn get_bank_transfer_request_data<
 
 // Implement GetFormData for TrustpayPaymentsRequest to satisfy the macro requirement
 // This will never be called since TrustPay only uses Json and FormUrlEncoded
-impl<T> crate::connectors::macros::GetFormData for TrustpayPaymentsRequest<T>
+impl<T> connectors::macros::GetFormData for TrustpayPaymentsRequest<T>
 where
     T: PaymentMethodDataTypes
         + std::fmt::Debug
@@ -1584,7 +1584,7 @@ pub struct TrustpayRefundRequestBankRedirect {
 
 // Implement GetFormData for TrustpayRefundRequest to satisfy the macro requirement
 // This will never be called since TrustPay only uses Json and FormUrlEncoded
-impl crate::connectors::macros::GetFormData for TrustpayRefundRequest {
+impl connectors::macros::GetFormData for TrustpayRefundRequest {
     fn get_form_data(&self) -> reqwest::multipart::Form {
         // This should never be called for TrustPay since we only use Json and FormUrlEncoded
         unimplemented!("TrustPay refunds only support Json and FormUrlEncoded content types. ")
@@ -1714,22 +1714,19 @@ fn handle_cards_refund_response(
     status_code: u16,
 ) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), errors::ConnectorError> {
     let (refund_status, message) = get_refund_status(&response.payment_status)?;
-    let error = if message.is_some() {
-        Some(ErrorResponse {
+    let error = match message {
+        Some(message) => Some(ErrorResponse {
             code: response.payment_status,
-            message: message
-                .clone()
-                .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
-            reason: message,
+            message: message.clone(),
+            reason: Some(message),
             status_code,
             attempt_status: None,
             connector_transaction_id: None,
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
-        })
-    } else {
-        None
+        }),
+        None => None,
     };
     let refund_response_data = RefundsResponseData {
         connector_refund_id: response.instance_id,
@@ -1880,17 +1877,14 @@ fn get_refund_status(
     payment_status: &str,
 ) -> CustomResult<(enums::RefundStatus, Option<String>), errors::ConnectorError> {
     let (is_failed, failure_message) = is_payment_failed(payment_status);
-    if payment_status == "000.200.000" {
-        Ok((enums::RefundStatus::Pending, None))
-    } else if is_failed {
-        Ok((
+    match payment_status {
+        "000.200.000" => Ok((enums::RefundStatus::Pending, None)),
+        _ if is_failed => Ok((
             enums::RefundStatus::Failure,
             Some(failure_message.to_string()),
-        ))
-    } else if is_payment_successful(payment_status)? {
-        Ok((enums::RefundStatus::Success, None))
-    } else {
-        Ok((enums::RefundStatus::Pending, None))
+        )),
+        _ if is_payment_successful(payment_status)? => Ok((enums::RefundStatus::Success, None)),
+        _ => Ok((enums::RefundStatus::Pending, None)),
     }
 }
 
