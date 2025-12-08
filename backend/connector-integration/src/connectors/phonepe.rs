@@ -369,6 +369,10 @@ macros::macro_connector_implementation!(
                     headers::CONTENT_TYPE.to_string(),
                     "application/json".to_string().into(),
                 ),
+                (
+                    headers::ACCEPT.to_string(),
+                    "application/json".to_string().into(),
+                ),
             ];
 
             // Build the request to get the checksum for X-VERIFY header
