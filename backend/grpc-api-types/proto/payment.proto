@@ -504,6 +504,7 @@ enum Connector {
   CELERO = 99;
   TRUSTPAYMENTS = 100;
   PAYSAFE = 101;
+  BARCLAYCARD = 102;
 }
 
 // Payment method types.
@@ -2002,6 +2003,9 @@ message PaymentServiceCreateOrderRequest {
 
   // Metadata
   map<string, string> metadata = 5; // Additional metadata for the connector
+
+  // State Information
+  optional ConnectorState state = 6; // State data for access token storage and other connector-specific state
 }
 
 // Response message for create order operation.

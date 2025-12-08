@@ -43,6 +43,8 @@ mock_server_url = "http://localhost:3000/mockGateway"
 psync = "GW_TXN_SYNC"
 
 [connectors]
+barclaycard.base_url = "https://api.smartpayfuse-test.barclaycard"
+airwallex.base_url = "https://api-demo.airwallex.com/api/v1"
 shift4.base_url = "https://api.shift4.com"
 bluesnap.base_url = "https://sandbox.bluesnap.com"
 bluesnap.secondary_base_url = "https://sandpay.bluesnap.com"
