@@ -709,6 +709,49 @@ impl Payments {
                 )
             })?;
 
+        // Trait-based auto-tokenization: Check if connector requires payment method tokenization
+        let should_do_payment_method_token =
+            connector_data.connector.should_do_payment_method_token(
+                payment_flow_data.payment_method,
+                payment_authorize_data.payment_method_type,
+            );
+
+        let payment_flow_data = if should_do_payment_method_token {
+            let event_params = EventParams {
+                _connector_name: &connector.to_string(),
+                _service_name: service_name,
+                request_id,
+                lineage_ids: &metadata_payload.lineage_ids,
+                reference_id: &metadata_payload.reference_id,
+                shadow_mode: metadata_payload.shadow_mode,
+            };
+            let payment_method_token_data = self
+                .handle_payment_method_token(
+                    config,
+                    connector_data.clone(),
+                    &payment_flow_data,
+                    connector_auth_details.clone(),
+                    event_params,
+                    &payment_authorize_data,
+                    &connector.to_string(),
+                    service_name,
+                )
+                .await
+                .map_err(|err| {
+                    tracing::error!("Failed to create payment method token: {:?}", err);
+                    PaymentAuthorizationError::new(
+                        grpc_api_types::payments::PaymentStatus::Pending,
+                        Some("Failed to tokenize payment method".to_string()),
+                        Some("PAYMENT_METHOD_TOKEN_ERROR".to_string()),
+                        None,
+                    )
+                })?;
+            tracing::info!("Payment Method Token created successfully");
+            payment_flow_data.set_payment_method_token(Some(payment_method_token_data.token))
+        } else {
+            payment_flow_data
+        };
+
         // Construct router data
         let router_data = RouterDataV2::<
             Authorize,

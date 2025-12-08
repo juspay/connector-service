@@ -1,0 +1,785 @@
+use crate::types::ResponseRouterData;
+use common_utils::types::{AmountConvertor, StringMajorUnitForConnector};
+use domain_types::{
+    connector_flow::{Authorize, PSync, PaymentMethodToken, RSync, Refund, Void},
+    connector_types::{
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+    },
+    errors,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    router_data::ConnectorAuthType,
+    router_data_v2::RouterDataV2,
+    router_response_types::RedirectForm,
+};
+use error_stack::ResultExt;
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone)]
+pub struct MollieAuthType {
+    pub api_key: Secret<String>,
+    pub profile_token: Option<Secret<String>>,
+}
+
+impl TryFrom<&ConnectorAuthType> for MollieAuthType {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+        match auth_type {
+            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
+                api_key: api_key.to_owned(),
+                profile_token: None,
+            }),
+            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
+                api_key: api_key.to_owned(),
+                profile_token: Some(key1.to_owned()),
+            }),
+            _ => Err(error_stack::report!(
+                errors::ConnectorError::FailedToObtainAuthType
+            )),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MollieErrorResponse {
+    pub status: u16,
+    pub title: String,
+    pub detail: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub field: Option<String>,
+    #[serde(rename = "_links", skip_serializing_if = "Option::is_none")]
+    pub links: Option<serde_json::Value>,
+}
+
+// Mollie Amount structure - uses object format with currency and value
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MollieAmount {
+    pub currency: common_enums::Currency,
+    pub value: String,
+}
+
+// Mollie Metadata structure - used in payments and refunds
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MollieMetadata {
+    pub order_id: String,
+}
+
+// Mollie Payment Request structure
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MolliePaymentsRequest {
+    pub amount: MollieAmount,
+    pub description: String,
+    pub redirect_url: String,
+    pub webhook_url: String,
+    pub metadata: serde_json::Value,
+    #[serde(flatten)]
+    pub payment_method_data: MolliePaymentMethodData,
+    pub sequence_type: SequenceType,
+    pub capture_mode: MollieCaptureMode,
+    // These fields are always null in Hyperswitch but must be present
+    pub locale: Option<String>,
+    pub cancel_url: Option<String>,
+    pub customer_id: Option<String>,
+}
+
+// Mollie Payment Method Data enum
+#[derive(Debug, Serialize)]
+#[serde(tag = "method")]
+#[serde(rename_all = "lowercase")]
+pub enum MolliePaymentMethodData {
+    #[serde(rename = "creditcard")]
+    CreditCard(Box<CreditCardMethodData>),
+}
+
+// Credit Card Method Data
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreditCardMethodData {
+    pub card_token: Option<Secret<String>>,
+    pub billing_address: Option<MollieAddress>,
+    pub shipping_address: Option<MollieAddress>,
+}
+
+// Mollie Address structure
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MollieAddress {
+    pub street_and_number: Secret<String>,
+    pub postal_code: Secret<String>,
+    pub city: String,
+    pub region: Option<String>,
+    pub country: common_enums::CountryAlpha2,
+}
+
+// Sequence Type enum
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum SequenceType {
+    Oneoff,
+    First,
+    Recurring,
+}
+
+// Capture Mode enum
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum MollieCaptureMode {
+    Manual,
+    Automatic,
+}
+
+impl<T: PaymentMethodDataTypes>
+    TryFrom<
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    > for MolliePaymentsRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Convert amount to string major unit format (e.g., "10.00" for $10.00)
+        let converter = StringMajorUnitForConnector;
+        let amount_value = converter
+            .convert(item.request.amount, item.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        // Extract payment method data based on payment method type
+        let payment_method_data = match &item.request.payment_method_data {
+            PaymentMethodData::Card(_card_data) => {
+                // Extract card token from payment_method_token
+                // Following Hyperswitch pattern: ALL tokens (cst_ and tkn_) go to cardToken field
+                let card_token = item
+                    .resource_common_data
+                    .payment_method_token
+                    .as_ref()
+                    .and_then(|token| match token {
+                        domain_types::router_data::PaymentMethodToken::Token(t) => Some(t.clone()),
+                        _ => None,
+                    });
+
+                // Extract billing address if available
+                // Match Hyperswitch format: comma separator, no region
+                let billing_address = item
+                    .resource_common_data
+                    .address
+                    .get_payment_method_billing()
+                    .and_then(|billing| {
+                        let address = billing.address.as_ref()?;
+                        let line1 = address.line1.as_ref()?.peek().to_string();
+                        let street_and_number = match address.line2.as_ref() {
+                            Some(line2) => format!("{},{}", line1, line2.peek()),
+                            None => line1,
+                        };
+
+                        Some(MollieAddress {
+                            street_and_number: Secret::new(street_and_number),
+                            postal_code: Secret::new(address.zip.as_ref()?.peek().to_string()),
+                            city: address.city.as_ref()?.peek().to_string(),
+                            region: None, // Match Hyperswitch: always null
+                            country: address.country?,
+                        })
+                    });
+
+                MolliePaymentMethodData::CreditCard(Box::new(CreditCardMethodData {
+                    card_token,
+                    billing_address,
+                    shipping_address: None,
+                }))
+            }
+            _ => {
+                return Err(errors::ConnectorError::NotImplemented(
+                    "Payment method not supported".to_string(),
+                )
+                .into());
+            }
+        };
+
+        // For regular payments, always use oneoff sequence type
+        // Following Hyperswitch pattern: only use "first" or "recurring" for explicit mandate flows
+        let sequence_type = SequenceType::Oneoff;
+
+        // captureMode is required for oneoff payments
+        let capture_mode =
+            if item.request.capture_method == Some(common_enums::CaptureMethod::Automatic) {
+                MollieCaptureMode::Automatic
+            } else {
+                MollieCaptureMode::Manual
+            };
+
+        // Build metadata - match Hyperswitch format with orderId
+        // Always use orderId format, not connector_meta_data
+        let mut metadata_map = serde_json::Map::new();
+        metadata_map.insert(
+            "orderId".to_string(),
+            serde_json::Value::String(
+                item.resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
+        );
+
+        Ok(Self {
+            amount: MollieAmount {
+                currency: item.request.currency,
+                value: amount_value.get_amount_as_string(),
+            },
+            description: item
+                .resource_common_data
+                .description
+                .clone()
+                .unwrap_or_else(|| "Payment".to_string()),
+            redirect_url: item.request.router_return_url.clone().unwrap_or_default(),
+            // Use empty string for webhook_url since we can't support webhook callbacks
+            // in test environment (localhost is unreachable from Mollie's servers).
+            // This matches Hyperswitch implementation pattern.
+            webhook_url: "".to_string(),
+            metadata: serde_json::Value::Object(metadata_map),
+            payment_method_data,
+            sequence_type,
+            capture_mode,
+            // Match Hyperswitch: these are always null
+            locale: None,
+            cancel_url: None,
+            customer_id: None,
+        })
+    }
+}
+
+// Mollie Payment Status enum
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum MolliePaymentStatus {
+    Open,
+    Pending,
+    Authorized,
+    Paid,
+    Canceled,
+    Expired,
+    Failed,
+}
+
+// Mollie Link structure
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MollieLink {
+    pub href: String,
+    #[serde(rename = "type")]
+    pub link_type: String,
+}
+
+// Mollie Links structure
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MollieLinks {
+    #[serde(rename = "self")]
+    pub self_link: MollieLink,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub checkout: Option<MollieLink>,
+}
+
+// Mollie Payment Response structure
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MolliePaymentsResponse {
+    pub id: String,
+    pub resource: String,
+    pub mode: String,
+    pub status: MolliePaymentStatus,
+    pub amount: MollieAmount,
+    pub description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method: Option<String>,
+    pub created_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<String>,
+    #[serde(rename = "_links")]
+    pub links: MollieLinks,
+}
+
+// Status mapping function - CRITICAL: NEVER HARDCODE STATUS VALUES
+fn map_mollie_payment_status_to_attempt_status(
+    status: &MolliePaymentStatus,
+) -> common_enums::AttemptStatus {
+    match status {
+        MolliePaymentStatus::Open => common_enums::AttemptStatus::AuthenticationPending,
+        MolliePaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+        MolliePaymentStatus::Authorized => common_enums::AttemptStatus::Authorized,
+        MolliePaymentStatus::Paid => common_enums::AttemptStatus::Charged,
+        MolliePaymentStatus::Canceled => common_enums::AttemptStatus::Voided,
+        MolliePaymentStatus::Expired => common_enums::AttemptStatus::Failure,
+        MolliePaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+    }
+}
+
+impl<T: PaymentMethodDataTypes>
+    TryFrom<
+        ResponseRouterData<
+            MolliePaymentsResponse,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+        >,
+    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            MolliePaymentsResponse,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Map status from Mollie response - NEVER HARDCODE
+        let status = map_mollie_payment_status_to_attempt_status(&item.response.status);
+
+        // Extract redirection URL if available
+        let redirection_data = item.response.links.checkout.as_ref().and_then(|checkout| {
+            url::Url::parse(&checkout.href).ok().map(|url| {
+                Box::new(RedirectForm::from((
+                    url,
+                    common_utils::request::Method::Get,
+                )))
+            })
+        });
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
+                redirection_data,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: Some(item.response.id),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// PSync Response Transformer - Reuses MolliePaymentsResponse
+impl
+    TryFrom<
+        ResponseRouterData<
+            MolliePaymentsResponse,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
+    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            MolliePaymentsResponse,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Map status from Mollie response - NEVER HARDCODE
+        let status = map_mollie_payment_status_to_attempt_status(&item.response.status);
+
+        // Extract redirection URL if available
+        let redirection_data = item.response.links.checkout.as_ref().and_then(|checkout| {
+            url::Url::parse(&checkout.href).ok().map(|url| {
+                Box::new(RedirectForm::from((
+                    url,
+                    common_utils::request::Method::Get,
+                )))
+            })
+        });
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
+                redirection_data,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: Some(item.response.id),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// ===== REFUND FLOW TYPES AND TRANSFORMERS =====
+
+// Mollie Refund Request structure
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MollieRefundRequest {
+    pub amount: MollieAmount,
+    pub description: String,
+    pub metadata: MollieMetadata,
+}
+
+// Mollie Refund Status enum
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MollieRefundStatus {
+    Queued,
+    Pending,
+    Processing,
+    Refunded,
+    Failed,
+    Canceled,
+}
+
+// Mollie Refund Links structure
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MollieRefundLinks {
+    #[serde(rename = "self")]
+    pub self_link: MollieLink,
+    pub payment: MollieLink,
+}
+
+// Mollie Refund Response structure
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MollieRefundResponse {
+    pub id: String,
+    pub resource: String,
+    pub mode: String,
+    pub status: MollieRefundStatus,
+    pub amount: MollieAmount,
+    pub description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<serde_json::Value>,
+    pub payment_id: String,
+    pub created_at: String,
+    #[serde(rename = "_links")]
+    pub links: MollieRefundLinks,
+}
+
+// Refund status mapping function - CRITICAL: NEVER HARDCODE STATUS VALUES
+fn map_mollie_refund_status_to_refund_status(
+    status: &MollieRefundStatus,
+) -> common_enums::RefundStatus {
+    match status {
+        MollieRefundStatus::Queued => common_enums::RefundStatus::Pending,
+        MollieRefundStatus::Pending => common_enums::RefundStatus::Pending,
+        MollieRefundStatus::Processing => common_enums::RefundStatus::Pending,
+        MollieRefundStatus::Refunded => common_enums::RefundStatus::Success,
+        MollieRefundStatus::Failed => common_enums::RefundStatus::Failure,
+        MollieRefundStatus::Canceled => common_enums::RefundStatus::Failure,
+    }
+}
+
+// Request transformer for Refund flow
+impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
+    for MollieRefundRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+    ) -> Result<Self, Self::Error> {
+        // Convert amount to string major unit format (e.g., "10.00" for $10.00)
+        let converter = StringMajorUnitForConnector;
+        let amount_value = converter
+            .convert(item.request.minor_refund_amount, item.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        Ok(Self {
+            amount: MollieAmount {
+                currency: item.request.currency,
+                value: amount_value.get_amount_as_string(),
+            },
+            description: item
+                .request
+                .reason
+                .clone()
+                .unwrap_or_else(|| "Refund".to_string()),
+            metadata: MollieMetadata {
+                order_id: item.request.refund_id.clone(),
+            },
+        })
+    }
+}
+
+// Response transformer for Refund flow
+impl
+    TryFrom<
+        ResponseRouterData<
+            MollieRefundResponse,
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        >,
+    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            MollieRefundResponse,
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            response: Ok(RefundsResponseData {
+                connector_refund_id: item.response.id.clone(),
+                refund_status: map_mollie_refund_status_to_refund_status(&item.response.status),
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+// Response transformer for RSync flow - reuses MollieRefundResponse
+impl
+    TryFrom<
+        ResponseRouterData<
+            MollieRefundResponse,
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        >,
+    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            MollieRefundResponse,
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            response: Ok(RefundsResponseData {
+                connector_refund_id: item.response.id.clone(),
+                refund_status: map_mollie_refund_status_to_refund_status(&item.response.status),
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+// ===== VOID FLOW TRANSFORMER =====
+
+// Void Response Transformer - Reuses MolliePaymentsResponse
+// No request structure needed - DELETE endpoint with path parameter only
+impl
+    TryFrom<
+        ResponseRouterData<
+            MolliePaymentsResponse,
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        >,
+    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            MolliePaymentsResponse,
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Map status from Mollie response - NEVER HARDCODE
+        // Status "canceled" maps to AttemptStatus::Voided
+        let status = map_mollie_payment_status_to_attempt_status(&item.response.status);
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: Some(item.response.id),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// ===== PAYMENT METHOD TOKEN FLOW TYPES AND TRANSFORMERS =====
+
+// Mollie Customer Request structure (for tokenization)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MollieCustomerRequest {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<serde_json::Value>,
+}
+
+// Mollie Customer Response structure
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MollieCustomerResponse {
+    pub id: String,       // cust_xxx format
+    pub resource: String, // "customer"
+    pub mode: String,     // "test" or "live"
+    pub name: String,
+    pub email: Option<String>, // Optional - can be null
+    pub created_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<serde_json::Value>,
+}
+
+// Mollie Card Token Request structure (for /card-tokens endpoint)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MollieCardTokenRequest<T: PaymentMethodDataTypes> {
+    pub card_holder: Secret<String>,
+    pub card_number: RawCardNumber<T>,
+    pub card_cvv: Secret<String>,
+    pub card_expiry_date: Secret<String>, // Format: "MM/YY" (e.g., "12/25")
+    pub locale: String,
+    pub testmode: bool,
+    pub profile_token: Secret<String>,
+}
+
+// Mollie Card Token Response structure
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MollieCardTokenResponse {
+    pub card_token: Secret<String>, // tkn_xxx format
+}
+
+// Request transformer for PaymentMethodToken flow - Card Token Request
+impl<T: PaymentMethodDataTypes>
+    TryFrom<
+        &RouterDataV2<
+            PaymentMethodToken,
+            PaymentFlowData,
+            PaymentMethodTokenizationData<T>,
+            PaymentMethodTokenResponse,
+        >,
+    > for MollieCardTokenRequest<T>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: &RouterDataV2<
+            PaymentMethodToken,
+            PaymentFlowData,
+            PaymentMethodTokenizationData<T>,
+            PaymentMethodTokenResponse,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Extract card data from payment method
+        let card_data = match &item.request.payment_method_data {
+            PaymentMethodData::Card(card) => Ok(card),
+            _ => Err(errors::ConnectorError::NotImplemented(
+                "Only card payment method is supported for tokenization".to_string(),
+            )),
+        }?;
+
+        // Get profile token from auth
+        let auth = MollieAuthType::try_from(&item.connector_auth_type)?;
+        let profile_token =
+            auth.profile_token
+                .ok_or(errors::ConnectorError::InvalidConnectorConfig {
+                    config: "profile_token",
+                })?;
+
+        // Format expiry date as "MM/YY" (required by Mollie Components API)
+        let card_expiry_date = format!(
+            "{}/{}",
+            card_data.card_exp_month.peek(),
+            card_data.card_exp_year.peek()
+        );
+
+        // Extract browser info and get language - match Hyperswitch approach
+        let browser_info = item.request.browser_info.as_ref().ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "browser_info",
+            },
+        )?;
+        let locale = browser_info.get_language()?;
+
+        Ok(Self {
+            card_holder: card_data
+                .card_holder_name
+                .clone()
+                .unwrap_or_else(|| Secret::new("Cardholder".to_string())),
+            card_number: card_data.card_number.clone(),
+            card_cvv: card_data.card_cvc.clone(),
+            card_expiry_date: Secret::new(card_expiry_date),
+            locale,
+            testmode: item.resource_common_data.test_mode.unwrap_or(false),
+            profile_token,
+        })
+    }
+}
+
+// Response transformer for PaymentMethodToken flow - Card Token Response
+impl<T: PaymentMethodDataTypes>
+    TryFrom<
+        ResponseRouterData<
+            MollieCardTokenResponse,
+            RouterDataV2<
+                PaymentMethodToken,
+                PaymentFlowData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
+            >,
+        >,
+    >
+    for RouterDataV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    >
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            MollieCardTokenResponse,
+            RouterDataV2<
+                PaymentMethodToken,
+                PaymentFlowData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            response: Ok(PaymentMethodTokenResponse {
+                token: item.response.card_token.expose(), // Return tkn_ token
+            }),
+            resource_common_data: PaymentFlowData {
+                status: common_enums::AttemptStatus::Charged, // Tokenization successful
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
