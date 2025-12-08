@@ -935,7 +935,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         with_error_response_body!(event_builder, response);
 
         let error_message = match response.source {
-            Some(ref source) => format!("{} {}", response.message, source),
+            Some(ref source) => format!("{}; {}", response.message, source),
             None => response.message.clone(),
         };
 
