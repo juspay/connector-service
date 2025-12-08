@@ -21,7 +21,7 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
-tsys.base_url = "https://stagegw.transnox.com/"
+tsys.base_url = "https://gateway.transit-pass.com/"
 shift4.base_url = "https://api.shift4.com"
 bluesnap.base_url = "https://ws.bluesnap.com"
 bluesnap.secondary_base_url = "https://pay.bluesnap.com"

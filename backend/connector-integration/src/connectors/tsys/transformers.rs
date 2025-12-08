@@ -1,4 +1,5 @@
 use common_enums::AttemptStatus;
+use common_utils::types::{MinorUnit, StringMinorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -17,7 +18,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
 
-use super::TsysRouterData;
+use super::{TsysAmountConvertor, TsysRouterData};
 
 // ============================================================================
 // Authentication Type
@@ -68,7 +69,7 @@ pub struct TsysPaymentAuthSaleRequest<T: PaymentMethodDataTypes> {
     device_id: Secret<String>,
     transaction_key: Secret<String>,
     card_data_source: String,
-    transaction_amount: i64,
+    transaction_amount: StringMinorUnit,
     currency_code: common_enums::enums::Currency,
     card_number: RawCardNumber<T>,
     expiration_date: Secret<String>,
@@ -125,7 +126,11 @@ impl<
                     device_id: auth.device_id,
                     transaction_key: auth.transaction_key,
                     card_data_source: "INTERNET".to_string(),
-                    transaction_amount: item.request.minor_amount.get_amount_as_i64(),
+                    transaction_amount: TsysAmountConvertor::convert(
+                        item.request.minor_amount,
+                        item.request.currency,
+                    )
+                    .change_context(errors::ConnectorError::RequestEncodingFailed)?,
                     currency_code: item.request.currency,
                     card_number: card_data.card_number.clone(),
                     expiration_date: card_data
@@ -579,7 +584,7 @@ pub struct TsysCaptureRequest {
     #[serde(rename = "deviceID")]
     device_id: Secret<String>,
     transaction_key: Secret<String>,
-    transaction_amount: i64,
+    transaction_amount: StringMinorUnit,
     #[serde(rename = "transactionID")]
     transaction_id: String,
     #[serde(rename = "developerID")]
@@ -629,7 +634,11 @@ impl<
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?,
             developer_id: auth.developer_id,
-            transaction_amount: item.request.minor_amount_to_capture.get_amount_as_i64(),
+            transaction_amount: TsysAmountConvertor::convert(
+                item.request.minor_amount_to_capture,
+                item.request.currency,
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?,
         };
 
         Ok(Self { capture })
@@ -705,7 +714,7 @@ pub struct TsysReturnRequest {
     #[serde(rename = "deviceID")]
     device_id: Secret<String>,
     transaction_key: Secret<String>,
-    transaction_amount: i64,
+    transaction_amount: StringMinorUnit,
     #[serde(rename = "transactionID")]
     transaction_id: String,
 }
@@ -744,7 +753,11 @@ impl<
         let return_request = TsysReturnRequest {
             device_id: auth.device_id,
             transaction_key: auth.transaction_key,
-            transaction_amount: item.request.refund_amount,
+            transaction_amount: TsysAmountConvertor::convert(
+                MinorUnit(item.request.refund_amount),
+                item.request.currency,
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?,
             transaction_id: item.request.connector_transaction_id.clone(),
         };
 

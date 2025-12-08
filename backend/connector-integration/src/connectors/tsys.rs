@@ -3,17 +3,24 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMinorUnit};
 use domain_types::{
     connector_flow::{
-        Authenticate, Authorize, Capture, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund,
-        SdkSessionToken, Void,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        CreateOrder, CreateSessionToken, DefendDispute, PSync, PostAuthenticate, PreAuthenticate,
+        RSync, Refund, RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
         PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
         PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors::{self},
     payment_method_data::PaymentMethodDataTypes,
@@ -267,6 +274,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // ===== MACRO-BASED CONNECTOR IMPLEMENTATION =====
 // Define connector struct and bridges for all flows
+macros::create_amount_converter_wrapper!(connector_name: Tsys, amount_type: StringMinorUnit);
 macros::create_all_prerequisites!(
     connector_name: Tsys,
     generic_type: T,
@@ -308,7 +316,9 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
-    amount_converters: [],  // TSYS uses MinorUnit (default)
+    amount_converters: [
+        amount_converter: StringMinorUnit
+    ],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
@@ -527,18 +537,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // ===== EMPTY IMPLEMENTATIONS FOR UNSUPPORTED FLOWS =====
 // These are required by ConnectorServiceTrait but not supported by TSYS
-
-use domain_types::connector_flow::{
-    Accept, CreateAccessToken, CreateConnectorCustomer, CreateOrder, CreateSessionToken,
-    DefendDispute, RepeatPayment, SetupMandate, SubmitEvidence, VoidPC,
-};
-use domain_types::connector_types::{
-    AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-    ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-    PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentMethodTokenResponse,
-    PaymentMethodTokenizationData, PaymentsCancelPostCaptureData, RepeatPaymentData,
-    SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-};
 
 // Order Create
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
