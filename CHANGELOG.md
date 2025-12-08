@@ -4,6 +4,24 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.08.0
+
+### Features
+
+- **connector:**
+  - [NUVEI] Connector Integration ([#331](https://github.com/juspay/connector-service/pull/331)) ([`1591db7`](https://github.com/juspay/connector-service/commit/1591db7741666709af7a46d7da24b8303ee3e902))
+  - Introduce barclaycard ([#339](https://github.com/juspay/connector-service/pull/339)) ([`8b72783`](https://github.com/juspay/connector-service/commit/8b72783b1dc23c03725fc2bf27e06d8bafa7347a))
+- GooglePayThirdPartySdk, ApplePayThirdPartySdk, PaypalSdk wallet support for braintree ([#335](https://github.com/juspay/connector-service/pull/335)) ([`d1b0ed3`](https://github.com/juspay/connector-service/commit/d1b0ed30a67dd5c78927cc3203f3620ace7c6950))
+
+### Bug Fixes
+
+- Adyen prod diff check parity ([#345](https://github.com/juspay/connector-service/pull/345)) ([`c95ea4f`](https://github.com/juspay/connector-service/commit/c95ea4fc8da270beb2802d90fa3f32c2509fa398))
+- Diff checker changes in hipay ([#330](https://github.com/juspay/connector-service/pull/330)) ([`2b25613`](https://github.com/juspay/connector-service/commit/2b256130c60318d3f2e79df7da819587f425d04f))
+
+**Full Changelog:** [`2025.12.05.0...2025.12.08.0`](https://github.com/juspay/connector-service/compare/2025.12.05.0...2025.12.08.0)
+
+- - -
+
 ## 2025.12.05.0
 
 ### Features
