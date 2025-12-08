@@ -1643,12 +1643,18 @@ impl<
                     },
                 )))
             }
-            _ => Ok(Self::CardsRefund(Box::new(TrustpayRefundRequestCards {
-                instance_id: item.router_data.request.connector_transaction_id.clone(),
-                amount,
-                currency: item.router_data.request.currency.to_string(),
-                reference: item.router_data.request.refund_id.clone(),
-            }))),
+            Some(enums::PaymentMethod::Card) => {
+                Ok(Self::CardsRefund(Box::new(TrustpayRefundRequestCards {
+                    instance_id: item.router_data.request.connector_transaction_id.clone(),
+                    amount,
+                    currency: item.router_data.request.currency.to_string(),
+                    reference: item.router_data.request.refund_id.clone(),
+                })))
+            }
+            _ => Err(errors::ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("trustpay"),
+            )
+            .into()),
         }
     }
 }
