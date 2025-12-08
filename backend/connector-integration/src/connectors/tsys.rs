@@ -3,7 +3,9 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMinorUnit};
+use common_utils::{
+    errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMinorUnit,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
@@ -534,8 +536,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Tsys<T>
 {
 }
-
-
 
 // Order Create
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
