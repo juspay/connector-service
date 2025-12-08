@@ -28,21 +28,23 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
-use hyperswitch_masking::{Mask, Maskable};
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
 use serde::Serialize;
 use serde_json;
 use transformers::{
-    self as nexinets, NexinetsCaptureOrVoidRequest, NexinetsErrorResponse,
+    self as nexinets, NexinetsCaptureOrVoidRequest,
+    NexinetsCaptureOrVoidRequest as NexinetsVoidRequest, NexinetsErrorResponse,
     NexinetsPaymentResponse as NexinetsCaptureResponse, NexinetsPaymentResponse,
-    NexinetsPaymentsRequest, NexinetsPreAuthOrDebitResponse, NexinetsRefundRequest,
-    NexinetsRefundResponse, NexinetsRefundResponse as RefundSyncResponse,
+    NexinetsPaymentResponse as NexinetsVoidResponse, NexinetsPaymentsRequest,
+    NexinetsPreAuthOrDebitResponse, NexinetsRefundRequest, NexinetsRefundResponse,
+    NexinetsRefundResponse as RefundSyncResponse,
 };
 
 use super::macros;
-use crate::{types::ResponseRouterData, with_error_response_body};
+use crate::{types::ResponseRouterData, utils, with_error_response_body};
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 use error_stack::ResultExt;
@@ -265,6 +267,12 @@ macros::create_all_prerequisites!(
             flow: RSync,
             response_body: RefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: Void,
+            request_body: NexinetsVoidRequest,
+            response_body: NexinetsVoidResponse,
+            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -393,15 +401,13 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-        let order_id = &req.resource_common_data.connector_request_reference_id;
-        let transaction_id = req
-                .request
-                .connector_transaction_id
-                .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+        let meta: nexinets::NexinetsPaymentsMetadata =
+            utils::to_connector_meta(req.request.connector_metadata.clone())?;
+        let order_id = nexinets::get_order_id(&meta)?;
+        let transaction_id = nexinets::get_transaction_id(&meta)?;
         Ok(format!(
             "{}/orders/{order_id}/transactions/{transaction_id}/capture",
-            self.connector_base_url_payments(req),
+            self.connector_base_url_payments(req)
         ))
         }
     }
@@ -504,6 +510,41 @@ macros::macro_connector_implementation!(
     }
 );
 
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Nexinets,
+    curl_request: Json(NexinetsVoidRequest),
+    curl_response: NexinetsVoidResponse,
+    flow_name: Void,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentVoidData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+        let meta: nexinets::NexinetsPaymentsMetadata =
+            utils::to_connector_meta(req.request.connector_metadata.clone().map(|secret| secret.expose()))?;
+        let order_id = nexinets::get_order_id(&meta)?;
+        let transaction_id = nexinets::get_transaction_id(&meta)?;
+        Ok(format!(
+            "{}/orders/{order_id}/transactions/{transaction_id}/cancel",
+            self.connector_base_url_payments(req),
+        ))
+        }
+    }
+);
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateOrder,
@@ -568,11 +609,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         SetupMandateRequestData<T>,
         PaymentsResponseData,
     > for Nexinets<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Nexinets<T>
 {
 }
 
