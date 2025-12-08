@@ -160,6 +160,7 @@ pub struct Connectors {
     pub shift4: ConnectorParams,
     pub barclaycard: ConnectorParams,
     pub nexixpay: ConnectorParams,
+    pub airwallex: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
@@ -6121,6 +6122,13 @@ impl
             })
             .transpose()?;
 
+        // Extract access token from state if present
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(AccessTokenResponseData::from);
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -6140,7 +6148,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
-            access_token: None,
+            access_token,
             session_token: None,
             reference_id: None,
             payment_method_token: None,
