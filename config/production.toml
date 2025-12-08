@@ -21,7 +21,7 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
-tsys.base_url = "https://gateway.transit-pass.com/"
+barclaycard.base_url = "https://api.smartpayfuse.barclaycard"
 shift4.base_url = "https://api.shift4.com"
 bluesnap.base_url = "https://ws.bluesnap.com"
 bluesnap.secondary_base_url = "https://pay.bluesnap.com"
@@ -83,6 +83,7 @@ paysafe.base_url = "https://api.paysafe.com/paymenthub/"
 billwerk.base_url = "https://api.reepay.com/"
 billwerk.secondary_base_url = "https://card.reepay.com/"
 nuvei.base_url = "https://secure.safecharge.com/ppp/api/v1"
+tsys.base_url = "https://gateway.transit-pass.com/"
 
 # Generic Events Configuration
 [events]

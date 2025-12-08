@@ -97,6 +97,7 @@ pub enum ConnectorEnum {
     Iatapay,
     Nmi,
     Shift4,
+    Barclaycard,
     Nexixpay,
     Tsys,
 }
@@ -159,6 +160,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Iatapay => Ok(Self::Iatapay),
             grpc_api_types::payments::Connector::Nmi => Ok(Self::Nmi),
             grpc_api_types::payments::Connector::Shift4 => Ok(Self::Shift4),
+            grpc_api_types::payments::Connector::Barclaycard => Ok(Self::Barclaycard),
             grpc_api_types::payments::Connector::Nexixpay => Ok(Self::Nexixpay),
             grpc_api_types::payments::Connector::Tsys => Ok(Self::Tsys),
             grpc_api_types::payments::Connector::Unspecified => {
@@ -346,7 +348,7 @@ pub struct PaymentFlowData {
     pub return_url: Option<String>,
     pub address: payment_address::PaymentAddress,
     pub auth_type: AuthenticationType,
-    pub connector_meta_data: Option<common_utils::pii::SecretSerdeValue>,
+    pub connector_meta_data: Option<SecretSerdeValue>,
     pub amount_captured: Option<i64>,
     // minor amount for amount frameworka
     pub minor_amount_captured: Option<MinorUnit>,
@@ -1447,6 +1449,8 @@ pub struct RefundFlowData {
     pub connector_response_headers: Option<http::HeaderMap>,
     pub raw_connector_request: Option<Secret<String>>,
     pub access_token: Option<AccessTokenResponseData>,
+    pub connector_meta_data: Option<SecretSerdeValue>,
+    pub test_mode: Option<bool>,
 }
 
 impl RawConnectorRequestResponse for RefundFlowData {
