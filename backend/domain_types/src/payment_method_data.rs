@@ -153,6 +153,12 @@ impl<T: PaymentMethodDataTypes> Card<T> {
             self.card_exp_month.peek()
         )))
     }
+
+    pub fn get_cardholder_name(&self) -> Result<Secret<String>, Error> {
+        self.card_holder_name
+            .clone()
+            .ok_or_else(missing_field_err("card.card_holder_name"))
+    }
 }
 
 impl Card<DefaultPCIHolder> {
