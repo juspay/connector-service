@@ -1,0 +1,1192 @@
+use std::fmt::Debug;
+
+use common_enums::{AttemptStatus, CaptureMethod, RefundStatus};
+use domain_types::{
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_types::{
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
+    },
+    errors,
+    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, WalletData},
+    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
+};
+use error_stack::ResultExt;
+use hyperswitch_masking::{ExposeInterface, Secret};
+use serde::Serialize;
+
+use super::{requests, responses, WorldpayxmlRouterData};
+use crate::types::ResponseRouterData;
+
+const API_VERSION: &str = "1.4";
+
+#[derive(Debug, Clone)]
+pub struct WorldpayxmlAuthType {
+    pub api_username: Secret<String>,
+    pub api_password: Secret<String>,
+    pub merchant_code: Secret<String>,
+}
+
+impl TryFrom<&ConnectorAuthType> for WorldpayxmlAuthType {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+        match auth_type {
+            ConnectorAuthType::SignatureKey {
+                api_key,
+                key1,
+                api_secret,
+            } => Ok(Self {
+                api_username: api_key.to_owned(),
+                api_password: key1.to_owned(),
+                merchant_code: api_secret.to_owned(),
+            }),
+            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+        }
+    }
+}
+
+// Helper function to get currency exponent
+fn get_currency_exponent(currency: common_enums::Currency) -> String {
+    match currency {
+        common_enums::Currency::BHD
+        | common_enums::Currency::IQD
+        | common_enums::Currency::JOD
+        | common_enums::Currency::KWD
+        | common_enums::Currency::LYD
+        | common_enums::Currency::OMR
+        | common_enums::Currency::TND => "3",
+        common_enums::Currency::CLP
+        | common_enums::Currency::DJF
+        | common_enums::Currency::GNF
+        | common_enums::Currency::ISK
+        | common_enums::Currency::JPY
+        | common_enums::Currency::KMF
+        | common_enums::Currency::KRW
+        | common_enums::Currency::PYG
+        | common_enums::Currency::RWF
+        | common_enums::Currency::UGX
+        | common_enums::Currency::VND
+        | common_enums::Currency::VUV
+        | common_enums::Currency::XAF
+        | common_enums::Currency::XOF
+        | common_enums::Currency::XPF => "0",
+        _ => "2",
+    }
+    .to_string()
+}
+
+// Helper function to get payment method XML element
+fn get_worldpayxml_payment_method<T>(
+    payment_method_data: &PaymentMethodData<T>,
+    card: &Card<T>,
+) -> Result<requests::WorldpayxmlPaymentMethod, error_stack::Report<errors::ConnectorError>>
+where
+    T: PaymentMethodDataTypes,
+{
+    match payment_method_data {
+        PaymentMethodData::Card(_) => {
+            let card_data = requests::WorldpayxmlCard {
+                card_number: Secret::new(card.card_number.peek().to_string()),
+                expiry_date: requests::WorldpayxmlExpiryDate {
+                    date: requests::WorldpayxmlDate {
+                        month: card.card_exp_month.clone(),
+                        year: card.card_exp_year.clone(),
+                    },
+                },
+                card_holder_name: card.card_holder_name.clone(),
+                cvc: card.card_cvc.clone(),
+            };
+
+            // Map card network to specific payment method type
+            match card.card_network.as_ref() {
+                Some(network) => match network {
+                    common_enums::CardNetwork::Visa => {
+                        Ok(requests::WorldpayxmlPaymentMethod::VisaSsl(card_data))
+                    }
+                    common_enums::CardNetwork::Mastercard => {
+                        Ok(requests::WorldpayxmlPaymentMethod::EcmcSsl(card_data))
+                    }
+                    _ => Ok(requests::WorldpayxmlPaymentMethod::CardSsl(card_data)),
+                },
+                None => Ok(requests::WorldpayxmlPaymentMethod::CardSsl(card_data)),
+            }
+        }
+        PaymentMethodData::Wallet(WalletData::GooglePay(google_pay_data)) => {
+            // For Google Pay, we use the token data as the signed message
+            // The tokenization_data enum contains the encrypted payment data
+            let token = match &google_pay_data.tokenization_data {
+                domain_types::payment_method_data::GpayTokenizationData::Encrypted(encrypted) => {
+                    encrypted.token.clone() // token is already a String
+                }
+                domain_types::payment_method_data::GpayTokenizationData::Decrypted(_) => {
+                    // For decrypted data, we don't have the token string
+                    // This case might not be used for Worldpayxml
+                    String::new()
+                }
+            };
+            Ok(requests::WorldpayxmlPaymentMethod::PaywithgoogleSsl(
+                requests::WorldpayxmlGooglePay {
+                    protocol_version: "ECv1".to_string(), // Default protocol version
+                    signature: String::new(),             // Signature is part of the token
+                    signed_message: token,
+                },
+            ))
+        }
+        _ => Err(errors::ConnectorError::NotSupported {
+            message: "Selected payment method".to_string(),
+            connector: "worldpayxml",
+        }
+        .into()),
+    }
+}
+
+// Authorize flow transformers
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        WorldpayxmlRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for requests::WorldpayxmlPaymentsRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: WorldpayxmlRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let auth = WorldpayxmlAuthType::try_from(&router_data.connector_auth_type)?;
+
+        // Determine if manual capture
+        let is_manual_capture = router_data.request.capture_method == Some(CaptureMethod::Manual)
+            || router_data.request.capture_method == Some(CaptureMethod::ManualMultiple);
+
+        // Get payment method
+        let payment_method = match &router_data.request.payment_method_data {
+            PaymentMethodData::Card(card) => {
+                get_worldpayxml_payment_method(&router_data.request.payment_method_data, card)?
+            }
+            PaymentMethodData::Wallet(WalletData::GooglePay(_)) => {
+                // For Google Pay, we don't need actual card data, just pass the payment method data
+                // The function will handle the Google Pay case separately
+                get_worldpayxml_payment_method(
+                    &router_data.request.payment_method_data,
+                    // Dummy card data - won't be used for Google Pay
+                    &Card::<T> {
+                        card_number: domain_types::payment_method_data::RawCardNumber(
+                            <T as PaymentMethodDataTypes>::Inner::default(),
+                        ),
+                        card_exp_month: Secret::new(String::new()),
+                        card_exp_year: Secret::new(String::new()),
+                        card_holder_name: None,
+                        card_cvc: Secret::new(String::new()),
+                        card_issuer: None,
+                        card_network: None,
+                        card_type: None,
+                        card_issuing_country: None,
+                        bank_code: None,
+                        nick_name: None,
+                        co_badged_card_data: None,
+                    },
+                )?
+            }
+            _ => {
+                return Err(errors::ConnectorError::NotSupported {
+                    message: "Selected payment method".to_string(),
+                    connector: "worldpayxml",
+                }
+                .into())
+            }
+        };
+
+        // Extract billing address
+        let billing_address = router_data
+            .resource_common_data
+            .address
+            .get_payment_billing()
+            .and_then(|billing| {
+                billing.address.as_ref().map(|addr| {
+                    requests::WorldpayxmlBillingAddress {
+                        address: requests::WorldpayxmlAddress {
+                            first_name: addr.first_name.clone(),
+                            last_name: addr.last_name.clone(),
+                            address1: addr.line1.clone(),
+                            postal_code: addr.zip.clone(),
+                            city: addr.city.clone().map(|c| c.expose()),
+                            country_code: addr.country,
+                        },
+                    }
+                })
+            });
+
+        // Convert amount using the connector's amount converter
+        let converted_amount = super::WorldpayxmlAmountConvertor::convert(
+            router_data.request.minor_amount,
+            router_data.request.currency,
+        )?;
+
+        Ok(Self {
+            version: API_VERSION.to_string(),
+            merchant_code: auth.merchant_code,
+            submit: requests::WorldpayxmlSubmit {
+                order: requests::WorldpayxmlOrder {
+                    order_code: router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                    capture_delay: if is_manual_capture {
+                        Some("OFF".to_string())
+                    } else {
+                        Some("0".to_string())
+                    },
+                    description: router_data
+                        .request
+                        .statement_descriptor
+                        .clone()
+                        .unwrap_or_else(|| "Payment".to_string()),
+                    amount: requests::WorldpayxmlAmount {
+                        value: converted_amount.to_string(),
+                        currency_code: router_data.request.currency.to_string(),
+                        exponent: get_currency_exponent(router_data.request.currency),
+                    },
+                    payment_details: requests::WorldpayxmlPaymentDetails {
+                        action: if is_manual_capture {
+                            "AUTHORISE".to_string()
+                        } else {
+                            "SALE".to_string()
+                        },
+                        payment_method,
+                    },
+                    shopper: requests::WorldpayxmlShopper {
+                        shopper_email_address: router_data.request.email.clone(),
+                    },
+                    billing_address,
+                },
+            },
+        })
+    }
+}
+
+// Capture flow transformers
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<
+        WorldpayxmlRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for requests::WorldpayxmlCaptureRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: WorldpayxmlRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let auth = WorldpayxmlAuthType::try_from(&router_data.connector_auth_type)?;
+
+        // Extract connector_transaction_id from request
+        let connector_transaction_id = router_data
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id()
+            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+
+        // Convert amount using the connector's amount converter
+        let converted_amount = super::WorldpayxmlAmountConvertor::convert(
+            router_data.request.minor_amount_to_capture,
+            router_data.request.currency,
+        )?;
+
+        Ok(Self {
+            version: API_VERSION.to_string(),
+            merchant_code: auth.merchant_code,
+            modify: requests::WorldpayxmlModify {
+                order_modification: requests::WorldpayxmlOrderModification {
+                    order_code: connector_transaction_id.clone(),
+                    capture: requests::WorldpayxmlCapture {
+                        amount: requests::WorldpayxmlAmount {
+                            value: converted_amount.to_string(),
+                            currency_code: router_data.request.currency.to_string(),
+                            exponent: get_currency_exponent(router_data.request.currency),
+                        },
+                    },
+                },
+            },
+        })
+    }
+}
+
+// Void flow transformers
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<
+        WorldpayxmlRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for requests::WorldpayxmlVoidRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: WorldpayxmlRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let auth = WorldpayxmlAuthType::try_from(&router_data.connector_auth_type)?;
+
+        // Extract connector_transaction_id from request
+        let connector_transaction_id = router_data.request.connector_transaction_id.clone();
+
+        Ok(Self {
+            version: API_VERSION.to_string(),
+            merchant_code: auth.merchant_code,
+            modify: requests::WorldpayxmlVoidModify {
+                order_modification: requests::WorldpayxmlVoidOrderModification {
+                    order_code: connector_transaction_id,
+                    cancel: requests::WorldpayxmlCancel {},
+                },
+            },
+        })
+    }
+}
+
+// Refund flow transformers
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<
+        WorldpayxmlRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for requests::WorldpayxmlRefundRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: WorldpayxmlRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let auth = WorldpayxmlAuthType::try_from(&router_data.connector_auth_type)?;
+
+        // Extract connector_transaction_id from request
+        let connector_transaction_id = router_data.request.connector_transaction_id.clone();
+
+        // Convert refund amount using the connector's amount converter
+        let converted_amount = super::WorldpayxmlAmountConvertor::convert(
+            router_data.request.minor_refund_amount,
+            router_data.request.currency,
+        )?;
+
+        Ok(Self {
+            version: API_VERSION.to_string(),
+            merchant_code: auth.merchant_code,
+            modify: requests::WorldpayxmlRefundModify {
+                order_modification: requests::WorldpayxmlRefundOrderModification {
+                    order_code: connector_transaction_id,
+                    refund: requests::WorldpayxmlRefund {
+                        amount: requests::WorldpayxmlAmount {
+                            value: converted_amount.to_string(),
+                            currency_code: router_data.request.currency.to_string(),
+                            exponent: get_currency_exponent(router_data.request.currency),
+                        },
+                    },
+                },
+            },
+        })
+    }
+}
+
+// PSync flow transformers
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<
+        WorldpayxmlRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    > for requests::WorldpayxmlPSyncRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: WorldpayxmlRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let auth = WorldpayxmlAuthType::try_from(&router_data.connector_auth_type)?;
+
+        // Extract connector_transaction_id from request
+        let connector_transaction_id = router_data
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id()
+            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+
+        Ok(Self {
+            version: "1.4".to_string(),
+            merchant_code: auth.merchant_code,
+            inquiry: requests::WorldpayxmlInquiry {
+                order_inquiry: requests::WorldpayxmlOrderInquiry {
+                    order_code: connector_transaction_id,
+                },
+            },
+        })
+    }
+}
+
+// RSync flow transformers - REUSE PSync request structure via type alias
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<
+        WorldpayxmlRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    > for requests::WorldpayxmlRSyncRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: WorldpayxmlRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let auth = WorldpayxmlAuthType::try_from(&router_data.connector_auth_type)?;
+
+        // Extract connector_refund_id from request
+        // This could be either the connector_refund_id OR the original connector_transaction_id
+        let order_code = router_data.request.connector_refund_id.clone();
+
+        Ok(Self {
+            version: "1.4".to_string(),
+            merchant_code: auth.merchant_code,
+            inquiry: requests::WorldpayxmlInquiry {
+                order_inquiry: requests::WorldpayxmlOrderInquiry { order_code },
+            },
+        })
+    }
+}
+
+// Helper function to map lastEvent to AttemptStatus
+fn map_worldpayxml_authorize_status(
+    last_event: &str,
+    is_auto_capture: bool,
+    capture_sync_status: Option<&AttemptStatus>,
+) -> AttemptStatus {
+    match last_event {
+        "AUTHORISED" => {
+            if is_auto_capture {
+                AttemptStatus::Pending
+            } else {
+                // Check if we're in CaptureInitiated or VoidInitiated state
+                match capture_sync_status {
+                    Some(AttemptStatus::CaptureInitiated) => AttemptStatus::CaptureInitiated,
+                    Some(AttemptStatus::VoidInitiated) => AttemptStatus::VoidInitiated,
+                    _ => AttemptStatus::Authorized,
+                }
+            }
+        }
+        "REFUSED" => AttemptStatus::Failure,
+        "CANCELLED" => AttemptStatus::Voided,
+        "CAPTURED" | "SETTLED" => AttemptStatus::Charged,
+        "SENT_FOR_AUTHORISATION" => AttemptStatus::Authorizing,
+        _ => AttemptStatus::Pending,
+    }
+}
+
+// Helper function to map lastEvent to RefundStatus
+fn map_worldpayxml_refund_status(last_event: &str) -> RefundStatus {
+    match last_event {
+        "REFUNDED" => RefundStatus::Success,
+        "SENT_FOR_REFUND" => RefundStatus::Pending,
+        "REFUND_REQUESTED" => RefundStatus::Pending,
+        "SENT_FOR_FAST_REFUND" => RefundStatus::Pending,
+        "REFUNDED_BY_MERCHANT" => RefundStatus::Pending,
+        "REFUND_FAILED" => RefundStatus::Failure,
+        "CAPTURED" | "SETTLED" => RefundStatus::Pending,
+        _ => RefundStatus::Pending, // Default to pending for unknown statuses
+    }
+}
+
+// Response transformers - Authorize
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        ResponseRouterData<
+            responses::WorldpayxmlAuthorizeResponse,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        >,
+    >
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            responses::WorldpayxmlAuthorizeResponse,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+        let router_data = &item.router_data;
+
+        // Check for top-level error first
+        if let Some(error) = &response.reply.error {
+            return Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status: AttemptStatus::Failure,
+                    ..router_data.resource_common_data.clone()
+                },
+                response: Err(ErrorResponse {
+                    code: error.code.clone(),
+                    message: error.message.clone(),
+                    reason: Some(error.message.clone()),
+                    status_code: item.http_code,
+                    attempt_status: Some(AttemptStatus::Failure),
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                }),
+                ..router_data.clone()
+            });
+        }
+
+        // Extract order status
+        let order_status = response
+            .reply
+            .order_status
+            .as_ref()
+            .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        // Check for error in order status
+        if let Some(error) = &order_status.error {
+            return Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status: AttemptStatus::Failure,
+                    ..router_data.resource_common_data.clone()
+                },
+                response: Err(ErrorResponse {
+                    code: error.code.clone(),
+                    message: error.message.clone(),
+                    reason: Some(error.message.clone()),
+                    status_code: item.http_code,
+                    attempt_status: Some(AttemptStatus::Failure),
+                    connector_transaction_id: Some(order_status.order_code.clone()),
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                }),
+                ..router_data.clone()
+            });
+        }
+
+        // Extract payment details
+        let payment = order_status
+            .payment
+            .as_ref()
+            .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        // Determine if auto-capture
+        let is_auto_capture = router_data.request.capture_method != Some(CaptureMethod::Manual)
+            && router_data.request.capture_method != Some(CaptureMethod::ManualMultiple);
+
+        // Map status from lastEvent
+        let status = map_worldpayxml_authorize_status(
+            &payment.last_event,
+            is_auto_capture,
+            Some(&router_data.resource_common_data.status),
+        );
+
+        // Build success response
+        let payments_response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(order_status.order_code.clone()),
+            redirection_data: None,
+            mandate_reference: None,
+            connector_metadata: None,
+            network_txn_id: payment
+                .authorisation_id
+                .as_ref()
+                .map(|auth_id| auth_id.id.clone()),
+            connector_response_reference_id: Some(order_status.order_code.clone()),
+            incremental_authorization_allowed: None,
+            status_code: item.http_code,
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data.clone()
+            },
+            response: Ok(payments_response_data),
+            ..router_data.clone()
+        })
+    }
+}
+
+// Response transformers - Capture
+impl TryFrom<
+        ResponseRouterData<
+            responses::WorldpayxmlCaptureResponse,
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        >,
+    >
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            responses::WorldpayxmlCaptureResponse,
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+        let router_data = &item.router_data;
+
+        // Check for top-level error first
+        if let Some(error) = &response.reply.error {
+            return Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status: AttemptStatus::CaptureFailed,
+                    ..router_data.resource_common_data.clone()
+                },
+                response: Err(ErrorResponse {
+                    code: error.code.clone(),
+                    message: error.message.clone(),
+                    reason: Some(error.message.clone()),
+                    status_code: item.http_code,
+                    attempt_status: Some(AttemptStatus::CaptureFailed),
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                }),
+                ..router_data.clone()
+            });
+        }
+
+        // Extract ok response
+        let ok_response = response
+            .reply
+            .ok
+            .as_ref()
+            .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        // Extract captureReceived
+        let capture_received = &ok_response.capture_received;
+
+        // Build success response
+        // Status is CaptureInitiated (capture confirmed but not yet processed)
+        // Actual completion must be verified via PSync
+        let payments_response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(capture_received.order_code.clone()),
+            redirection_data: None,
+            mandate_reference: None,
+            connector_metadata: None,
+            network_txn_id: None,
+            connector_response_reference_id: Some(capture_received.order_code.clone()),
+            incremental_authorization_allowed: None,
+            status_code: item.http_code,
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: AttemptStatus::CaptureInitiated,
+                ..router_data.resource_common_data.clone()
+            },
+            response: Ok(payments_response_data),
+            ..router_data.clone()
+        })
+    }
+}
+
+// Response transformers - Void
+impl TryFrom<
+        ResponseRouterData<
+            responses::WorldpayxmlVoidResponse,
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        >,
+    >
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            responses::WorldpayxmlVoidResponse,
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+        let router_data = &item.router_data;
+
+        // Check for top-level error first
+        if let Some(error) = &response.reply.error {
+            return Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status: AttemptStatus::VoidFailed,
+                    ..router_data.resource_common_data.clone()
+                },
+                response: Err(ErrorResponse {
+                    code: error.code.clone(),
+                    message: error.message.clone(),
+                    reason: Some(error.message.clone()),
+                    status_code: item.http_code,
+                    attempt_status: Some(AttemptStatus::VoidFailed),
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                }),
+                ..router_data.clone()
+            });
+        }
+
+        // Extract ok response
+        let ok_response = response
+            .reply
+            .ok
+            .as_ref()
+            .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        // Extract cancelReceived
+        let cancel_received = &ok_response.cancel_received;
+
+        // Build success response
+        // Status is VoidInitiated (cancellation confirmed but not yet processed)
+        // Actual completion must be verified via PSync
+        let payments_response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(cancel_received.order_code.clone()),
+            redirection_data: None,
+            mandate_reference: None,
+            connector_metadata: None,
+            network_txn_id: None,
+            connector_response_reference_id: Some(cancel_received.order_code.clone()),
+            incremental_authorization_allowed: None,
+            status_code: item.http_code,
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: AttemptStatus::VoidInitiated,
+                ..router_data.resource_common_data.clone()
+            },
+            response: Ok(payments_response_data),
+            ..router_data.clone()
+        })
+    }
+}
+
+// Response transformers - PSync
+impl TryFrom<
+        ResponseRouterData<
+            responses::WorldpayxmlTransactionResponse,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
+    >
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            responses::WorldpayxmlTransactionResponse,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
+        // Match on the response enum to handle both XML and JSON formats
+        match &item.response {
+            responses::WorldpayxmlTransactionResponse::Payment(xml_response) => {
+                // Process XML response (same structure as Authorize)
+                let response = xml_response.as_ref();
+
+                // Check for top-level error first
+                if let Some(error) = &response.reply.error {
+                    return Ok(Self {
+                        resource_common_data: PaymentFlowData {
+                            status: AttemptStatus::Failure,
+                            ..router_data.resource_common_data.clone()
+                        },
+                        response: Err(ErrorResponse {
+                            code: error.code.clone(),
+                            message: error.message.clone(),
+                            reason: Some(error.message.clone()),
+                            status_code: item.http_code,
+                            attempt_status: Some(AttemptStatus::Failure),
+                            connector_transaction_id: None,
+                            network_decline_code: None,
+                            network_advice_code: None,
+                            network_error_message: None,
+                        }),
+                        ..router_data.clone()
+                    });
+                }
+
+                // Extract order status
+                let order_status = response
+                    .reply
+                    .order_status
+                    .as_ref()
+                    .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+                // Special handling: If error exists but payment is None, return current status (don't fail)
+                if let Some(error) = &order_status.error {
+                    if order_status.payment.is_none() {
+                        // Error exists but no payment data - return current status as Pending
+                        let payments_response_data = PaymentsResponseData::TransactionResponse {
+                            resource_id: ResponseId::ConnectorTransactionId(order_status.order_code.clone()),
+                            redirection_data: None,
+                            mandate_reference: None,
+                            connector_metadata: None,
+                            network_txn_id: None,
+                            connector_response_reference_id: Some(order_status.order_code.clone()),
+                            incremental_authorization_allowed: None,
+                            status_code: item.http_code,
+                        };
+
+                        return Ok(Self {
+                            resource_common_data: PaymentFlowData {
+                                status: AttemptStatus::Pending,
+                                ..router_data.resource_common_data.clone()
+                            },
+                            response: Ok(payments_response_data),
+                            ..router_data.clone()
+                        });
+                    }
+
+                    // Error exists with payment data - fail the payment
+                    return Ok(Self {
+                        resource_common_data: PaymentFlowData {
+                            status: AttemptStatus::Failure,
+                            ..router_data.resource_common_data.clone()
+                        },
+                        response: Err(ErrorResponse {
+                            code: error.code.clone(),
+                            message: error.message.clone(),
+                            reason: Some(error.message.clone()),
+                            status_code: item.http_code,
+                            attempt_status: Some(AttemptStatus::Failure),
+                            connector_transaction_id: Some(order_status.order_code.clone()),
+                            network_decline_code: None,
+                            network_advice_code: None,
+                            network_error_message: None,
+                        }),
+                        ..router_data.clone()
+                    });
+                }
+
+                // Extract payment details
+                let payment = order_status
+                    .payment
+                    .as_ref()
+                    .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+                // Determine if auto-capture from request data
+                let is_auto_capture = router_data.request.capture_method != Some(CaptureMethod::Manual)
+                    && router_data.request.capture_method != Some(CaptureMethod::ManualMultiple);
+
+                // Map status from lastEvent - reuse the helper function
+                let status = map_worldpayxml_authorize_status(
+                    &payment.last_event,
+                    is_auto_capture,
+                    Some(&router_data.resource_common_data.status),
+                );
+
+                // Build success response
+                let payments_response_data = PaymentsResponseData::TransactionResponse {
+                    resource_id: ResponseId::ConnectorTransactionId(order_status.order_code.clone()),
+                    redirection_data: None,
+                    mandate_reference: None,
+                    connector_metadata: None,
+                    network_txn_id: payment
+                        .authorisation_id
+                        .as_ref()
+                        .map(|auth_id| auth_id.id.clone()),
+                    connector_response_reference_id: Some(order_status.order_code.clone()),
+                    incremental_authorization_allowed: None,
+                    status_code: item.http_code,
+                };
+
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..router_data.resource_common_data.clone()
+                    },
+                    response: Ok(payments_response_data),
+                    ..router_data.clone()
+                })
+            }
+            responses::WorldpayxmlTransactionResponse::Webhook(webhook_response) => {
+                // Process JSON webhook response
+                let order_code = webhook_response
+                    .order_code
+                    .clone()
+                    .unwrap_or_else(|| "unknown".to_string());
+
+                let last_event = webhook_response
+                    .last_event
+                    .as_ref()
+                    .or(webhook_response.payment_status.as_ref())
+                    .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+                // Determine if auto-capture from request data
+                let is_auto_capture = router_data.request.capture_method != Some(CaptureMethod::Manual)
+                    && router_data.request.capture_method != Some(CaptureMethod::ManualMultiple);
+
+                // Map status from lastEvent
+                let status = map_worldpayxml_authorize_status(
+                    last_event,
+                    is_auto_capture,
+                    Some(&router_data.resource_common_data.status),
+                );
+
+                // Build success response
+                let payments_response_data = PaymentsResponseData::TransactionResponse {
+                    resource_id: ResponseId::ConnectorTransactionId(order_code.clone()),
+                    redirection_data: None,
+                    mandate_reference: None,
+                    connector_metadata: None,
+                    network_txn_id: None,
+                    connector_response_reference_id: Some(order_code),
+                    incremental_authorization_allowed: None,
+                    status_code: item.http_code,
+                };
+
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..router_data.resource_common_data.clone()
+                    },
+                    response: Ok(payments_response_data),
+                    ..router_data.clone()
+                })
+            }
+        }
+    }
+}
+
+// Response transformers - Refund
+impl TryFrom<
+        ResponseRouterData<
+            responses::WorldpayxmlRefundResponse,
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        >,
+    >
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            responses::WorldpayxmlRefundResponse,
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+        let router_data = &item.router_data;
+
+        // Check for top-level error first
+        if let Some(error) = &response.reply.error {
+            return Ok(Self {
+                response: Err(ErrorResponse {
+                    code: error.code.clone(),
+                    message: error.message.clone(),
+                    reason: Some(error.message.clone()),
+                    status_code: item.http_code,
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                }),
+                ..router_data.clone()
+            });
+        }
+
+        // Extract ok response
+        let ok_response = response
+            .reply
+            .ok
+            .as_ref()
+            .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        // Extract refundReceived
+        let refund_received = &ok_response.refund_received;
+
+        // Build success response
+        // Status is Pending (refund initiated but not completed)
+        // Actual completion must be verified via RSync
+        let refunds_response_data = RefundsResponseData {
+            connector_refund_id: refund_received.order_code.clone(),
+            refund_status: RefundStatus::Pending,
+            status_code: item.http_code,
+        };
+
+        Ok(Self {
+            response: Ok(refunds_response_data),
+            ..router_data.clone()
+        })
+    }
+}
+
+// Response transformers - RSync (REUSE PSync response structure via type alias)
+impl TryFrom<
+        ResponseRouterData<
+            responses::WorldpayxmlRsyncResponse,
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        >,
+    >
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            responses::WorldpayxmlRsyncResponse,
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
+        // Match on the response enum to handle both XML and JSON formats (same as PSync)
+        match &item.response {
+            responses::WorldpayxmlTransactionResponse::Payment(xml_response) => {
+                // Process XML response
+                let response = xml_response.as_ref();
+
+                // Check for top-level error first
+                if let Some(error) = &response.reply.error {
+                    return Ok(Self {
+                        response: Err(ErrorResponse {
+                            code: error.code.clone(),
+                            message: error.message.clone(),
+                            reason: Some(error.message.clone()),
+                            status_code: item.http_code,
+                            attempt_status: None,
+                            connector_transaction_id: None,
+                            network_decline_code: None,
+                            network_advice_code: None,
+                            network_error_message: None,
+                        }),
+                        ..router_data.clone()
+                    });
+                }
+
+                // Extract order status
+                let order_status = response
+                    .reply
+                    .order_status
+                    .as_ref()
+                    .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+                // Special handling: If error exists but payment is None, return Pending (don't fail)
+                if let Some(_error) = &order_status.error {
+                    if order_status.payment.is_none() {
+                        // Error exists but no payment data - return current status as Pending
+                        let refunds_response_data = RefundsResponseData {
+                            connector_refund_id: order_status.order_code.clone(),
+                            refund_status: RefundStatus::Pending,
+                            status_code: item.http_code,
+                        };
+
+                        return Ok(Self {
+                            response: Ok(refunds_response_data),
+                            ..router_data.clone()
+                        });
+                    }
+                }
+
+                // Extract payment details
+                let payment = order_status
+                    .payment
+                    .as_ref()
+                    .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+                // Map status from lastEvent using refund status mapping
+                let refund_status = map_worldpayxml_refund_status(&payment.last_event);
+
+                // Check if refund failed and extract error details from ISO8583ReturnCode
+                if refund_status == RefundStatus::Failure {
+                    if let Some(return_code) = &payment.iso8583_return_code {
+                        return Ok(Self {
+                            response: Err(ErrorResponse {
+                                code: return_code.code.clone(),
+                                message: return_code.description.clone(),
+                                reason: Some(return_code.description.clone()),
+                                status_code: item.http_code,
+                                attempt_status: None,
+                                connector_transaction_id: Some(order_status.order_code.clone()),
+                                network_decline_code: None,
+                                network_advice_code: None,
+                                network_error_message: None,
+                            }),
+                            ..router_data.clone()
+                        });
+                    }
+                }
+
+                // Build success response
+                let refunds_response_data = RefundsResponseData {
+                    connector_refund_id: order_status.order_code.clone(),
+                    refund_status,
+                    status_code: item.http_code,
+                };
+
+                Ok(Self {
+                    response: Ok(refunds_response_data),
+                    ..router_data.clone()
+                })
+            }
+            responses::WorldpayxmlTransactionResponse::Webhook(webhook_response) => {
+                // Process JSON webhook response
+                let order_code = webhook_response
+                    .order_code
+                    .clone()
+                    .unwrap_or_else(|| "unknown".to_string());
+
+                let last_event = webhook_response
+                    .last_event
+                    .as_ref()
+                    .or(webhook_response.payment_status.as_ref())
+                    .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+                // Map status from lastEvent using refund status mapping
+                let refund_status = map_worldpayxml_refund_status(last_event);
+
+                // Build success response
+                let refunds_response_data = RefundsResponseData {
+                    connector_refund_id: order_code,
+                    refund_status,
+                    status_code: item.http_code,
+                };
+
+                Ok(Self {
+                    response: Ok(refunds_response_data),
+                    ..router_data.clone()
+                })
+            }
+        }
+    }
+}

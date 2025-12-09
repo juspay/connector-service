@@ -84,6 +84,7 @@ billwerk.base_url = "https://api.reepay.com/"
 billwerk.secondary_base_url = "https://card.reepay.com/"
 nuvei.base_url = "https://ppp-test.nuvei.com/ppp/api/v1"
 bamboraapac.base_url = "https://demo.ippayments.com.au/interface/api"
+worldpayxml.base_url = "https://secure-test.worldpay.com/jsp/merchant/xml/paymentService.jsp"
 
 # Generic Events Configuration
 [events]
