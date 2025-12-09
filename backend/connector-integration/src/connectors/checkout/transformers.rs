@@ -438,38 +438,29 @@ impl<
                 .get_optional_billing_country(),
         });
 
-        let (
-            source_var,
-            previous_payment_id,
-            merchant_initiated,
-            store_for_future_use,
-        ) = match item.router_data.request.payment_method_data.clone() {
-            PaymentMethodData::Card(ccard) => {
-                let (first_name, last_name) = split_account_holder_name(ccard.card_holder_name);
+        let (source_var, previous_payment_id, merchant_initiated, store_for_future_use) =
+            match item.router_data.request.payment_method_data.clone() {
+                PaymentMethodData::Card(ccard) => {
+                    let (first_name, last_name) = split_account_holder_name(ccard.card_holder_name);
 
-                let payment_source = PaymentSource::Card(CardSource {
-                    source_type: CheckoutSourceTypes::Card,
-                    number: ccard.card_number.clone(),
-                    expiry_month: ccard.card_exp_month.clone(),
-                    expiry_year: ccard.card_exp_year.clone(),
-                    cvv: Some(ccard.card_cvc),
-                    billing_address: billing_details,
-                    account_holder: Some(CheckoutAccountHolderDetails {
-                        first_name,
-                        last_name,
-                    }),
-                });
-                Ok((
-                    payment_source,
-                    None,
-                    Some(false),
-                    store_for_future_use,
-                ))
-            }
-            _ => Err(errors::ConnectorError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("checkout"),
-            )),
-        }?;
+                    let payment_source = PaymentSource::Card(CardSource {
+                        source_type: CheckoutSourceTypes::Card,
+                        number: ccard.card_number.clone(),
+                        expiry_month: ccard.card_exp_month.clone(),
+                        expiry_year: ccard.card_exp_year.clone(),
+                        cvv: Some(ccard.card_cvc),
+                        billing_address: billing_details,
+                        account_holder: Some(CheckoutAccountHolderDetails {
+                            first_name,
+                            last_name,
+                        }),
+                    });
+                    Ok((payment_source, None, Some(false), store_for_future_use))
+                }
+                _ => Err(errors::ConnectorError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("checkout"),
+                )),
+            }?;
 
         let authentication_data = item.router_data.request.authentication_data.as_ref();
 
