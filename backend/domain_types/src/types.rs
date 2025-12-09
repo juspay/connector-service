@@ -174,6 +174,8 @@ pub struct Connectors {
     pub shift4: ConnectorParams,
     pub barclaycard: ConnectorParams,
     pub nexixpay: ConnectorParams,
+    pub airwallex: ConnectorParams,
+    pub bankofamerica: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
@@ -3885,6 +3887,18 @@ impl
             .ok()
             .flatten();
 
+        let payment_method = value
+            .payment_method_type
+            .map(|pm_type_i32| {
+                // Convert i32 to gRPC PaymentMethodType enum
+                let grpc_pm_type =
+                    grpc_api_types::payments::PaymentMethodType::try_from(pm_type_i32)
+                        .unwrap_or(grpc_api_types::payments::PaymentMethodType::Unspecified);
+
+                // Convert from gRPC enum to internal PaymentMethod using ForeignTryFrom
+                common_enums::PaymentMethod::foreign_try_from(grpc_pm_type)
+            })
+            .transpose()?;
         Ok(RefundFlowData {
             status: common_enums::RefundStatus::Pending,
             refund_id: None,
@@ -3898,6 +3912,7 @@ impl
             access_token,
             connector_meta_data,
             test_mode: value.test_mode,
+            payment_method,
         })
     }
 }
@@ -3933,6 +3948,19 @@ impl
             .ok()
             .flatten();
 
+        let payment_method = value
+            .payment_method_type
+            .map(|pm_type_i32| {
+                // Convert i32 to gRPC PaymentMethodType enum
+                let grpc_pm_type =
+                    grpc_api_types::payments::PaymentMethodType::try_from(pm_type_i32)
+                        .unwrap_or(grpc_api_types::payments::PaymentMethodType::Unspecified);
+
+                // Convert from gRPC enum to internal PaymentMethod using ForeignTryFrom
+                common_enums::PaymentMethod::foreign_try_from(grpc_pm_type)
+            })
+            .transpose()?;
+
         Ok(RefundFlowData {
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
@@ -3947,6 +3975,7 @@ impl
             access_token,
             connector_meta_data,
             test_mode: value.test_mode,
+            payment_method,
         })
     }
 }
@@ -3979,6 +4008,18 @@ impl
             .ok()
             .flatten();
 
+        let payment_method = value
+            .payment_method_type
+            .map(|pm_type_i32| {
+                // Convert i32 to gRPC PaymentMethodType enum
+                let grpc_pm_type =
+                    grpc_api_types::payments::PaymentMethodType::try_from(pm_type_i32)
+                        .unwrap_or(grpc_api_types::payments::PaymentMethodType::Unspecified);
+
+                // Convert from gRPC enum to internal PaymentMethod using ForeignTryFrom
+                common_enums::PaymentMethod::foreign_try_from(grpc_pm_type)
+            })
+            .transpose()?;
         Ok(RefundFlowData {
             status: common_enums::RefundStatus::Pending,
             refund_id: Some(value.refund_id),
@@ -3992,6 +4033,7 @@ impl
             access_token,
             connector_meta_data,
             test_mode: value.test_mode,
+            payment_method,
         })
     }
 }
@@ -4027,6 +4069,19 @@ impl
             .ok()
             .flatten();
 
+        let payment_method = value
+            .payment_method_type
+            .map(|pm_type_i32| {
+                // Convert i32 to gRPC PaymentMethodType enum
+                let grpc_pm_type =
+                    grpc_api_types::payments::PaymentMethodType::try_from(pm_type_i32)
+                        .unwrap_or(grpc_api_types::payments::PaymentMethodType::Unspecified);
+
+                // Convert from gRPC enum to internal PaymentMethod using ForeignTryFrom
+                common_enums::PaymentMethod::foreign_try_from(grpc_pm_type)
+            })
+            .transpose()?;
+
         Ok(RefundFlowData {
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
@@ -4041,7 +4096,74 @@ impl
             access_token,
             connector_meta_data,
             test_mode: value.test_mode,
+            payment_method,
         })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for common_enums::PaymentMethod {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::PaymentMethodType,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::PaymentMethodType::Credit => Ok(Self::Card),
+            grpc_api_types::payments::PaymentMethodType::Debit => Ok(Self::Card),
+
+            grpc_api_types::payments::PaymentMethodType::ApplePay => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::GooglePay => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::AmazonPay => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::PayPal => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::WeChatPay => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::AliPay => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::Cashapp => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::RevolutPay => Ok(Self::Wallet),
+
+            grpc_api_types::payments::PaymentMethodType::UpiCollect => Ok(Self::Upi),
+            grpc_api_types::payments::PaymentMethodType::UpiIntent => Ok(Self::Upi),
+
+            grpc_api_types::payments::PaymentMethodType::Affirm => Ok(Self::PayLater),
+            grpc_api_types::payments::PaymentMethodType::AfterpayClearpay => Ok(Self::PayLater),
+            grpc_api_types::payments::PaymentMethodType::Alma => Ok(Self::PayLater),
+            grpc_api_types::payments::PaymentMethodType::Atome => Ok(Self::PayLater),
+
+            grpc_api_types::payments::PaymentMethodType::BancontactCard => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethodType::Ideal => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethodType::Sofort => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethodType::Trustly => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethodType::Giropay => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethodType::Eps => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethodType::Przelewy24 => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethodType::Blik => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethodType::Bizum => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethodType::OpenBankingUk => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethodType::OnlineBankingFpx => Ok(Self::BankRedirect),
+
+            grpc_api_types::payments::PaymentMethodType::Ach => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethodType::Sepa => Ok(Self::BankTransfer),
+            grpc_api_types::payments::PaymentMethodType::Bacs => Ok(Self::BankTransfer),
+
+            grpc_api_types::payments::PaymentMethodType::ClassicReward => Ok(Self::Reward),
+            grpc_api_types::payments::PaymentMethodType::Evoucher => Ok(Self::Reward),
+
+            grpc_api_types::payments::PaymentMethodType::CryptoCurrency => Ok(Self::Crypto),
+
+            grpc_api_types::payments::PaymentMethodType::DuitNow => Ok(Self::RealTimePayment),
+
+            grpc_api_types::payments::PaymentMethodType::Boleto => Ok(Self::Voucher),
+            grpc_api_types::payments::PaymentMethodType::Oxxo => Ok(Self::Voucher),
+            grpc_api_types::payments::PaymentMethodType::CardRedirect => Ok(Self::CardRedirect),
+
+            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "UNSUPPORTED_PAYMENT_METHOD_TYPE".to_owned(),
+                error_identifier: 400,
+                error_message: "This payment method type cannot be mapped to a high-level category"
+                    .to_owned(),
+                error_object: None,
+            })
+            .into()),
+        }
     }
 }
 
@@ -6129,6 +6251,13 @@ impl
             })
             .transpose()?;
 
+        // Extract access token from state if present
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(AccessTokenResponseData::from);
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -6148,7 +6277,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
-            access_token: None,
+            access_token,
             session_token: None,
             reference_id: None,
             payment_method_token: None,
