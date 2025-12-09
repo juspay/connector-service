@@ -268,8 +268,8 @@ impl<T: PaymentMethodDataTypes>
                     Ok(get_payments_response(auth_response, item.http_code)),
                     AttemptStatus::Authorized,
                 ),
-                TsysResponseTypes::ErrorResponse(_) => (
-                    Err(get_error_response(item.http_code)),
+                TsysResponseTypes::ErrorResponse(error_response) => (
+                    Err(get_error_response(&error_response, item.http_code)),
                     AttemptStatus::AuthorizationFailed,
                 ),
             },
@@ -278,15 +278,22 @@ impl<T: PaymentMethodDataTypes>
                     Ok(get_payments_response(sale_response, item.http_code)),
                     AttemptStatus::Charged,
                 ),
-                TsysResponseTypes::ErrorResponse(_) => (
-                    Err(get_error_response(item.http_code)),
+                TsysResponseTypes::ErrorResponse(error_response) => (
+                    Err(get_error_response(&error_response, item.http_code)),
                     AttemptStatus::Failure,
                 ),
             },
-            _ => (
-                Err(get_error_response(item.http_code)),
-                AttemptStatus::Failure,
-            ),
+            _ => {
+                let generic_error = TsysErrorResponse {
+                    status: TsysPaymentStatus::Fail,
+                    response_code: item.http_code.to_string(),
+                    response_message: item.http_code.to_string(),
+                };
+                (
+                    Err(get_error_response(&generic_error, item.http_code)),
+                    AttemptStatus::Failure,
+                )
+            },
         };
 
         Ok(Self {
@@ -323,15 +330,22 @@ impl
                     Ok(get_payments_response(capture_response, item.http_code)),
                     AttemptStatus::Charged,
                 ),
-                TsysResponseTypes::ErrorResponse(_) => (
-                    Err(get_error_response(item.http_code)),
+                TsysResponseTypes::ErrorResponse(error_response) => (
+                    Err(get_error_response(&error_response, item.http_code)),
                     AttemptStatus::CaptureFailed,
                 ),
             },
-            _ => (
-                Err(get_error_response(item.http_code)),
-                AttemptStatus::CaptureFailed,
-            ),
+            _ => {
+                let generic_error = TsysErrorResponse {
+                    status: TsysPaymentStatus::Fail,
+                    response_code: item.http_code.to_string(),
+                    response_message: item.http_code.to_string(),
+                };
+                (
+                    Err(get_error_response(&generic_error, item.http_code)),
+                    AttemptStatus::CaptureFailed,
+                )
+            },
         };
 
         Ok(Self {
@@ -368,15 +382,22 @@ impl
                     Ok(get_payments_response(void_response, item.http_code)),
                     AttemptStatus::Voided,
                 ),
-                TsysResponseTypes::ErrorResponse(_) => (
-                    Err(get_error_response(item.http_code)),
+                TsysResponseTypes::ErrorResponse(error_response) => (
+                    Err(get_error_response(&error_response, item.http_code)),
                     AttemptStatus::VoidFailed,
                 ),
             },
-            _ => (
-                Err(get_error_response(item.http_code)),
-                AttemptStatus::VoidFailed,
-            ),
+            _ => {
+                let generic_error = TsysErrorResponse {
+                    status: TsysPaymentStatus::Fail,
+                    response_code: item.http_code.to_string(),
+                    response_message: item.http_code.to_string(),
+                };
+                (
+                    Err(get_error_response(&generic_error, item.http_code)),
+                    AttemptStatus::VoidFailed,
+                )
+            },
         };
 
         Ok(Self {
@@ -557,8 +578,8 @@ impl
                 Ok(get_payments_sync_response(&search_response, item.http_code)),
                 AttemptStatus::from(search_response.transaction_details),
             ),
-            SearchResponseTypes::ErrorResponse(_) => (
-                Err(get_error_response(item.http_code)),
+            SearchResponseTypes::ErrorResponse(error_response) => (
+                Err(get_error_response(&error_response, item.http_code)),
                 item.router_data.resource_common_data.status,
             ),
         };
@@ -813,7 +834,7 @@ impl
                 refund_status: common_enums::enums::RefundStatus::from(return_response.status),
                 status_code: item.http_code,
             }),
-            TsysResponseTypes::ErrorResponse(_) => Err(get_error_response(item.http_code)),
+            TsysResponseTypes::ErrorResponse(error_response) => Err(get_error_response(&error_response, item.http_code)),
         };
 
         Ok(Self {
@@ -894,7 +915,9 @@ impl
                 ),
                 status_code: item.http_code,
             }),
-            SearchResponseTypes::ErrorResponse(_) => Err(get_error_response(item.http_code)),
+            SearchResponseTypes::ErrorResponse(error_response) => {
+                Err(get_error_response(&error_response, item.http_code))
+            },
         };
 
         Ok(Self {
@@ -908,11 +931,14 @@ impl
 // ERROR RESPONSE HELPER
 // ============================================================================
 
-fn get_error_response(status_code: u16) -> domain_types::router_data::ErrorResponse {
+fn get_error_response(
+    connector_response: &TsysErrorResponse,
+    status_code: u16,
+) -> domain_types::router_data::ErrorResponse {
     domain_types::router_data::ErrorResponse {
-        code: status_code.to_string(),
-        message: "Payment failed".to_string(),
-        reason: Some("Transaction declined".to_string()),
+        code: connector_response.response_code.clone(),
+        message: connector_response.response_message.clone(),
+        reason: Some(connector_response.response_message.clone()),
         status_code,
         attempt_status: None,
         connector_transaction_id: None,
