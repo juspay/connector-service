@@ -494,6 +494,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         test_mode: Some(true),
         state: None,
         merchant_account_metadata: HashMap::new(),
+        payment_method_type: None,
     }
 }
 
@@ -517,6 +518,7 @@ fn create_refund_get_request(transaction_id: &str, refund_id: &str) -> RefundSer
         refund_metadata: HashMap::new(),
         state: None,
         merchant_account_metadata: HashMap::new(),
+        payment_method_type: None,
     }
 }
 
