@@ -85,6 +85,7 @@ billwerk.base_url = "https://api.reepay.com/"
 billwerk.secondary_base_url = "https://card.reepay.com/"
 nuvei.base_url = "https://secure.safecharge.com/ppp/api/v1"
 tsys.base_url = "https://gateway.transit-pass.com/"
+bankofamerica.base_url = "https://apitest.merchant-services.bankofamerica.com/"
 
 # Generic Events Configuration
 [events]
