@@ -2884,11 +2884,14 @@ impl<
             }
         };
 
-        // RepeatPayment always captures immediately (MIT transactions)
-        let intent = PaypalPaymentIntent::Capture;
-
+        // Determine intent based on capture_method
+        let intent = if item.router_data.request.is_auto_capture()? {
+            PaypalPaymentIntent::Capture
+        } else {
+            PaypalPaymentIntent::Authorize
+        };
         let paypal_auth: PaypalAuthType =
-            PaypalAuthType::try_from(&item.router_data.resource_common_data.connector_auth_type)?;
+            PaypalAuthType::try_from(&item.router_data.connector_auth_type)?;
         let payee = get_payee(&paypal_auth);
 
         let amount = OrderRequestAmount::try_from(&item)?;
@@ -2898,7 +2901,6 @@ impl<
             .connector_request_reference_id
             .clone();
         
-        let shipping_address = ShippingAddress::from(&item);
         let item_details = vec![ItemDetails::try_from(&item)?];
 
         let purchase_units = vec![PurchaseUnitRequest {
@@ -2907,7 +2909,7 @@ impl<
             invoice_id: Some(connector_request_reference_id),
             amount,
             payee,
-            shipping: Some(shipping_address),
+            shipping: None,
             items: item_details,
         }];
 
@@ -2920,9 +2922,7 @@ impl<
             })?;
 
         let payment_source = match payment_method_type {
-            common_enums::PaymentMethodType::Credit
-            | common_enums::PaymentMethodType::Debit
-            | common_enums::PaymentMethodType::Card => Some(PaymentSourceItem::Card(
+            common_enums::PaymentMethodType::Card => Some(PaymentSourceItem::Card(
                 CardRequest::CardVaultStruct(VaultStruct {
                     vault_id: Secret::new(connector_mandate_id),
                 }),
