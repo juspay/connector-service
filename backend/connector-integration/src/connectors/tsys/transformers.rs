@@ -293,7 +293,7 @@ impl<T: PaymentMethodDataTypes>
                     Err(get_error_response(&generic_error, item.http_code)),
                     AttemptStatus::Failure,
                 )
-            },
+            }
         };
 
         Ok(Self {
@@ -345,7 +345,7 @@ impl
                     Err(get_error_response(&generic_error, item.http_code)),
                     AttemptStatus::CaptureFailed,
                 )
-            },
+            }
         };
 
         Ok(Self {
@@ -397,7 +397,7 @@ impl
                     Err(get_error_response(&generic_error, item.http_code)),
                     AttemptStatus::VoidFailed,
                 )
-            },
+            }
         };
 
         Ok(Self {
@@ -834,7 +834,9 @@ impl
                 refund_status: common_enums::enums::RefundStatus::from(return_response.status),
                 status_code: item.http_code,
             }),
-            TsysResponseTypes::ErrorResponse(error_response) => Err(get_error_response(&error_response, item.http_code)),
+            TsysResponseTypes::ErrorResponse(error_response) => {
+                Err(get_error_response(&error_response, item.http_code))
+            }
         };
 
         Ok(Self {
@@ -917,7 +919,7 @@ impl
             }),
             SearchResponseTypes::ErrorResponse(error_response) => {
                 Err(get_error_response(&error_response, item.http_code))
-            },
+            }
         };
 
         Ok(Self {
