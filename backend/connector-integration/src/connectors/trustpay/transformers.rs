@@ -1,5 +1,5 @@
 use crate::utils::{self, ErrorCodeAndMessage};
-use crate::{connectors::trustpay::TrustpayRouterData, types::ResponseRouterData};
+use crate::{connectors, connectors::trustpay::TrustpayRouterData, types::ResponseRouterData};
 use common_enums::enums;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
@@ -10,10 +10,10 @@ use common_utils::{
     Email,
 };
 use domain_types::{
-    connector_flow::{Authorize, CreateAccessToken},
+    connector_flow::{Authorize, CreateAccessToken, Refund},
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsResponseData, ResponseId,
+        PaymentsResponseData, RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
@@ -1400,7 +1400,7 @@ fn get_bank_transfer_request_data<
 
 // Implement GetFormData for TrustpayPaymentsRequest to satisfy the macro requirement
 // This will never be called since TrustPay only uses Json and FormUrlEncoded
-impl<T> crate::connectors::macros::GetFormData for TrustpayPaymentsRequest<T>
+impl<T> connectors::macros::GetFormData for TrustpayPaymentsRequest<T>
 where
     T: PaymentMethodDataTypes
         + std::fmt::Debug
@@ -1411,7 +1411,7 @@ where
 {
     fn get_form_data(&self) -> reqwest::multipart::Form {
         // This should never be called for TrustPay since we only use Json and FormUrlEncoded
-        panic!("TrustPay does not support FormData content type")
+        unimplemented!("TrustPay only support Json and FormUrlEncoded content types.")
     }
 }
 
@@ -1556,5 +1556,389 @@ impl<
                 .into())
             }
         }
+    }
+}
+
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum TrustpayRefundRequest {
+    CardsRefund(Box<TrustpayRefundRequestCards>),
+    BankRedirectRefund(Box<TrustpayRefundRequestBankRedirect>),
+}
+
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrustpayRefundRequestCards {
+    instance_id: String,
+    amount: StringMajorUnit,
+    currency: String,
+    reference: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrustpayRefundRequestBankRedirect {
+    pub merchant_identification: MerchantIdentification,
+    pub payment_information: BankPaymentInformation,
+}
+
+// Implement GetFormData for TrustpayRefundRequest to satisfy the macro requirement
+// This will never be called since TrustPay only uses Json and FormUrlEncoded
+impl connectors::macros::GetFormData for TrustpayRefundRequest {
+    fn get_form_data(&self) -> reqwest::multipart::Form {
+        // This should never be called for TrustPay since we only use Json and FormUrlEncoded
+        unimplemented!("TrustPay refunds only support Json and FormUrlEncoded content types. ")
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        TrustpayRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for TrustpayRefundRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: TrustpayRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.minor_refund_amount,
+                item.router_data.request.currency,
+            )
+            .change_context(ConnectorError::AmountConversionFailed)?;
+        match item.router_data.resource_common_data.payment_method {
+            Some(enums::PaymentMethod::BankRedirect) => {
+                let auth = TrustpayAuthType::try_from(&item.router_data.connector_auth_type)
+                    .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+                Ok(Self::BankRedirectRefund(Box::new(
+                    TrustpayRefundRequestBankRedirect {
+                        merchant_identification: MerchantIdentification {
+                            project_id: auth.project_id,
+                        },
+                        payment_information: BankPaymentInformation {
+                            amount: Amount {
+                                amount,
+                                currency: item.router_data.request.currency.to_string(),
+                            },
+                            references: References {
+                                merchant_reference: item.router_data.request.refund_id.clone(),
+                            },
+                            debtor: None,
+                        },
+                    },
+                )))
+            }
+            Some(enums::PaymentMethod::Card) => {
+                Ok(Self::CardsRefund(Box::new(TrustpayRefundRequestCards {
+                    instance_id: item.router_data.request.connector_transaction_id.clone(),
+                    amount,
+                    currency: item.router_data.request.currency.to_string(),
+                    reference: item.router_data.request.refund_id.clone(),
+                })))
+            }
+            _ => Err(errors::ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("trustpay"),
+            )
+            .into()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum RefundResponse {
+    CardsRefund(Box<CardsRefundResponse>),
+    WebhookRefund(Box<WebhookPaymentInformation>),
+    BankRedirectRefund(Box<BankRedirectRefundResponse>),
+    BankRedirectRefundSyncResponse(Box<SyncResponseBankRedirect>),
+    BankRedirectError(Box<ErrorResponseBankRedirect>),
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CardsRefundResponse {
+    pub status: i64,
+    pub description: Option<String>,
+    pub instance_id: String,
+    pub payment_status: String,
+    pub payment_description: Option<String>,
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct BankRedirectRefundResponse {
+    pub payment_request_id: i64,
+    pub result_info: ResultInfo,
+}
+
+impl<F, T> TryFrom<ResponseRouterData<RefundResponse, Self>>
+    for RouterDataV2<F, RefundFlowData, T, RefundsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
+        let (error, response) = match item.response {
+            RefundResponse::CardsRefund(response) => {
+                handle_cards_refund_response(*response, item.http_code)?
+            }
+            RefundResponse::WebhookRefund(response) => {
+                handle_webhooks_refund_response(*response, item.http_code)?
+            }
+            RefundResponse::BankRedirectRefund(response) => {
+                handle_bank_redirects_refund_response(*response, item.http_code)
+            }
+            RefundResponse::BankRedirectRefundSyncResponse(response) => {
+                handle_bank_redirects_refund_sync_response(*response, item.http_code)
+            }
+            RefundResponse::BankRedirectError(response) => {
+                handle_bank_redirects_refund_sync_error_response(*response, item.http_code)
+            }
+        };
+        Ok(Self {
+            response: error.map_or_else(|| Ok(response), Err),
+            ..item.router_data
+        })
+    }
+}
+
+fn handle_cards_refund_response(
+    response: CardsRefundResponse,
+    status_code: u16,
+) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), errors::ConnectorError> {
+    let (refund_status, message) = get_refund_status(&response.payment_status)?;
+    let error = match message {
+        Some(message) => Some(ErrorResponse {
+            code: response.payment_status,
+            message: message.clone(),
+            reason: Some(message),
+            status_code,
+            attempt_status: None,
+            connector_transaction_id: None,
+            network_advice_code: None,
+            network_decline_code: None,
+            network_error_message: None,
+        }),
+        None => None,
+    };
+    let refund_response_data = RefundsResponseData {
+        connector_refund_id: response.instance_id,
+        refund_status,
+        status_code,
+    };
+    Ok((error, refund_response_data))
+}
+
+fn handle_webhooks_refund_response(
+    response: WebhookPaymentInformation,
+    status_code: u16,
+) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), errors::ConnectorError> {
+    let refund_status = enums::RefundStatus::try_from(response.status)?;
+    let error = match utils::is_refund_failure(refund_status) {
+        true => {
+            let reason_info = response.status_reason_information.unwrap_or_default();
+            Some(ErrorResponse {
+                code: reason_info
+                    .reason
+                    .code
+                    .clone()
+                    .unwrap_or(NO_ERROR_CODE.to_string()),
+                // message vary for the same code, so relying on code alone as it is unique
+                message: reason_info
+                    .reason
+                    .code
+                    .unwrap_or(NO_ERROR_MESSAGE.to_string()),
+                reason: reason_info.reason.reject_reason,
+                status_code,
+                attempt_status: None,
+                connector_transaction_id: response.references.payment_request_id.clone(),
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+            })
+        }
+        false => None,
+    };
+    let refund_response_data = RefundsResponseData {
+        connector_refund_id: response
+            .references
+            .payment_request_id
+            .ok_or(errors::ConnectorError::MissingConnectorRefundID)?,
+        refund_status,
+        status_code,
+    };
+    Ok((error, refund_response_data))
+}
+
+fn handle_bank_redirects_refund_response(
+    response: BankRedirectRefundResponse,
+    status_code: u16,
+) -> (Option<ErrorResponse>, RefundsResponseData) {
+    let (refund_status, msg) = get_refund_status_from_result_info(response.result_info.result_code);
+    let error = match msg.is_some() {
+        true => Some(ErrorResponse {
+            code: response.result_info.result_code.to_string(),
+            // message vary for the same code, so relying on code alone as it is unique
+            message: response.result_info.result_code.to_string(),
+            reason: msg.map(|message| message.to_string()),
+            status_code,
+            attempt_status: None,
+            connector_transaction_id: None,
+            network_advice_code: None,
+            network_decline_code: None,
+            network_error_message: None,
+        }),
+        false => None,
+    };
+    let refund_response_data = RefundsResponseData {
+        connector_refund_id: response.payment_request_id.to_string(),
+        refund_status,
+        status_code,
+    };
+    (error, refund_response_data)
+}
+
+fn handle_bank_redirects_refund_sync_response(
+    response: SyncResponseBankRedirect,
+    status_code: u16,
+) -> (Option<ErrorResponse>, RefundsResponseData) {
+    let refund_status = enums::RefundStatus::from(response.payment_information.status);
+    let error = match utils::is_refund_failure(refund_status) {
+        true => {
+            let reason_info = response
+                .payment_information
+                .status_reason_information
+                .unwrap_or_default();
+            Some(ErrorResponse {
+                code: reason_info
+                    .reason
+                    .code
+                    .clone()
+                    .unwrap_or(NO_ERROR_CODE.to_string()),
+                // message vary for the same code, so relying on code alone as it is unique
+                message: reason_info
+                    .reason
+                    .code
+                    .unwrap_or(NO_ERROR_MESSAGE.to_string()),
+                reason: reason_info.reason.reject_reason,
+                status_code,
+                attempt_status: None,
+                connector_transaction_id: None,
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+            })
+        }
+        false => None,
+    };
+    let refund_response_data = RefundsResponseData {
+        connector_refund_id: response.payment_information.references.payment_request_id,
+        refund_status,
+        status_code,
+    };
+    (error, refund_response_data)
+}
+
+fn handle_bank_redirects_refund_sync_error_response(
+    response: ErrorResponseBankRedirect,
+    status_code: u16,
+) -> (Option<ErrorResponse>, RefundsResponseData) {
+    let error = Some(ErrorResponse {
+        code: response.payment_result_info.result_code.to_string(),
+        message: response
+            .payment_result_info
+            .additional_info
+            .clone()
+            .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
+        reason: response.payment_result_info.additional_info,
+        status_code,
+        attempt_status: None,
+        connector_transaction_id: None,
+        network_advice_code: None,
+        network_decline_code: None,
+        network_error_message: None,
+    });
+    //unreachable case as we are sending error as Some()
+    let refund_response_data = RefundsResponseData {
+        connector_refund_id: "".to_string(),
+        refund_status: enums::RefundStatus::Failure,
+        status_code,
+    };
+    (error, refund_response_data)
+}
+
+fn get_refund_status(
+    payment_status: &str,
+) -> CustomResult<(enums::RefundStatus, Option<String>), errors::ConnectorError> {
+    let (is_failed, failure_message) = is_payment_failed(payment_status);
+    match payment_status {
+        "000.200.000" => Ok((enums::RefundStatus::Pending, None)),
+        _ if is_failed => Ok((
+            enums::RefundStatus::Failure,
+            Some(failure_message.to_string()),
+        )),
+        _ if is_payment_successful(payment_status)? => Ok((enums::RefundStatus::Success, None)),
+        _ => Ok((enums::RefundStatus::Pending, None)),
+    }
+}
+
+fn get_refund_status_from_result_info(
+    result_code: i64,
+) -> (enums::RefundStatus, Option<&'static str>) {
+    match result_code {
+        1001000 => (enums::RefundStatus::Success, None),
+        1130001 => (enums::RefundStatus::Pending, Some("MapiPending")),
+        1130000 => (enums::RefundStatus::Pending, Some("MapiSuccess")),
+        1130004 => (enums::RefundStatus::Pending, Some("MapiProcessing")),
+        1130002 => (enums::RefundStatus::Pending, Some("MapiAnnounced")),
+        1130003 => (enums::RefundStatus::Pending, Some("MapiAuthorized")),
+        1130005 => (enums::RefundStatus::Pending, Some("MapiAuthorizedOnly")),
+        1112008 => (enums::RefundStatus::Failure, Some("InvalidPaymentState")),
+        1112009 => (enums::RefundStatus::Failure, Some("RefundRejected")),
+        1122006 => (
+            enums::RefundStatus::Failure,
+            Some("AccountCurrencyNotAllowed"),
+        ),
+        1132000 => (enums::RefundStatus::Failure, Some("InvalidMapiRequest")),
+        1132001 => (enums::RefundStatus::Failure, Some("UnknownAccount")),
+        1132002 => (
+            enums::RefundStatus::Failure,
+            Some("MerchantAccountDisabled"),
+        ),
+        1132003 => (enums::RefundStatus::Failure, Some("InvalidSign")),
+        1132004 => (enums::RefundStatus::Failure, Some("DisposableBalance")),
+        1132005 => (enums::RefundStatus::Failure, Some("TransactionNotFound")),
+        1132006 => (enums::RefundStatus::Failure, Some("UnsupportedTransaction")),
+        1132007 => (enums::RefundStatus::Failure, Some("GeneralMapiError")),
+        1132008 => (
+            enums::RefundStatus::Failure,
+            Some("UnsupportedCurrencyConversion"),
+        ),
+        1132009 => (enums::RefundStatus::Failure, Some("UnknownMandate")),
+        1132010 => (enums::RefundStatus::Failure, Some("CanceledMandate")),
+        1132011 => (enums::RefundStatus::Failure, Some("MissingCid")),
+        1132012 => (enums::RefundStatus::Failure, Some("MandateAlreadyPaid")),
+        1132013 => (enums::RefundStatus::Failure, Some("AccountIsTesting")),
+        1132014 => (enums::RefundStatus::Failure, Some("RequestThrottled")),
+        1133000 => (enums::RefundStatus::Failure, Some("InvalidAuthentication")),
+        1133001 => (enums::RefundStatus::Failure, Some("ServiceNotAllowed")),
+        1133002 => (enums::RefundStatus::Failure, Some("PaymentRequestNotFound")),
+        1133003 => (enums::RefundStatus::Failure, Some("UnexpectedGateway")),
+        1133004 => (enums::RefundStatus::Failure, Some("MissingExternalId")),
+        1152000 => (enums::RefundStatus::Failure, Some("RiskDecline")),
+        _ => (enums::RefundStatus::Pending, None),
     }
 }
