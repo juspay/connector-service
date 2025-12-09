@@ -170,6 +170,7 @@ pub struct Connectors {
     pub globalpay: ConnectorParams,
     pub nuvei: ConnectorParams,
     pub iatapay: ConnectorParams,
+    pub jpmorgan: ConnectorParams,
     pub nmi: ConnectorParams,
     pub shift4: ConnectorParams,
     pub barclaycard: ConnectorParams,
