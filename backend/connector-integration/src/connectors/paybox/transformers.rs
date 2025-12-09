@@ -174,11 +174,6 @@ fn get_currency_code(currency: Currency) -> CustomResult<String, errors::Connect
     Ok(code.to_string())
 }
 
-
-fn get_transaction_id(numappel: Option<String>, numtrans: Option<String>) -> String {
-    numappel.or(numtrans).unwrap_or_default()
-}
-
 // ============================================================================
 // AUTHORIZE FLOW
 // ============================================================================
@@ -280,9 +275,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PayboxPaymentResponse {
     #[serde(rename = "NUMTRANS")]
-    pub transaction_number: Option<String>,
+    pub transaction_number: String,
     #[serde(rename = "NUMAPPEL")]
-    pub paybox_order_id: Option<String>,
+    pub paybox_order_id: String,
     #[serde(rename = "NUMQUESTION")]
     pub paybox_request_number: Option<String>,
     #[serde(rename = "SITE")]
@@ -294,7 +289,11 @@ pub struct PayboxPaymentResponse {
     #[serde(rename = "CODEREPONSE")]
     pub response_code: String,
     #[serde(rename = "COMMENTAIRE")]
-    pub response_message: Option<String>,
+    pub response_message: String,
+    #[serde(rename = "PORTEUR")]
+    pub carrier_id: Option<Secret<String>>,
+    #[serde(rename = "REFABONNE")]
+    pub customer_id: Option<Secret<String>>,
 }
 
 impl<T: PaymentMethodDataTypes>
@@ -313,14 +312,15 @@ impl<T: PaymentMethodDataTypes>
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
+        tracing::debug!("=== PAYBOX AUTHORIZE RESPONSE TRANSFORMATION ===");
+        tracing::debug!("Paybox Authorize - Full response from Paybox: {:#?}", item.response);
+        tracing::debug!("Paybox Authorize - response_code: {}", item.response.response_code);
+        tracing::debug!("Paybox Authorize - NUMTRANS (transaction_number): {:?}", item.response.transaction_number);
+        tracing::debug!("Paybox Authorize - NUMAPPEL (paybox_order_id): {:?}", item.response.paybox_order_id);
+
         let is_auto_capture = matches!(
             item.router_data.request.capture_method,
             Some(common_enums::CaptureMethod::Automatic)
-        );
-
-        let connector_transaction_id = get_transaction_id(
-            item.response.paybox_order_id.clone(),
-            item.response.transaction_number.clone(),
         );
 
         if item.response.response_code == SUCCESS_CODE {
@@ -330,25 +330,29 @@ impl<T: PaymentMethodDataTypes>
                 AttemptStatus::Authorized
             };
 
-            let connector_metadata = item.response.transaction_number.as_ref().map(|transaction_number| {
-                serde_json::json!({
-                    "connector_request_id": transaction_number
-                })
+            // Create connector_metadata with NUMTRANS
+            let connector_metadata = serde_json::json!(PayboxMeta {
+                connector_request_id: item.response.transaction_number.clone()
             });
+
+            tracing::debug!("Paybox Authorize - NUMTRANS: {}", item.response.transaction_number);
+            tracing::debug!("Paybox Authorize - NUMAPPEL: {}", item.response.paybox_order_id);
+            tracing::debug!("Paybox Authorize - Storing connector_metadata: {:#?}", connector_metadata);
 
             Ok(Self {
                 response: Ok(PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id.clone()),
+                    resource_id: ResponseId::ConnectorTransactionId(item.response.paybox_order_id.clone()),
                     redirection_data: None,
                     mandate_reference: None,
-                    connector_metadata,
-                    network_txn_id: None,
-                    connector_response_reference_id: Some(connector_transaction_id),
+                    connector_metadata: Some(connector_metadata),
+                    network_txn_id: Some(item.response.transaction_number.clone()), // Store NUMTRANS here for Capture
+                    connector_response_reference_id: Some(item.response.paybox_order_id.clone()),
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                 }),
                 resource_common_data: PaymentFlowData {
                     status,
+                    reference_id: Some(item.response.transaction_number.clone()), // Store NUMTRANS in reference_id
                     ..item.router_data.resource_common_data
                 },
                 ..item.router_data
@@ -424,9 +428,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PayboxPSyncResponse {
     #[serde(rename = "NUMTRANS")]
-    pub transaction_number: Option<String>,
+    pub transaction_number: String,
     #[serde(rename = "NUMAPPEL")]
-    pub paybox_order_id: Option<String>,
+    pub paybox_order_id: String,
     #[serde(rename = "NUMQUESTION")]
     pub paybox_request_number: Option<String>,
     #[serde(rename = "SITE")]
@@ -438,7 +442,7 @@ pub struct PayboxPSyncResponse {
     #[serde(rename = "CODEREPONSE")]
     pub response_code: String,
     #[serde(rename = "COMMENTAIRE")]
-    pub response_message: Option<String>,
+    pub response_message: String,
     #[serde(rename = "STATUS")]
     pub status: PayboxStatus,
 }
@@ -461,19 +465,14 @@ impl TryFrom<
         let connector_payment_status = item.response.status;
         let status = AttemptStatus::from(connector_payment_status);
 
-        let connector_transaction_id = get_transaction_id(
-            item.response.paybox_order_id.clone(),
-            item.response.transaction_number.clone(),
-        );
-
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id.clone()),
+                resource_id: ResponseId::ConnectorTransactionId(item.response.paybox_order_id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
-                connector_response_reference_id: Some(connector_transaction_id),
+                connector_response_reference_id: Some(item.response.paybox_order_id.clone()),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
@@ -530,18 +529,58 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
         let connector = item.connector;
         let auth = PayboxAuthType::try_from(&router_data.connector_auth_type)?;
 
+        tracing::debug!("=== PAYBOX CAPTURE - FULL ROUTER DATA START ===");
+
+        // Log the ENTIRE router_data structure
+        tracing::debug!("Paybox Capture - FULL router_data:\n{:#?}", router_data);
+
+        tracing::debug!("=== PAYBOX CAPTURE - FULL ROUTER DATA END ===");
+
         let numappel = match &router_data.request.connector_transaction_id {
             ResponseId::ConnectorTransactionId(id) => id.clone(),
             _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into()),
         };
 
-        let paybox_meta: PayboxMeta = utils::to_connector_meta_from_secret(
-            router_data
-                .resource_common_data
-                .connector_meta_data
-                .clone(),
-        )?;
-        let numtrans = paybox_meta.connector_request_id;
+        tracing::debug!("Paybox Capture - NUMAPPEL (connector_transaction_id): {}", numappel);
+
+        // Try to get NUMTRANS from multiple sources
+        tracing::debug!("Paybox Capture - Checking all available fields:");
+        tracing::debug!("Paybox Capture - request.connector_metadata: {:?}", router_data.request.connector_metadata);
+        tracing::debug!("Paybox Capture - resource_common_data.connector_meta_data: {:?}", router_data.resource_common_data.connector_meta_data);
+        tracing::debug!("Paybox Capture - resource_common_data.reference_id: {:?}", router_data.resource_common_data.reference_id);
+        tracing::debug!("Paybox Capture - resource_common_data.preprocessing_id: {:?}", router_data.resource_common_data.preprocessing_id);
+
+        // Try reading from multiple sources in order of preference
+        let numtrans = router_data
+            .resource_common_data
+            .reference_id
+            .clone()
+            .or_else(|| {
+                // Fallback 1: try reading from request.connector_metadata
+                tracing::debug!("Paybox Capture - Trying to parse connector_metadata");
+                router_data
+                    .request
+                    .connector_metadata
+                    .as_ref()
+                    .and_then(|meta| serde_json::from_value::<PayboxMeta>(meta.clone()).ok())
+                    .map(|meta| meta.connector_request_id)
+            })
+            .or_else(|| {
+                // Fallback 2: try reading from resource_common_data.connector_meta_data
+                tracing::debug!("Paybox Capture - Trying to parse resource_common_data.connector_meta_data");
+                router_data
+                    .resource_common_data
+                    .connector_meta_data
+                    .as_ref()
+                    .and_then(|meta| utils::to_connector_meta_from_secret::<PayboxMeta>(Some(meta.clone())).ok())
+                    .map(|meta| meta.connector_request_id)
+            })
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "connector_request_id (NUMTRANS)",
+            })
+            .attach_printable("Failed to find NUMTRANS in reference_id, connector_metadata, or resource_common_data")?;
+
+        tracing::debug!(numtrans = %numtrans, "Paybox Capture - numtrans");
 
         let amount = connector
             .amount_converter
@@ -551,7 +590,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
             )
             .change_context(errors::ConnectorError::ParsingFailed)?;
 
-        Ok(Self {
+        tracing::debug!(
+            numtrans = %numtrans,
+            numappel = %numappel,
+            amount = ?amount,
+            "Paybox Capture - Building request"
+        );
+
+        let capture_request = Self {
             version: VERSION_PAYBOX.to_string(),
             transaction_type: CAPTURE_REQUEST.to_string(),
             site: auth.site,
@@ -564,7 +610,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
             date: generate_date_time(),
             transaction_number: numtrans,
             paybox_order_id: numappel,
-        })
+        };
+
+        tracing::debug!(capture_request = ?capture_request, "Paybox Capture - Final request");
+
+        Ok(capture_request)
     }
 }
 
@@ -583,25 +633,37 @@ impl TryFrom<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let connector_transaction_id = get_transaction_id(
-            item.response.paybox_order_id.clone(),
-            item.response.transaction_number.clone(),
-        );
+        tracing::debug!("=== PAYBOX CAPTURE RESPONSE TRANSFORMATION ===");
+        tracing::debug!("Paybox Capture - Full response from Paybox: {:#?}", item.response);
+        tracing::debug!("Paybox Capture - response_code: {}", item.response.response_code);
+        tracing::debug!("Paybox Capture - NUMTRANS: {}", item.response.transaction_number);
+        tracing::debug!("Paybox Capture - NUMAPPEL: {}", item.response.paybox_order_id);
 
         if item.response.response_code == SUCCESS_CODE {
+            // Create connector_metadata with NUMTRANS
+            let connector_metadata = serde_json::json!(PayboxMeta {
+                connector_request_id: item.response.transaction_number.clone()
+            });
+
+            tracing::debug!("Paybox Capture - Storing connector_metadata: {:#?}", connector_metadata);
+
+            // Manually set connector_meta_data
+            let connector_meta_data = Secret::new(connector_metadata.clone());
+
             Ok(Self {
                 response: Ok(PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id.clone()),
+                    resource_id: ResponseId::ConnectorTransactionId(item.response.paybox_order_id.clone()),
                     redirection_data: None,
                     mandate_reference: None,
-                    connector_metadata: None,
+                    connector_metadata: Some(connector_metadata),
                     network_txn_id: None,
-                    connector_response_reference_id: Some(connector_transaction_id),
+                    connector_response_reference_id: Some(item.response.paybox_order_id.clone()),
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                 }),
                 resource_common_data: PaymentFlowData {
                     status: AttemptStatus::Charged,
+                    connector_meta_data: Some(connector_meta_data),
                     ..item.router_data.resource_common_data
                 },
                 ..item.router_data
@@ -717,20 +779,15 @@ impl TryFrom<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let connector_transaction_id = get_transaction_id(
-            item.response.paybox_order_id.clone(),
-            item.response.transaction_number.clone(),
-        );
-
         if item.response.response_code == SUCCESS_CODE {
             Ok(Self {
                 response: Ok(PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id.clone()),
+                    resource_id: ResponseId::ConnectorTransactionId(item.response.paybox_order_id.clone()),
                     redirection_data: None,
                     mandate_reference: None,
                     connector_metadata: None,
                     network_txn_id: None,
-                    connector_response_reference_id: Some(connector_transaction_id),
+                    connector_response_reference_id: Some(item.response.paybox_order_id.clone()),
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                 }),
@@ -828,9 +885,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PayboxRefundResponse {
     #[serde(rename = "NUMTRANS")]
-    pub transaction_number: Option<String>,
+    pub transaction_number: String,
     #[serde(rename = "NUMAPPEL")]
-    pub paybox_order_id: Option<String>,
+    pub paybox_order_id: String,
     #[serde(rename = "NUMQUESTION")]
     pub paybox_request_number: Option<String>,
     #[serde(rename = "SITE")]
@@ -842,7 +899,7 @@ pub struct PayboxRefundResponse {
     #[serde(rename = "CODEREPONSE")]
     pub response_code: String,
     #[serde(rename = "COMMENTAIRE")]
-    pub response_message: Option<String>,
+    pub response_message: String,
 }
 
 impl TryFrom<
@@ -860,15 +917,10 @@ impl TryFrom<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let connector_refund_id = get_transaction_id(
-            item.response.paybox_order_id.clone(),
-            item.response.transaction_number.clone(),
-        );
-
         if item.response.response_code == SUCCESS_CODE {
             Ok(Self {
                 response: Ok(RefundsResponseData {
-                    connector_refund_id,
+                    connector_refund_id: item.response.paybox_order_id.clone(),
                     refund_status: RefundStatus::Pending,
                     status_code: item.http_code,
                 }),
@@ -940,9 +992,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PayboxRSyncResponse {
     #[serde(rename = "NUMTRANS")]
-    pub transaction_number: Option<String>,
+    pub transaction_number: String,
     #[serde(rename = "NUMAPPEL")]
-    pub paybox_order_id: Option<String>,
+    pub paybox_order_id: String,
     #[serde(rename = "NUMQUESTION")]
     pub paybox_request_number: Option<String>,
     #[serde(rename = "SITE")]
@@ -954,7 +1006,7 @@ pub struct PayboxRSyncResponse {
     #[serde(rename = "CODEREPONSE")]
     pub response_code: String,
     #[serde(rename = "COMMENTAIRE")]
-    pub response_message: Option<String>,
+    pub response_message: String,
     #[serde(rename = "STATUS")]
     pub status: PayboxStatus,
 }
@@ -977,14 +1029,9 @@ impl TryFrom<
         let connector_refund_status = item.response.status;
         let refund_status = RefundStatus::from(connector_refund_status);
 
-        let connector_refund_id = get_transaction_id(
-            item.response.paybox_order_id.clone(),
-            item.response.transaction_number.clone(),
-        );
-
         Ok(Self {
             response: Ok(RefundsResponseData {
-                connector_refund_id,
+                connector_refund_id: item.response.paybox_order_id.clone(),
                 refund_status,
                 status_code: item.http_code,
             }),

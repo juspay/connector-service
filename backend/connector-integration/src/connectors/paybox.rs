@@ -7,8 +7,8 @@ use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
-        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void, VoidPC,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken,
+        SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -17,9 +17,10 @@ use domain_types::{
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
         PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -156,15 +157,77 @@ macros::create_all_prerequisites!(
             _req: &RouterDataV2<F, FCD, Req, Res>,
             bytes: bytes::Bytes,
         ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
-            // Paybox returns URL-encoded responses
-            // Parse URL-encoded response and convert to JSON for deserialization
-            let url_encoded_response: paybox::PayboxPaymentResponse = serde_urlencoded::from_bytes(&bytes)
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)
-                .attach_printable("Failed to parse URL-encoded response from Paybox")?;
+            tracing::debug!("Paybox - Raw bytes from connector: {:?}", bytes);
 
-            let json_bytes = serde_json::to_vec(&url_encoded_response)
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)
-                .attach_printable("Failed to convert URL-encoded response to JSON")?;
+            // Paybox returns URL-encoded response wrapped in a JSON string
+            // First, parse the JSON string to get the URL-encoded content
+            let json_string: String = match serde_json::from_slice(&bytes) {
+                Ok(s) => {
+                    tracing::debug!("Paybox - Successfully unwrapped JSON string");
+                    s
+                }
+                Err(e) => {
+                    tracing::error!("Paybox - Failed to parse JSON-wrapped response: {:?}", e);
+                    return Err(errors::ConnectorError::ResponseDeserializationFailed)
+                        .attach_printable(format!("Failed to parse JSON-wrapped response from Paybox: {:?}", e));
+                }
+            };
+
+            tracing::debug!("Paybox - URL-encoded response from Paybox (unwrapped from JSON):\n{}", json_string);
+
+            // Decode from ISO-8859-15 to UTF-8
+            let (decoded_str, _, _) = encoding_rs::ISO_8859_15.decode(json_string.as_bytes());
+            let response_str = decoded_str.trim();
+
+            tracing::debug!("Paybox - After ISO-8859-15 decode:\n{}", response_str);
+
+            // Check if NUMTRANS exists in raw response
+            if response_str.contains("NUMTRANS") {
+                tracing::debug!("Paybox - NUMTRANS found in raw response");
+                // Try to extract and log the value
+                if let Some(start) = response_str.find("NUMTRANS=") {
+                    let after_numtrans = &response_str[start + 9..];
+                    let end = after_numtrans.find('&').unwrap_or(after_numtrans.len());
+                    let numtrans_value = &after_numtrans[..end];
+                    tracing::debug!("Paybox - Raw NUMTRANS value from string: '{}'", numtrans_value);
+                }
+            } else {
+                tracing::warn!("Paybox - NUMTRANS NOT found in raw response!");
+            }
+
+            // Parse URL-encoded response using serde_qs (following Hyperswitch pattern)
+            tracing::debug!("Paybox - Attempting to parse URL-encoded response with serde_qs");
+            let url_encoded_response: paybox::PayboxPaymentResponse = match serde_qs::from_str(response_str) {
+                Ok(parsed) => {
+                    tracing::debug!("Paybox - Successfully parsed URL-encoded response");
+                    parsed
+                }
+                Err(e) => {
+                    tracing::error!("Paybox - Failed to parse URL-encoded response: {:?}", e);
+                    return Err(errors::ConnectorError::ResponseDeserializationFailed)
+                        .attach_printable(format!("Failed to parse URL-encoded response from Paybox: {:?}", e));
+                }
+            };
+
+            // Log parsed response
+            tracing::debug!("Paybox - Parsed response struct: {:#?}", url_encoded_response);
+            tracing::debug!("Paybox - NUMTRANS field after parsing: {:?}", url_encoded_response.transaction_number);
+            tracing::debug!("Paybox - NUMAPPEL field after parsing: {:?}", url_encoded_response.paybox_order_id);
+
+            tracing::debug!("Paybox - Attempting to convert to JSON");
+            let json_bytes = match serde_json::to_vec(&url_encoded_response) {
+                Ok(bytes) => {
+                    tracing::debug!("Paybox - Successfully converted to JSON");
+                    bytes
+                }
+                Err(e) => {
+                    tracing::error!("Paybox - Failed to convert to JSON: {:?}", e);
+                    return Err(errors::ConnectorError::ResponseDeserializationFailed)
+                        .attach_printable(format!("Failed to convert URL-encoded response to JSON: {:?}", e));
+                }
+            };
+
+            tracing::debug!("Paybox - Converted to JSON: {}", String::from_utf8_lossy(&json_bytes));
 
             Ok(bytes::Bytes::from(json_bytes))
         }
@@ -267,6 +330,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSessionToken for Paybox<T>
+{}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SdkSessionTokenV2 for Paybox<T>
 {}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -538,6 +605,25 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         SetupMandate,
         PaymentFlowData,
         SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    > for Paybox<T>
+{}
+
+// SdkSessionToken
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
+    > for Paybox<T>
+{}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
         PaymentsResponseData,
     > for Paybox<T>
 {}
