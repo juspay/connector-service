@@ -31,10 +31,7 @@ impl TryFrom<&ConnectorAuthType> for JpmorganAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey {
-                api_key,
-                key1,
-            } => Ok(Self {
+            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
                 client_id: api_key.clone(),
                 client_secret: key1.clone(),
             }),
@@ -44,12 +41,37 @@ impl TryFrom<&ConnectorAuthType> for JpmorganAuthType {
 }
 
 // OAuth 2.0 transformers
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<JpmorganRouterData<RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>, T>>
-    for requests::JpmorganTokenRequest
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        JpmorganRouterData<
+            RouterDataV2<
+                CreateAccessToken,
+                PaymentFlowData,
+                AccessTokenRequestData,
+                AccessTokenResponseData,
+            >,
+            T,
+        >,
+    > for requests::JpmorganTokenRequest
 {
     type Error = Error;
     fn try_from(
-        _item: JpmorganRouterData<RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>, T>,
+        _item: JpmorganRouterData<
+            RouterDataV2<
+                CreateAccessToken,
+                PaymentFlowData,
+                AccessTokenRequestData,
+                AccessTokenResponseData,
+            >,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             grant_type: String::from("client_credentials"),
@@ -90,12 +112,37 @@ fn map_capture_method(
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<JpmorganRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
-    for requests::JpmorganPaymentsRequest<T>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        JpmorganRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for requests::JpmorganPaymentsRequest<T>
 {
     type Error = Error;
     fn try_from(
-        item: JpmorganRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        item: JpmorganRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
@@ -157,12 +204,27 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<JpmorganRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
-    for requests::JpmorganCaptureRequest
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        JpmorganRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for requests::JpmorganCaptureRequest
 {
     type Error = Error;
     fn try_from(
-        item: JpmorganRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+        item: JpmorganRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let capture_method = Some(map_capture_method(item.router_data.request.capture_method)?);
         Ok(Self {
@@ -173,29 +235,65 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<JpmorganRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for requests::JpmorganVoidRequest
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        JpmorganRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for requests::JpmorganVoidRequest
 {
     type Error = Error;
     fn try_from(
-        item: JpmorganRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+        item: JpmorganRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             amount: item.router_data.request.amount,
             is_void: Some(true),
-            reversal_reason: item.router_data.request.cancellation_reason.as_ref().map(|reason| {
-                reason.parse::<requests::ReversalReason>()
-            }).transpose().ok().flatten(),
+            reversal_reason: item
+                .router_data
+                .request
+                .cancellation_reason
+                .as_ref()
+                .map(|reason| reason.parse::<requests::ReversalReason>())
+                .transpose()
+                .ok()
+                .flatten(),
         })
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<JpmorganRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for requests::JpmorganRefundRequest
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        JpmorganRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for requests::JpmorganRefundRequest
 {
     type Error = Error;
     fn try_from(
-        item: JpmorganRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: JpmorganRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let merchant_software = requests::JpmorganMerchantSoftware {
             company_name: Secret::new("JPMC".to_string()),
@@ -221,9 +319,8 @@ fn map_transaction_state_to_attempt_status(
             _ => AttemptStatus::Authorized,
         },
         responses::JpmorganTransactionState::Authorized => AttemptStatus::Authorized,
-        responses::JpmorganTransactionState::Declined | responses::JpmorganTransactionState::Error => {
-            AttemptStatus::Failure
-        }
+        responses::JpmorganTransactionState::Declined
+        | responses::JpmorganTransactionState::Error => AttemptStatus::Failure,
         responses::JpmorganTransactionState::Pending => AttemptStatus::Pending,
         responses::JpmorganTransactionState::Voided => AttemptStatus::Voided,
     }
@@ -248,7 +345,10 @@ impl TryFrom<&responses::JpmorganPaymentsResponse> for PaymentsResponseData {
 impl TryFrom<&responses::JpmorganPaymentsResponse> for AttemptStatus {
     type Error = Error;
     fn try_from(item: &responses::JpmorganPaymentsResponse) -> Result<Self, Self::Error> {
-        Ok(map_transaction_state_to_attempt_status(&item.transaction_state, &item.capture_method))
+        Ok(map_transaction_state_to_attempt_status(
+            &item.transaction_state,
+            &item.capture_method,
+        ))
     }
 }
 
@@ -271,7 +371,8 @@ impl TryFrom<&responses::JpmorganRefundResponse> for RefundsResponseData {
 
 // Bridge pattern implementations for RouterDataV2
 
-impl<T: PaymentMethodDataTypes, F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
+impl<T: PaymentMethodDataTypes, F>
+    TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = Error;
@@ -404,4 +505,3 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganRefundResponse, Self>>
         })
     }
 }
-

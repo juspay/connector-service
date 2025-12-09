@@ -1,7 +1,10 @@
 use std::str::FromStr;
 
 use common_utils::types::MinorUnit;
-use domain_types::{errors, payment_method_data::{PaymentMethodDataTypes, RawCardNumber}};
+use domain_types::{
+    errors,
+    payment_method_data::{PaymentMethodDataTypes, RawCardNumber},
+};
 use error_stack::report;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
