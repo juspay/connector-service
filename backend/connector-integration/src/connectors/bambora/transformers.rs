@@ -16,7 +16,6 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Deserializer, Serialize};
-use std::str::FromStr;
 
 // ============================================================================
 // Authentication Types
@@ -89,69 +88,13 @@ pub struct BamboraPaymentsRequest<T: PaymentMethodDataTypes> {
     pub amount: FloatMajorUnit,
     pub payment_method: PaymentMethodType,
     pub card: BamboraCard<T>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub billing: Option<BamboraBillingAddress>,
+    pub billing: BamboraBillingAddress,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PaymentMethodType {
     Card,
-}
-
-/// Bambora Transaction Type Enum
-/// Based on the "type" field in Bambora API responses
-/// Reference: Bambora technical specification section 4.1
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-pub enum BamboraTransactionType {
-    /// "P" - Completed payment (successfully charged)
-    #[serde(rename = "P")]
-    Payment,
-
-    /// "PA" - Pre-authorization (authorized but not captured)
-    #[serde(rename = "PA")]
-    PreAuthorization,
-
-    /// "PAC" - Pre-authorization completion (captured after pre-auth)
-    #[serde(rename = "PAC")]
-    PreAuthCompletion,
-
-    /// "VP" - Voided payment
-    #[serde(rename = "VP")]
-    VoidedPayment,
-
-    /// "R" - Refund completed
-    #[serde(rename = "R")]
-    Refund,
-}
-
-impl BamboraTransactionType {
-    /// Convert transaction type to string representation for matching
-    pub fn as_str(&self) -> &str {
-        match self {
-            Self::Payment => "P",
-            Self::PreAuthorization => "PA",
-            Self::PreAuthCompletion => "PAC",
-            Self::VoidedPayment => "VP",
-            Self::Refund => "R",
-        }
-    }
-}
-
-/// Implement FromStr trait for standard parsing
-impl FromStr for BamboraTransactionType {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "P" => Ok(Self::Payment),
-            "PA" => Ok(Self::PreAuthorization),
-            "PAC" => Ok(Self::PreAuthCompletion),
-            "VP" => Ok(Self::VoidedPayment),
-            "R" => Ok(Self::Refund),
-            _ => Err(()),
-        }
-    }
 }
 
 #[derive(Debug, Serialize)]
@@ -351,32 +294,44 @@ impl<T: PaymentMethodDataTypes>
             }
         };
 
-        // Extract billing address
-        let billing = item
+        // Extract billing address - mandatory field
+        let payment_billing = item
             .resource_common_data
             .address
             .get_payment_billing()
-            .and_then(|billing| {
-                billing.address.as_ref().map(|addr| {
-                    // Bambora requires province/state for US and CA addresses in 2-letter format
-                    // Convert full state names (e.g., "California", "New York") to 2-letter codes (e.g., "CA", "NY")
-                    let province = addr.state.clone().and_then(|state| {
-                        crate::utils::get_state_code_for_country(&state, addr.country)
-                    });
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "billing",
+            })?;
 
-                    BamboraBillingAddress {
-                        name: addr.first_name.clone().or(addr.last_name.clone()),
-                        address_line1: addr.line1.clone(),
-                        address_line2: addr.line2.clone(),
-                        city: addr.city.clone().map(|s| s.expose()),
-                        province,
-                        country: addr.country,
-                        postal_code: addr.zip.clone(),
-                        phone_number: billing.phone.as_ref().and_then(|p| p.number.clone()),
-                        email_address: billing.email.clone(),
-                    }
-                })
-            });
+        let billing_address = payment_billing.address.as_ref().ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "billing.address",
+            },
+        )?;
+
+        // Bambora requires province/state for US and CA addresses in 2-letter format
+        // Convert full state names (e.g., "California", "New York") to 2-letter codes (e.g., "CA", "NY")
+        let province = billing_address.state.clone().and_then(|state| {
+            crate::utils::get_state_code_for_country(&state, billing_address.country)
+        });
+
+        let billing = BamboraBillingAddress {
+            name: billing_address
+                .first_name
+                .clone()
+                .or(billing_address.last_name.clone()),
+            address_line1: billing_address.line1.clone(),
+            address_line2: billing_address.line2.clone(),
+            city: billing_address.city.clone().map(|s| s.expose()),
+            province,
+            country: billing_address.country,
+            postal_code: billing_address.zip.clone(),
+            phone_number: payment_billing
+                .phone
+                .as_ref()
+                .and_then(|p| p.number.clone()),
+            email_address: payment_billing.email.clone(),
+        };
 
         // Convert amount from minor units to major units using FloatMajorUnitForConnector
         let converter = FloatMajorUnitForConnector;
