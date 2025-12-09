@@ -41,9 +41,10 @@ pub mod transformers;
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 use transformers::{
-    self as trustpay, TrustpayAuthUpdateRequest, TrustpayAuthUpdateResponse, TrustpayErrorResponse,
+    self as trustpay, RefundResponse, RefundResponse as RefundSyncResponse,
+    TrustpayAuthUpdateRequest, TrustpayAuthUpdateResponse, TrustpayErrorResponse,
     TrustpayPaymentsRequest, TrustpayPaymentsResponse as TrustpayPaymentsSyncResponse,
-    TrustpayPaymentsResponse,
+    TrustpayPaymentsResponse, TrustpayRefundRequest,
 };
 
 use super::macros::{self, ContentTypeSelector};
@@ -184,6 +185,17 @@ macros::create_all_prerequisites!(
             request_body: TrustpayPaymentsRequest<T>,
             response_body: TrustpayPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: Refund,
+            request_body: TrustpayRefundRequest,
+            response_body: RefundResponse,
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
+            flow: RSync,
+            response_body: RefundSyncResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
     amount_converters: [
@@ -229,6 +241,44 @@ macros::create_all_prerequisites!(
         }
         }
 
+        pub fn build_headers_for_refunds<F, Req, Res>(
+            &self,
+            req: &RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+        where
+            Self: ConnectorIntegrationV2<F, RefundFlowData, Req, Res>,
+        {
+            match req.resource_common_data.payment_method {
+            Some(common_enums::PaymentMethod::BankRedirect) | Some(common_enums::PaymentMethod::BankTransfer) => {
+                let token = req
+                    .resource_common_data
+                    .get_access_token()
+                    .change_context(errors::ConnectorError::MissingRequiredField {
+                        field_name: "access_token",
+                    })?;
+                Ok(vec![
+                    (
+                        headers::CONTENT_TYPE.to_string(),
+                        "application/json".to_owned().into(),
+                    ),
+                    (
+                        headers::AUTHORIZATION.to_string(),
+                        format!("Bearer {token}").into_masked(),
+                    ),
+                ])
+            }
+            _ => {
+                let mut header = vec![(
+                    headers::CONTENT_TYPE.to_string(),
+                    self.get_content_type().to_string().into(),
+                )];
+                let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+                header.append(&mut api_key);
+                Ok(header)
+            }
+        }
+        }
+
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
@@ -241,6 +291,20 @@ macros::create_all_prerequisites!(
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
             &req.resource_common_data.connectors.trustpay.base_url_bank_redirects
+        }
+
+        pub fn connector_base_url_bank_redirects_refunds<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.trustpay.base_url_bank_redirects
+        }
+
+        pub fn connector_base_url_refunds<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.trustpay.base_url
         }
 
         pub fn get_auth_header(
@@ -547,19 +611,105 @@ macros::macro_connector_implementation!(
     }
 );
 
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ContentTypeSelector<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Trustpay<T>
+{
+    fn get_dynamic_content_type(
+        &self,
+        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+    ) -> CustomResult<common_enums::DynamicContentType, errors::ConnectorError> {
+        match req.resource_common_data.payment_method {
+            Some(common_enums::PaymentMethod::BankRedirect)
+            | Some(common_enums::PaymentMethod::BankTransfer) => {
+                Ok(common_enums::DynamicContentType::Json)
+            }
+            _ => Ok(common_enums::DynamicContentType::FormUrlEncoded),
+        }
+    }
+}
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Trustpay,
+    curl_request: Dynamic(TrustpayRefundRequest),
+    curl_response: RefundResponse,
+    flow_name: Refund,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundsData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers_for_refunds(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+          match req.resource_common_data.payment_method {
+            Some(common_enums::PaymentMethod::BankRedirect) | Some(common_enums::PaymentMethod::BankTransfer) => Ok(format!(
+                "{}{}{}{}",
+                self.connector_base_url_bank_redirects_refunds(req),
+                "api/Payments/Payment/",
+                req.request.connector_transaction_id,
+                "/Refund"
+            )),
+            _ => Ok(format!("{}{}", self.connector_base_url_refunds(req), "api/v1/Refund")),
+        }
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Trustpay,
+    curl_response: RefundSyncResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers_for_refunds(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+             let id = req
+            .request
+            .connector_refund_id
+            .clone();
+        match req.resource_common_data.payment_method {
+            Some(common_enums::PaymentMethod::BankRedirect) | Some(common_enums::PaymentMethod::BankTransfer) => Ok(format!(
+                "{}{}/{}",
+                self.connector_base_url_bank_redirects_refunds(req), "api/Payments/Payment", id
+            )),
+            _ => Ok(format!(
+                "{}{}/{}",
+                self.connector_base_url_refunds(req),
+                "api/v1/instance",
+                id
+            )),
+        }
+        }
+    }
+);
+
 // Implementation for empty stubs - these will need to be properly implemented later
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Trustpay<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    for Trustpay<T>
-{
-}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -634,7 +784,6 @@ impl<
             + std::marker::Sync
             + std::marker::Send
             + 'static
-            + Serialize
             + Serialize,
     > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
     for Trustpay<T>

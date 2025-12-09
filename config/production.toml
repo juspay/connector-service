@@ -22,6 +22,7 @@ mitm_proxy_enabled = false
 
 [connectors]
 barclaycard.base_url = "https://api.smartpayfuse.barclaycard"
+airwallex.base_url = "https://api.airwallex.com/api/v1"
 shift4.base_url = "https://api.shift4.com"
 bluesnap.base_url = "https://ws.bluesnap.com"
 bluesnap.secondary_base_url = "https://pay.bluesnap.com"
