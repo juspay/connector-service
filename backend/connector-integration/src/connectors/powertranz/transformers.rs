@@ -7,7 +7,7 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::PaymentMethodDataTypes,
+    payment_method_data::{PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
@@ -50,13 +50,13 @@ impl TryFrom<&ConnectorAuthType> for PowertranzAuthType {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "PascalCase")]
-pub struct PowertranzPaymentsRequest {
+pub struct PowertranzPaymentsRequest<T: PaymentMethodDataTypes> {
     pub transaction_identifier: String,
     pub total_amount: FloatMajorUnit,
     pub currency_code: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub three_d_secure: Option<bool>,
-    pub source: PowertranzSource,
+    pub source: PowertranzSource<T>,
     pub order_identifier: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub extended_data: Option<serde_json::Value>,
@@ -64,9 +64,9 @@ pub struct PowertranzPaymentsRequest {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "PascalCase")]
-pub struct PowertranzSource {
+pub struct PowertranzSource<T: PaymentMethodDataTypes> {
     pub cardholder_name: Secret<String>,
-    pub card_pan: Secret<String>,
+    pub card_pan: RawCardNumber<T>,
     pub card_cvv: Secret<String>,
     pub card_expiration: Secret<String>,
 }
@@ -309,7 +309,7 @@ impl<
             >,
             T,
         >,
-    > for PowertranzPaymentsRequest
+    > for PowertranzPaymentsRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -348,7 +348,7 @@ impl<
                             .ok_or(errors::ConnectorError::MissingRequiredField {
                                 field_name: "card_holder_name",
                             })?,
-                        card_pan: Secret::new(card_data.card_number.peek().to_string()),
+                        card_pan: card_data.card_number.clone(),
                         card_cvv: card_data.card_cvc.clone(),
                         card_expiration,
                     },

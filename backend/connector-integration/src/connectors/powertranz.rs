@@ -544,7 +544,7 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: Authorize,
-            request_body: PowertranzPaymentsRequest,
+            request_body: PowertranzPaymentsRequest<T>,
             response_body: PowertranzPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
@@ -747,7 +747,12 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/auth", self.connector_base_url_payments(req)))
+            let endpoint = if req.request.is_auto_capture()? {
+                "sale" 
+            } else {
+                "auth" 
+            };
+            Ok(format!("{}/{}", self.connector_base_url_payments(req), endpoint))
         }
     }
 );
