@@ -333,7 +333,7 @@ impl<
         match &request_data.payment_method_data {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
                 let card_expiration = card_data
-                    .get_card_expiry_year_month_as_yymm()
+                    .get_card_expiry_year_month_2_digit_with_delimiter(String::new())
                     .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
                 Ok(Self {
