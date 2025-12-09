@@ -116,6 +116,9 @@ pub use self::authipay::Authipay;
 pub mod bamboraapac;
 pub use self::bamboraapac::Bamboraapac;
 
+pub mod barclaycard;
+pub use self::barclaycard::Barclaycard;
+
 pub mod silverflow;
 pub use self::silverflow::Silverflow;
 
@@ -140,6 +143,12 @@ pub use self::globalpay::Globalpay;
 pub mod billwerk;
 pub use self::billwerk::Billwerk;
 
+pub mod nuvei;
+pub use self::nuvei::Nuvei;
+
+pub mod iatapay;
+pub use self::iatapay::Iatapay;
+
 pub mod nmi;
 pub use self::nmi::Nmi;
 
@@ -148,3 +157,9 @@ pub use self::forte::Forte;
 
 pub mod shift4;
 pub use self::shift4::Shift4;
+
+pub mod nexixpay;
+pub use self::nexixpay::Nexixpay;
+
+pub mod airwallex;
+pub use self::airwallex::Airwallex;

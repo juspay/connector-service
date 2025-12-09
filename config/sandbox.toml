@@ -21,11 +21,15 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+barclaycard.base_url = "https://api.smartpayfuse-test.barclaycard"
+airwallex.base_url = "https://api-demo.airwallex.com/api/v1"
 shift4.base_url = "https://api.shift4.com"
 bluesnap.base_url = "https://sandbox.bluesnap.com"
 bluesnap.secondary_base_url = "https://sandpay.bluesnap.com"
 multisafepay.base_url = "https://testapi.multisafepay.com/v1/json"
+iatapay.base_url = "https://sandbox.iata-pay.iata.org/api/v1"
 nmi.base_url = "https://secure.nmi.com"
+nexixpay.base_url = "https://xpaysandbox.nexigroup.com/api/phoenix-0.0/psp/api/v1"
 authipay.base_url = "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments"
 stax.base_url = "https://apiprod.fattlabs.com"
 trustpayments.base_url = "https://webservices.securetrading.net"
@@ -78,6 +82,7 @@ paypal.base_url = "https://api-m.sandbox.paypal.com/"
 paysafe.base_url = "https://api.test.paysafe.com/paymenthub/"
 billwerk.base_url = "https://api.reepay.com/"
 billwerk.secondary_base_url = "https://card.reepay.com/"
+nuvei.base_url = "https://ppp-test.nuvei.com/ppp/api/v1"
 bamboraapac.base_url = "https://demo.ippayments.com.au/interface/api"
 
 # Generic Events Configuration

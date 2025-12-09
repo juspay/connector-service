@@ -338,3 +338,34 @@ pub fn get_token_expiry_month_year_2_digit_with_delimiter(
     };
     Secret::new(format!("{}/{}", month.peek(), year_2_digit.peek()))
 }
+
+/// Common merchant-defined information structure for Cybersource-based connectors
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MerchantDefinedInformation {
+    pub key: u8,
+    pub value: String,
+}
+
+/// Converts metadata JSON to merchant-defined information format
+///
+/// Used by Cybersource-based connectors (Barclaycard, Cybersource) to send custom merchant metadata.
+/// The silent failure (unwrap_or_default) is intentional:
+/// - Metadata is optional and non-critical for payment processing
+/// - Input is already valid JSON (serde_json::Value), so parsing rarely fails
+/// - Better to continue payment without metadata than to fail the entire payment
+pub fn convert_metadata_to_merchant_defined_info(
+    metadata: serde_json::Value,
+) -> Vec<MerchantDefinedInformation> {
+    serde_json::from_str::<std::collections::BTreeMap<String, serde_json::Value>>(
+        &metadata.to_string(),
+    )
+    .unwrap_or_default()
+    .into_iter()
+    .enumerate()
+    .map(|(index, (key, value))| MerchantDefinedInformation {
+        key: (index + 1) as u8,
+        value: format!("{key}={value}"),
+    })
+    .collect()
+}

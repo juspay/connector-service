@@ -252,9 +252,11 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
             id_type: Some(IdType::Id(format!("rsync_ref_{}", get_timestamp()))),
         }),
         browser_info: None,
+        test_mode: Some(true),
         refund_metadata,
         state: None,
         merchant_account_metadata: HashMap::new(),
+        payment_method_type: None,
     }
 }
 
