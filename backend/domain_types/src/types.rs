@@ -162,6 +162,7 @@ pub struct Connectors {
     pub nexixpay: ConnectorParams,
     pub airwallex: ConnectorParams,
     pub bankofamerica: ConnectorParams,
+    pub powertranz: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
