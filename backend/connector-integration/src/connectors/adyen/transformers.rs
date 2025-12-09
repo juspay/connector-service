@@ -56,6 +56,7 @@ pub struct Amount {
 type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum CardBrand {
     Visa,
     MC,
