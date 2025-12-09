@@ -2065,6 +2065,9 @@ message PaymentServiceRefundRequest {
   
   // Environment Configuration
   optional bool test_mode = 19; // A boolean value to indicate if the connector is in Test mode
+
+  // Payment Method Type
+  optional PaymentMethodType payment_method_type = 20; // Indicates the sub type of payment method. (e.g., card, bank_redirect, bank_transfer)
 }
 
 // Response message for a refund operation (unified for both Create and Get).
@@ -2675,6 +2678,9 @@ message RefundServiceGetRequest {
   
   // Environment Configuration
   optional bool test_mode = 10; // A boolean value to indicate if the connector is in Test mode
+
+  // Payment Method Type
+  optional PaymentMethodType payment_method_type = 11; // Indicates the sub type of payment method. (e.g., card, bank_redirect, bank_transfer)
 }
 
 // Legacy alias for backward compatibility - use RefundResponse instead
