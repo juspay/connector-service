@@ -33,7 +33,6 @@ use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
 };
 use serde::Serialize;
-use serde_json;
 use transformers::{
     self as nexinets, NexinetsCaptureOrVoidRequest,
     NexinetsCaptureOrVoidRequest as NexinetsVoidRequest, NexinetsErrorResponse,
@@ -368,8 +367,16 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-        let transaction_id = req.request.get_connector_transaction_id()?;
-        let order_id = &req.resource_common_data.connector_request_reference_id;
+        let meta: nexinets::NexinetsPaymentsMetadata =
+            utils::to_connector_meta(req.request.connector_meta.clone())?;
+        let order_id = nexinets::get_order_id(&meta)?;
+        let transaction_id = match meta.psync_flow {
+            transformers::NexinetsTransactionType::Debit
+            | transformers::NexinetsTransactionType::Capture => {
+                req.request.get_connector_transaction_id()?
+            }
+            _ => nexinets::get_transaction_id(&meta)?,
+        };
             Ok(format!(
                 "{}/orders/{order_id}/transactions/{transaction_id}",
                 self.connector_base_url_payments(req),
@@ -437,31 +444,9 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let connector_metadata = req
-                .request
-                .get_connector_metadata()
-                .change_context(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_metadata",
-                })?;
-
-            // connector_metadata is a Value::String, so extract and parse
-            let metadata_str = connector_metadata
-                .as_str()
-                .ok_or(errors::ConnectorError::InvalidDataFormat {
-                    field_name: "connector_metadata as string",
-                })?;
-
-            let parsed_metadata: serde_json::Value =
-                serde_json::from_str(metadata_str).change_context(
-                    errors::ConnectorError::ParsingFailed
-                )?;
-
-            let order_id = parsed_metadata
-                .get("order_id")
-                .and_then(|v| v.as_str())
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "order_id in connector_metadata",
-                })?;
+        let meta: nexinets::NexinetsPaymentsMetadata =
+            utils::to_connector_meta(req.request.connector_metadata.clone())?;
+        let order_id = nexinets::get_order_id(&meta)?;
 
             Ok(format!(
                 "{}/orders/{order_id}/transactions/{}/refund",
@@ -500,7 +485,9 @@ macros::macro_connector_implementation!(
                 .connector_refund_id
                 .clone();
 
-            let order_id = req.resource_common_data.connector_request_reference_id.clone();
+            let meta: nexinets::NexinetsPaymentsMetadata =
+            utils::to_connector_meta(req.request.refund_connector_metadata.clone().map(|secret| secret.expose()))?;
+        let order_id = nexinets::get_order_id(&meta)?;
 
             Ok(format!(
                 "{}/orders/{order_id}/transactions/{transaction_id}",

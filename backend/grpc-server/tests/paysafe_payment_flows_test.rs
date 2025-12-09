@@ -268,6 +268,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         currency: i32::from(Currency::Usd),
         state: None,
         encoded_data: None,
+        connector_metadata: HashMap::new(),
     }
 }
 

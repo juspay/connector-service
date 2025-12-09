@@ -267,6 +267,7 @@ fn create_payment_sync_request(
         amount,
         currency: i32::from(Currency::Usd),
         state: None,
+        connector_metadata: HashMap::new(),
     }
 }
 

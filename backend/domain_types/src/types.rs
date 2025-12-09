@@ -3190,7 +3190,15 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             connector_transaction_id,
             encoded_data,
             capture_method,
-            connector_meta: None,
+            connector_meta: (!value.connector_metadata.is_empty()).then(|| {
+                serde_json::Value::Object(
+                    value
+                        .connector_metadata
+                        .into_iter()
+                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .collect(),
+                )
+            }),
             sync_type: router_request_types::SyncRequestType::SinglePaymentSync,
             mandate_id: None,
             payment_method_type: None,
