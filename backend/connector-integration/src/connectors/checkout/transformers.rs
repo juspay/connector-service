@@ -243,7 +243,6 @@ pub struct PaymentsRequest<
     pub reference: String,
     #[serde(skip_serializing_if = "is_metadata_empty")]
     pub metadata: Option<Secret<serde_json::Value>>,
-    pub payment_type: CheckoutPaymentType,
     pub merchant_initiated: Option<bool>,
     pub previous_payment_id: Option<String>,
     pub store_for_future_use: Option<bool>,
@@ -402,20 +401,6 @@ impl<
             Some(common_enums::CaptureMethod::Automatic)
         );
 
-        let payment_type = if matches!(
-            item.router_data.request.payment_channel,
-            Some(
-                common_enums::PaymentChannel::MailOrder
-                    | common_enums::PaymentChannel::TelephoneOrder
-            )
-        ) {
-            CheckoutPaymentType::Moto
-        } else if item.router_data.request.is_mandate_payment() {
-            CheckoutPaymentType::Unscheduled
-        } else {
-            CheckoutPaymentType::Regular
-        };
-
         let (challenge_indicator, store_for_future_use) =
             if item.router_data.request.is_mandate_payment() {
                 (
@@ -457,7 +442,6 @@ impl<
             source_var,
             previous_payment_id,
             merchant_initiated,
-            payment_type,
             store_for_future_use,
         ) = match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Card(ccard) => {
@@ -479,7 +463,6 @@ impl<
                     payment_source,
                     None,
                     Some(false),
-                    payment_type,
                     store_for_future_use,
                 ))
             }
@@ -569,7 +552,6 @@ impl<
                 .connector_request_reference_id
                 .clone(),
             metadata,
-            payment_type,
             merchant_initiated,
             previous_payment_id,
             store_for_future_use,

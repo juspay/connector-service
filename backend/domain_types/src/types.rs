@@ -1503,8 +1503,7 @@ impl<
             request_extended_authorization: value.request_extended_authorization,
             merchant_account_metadata,
             connector_testing_data,
-            payment_channel: None,
-            enable_partial_authorization: None,
+            enable_partial_authorization: value.enable_partial_authorization,
         })
     }
 }
@@ -1722,8 +1721,7 @@ impl<
             request_extended_authorization: value.request_extended_authorization,
             merchant_account_metadata,
             connector_testing_data,
-            payment_channel: None,
-            enable_partial_authorization: None,
+            enable_partial_authorization: value.enable_partial_authorization,
         })
     }
 }

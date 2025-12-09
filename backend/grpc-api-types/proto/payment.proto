@@ -1592,6 +1592,7 @@ message PaymentServiceAuthorizeRequest {
   optional bool off_session = 25; // Indicates if off-session transaction
   bool request_incremental_authorization = 26; // Indicates if incremental authorization is requested
   optional bool request_extended_authorization = 27; // Indicates if extended authorization is requested
+  optional bool enable_partial_authorization = 43; // Indicates if partial authorization is enabled
 
   // Contextual Information
   optional CustomerAcceptance customer_acceptance = 28; // Details of customer acceptance
@@ -1668,6 +1669,7 @@ message PaymentServiceAuthorizeOnlyRequest {
   optional bool off_session = 25; // Indicates if off-session transaction
   bool request_incremental_authorization = 26; // Indicates if incremental authorization is requested
   optional bool request_extended_authorization = 27; // Indicates if extended authorization is requested
+  optional bool enable_partial_authorization = 43; // Indicates if partial authorization is enabled
 
   // Contextual Information
   optional CustomerAcceptance customer_acceptance = 28; // Details of customer acceptance

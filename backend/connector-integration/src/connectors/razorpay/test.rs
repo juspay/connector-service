@@ -189,7 +189,6 @@ mod tests {
                     setup_mandate_details: None,
                     enable_overcapture: None,
                     merchant_account_metadata: None,
-                    payment_channel: None,
                     enable_partial_authorization: None,
                 },
                 response: Err(ErrorResponse {
@@ -350,7 +349,6 @@ mod tests {
                     setup_mandate_details: None,
                     enable_overcapture: None,
                     merchant_account_metadata: None,
-                    payment_channel: None,
                     enable_partial_authorization: None,
                 },
                 response: Err(ErrorResponse {
@@ -485,7 +483,6 @@ mod tests {
                     enable_overcapture: None,
                     merchant_account_metadata: None,
                     billing_descriptor: None,
-                    payment_channel: None,
                     enable_partial_authorization: None,
                 },
                 response: Err(ErrorResponse {
@@ -665,7 +662,6 @@ mod tests {
                     enable_overcapture: None,
                     merchant_account_metadata: None,
                     billing_descriptor: None,
-                    payment_channel: None,
                     enable_partial_authorization: None,
                 },
                 response: Err(ErrorResponse {
@@ -989,7 +985,6 @@ mod tests {
                 enable_overcapture: None,
                 merchant_account_metadata: None,
                 billing_descriptor: None,
-                payment_channel: None,
                 enable_partial_authorization: None,
             },
             response: Err(ErrorResponse {
@@ -1180,7 +1175,6 @@ mod tests {
                 enable_overcapture: None,
                 merchant_account_metadata: None,
                 billing_descriptor: None,
-                payment_channel: None,
                 enable_partial_authorization: None,
             },
             response: Err(ErrorResponse {
@@ -1587,7 +1581,6 @@ mod tests {
                     setup_mandate_details: None,
                     enable_overcapture: None,
                     merchant_account_metadata: None,
-                    payment_channel: None,
                     enable_partial_authorization: None,
                 },
                 response: Err(ErrorResponse {
