@@ -18,7 +18,6 @@ use serde::{Deserialize, Serialize};
 use crate::{
     connectors::powertranz::{PowertranzAmountConvertor, PowertranzRouterData},
     types::ResponseRouterData,
-    utils::get_card_expiration_yymm,
 };
 
 // ============================================================================
@@ -224,24 +223,18 @@ fn get_payment_status(
     }
 }
 
-/// Build error response from PowerTranz response
-///
-/// Error handling precedence:
-/// 1. If `errors` object exists - use first error's code and message
-/// 2. If ISO response code is not in success codes - use ISO code and response message
-/// 3. Otherwise - return None (successful response)
 pub fn build_powertranz_error_response(
     errors: &Option<Vec<PowertranzError>>,
     iso_response_code: &str,
     response_message: &str,
     status_code: u16,
-) -> Option<domain_types::router_data::ErrorResponse> {
+) -> domain_types::router_data::ErrorResponse {
     use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
 
     if let Some(errors) = errors {
         if !errors.is_empty() {
             let first_error = errors.first();
-            return Some(domain_types::router_data::ErrorResponse {
+            return domain_types::router_data::ErrorResponse {
                 status_code,
                 code: first_error
                     .map(|e| e.code.clone())
@@ -261,13 +254,13 @@ pub fn build_powertranz_error_response(
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-            });
+            };
         }
     }
 
-    // Check ISO response code if no errors object
+    // ISO Error Case
     if !ISO_SUCCESS_CODES.contains(&iso_response_code) {
-        return Some(domain_types::router_data::ErrorResponse {
+        return domain_types::router_data::ErrorResponse {
             status_code,
             code: iso_response_code.to_string(),
             message: response_message.to_string(),
@@ -277,11 +270,22 @@ pub fn build_powertranz_error_response(
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
-        });
+        };
     }
 
-    None
+    domain_types::router_data::ErrorResponse {
+        status_code,
+        code: NO_ERROR_CODE.to_string(),
+        message: NO_ERROR_MESSAGE.to_string(),
+        reason: None, // or Some("Success".into())
+        attempt_status: None,
+        connector_transaction_id: None,
+        network_decline_code: None,
+        network_advice_code: None,
+        network_error_message: None,
+    }
 }
+
 
 // ============================================================================
 // Request Transformers
@@ -328,10 +332,9 @@ impl<
 
         match &request_data.payment_method_data {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
-                let card_expiration = get_card_expiration_yymm(
-                    card_data.card_exp_year.clone(),
-                    card_data.card_exp_month.clone(),
-                );
+                let card_expiration = card_data
+                    .get_card_expiry_year_month_as_yymm()
+                    .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
                 Ok(Self {
                     transaction_identifier: uuid::Uuid::new_v4().to_string(),
@@ -342,7 +345,9 @@ impl<
                         cardholder_name: card_data
                             .card_holder_name
                             .clone()
-                            .unwrap_or(Secret::new("".to_string())),
+                            .ok_or(errors::ConnectorError::MissingRequiredField {
+                                field_name: "card_holder_name",
+                            })?,
                         card_pan: Secret::new(card_data.card_number.peek().to_string()),
                         card_cvv: card_data.card_cvc.clone(),
                         card_expiration,

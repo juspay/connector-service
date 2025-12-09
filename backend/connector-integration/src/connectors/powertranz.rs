@@ -629,7 +629,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn get_currency_unit(&self) -> CurrencyUnit {
-        CurrencyUnit:: Base
+        CurrencyUnit::Base
     }
 
     fn common_get_content_type(&self) -> &'static str {
@@ -699,7 +699,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             with_response_body!(event_builder, response);
 
             let first_error = response.errors.first();
-            Some(ErrorResponse {
+            ErrorResponse {
                 status_code: res.status_code,
                 code: first_error
                     .map(|e| e.code.clone())
@@ -713,20 +713,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-            })
+            }
         };
 
-        Ok(error_response.unwrap_or_else(|| ErrorResponse {
-            status_code: res.status_code,
-            code: NO_ERROR_CODE.to_string(),
-            message: NO_ERROR_MESSAGE.to_string(),
-            reason: None,
-            attempt_status: None,
-            connector_transaction_id: None,
-            network_decline_code: None,
-            network_advice_code: None,
-            network_error_message: None,
-        }))
+        Ok(error_response)
     }
 }
 

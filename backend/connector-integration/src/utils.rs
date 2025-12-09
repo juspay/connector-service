@@ -293,18 +293,6 @@ pub fn get_token_expiry_month_year_2_digit_with_delimiter(
     Secret::new(format!("{}/{}", month.peek(), year_2_digit.peek()))
 }
 
-pub fn get_card_expiration_yymm(
-    year: Secret<String>,
-    month: Secret<String>,
-) -> Secret<String> {
-    let year_2_digit = if year.peek().len() == 4 {
-        Secret::new(year.peek().chars().skip(2).collect::<String>())
-    } else {
-        year
-    };
-    Secret::new(format!("{}{}", year_2_digit.peek(), month.peek()))
-}
-
 /// Common merchant-defined information structure for Cybersource-based connectors
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
