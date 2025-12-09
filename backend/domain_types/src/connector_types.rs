@@ -301,7 +301,7 @@ pub struct PaymentsSyncData {
     pub connector_transaction_id: ResponseId,
     pub encoded_data: Option<String>,
     pub capture_method: Option<common_enums::CaptureMethod>,
-    pub connector_meta: Option<serde_json::Value>,
+    pub connector_metadata: Option<SecretSerdeValue>,
     pub sync_type: SyncRequestType,
     pub mandate_id: Option<MandateIds>,
     pub payment_method_type: Option<common_enums::PaymentMethodType>,
@@ -311,6 +311,7 @@ pub struct PaymentsSyncData {
     pub all_keys_required: Option<bool>,
     pub integrity_object: Option<PaymentSynIntegrityObject>,
     pub split_payments: Option<SplitPaymentsRequest>,
+    pub setup_future_usage: Option<common_enums::FutureUsage>,
 }
 
 impl PaymentsSyncData {
@@ -332,6 +333,12 @@ impl PaymentsSyncData {
             .attach_printable("Expected connector transaction ID not found")
             .change_context(ConnectorError::MissingConnectorTransactionID)?,
         }
+    }
+    pub fn is_mandate_payment(&self) -> bool {
+        matches!(
+            self.setup_future_usage,
+            Some(common_enums::FutureUsage::OffSession)
+        )
     }
 }
 
@@ -374,9 +381,8 @@ pub struct PaymentFlowData {
     pub connector_response: Option<ConnectorResponseData>,
     pub recurring_mandate_payment_data: Option<RecurringMandatePaymentData>,
     pub order_details: Option<Vec<payment_address::OrderDetailsWithAmount>>,
-    pub l2_l3_data: Option<Box<L2L3Data>>,
     // stores the authorized amount in case of partial authorization
-    pub authorized_amount: Option<MinorUnit>,
+    pub minor_amount_authorized: Option<MinorUnit>,
 }
 
 impl PaymentFlowData {
@@ -1082,8 +1088,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub customer_name: Option<String>,
     pub currency: Currency,
     pub confirm: bool,
-    pub statement_descriptor_suffix: Option<String>,
-    pub statement_descriptor: Option<String>,
+    pub billing_descriptor: Option<BillingDescriptor>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub router_return_url: Option<String>,
     pub webhook_url: Option<String>,
@@ -2227,8 +2232,7 @@ pub struct SetupMandateRequestData<T: PaymentMethodDataTypes> {
     pub payment_method_data: payment_method_data::PaymentMethodData<T>,
     pub amount: Option<i64>,
     pub confirm: bool,
-    pub statement_descriptor_suffix: Option<String>,
-    pub statement_descriptor: Option<String>,
+    pub billing_descriptor: Option<BillingDescriptor>,
     pub customer_acceptance: Option<CustomerAcceptance>,
     pub mandate_id: Option<MandateIds>,
     pub setup_future_usage: Option<common_enums::FutureUsage>,
@@ -3285,4 +3289,21 @@ pub struct CustomerInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BillingDetails {
     pub address_city: Option<String>,
+}
+
+/// Billing Descriptor information to be sent to the payment gateway
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BillingDescriptor {
+    /// name to be put in billing description
+    pub name: Option<Secret<String>>,
+    /// city to be put in billing description
+    pub city: Option<Secret<String>>,
+    /// phone to be put in billing description
+    pub phone: Option<Secret<String>>,
+    /// a short description for the payment
+    pub statement_descriptor: Option<String>,
+    /// Concatenated with the prefix (shortened descriptor) or statement descriptor that’s set on the account to form the complete statement descriptor.
+    pub statement_descriptor_suffix: Option<String>,
+    /// A reference to be shown on billing description
+    pub reference: Option<String>,
 }

@@ -2236,6 +2236,7 @@ impl<F, T>
         let mandate_reference = Some(Box::new(MandateReference {
             connector_mandate_id: Some(info_response.id.clone()),
             payment_method_id: None,
+            connector_mandate_request_reference_id: None,
         }));
         // https://developer.paypal.com/docs/api/payment-tokens/v3/#payment-tokens_create
         // If 201 status code, then order is captured, other status codes are handled by the error handler

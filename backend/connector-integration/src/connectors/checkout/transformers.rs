@@ -248,11 +248,6 @@ pub struct PaymentsRequest<
     pub previous_payment_id: Option<String>,
     pub store_for_future_use: Option<bool>,
     pub billing_descriptor: Option<CheckoutBillingDescriptor>,
-    // Level 2/3 data fields
-    pub customer: Option<CheckoutCustomer>,
-    pub processing: Option<CheckoutProcessing>,
-    pub shipping: Option<CheckoutShipping>,
-    pub items: Option<Vec<CheckoutLineItem>>,
     pub partial_authorization: Option<CheckoutPartialAuthorization>,
     pub payment_ip: Option<Secret<String, common_utils::pii::IpAddress>>,
 }
@@ -540,59 +535,6 @@ impl<
         let auth_type: CheckoutAuthType = connector_auth.try_into()?;
         let processing_channel_id = auth_type.processing_channel_id;
         let metadata = build_metadata(&item);
-        let (customer, processing, shipping, items) = if let Some(l2l3_data) =
-            &item.router_data.resource_common_data.l2_l3_data
-        {
-            (
-                l2l3_data.customer_info.as_ref().map(|_| CheckoutCustomer {
-                    name: l2l3_data.get_customer_name(),
-                    email: l2l3_data.get_customer_email(),
-                    phone: Some(CheckoutPhoneDetails {
-                        country_code: l2l3_data.get_customer_phone_country_code(),
-                        number: l2l3_data.get_customer_phone_number(),
-                    }),
-                    tax_number: l2l3_data.get_customer_tax_registration_id(),
-                }),
-                l2l3_data.order_info.as_ref().map(|_| CheckoutProcessing {
-                    order_id: l2l3_data.get_merchant_order_reference_id(),
-                    tax_amount: l2l3_data.get_order_tax_amount(),
-                    discount_amount: l2l3_data.get_discount_amount(),
-                    duty_amount: l2l3_data.get_duty_amount(),
-                    shipping_amount: l2l3_data.get_shipping_cost(),
-                    shipping_tax_amount: l2l3_data.get_shipping_amount_tax(),
-                }),
-                Some(CheckoutShipping {
-                    address: Some(CheckoutAddress {
-                        country: l2l3_data.get_shipping_country(),
-                        address_line1: l2l3_data.get_shipping_address_line1(),
-                        address_line2: l2l3_data.get_shipping_address_line2(),
-                        city: l2l3_data.get_shipping_city(),
-                        state: l2l3_data.get_shipping_state(),
-                        zip: l2l3_data.get_shipping_zip(),
-                    }),
-                    from_address_zip: l2l3_data.get_shipping_origin_zip().map(|zip| zip.expose()),
-                }),
-                l2l3_data.get_order_details().map(|details| {
-                    details
-                        .iter()
-                        .map(|item| CheckoutLineItem {
-                            commodity_code: item.commodity_code.clone(),
-                            discount_amount: item.unit_discount_amount,
-                            name: Some(item.product_name.clone()),
-                            quantity: Some(item.quantity),
-                            reference: item.product_id.clone(),
-                            tax_exempt: None,
-                            tax_amount: item.total_tax_amount,
-                            total_amount: item.total_amount,
-                            unit_of_measure: item.unit_of_measure.clone(),
-                            unit_price: Some(item.amount),
-                        })
-                        .collect()
-                }),
-            )
-        } else {
-            (None, None, None, None)
-        };
 
         let partial_authorization = item.router_data.request.enable_partial_authorization.map(
             |enable_partial_authorization| CheckoutPartialAuthorization {
@@ -602,16 +544,16 @@ impl<
 
         let payment_ip = item.router_data.request.get_ip_address_as_optional();
 
-        // let billing_descriptor =
-        //     item.router_data
-        //         .request
-        //         .billing_descriptor
-        //         .as_ref()
-        //         .map(|descriptor| CheckoutBillingDescriptor {
-        //             name: descriptor.name.clone(),
-        //             city: descriptor.city.clone(),
-        //             reference: descriptor.reference.clone(),
-        //         });
+        let billing_descriptor =
+            item.router_data
+                .request
+                .billing_descriptor
+                .as_ref()
+                .map(|descriptor| CheckoutBillingDescriptor {
+                    name: descriptor.name.clone(),
+                    city: descriptor.city.clone(),
+                    reference: descriptor.reference.clone(),
+                });
 
         let request = Self {
             source: source_var,
@@ -631,13 +573,9 @@ impl<
             merchant_initiated,
             previous_payment_id,
             store_for_future_use,
-            customer,
-            processing,
-            shipping,
-            items,
             partial_authorization,
             payment_ip,
-            billing_descriptor: None,
+            billing_descriptor,
         };
 
         Ok(request)
@@ -941,7 +879,7 @@ impl<
                 _ => (item.response.amount.map(MinorUnit::get_amount_as_i64), None),
             };
 
-        let authorized_amount = item
+        let minor_amount_authorized = item
             .router_data
             .request
             .enable_partial_authorization
@@ -952,7 +890,7 @@ impl<
             resource_common_data: PaymentFlowData {
                 status,
                 connector_response: additional_information,
-                authorized_amount,
+                minor_amount_authorized,
                 amount_captured,
                 minor_amount_capturable,
                 ..item.router_data.resource_common_data
@@ -1090,8 +1028,13 @@ impl<F> TryFrom<ResponseRouterData<PaymentsResponse, Self>>
             .links
             .redirect
             .map(|href| RedirectForm::from((href.redirection_url, Method::Get)));
-        let checkout_meta: CheckoutMeta =
-            to_connector_meta(item.router_data.request.connector_meta.clone())?;
+        let checkout_meta: CheckoutMeta = to_connector_meta(
+            item.router_data
+                .request
+                .connector_metadata
+                .clone()
+                .map(|m| m.expose()),
+        )?;
         let status = get_attempt_status_intent((item.response.status, checkout_meta.psync_flow));
         let error_response = if status == common_enums::AttemptStatus::Failure {
             Some(ErrorResponse {
@@ -1116,16 +1059,19 @@ impl<F> TryFrom<ResponseRouterData<PaymentsResponse, Self>>
             None
         };
 
-        let mandate_reference = item
-            .response
-            .source
-            .as_ref()
-            .and_then(|src| src.id.clone())
-            .map(|id| MandateReference {
-                connector_mandate_id: Some(id),
-                payment_method_id: None,
-                connector_mandate_request_reference_id: Some(item.response.id.clone()),
-            });
+        let mandate_reference = if item.router_data.request.is_mandate_payment() {
+            item.response
+                .source
+                .as_ref()
+                .and_then(|src| src.id.clone())
+                .map(|id| MandateReference {
+                    connector_mandate_id: Some(id),
+                    payment_method_id: None,
+                    connector_mandate_request_reference_id: Some(item.response.id.clone()),
+                })
+        } else {
+            None
+        };
 
         let additional_information =
             convert_to_additional_payment_method_connector_response(item.response.source.as_ref())
@@ -1185,20 +1131,16 @@ pub struct PaymentVoidRequest {
 }
 #[derive(Clone, Default, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct PaymentVoidResponse {
-    #[serde(skip)]
-    status: u16,
     action_id: String,
     reference: String,
     scheme_id: Option<String>,
 }
 
-impl From<&PaymentVoidResponse> for common_enums::AttemptStatus {
-    fn from(item: &PaymentVoidResponse) -> Self {
-        if item.status == 202 {
-            Self::Voided
-        } else {
-            Self::VoidFailed
-        }
+fn http_code_to_attempt_status_for_void_flow(http_code: u16) -> common_enums::AttemptStatus {
+    if http_code == 202 {
+        common_enums::AttemptStatus::Voided
+    } else {
+        common_enums::AttemptStatus::VoidFailed
     }
 }
 
@@ -1221,7 +1163,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentVoidResponse, Self>>
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
-                status: response.into(),
+                status: http_code_to_attempt_status_for_void_flow(item.http_code),
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
