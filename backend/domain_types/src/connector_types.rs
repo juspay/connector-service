@@ -3116,39 +3116,6 @@ pub struct PaypalSdkSessionTokenData {
     pub data: PaypalSdkMetaData,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OrderInfo {
-    pub order_date: Option<time::PrimitiveDateTime>,
-    pub order_details: Option<Vec<payment_address::OrderDetailsWithAmount>>,
-    pub merchant_order_reference_id: Option<String>,
-    pub discount_amount: Option<MinorUnit>,
-    pub shipping_cost: Option<MinorUnit>,
-    pub duty_amount: Option<MinorUnit>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaxInfo {
-    pub tax_status: Option<common_enums::TaxStatus>,
-    pub customer_tax_registration_id: Option<Secret<String>>,
-    pub merchant_tax_registration_id: Option<Secret<String>>,
-    pub shipping_amount_tax: Option<MinorUnit>,
-    pub order_tax_amount: Option<MinorUnit>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CustomerInfo {
-    pub customer_id: Option<common_utils::id_type::CustomerId>,
-    pub customer_email: Option<common_utils::pii::Email>,
-    pub customer_name: Option<Secret<String>>,
-    pub customer_phone_number: Option<Secret<String>>,
-    pub customer_phone_country_code: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BillingDetails {
-    pub address_city: Option<String>,
-}
-
 /// Billing Descriptor information to be sent to the payment gateway
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BillingDescriptor {
