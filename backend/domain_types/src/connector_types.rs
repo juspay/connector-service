@@ -100,7 +100,7 @@ pub enum ConnectorEnum {
     Barclaycard,
     Nexixpay,
     Airwallex,
-    Bankofamerica
+    Bankofamerica,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
