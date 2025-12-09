@@ -4,6 +4,17 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.09.0
+
+### Features
+
+- **connector:** [AIRWALLEX] Connector Integration ([#333](https://github.com/juspay/connector-service/pull/333)) ([`f43fbfd`](https://github.com/juspay/connector-service/commit/f43fbfdb01f6d3086e4ed7f258369daceaf86518))
+- Paypal refund rsync flow ([#349](https://github.com/juspay/connector-service/pull/349)) ([`70cccb9`](https://github.com/juspay/connector-service/commit/70cccb931bccb2c7ab7c72eebecc98f86aad92e1))
+
+**Full Changelog:** [`2025.12.08.0...2025.12.09.0`](https://github.com/juspay/connector-service/compare/2025.12.08.0...2025.12.09.0)
+
+- - -
+
 ## 2025.12.08.0
 
 ### Features
