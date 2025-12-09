@@ -748,9 +748,9 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let endpoint = if req.request.is_auto_capture()? {
-                "sale" 
+                "sale"
             } else {
-                "auth" 
+                "auth"
             };
             Ok(format!("{}/{}", self.connector_base_url_payments(req), endpoint))
         }

@@ -286,7 +286,6 @@ pub fn build_powertranz_error_response(
     }
 }
 
-
 // ============================================================================
 // Request Transformers
 // ============================================================================
@@ -342,12 +341,11 @@ impl<
                     currency_code,
                     three_d_secure: Some(false),
                     source: PowertranzSource {
-                        cardholder_name: card_data
-                            .card_holder_name
-                            .clone()
-                            .ok_or(errors::ConnectorError::MissingRequiredField {
+                        cardholder_name: card_data.card_holder_name.clone().ok_or(
+                            errors::ConnectorError::MissingRequiredField {
                                 field_name: "card_holder_name",
-                            })?,
+                            },
+                        )?,
                         card_pan: card_data.card_number.clone(),
                         card_cvv: card_data.card_cvc.clone(),
                         card_expiration,
