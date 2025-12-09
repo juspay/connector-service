@@ -1455,15 +1455,23 @@ impl From<&ActionResponse> for common_enums::RefundStatus {
     }
 }
 
-impl<F> TryFrom<ResponseRouterData<&ActionResponse, Self>>
+pub type RSyncResponse = Vec<ActionResponse>;
+
+impl<F> TryFrom<ResponseRouterData<RSyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<&ActionResponse, Self>) -> Result<Self, Self::Error> {
-        let refund_status = common_enums::RefundStatus::from(item.response);
+    fn try_from(item: ResponseRouterData<RSyncResponse, Self>) -> Result<Self, Self::Error> {
+        let refund_action_id = item.router_data.request.connector_refund_id.clone();
+        let action_response = item
+            .response
+            .iter()
+            .find(|&x| x.action_id.clone() == refund_action_id)
+            .ok_or(errors::ConnectorError::ResponseHandlingFailed)?;
+        let refund_status = common_enums::RefundStatus::from(action_response);
         Ok(Self {
             response: Ok(RefundsResponseData {
-                connector_refund_id: item.response.action_id.clone(),
+                connector_refund_id: action_response.action_id.clone(),
                 refund_status,
                 status_code: item.http_code,
             }),

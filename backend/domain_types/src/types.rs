@@ -5938,11 +5938,11 @@ impl
             statement_descriptor: descriptor
                 .statement_descriptor
                 .clone()
-                .or_else(|| statement_descriptor_name),
+                .or(statement_descriptor_name),
             statement_descriptor_suffix: descriptor
                 .statement_descriptor_suffix
                 .clone()
-                .or_else(|| statement_descriptor_suffix),
+                .or(statement_descriptor_suffix),
             reference: descriptor.reference.clone(),
         }
     }
