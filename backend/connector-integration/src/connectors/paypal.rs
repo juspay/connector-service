@@ -50,7 +50,8 @@ use crate::{
         self as paypal, auth_headers, PaypalAuthResponse, PaypalAuthUpdateRequest,
         PaypalAuthUpdateResponse, PaypalCaptureResponse, PaypalPaymentsCancelResponse,
         PaypalPaymentsCaptureRequest, PaypalPaymentsRequest, PaypalRefundRequest,
-        PaypalSyncResponse, RefundResponse, RefundSyncResponse,
+        PaypalRepeatPaymentRequest, PaypalRepeatPaymentResponse, PaypalSetupMandatesResponse,
+        PaypalSyncResponse, PaypalZeroMandateRequest, RefundResponse, RefundSyncResponse,
     },
     types::ResponseRouterData,
     utils::{self, ConnectorErrorTypeMapping, ErrorCodeAndMessage},
@@ -215,6 +216,18 @@ macros::create_all_prerequisites!(
             flow: RSync,
             response_body: RefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: PaypalZeroMandateRequest,
+            response_body: PaypalSetupMandatesResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: PaypalRepeatPaymentRequest<T>,
+            response_body: PaypalRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -226,7 +239,7 @@ macros::create_all_prerequisites!(
             access_token: &str,
             connector_request_reference_id: &str,
             connector_auth_type: &ConnectorAuthType,
-            connector_metadata: Option<&serde_json::Value>,
+            _connector_metadata: Option<&serde_json::Value>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             let auth = paypal::PaypalAuthType::try_from(connector_auth_type)?;
             let mut headers = vec![
@@ -252,13 +265,6 @@ macros::create_all_prerequisites!(
             {
                 let auth_assertion_header =
                     construct_auth_assertion_header(&credentials.payer_id, &credentials.client_id);
-                let partner_attribution_id = connector_metadata
-                    .and_then(|metadata| metadata.get("paypal_partner_attribution_id"))
-                    .and_then(|value| value.as_str())
-                    .ok_or(errors::ConnectorError::InvalidConnectorConfig {
-                        config: "Missing paypal_partner_attribution_id in connector metadata for PartnerIntegration",
-                    })?;
-
                 headers.extend(vec![
                     (
                         auth_headers::PAYPAL_AUTH_ASSERTION.to_string(),
@@ -266,18 +272,13 @@ macros::create_all_prerequisites!(
                     ),
                     (
                         auth_headers::PAYPAL_PARTNER_ATTRIBUTION_ID.to_string(),
-                        partner_attribution_id.to_string().into(),
+                        "HyperSwitchPPCP_SP".to_string().into(),
                     ),
                 ])
             } else {
-                let legacy_attribution_id = connector_metadata
-                    .and_then(|metadata| metadata.get("paypal_legacy_partner_attribution_id"))
-                    .and_then(|value| value.as_str())
-                    .unwrap_or(""); // fallback to empty value
-
                 headers.extend(vec![(
                     auth_headers::PAYPAL_PARTNER_ATTRIBUTION_ID.to_string(),
-                    legacy_attribution_id.to_string().into(),
+                    "HyperSwitchlegacy_Ecom".to_string().into(),
                 )])
             }
             Ok(headers)
@@ -725,15 +726,65 @@ macros::macro_connector_implementation!(
     }
 );
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Paypal<T>
-{
-}
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Paypal,
+    curl_request: Json(paypal::PaypalZeroMandateRequest),
+    curl_response: paypal::PaypalSetupMandatesResponse,
+    flow_name: SetupMandate,
+    resource_common_data: PaymentFlowData,
+    flow_request: SetupMandateRequestData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_payment_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+                "{}v3/vault/payment-tokens/",
+                self.connector_base_url_payments(req)
+            ))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Paypal,
+    curl_request: Json(PaypalRepeatPaymentRequest<T>),
+    curl_response: PaypalRepeatPaymentResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_payment_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}v2/checkout/orders", self.connector_base_url_payments(req)))
+        }
+    }
+);
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
     for Paypal<T>
@@ -1057,12 +1108,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RepeatPaymentData,
         PaymentsResponseData,
     > for Paypal<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Paypal<T>
 {
 }
 

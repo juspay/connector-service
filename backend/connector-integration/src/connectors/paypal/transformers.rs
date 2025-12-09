@@ -5,11 +5,12 @@ use cards;
 use common_enums;
 use common_utils::{types::StringMajorUnit, CustomResult};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PostAuthenticate},
+    connector_flow::{Authorize, Capture, PostAuthenticate, RepeatPayment},
     connector_types::{
         AccessTokenResponseData, MandateReference, PaymentFlowData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
+       
         SetupMandateRequestData,
     },
     errors::{self, ConnectorError},
@@ -47,6 +48,12 @@ impl<
 }
 
 impl GetRequestIncrementalAuthorization for PaymentsSyncData {
+    fn get_request_incremental_authorization(&self) -> Option<bool> {
+        None
+    }
+}
+
+impl GetRequestIncrementalAuthorization for RepeatPaymentData {
     fn get_request_incremental_authorization(&self) -> Option<bool> {
         None
     }
@@ -148,6 +155,64 @@ impl<
     }
 }
 
+// OrderRequestAmount for RepeatPayment - RepeatPaymentData doesn't have shipping_cost
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        &PaypalRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            T,
+        >,
+    > for OrderRequestAmount
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: &PaypalRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let value = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
+            .change_context(errors::ConnectorError::AmountConversionFailed)?;
+        // RepeatPaymentData doesn't have shipping_cost, default to 0
+        let shipping_value = item
+            .connector
+            .amount_converter
+            .convert(
+                common_utils::types::MinorUnit::zero(),
+                item.router_data.request.currency,
+            )
+            .change_context(errors::ConnectorError::AmountConversionFailed)?;
+        Ok(Self {
+            currency_code: item.router_data.request.currency,
+            value: value.clone(),
+            breakdown: AmountBreakdown {
+                item_total: OrderAmount {
+                    currency_code: item.router_data.request.currency,
+                    value,
+                },
+                tax_total: None,
+                shipping: Some(OrderAmount {
+                    currency_code: item.router_data.request.currency,
+                    value: shipping_value,
+                }),
+            },
+        })
+    }
+}
+
 #[derive(Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct AmountBreakdown {
     item_total: OrderAmount,
@@ -209,6 +274,54 @@ impl<
                 PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let value = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
+            .change_context(errors::ConnectorError::AmountConversionFailed)?;
+        Ok(Self {
+            name: format!(
+                "Payment for invoice {}",
+                item.router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+            ),
+            quantity: ORDER_QUANTITY,
+            unit_amount: OrderAmount {
+                currency_code: item.router_data.request.currency,
+                value,
+            },
+            tax: None,
+        })
+    }
+}
+
+// ItemDetails for RepeatPayment
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        &PaypalRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            T,
+        >,
+    > for ItemDetails
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: &PaypalRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -356,7 +469,7 @@ pub struct CardRequestStruct<
     attributes: Option<CardRequestAttributes>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VaultStruct {
     vault_id: Secret<String>,
 }
@@ -563,6 +676,41 @@ pub struct PaypalSetupMandatesResponse {
     customer: Customer,
     payment_source: ZeroMandateSourceItem,
     links: Vec<PaypalLinks>,
+}
+
+// RepeatPayment - reuses Authorize request/response types
+pub type PaypalRepeatPaymentRequest<T> = PaypalPaymentsRequest<T>;
+pub type PaypalRepeatPaymentResponse = PaypalAuthResponse;
+
+// Response handling for RepeatPayment - delegates to PaypalOrdersResponse
+impl TryFrom<
+        ResponseRouterData<
+            PaypalAuthResponse,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        >,
+    > for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<
+            PaypalAuthResponse,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // RepeatPayment returns PaypalOrdersResponse variant (direct capture)
+        match item.response {
+            PaypalAuthResponse::PaypalOrdersResponse(orders_response) => {
+                Self::try_from(ResponseRouterData {
+                    response: orders_response,
+                    router_data: item.router_data,
+                    http_code: item.http_code,
+                })
+            }
+            PaypalAuthResponse::PaypalRedirectResponse(_) | PaypalAuthResponse::PaypalThreeDsResponse(_) => {
+                Err(errors::ConnectorError::ResponseDeserializationFailed)?
+            }
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -1576,7 +1724,7 @@ pub enum PaypalSyncResponse {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-#[serde(untagged)]
+#[serde(rename_all = "snake_case")]
 pub enum NextActionCall {
     CompleteAuthorize,
 }
@@ -2690,6 +2838,115 @@ impl
                 status_code: item.http_code,
             }),
             ..item.router_data
+        })
+    }
+}
+
+// RepeatPayment - TryFrom implementation for MIT payments
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        PaypalRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            T,
+        >,
+    > for PaypalPaymentsRequest<T>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: PaypalRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Extract connector mandate ID (vault_id) from mandate_reference
+        let connector_mandate_id = match &item.router_data.request.mandate_reference {
+            domain_types::connector_types::MandateReferenceId::ConnectorMandateId(data) => {
+                data.get_connector_mandate_id()
+                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                        field_name: "connector_mandate_id",
+                    })?
+            }
+            domain_types::connector_types::MandateReferenceId::NetworkMandateId(_)
+            | domain_types::connector_types::MandateReferenceId::NetworkTokenWithNTI(_) => {
+                return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                    message: "Network mandate ID not supported for PayPal repeat payments"
+                        .to_string(),
+                    connector: "paypal",
+                }));
+            }
+        };
+
+        // RepeatPayment always captures immediately (MIT transactions)
+        let intent = PaypalPaymentIntent::Capture;
+
+        let paypal_auth: PaypalAuthType =
+            PaypalAuthType::try_from(&item.router_data.resource_common_data.connector_auth_type)?;
+        let payee = get_payee(&paypal_auth);
+
+        let amount = OrderRequestAmount::try_from(&item)?;
+        let connector_request_reference_id = item
+            .router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+        
+        let shipping_address = ShippingAddress::from(&item);
+        let item_details = vec![ItemDetails::try_from(&item)?];
+
+        let purchase_units = vec![PurchaseUnitRequest {
+            reference_id: Some(connector_request_reference_id.clone()),
+            custom_id: item.router_data.request.merchant_order_reference_id.clone(),
+            invoice_id: Some(connector_request_reference_id),
+            amount,
+            payee,
+            shipping: Some(shipping_address),
+            items: item_details,
+        }];
+
+        let payment_method_type = item
+            .router_data
+            .request
+            .payment_method_type
+            .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                field_name: "payment_method_type",
+            })?;
+
+        let payment_source = match payment_method_type {
+            common_enums::PaymentMethodType::Credit
+            | common_enums::PaymentMethodType::Debit
+            | common_enums::PaymentMethodType::Card => Some(PaymentSourceItem::Card(
+                CardRequest::CardVaultStruct(VaultStruct {
+                    vault_id: Secret::new(connector_mandate_id),
+                }),
+            )),
+            common_enums::PaymentMethodType::Paypal => Some(PaymentSourceItem::Paypal(
+                PaypalRedirectionRequest::PaypalVaultStruct(VaultStruct {
+                    vault_id: Secret::new(connector_mandate_id),
+                }),
+            )),
+            _ => {
+                return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                    message: format!(
+                        "Payment method type {:?} not supported for PayPal repeat payments",
+                        payment_method_type
+                    ),
+                    connector: "paypal",
+                }));
+            }
+        };
+
+        Ok(Self {
+            intent,
+            purchase_units,
+            payment_source,
         })
     }
 }
