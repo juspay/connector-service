@@ -237,24 +237,17 @@ impl<T: PaymentMethodDataTypes>
         let payment_method_data = &item.request.payment_method_data;
         let card = match payment_method_data {
             PaymentMethodData::Card(card_data) => {
-                // Get cardholder name - prefer billing name, fallback to customer name
+                // Get cardholder name - prefer billing full name, fallback to customer name
                 let cardholder_name = item
                     .resource_common_data
-                    .address
-                    .get_payment_billing()
-                    .and_then(|billing| billing.address.as_ref())
-                    .and_then(|addr| addr.first_name.clone())
+                    .get_optional_billing_full_name()
                     .or_else(|| item.request.customer_name.clone().map(Secret::new))
                     .ok_or(errors::ConnectorError::MissingRequiredField {
                         field_name: "billing.first_name or customer_name",
                     })?;
 
                 // Determine if this should be auto-capture or authorization
-                let is_auto_capture = item
-                    .request
-                    .capture_method
-                    .map(|cm| matches!(cm, common_enums::CaptureMethod::Automatic))
-                    .unwrap_or(true);
+                let is_auto_capture = !crate::utils::is_manual_capture(item.request.capture_method);
 
                 // Get 2-digit expiry year using utility function
                 let expiry_year = card_data.get_card_expiry_year_2_digit()?;
@@ -630,12 +623,6 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
     fn try_from(
         item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
-        // Validate that we have a connector transaction ID
-        // This is critical - addressing Silverflow PR feedback about proper validation
-        if item.request.connector_transaction_id.is_empty() {
-            return Err(errors::ConnectorError::MissingConnectorTransactionID.into());
-        }
-
         // Convert amount from minor units to major units using FloatMajorUnitForConnector
         let converter = FloatMajorUnitForConnector;
         let amount = converter
