@@ -1375,19 +1375,12 @@ impl<
         let billing_descriptor = value
             .billing_descriptor
             .as_ref()
-            .map(|descriptor| BillingDescriptor {
-                name: descriptor.name.clone(),
-                city: descriptor.city.clone(),
-                phone: descriptor.phone.clone(),
-                statement_descriptor: descriptor
-                    .statement_descriptor
-                    .clone()
-                    .or_else(|| value.statement_descriptor_name.clone()),
-                statement_descriptor_suffix: descriptor
-                    .statement_descriptor_suffix
-                    .clone()
-                    .or_else(|| value.statement_descriptor_suffix.clone()),
-                reference: descriptor.reference.clone(),
+            .map(|descriptor| {
+                BillingDescriptor::from((
+                    descriptor,
+                    value.statement_descriptor_name.clone(),
+                    value.statement_descriptor_suffix.clone(),
+                ))
             })
             .or_else(|| {
                 // Only build a fallback if at least one descriptor exists
@@ -1593,19 +1586,12 @@ impl<
         let billing_descriptor = value
             .billing_descriptor
             .as_ref()
-            .map(|descriptor| BillingDescriptor {
-                name: descriptor.name.clone(),
-                city: descriptor.city.clone(),
-                phone: descriptor.phone.clone(),
-                statement_descriptor: descriptor
-                    .statement_descriptor
-                    .clone()
-                    .or_else(|| value.statement_descriptor_name.clone()),
-                statement_descriptor_suffix: descriptor
-                    .statement_descriptor_suffix
-                    .clone()
-                    .or_else(|| value.statement_descriptor_suffix.clone()),
-                reference: descriptor.reference.clone(),
+            .map(|descriptor| {
+                BillingDescriptor::from((
+                    descriptor,
+                    value.statement_descriptor_name.clone(),
+                    value.statement_descriptor_suffix.clone(),
+                ))
             })
             .or_else(|| {
                 // Only build a fallback if at least one descriptor exists
@@ -5928,6 +5914,37 @@ impl ForeignTryFrom<grpc_api_types::payments::CustomerAcceptance> for mandates::
                 .map(mandates::OnlineMandate::foreign_try_from)
                 .transpose()?,
         })
+    }
+}
+
+impl
+    From<(
+        &grpc_api_types::payments::BillingDescriptor,
+        Option<String>,
+        Option<String>,
+    )> for BillingDescriptor
+{
+    fn from(
+        (descriptor, statement_descriptor_name, statement_descriptor_suffix): (
+            &grpc_api_types::payments::BillingDescriptor,
+            Option<String>,
+            Option<String>,
+        ),
+    ) -> Self {
+        BillingDescriptor {
+            name: descriptor.name.clone(),
+            city: descriptor.city.clone(),
+            phone: descriptor.phone.clone(),
+            statement_descriptor: descriptor
+                .statement_descriptor
+                .clone()
+                .or_else(|| statement_descriptor_name),
+            statement_descriptor_suffix: descriptor
+                .statement_descriptor_suffix
+                .clone()
+                .or_else(|| statement_descriptor_suffix),
+            reference: descriptor.reference.clone(),
+        }
     }
 }
 

@@ -1329,52 +1329,23 @@ pub struct RefundResponse {
     reference: String,
 }
 
-#[derive(Deserialize, Debug, Serialize)]
-pub struct CheckoutRefundResponse {
-    status: u16,
-    response: RefundResponse,
-}
-
-impl From<&CheckoutRefundResponse> for common_enums::RefundStatus {
-    fn from(item: &CheckoutRefundResponse) -> Self {
-        if item.status == 202 {
-            Self::Success
-        } else {
-            Self::Failure
-        }
+fn http_code_to_refund_status(http_code: u16) -> common_enums::RefundStatus {
+    if http_code == 202 {
+        common_enums::RefundStatus::Success
+    } else {
+        common_enums::RefundStatus::Failure
     }
 }
 
-impl<F> TryFrom<ResponseRouterData<CheckoutRefundResponse, Self>>
+impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<CheckoutRefundResponse, Self>,
-    ) -> Result<Self, Self::Error> {
-        let refund_status = common_enums::RefundStatus::from(&item.response);
+    fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
+        let refund_status = http_code_to_refund_status(item.http_code);
         Ok(Self {
             response: Ok(RefundsResponseData {
-                connector_refund_id: item.response.response.action_id.clone(),
-                refund_status,
-                status_code: item.http_code,
-            }),
-            ..item.router_data
-        })
-    }
-}
-
-impl<F> TryFrom<ResponseRouterData<CheckoutRefundResponse, Self>>
-    for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<CheckoutRefundResponse, Self>,
-    ) -> Result<Self, Self::Error> {
-        let refund_status = common_enums::RefundStatus::from(&item.response);
-        Ok(Self {
-            response: Ok(RefundsResponseData {
-                connector_refund_id: item.response.response.action_id.clone(),
+                connector_refund_id: item.response.action_id.clone(),
                 refund_status,
                 status_code: item.http_code,
             }),
@@ -1411,16 +1382,6 @@ pub struct ActionResponse {
     pub action_type: ActionType,
     pub approved: Option<bool>,
     pub reference: Option<String>,
-}
-
-impl From<&ActionResponse> for common_enums::RefundStatus {
-    fn from(item: &ActionResponse) -> Self {
-        match item.approved {
-            Some(true) => Self::Success,
-            Some(false) => Self::Failure,
-            None => Self::Pending,
-        }
-    }
 }
 
 impl MultipleCaptureSyncResponse for ActionResponse {
@@ -1484,29 +1445,22 @@ pub struct CheckoutRedirectResponse {
     pub cko_session_id: Option<String>,
 }
 
-impl<F> TryFrom<ResponseRouterData<ActionResponse, Self>>
-    for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<ActionResponse, Self>) -> Result<Self, Self::Error> {
-        let refund_status = common_enums::RefundStatus::from(&item.response);
-        Ok(Self {
-            response: Ok(RefundsResponseData {
-                connector_refund_id: item.response.action_id.clone(),
-                refund_status,
-                status_code: item.http_code,
-            }),
-            ..item.router_data
-        })
+impl From<&ActionResponse> for common_enums::RefundStatus {
+    fn from(item: &ActionResponse) -> Self {
+        match item.approved {
+            Some(true) => Self::Success,
+            Some(false) => Self::Failure,
+            None => Self::Pending,
+        }
     }
 }
 
-impl<F> TryFrom<ResponseRouterData<ActionResponse, Self>>
+impl<F> TryFrom<ResponseRouterData<&ActionResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<ActionResponse, Self>) -> Result<Self, Self::Error> {
-        let refund_status = common_enums::RefundStatus::from(&item.response);
+    fn try_from(item: ResponseRouterData<&ActionResponse, Self>) -> Result<Self, Self::Error> {
+        let refund_status = common_enums::RefundStatus::from(item.response);
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.action_id.clone(),
