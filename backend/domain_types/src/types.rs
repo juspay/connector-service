@@ -3278,16 +3278,20 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
 
         let encoded_data = value.encoded_data;
 
-        let connector_metadata = value
-            .connector_metadata
-            .map(|metadata| serde_json::from_str(&metadata.expose()))
-            .transpose()
-            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
-                error_identifier: 400,
-                error_message: "Failed to parse connector metadata".to_owned(),
-                error_object: None,
-            }))?;
+        let connector_metadata = if value.connector_metadata.is_empty() {
+            None
+        } else {
+            Some(common_utils::pii::SecretSerdeValue::new(
+                serde_json::to_value(&value.connector_metadata).change_context(
+                    ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Failed to serialize connector metadata".to_owned(),
+                        error_object: None,
+                    }),
+                )?,
+            ))
+        };
 
         Ok(Self {
             connector_transaction_id,
@@ -5519,16 +5523,21 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: value
-                .merchant_account_metadata
-                .map(|metadata| serde_json::from_str(&metadata.expose()))
-                .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_MERCHANT_ACCOUNT_METADATA".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Failed to parse merchant account metadata".to_owned(),
-                    error_object: None,
-                }))?,
+            connector_meta_data: if value.merchant_account_metadata.is_empty() {
+                None
+            } else {
+                Some(common_utils::pii::SecretSerdeValue::new(
+                    serde_json::to_value(&value.merchant_account_metadata).change_context(
+                        ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_MERCHANT_ACCOUNT_METADATA".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Failed to serialize merchant account metadata"
+                                .to_owned(),
+                            error_object: None,
+                        }),
+                    )?,
+                ))
+            },
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
