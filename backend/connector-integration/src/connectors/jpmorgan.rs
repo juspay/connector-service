@@ -323,11 +323,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         with_error_response_body!(event_builder, response);
 
+        let response_message = response
+            .response_message
+            .as_ref()
+            .map_or_else(|| consts::NO_ERROR_MESSAGE.to_string(), ToString::to_string);
+
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: response.code.unwrap_or_else(|| "UNKNOWN".to_string()),
-            message: response.message,
-            reason: response.details.map(|d| format!("{:?}", d)),
+            code: response.response_code,
+            message: response_message.clone(),
+            reason: Some(response_message),
             attempt_status: None,
             connector_transaction_id: None,
             network_advice_code: None,

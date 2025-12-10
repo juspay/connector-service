@@ -11,17 +11,12 @@ pub struct JpmorganAuthUpdateResponse {
     pub expires_in: i64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct JpmorganErrorResponse {
-    pub code: Option<String>,
-    pub message: String,
-    pub details: Option<Vec<ErrorDetails>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-pub struct ErrorDetails {
-    pub field: Option<String>,
-    pub reason: Option<String>,
+    pub response_status: JpmorganTransactionStatus,
+    pub response_code: String,
+    pub response_message: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

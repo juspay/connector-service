@@ -94,6 +94,7 @@ pub enum ReversalReason {
 pub struct JpmorganVoidRequest {
     pub amount: Option<MinorUnit>,
     pub is_void: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub reversal_reason: Option<ReversalReason>,
 }
 
