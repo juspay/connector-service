@@ -9,7 +9,7 @@ use std::fmt::Debug;
 
 use base64::Engine;
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{consts, errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
@@ -281,7 +281,14 @@ macros::create_all_prerequisites!(
                 req.resource_common_data.connector_request_reference_id.clone().into_masked(),
             );
 
+            // Merchant-Id header
+            let merchant_id_header = (
+                headers::MERCHANT_ID.to_string(),
+                req.resource_common_data.merchant_id.get_string_repr().to_string().into_masked(),
+            );
+
             headers.push(auth_header);
+            headers.push(merchant_id_header);
             headers.push(request_id_header);
 
             Ok(headers)

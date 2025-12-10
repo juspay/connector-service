@@ -3865,71 +3865,13 @@ impl
     ForeignTryFrom<(
         grpc_api_types::payments::RefundServiceGetRequest,
         Connectors,
-    )> for RefundFlowData
-{
-    type Error = ApplicationErrorResponse;
-
-    fn foreign_try_from(
-        (value, connectors): (
-            grpc_api_types::payments::RefundServiceGetRequest,
-            Connectors,
-        ),
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let access_token = value
-            .state
-            .as_ref()
-            .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
-        let connector_meta_data = (!value.merchant_account_metadata.is_empty())
-            .then(|| {
-                serde_json::to_value(&value.merchant_account_metadata)
-                    .map(common_utils::pii::SecretSerdeValue::new)
-            })
-            .transpose()
-            .ok()
-            .flatten();
-
-        let payment_method = value
-            .payment_method_type
-            .map(|pm_type_i32| {
-                // Convert i32 to gRPC PaymentMethodType enum
-                let grpc_pm_type =
-                    grpc_api_types::payments::PaymentMethodType::try_from(pm_type_i32)
-                        .unwrap_or(grpc_api_types::payments::PaymentMethodType::Unspecified);
-
-                // Convert from gRPC enum to internal PaymentMethod using ForeignTryFrom
-                common_enums::PaymentMethod::foreign_try_from(grpc_pm_type)
-            })
-            .transpose()?;
-        Ok(RefundFlowData {
-            status: common_enums::RefundStatus::Pending,
-            refund_id: None,
-            connectors,
-            connector_request_reference_id: extract_connector_request_reference_id(
-                &value.request_ref_id,
-            ),
-            raw_connector_response: None,
-            raw_connector_request: None,
-            connector_response_headers: None,
-            access_token,
-            connector_meta_data,
-            test_mode: value.test_mode,
-            payment_method,
-        })
-    }
-}
-
-impl
-    ForeignTryFrom<(
-        grpc_api_types::payments::RefundServiceGetRequest,
-        Connectors,
         &MaskedMetadata,
     )> for RefundFlowData
 {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (value, connectors, _metadata): (
+        (value, connectors, metadata): (
             grpc_api_types::payments::RefundServiceGetRequest,
             Connectors,
             &MaskedMetadata,
@@ -3940,7 +3882,6 @@ impl
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
-
         let connector_meta_data = (!value.merchant_account_metadata.is_empty())
             .then(|| {
                 serde_json::to_value(&value.merchant_account_metadata)
@@ -3963,68 +3904,12 @@ impl
             })
             .transpose()?;
 
-        Ok(RefundFlowData {
-            connector_request_reference_id: extract_connector_request_reference_id(
-                &value.request_ref_id,
-            ),
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
+        Ok(RefundFlowData {
+            merchant_id: merchant_id_from_header,
             status: common_enums::RefundStatus::Pending,
             refund_id: None,
-            connectors,
-            raw_connector_response: None,
-            raw_connector_request: None,
-            connector_response_headers: None,
-            access_token,
-            connector_meta_data,
-            test_mode: value.test_mode,
-            payment_method,
-        })
-    }
-}
-
-impl
-    ForeignTryFrom<(
-        grpc_api_types::payments::PaymentServiceRefundRequest,
-        Connectors,
-    )> for RefundFlowData
-{
-    type Error = ApplicationErrorResponse;
-
-    fn foreign_try_from(
-        (value, connectors): (
-            grpc_api_types::payments::PaymentServiceRefundRequest,
-            Connectors,
-        ),
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let access_token = value
-            .state
-            .as_ref()
-            .and_then(|state| state.access_token.as_ref())
-            .map(AccessTokenResponseData::from);
-        let connector_meta_data = (!value.merchant_account_metadata.is_empty())
-            .then(|| {
-                serde_json::to_value(&value.merchant_account_metadata)
-                    .map(common_utils::pii::SecretSerdeValue::new)
-            })
-            .transpose()
-            .ok()
-            .flatten();
-
-        let payment_method = value
-            .payment_method_type
-            .map(|pm_type_i32| {
-                // Convert i32 to gRPC PaymentMethodType enum
-                let grpc_pm_type =
-                    grpc_api_types::payments::PaymentMethodType::try_from(pm_type_i32)
-                        .unwrap_or(grpc_api_types::payments::PaymentMethodType::Unspecified);
-
-                // Convert from gRPC enum to internal PaymentMethod using ForeignTryFrom
-                common_enums::PaymentMethod::foreign_try_from(grpc_pm_type)
-            })
-            .transpose()?;
-        Ok(RefundFlowData {
-            status: common_enums::RefundStatus::Pending,
-            refund_id: Some(value.refund_id),
             connectors,
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,
@@ -4050,7 +3935,7 @@ impl
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (value, connectors, _metadata): (
+        (value, connectors, metadata): (
             grpc_api_types::payments::PaymentServiceRefundRequest,
             Connectors,
             &MaskedMetadata,
@@ -4061,7 +3946,6 @@ impl
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
-
         let connector_meta_data = (!value.merchant_account_metadata.is_empty())
             .then(|| {
                 serde_json::to_value(&value.merchant_account_metadata)
@@ -4084,14 +3968,16 @@ impl
             })
             .transpose()?;
 
-        Ok(RefundFlowData {
-            connector_request_reference_id: extract_connector_request_reference_id(
-                &value.request_ref_id,
-            ),
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
+        Ok(RefundFlowData {
+            merchant_id: merchant_id_from_header,
             status: common_enums::RefundStatus::Pending,
             refund_id: Some(value.refund_id),
             connectors,
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
             raw_connector_response: None,
             raw_connector_request: None,
             connector_response_headers: None,
