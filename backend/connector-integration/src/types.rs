@@ -77,8 +77,11 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Barclaycard => Box::new(connectors::Barclaycard::new()),
             ConnectorEnum::Billwerk => Box::new(connectors::Billwerk::new()),
             ConnectorEnum::Nuvei => Box::new(connectors::Nuvei::new()),
+            ConnectorEnum::Airwallex => Box::new(connectors::Airwallex::new()),
             ConnectorEnum::Shift4 => Box::new(connectors::Shift4::new()),
             ConnectorEnum::Bamboraapac => Box::new(connectors::Bamboraapac::new()),
+            ConnectorEnum::Bankofamerica => Box::new(connectors::Bankofamerica::new()),
+            ConnectorEnum::Powertranz => Box::new(connectors::Powertranz::new()),
         }
     }
 }
