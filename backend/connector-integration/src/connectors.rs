@@ -166,3 +166,9 @@ pub use self::airwallex::Airwallex;
 
 pub mod worldpayxml;
 pub use self::worldpayxml::Worldpayxml;
+
+pub mod bankofamerica;
+pub use self::bankofamerica::Bankofamerica;
+
+pub mod powertranz;
+pub use self::powertranz::Powertranz;

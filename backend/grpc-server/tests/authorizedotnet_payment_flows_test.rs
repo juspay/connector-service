@@ -402,6 +402,8 @@ fn create_payment_get_request(transaction_id: &str) -> PaymentServiceGetRequest 
         amount: TEST_AMOUNT,
         currency: 146, // Currency value from working grpcurl
         state: None,
+        connector_metadata: None,
+        setup_future_usage: None,
     }
 }
 
@@ -494,6 +496,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         test_mode: Some(true),
         state: None,
         merchant_account_metadata: HashMap::new(),
+        payment_method_type: None,
     }
 }
 
@@ -517,6 +520,7 @@ fn create_refund_get_request(transaction_id: &str, refund_id: &str) -> RefundSer
         refund_metadata: HashMap::new(),
         state: None,
         merchant_account_metadata: HashMap::new(),
+        payment_method_type: None,
     }
 }
 
