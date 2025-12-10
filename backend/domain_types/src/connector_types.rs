@@ -2205,6 +2205,7 @@ pub struct RepeatPaymentData {
     pub router_return_url: Option<String>,
     pub split_payments: Option<SplitPaymentsRequest>,
     pub recurring_mandate_payment_data: Option<router_data::RecurringMandatePaymentData>,
+    pub shipping_cost: Option<MinorUnit>,
 }
 
 impl RepeatPaymentData {
