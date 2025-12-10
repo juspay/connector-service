@@ -312,7 +312,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}/charge", base_url))
+            Ok(format!("{base_url}/charge"))
         }
     }
 );
@@ -349,7 +349,7 @@ macros::macro_connector_implementation!(
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}/transaction/{}", base_url, transaction_id))
+            Ok(format!("{base_url}/transaction/{transaction_id}"))
         }
     }
 );
@@ -378,7 +378,7 @@ macros::macro_connector_implementation!(
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}/transaction/{}/capture", base_url, transaction_id))
+            Ok(format!("{base_url}/transaction/{transaction_id}/capture"))
         }
     }
 );
@@ -403,7 +403,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let transaction_id = req.request.connector_transaction_id.clone();
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}/transaction/{}/void", base_url, transaction_id))
+            Ok(format!("{base_url}/transaction/{transaction_id}/void"))
         }
     }
 );
@@ -428,7 +428,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let transaction_id = req.request.connector_transaction_id.clone();
             let base_url = self.connector_base_url_refunds(req);
-            Ok(format!("{}/transaction/{}/refund", base_url, transaction_id))
+            Ok(format!("{base_url}/transaction/{transaction_id}/refund"))
         }
     }
 );
@@ -461,7 +461,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let refund_id = req.request.connector_refund_id.clone();
             let base_url = self.connector_base_url_refunds(req);
-            Ok(format!("{}/transaction/{}", base_url, refund_id))
+            Ok(format!("{base_url}/transaction/{refund_id}"))
         }
     }
 );
@@ -485,7 +485,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}/payment-method/", base_url))
+            Ok(format!("{base_url}/payment-method/"))
         }
     }
 );
@@ -509,7 +509,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{}/customer", base_url))
+            Ok(format!("{base_url}/customer"))
         }
     }
 );

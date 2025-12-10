@@ -31,7 +31,7 @@ mod tests {
                 PaymentsAuthorizeData<DefaultPCIHolder>,
                 PaymentsResponseData,
             > = RouterDataV2 {
-                flow: PhantomData::<domain_types::connector_flow::Authorize>,
+                flow: PhantomData::<Authorize>,
                 resource_common_data: PaymentFlowData {
                     merchant_id: common_utils::id_type::MerchantId::default(),
                     customer_id: None,

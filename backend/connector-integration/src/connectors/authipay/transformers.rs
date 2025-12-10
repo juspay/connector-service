@@ -45,10 +45,7 @@ impl AuthipayAuthType {
         request_body: &str,
     ) -> Result<String, error_stack::Report<errors::ConnectorError>> {
         // Raw signature: apiKey + ClientRequestId + time + requestBody
-        let raw_signature = format!(
-            "{}{}{}{}",
-            api_key, client_request_id, timestamp, request_body
-        );
+        let raw_signature = format!("{api_key}{client_request_id}{timestamp}{request_body}");
 
         // Generate HMAC-SHA256 with API Secret as key
         let signature = crypto::HmacSha256
@@ -579,31 +576,13 @@ fn map_status(
 
 // ===== RESPONSE TRANSFORMATION =====
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            AuthipayPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            AuthipayPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<AuthipayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map transaction status using status/result, state, AND transaction type
         // CRITICAL: This validates BOTH status fields and transaction state
@@ -648,21 +627,13 @@ impl<T: PaymentMethodDataTypes>
 // Reuses AuthipayPaymentsResponse structure from authorize flow
 // PSync returns the same response format as the original transaction
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            AuthipayPaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            AuthipayPaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<AuthipayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map transaction status using status/result, state, AND transaction type
         // CRITICAL: This validates BOTH status fields and transaction state
@@ -707,21 +678,13 @@ impl
 // Reuses AuthipayPaymentsResponse structure from authorize flow
 // Capture returns the same response format as the original transaction
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            AuthipayPaymentsResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            AuthipayPaymentsResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<AuthipayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map transaction status using status/result, state, AND transaction type
         // CRITICAL: This validates BOTH status fields and transaction state
@@ -914,21 +877,13 @@ fn map_refund_status(
     RefundStatus::Pending
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            AuthipayPaymentsResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            AuthipayPaymentsResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<AuthipayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map refund status with CRITICAL validation of ALL fields
         let refund_status = map_refund_status(
@@ -952,21 +907,13 @@ impl
 // ===== REFUND SYNC RESPONSE TRANSFORMATION =====
 // RSync also reuses AuthipayPaymentsResponse and uses the same refund status mapping
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            AuthipayPaymentsResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            AuthipayPaymentsResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<AuthipayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map refund status with CRITICAL validation of ALL fields
         let refund_status = map_refund_status(
@@ -1059,21 +1006,13 @@ fn map_void_status(
     AttemptStatus::Pending
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            AuthipayPaymentsResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            AuthipayPaymentsResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<AuthipayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map void status with CRITICAL validation of ALL fields
         let status = map_void_status(
@@ -1124,7 +1063,7 @@ pub type AuthipayRefundSyncResponse = AuthipayPaymentsResponse;
 
 use crate::connectors::authipay::AuthipayRouterData;
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AuthipayRouterData<
             RouterDataV2<
@@ -1154,7 +1093,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AuthipayRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -1174,7 +1113,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AuthipayRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -1194,7 +1133,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AuthipayRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,

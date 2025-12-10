@@ -293,10 +293,10 @@ pub fn build_powertranz_error_response(
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Sync
+            + Send
             + 'static
-            + serde::Serialize,
+            + Serialize,
     >
     TryFrom<
         PowertranzRouterData<
@@ -370,10 +370,10 @@ impl<
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Sync
+            + Send
             + 'static
-            + serde::Serialize,
+            + Serialize,
     >
     TryFrom<
         PowertranzRouterData<
@@ -419,10 +419,10 @@ impl<
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Sync
+            + Send
             + 'static
-            + serde::Serialize,
+            + Serialize,
     >
     TryFrom<
         PowertranzRouterData<
@@ -458,10 +458,10 @@ impl<
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Sync
+            + Send
             + 'static
-            + serde::Serialize,
+            + Serialize,
     >
     TryFrom<
         PowertranzRouterData<

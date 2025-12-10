@@ -390,7 +390,7 @@ macros::macro_connector_implementation!(
             let mut header = self.build_headers(req)?;
             header.push((
                 headers::IDEMPOTENCY_KEY.to_string(),
-                uuid::Uuid::new_v4().to_string().into(),
+                Uuid::new_v4().to_string().into(),
             ));
             Ok(header)
         }
@@ -448,7 +448,7 @@ macros::macro_connector_implementation!(
             let mut header = self.build_headers(req)?;
             header.push((
                 headers::IDEMPOTENCY_KEY.to_string(),
-                uuid::Uuid::new_v4().to_string().into(),
+                Uuid::new_v4().to_string().into(),
             ));
             Ok(header)
         }
@@ -497,7 +497,7 @@ macros::macro_connector_implementation!(
             let mut header = self.build_headers(req)?;
             header.push((
                 headers::IDEMPOTENCY_KEY.to_string(),
-                uuid::Uuid::new_v4().to_string().into(),
+                Uuid::new_v4().to_string().into(),
             ));
             Ok(header)
         }

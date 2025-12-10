@@ -434,4 +434,4 @@ pub struct OrderDetailsWithAmount {
     pub unit_discount_amount: Option<MinorUnit>,
 }
 
-impl hyperswitch_masking::SerializableSecret for OrderDetailsWithAmount {}
+impl SerializableSecret for OrderDetailsWithAmount {}

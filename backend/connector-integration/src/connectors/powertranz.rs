@@ -665,7 +665,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         // Try to parse as payment/refund response first (has iso_response_code)
         let error_response = if let Ok(payment_response) = res
             .response
-            .parse_struct::<powertranz::PowertranzPaymentsResponse>(
+            .parse_struct::<PowertranzPaymentsResponse>(
             "PowertranzPaymentsResponse",
         ) {
             with_response_body!(event_builder, payment_response);
@@ -677,7 +677,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             )
         } else if let Ok(refund_response) = res
             .response
-            .parse_struct::<powertranz::PowertranzRefundResponse>("PowertranzRefundResponse")
+            .parse_struct::<PowertranzRefundResponse>("PowertranzRefundResponse")
         {
             with_response_body!(event_builder, refund_response);
             powertranz::build_powertranz_error_response(
