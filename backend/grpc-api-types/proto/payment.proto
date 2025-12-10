@@ -1586,6 +1586,7 @@ message PaymentServiceAuthorizeRequest {
   // Order Details
   optional string order_category = 22; // Category of the order
   optional string merchant_order_reference_id = 23; // Merchant's internal reference ID
+  optional string connector_order_reference_id = 40; // Connector's reference id for order
 
   // Behavioral Flags and Preferences
   optional FutureUsage setup_future_usage = 24; // Indicates future usage intention
@@ -1699,7 +1700,7 @@ message PaymentServiceAuthorizeOnlyRequest {
   optional string payment_method_token = 40;
 
   // Send the connector order identifier here if an order was created before authorize
-  optional string order_id = 41;
+  optional string connector_order_reference_id = 41; // Connector's reference id for order
 }
 
 // Response message for a payment authorization.
@@ -1850,7 +1851,7 @@ message PaymentServiceVoidRequest {
   // State Information
   optional ConnectorState state = 10; // State data for access token storage and other connector-specific state
 
-    // Account-Specific Configuration
+  // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 11; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
@@ -2557,6 +2558,7 @@ message PaymentServicePostAuthenticateRequest {
 
   // Authentication Details
   optional AuthenticationData authentication_data = 9; // Authentication data from previous steps
+  optional string connector_order_reference_id = 18; // Authenticated order id
 
   // Metadata
   map<string, string> metadata = 10; // Additional metadata for the connector
