@@ -1210,7 +1210,11 @@ fn get_card_request_data<
             browser_challenge_window: CHALLENGE_WINDOW.to_string(),
             payment_action: None,
             payment_type: PAYMENT_TYPE.to_string(),
-            descriptor: item.request.statement_descriptor.clone(),
+            descriptor: item
+                .request
+                .billing_descriptor
+                .as_ref()
+                .and_then(|descriptor| descriptor.statement_descriptor.clone()),
         },
     )))
 }

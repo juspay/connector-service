@@ -1469,6 +1469,7 @@ where
             .map(|id| MandateReference {
                 connector_mandate_id: Some(id.expose()),
                 payment_method_id: None,
+                connector_mandate_request_reference_id: None,
             });
 
         let auto_capture = matches!(
@@ -1891,6 +1892,7 @@ impl<
         let mandate_reference = Some(MandateReference {
             connector_mandate_id: Some(item.response.id.clone()),
             payment_method_id: None,
+            connector_mandate_request_reference_id: None,
         });
 
         let status = if SUCCESSFUL_CODES.contains(&item.response.result.code.as_str()) {

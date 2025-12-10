@@ -2134,8 +2134,16 @@ impl<
         Ok(Self {
             amount,                                      //hopefully we don't loose some cents here
             currency: item.request.currency.to_string(), //we need to copy the value and not transfer ownership
-            statement_descriptor_suffix: item.request.statement_descriptor_suffix.clone(),
-            statement_descriptor: item.request.statement_descriptor.clone(),
+            statement_descriptor_suffix: item
+                .request
+                .billing_descriptor
+                .as_ref()
+                .and_then(|descriptor| descriptor.statement_descriptor_suffix.clone()),
+            statement_descriptor: item
+                .request
+                .billing_descriptor
+                .as_ref()
+                .and_then(|descriptor| descriptor.statement_descriptor.clone()),
             meta_data,
             return_url: item
                 .request
@@ -2701,7 +2709,7 @@ where
             MandateReference {
                 connector_mandate_id,
                 payment_method_id,
-                //mandate_metadata,
+                connector_mandate_request_reference_id: None,
             }
         });
 
@@ -2973,6 +2981,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentIntentSyncResponse, Self>>
                 MandateReference {
                     connector_mandate_id: Some(payment_method_id.clone()),
                     payment_method_id: Some(payment_method_id),
+                    connector_mandate_request_reference_id: None,
                 }
             });
 
@@ -3090,6 +3099,7 @@ impl<F, T> TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
             MandateReference {
                 connector_mandate_id,
                 payment_method_id,
+                connector_mandate_request_reference_id: None,
             }
         });
         let status = common_enums::AttemptStatus::from(item.response.status);

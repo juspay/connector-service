@@ -1078,6 +1078,7 @@ impl<
                                 extra_p.token.as_ref().map(|token| MandateReference {
                                     connector_mandate_id: Some(token.clone().expose()),
                                     payment_method_id: None,
+                                    connector_mandate_request_reference_id: None,
                                 })
                             });
                     let status = match non_threeds_data.status.as_str() {
@@ -1629,6 +1630,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentResponse, Self>>
                         Ok(token) => token.token.as_ref().map(|token| MandateReference {
                             connector_mandate_id: Some(token.clone().expose()),
                             payment_method_id: None,
+                            connector_mandate_request_reference_id: None,
                         }),
                         Err(_err) => None,
                     }
