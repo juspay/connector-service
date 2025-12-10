@@ -178,6 +178,7 @@ pub struct Connectors {
     pub bankofamerica: ConnectorParams,
     pub powertranz: ConnectorParams,
     pub bambora: ConnectorParams,
+    pub payme: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
