@@ -226,11 +226,22 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let capture_method = Some(map_capture_method(item.router_data.request.capture_method)?);
+        let capture_method = Some(requests::CapMethod::Now);
+        let amount_to_capture = item.router_data.request.minor_amount_to_capture;
+
+        // isAmountFinal is true when capturing less than the total capturable amount (partial capture)
+        // Don't send the field for full captures
+        let is_amount_final = item
+            .router_data
+            .resource_common_data
+            .minor_amount_capturable
+            .and_then(|capturable| (capturable > amount_to_capture).then_some(true));
+
         Ok(Self {
             capture_method,
-            amount: item.router_data.request.minor_amount_to_capture,
+            amount: amount_to_capture,
             currency: Some(item.router_data.request.currency),
+            is_amount_final,
         })
     }
 }

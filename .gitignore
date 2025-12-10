@@ -412,5 +412,3 @@ $RECYCLE.BIN/
 # DrawIO files
 **/*.drawio.bkp
 gen/**
-
-$*
