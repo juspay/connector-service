@@ -265,12 +265,12 @@ macros::create_all_prerequisites!(
             {
                 let auth_assertion_header =
                     construct_auth_assertion_header(&credentials.payer_id, &credentials.client_id);
-                
+
                 let partner_attribution_id = connector_metadata
                     .and_then(|metadata| metadata.get("paypal_partner_attribution_id"))
                     .and_then(|value| value.as_str())
                     .unwrap_or("HyperSwitchPPCP_SP");
-                
+
                 headers.extend(vec![
                     (
                         auth_headers::PAYPAL_AUTH_ASSERTION.to_string(),
@@ -286,7 +286,7 @@ macros::create_all_prerequisites!(
                     .and_then(|metadata| metadata.get("paypal_legacy_partner_attribution_id"))
                     .and_then(|value| value.as_str())
                     .unwrap_or("HyperSwitchlegacy_Ecom");
-                
+
                 headers.extend(vec![(
                     auth_headers::PAYPAL_PARTNER_ATTRIBUTION_ID.to_string(),
                     legacy_attribution_id.to_string().into(),
