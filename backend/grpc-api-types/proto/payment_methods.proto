@@ -646,7 +646,7 @@ message OpenBankingUK {
 
 // Open Banking - Open Banking implementation
 message OpenBanking {
-  // Fields will be added as needed for Open Banking PIS integration
+  // Fields will be added as needed for Open Banking integration
 }
 
 // Open Banking Payment Initiation Service
