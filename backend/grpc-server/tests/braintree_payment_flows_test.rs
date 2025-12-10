@@ -178,7 +178,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         state: None,
-        connector_metadata: HashMap::new(),
+        connector_metadata: None,
+        setup_future_usage: None,
     }
 }
 

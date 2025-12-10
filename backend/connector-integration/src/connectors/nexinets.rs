@@ -368,7 +368,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
         let meta: nexinets::NexinetsPaymentsMetadata =
-            utils::to_connector_meta(req.request.connector_meta.clone())?;
+            utils::to_connector_meta(req.request.connector_metadata.clone().map(|secret| secret.expose()))?;
         let order_id = nexinets::get_order_id(&meta)?;
         let transaction_id = match meta.psync_flow {
             transformers::NexinetsTransactionType::Debit
