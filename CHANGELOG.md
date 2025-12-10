@@ -4,6 +4,24 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.10.0
+
+### Features
+
+- **connector:**
+  - Trustpay Refund & RSync flow ([#344](https://github.com/juspay/connector-service/pull/344)) ([`505dd74`](https://github.com/juspay/connector-service/commit/505dd74f0844af1af8b81d69a8bbdc1404e9510a))
+  - Bankofamerica Connector Integration ([#319](https://github.com/juspay/connector-service/pull/319)) ([`96f74dc`](https://github.com/juspay/connector-service/commit/96f74dc93271ac487fd1326d97886c64c1d6bdde))
+  - [Powertranz] Connector Integration ([#334](https://github.com/juspay/connector-service/pull/334)) ([`98c9b42`](https://github.com/juspay/connector-service/commit/98c9b42c4bc3dded29b9d8bb877715be6005a339))
+- **framework:** Implemented Custom HTTP Integration Layer ([#329](https://github.com/juspay/connector-service/pull/329)) ([`afac8b1`](https://github.com/juspay/connector-service/commit/afac8b19c7481b9385ae63ef71b8f435e2fa526a))
+
+### Bug Fixes
+
+- Fixed metadata to accept all values in Authorize flow ([#353](https://github.com/juspay/connector-service/pull/353)) ([`d7db406`](https://github.com/juspay/connector-service/commit/d7db40696d7f5b463df0159856544e6c0d0e7ece))
+
+**Full Changelog:** [`2025.12.09.0...2025.12.10.0`](https://github.com/juspay/connector-service/compare/2025.12.09.0...2025.12.10.0)
+
+- - -
+
 ## 2025.12.09.0
 
 ### Features
