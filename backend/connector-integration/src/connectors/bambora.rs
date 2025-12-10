@@ -45,9 +45,6 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
-// ===== CONNECTOR STRUCTURE WITH MACROS =====
-
-// Import types for macro usage
 use transformers::{
     BamboraAuthorizeResponse, BamboraCaptureRequest, BamboraCaptureResponse, BamboraPSyncResponse,
     BamboraPaymentsRequest, BamboraRSyncResponse, BamboraRefundRequest, BamboraRefundResponse,
@@ -124,8 +121,6 @@ macros::create_all_prerequisites!(
         }
     }
 );
-
-// ===== CONNECTOR SERVICE TRAIT IMPLEMENTATIONS =====
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Bambora<T>
@@ -220,8 +215,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== DISPUTE FLOW TRAIT IMPLEMENTATIONS =====
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::AcceptDispute for Bambora<T>
 {
@@ -237,14 +230,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== WEBHOOK TRAIT IMPLEMENTATIONS =====
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Bambora<T>
 {
 }
-
-// ===== VALIDATION TRAIT IMPLEMENTATIONS =====
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Bambora<T>
@@ -256,14 +245,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== CONNECTOR CUSTOMER TRAIT IMPLEMENTATIONS =====
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::CreateConnectorCustomer for Bambora<T>
 {
 }
-
-// ===== CONNECTOR COMMON IMPLEMENTATION =====
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Bambora<T>

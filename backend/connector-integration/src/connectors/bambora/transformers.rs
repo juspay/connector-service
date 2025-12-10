@@ -17,9 +17,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Deserializer, Serialize};
 
-// ============================================================================
 // Authentication Types
-// ============================================================================
 
 #[derive(Debug, Clone)]
 pub struct BamboraAuthType {
@@ -58,9 +56,7 @@ impl TryFrom<&ConnectorAuthType> for BamboraAuthType {
     }
 }
 
-// ============================================================================
 // Error Response Types
-// ============================================================================
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BamboraErrorResponse {
@@ -78,9 +74,7 @@ pub struct BamboraErrorResponse {
     pub card: Option<serde_json::Value>,
 }
 
-// ============================================================================
 // Request Types
-// ============================================================================
 
 #[derive(Debug, Serialize)]
 pub struct BamboraPaymentsRequest<T: PaymentMethodDataTypes> {
@@ -129,9 +123,7 @@ pub struct BamboraBillingAddress {
     pub email_address: Option<common_utils::pii::Email>,
 }
 
-// ============================================================================
 // Response Types
-// ============================================================================
 
 /// Helper function to deserialize string or i32 as String
 fn str_or_i32<'de, D>(deserializer: D) -> Result<String, D::Error>
@@ -202,7 +194,7 @@ pub struct BamboraCardResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avs_result: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub cvd_result: Option<String>, // Changed from i32 to String as Bambora sends it as string
+    pub cvd_result: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avs: Option<BamboraAvsDetails>,
 }
@@ -214,9 +206,7 @@ pub struct BamboraAvsDetails {
     pub processed: bool,
 }
 
-// ============================================================================
 // Request Transformation
-// ============================================================================
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
@@ -345,9 +335,7 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-// ============================================================================
 // Response Transformation
-// ============================================================================
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
@@ -417,15 +405,8 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-// ============================================================================
 // Capture (Complete Pre-Authorization) Implementation
-// ============================================================================
 
-/// Capture Request Structure
-/// Per technical specification:
-/// - Endpoint: POST /payments/{transId}/completions
-/// - Request payload contains amount and payment_method
-/// - Amount must be ≤ original pre-authorization amount
 #[derive(Debug, Serialize)]
 pub struct BamboraCaptureRequest {
     pub amount: FloatMajorUnit,
@@ -440,8 +421,6 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
     fn try_from(
         item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        // Validate that we have a connector transaction ID
-        // This is critical - addressing Silverflow PR feedback about proper validation
         let _transaction_id = match &item.request.connector_transaction_id {
             ResponseId::ConnectorTransactionId(id) => id,
             ResponseId::EncodedData(_) | ResponseId::NoResponseId => {
@@ -462,10 +441,6 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
     }
 }
 
-/// Capture Response Transformation
-/// Per technical specification:
-/// - Response payload is identical to Make Payment response
-/// - Should result in AttemptStatus::Charged on success
 impl
     TryFrom<
         ResponseRouterData<
@@ -511,10 +486,6 @@ impl
         })
     }
 }
-
-// ============================================================================
-// PSync (Payment Sync) Implementation
-// ============================================================================
 
 // PSync uses GET request, so no request body is needed
 #[derive(Debug, Serialize)]
@@ -601,15 +572,8 @@ impl
     }
 }
 
-// ============================================================================
 // Refund Implementation
-// ============================================================================
 
-/// Refund Request Structure
-/// Per technical specification:
-/// - Endpoint: POST /payments/{transId}/returns
-/// - Request body: amount only
-/// - Response: Identical to Make Payment response but with type "R"
 #[derive(Debug, Serialize)]
 pub struct BamboraRefundRequest {
     pub amount: FloatMajorUnit,
@@ -633,12 +597,6 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
     }
 }
 
-/// Refund Response Transformation
-/// Per technical specification and Silverflow PR #240 feedback:
-/// - Response payload is identical to Make Payment response
-/// - CRITICAL: Check BOTH approved status AND payment type "R" for refund
-/// - DO NOT assume success based on single field
-/// - Payment type "R" indicates this is a refund transaction
 impl
     TryFrom<
         ResponseRouterData<
@@ -676,18 +634,8 @@ impl
     }
 }
 
-// ============================================================================
 // Refund Sync (RSync) Implementation
-// ============================================================================
 
-// RSync for refunds uses GET request to retrieve refund status
-// Note: Bambora may use the same transaction ID endpoint as payment sync
-// The GET /payments/{transId} endpoint returns the same response structure
-// We differentiate by checking the payment_type field
-
-/// Refund Sync Response Transformation
-/// Uses the same BamboraPaymentsResponse structure
-/// CRITICAL: Comprehensive status checking per Silverflow PR feedback
 impl
     TryFrom<
         ResponseRouterData<
@@ -749,8 +697,6 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
     fn try_from(
         item: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        // Validate that we have a connector transaction ID
-        // This is critical - addressing Silverflow PR feedback about proper validation
         if item.request.connector_transaction_id.is_empty() {
             return Err(errors::ConnectorError::MissingConnectorTransactionID.into());
         }
@@ -782,12 +728,6 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
     }
 }
 
-/// Void Response Transformation
-/// Per technical specification and Silverflow PR #240 feedback:
-/// - Response payload is identical to Make Payment response
-/// - CRITICAL: Check BOTH approved status AND payment type "VP" for void
-/// - DO NOT assume success based on single field
-/// - Payment type "VP" indicates this is a void payment transaction
 impl
     TryFrom<
         ResponseRouterData<
@@ -834,14 +774,7 @@ impl
     }
 }
 
-// ============================================================================
 // Macro Wrapper Type Implementations
-// ============================================================================
-// The create_all_prerequisites! macro creates BamboraRouterData wrapper types
-// We need to implement TryFrom for these wrappers to delegate to the existing
-// TryFrom<&RouterDataV2<...>> implementations
-//
-// Note: The wrapper struct is created by the macro, we just implement TryFrom
 
 use crate::connectors::bambora::BamboraRouterData;
 
