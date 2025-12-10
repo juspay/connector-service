@@ -896,7 +896,12 @@ impl<
             shopper_reference,
             store_payment_method,
             channel: None,
-            shopper_statement: item.router_data.request.statement_descriptor.clone(),
+            shopper_statement: item
+                .router_data
+                .request
+                .billing_descriptor
+                .clone()
+                .and_then(|descriptor| descriptor.statement_descriptor),
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
             merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
             store,
@@ -1020,7 +1025,12 @@ impl<
             shopper_reference,
             store_payment_method,
             channel: None,
-            shopper_statement: item.router_data.request.statement_descriptor.clone(),
+            shopper_statement: item
+                .router_data
+                .request
+                .billing_descriptor
+                .clone()
+                .and_then(|descriptor| descriptor.statement_descriptor),
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
             merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
             store: None,
@@ -1755,6 +1765,7 @@ pub fn get_adyen_response(
         .map(|mandate_id| MandateReference {
             connector_mandate_id: Some(mandate_id.expose()),
             payment_method_id: None,
+            connector_mandate_request_reference_id: None,
         });
     let network_txn_id = response.additional_data.and_then(|additional_data| {
         additional_data
@@ -2037,6 +2048,7 @@ pub fn get_webhook_response(
         .map(|mandate_id| MandateReference {
             connector_mandate_id: Some(mandate_id.clone().expose()),
             payment_method_id: response.recurring_shopper_reference.clone(),
+            connector_mandate_request_reference_id: None,
         });
     let payments_response_data = PaymentsResponseData::TransactionResponse {
         resource_id: ResponseId::ConnectorTransactionId(
@@ -2983,7 +2995,12 @@ impl<
             shopper_reference,
             store_payment_method,
             channel: None,
-            shopper_statement: item.router_data.request.statement_descriptor.clone(),
+            shopper_statement: item
+                .router_data
+                .request
+                .billing_descriptor
+                .clone()
+                .and_then(|descriptor| descriptor.statement_descriptor),
             shopper_ip: None,
             merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
             store: None,

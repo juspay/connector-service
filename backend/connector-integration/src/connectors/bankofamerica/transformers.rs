@@ -528,6 +528,7 @@ fn get_payment_response(
                             .payment_instrument
                             .map(|payment_instrument| payment_instrument.id.expose()),
                         payment_method_id: None,
+                        connector_mandate_request_reference_id: None,
                     });
 
             Ok(PaymentsResponseData::TransactionResponse {
@@ -2132,6 +2133,7 @@ impl<F> TryFrom<ResponseRouterData<BankOfAmericaSetupMandatesResponse, Self>>
                                 .payment_instrument
                                 .map(|payment_instrument| payment_instrument.id.expose()),
                             payment_method_id: None,
+                            connector_mandate_request_reference_id: None,
                         });
                 let mut mandate_status =
                     map_boa_attempt_status((info_response.status.clone(), false));
