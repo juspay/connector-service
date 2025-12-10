@@ -545,6 +545,9 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let connector_refund_id = &req.request.connector_refund_id;
+            if connector_refund_id.is_empty() {
+                return Err(errors::ConnectorError::MissingConnectorRefundID.into());
+            }
             Ok(format!(
                 "{}/payments/{}",
                 self.connector_base_url_refunds(req),
