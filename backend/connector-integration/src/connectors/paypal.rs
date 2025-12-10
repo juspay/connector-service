@@ -983,7 +983,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PaymentsResponseData,
         >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        self.build_payment_headers(req)
+        let access_token = req.resource_common_data
+            .access_token
+            .clone()
+            .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
+        let connector_metadata = req.resource_common_data.connector_meta_data
+            .as_ref()
+            .map(|secret| secret.clone().expose());
+        self.build_headers(
+            &access_token.access_token,
+            &req.resource_common_data.connector_request_reference_id,
+            &req.connector_auth_type,
+            connector_metadata.as_ref(),
+        )
     }
 
     fn get_url(
