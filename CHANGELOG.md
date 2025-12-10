@@ -4,6 +4,22 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.10.1
+
+### Features
+
+- **connector:** Nexinets void flow & PSync, Capture, Refund, RSyns diff check fix ([#354](https://github.com/juspay/connector-service/pull/354)) ([`9315320`](https://github.com/juspay/connector-service/commit/9315320027a14d098cab75ca243fcd0ee61833af))
+- Paypal Threeds flow Added ([#350](https://github.com/juspay/connector-service/pull/350)) ([`30b5a8c`](https://github.com/juspay/connector-service/commit/30b5a8c7106778891cbb1a50a9d617da09c697a0))
+
+### Bug Fixes
+
+- Checkout Diff check fixes ([#340](https://github.com/juspay/connector-service/pull/340)) ([`22e1c1f`](https://github.com/juspay/connector-service/commit/22e1c1f7a0e4c71bb028d47f5e04bbac93236dc2))
+- Removed extra ; in payments.proto file ([#360](https://github.com/juspay/connector-service/pull/360)) ([`350e9e0`](https://github.com/juspay/connector-service/commit/350e9e05044fcf2c5fb5991b5fedf66bf633cd25))
+
+**Full Changelog:** [`2025.12.10.0...2025.12.10.1`](https://github.com/juspay/connector-service/compare/2025.12.10.0...2025.12.10.1)
+
+- - -
+
 ## 2025.12.10.0
 
 ### Features
