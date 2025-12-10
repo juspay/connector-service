@@ -3,7 +3,7 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::FloatMajorUnit};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
@@ -51,7 +51,6 @@ use transformers::{
     BamboraVoidRequest, BamboraVoidResponse,
 };
 
-macros::create_amount_converter_wrapper!(connector_name: Bambora, amount_type: MinorUnit);
 macros::create_all_prerequisites!(
     connector_name: Bambora,
     generic_type: T,
@@ -91,7 +90,7 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
-    amount_converters: [],
+    amount_converters: [amount_converter: FloatMajorUnit],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
