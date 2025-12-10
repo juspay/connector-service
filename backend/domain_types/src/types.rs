@@ -3200,11 +3200,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             connector_transaction_id,
             encoded_data,
             capture_method,
-            connector_meta: if value.connector_metadata.is_empty() {
-                None
-            } else {
-                Some(convert_metadata_to_json(&value.connector_metadata))
-            },
+            connector_meta: (!value.connector_metadata.is_empty())
+                .then(|| convert_metadata_to_json(&value.connector_metadata)),
             sync_type: router_request_types::SyncRequestType::SinglePaymentSync,
             mandate_id: None,
             payment_method_type: None,
