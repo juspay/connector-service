@@ -117,6 +117,12 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let item = &item_data.router_data;
+        if item.resource_common_data.is_three_ds() {
+            return Err(errors::ConnectorError::NotImplemented(
+                "Three_ds payments through Tsys".to_string(),
+            )
+            .into());
+        };
 
         match &item.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
@@ -130,8 +136,8 @@ impl<
                         .connector
                         .amount_converter
                         .convert(
-                            item_data.router_data.request.minor_amount,
-                            item_data.router_data.request.currency,
+                            item.request.minor_amount,
+                            item.request.currency,
                         )
                         .change_context(errors::ConnectorError::AmountConversionFailed)?,
                     currency_code: item.request.currency,
@@ -579,9 +585,7 @@ impl
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let TsysPSyncResponse(TsysSyncResponse {
-            search_transaction_response,
-        }) = item.response;
+        let TsysPSyncResponse(TsysSyncResponse { search_transaction_response }) = item.response;
         let (response, status) = match search_transaction_response {
             SearchResponseTypes::SuccessResponse(search_response) => (
                 Ok(get_payments_sync_response(&search_response, item.http_code)),
@@ -668,8 +672,8 @@ impl<
                 .connector
                 .amount_converter
                 .convert(
-                    item_data.router_data.request.minor_amount_to_capture,
-                    item_data.router_data.request.currency,
+                    item.request.minor_amount_to_capture,
+                    item.request.currency,
                 )
                 .change_context(errors::ConnectorError::AmountConversionFailed)?,
         };
@@ -750,6 +754,8 @@ pub struct TsysReturnRequest {
     transaction_amount: StringMinorUnit,
     #[serde(rename = "transactionID")]
     transaction_id: String,
+    #[serde(rename = "developerID")]
+    developer_id: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -790,11 +796,12 @@ impl<
                 .connector
                 .amount_converter
                 .convert(
-                    MinorUnit(item_data.router_data.request.refund_amount),
-                    item_data.router_data.request.currency,
+                    MinorUnit(item.request.refund_amount),
+                    item.request.currency,
                 )
                 .change_context(errors::ConnectorError::AmountConversionFailed)?,
             transaction_id: item.request.connector_transaction_id.clone(),
+            developer_id: auth.developer_id,
         };
 
         Ok(Self { return_request })
@@ -814,6 +821,7 @@ impl From<TsysPaymentStatus> for common_enums::enums::RefundStatus {
 impl From<TsysTransactionDetails> for common_enums::enums::RefundStatus {
     fn from(item: TsysTransactionDetails) -> Self {
         match item.transaction_status {
+            // TSYS API uses Approved status for processing refunds
             TsysTransactionStatus::Approved => Self::Pending,
             TsysTransactionStatus::Void => Self::Success, // TSYS marks successful refunds as VOID
             TsysTransactionStatus::Declined => Self::Failure,
@@ -924,9 +932,7 @@ impl
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let TsysRSyncResponse(TsysSyncResponse {
-            search_transaction_response,
-        }) = item.response;
+        let TsysRSyncResponse(TsysSyncResponse { search_transaction_response }) = item.response;
         let response = match search_transaction_response {
             SearchResponseTypes::SuccessResponse(search_response) => Ok(RefundsResponseData {
                 connector_refund_id: search_response.transaction_details.transaction_id.clone(),
