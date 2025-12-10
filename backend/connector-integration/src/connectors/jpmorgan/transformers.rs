@@ -252,23 +252,13 @@ impl<
 {
     type Error = Error;
     fn try_from(
-        item: JpmorganRouterData<
+        _item: JpmorganRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            amount: item.router_data.request.amount,
             is_void: Some(true),
-            reversal_reason: item
-                .router_data
-                .request
-                .cancellation_reason
-                .as_ref()
-                .map(|reason| reason.parse::<requests::ReversalReason>())
-                .transpose()
-                .ok()
-                .flatten(),
         })
     }
 }

@@ -1,11 +1,5 @@
-use std::str::FromStr;
-
 use common_utils::types::MinorUnit;
-use domain_types::{
-    errors,
-    payment_method_data::{PaymentMethodDataTypes, RawCardNumber},
-};
-use error_stack::report;
+use domain_types::payment_method_data::{PaymentMethodDataTypes, RawCardNumber};
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
@@ -73,29 +67,14 @@ pub struct JpmorganCaptureRequest {
     pub capture_method: Option<CapMethod>,
     pub amount: MinorUnit,
     pub currency: Option<common_enums::Currency>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum ReversalReason {
-    NoResponse,
-    LateResponse,
-    UnableToDeliver,
-    CardDeclined,
-    MacNotVerified,
-    MacSyncError,
-    ZekSyncError,
-    SystemMalfunction,
-    SuspectedFraud,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_amount_final: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganVoidRequest {
-    pub amount: Option<MinorUnit>,
     pub is_void: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reversal_reason: Option<ReversalReason>,
 }
 
 #[derive(Debug, Serialize)]
@@ -110,25 +89,4 @@ pub struct JpmorganRefundRequest {
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganMerchantRefund {
     pub merchant_software: JpmorganMerchantSoftware,
-}
-
-impl FromStr for ReversalReason {
-    type Err = error_stack::Report<errors::ConnectorError>;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_uppercase().as_str() {
-            "NO_RESPONSE" => Ok(Self::NoResponse),
-            "LATE_RESPONSE" => Ok(Self::LateResponse),
-            "UNABLE_TO_DELIVER" => Ok(Self::UnableToDeliver),
-            "CARD_DECLINED" => Ok(Self::CardDeclined),
-            "MAC_NOT_VERIFIED" => Ok(Self::MacNotVerified),
-            "MAC_SYNC_ERROR" => Ok(Self::MacSyncError),
-            "ZEK_SYNC_ERROR" => Ok(Self::ZekSyncError),
-            "SYSTEM_MALFUNCTION" => Ok(Self::SystemMalfunction),
-            "SUSPECTED_FRAUD" => Ok(Self::SuspectedFraud),
-            _ => Err(report!(errors::ConnectorError::InvalidDataFormat {
-                field_name: "cancellation_reason",
-            })),
-        }
-    }
 }
