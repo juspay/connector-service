@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
 
-use super::{TsysAmountConvertor, TsysRouterData};
+use super::TsysRouterData;
 
 // ============================================================================
 // Authentication Type
@@ -126,11 +126,14 @@ impl<
                     device_id: auth.device_id,
                     transaction_key: auth.transaction_key,
                     card_data_source: "INTERNET".to_string(),
-                    transaction_amount: TsysAmountConvertor::convert(
-                        item.request.minor_amount,
-                        item.request.currency,
-                    )
-                    .change_context(errors::ConnectorError::RequestEncodingFailed)?,
+                    transaction_amount: item_data
+                        .connector
+                        .amount_converter
+                        .convert(
+                            item_data.router_data.request.minor_amount,
+                            item_data.router_data.request.currency,
+                        )
+                        .change_context(errors::ConnectorError::AmountConversionFailed)?,
                     currency_code: item.request.currency,
                     card_number: card_data.card_number.clone(),
                     expiration_date: card_data
@@ -154,7 +157,7 @@ impl<
                 }
             }
             _ => Err(errors::ConnectorError::NotImplemented(
-                "Payment method not supported".to_string(),
+                "Payment method not implemented".to_string(),
             ))?,
         }
     }
@@ -262,7 +265,8 @@ impl<T: PaymentMethodDataTypes>
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        let (response, status) = match item.response.0 {
+        let TsysAuthorizeResponse(response_data) = item.response;
+        let (response, status) = match response_data {
             TsysPaymentsResponse::AuthResponse(resp) => match resp {
                 TsysResponseTypes::SuccessResponse(auth_response) => (
                     Ok(get_payments_response(auth_response, item.http_code)),
@@ -324,7 +328,8 @@ impl
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let (response, status) = match item.response.0 {
+        let TsysCaptureResponse(response_data) = item.response;
+        let (response, status) = match response_data {
             TsysPaymentsResponse::CaptureResponse(resp) => match resp {
                 TsysResponseTypes::SuccessResponse(capture_response) => (
                     Ok(get_payments_response(capture_response, item.http_code)),
@@ -376,7 +381,8 @@ impl
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let (response, status) = match item.response.0 {
+        let TsysVoidResponse(response_data) = item.response;
+        let (response, status) = match response_data {
             TsysPaymentsResponse::VoidResponse(resp) => match resp {
                 TsysResponseTypes::SuccessResponse(void_response) => (
                     Ok(get_payments_response(void_response, item.http_code)),
@@ -573,7 +579,10 @@ impl
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let (response, status) = match item.response.0.search_transaction_response {
+        let TsysPSyncResponse(TsysSyncResponse {
+            search_transaction_response,
+        }) = item.response;
+        let (response, status) = match search_transaction_response {
             SearchResponseTypes::SuccessResponse(search_response) => (
                 Ok(get_payments_sync_response(&search_response, item.http_code)),
                 AttemptStatus::from(search_response.transaction_details),
@@ -655,11 +664,14 @@ impl<
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?,
             developer_id: auth.developer_id,
-            transaction_amount: TsysAmountConvertor::convert(
-                item.request.minor_amount_to_capture,
-                item.request.currency,
-            )
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?,
+            transaction_amount: item_data
+                .connector
+                .amount_converter
+                .convert(
+                    item_data.router_data.request.minor_amount_to_capture,
+                    item_data.router_data.request.currency,
+                )
+                .change_context(errors::ConnectorError::AmountConversionFailed)?,
         };
 
         Ok(Self { capture })
@@ -774,11 +786,14 @@ impl<
         let return_request = TsysReturnRequest {
             device_id: auth.device_id,
             transaction_key: auth.transaction_key,
-            transaction_amount: TsysAmountConvertor::convert(
-                MinorUnit(item.request.refund_amount),
-                item.request.currency,
-            )
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?,
+            transaction_amount: item_data
+                .connector
+                .amount_converter
+                .convert(
+                    MinorUnit(item_data.router_data.request.refund_amount),
+                    item_data.router_data.request.currency,
+                )
+                .change_context(errors::ConnectorError::AmountConversionFailed)?,
             transaction_id: item.request.connector_transaction_id.clone(),
         };
 
@@ -909,7 +924,10 @@ impl
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let response = match item.response.0.search_transaction_response {
+        let TsysRSyncResponse(TsysSyncResponse {
+            search_transaction_response,
+        }) = item.response;
+        let response = match search_transaction_response {
             SearchResponseTypes::SuccessResponse(search_response) => Ok(RefundsResponseData {
                 connector_refund_id: search_response.transaction_details.transaction_id.clone(),
                 refund_status: common_enums::enums::RefundStatus::from(

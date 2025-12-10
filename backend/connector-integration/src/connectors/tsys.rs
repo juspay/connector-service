@@ -24,7 +24,7 @@ use domain_types::{
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData,
     },
-    errors::{self},
+    errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -274,9 +274,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== MACRO-BASED CONNECTOR IMPLEMENTATION =====
-// Define connector struct and bridges for all flows
-macros::create_amount_converter_wrapper!(connector_name: Tsys, amount_type: StringMinorUnit);
+// macros::create_amount_converter_wrapper!(connector_name: Tsys, amount_type: StringMinorUnit);
 macros::create_all_prerequisites!(
     connector_name: Tsys,
     generic_type: T,
