@@ -6,7 +6,7 @@ use std::fmt::Debug;
 
 use base64::Engine;
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, StringMinorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -38,7 +38,7 @@ use responses::{
     WorldpayxmlRsyncResponse, WorldpayxmlTransactionResponse, WorldpayxmlVoidResponse,
 };
 
-use super::macros;
+use super::macros::{self, GetSoapXml};
 use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
@@ -330,36 +330,42 @@ macros::create_all_prerequisites!(
             flow: Authorize,
             request_body: WorldpayxmlPaymentsRequest,
             response_body: WorldpayxmlAuthorizeResponse,
+            response_format: xml,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: Capture,
             request_body: WorldpayxmlCaptureRequest,
             response_body: WorldpayxmlCaptureResponse,
+            response_format: xml,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ),
         (
             flow: Void,
             request_body: WorldpayxmlVoidRequest,
             response_body: WorldpayxmlVoidResponse,
+            response_format: xml,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
         (
             flow: PSync,
             request_body: WorldpayxmlPSyncRequest,
             response_body: WorldpayxmlTransactionResponse,
+            response_format: xml,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
             flow: Refund,
             request_body: WorldpayxmlRefundRequest,
             response_body: WorldpayxmlRefundResponse,
+            response_format: xml,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
         (
             flow: RSync,
             request_body: WorldpayxmlRSyncRequest,
             response_body: WorldpayxmlRsyncResponse,
+            response_format: xml,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
@@ -400,13 +406,14 @@ macros::create_all_prerequisites!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpayxml,
-    curl_request: Xml(WorldpayxmlPaymentsRequest),
+    curl_request: SoapXml(WorldpayxmlPaymentsRequest),
     curl_response: WorldpayxmlAuthorizeResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthorizeData<T>,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
@@ -434,13 +441,14 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpayxml,
-    curl_request: Xml(WorldpayxmlCaptureRequest),
+    curl_request: SoapXml(WorldpayxmlCaptureRequest),
     curl_response: WorldpayxmlCaptureResponse,
     flow_name: Capture,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsCaptureData,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
@@ -468,13 +476,14 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpayxml,
-    curl_request: Xml(WorldpayxmlVoidRequest),
+    curl_request: SoapXml(WorldpayxmlVoidRequest),
     curl_response: WorldpayxmlVoidResponse,
     flow_name: Void,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentVoidData,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
@@ -502,13 +511,14 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpayxml,
-    curl_request: Xml(WorldpayxmlPSyncRequest),
+    curl_request: SoapXml(WorldpayxmlPSyncRequest),
     curl_response: WorldpayxmlTransactionResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
@@ -536,13 +546,14 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpayxml,
-    curl_request: Xml(WorldpayxmlRefundRequest),
+    curl_request: SoapXml(WorldpayxmlRefundRequest),
     curl_response: WorldpayxmlRefundResponse,
     flow_name: Refund,
     resource_common_data: RefundFlowData,
     flow_request: RefundsData,
     flow_response: RefundsResponseData,
     http_method: Post,
+    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
@@ -570,13 +581,14 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpayxml,
-    curl_request: Xml(WorldpayxmlRSyncRequest),
+    curl_request: SoapXml(WorldpayxmlRSyncRequest),
     curl_response: WorldpayxmlRsyncResponse,
     flow_name: RSync,
     resource_common_data: RefundFlowData,
     flow_request: RefundSyncData,
     flow_response: RefundsResponseData,
     http_method: Post,
+    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
@@ -810,6 +822,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         domain_types::connector_types::PaymentCreateOrderResponse,
     > for Worldpayxml<T>
 {
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Worldpayxml<T> {
+    pub fn preprocess_response_bytes<F, FCD, Req, Res>(
+        &self,
+        _req: &RouterDataV2<F, FCD, Req, Res>,
+        bytes: bytes::Bytes,
+    ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
+        // WorldPay XML responses are kept as-is
+        // The macros will handle XML deserialization using parse_xml()
+        Ok(bytes)
+    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon

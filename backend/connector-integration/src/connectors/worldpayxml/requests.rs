@@ -1,6 +1,8 @@
 use hyperswitch_masking::Secret;
 use serde::Serialize;
 
+use super::super::macros::GetSoapXml;
+
 #[derive(Debug, Serialize)]
 #[serde(rename = "paymentService")]
 pub struct WorldpayxmlPaymentsRequest {
@@ -9,6 +11,15 @@ pub struct WorldpayxmlPaymentsRequest {
     #[serde(rename = "@merchantCode")]
     pub merchant_code: Secret<String>,
     pub submit: WorldpayxmlSubmit,
+}
+
+impl GetSoapXml for WorldpayxmlPaymentsRequest {
+    fn to_soap_xml(&self) -> String {
+        format!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n{}",
+            quick_xml::se::to_string(self).unwrap_or_default()
+        )
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -68,8 +79,8 @@ pub struct WorldpayxmlCard {
     pub card_number: Secret<String>,
     #[serde(rename = "expiryDate")]
     pub expiry_date: WorldpayxmlExpiryDate,
-    #[serde(rename = "cardHolderName", skip_serializing_if = "Option::is_none")]
-    pub card_holder_name: Option<Secret<String>>,
+    #[serde(rename = "cardHolderName")]
+    pub card_holder_name: Secret<String>,
     #[serde(rename = "cvc")]
     pub cvc: Secret<String>,
 }
@@ -100,6 +111,33 @@ pub struct WorldpayxmlGooglePay {
 pub struct WorldpayxmlShopper {
     #[serde(rename = "shopperEmailAddress", skip_serializing_if = "Option::is_none")]
     pub shopper_email_address: Option<common_utils::Email>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub browser: Option<WorldpayxmlBrowser>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorldpayxmlBrowser {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub accept_header: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_agent_header: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub http_accept_language: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub time_zone: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub browser_language: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub browser_java_enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub browser_java_script_enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub browser_colour_depth: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub browser_screen_height: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub browser_screen_width: Option<u32>,
 }
 
 #[derive(Debug, Serialize)]
@@ -115,10 +153,16 @@ pub struct WorldpayxmlAddress {
     pub last_name: Option<Secret<String>>,
     #[serde(rename = "address1", skip_serializing_if = "Option::is_none")]
     pub address1: Option<Secret<String>>,
+    #[serde(rename = "address2", skip_serializing_if = "Option::is_none")]
+    pub address2: Option<Secret<String>>,
+    #[serde(rename = "address3", skip_serializing_if = "Option::is_none")]
+    pub address3: Option<Secret<String>>,
     #[serde(rename = "postalCode", skip_serializing_if = "Option::is_none")]
     pub postal_code: Option<Secret<String>>,
     #[serde(rename = "city", skip_serializing_if = "Option::is_none")]
     pub city: Option<String>,
+    #[serde(rename = "state", skip_serializing_if = "Option::is_none")]
+    pub state: Option<Secret<String>>,
     #[serde(rename = "countryCode", skip_serializing_if = "Option::is_none")]
     pub country_code: Option<common_enums::CountryAlpha2>,
 }
@@ -131,6 +175,15 @@ pub struct WorldpayxmlCaptureRequest {
     #[serde(rename = "@merchantCode")]
     pub merchant_code: Secret<String>,
     pub modify: WorldpayxmlModify,
+}
+
+impl GetSoapXml for WorldpayxmlCaptureRequest {
+    fn to_soap_xml(&self) -> String {
+        format!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n{}",
+            quick_xml::se::to_string(self).unwrap_or_default()
+        )
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -161,6 +214,15 @@ pub struct WorldpayxmlVoidRequest {
     pub modify: WorldpayxmlVoidModify,
 }
 
+impl GetSoapXml for WorldpayxmlVoidRequest {
+    fn to_soap_xml(&self) -> String {
+        format!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n{}",
+            quick_xml::se::to_string(self).unwrap_or_default()
+        )
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct WorldpayxmlVoidModify {
     #[serde(rename = "orderModification")]
@@ -189,6 +251,15 @@ pub struct WorldpayxmlRefundRequest {
     pub modify: WorldpayxmlRefundModify,
 }
 
+impl GetSoapXml for WorldpayxmlRefundRequest {
+    fn to_soap_xml(&self) -> String {
+        format!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n{}",
+            quick_xml::se::to_string(self).unwrap_or_default()
+        )
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct WorldpayxmlRefundModify {
     #[serde(rename = "orderModification")]
@@ -215,6 +286,15 @@ pub struct WorldpayxmlPSyncRequest {
     #[serde(rename = "@merchantCode")]
     pub merchant_code: Secret<String>,
     pub inquiry: WorldpayxmlInquiry,
+}
+
+impl GetSoapXml for WorldpayxmlPSyncRequest {
+    fn to_soap_xml(&self) -> String {
+        format!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n{}",
+            quick_xml::se::to_string(self).unwrap_or_default()
+        )
+    }
 }
 
 #[derive(Debug, Serialize)]

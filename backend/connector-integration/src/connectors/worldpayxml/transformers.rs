@@ -14,10 +14,10 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::Serialize;
 
-use super::{requests, responses, WorldpayxmlRouterData};
+use super::{requests, responses::{self, WorldpayxmlLastEvent}, WorldpayxmlRouterData};
 use crate::types::ResponseRouterData;
 
 const API_VERSION: &str = "1.4";
@@ -88,15 +88,23 @@ where
 {
     match payment_method_data {
         PaymentMethodData::Card(_) => {
+            // Convert 2-digit year to 4-digit year (e.g., "30" -> "2030")
+            let year_str = card.card_exp_year.peek();
+            let formatted_year = if year_str.len() == 2 {
+                Secret::new(format!("20{}", year_str))
+            } else {
+                card.card_exp_year.clone()
+            };
+
             let card_data = requests::WorldpayxmlCard {
                 card_number: Secret::new(card.card_number.peek().to_string()),
                 expiry_date: requests::WorldpayxmlExpiryDate {
                     date: requests::WorldpayxmlDate {
                         month: card.card_exp_month.clone(),
-                        year: card.card_exp_year.clone(),
+                        year: formatted_year,
                     },
                 },
-                card_holder_name: card.card_holder_name.clone(),
+                card_holder_name: card.card_holder_name.clone().unwrap_or_else(|| Secret::new("CARDHOLDER".to_string())),
                 cvc: card.card_cvc.clone(),
             };
 
@@ -194,7 +202,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         ),
                         card_exp_month: Secret::new(String::new()),
                         card_exp_year: Secret::new(String::new()),
-                        card_holder_name: None,
+                        card_holder_name: Some(Secret::new("CARDHOLDER".to_string())),
                         card_cvc: Secret::new(String::new()),
                         card_issuer: None,
                         card_network: None,
@@ -227,8 +235,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             first_name: addr.first_name.clone(),
                             last_name: addr.last_name.clone(),
                             address1: addr.line1.clone(),
+                            address2: addr.line2.clone(),
+                            address3: addr.line3.clone(),
                             postal_code: addr.zip.clone(),
                             city: addr.city.clone().map(|c| c.expose()),
+                            state: addr.state.clone(),
                             country_code: addr.country,
                         },
                     }
@@ -256,8 +267,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         Some("0".to_string())
                     },
                     description: router_data
-                        .request
-                        .statement_descriptor
+                        .resource_common_data
+                        .description
                         .clone()
                         .unwrap_or_else(|| "Payment".to_string()),
                     amount: requests::WorldpayxmlAmount {
@@ -275,6 +286,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     },
                     shopper: requests::WorldpayxmlShopper {
                         shopper_email_address: router_data.request.email.clone(),
+                        browser: router_data
+                            .request
+                            .browser_info
+                            .as_ref()
+                            .map(|browser_info| requests::WorldpayxmlBrowser {
+                                accept_header: browser_info.accept_header.clone(),
+                                user_agent_header: browser_info.user_agent.clone(),
+                                http_accept_language: browser_info.accept_language.clone(),
+                                time_zone: browser_info.time_zone,
+                                browser_language: browser_info.language.clone(),
+                                browser_java_enabled: browser_info.java_enabled,
+                                browser_java_script_enabled: browser_info.java_script_enabled,
+                                browser_colour_depth: browser_info.color_depth.map(|d| d as u32),
+                                browser_screen_height: browser_info.screen_height,
+                                browser_screen_width: browser_info.screen_width,
+                            }),
                     },
                     billing_address,
                 },
@@ -489,12 +516,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
 
 // Helper function to map lastEvent to AttemptStatus
 fn map_worldpayxml_authorize_status(
-    last_event: &str,
+    last_event: &WorldpayxmlLastEvent,
     is_auto_capture: bool,
     capture_sync_status: Option<&AttemptStatus>,
 ) -> AttemptStatus {
     match last_event {
-        "AUTHORISED" => {
+        WorldpayxmlLastEvent::Authorised => {
             if is_auto_capture {
                 AttemptStatus::Pending
             } else {
@@ -506,25 +533,41 @@ fn map_worldpayxml_authorize_status(
                 }
             }
         }
-        "REFUSED" => AttemptStatus::Failure,
-        "CANCELLED" => AttemptStatus::Voided,
-        "CAPTURED" | "SETTLED" => AttemptStatus::Charged,
-        "SENT_FOR_AUTHORISATION" => AttemptStatus::Authorizing,
-        _ => AttemptStatus::Pending,
+        WorldpayxmlLastEvent::Refused => AttemptStatus::Failure,
+        WorldpayxmlLastEvent::Cancelled => AttemptStatus::Voided,
+        WorldpayxmlLastEvent::Captured => AttemptStatus::Charged,
+        WorldpayxmlLastEvent::SentForRefund => AttemptStatus::Pending,
+        WorldpayxmlLastEvent::Refunded => AttemptStatus::Charged,
+        WorldpayxmlLastEvent::RefundFailed => AttemptStatus::Failure,
+        WorldpayxmlLastEvent::Expired => AttemptStatus::Failure,
+        WorldpayxmlLastEvent::Error => AttemptStatus::Failure,
     }
 }
 
 // Helper function to map lastEvent to RefundStatus
-fn map_worldpayxml_refund_status(last_event: &str) -> RefundStatus {
+fn map_worldpayxml_refund_status(last_event: &WorldpayxmlLastEvent) -> RefundStatus {
     match last_event {
-        "REFUNDED" => RefundStatus::Success,
-        "SENT_FOR_REFUND" => RefundStatus::Pending,
-        "REFUND_REQUESTED" => RefundStatus::Pending,
-        "SENT_FOR_FAST_REFUND" => RefundStatus::Pending,
-        "REFUNDED_BY_MERCHANT" => RefundStatus::Pending,
-        "REFUND_FAILED" => RefundStatus::Failure,
-        "CAPTURED" | "SETTLED" => RefundStatus::Pending,
+        WorldpayxmlLastEvent::Refunded => RefundStatus::Success,
+        WorldpayxmlLastEvent::SentForRefund => RefundStatus::Pending,
+        WorldpayxmlLastEvent::RefundFailed => RefundStatus::Failure,
+        WorldpayxmlLastEvent::Captured => RefundStatus::Pending,
         _ => RefundStatus::Pending, // Default to pending for unknown statuses
+    }
+}
+
+// Helper function to parse string last_event from webhook/JSON responses
+fn parse_last_event(event_str: &str) -> Result<WorldpayxmlLastEvent, errors::ConnectorError> {
+    match event_str {
+        "AUTHORISED" => Ok(WorldpayxmlLastEvent::Authorised),
+        "REFUSED" => Ok(WorldpayxmlLastEvent::Refused),
+        "CANCELLED" => Ok(WorldpayxmlLastEvent::Cancelled),
+        "CAPTURED" | "SETTLED" => Ok(WorldpayxmlLastEvent::Captured),
+        "SENT_FOR_REFUND" | "REFUND_REQUESTED" | "SENT_FOR_FAST_REFUND" | "REFUNDED_BY_MERCHANT" => Ok(WorldpayxmlLastEvent::SentForRefund),
+        "REFUNDED" => Ok(WorldpayxmlLastEvent::Refunded),
+        "REFUND_FAILED" => Ok(WorldpayxmlLastEvent::RefundFailed),
+        "EXPIRED" => Ok(WorldpayxmlLastEvent::Expired),
+        "ERROR" => Ok(WorldpayxmlLastEvent::Error),
+        _ => Err(errors::ConnectorError::ResponseDeserializationFailed),
     }
 }
 
@@ -945,11 +988,14 @@ impl TryFrom<
                     .clone()
                     .unwrap_or_else(|| "unknown".to_string());
 
-                let last_event = webhook_response
+                let last_event_str = webhook_response
                     .last_event
                     .as_ref()
                     .or(webhook_response.payment_status.as_ref())
                     .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+                // Parse string to enum
+                let last_event = parse_last_event(last_event_str)?;
 
                 // Determine if auto-capture from request data
                 let is_auto_capture = router_data.request.capture_method != Some(CaptureMethod::Manual)
@@ -957,7 +1003,7 @@ impl TryFrom<
 
                 // Map status from lastEvent
                 let status = map_worldpayxml_authorize_status(
-                    last_event,
+                    &last_event,
                     is_auto_capture,
                     Some(&router_data.resource_common_data.status),
                 );
@@ -1166,14 +1212,17 @@ impl TryFrom<
                     .clone()
                     .unwrap_or_else(|| "unknown".to_string());
 
-                let last_event = webhook_response
+                let last_event_str = webhook_response
                     .last_event
                     .as_ref()
                     .or(webhook_response.payment_status.as_ref())
                     .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
 
+                // Parse string to enum
+                let last_event = parse_last_event(last_event_str)?;
+
                 // Map status from lastEvent using refund status mapping
-                let refund_status = map_worldpayxml_refund_status(last_event);
+                let refund_status = map_worldpayxml_refund_status(&last_event);
 
                 // Build success response
                 let refunds_response_data = RefundsResponseData {
