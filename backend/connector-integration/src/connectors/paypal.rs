@@ -404,8 +404,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 connector: self.to_owned(),
                 router_data: req.to_owned(),
             };
-            let connector_req =
-                PaypalPaymentsRequest::try_from(connector_router_data)?;
+            let connector_req = PaypalPaymentsRequest::try_from(connector_router_data)?;
 
             Some(common_utils::request::RequestContent::Json(Box::new(
                 connector_req,
@@ -450,8 +449,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorError>
-    {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 }
@@ -1054,8 +1052,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorError>
-    {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 }

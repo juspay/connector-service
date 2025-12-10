@@ -1,4 +1,9 @@
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
+#[allow(clippy::expect_used)]
+#[allow(clippy::panic)]
+#[allow(clippy::indexing_slicing)]
+#[allow(clippy::print_stdout)]
 mod tests {
     pub mod authorize {
         use std::{borrow::Cow, marker::PhantomData, str::FromStr};

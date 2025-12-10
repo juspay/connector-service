@@ -665,9 +665,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         // Try to parse as payment/refund response first (has iso_response_code)
         let error_response = if let Ok(payment_response) = res
             .response
-            .parse_struct::<PowertranzPaymentsResponse>(
-            "PowertranzPaymentsResponse",
-        ) {
+            .parse_struct::<PowertranzPaymentsResponse>("PowertranzPaymentsResponse")
+        {
             with_response_body!(event_builder, payment_response);
             powertranz::build_powertranz_error_response(
                 &payment_response.errors,

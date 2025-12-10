@@ -452,14 +452,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NexinetsRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -474,16 +467,20 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = item.router_data.request.amount.ok_or(
-            ConnectorError::MissingRequiredField {
-                field_name: "amount",
-            },
-        )?;
-        let currency = item.router_data.request.currency.ok_or(
-            ConnectorError::MissingRequiredField {
-                field_name: "currency",
-            },
-        )?;
+        let amount =
+            item.router_data
+                .request
+                .amount
+                .ok_or(ConnectorError::MissingRequiredField {
+                    field_name: "amount",
+                })?;
+        let currency =
+            item.router_data
+                .request
+                .currency
+                .ok_or(ConnectorError::MissingRequiredField {
+                    field_name: "currency",
+                })?;
         Ok(Self {
             initial_amount: amount.get_amount_as_i64(),
             currency,

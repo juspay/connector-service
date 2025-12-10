@@ -848,14 +848,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > ConnectorErrorTypeMapping for Checkout<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorErrorTypeMapping for Checkout<T>
 {
     fn get_connector_error_type(
         &self,

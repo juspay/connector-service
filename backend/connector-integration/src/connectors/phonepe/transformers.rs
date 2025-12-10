@@ -644,7 +644,7 @@ fn generate_phonepe_checksum(
         .change_context(errors::ConnectorError::RequestEncodingFailed)?;
     let hash = hash_bytes.iter().fold(String::new(), |mut acc, byte| {
         use std::fmt::Write;
-        write!(&mut acc, "{byte:02x}").unwrap();
+        let _ = write!(&mut acc, "{byte:02x}");
         acc
     });
 
@@ -849,7 +849,7 @@ fn generate_phonepe_sync_checksum(
         .change_context(errors::ConnectorError::RequestEncodingFailed)?;
     let hash = hash_bytes.iter().fold(String::new(), |mut acc, byte| {
         use std::fmt::Write;
-        write!(&mut acc, "{byte:02x}").unwrap();
+        let _ = write!(&mut acc, "{byte:02x}");
         acc
     });
 
