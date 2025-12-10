@@ -9,9 +9,8 @@ use domain_types::{
     connector_types::{
         AccessTokenResponseData, MandateReference, PaymentFlowData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
-       
-        SetupMandateRequestData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId, SetupMandateRequestData,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
