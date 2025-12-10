@@ -2356,7 +2356,7 @@ impl
             minor_amount_capturable: None,
             access_token,
             session_token: value.session_token,
-            reference_id: value.order_id,
+            reference_id: value.connector_order_reference_id.clone(),
             payment_method_token: value
                 .payment_method_token
                 .map(|pmt| router_data::PaymentMethodToken::Token(Secret::new(pmt))),
