@@ -101,6 +101,7 @@ pub enum ConnectorEnum {
     Nexixpay,
     Airwallex,
     Bankofamerica,
+    Powertranz,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -165,6 +166,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Nexixpay => Ok(Self::Nexixpay),
             grpc_api_types::payments::Connector::Airwallex => Ok(Self::Airwallex),
             grpc_api_types::payments::Connector::Bankofamerica => Ok(Self::Bankofamerica),
+            grpc_api_types::payments::Connector::Powertranz => Ok(Self::Powertranz),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
