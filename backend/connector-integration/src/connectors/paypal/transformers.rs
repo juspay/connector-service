@@ -186,12 +186,14 @@ impl<
                 item.router_data.request.currency,
             )
             .change_context(errors::ConnectorError::AmountConversionFailed)?;
-        // RepeatPaymentData doesn't have shipping_cost, default to 0
         let shipping_value = item
             .connector
             .amount_converter
             .convert(
-                common_utils::types::MinorUnit::zero(),
+                item.router_data
+                    .request
+                    .shipping_cost
+                    .unwrap_or(common_utils::types::MinorUnit::zero()),
                 item.router_data.request.currency,
             )
             .change_context(errors::ConnectorError::AmountConversionFailed)?;
@@ -683,7 +685,8 @@ pub type PaypalRepeatPaymentRequest<T> = PaypalPaymentsRequest<T>;
 pub type PaypalRepeatPaymentResponse = PaypalAuthResponse;
 
 // Response handling for RepeatPayment - delegates to PaypalOrdersResponse
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             PaypalAuthResponse,
             RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
@@ -706,7 +709,8 @@ impl TryFrom<
                     http_code: item.http_code,
                 })
             }
-            PaypalAuthResponse::PaypalRedirectResponse(_) | PaypalAuthResponse::PaypalThreeDsResponse(_) => {
+            PaypalAuthResponse::PaypalRedirectResponse(_)
+            | PaypalAuthResponse::PaypalThreeDsResponse(_) => {
                 Err(errors::ConnectorError::ResponseDeserializationFailed)?
             }
         }
@@ -2868,12 +2872,11 @@ impl<
     ) -> Result<Self, Self::Error> {
         // Extract connector mandate ID (vault_id) from mandate_reference
         let connector_mandate_id = match &item.router_data.request.mandate_reference {
-            domain_types::connector_types::MandateReferenceId::ConnectorMandateId(data) => {
-                data.get_connector_mandate_id()
-                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
-                        field_name: "connector_mandate_id",
-                    })?
-            }
+            domain_types::connector_types::MandateReferenceId::ConnectorMandateId(data) => data
+                .get_connector_mandate_id()
+                .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_mandate_id",
+                })?,
             domain_types::connector_types::MandateReferenceId::NetworkMandateId(_)
             | domain_types::connector_types::MandateReferenceId::NetworkTokenWithNTI(_) => {
                 return Err(error_stack::report!(errors::ConnectorError::NotSupported {
@@ -2900,7 +2903,7 @@ impl<
             .resource_common_data
             .connector_request_reference_id
             .clone();
-        
+
         let item_details = vec![ItemDetails::try_from(&item)?];
 
         let purchase_units = vec![PurchaseUnitRequest {
@@ -2913,13 +2916,13 @@ impl<
             items: item_details,
         }];
 
-        let payment_method_type = item
-            .router_data
-            .request
-            .payment_method_type
-            .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
-                field_name: "payment_method_type",
-            })?;
+        let payment_method_type =
+            item.router_data
+                .request
+                .payment_method_type
+                .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                    field_name: "payment_method_type",
+                })?;
 
         let payment_source = match payment_method_type {
             common_enums::PaymentMethodType::Card => Some(PaymentSourceItem::Card(

@@ -7341,6 +7341,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
                     mandate_metadata: None,
                 }
             }),
+            shipping_cost: value.shipping_cost.map(common_utils::types::MinorUnit::new),
         })
     }
 }
@@ -7361,14 +7362,14 @@ impl
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // For MIT, address is optional
         let address = payment_address::PaymentAddress::default();
-        
+
         // Extract access_token from state field
         let access_token = value
             .state
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
-        
+
         Ok(Self {
             merchant_id: common_utils::id_type::MerchantId::default(),
             payment_id: "REPEAT_PAYMENT_ID".to_string(),

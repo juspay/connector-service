@@ -239,7 +239,7 @@ macros::create_all_prerequisites!(
             access_token: &str,
             connector_request_reference_id: &str,
             connector_auth_type: &ConnectorAuthType,
-            _connector_metadata: Option<&serde_json::Value>,
+            connector_metadata: Option<&serde_json::Value>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             let auth = paypal::PaypalAuthType::try_from(connector_auth_type)?;
             let mut headers = vec![
@@ -265,6 +265,12 @@ macros::create_all_prerequisites!(
             {
                 let auth_assertion_header =
                     construct_auth_assertion_header(&credentials.payer_id, &credentials.client_id);
+                
+                let partner_attribution_id = connector_metadata
+                    .and_then(|metadata| metadata.get("paypal_partner_attribution_id"))
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("HyperSwitchPPCP_SP");
+                
                 headers.extend(vec![
                     (
                         auth_headers::PAYPAL_AUTH_ASSERTION.to_string(),
@@ -272,57 +278,28 @@ macros::create_all_prerequisites!(
                     ),
                     (
                         auth_headers::PAYPAL_PARTNER_ATTRIBUTION_ID.to_string(),
-                        "HyperSwitchPPCP_SP".to_string().into(),
+                        partner_attribution_id.to_string().into(),
                     ),
                 ])
             } else {
+                let legacy_attribution_id = connector_metadata
+                    .and_then(|metadata| metadata.get("paypal_legacy_partner_attribution_id"))
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("HyperSwitchlegacy_Ecom");
+                
                 headers.extend(vec![(
                     auth_headers::PAYPAL_PARTNER_ATTRIBUTION_ID.to_string(),
-                    "HyperSwitchlegacy_Ecom".to_string().into(),
+                    legacy_attribution_id.to_string().into(),
                 )])
             }
             Ok(headers)
         }
 
-        pub fn build_payment_headers<F, Req, Res>(
-            &self,
-            req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-            let access_token = req.resource_common_data
-                .access_token
-                .clone()
-                .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
-            let connector_metadata = req.resource_common_data.connector_meta_data
-                .as_ref()
-                .map(|secret| secret.clone().expose());
-            self.build_headers(
-                &access_token.access_token,
-                &req.resource_common_data.connector_request_reference_id,
-                &req.connector_auth_type,
-                connector_metadata.as_ref(),
-            )
-        }
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
             &req.resource_common_data.connectors.paypal.base_url
-        }
-
-        pub fn build_refund_headers<F, Req, Res>(
-            &self,
-            req: &RouterDataV2<F, RefundFlowData, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-            let access_token = req.resource_common_data
-                .access_token
-                .clone()
-                .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
-            self.build_headers(
-                &access_token.access_token,
-                &req.resource_common_data.connector_request_reference_id,
-                &req.connector_auth_type,
-                None,
-            )
         }
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
@@ -360,7 +337,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PaymentsResponseData,
         >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        self.build_payment_headers(req)
+            let access_token = req.resource_common_data
+                .access_token
+                .clone()
+                .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
+            let connector_metadata = req.resource_common_data.connector_meta_data
+                .as_ref()
+                .map(|secret| secret.clone().expose());
+            self.build_headers(
+                &access_token.access_token,
+                &req.resource_common_data.connector_request_reference_id,
+                &req.connector_auth_type,
+                connector_metadata.as_ref(),
+            )
     }
 
     fn get_url(
@@ -525,7 +514,19 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_payment_headers(req)
+            let access_token = req.resource_common_data
+                .access_token
+                .clone()
+                .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
+            let connector_metadata = req.resource_common_data.connector_meta_data
+                .as_ref()
+                .map(|secret| secret.clone().expose());
+            self.build_headers(
+                &access_token.access_token,
+                &req.resource_common_data.connector_request_reference_id,
+                &req.connector_auth_type,
+                connector_metadata.as_ref(),
+            )
         }
         fn get_url(
             &self,
@@ -597,7 +598,19 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_payment_headers(req)
+            let access_token = req.resource_common_data
+                .access_token
+                .clone()
+                .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
+            let connector_metadata = req.resource_common_data.connector_meta_data
+                .as_ref()
+                .map(|secret| secret.clone().expose());
+            self.build_headers(
+                &access_token.access_token,
+                &req.resource_common_data.connector_request_reference_id,
+                &req.connector_auth_type,
+                connector_metadata.as_ref(),
+            )
         }
         fn get_url(
             &self,
@@ -634,7 +647,19 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_payment_headers(req)
+            let access_token = req.resource_common_data
+                .access_token
+                .clone()
+                .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
+            let connector_metadata = req.resource_common_data.connector_meta_data
+                .as_ref()
+                .map(|secret| secret.clone().expose());
+            self.build_headers(
+                &access_token.access_token,
+                &req.resource_common_data.connector_request_reference_id,
+                &req.connector_auth_type,
+                connector_metadata.as_ref(),
+            )
         }
 
         fn get_url(
@@ -674,7 +699,19 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_refund_headers(req)
+            let access_token = req.resource_common_data
+                .access_token
+                .clone()
+                .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
+            let connector_metadata = req.resource_common_data.connector_meta_data
+                .as_ref()
+                .map(|secret| secret.clone().expose());
+            self.build_headers(
+                &access_token.access_token,
+                &req.resource_common_data.connector_request_reference_id,
+                &req.connector_auth_type,
+                connector_metadata.as_ref(),
+            )
         }
         fn get_url(
             &self,
@@ -711,7 +748,19 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_refund_headers(req)
+            let access_token = req.resource_common_data
+                .access_token
+                .clone()
+                .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
+            let connector_metadata = req.resource_common_data.connector_meta_data
+                .as_ref()
+                .map(|secret| secret.clone().expose());
+            self.build_headers(
+                &access_token.access_token,
+                &req.resource_common_data.connector_request_reference_id,
+                &req.connector_auth_type,
+                connector_metadata.as_ref(),
+            )
         }
         fn get_url(
             &self,
@@ -729,8 +778,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Paypal,
-    curl_request: Json(paypal::PaypalZeroMandateRequest),
-    curl_response: paypal::PaypalSetupMandatesResponse,
+    curl_request: Json(PaypalZeroMandateRequest),
+    curl_response: PaypalSetupMandatesResponse,
     flow_name: SetupMandate,
     resource_common_data: PaymentFlowData,
     flow_request: SetupMandateRequestData<T>,
@@ -743,7 +792,19 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_payment_headers(req)
+            let access_token = req.resource_common_data
+                .access_token
+                .clone()
+                .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
+            let connector_metadata = req.resource_common_data.connector_meta_data
+                .as_ref()
+                .map(|secret| secret.clone().expose());
+            self.build_headers(
+                &access_token.access_token,
+                &req.resource_common_data.connector_request_reference_id,
+                &req.connector_auth_type,
+                connector_metadata.as_ref(),
+            )
         }
         fn get_url(
             &self,
@@ -774,7 +835,19 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_payment_headers(req)
+            let access_token = req.resource_common_data
+                .access_token
+                .clone()
+                .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
+            let connector_metadata = req.resource_common_data.connector_meta_data
+                .as_ref()
+                .map(|secret| secret.clone().expose());
+            self.build_headers(
+                &access_token.access_token,
+                &req.resource_common_data.connector_request_reference_id,
+                &req.connector_auth_type,
+                connector_metadata.as_ref(),
+            )
         }
         fn get_url(
             &self,
