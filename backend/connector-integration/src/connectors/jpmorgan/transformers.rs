@@ -232,8 +232,8 @@ impl<
         let capture_method = Some(requests::CapMethod::Now);
         let amount_to_capture = item.router_data.request.minor_amount_to_capture;
 
-        /// When AuthenticationType is `Manual`, Documentation suggests us to pass `isAmountFinal` field being `true`
-        /// isAmountFinal is by default `true`. Since Manual Multiple support is not added here, the field is not used.
+        // When AuthenticationType is `Manual`, Documentation suggests us to pass `isAmountFinal` field being `true`
+        // isAmountFinal is by default `true`. Since Manual Multiple support is not added here, the field is not used.
         Ok(Self {
             capture_method,
             amount: amount_to_capture,
