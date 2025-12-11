@@ -722,7 +722,7 @@ impl TryFrom<&ConnectorAuthType> for PhonepeAuthType {
 // Check if merchant ID corresponds to IRCTC (merchant-based endpoints)
 // This should be called with the merchant_id from X-MERCHANT-ID auth header
 pub fn is_irctc_merchant(merchant_id: &str) -> bool {
-    merchant_id == "irctc"
+    merchant_id.contains("irctc")
 }
 
 // Convert UpiSource enum to string for API
