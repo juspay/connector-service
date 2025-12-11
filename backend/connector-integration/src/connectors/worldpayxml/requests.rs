@@ -64,13 +64,13 @@ pub struct WorldpayxmlPaymentDetails {
 #[serde(rename_all = "SCREAMING-KEBAB-CASE")]
 pub enum WorldpayxmlPaymentMethod {
     #[serde(rename = "CARD-SSL")]
-    CardSsl(WorldpayxmlCard),
+    Card(WorldpayxmlCard),
     #[serde(rename = "VISA-SSL")]
-    VisaSsl(WorldpayxmlCard),
+    Visa(WorldpayxmlCard),
     #[serde(rename = "ECMC-SSL")]
-    EcmcSsl(WorldpayxmlCard),
+    Ecmc(WorldpayxmlCard),
     #[serde(rename = "PAYWITHGOOGLE-SSL")]
-    PaywithgoogleSsl(WorldpayxmlGooglePay),
+    Paywithgoogle(WorldpayxmlGooglePay),
 }
 
 #[derive(Debug, Serialize)]
@@ -109,7 +109,10 @@ pub struct WorldpayxmlGooglePay {
 
 #[derive(Debug, Serialize)]
 pub struct WorldpayxmlShopper {
-    #[serde(rename = "shopperEmailAddress", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "shopperEmailAddress",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub shopper_email_address: Option<common_utils::Email>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub browser: Option<WorldpayxmlBrowser>,

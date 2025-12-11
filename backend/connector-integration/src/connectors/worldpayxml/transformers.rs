@@ -17,7 +17,11 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::Serialize;
 
-use super::{requests, responses::{self, WorldpayxmlLastEvent}, WorldpayxmlRouterData};
+use super::{
+    requests,
+    responses::{self, WorldpayxmlLastEvent},
+    WorldpayxmlRouterData,
+};
 use crate::types::ResponseRouterData;
 
 const API_VERSION: &str = "1.4";
@@ -104,7 +108,10 @@ where
                         year: formatted_year,
                     },
                 },
-                card_holder_name: card.card_holder_name.clone().unwrap_or_else(|| Secret::new("CARDHOLDER".to_string())),
+                card_holder_name: card
+                    .card_holder_name
+                    .clone()
+                    .unwrap_or_else(|| Secret::new("CARDHOLDER".to_string())),
                 cvc: card.card_cvc.clone(),
             };
 
@@ -112,14 +119,14 @@ where
             match card.card_network.as_ref() {
                 Some(network) => match network {
                     common_enums::CardNetwork::Visa => {
-                        Ok(requests::WorldpayxmlPaymentMethod::VisaSsl(card_data))
+                        Ok(requests::WorldpayxmlPaymentMethod::Visa(card_data))
                     }
                     common_enums::CardNetwork::Mastercard => {
-                        Ok(requests::WorldpayxmlPaymentMethod::EcmcSsl(card_data))
+                        Ok(requests::WorldpayxmlPaymentMethod::Ecmc(card_data))
                     }
-                    _ => Ok(requests::WorldpayxmlPaymentMethod::CardSsl(card_data)),
+                    _ => Ok(requests::WorldpayxmlPaymentMethod::Card(card_data)),
                 },
-                None => Ok(requests::WorldpayxmlPaymentMethod::CardSsl(card_data)),
+                None => Ok(requests::WorldpayxmlPaymentMethod::Card(card_data)),
             }
         }
         PaymentMethodData::Wallet(WalletData::GooglePay(google_pay_data)) => {
@@ -135,7 +142,7 @@ where
                     String::new()
                 }
             };
-            Ok(requests::WorldpayxmlPaymentMethod::PaywithgoogleSsl(
+            Ok(requests::WorldpayxmlPaymentMethod::Paywithgoogle(
                 requests::WorldpayxmlGooglePay {
                     protocol_version: "ECv1".to_string(), // Default protocol version
                     signature: String::new(),             // Signature is part of the token
@@ -229,8 +236,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .address
             .get_payment_billing()
             .and_then(|billing| {
-                billing.address.as_ref().map(|addr| {
-                    requests::WorldpayxmlBillingAddress {
+                billing
+                    .address
+                    .as_ref()
+                    .map(|addr| requests::WorldpayxmlBillingAddress {
                         address: requests::WorldpayxmlAddress {
                             first_name: addr.first_name.clone(),
                             last_name: addr.last_name.clone(),
@@ -242,8 +251,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             state: addr.state.clone(),
                             country_code: addr.country,
                         },
-                    }
-                })
+                    })
             });
 
         // Convert amount using the connector's amount converter
@@ -311,7 +319,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // Capture flow transformers
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
         WorldpayxmlRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
             T,
@@ -362,7 +371,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
 }
 
 // Void flow transformers
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
         WorldpayxmlRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
             T,
@@ -397,7 +407,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
 }
 
 // Refund flow transformers
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
         WorldpayxmlRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
             T,
@@ -444,7 +455,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
 }
 
 // PSync flow transformers
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
         WorldpayxmlRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             T,
@@ -482,7 +494,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
 }
 
 // RSync flow transformers - REUSE PSync request structure via type alias
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
         WorldpayxmlRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
             T,
@@ -562,7 +575,10 @@ fn parse_last_event(event_str: &str) -> Result<WorldpayxmlLastEvent, errors::Con
         "REFUSED" => Ok(WorldpayxmlLastEvent::Refused),
         "CANCELLED" => Ok(WorldpayxmlLastEvent::Cancelled),
         "CAPTURED" | "SETTLED" => Ok(WorldpayxmlLastEvent::Captured),
-        "SENT_FOR_REFUND" | "REFUND_REQUESTED" | "SENT_FOR_FAST_REFUND" | "REFUNDED_BY_MERCHANT" => Ok(WorldpayxmlLastEvent::SentForRefund),
+        "SENT_FOR_REFUND"
+        | "REFUND_REQUESTED"
+        | "SENT_FOR_FAST_REFUND"
+        | "REFUNDED_BY_MERCHANT" => Ok(WorldpayxmlLastEvent::SentForRefund),
         "REFUNDED" => Ok(WorldpayxmlLastEvent::Refunded),
         "REFUND_FAILED" => Ok(WorldpayxmlLastEvent::RefundFailed),
         "EXPIRED" => Ok(WorldpayxmlLastEvent::Expired),
@@ -576,17 +592,26 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ResponseRouterData<
             responses::WorldpayxmlAuthorizeResponse,
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         >,
-    >
-    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<
             responses::WorldpayxmlAuthorizeResponse,
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         >,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -687,13 +712,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // Response transformers - Capture
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             responses::WorldpayxmlCaptureResponse,
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
-    >
-    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -764,13 +789,13 @@ impl TryFrom<
 }
 
 // Response transformers - Void
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             responses::WorldpayxmlVoidResponse,
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         >,
-    >
-    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -841,13 +866,13 @@ impl TryFrom<
 }
 
 // Response transformers - PSync
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             responses::WorldpayxmlTransactionResponse,
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         >,
-    >
-    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -899,7 +924,9 @@ impl TryFrom<
                     if order_status.payment.is_none() {
                         // Error exists but no payment data - return current status as Pending
                         let payments_response_data = PaymentsResponseData::TransactionResponse {
-                            resource_id: ResponseId::ConnectorTransactionId(order_status.order_code.clone()),
+                            resource_id: ResponseId::ConnectorTransactionId(
+                                order_status.order_code.clone(),
+                            ),
                             redirection_data: None,
                             mandate_reference: None,
                             connector_metadata: None,
@@ -947,7 +974,8 @@ impl TryFrom<
                     .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
 
                 // Determine if auto-capture from request data
-                let is_auto_capture = router_data.request.capture_method != Some(CaptureMethod::Manual)
+                let is_auto_capture = router_data.request.capture_method
+                    != Some(CaptureMethod::Manual)
                     && router_data.request.capture_method != Some(CaptureMethod::ManualMultiple);
 
                 // Map status from lastEvent - reuse the helper function
@@ -959,7 +987,9 @@ impl TryFrom<
 
                 // Build success response
                 let payments_response_data = PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(order_status.order_code.clone()),
+                    resource_id: ResponseId::ConnectorTransactionId(
+                        order_status.order_code.clone(),
+                    ),
                     redirection_data: None,
                     mandate_reference: None,
                     connector_metadata: None,
@@ -998,7 +1028,8 @@ impl TryFrom<
                 let last_event = parse_last_event(last_event_str)?;
 
                 // Determine if auto-capture from request data
-                let is_auto_capture = router_data.request.capture_method != Some(CaptureMethod::Manual)
+                let is_auto_capture = router_data.request.capture_method
+                    != Some(CaptureMethod::Manual)
                     && router_data.request.capture_method != Some(CaptureMethod::ManualMultiple);
 
                 // Map status from lastEvent
@@ -1034,13 +1065,13 @@ impl TryFrom<
 }
 
 // Response transformers - Refund
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             responses::WorldpayxmlRefundResponse,
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         >,
-    >
-    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -1098,13 +1129,13 @@ impl TryFrom<
 }
 
 // Response transformers - RSync (REUSE PSync response structure via type alias)
-impl TryFrom<
+impl
+    TryFrom<
         ResponseRouterData<
             responses::WorldpayxmlRsyncResponse,
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         >,
-    >
-    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
