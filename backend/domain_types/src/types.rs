@@ -2496,6 +2496,13 @@ impl
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
+        // Extract access_token from state field
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(AccessTokenResponseData::from);
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -2515,7 +2522,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
-            access_token: None,
+            access_token,
             session_token: None,
             reference_id: None,
             payment_method_token: None,
@@ -4972,14 +4979,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
             reason: value.reason.clone(),
             webhook_url: value.webhook_url,
             refund_amount: value.refund_amount,
-            connector_metadata: serde_json::to_value(&value.metadata)
-                .inspect_err(|e| {
-                    tracing::warn!(
-                        error = %e,
-                        "Failed to serialize connector_metadata from refund metadata"
-                    );
-                })
-                .ok(),
+            connector_metadata: Some(convert_merchant_metadata_to_json(&value.metadata)),
             refund_connector_metadata: {
                 value.refund_metadata.get("refund_metadata").map(|json_string| {
                     Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
@@ -7347,6 +7347,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
                     mandate_metadata: None,
                 }
             }),
+            shipping_cost: value.shipping_cost.map(common_utils::types::MinorUnit::new),
         })
     }
 }
@@ -7367,6 +7368,14 @@ impl
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // For MIT, address is optional
         let address = payment_address::PaymentAddress::default();
+
+        // Extract access_token from state field
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(AccessTokenResponseData::from);
+
         Ok(Self {
             merchant_id: common_utils::id_type::MerchantId::default(),
             payment_id: "REPEAT_PAYMENT_ID".to_string(),
@@ -7386,7 +7395,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
-            access_token: None,
+            access_token,
             session_token: None,
             reference_id: value.merchant_order_reference_id,
             payment_method_token: None,
