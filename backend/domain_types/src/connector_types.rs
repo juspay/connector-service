@@ -102,6 +102,7 @@ pub enum ConnectorEnum {
     Airwallex,
     Bankofamerica,
     Powertranz,
+    Bambora,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -167,6 +168,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Airwallex => Ok(Self::Airwallex),
             grpc_api_types::payments::Connector::Bankofamerica => Ok(Self::Bankofamerica),
             grpc_api_types::payments::Connector::Powertranz => Ok(Self::Powertranz),
+            grpc_api_types::payments::Connector::Bambora => Ok(Self::Bambora),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -428,6 +430,10 @@ impl PaymentFlowData {
         self.address.get_payment_method_billing()
     }
 
+    pub fn get_optional_payment_billing(&self) -> Option<&Address> {
+        self.address.get_payment_billing()
+    }
+
     pub fn get_optional_shipping(&self) -> Option<&Address> {
         self.address.get_shipping()
     }
@@ -531,6 +537,14 @@ impl PaymentFlowData {
     pub fn get_billing_address(&self) -> Result<&AddressDetails, Error> {
         self.address
             .get_payment_method_billing()
+            .as_ref()
+            .and_then(|a| a.address.as_ref())
+            .ok_or_else(missing_field_err("billing.address"))
+    }
+
+    pub fn get_billing_address_from_payment_address(&self) -> Result<&AddressDetails, Error> {
+        self.address
+            .get_payment_billing()
             .as_ref()
             .and_then(|a| a.address.as_ref())
             .ok_or_else(missing_field_err("billing.address"))
@@ -847,6 +861,12 @@ impl PaymentFlowData {
     // Helper methods for additional headers
     pub fn get_header(&self, key: &str) -> Option<&Secret<String>> {
         self.vault_headers.as_ref().and_then(|h| h.get(key))
+    }
+
+    pub fn get_optional_payment_billing_full_name(&self) -> Option<Secret<String>> {
+        self.get_optional_payment_billing()
+            .and_then(|billing_details| billing_details.address.as_ref())
+            .and_then(|billing_address| billing_address.get_optional_full_name())
     }
 }
 
@@ -1332,6 +1352,7 @@ pub struct PaymentMethodTokenizationData<T: PaymentMethodDataTypes> {
     pub mandate_id: Option<MandateIds>,
     pub integrity_object: Option<PaymentMethodTokenIntegrityObject>,
     pub split_payments: Option<SplitPaymentsRequest>,
+    pub merchant_account_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
 
 #[derive(Debug, Clone)]
@@ -2197,6 +2218,7 @@ pub struct RepeatPaymentData {
     pub router_return_url: Option<String>,
     pub split_payments: Option<SplitPaymentsRequest>,
     pub recurring_mandate_payment_data: Option<router_data::RecurringMandatePaymentData>,
+    pub shipping_cost: Option<MinorUnit>,
     pub mit_category: Option<common_enums::MitCategory>,
     pub enable_partial_authorization: Option<bool>,
     pub billing_descriptor: Option<BillingDescriptor>,

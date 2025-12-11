@@ -1615,6 +1615,7 @@ message PaymentServiceAuthorizeRequest {
   // Order Details
   optional string order_category = 22; // Category of the order
   optional string merchant_order_reference_id = 23; // Merchant's internal reference ID
+  optional string connector_order_reference_id = 40; // Connector's reference id for order
 
   // Behavioral Flags and Preferences
   optional FutureUsage setup_future_usage = 24; // Indicates future usage intention
@@ -1730,7 +1731,7 @@ message PaymentServiceAuthorizeOnlyRequest {
   optional string payment_method_token = 40;
 
   // Send the connector order identifier here if an order was created before authorize
-  optional string order_id = 41;
+  optional string connector_order_reference_id = 41; // Connector's reference id for order
 }
 
 // Response message for a payment authorization.
@@ -1883,7 +1884,7 @@ message PaymentServiceVoidRequest {
   // State Information
   optional ConnectorState state = 10; // State data for access token storage and other connector-specific state
 
-    // Account-Specific Configuration
+  // Account-Specific Configuration
   map<string, string> merchant_account_metadata = 11; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
@@ -1972,7 +1973,7 @@ message PaymentServiceSdkSessionTokenRequest {
   optional SecretString customer_name = 10; // Name of the customer
 
   // Account-Specific Configuration
-  SecretString merchant_account_metadata = 17;; // Account-level configuration metadata (e.g., merchant_name, brand_id)
+  SecretString merchant_account_metadata = 17; // Account-level configuration metadata (e.g., merchant_name, brand_id)
 }
 
 // Response message for a sdk session token operation.
@@ -2380,6 +2381,9 @@ message PaymentServiceRepeatEverythingRequest {
   optional ConnectorState state = 22; // State data for access token storage and other connector-specific state
 
   optional RecurringMandatePaymentData recurring_mandate_payment_data = 9; // Mandate payment details
+  
+  // Shipping Cost
+  optional int64 shipping_cost = 34; // Shipping cost in minor units (e.g., cents)
 
   optional BillingDescriptor billing_descriptor = 24; // Billing Descriptor information to be sent to the payment gateway
 
@@ -2600,6 +2604,7 @@ message PaymentServicePostAuthenticateRequest {
 
   // Authentication Details
   optional AuthenticationData authentication_data = 9; // Authentication data from previous steps
+  optional string connector_order_reference_id = 18; // Authenticated order id
 
   // Metadata
   map<string, string> metadata = 10; // Additional metadata for the connector
@@ -3088,6 +3093,9 @@ message PaymentServiceCreatePaymentMethodTokenRequest {
 
   // Additional Metadata
   map<string, string> metadata = 12; // Additional metadata for the connector
+
+  // URLs for Redirection
+  optional string return_url = 13; // URL to redirect after payment method token creation
 }
 
 // Response message for creating a payment method token.
