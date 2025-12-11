@@ -53,6 +53,50 @@ pub(crate) mod headers {
     pub(crate) const MERCHANT_ID: &str = "Merchant-Id";
 }
 
+// Trait to abstract over PaymentFlowData and RefundFlowData for header building
+pub trait JpmorganResourceData {
+    fn access_token(&self) -> Option<&AccessTokenResponseData>;
+    fn connector_request_reference_id(&self) -> String;
+    fn merchant_id(&self) -> &common_utils::id_type::MerchantId;
+    fn connectors(&self) -> &Connectors;
+}
+
+impl JpmorganResourceData for PaymentFlowData {
+    fn access_token(&self) -> Option<&AccessTokenResponseData> {
+        self.access_token.as_ref()
+    }
+
+    fn connector_request_reference_id(&self) -> String {
+        self.connector_request_reference_id.clone()
+    }
+
+    fn merchant_id(&self) -> &common_utils::id_type::MerchantId {
+        &self.merchant_id
+    }
+
+    fn connectors(&self) -> &Connectors {
+        &self.connectors
+    }
+}
+
+impl JpmorganResourceData for RefundFlowData {
+    fn access_token(&self) -> Option<&AccessTokenResponseData> {
+        self.access_token.as_ref()
+    }
+
+    fn connector_request_reference_id(&self) -> String {
+        self.connector_request_reference_id.clone()
+    }
+
+    fn merchant_id(&self) -> &common_utils::id_type::MerchantId {
+        &self.merchant_id
+    }
+
+    fn connectors(&self) -> &Connectors {
+        &self.connectors
+    }
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Jpmorgan<T>
 {
@@ -197,12 +241,14 @@ macros::create_all_prerequisites!(
     ],
     amount_converters: [],
     member_functions: {
-        pub fn build_headers<F, Req, Res>(
+        // Generic header builder that works for both PaymentFlowData and RefundFlowData
+        pub fn build_headers<F, ResourceData, Req, Res>(
             &self,
-            req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
+            req: &RouterDataV2<F, ResourceData, Req, Res>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
         where
-            Self: ConnectorIntegrationV2<F, PaymentFlowData, Req, Res>,
+            Self: ConnectorIntegrationV2<F, ResourceData, Req, Res>,
+            ResourceData: JpmorganResourceData,
         {
             let mut headers = vec![(
                 headers::CONTENT_TYPE.to_string(),
@@ -215,8 +261,7 @@ macros::create_all_prerequisites!(
                 format!(
                     "Bearer {}",
                     &req.resource_common_data
-                        .access_token
-                        .as_ref()
+                        .access_token()
                         .ok_or(errors::ConnectorError::FailedToObtainAuthType)?
                         .access_token
                 )
@@ -226,13 +271,13 @@ macros::create_all_prerequisites!(
             // Request-Id header
             let request_id_header = (
                 headers::REQUEST_ID.to_string(),
-                req.resource_common_data.connector_request_reference_id.clone().into_masked(),
+                req.resource_common_data.connector_request_reference_id().into_masked(),
             );
 
             // Merchant-Id header
             let merchant_id_header = (
                 headers::MERCHANT_ID.to_string(),
-                req.resource_common_data.merchant_id.get_string_repr().to_string().into_masked(),
+                req.resource_common_data.merchant_id().get_string_repr().to_string().into_masked(),
             );
 
             headers.push(auth_header);
@@ -242,63 +287,15 @@ macros::create_all_prerequisites!(
             Ok(headers)
         }
 
-        pub fn connector_base_url_payments<'a, F, Req, Res>(
+        // Generic base URL getter that works for both PaymentFlowData and RefundFlowData
+        pub fn connector_base_url<'a, F, ResourceData, Req, Res>(
             &self,
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.jpmorgan.base_url
-        }
-
-        pub fn build_headers_refunds<F, Req, Res>(
-            &self,
-            req: &RouterDataV2<F, RefundFlowData, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+            req: &'a RouterDataV2<F, ResourceData, Req, Res>,
+        ) -> &'a str
         where
-            Self: ConnectorIntegrationV2<F, RefundFlowData, Req, Res>,
+            ResourceData: JpmorganResourceData,
         {
-            let mut headers = vec![(
-                headers::CONTENT_TYPE.to_string(),
-                Self::common_get_content_type(self).to_string().into(),
-            )];
-
-            // OAuth 2.0 Bearer token from access_token
-            let auth_header = (
-                headers::AUTHORIZATION.to_string(),
-                format!(
-                    "Bearer {}",
-                    &req.resource_common_data
-                        .access_token
-                        .as_ref()
-                        .ok_or(errors::ConnectorError::FailedToObtainAuthType)?
-                        .access_token
-                )
-                .into_masked(),
-            );
-
-            // Request-Id header
-            let request_id_header = (
-                headers::REQUEST_ID.to_string(),
-                req.resource_common_data.connector_request_reference_id.clone().into_masked(),
-            );
-
-            // Merchant-Id header
-            let merchant_id_header = (
-                headers::MERCHANT_ID.to_string(),
-                req.resource_common_data.merchant_id.get_string_repr().to_string().into_masked(),
-            );
-
-            headers.push(auth_header);
-            headers.push(merchant_id_header);
-            headers.push(request_id_header);
-
-            Ok(headers)
-        }
-
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
-            &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.jpmorgan.base_url
+            &req.resource_common_data.connectors().jpmorgan.base_url
         }
     }
 );
@@ -545,7 +542,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/payments", self.connector_base_url_payments(req)))
+            Ok(format!("{}/payments", self.connector_base_url(req)))
         }
     }
 );
@@ -575,7 +572,7 @@ macros::macro_connector_implementation!(
             let transaction_id = req.request.connector_transaction_id
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
-            Ok(format!("{}/payments/{}", self.connector_base_url_payments(req), transaction_id))
+            Ok(format!("{}/payments/{}", self.connector_base_url(req), transaction_id))
         }
     }
 );
@@ -606,7 +603,7 @@ macros::macro_connector_implementation!(
             let transaction_id = req.request.connector_transaction_id
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
-            Ok(format!("{}/payments/{}/captures", self.connector_base_url_payments(req), transaction_id))
+            Ok(format!("{}/payments/{}/captures", self.connector_base_url(req), transaction_id))
         }
     }
 );
@@ -634,7 +631,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/payments/{}", self.connector_base_url_payments(req), req.request.connector_transaction_id))
+            Ok(format!("{}/payments/{}", self.connector_base_url(req), req.request.connector_transaction_id))
         }
     }
 );
@@ -656,13 +653,13 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers_refunds(req)
+            self.build_headers(req)
         }
         fn get_url(
             &self,
             _req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/refunds", self.connector_base_url_refunds(_req)))
+            Ok(format!("{}/refunds", self.connector_base_url(_req)))
         }
     }
 );
@@ -683,14 +680,14 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers_refunds(req)
+            self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let refund_id = req.request.connector_refund_id.clone();
-            Ok(format!("{}/refunds/{}", self.connector_base_url_refunds(req), refund_id))
+            Ok(format!("{}/refunds/{}", self.connector_base_url(req), refund_id))
         }
     }
 );

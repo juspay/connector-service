@@ -15,7 +15,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use super::{requests, responses};
+use super::{requests, responses, JpmorganAmountConvertor};
 use crate::{connectors::jpmorgan::JpmorganRouterData, types::ResponseRouterData};
 
 type Error = error_stack::Report<errors::ConnectorError>;
@@ -191,10 +191,15 @@ impl<
 
                 let payment_method_type = requests::JpmorganPaymentMethodType { card };
 
+                let amount = JpmorganAmountConvertor::convert(
+                    router_data.request.minor_amount,
+                    router_data.request.currency,
+                )?;
+
                 Ok(Self {
                     capture_method,
                     currency: router_data.request.currency,
-                    amount: router_data.request.minor_amount,
+                    amount,
                     merchant: requests::JpmorganMerchant { merchant_software },
                     payment_method_type,
                 })
@@ -232,11 +237,14 @@ impl<
         let capture_method = requests::CapMethod::Now;
         let amount_to_capture = item.router_data.request.minor_amount_to_capture;
 
+        let amount =
+            JpmorganAmountConvertor::convert(amount_to_capture, item.router_data.request.currency)?;
+
         // When AuthenticationType is `Manual`, Documentation suggests us to pass `isAmountFinal` field being `true`
         // isAmountFinal is by default `true`. Since Manual Multiple support is not added here, the field is not used.
         Ok(Self {
             capture_method,
-            amount: amount_to_capture,
+            amount,
             currency: item.router_data.request.currency,
         })
     }
@@ -291,14 +299,19 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let merchant_software = requests::JpmorganMerchantSoftware {
-            company_name: Secret::new("JPMC".to_string()),
-            product_name: Secret::new("Hyperswitch".to_string()),
+            company_name: Secret::new(MERCHANT_COMPANY_NAME.to_string()),
+            product_name: Secret::new(MERCHANT_PRODUCT_NAME.to_string()),
         };
         let merchant = requests::JpmorganMerchantRefund { merchant_software };
 
+        let amount = JpmorganAmountConvertor::convert(
+            item.router_data.request.minor_refund_amount,
+            item.router_data.request.currency,
+        )?;
+
         Ok(Self {
             merchant,
-            amount: item.router_data.request.minor_refund_amount,
+            amount,
             currency: item.router_data.request.currency,
         })
     }

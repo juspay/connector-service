@@ -4031,7 +4031,7 @@ impl
         Ok(RefundFlowData {
             merchant_id: merchant_id_from_header,
             status: common_enums::RefundStatus::Pending,
-            refund_id: None,
+            refund_id: Some(value.refund_id),
             connectors,
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.request_ref_id,

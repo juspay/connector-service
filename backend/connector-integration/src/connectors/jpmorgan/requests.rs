@@ -72,8 +72,8 @@ pub struct JpmorganCaptureRequest {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganVoidRequest {
-    /// As per the docs, this is not a required field
-    /// Since we always pass `true` in `isVoid` only during the void call, it makes more sense to have it required field
+    // As per the docs, this is not a required field
+    // Since we always pass `true` in `isVoid` only during the void call, it makes more sense to have it required field
     pub is_void: bool,
 }
 
