@@ -199,7 +199,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: Authorize,
-            request_body: PaymePaymentRequest,
+            request_body: PaymePaymentRequest<T>,
             response_body: PaymePaymentResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),

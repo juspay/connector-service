@@ -9,13 +9,16 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
+    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
+extern crate cards;
+
+const LANGUAGE: &str = "en";
 
 // ===== AUTHENTICATION TYPE =====
 #[derive(Debug, Clone)]
@@ -70,32 +73,18 @@ pub enum SaleStatus {
     PartialVoid,
     Failed,
     Chargeback,
-    Success,    // Added for API responses
-    Pending,    // Added for API responses
-    Validated,  // Added for API responses
-    Error,      // Added for API responses
-    Cancelled,  // Added for API responses (alternative spelling)
-    Canceled,   // Added for API responses
-    Processing, // Added for refunds
-    Initiated,  // Added for refunds
-    Refused,    // Added for refunds
 }
 
 impl From<SaleStatus> for AttemptStatus {
     fn from(item: SaleStatus) -> Self {
         match item {
-            SaleStatus::Initial | SaleStatus::Pending | SaleStatus::Validated => Self::Pending,
-            SaleStatus::Completed | SaleStatus::Success => Self::Charged,
+            SaleStatus::Initial => Self::Pending,
+            SaleStatus::Completed => Self::Charged,
             SaleStatus::Refunded | SaleStatus::PartialRefund => Self::AutoRefunded,
             SaleStatus::Authorized => Self::Authorized,
-            SaleStatus::Voided
-            | SaleStatus::PartialVoid
-            | SaleStatus::Cancelled
-            | SaleStatus::Canceled => Self::Voided,
-            SaleStatus::Failed | SaleStatus::Error => Self::Failure,
+            SaleStatus::Voided | SaleStatus::PartialVoid => Self::Voided,
+            SaleStatus::Failed => Self::Failure,
             SaleStatus::Chargeback => Self::AutoRefunded,
-            SaleStatus::Processing | SaleStatus::Initiated => Self::Pending,
-            SaleStatus::Refused => Self::Failure,
         }
     }
 }
@@ -105,22 +94,14 @@ impl TryFrom<SaleStatus> for RefundStatus {
 
     fn try_from(sale_status: SaleStatus) -> Result<Self, Self::Error> {
         match sale_status {
-            SaleStatus::Completed
-            | SaleStatus::Refunded
-            | SaleStatus::PartialRefund
-            | SaleStatus::Success => Ok(Self::Success),
-            SaleStatus::Pending | SaleStatus::Processing | SaleStatus::Initiated => {
-                Ok(Self::Pending)
+            SaleStatus::Completed | SaleStatus::Refunded | SaleStatus::PartialRefund => {
+                Ok(Self::Success)
             }
-            SaleStatus::Failed | SaleStatus::Error | SaleStatus::Refused => Ok(Self::Failure),
-            SaleStatus::Initial
-            | SaleStatus::Authorized
-            | SaleStatus::Voided
-            | SaleStatus::PartialVoid
-            | SaleStatus::Chargeback
-            | SaleStatus::Validated
-            | SaleStatus::Cancelled
-            | SaleStatus::Canceled => Err(errors::ConnectorError::ResponseHandlingFailed)?,
+            SaleStatus::Initial | SaleStatus::Authorized => Ok(Self::Pending),
+            SaleStatus::Failed => Ok(Self::Failure),
+            SaleStatus::Voided | SaleStatus::PartialVoid | SaleStatus::Chargeback => {
+                Err(errors::ConnectorError::ResponseHandlingFailed)?
+            }
         }
     }
 }
@@ -128,18 +109,18 @@ impl TryFrom<SaleStatus> for RefundStatus {
 // ===== PAYMENT REQUEST STRUCTURES =====
 // Simplified authorize request - uses payme_sale_id from CreateOrder
 #[derive(Debug, Serialize)]
-pub struct PaymePaymentRequest {
+pub struct PaymePaymentRequest<T: PaymentMethodDataTypes> {
     pub buyer_name: Secret<String>,
     pub buyer_email: pii::Email,
     pub payme_sale_id: String,
     #[serde(flatten)]
-    pub card: PaymeCardDetails,
+    pub card: PaymeCardDetails<T>,
     pub language: String,
 }
 
 #[derive(Debug, Serialize)]
-pub struct PaymeCardDetails {
-    pub credit_card_number: Secret<String>,
+pub struct PaymeCardDetails<T: PaymentMethodDataTypes> {
+    pub credit_card_number: RawCardNumber<T>,
     pub credit_card_exp: Secret<String>,
     pub credit_card_cvv: Secret<String>,
 }
@@ -192,7 +173,7 @@ fn create_payment_request_from_router_data<T: PaymentMethodDataTypes>(
         PaymentsAuthorizeData<T>,
         PaymentsResponseData,
     >,
-) -> Result<PaymePaymentRequest, error_stack::Report<errors::ConnectorError>> {
+) -> Result<PaymePaymentRequest<T>, error_stack::Report<errors::ConnectorError>> {
     // Get payme_sale_id from CreateOrder (stored in reference_id)
     let payme_sale_id = router_data
         .resource_common_data
@@ -239,14 +220,14 @@ fn create_payment_request_from_router_data<T: PaymentMethodDataTypes>(
         buyer_email,
         payme_sale_id,
         card,
-        language: "en".to_string(),
+        language: LANGUAGE.to_string(),
     })
 }
 
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    > for PaymePaymentRequest
+    > for PaymePaymentRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -275,7 +256,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde
             >,
             T,
         >,
-    > for PaymePaymentRequest
+    > for PaymePaymentRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -297,12 +278,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde
 // Helper function to build card details
 fn build_card_details<T: PaymentMethodDataTypes>(
     card: &Card<T>,
-) -> Result<PaymeCardDetails, error_stack::Report<errors::ConnectorError>> {
+) -> Result<PaymeCardDetails<T>, error_stack::Report<errors::ConnectorError>> {
     // Format expiry as MMYY using utility function (e.g., "0322" for March 2022)
     let credit_card_exp = card.get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?;
 
     Ok(PaymeCardDetails {
-        credit_card_number: Secret::new(card.card_number.peek().to_string()),
+        credit_card_number: card.card_number.clone(),
         credit_card_exp,
         credit_card_cvv: card.card_cvc.clone(),
     })
@@ -761,7 +742,7 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
             seller_payme_id: auth.seller_payme_id,
             payme_sale_id,
             sale_refund_amount: item.request.minor_refund_amount,
-            language: "en".to_string(),
+            language: LANGUAGE.to_string(),
         })
     }
 }
@@ -979,7 +960,7 @@ impl
 pub struct PaymeVoidRequest {
     pub seller_payme_id: Secret<String>,
     pub payme_sale_id: String,
-    pub sale_currency: String,
+    pub sale_currency: Currency,
     pub language: String,
 }
 
@@ -1003,19 +984,18 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
         let payme_sale_id = item.request.connector_transaction_id.clone();
 
         // Get currency
-        let sale_currency = item
-            .request
-            .currency
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "currency",
-            })?
-            .to_string();
+        let sale_currency =
+            item.request
+                .currency
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "currency",
+                })?;
 
         Ok(Self {
             seller_payme_id: auth.seller_payme_id,
             payme_sale_id,
             sale_currency,
-            language: "en".to_string(),
+            language: LANGUAGE.to_string(),
         })
     }
 }
@@ -1092,11 +1072,11 @@ impl
         }
 
         // Map PayMe sale status to AttemptStatus for void
-        // Successful void should return "cancelled" or "voided" status
+        // Successful void should return "voided" status
         let status = match response.payme_sale_status.as_deref() {
-            Some("cancelled") | Some("canceled") | Some("voided") => AttemptStatus::Voided,
-            Some("pending") | Some("processing") => AttemptStatus::Pending,
-            Some("failed") | Some("error") => AttemptStatus::VoidFailed,
+            Some("voided") => AttemptStatus::Voided,
+            Some("pending") => AttemptStatus::Pending,
+            Some("failed") => AttemptStatus::VoidFailed,
             _ => AttemptStatus::Voided, // Default to Voided for success response
         };
 
@@ -1184,11 +1164,20 @@ impl
             sale_price: item.request.amount,
             currency: item.request.currency,
             sale_payment_method: "credit-card".to_string(), // Only card for no3ds
-            product_name: None, // Not available in PaymentCreateOrderData
-            transaction_id: item.resource_common_data.attempt_id.clone(),
+            product_name: item
+                .request
+                .metadata
+                .as_ref()
+                .and_then(|meta| meta.get("product_name"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()), // Extract from metadata
+            transaction_id: item
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             sale_callback_url: item.request.webhook_url.clone(),
             sale_return_url: item.resource_common_data.return_url.clone(),
-            language: Some("en".to_string()),
+            language: Some(LANGUAGE.to_string()),
         })
     }
 }
