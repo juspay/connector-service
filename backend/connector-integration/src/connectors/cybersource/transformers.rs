@@ -2575,12 +2575,10 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let merchant_defined_information = item
-            .router_data
-            .request
-            .connector_metadata
-            .clone()
-            .map(utils::convert_metadata_to_merchant_defined_info);
+        let merchant_defined_information =
+            item.router_data.request.metadata.clone().map(|metadata| {
+                utils::convert_metadata_to_merchant_defined_info(metadata.expose())
+            });
 
         let is_final = matches!(
             item.router_data.request.capture_method,
@@ -2668,14 +2666,15 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let merchant_defined_information = value
-            .router_data
-            .request
-            .connector_metadata
-            .clone()
-            .map(|connector_metadata| {
-                utils::convert_metadata_to_merchant_defined_info(connector_metadata.expose())
-            });
+        let merchant_defined_information =
+            value
+                .router_data
+                .request
+                .metadata
+                .clone()
+                .map(|connector_metadata| {
+                    utils::convert_metadata_to_merchant_defined_info(connector_metadata.expose())
+                });
 
         let currency = value.router_data.request.currency.unwrap();
         let total_amount = value

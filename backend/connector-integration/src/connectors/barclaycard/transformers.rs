@@ -521,11 +521,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data.request.currency,
         )?;
 
-        let merchant_defined_information = router_data
-            .request
-            .connector_metadata
-            .clone()
-            .map(utils::convert_metadata_to_merchant_defined_info);
+        let merchant_defined_information =
+            router_data.request.metadata.clone().map(|metadata| {
+                utils::convert_metadata_to_merchant_defined_info(metadata.expose())
+            });
 
         Ok(Self {
             order_information: requests::OrderInformation {
@@ -581,11 +580,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             currency,
         )?;
 
-        let merchant_defined_information = router_data
-            .request
-            .connector_metadata
-            .clone()
-            .map(|metadata| utils::convert_metadata_to_merchant_defined_info(metadata.expose()));
+        let merchant_defined_information =
+            router_data.request.metadata.clone().map(|metadata| {
+                utils::convert_metadata_to_merchant_defined_info(metadata.expose())
+            });
 
         Ok(Self {
             client_reference_information: requests::ClientReferenceInformation {

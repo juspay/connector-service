@@ -2413,9 +2413,9 @@ impl<
         let merchant_defined_information = item
             .router_data
             .request
-            .connector_metadata
+            .metadata
             .clone()
-            .map(convert_metadata_to_merchant_defined_info);
+            .map(|metadata| convert_metadata_to_merchant_defined_info(metadata.expose()));
         Ok(Self {
             order_information: OrderInformation {
                 amount_details: Amount {
@@ -2469,7 +2469,7 @@ impl<
         let merchant_defined_information = item
             .router_data
             .request
-            .connector_metadata
+            .metadata
             .clone()
             .map(|metadata| convert_metadata_to_merchant_defined_info(metadata.expose()));
 

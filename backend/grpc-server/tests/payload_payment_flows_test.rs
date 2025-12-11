@@ -166,7 +166,9 @@ fn create_payment_sync_request(transaction_id: &str, amount: i64) -> PaymentServ
         amount,
         currency: i32::from(Currency::Usd),
         state: None,
-        connector_metadata: None,
+        metadata: HashMap::new(),
+        merchant_account_metadata: HashMap::new(),
+        connector_metadata: HashMap::new(),
         setup_future_usage: None,
     }
 }
@@ -497,7 +499,9 @@ async fn test_authorize_capture_refund_rsync() {
             amount,
             currency: i32::from(Currency::Usd),
             state: None,
-            connector_metadata: None,
+            metadata: HashMap::new(),
+        merchant_account_metadata: HashMap::new(),
+        connector_metadata: HashMap::new(),
             setup_future_usage: None,
         };
         let mut rsync_grpc_request = Request::new(rsync_request);

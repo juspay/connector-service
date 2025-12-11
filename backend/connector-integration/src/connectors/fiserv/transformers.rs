@@ -680,13 +680,13 @@ impl<
                 router_data.request.currency,
             )
             .change_context(ConnectorError::AmountConversionFailed)?;
-        let order_id = router_data
-            .request
-            .connector_metadata
-            .as_ref()
-            .and_then(|v| v.get("order_id"))
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+        let order_id = router_data.request.metadata.as_ref().and_then(|v| {
+            let exposed = v.clone().expose();
+            exposed
+                .get("order_id")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+        });
 
         Ok(Self {
             amount: Amount {
