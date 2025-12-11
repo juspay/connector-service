@@ -6321,8 +6321,8 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 state,
                 raw_connector_request,
                 connector_response: None,
+                connector_metadata: HashMap::new(),
             }
-            connector_metadata: HashMap::new(),
         }
     };
     Ok(response)
