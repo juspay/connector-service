@@ -369,3 +369,39 @@ pub fn convert_metadata_to_merchant_defined_info(
     })
     .collect()
 }
+
+/// Convert state/province to 2-letter code based on country
+/// Returns None if the state is already 2 letters or if conversion is not needed
+/// Returns Some(code) if successfully converted from full name to abbreviation
+pub fn get_state_code_for_country(
+    state: &Secret<String>,
+    country: Option<common_enums::CountryAlpha2>,
+) -> Option<Secret<String>> {
+    let state_str = state.peek();
+
+    // If already 2 letters, return as-is (already a code)
+    if state_str.len() == 2 {
+        Some(state.clone())
+    } else if state_str.is_empty() {
+        // If empty, return None
+        None
+    } else {
+        // Convert based on country
+        match country {
+            Some(common_enums::CountryAlpha2::US) => {
+                // Try to convert US state name to abbreviation
+                common_enums::UsStatesAbbreviation::from_state_name(state_str)
+                    .map(|abbr| Secret::new(abbr.to_string()))
+            }
+            Some(common_enums::CountryAlpha2::CA) => {
+                // Try to convert Canada province name to abbreviation
+                common_enums::CanadaStatesAbbreviation::from_province_name(state_str)
+                    .map(|abbr| Secret::new(abbr.to_string()))
+            }
+            _ => {
+                // For other countries, return the state as-is if it's not empty
+                Some(state.clone())
+            }
+        }
+    }
+}

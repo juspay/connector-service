@@ -3050,6 +3050,9 @@ message PaymentServiceCreatePaymentMethodTokenRequest {
 
   // Additional Metadata
   map<string, string> metadata = 12; // Additional metadata for the connector
+
+  // URLs for Redirection
+  optional string return_url = 13; // URL to redirect after payment method token creation
 }
 
 // Response message for creating a payment method token.

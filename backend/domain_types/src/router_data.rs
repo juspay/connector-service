@@ -169,6 +169,24 @@ impl Default for ErrorResponse {
 }
 
 impl ErrorResponse {
+    /// Returns attempt status for gRPC response
+    ///
+    /// For 2xx: If attempt_status is None, use fallback (router_data.status set by connector)
+    /// For 4xx/5xx: If attempt_status is None, return None
+    pub fn get_attempt_status_for_grpc(
+        &self,
+        http_status_code: u16,
+        fallback_status: common_enums::enums::AttemptStatus,
+    ) -> Option<common_enums::enums::AttemptStatus> {
+        self.attempt_status.or_else(|| {
+            if (200..300).contains(&http_status_code) {
+                Some(fallback_status)
+            } else {
+                None
+            }
+        })
+    }
+
     pub fn get_not_implemented() -> Self {
         Self {
             code: "IR_00".to_string(),
