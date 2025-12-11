@@ -20,6 +20,9 @@ use crate::{connectors::jpmorgan::JpmorganRouterData, types::ResponseRouterData}
 
 type Error = error_stack::Report<errors::ConnectorError>;
 
+const MERCHANT_COMPANY_NAME: &str = "JPMC";
+const MERCHANT_PRODUCT_NAME: &str = "Hyperswitch";
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganAuthType {
@@ -160,8 +163,8 @@ impl<
                 let capture_method = map_capture_method(router_data.request.capture_method)?;
 
                 let merchant_software = requests::JpmorganMerchantSoftware {
-                    company_name: Secret::new("JPMC".to_string()),
-                    product_name: Secret::new("Hyperswitch".to_string()),
+                    company_name: Secret::new(MERCHANT_COMPANY_NAME.to_string()),
+                    product_name: Secret::new(MERCHANT_PRODUCT_NAME.to_string()),
                 };
 
                 let expiry = requests::Expiry {
