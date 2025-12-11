@@ -1904,6 +1904,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetRepeatPaymentResponse, Self>>
                             profile.customer_profile_id, profile.customer_payment_profile_id
                         )),
                         payment_method_id: None,
+                        connector_mandate_request_reference_id: None,
                     }
                 });
 
@@ -2401,6 +2402,7 @@ pub fn convert_to_payments_response_data_or_error(
                         },
                     ),
                     payment_method_id: None,
+                    connector_mandate_request_reference_id: None,
                 }
             });
 
@@ -2817,6 +2819,7 @@ impl<
                 mandate_reference: Some(Box::new(MandateReference {
                     connector_mandate_id: Some(connector_mandate_id),
                     payment_method_id: None,
+                    connector_mandate_request_reference_id: None,
                 })),
                 network_txn_id: None,
                 connector_response_reference_id: None,
