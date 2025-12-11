@@ -639,7 +639,7 @@ impl<
 
 // ===== AUTHENTICATION =====
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct PhonepeAuthType {
     pub merchant_id: Secret<String>,
     pub salt_key: Secret<String>,
@@ -946,4 +946,84 @@ pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
         e
     })
     .ok()
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub enum PhonepeWebhookEvent {
+    #[serde(rename = "PAYMENT_SUCCESS")]
+    PaymentSuccess,
+
+    #[serde(rename = "PAYMENT_FAILED")]
+    PaymentFailed,
+
+    #[serde(rename = "PAYMENT_PENDING")]
+    PaymentPending,
+
+    #[serde(other)]
+    Unknown,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct PhonepeWebhookBody {
+    pub response: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct PhonepeWebhookResponse {
+    pub success: bool,
+    pub code: String,
+    pub message: String,
+    pub data: PhonepeWebhookData,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct PhonepeWebhookData {
+    #[serde(rename = "merchantId")]
+    pub merchant_id: String,
+
+    #[serde(rename = "merchantTransactionId")]
+    pub merchant_transaction_id: String,
+
+    #[serde(rename = "transactionId")]
+    pub transaction_id: String,
+
+    pub amount: i64,
+
+    pub state: PhonepeWebhookEvent,
+
+    #[serde(rename = "responseCode")]
+    pub response_code: String,
+
+    #[serde(rename = "paymentInstrument", skip_serializing_if = "Option::is_none")]
+    pub payment_instrument: Option<serde_json::Value>,
+}
+
+impl PhonepeWebhookEvent {
+    pub fn to_event_type(self) -> Result<domain_types::connector_types::EventType, errors::ConnectorError> {
+        match self {
+            Self::PaymentSuccess => {
+                Ok(domain_types::connector_types::EventType::PaymentIntentSuccess)
+            }
+            Self::PaymentFailed => {
+                Ok(domain_types::connector_types::EventType::PaymentIntentFailure)
+            }
+            Self::PaymentPending => {
+                Ok(domain_types::connector_types::EventType::PaymentIntentProcessing)
+            }
+            Self::Unknown => {
+                Err(errors::ConnectorError::WebhookEventTypeNotFound)
+            }
+        }
+    }
+}
+
+impl From<PhonepeWebhookEvent> for common_enums::AttemptStatus {
+    fn from(event: PhonepeWebhookEvent) -> Self {
+        match event {
+            PhonepeWebhookEvent::PaymentSuccess => Self::Charged,
+            PhonepeWebhookEvent::PaymentFailed => Self::Failure,
+            PhonepeWebhookEvent::PaymentPending => Self::Pending,
+            PhonepeWebhookEvent::Unknown => Self::Failure,
+        }
+    }
 }
