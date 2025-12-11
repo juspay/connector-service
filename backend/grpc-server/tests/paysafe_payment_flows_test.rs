@@ -267,6 +267,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         state: None,
+        connector_metadata: None,
+        setup_future_usage: None,
         encoded_data: None,
     }
 }
@@ -332,6 +334,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_metadata,
         merchant_account_metadata: Default::default(),
         state: None,
+        payment_method_type: None,
     }
 }
 
