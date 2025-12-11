@@ -103,6 +103,7 @@ pub enum ConnectorEnum {
     Bankofamerica,
     Powertranz,
     Jpmorgan,
+    Bambora,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -169,6 +170,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Bankofamerica => Ok(Self::Bankofamerica),
             grpc_api_types::payments::Connector::Powertranz => Ok(Self::Powertranz),
             grpc_api_types::payments::Connector::Jpmorgan => Ok(Self::Jpmorgan),
+            grpc_api_types::payments::Connector::Bambora => Ok(Self::Bambora),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -307,7 +309,7 @@ pub struct PaymentsSyncData {
     pub connector_transaction_id: ResponseId,
     pub encoded_data: Option<String>,
     pub capture_method: Option<common_enums::CaptureMethod>,
-    pub connector_meta: Option<serde_json::Value>,
+    pub connector_metadata: Option<SecretSerdeValue>,
     pub sync_type: SyncRequestType,
     pub mandate_id: Option<MandateIds>,
     pub payment_method_type: Option<common_enums::PaymentMethodType>,
@@ -317,6 +319,7 @@ pub struct PaymentsSyncData {
     pub all_keys_required: Option<bool>,
     pub integrity_object: Option<PaymentSynIntegrityObject>,
     pub split_payments: Option<SplitPaymentsRequest>,
+    pub setup_future_usage: Option<common_enums::FutureUsage>,
 }
 
 impl PaymentsSyncData {
@@ -338,6 +341,12 @@ impl PaymentsSyncData {
             .attach_printable("Expected connector transaction ID not found")
             .change_context(ConnectorError::MissingConnectorTransactionID)?,
         }
+    }
+    pub fn is_mandate_payment(&self) -> bool {
+        matches!(
+            self.setup_future_usage,
+            Some(common_enums::FutureUsage::OffSession)
+        )
     }
 }
 
@@ -380,6 +389,8 @@ pub struct PaymentFlowData {
     pub connector_response: Option<ConnectorResponseData>,
     pub recurring_mandate_payment_data: Option<RecurringMandatePaymentData>,
     pub order_details: Option<Vec<payment_address::OrderDetailsWithAmount>>,
+    // stores the authorized amount in case of partial authorization
+    pub minor_amount_authorized: Option<MinorUnit>,
 }
 
 impl PaymentFlowData {
@@ -412,6 +423,10 @@ impl PaymentFlowData {
 
     pub fn get_optional_billing(&self) -> Option<&Address> {
         self.address.get_payment_method_billing()
+    }
+
+    pub fn get_optional_payment_billing(&self) -> Option<&Address> {
+        self.address.get_payment_billing()
     }
 
     pub fn get_optional_shipping(&self) -> Option<&Address> {
@@ -517,6 +532,14 @@ impl PaymentFlowData {
     pub fn get_billing_address(&self) -> Result<&AddressDetails, Error> {
         self.address
             .get_payment_method_billing()
+            .as_ref()
+            .and_then(|a| a.address.as_ref())
+            .ok_or_else(missing_field_err("billing.address"))
+    }
+
+    pub fn get_billing_address_from_payment_address(&self) -> Result<&AddressDetails, Error> {
+        self.address
+            .get_payment_billing()
             .as_ref()
             .and_then(|a| a.address.as_ref())
             .ok_or_else(missing_field_err("billing.address"))
@@ -834,6 +857,12 @@ impl PaymentFlowData {
     pub fn get_header(&self, key: &str) -> Option<&Secret<String>> {
         self.vault_headers.as_ref().and_then(|h| h.get(key))
     }
+
+    pub fn get_optional_payment_billing_full_name(&self) -> Option<Secret<String>> {
+        self.get_optional_payment_billing()
+            .and_then(|billing_details| billing_details.address.as_ref())
+            .and_then(|billing_address| billing_address.get_optional_full_name())
+    }
 }
 
 impl RawConnectorRequestResponse for PaymentFlowData {
@@ -952,8 +981,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub customer_name: Option<String>,
     pub currency: Currency,
     pub confirm: bool,
-    pub statement_descriptor_suffix: Option<String>,
-    pub statement_descriptor: Option<String>,
+    pub billing_descriptor: Option<BillingDescriptor>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub router_return_url: Option<String>,
     pub webhook_url: Option<String>,
@@ -992,6 +1020,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub setup_mandate_details: Option<MandateData>,
     pub merchant_account_metadata: Option<common_utils::pii::SecretSerdeValue>,
     pub connector_testing_data: Option<common_utils::pii::SecretSerdeValue>,
+    pub enable_partial_authorization: Option<bool>,
 }
 
 impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
@@ -1261,12 +1290,33 @@ pub enum PaymentsResponseData {
         connector_response_reference_id: Option<String>,
         status_code: u16,
     },
+    MultipleCaptureResponse {
+        capture_sync_response_list: HashMap<String, CaptureSyncResponse>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MandateReference {
     pub connector_mandate_id: Option<String>,
     pub payment_method_id: Option<String>,
+    pub connector_mandate_request_reference_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum CaptureSyncResponse {
+    Success {
+        resource_id: ResponseId,
+        status: common_enums::AttemptStatus,
+        connector_response_reference_id: Option<String>,
+        amount: Option<MinorUnit>,
+    },
+    Error {
+        code: String,
+        message: String,
+        reason: Option<String>,
+        status_code: u16,
+        amount: Option<MinorUnit>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -1296,6 +1346,7 @@ pub struct PaymentMethodTokenizationData<T: PaymentMethodDataTypes> {
     pub mandate_id: Option<MandateIds>,
     pub integrity_object: Option<PaymentMethodTokenIntegrityObject>,
     pub split_payments: Option<SplitPaymentsRequest>,
+    pub merchant_account_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
 
 #[derive(Debug, Clone)]
@@ -2075,8 +2126,7 @@ pub struct SetupMandateRequestData<T: PaymentMethodDataTypes> {
     pub payment_method_data: payment_method_data::PaymentMethodData<T>,
     pub amount: Option<i64>,
     pub confirm: bool,
-    pub statement_descriptor_suffix: Option<String>,
-    pub statement_descriptor: Option<String>,
+    pub billing_descriptor: Option<BillingDescriptor>,
     pub customer_acceptance: Option<CustomerAcceptance>,
     pub mandate_id: Option<MandateIds>,
     pub setup_future_usage: Option<common_enums::FutureUsage>,
@@ -2161,6 +2211,7 @@ pub struct RepeatPaymentData {
     pub router_return_url: Option<String>,
     pub split_payments: Option<SplitPaymentsRequest>,
     pub recurring_mandate_payment_data: Option<router_data::RecurringMandatePaymentData>,
+    pub shipping_cost: Option<MinorUnit>,
 }
 
 impl RepeatPaymentData {
@@ -3092,4 +3143,21 @@ pub struct PaypalSdkMetaData {
 pub struct PaypalSdkSessionTokenData {
     #[serde(rename = "paypal_sdk")]
     pub data: PaypalSdkMetaData,
+}
+
+/// Billing Descriptor information to be sent to the payment gateway
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BillingDescriptor {
+    /// name to be put in billing description
+    pub name: Option<Secret<String>>,
+    /// city to be put in billing description
+    pub city: Option<Secret<String>>,
+    /// phone to be put in billing description
+    pub phone: Option<Secret<String>>,
+    /// a short description for the payment
+    pub statement_descriptor: Option<String>,
+    /// Concatenated with the prefix (shortened descriptor) or statement descriptor that’s set on the account to form the complete statement descriptor.
+    pub statement_descriptor_suffix: Option<String>,
+    /// A reference to be shown on billing description
+    pub reference: Option<String>,
 }

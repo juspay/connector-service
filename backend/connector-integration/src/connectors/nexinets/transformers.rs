@@ -2,11 +2,11 @@ use base64::Engine;
 use common_enums::{enums, AttemptStatus};
 use common_utils::{errors::CustomResult, request::Method};
 use domain_types::{
-    connector_flow::{Authorize, Capture},
+    connector_flow::{Authorize, Capture, Void},
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
@@ -434,6 +434,7 @@ impl<
             .map(|id| MandateReference {
                 connector_mandate_id: Some(id.expose()),
                 payment_method_id: None,
+                connector_mandate_request_reference_id: None,
             });
         Ok(Self {
             resource_common_data: PaymentFlowData {
@@ -493,6 +494,45 @@ impl<
         Ok(Self {
             initial_amount: item.router_data.request.amount_to_capture,
             currency: item.router_data.request.currency,
+        })
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        NexinetsRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for NexinetsCaptureOrVoidRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: NexinetsRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let amount = item.router_data.request.amount.ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "amount",
+            },
+        )?;
+        let currency = item.router_data.request.currency.ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "currency",
+            },
+        )?;
+        Ok(Self {
+            initial_amount: amount.get_amount_as_i64(),
+            currency,
         })
     }
 }

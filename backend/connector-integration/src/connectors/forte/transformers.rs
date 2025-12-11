@@ -506,7 +506,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let authorized_amount = item
+        let minor_amount_authorized = item
             .router_data
             .resource_common_data
             .minor_amount_capturable
@@ -514,7 +514,7 @@ impl<
                 field_name: "amount",
             })?;
 
-        if item.router_data.request.minor_amount_to_capture != authorized_amount {
+        if item.router_data.request.minor_amount_to_capture != minor_amount_authorized {
             return Err(errors::ConnectorError::NotSupported {
                 message: "Forte only supports full captures.".to_string(),
                 connector: "Forte",

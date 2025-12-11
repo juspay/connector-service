@@ -347,7 +347,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone(),
             amount: item.request.minor_amount,
             currency: item.request.currency,
-            description: item.request.statement_descriptor.clone(),
+            description: item
+                .request
+                .billing_descriptor
+                .as_ref()
+                .and_then(|billing_descriptor| billing_descriptor.statement_descriptor.clone()),
             customer_info,
         };
 

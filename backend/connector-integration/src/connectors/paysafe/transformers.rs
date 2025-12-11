@@ -244,15 +244,15 @@ impl<
         let router_data = &item.router_data;
 
         let metadata: PaysafeConnectorMetadataObject = router_data
-            .resource_common_data
-            .connector_meta_data
+            .request
+            .merchant_account_metadata
             .clone()
             .ok_or(errors::ConnectorError::InvalidConnectorConfig {
-                config: "connector_meta_data",
+                config: "merchant_account_metadata",
             })?
             .parse_value("PaysafeConnectorMetadataObject")
             .change_context(errors::ConnectorError::InvalidConnectorConfig {
-                config: "connector_meta_data",
+                config: "merchant_account_metadata",
             })?;
 
         let currency = router_data.request.currency;
@@ -434,15 +434,15 @@ impl<
         let amount = router_data.request.minor_amount;
 
         let metadata: PaysafeConnectorMetadataObject = router_data
-            .resource_common_data
-            .connector_meta_data
+            .request
+            .merchant_account_metadata
             .clone()
             .ok_or(errors::ConnectorError::InvalidConnectorConfig {
-                config: "connector_meta_data",
+                config: "merchant_account_metadata",
             })?
             .parse_value("PaysafeConnectorMetadataObject")
             .change_context(errors::ConnectorError::InvalidConnectorConfig {
-                config: "connector_meta_data",
+                config: "merchant_account_metadata",
             })?;
 
         let payment_handle_token: Secret<String> = router_data
@@ -549,6 +549,7 @@ impl<T: PaymentMethodDataTypes>
                 .map(|token| MandateReference {
                     connector_mandate_id: Some(token.peek().to_string()),
                     payment_method_id: None,
+                    connector_mandate_request_reference_id: None,
                 });
 
         let mut router_data = item.router_data;
