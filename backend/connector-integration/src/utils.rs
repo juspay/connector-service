@@ -381,29 +381,27 @@ pub fn get_state_code_for_country(
 
     // If already 2 letters, return as-is (already a code)
     if state_str.len() == 2 {
-        return Some(state.clone());
-    }
-
-    // If empty, return None
-    if state_str.is_empty() {
-        return None;
-    }
-
-    // Convert based on country
-    match country {
-        Some(common_enums::CountryAlpha2::US) => {
-            // Try to convert US state name to abbreviation
-            common_enums::UsStatesAbbreviation::from_state_name(state_str)
-                .map(|abbr| Secret::new(abbr.to_string()))
-        }
-        Some(common_enums::CountryAlpha2::CA) => {
-            // Try to convert Canada province name to abbreviation
-            common_enums::CanadaStatesAbbreviation::from_province_name(state_str)
-                .map(|abbr| Secret::new(abbr.to_string()))
-        }
-        _ => {
-            // For other countries, return the state as-is if it's not empty
-            Some(state.clone())
+        Some(state.clone())
+    } else if state_str.is_empty() {
+        // If empty, return None
+        None
+    } else {
+        // Convert based on country
+        match country {
+            Some(common_enums::CountryAlpha2::US) => {
+                // Try to convert US state name to abbreviation
+                common_enums::UsStatesAbbreviation::from_state_name(state_str)
+                    .map(|abbr| Secret::new(abbr.to_string()))
+            }
+            Some(common_enums::CountryAlpha2::CA) => {
+                // Try to convert Canada province name to abbreviation
+                common_enums::CanadaStatesAbbreviation::from_province_name(state_str)
+                    .map(|abbr| Secret::new(abbr.to_string()))
+            }
+            _ => {
+                // For other countries, return the state as-is if it's not empty
+                Some(state.clone())
+            }
         }
     }
 }

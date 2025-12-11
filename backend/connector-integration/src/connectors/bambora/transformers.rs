@@ -125,6 +125,30 @@ pub struct BamboraBillingAddress {
 
 // Response Types
 
+/// Bambora transaction type enum
+/// Represents the type of transaction as returned by Bambora API
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+pub enum BamboraPaymentType {
+    /// Payment (auto-captured or completed)
+    #[serde(rename = "P")]
+    Payment,
+    /// Pre-authorization (authorized, not captured)
+    #[serde(rename = "PA")]
+    PreAuth,
+    /// Pre-auth completion (captured)
+    #[serde(rename = "PAC")]
+    PreAuthCompletion,
+    /// Return/Refund
+    #[serde(rename = "R")]
+    Return,
+    /// Void payment
+    #[serde(rename = "VP")]
+    VoidPayment,
+    /// Void refund
+    #[serde(rename = "VR")]
+    VoidRefund,
+}
+
 /// Helper function to deserialize string or i32 as String
 fn str_or_i32<'de, D>(deserializer: D) -> Result<String, D::Error>
 where
@@ -168,7 +192,7 @@ pub struct BamboraPaymentsResponse {
     pub created: String,
     pub order_number: String,
     #[serde(rename = "type")]
-    pub payment_type: String, // "P" for payment, "PA" for pre-auth
+    pub payment_type: BamboraPaymentType,
     pub amount: FloatMajorUnit,
     pub payment_method: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -320,7 +344,8 @@ impl<T: PaymentMethodDataTypes>
         let converter = FloatMajorUnitForConnector;
         let amount = converter
             .convert(item.request.minor_amount, item.request.currency)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(errors::ConnectorError::AmountConversionFailed)
+            .attach_printable("Failed to convert amount from minor to major units")?;
 
         Ok(Self {
             order_number: item
@@ -363,25 +388,36 @@ impl<T: PaymentMethodDataTypes>
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        // Status mapping following hyperswitch pattern
-        // Only check approved field and capture method
+        // Status mapping using Bambora's payment_type field for robustness
+        // payment_type: "P" = Payment (auto-captured), "PA" = Pre-authorization (manual)
         let is_approved = item.response.approved == "1";
-        let is_auto_capture = item
-            .router_data
-            .request
-            .capture_method
-            .map(|cm| matches!(cm, common_enums::CaptureMethod::Automatic))
-            .unwrap_or(true);
 
         let status = if is_approved {
-            match is_auto_capture {
-                true => AttemptStatus::Charged,
-                false => AttemptStatus::Authorized,
+            // Use payment_type to determine if captured or just authorized
+            match item.response.payment_type {
+                BamboraPaymentType::PreAuth => AttemptStatus::Authorized, // Pre-auth (manual capture)
+                BamboraPaymentType::Payment => AttemptStatus::Charged,    // Payment (auto-capture)
+                BamboraPaymentType::PreAuthCompletion => AttemptStatus::Charged,
+                BamboraPaymentType::Return
+                | BamboraPaymentType::VoidPayment
+                | BamboraPaymentType::VoidRefund => {
+                    // Unexpected types for Authorize flow - mark as pending
+                    AttemptStatus::Pending
+                }
             }
         } else {
-            match is_auto_capture {
-                true => AttemptStatus::Failure,
-                false => AttemptStatus::AuthorizationFailed,
+            // For failed transactions, check if it was meant to be auto-capture or manual
+            let is_auto_capture = item
+                .router_data
+                .request
+                .capture_method
+                .map(|cm| matches!(cm, common_enums::CaptureMethod::Automatic))
+                .unwrap_or(true);
+
+            if is_auto_capture {
+                AttemptStatus::Failure
+            } else {
+                AttemptStatus::AuthorizationFailed
             }
         };
 
@@ -432,7 +468,8 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
         let converter = FloatMajorUnitForConnector;
         let amount = converter
             .convert(item.request.minor_amount_to_capture, item.request.currency)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(errors::ConnectorError::AmountConversionFailed)
+            .attach_printable("Failed to convert capture amount from minor to major units")?;
 
         Ok(Self {
             amount,
@@ -457,8 +494,8 @@ impl
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Status mapping following hyperswitch pattern
-        // Only check approved field for capture
+        // Status mapping for capture completion
+        // For approved captures, payment_type should be "PAC" (Pre-auth Completion)
         let is_approved = item.response.approved == "1";
 
         let status = if is_approved {
@@ -522,33 +559,42 @@ impl
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Status mapping following hyperswitch pattern
-        // Check approved field and use is_auto_capture to determine status
+        // Status mapping using Bambora's payment_type field for accuracy
+        // payment_type indicates the actual transaction state:
+        // "P" = Payment (auto-captured or completed)
+        // "PA" = Pre-authorization (authorized, not captured)
+        // "PAC" = Pre-auth completion (captured)
         let is_approved = item.response.approved == "1";
 
-        // Determine if this was auto-capture or manual capture based on original request
-        // For sync, we need to infer from the request capture method
-        let is_auto_capture = item
-            .router_data
-            .request
-            .capture_method
-            .map(|cm| matches!(cm, common_enums::CaptureMethod::Automatic))
-            .unwrap_or(true);
-
-        let status = match is_auto_capture {
-            true => {
-                if is_approved {
-                    AttemptStatus::Charged
-                } else {
-                    AttemptStatus::Failure
+        let status = if is_approved {
+            // Use payment_type to determine if captured or just authorized
+            match item.response.payment_type {
+                BamboraPaymentType::PreAuth => AttemptStatus::Authorized, // Pre-auth only
+                BamboraPaymentType::Payment | BamboraPaymentType::PreAuthCompletion => {
+                    AttemptStatus::Charged // Payment or Pre-auth completion
+                }
+                BamboraPaymentType::VoidPayment | BamboraPaymentType::VoidRefund => {
+                    AttemptStatus::Voided // Void types map to Voided status
+                }
+                BamboraPaymentType::Return => {
+                    // Return/Refund is handled separately in refund flows
+                    // If seen in PSync, mark as pending for investigation
+                    AttemptStatus::Pending
                 }
             }
-            false => {
-                if is_approved {
-                    AttemptStatus::Authorized
-                } else {
-                    AttemptStatus::AuthorizationFailed
-                }
+        } else {
+            // For failed transactions, check if it was meant to be auto-capture or manual
+            let is_auto_capture = item
+                .router_data
+                .request
+                .capture_method
+                .map(|cm| matches!(cm, common_enums::CaptureMethod::Automatic))
+                .unwrap_or(true);
+
+            if is_auto_capture {
+                AttemptStatus::Failure
+            } else {
+                AttemptStatus::AuthorizationFailed
             }
         };
 
@@ -722,7 +768,8 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
         let converter = FloatMajorUnitForConnector;
         let amount = converter
             .convert(minor_amount, currency)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(errors::ConnectorError::AmountConversionFailed)
+            .attach_printable("Failed to convert void amount from minor to major units")?;
 
         Ok(Self { amount })
     }
