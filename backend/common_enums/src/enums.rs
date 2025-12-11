@@ -1837,3 +1837,24 @@ pub enum DynamicContentType {
     FormUrlEncoded,
     FormData,
 }
+
+/// Describes the channel through which the payment was initiated.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub enum PaymentChannel {
+    #[default]
+    Ecommerce,
+    MailOrder,
+    TelephoneOrder,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MitCategory {
+    /// A fixed purchase amount split into multiple scheduled payments until the total is paid.
+    Installment,
+    /// Merchant-initiated transaction using stored credentials, but not tied to a fixed schedule
+    Unscheduled,
+    /// Merchant-initiated payments that happen at regular intervals (usually the same amount each time).
+    Recurring,
+    /// A retried MIT after a previous transaction failed or was declined.
+    Resubmission,
+}

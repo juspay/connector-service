@@ -5,11 +5,12 @@ use common_utils::{
     types::MinorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, SetupMandate, Void},
+    connector_flow::{Authorize, Capture, RepeatPayment, SetupMandate, Void},
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
+        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId, SetupMandateRequestData,
     },
     errors::{self, ConnectorError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -31,8 +32,7 @@ use crate::{
     connectors::checkout::CheckoutRouterData,
     types::ResponseRouterData,
     utils::{
-        construct_captures_response_hashmap, to_connector_meta, ErrorCodeAndMessage,
-        MultipleCaptureSyncResponse,
+        construct_captures_response_hashmap, ErrorCodeAndMessage, MultipleCaptureSyncResponse,
     },
 };
 
@@ -241,8 +241,8 @@ pub struct PaymentsRequest<
     pub return_url: ReturnUrl,
     pub capture: bool,
     pub reference: String,
-    #[serde(skip_serializing_if = "is_metadata_empty")]
     pub metadata: Option<Secret<serde_json::Value>>,
+    pub payment_type: CheckoutPaymentType,
     pub merchant_initiated: Option<bool>,
     pub previous_payment_id: Option<String>,
     pub store_for_future_use: Option<bool>,
@@ -350,20 +350,6 @@ fn build_metadata<
     Some(Secret::new(metadata_json))
 }
 
-fn is_metadata_empty(val: &Option<Secret<serde_json::Value>>) -> bool {
-    match val {
-        None => true,
-        Some(secret) => {
-            let inner = secret.clone().expose();
-            match inner {
-                serde_json::Value::Null => true,
-                serde_json::Value::Object(map) => map.is_empty(),
-                _ => false,
-            }
-        }
-    }
-}
-
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -400,6 +386,20 @@ impl<
             item.router_data.request.capture_method,
             Some(common_enums::CaptureMethod::Automatic)
         );
+
+        let payment_type = if matches!(
+            item.router_data.request.payment_channel,
+            Some(
+                common_enums::PaymentChannel::MailOrder
+                    | common_enums::PaymentChannel::TelephoneOrder
+            )
+        ) {
+            CheckoutPaymentType::Moto
+        } else if item.router_data.request.is_mandate_payment() {
+            CheckoutPaymentType::Unscheduled
+        } else {
+            CheckoutPaymentType::Regular
+        };
 
         let (challenge_indicator, store_for_future_use) =
             if item.router_data.request.is_mandate_payment() {
@@ -543,6 +543,366 @@ impl<
                 .connector_request_reference_id
                 .clone(),
             metadata,
+            payment_type,
+            merchant_initiated,
+            previous_payment_id,
+            store_for_future_use,
+            partial_authorization,
+            payment_ip,
+            billing_descriptor,
+        };
+
+        Ok(request)
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        CheckoutRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            T,
+        >,
+    > for PaymentsRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: CheckoutRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let capture = matches!(
+            item.router_data.request.capture_method,
+            Some(common_enums::CaptureMethod::Automatic)
+        );
+
+        let billing_details = Some(CheckoutAddress {
+            city: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_city(),
+            address_line1: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_line1(),
+            address_line2: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_line2(),
+            state: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_state(),
+            zip: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_zip(),
+            country: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_country(),
+        });
+
+        let (
+            source_var,
+            previous_payment_id,
+            merchant_initiated,
+            payment_type,
+            store_for_future_use,
+        ) = match &item.router_data.request.mandate_reference {
+            MandateReferenceId::ConnectorMandateId(mandate_data) => {
+                let mandate_source = PaymentSource::MandatePayment(MandateSource {
+                    source_type: CheckoutSourceTypes::SourceId,
+                    source_id: mandate_data.get_connector_mandate_id(),
+                    billing_address: billing_details,
+                });
+                let previous_id = mandate_data.get_connector_mandate_request_reference_id();
+                let p_type = match item.router_data.request.mit_category {
+                    Some(common_enums::MitCategory::Installment) => {
+                        CheckoutPaymentType::Installment
+                    }
+                    Some(common_enums::MitCategory::Recurring) => CheckoutPaymentType::Recurring,
+                    Some(common_enums::MitCategory::Unscheduled) | None => {
+                        CheckoutPaymentType::Unscheduled
+                    }
+                    _ => CheckoutPaymentType::Unscheduled,
+                };
+                Ok((mandate_source, previous_id, Some(true), p_type, None))
+            }
+            _ => Err(errors::ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("checkout"),
+            )),
+        }?;
+
+        let three_ds = match item.router_data.resource_common_data.auth_type {
+            common_enums::AuthenticationType::ThreeDs => CheckoutThreeDS {
+                enabled: true,
+                force_3ds: true,
+                eci: None,
+                cryptogram: None,
+                xid: None,
+                version: None,
+                challenge_indicator: CheckoutChallengeIndicator::ChallengeRequestedMandate,
+            },
+            common_enums::AuthenticationType::NoThreeDs => CheckoutThreeDS {
+                enabled: false,
+                force_3ds: false,
+                eci: None,
+                cryptogram: None,
+                xid: None,
+                version: None,
+                challenge_indicator: CheckoutChallengeIndicator::NoPreference,
+            },
+        };
+
+        let return_url = ReturnUrl {
+            success_url: item
+                .router_data
+                .request
+                .router_return_url
+                .as_ref()
+                .map(|return_url| format!("{return_url}?status=success")),
+            failure_url: item
+                .router_data
+                .request
+                .router_return_url
+                .as_ref()
+                .map(|return_url| format!("{return_url}?status=failure")),
+        };
+
+        let connector_auth = &item.router_data.connector_auth_type;
+        let auth_type: CheckoutAuthType = connector_auth.try_into()?;
+        let processing_channel_id = auth_type.processing_channel_id;
+
+        let metadata = item.router_data.request.metadata.clone();
+
+        let partial_authorization = item.router_data.request.enable_partial_authorization.map(
+            |enable_partial_authorization| CheckoutPartialAuthorization {
+                enabled: enable_partial_authorization,
+            },
+        );
+
+        let payment_ip = item.router_data.request.get_ip_address_as_optional();
+
+        let billing_descriptor =
+            item.router_data
+                .request
+                .billing_descriptor
+                .as_ref()
+                .map(|descriptor| CheckoutBillingDescriptor {
+                    name: descriptor.name.clone(),
+                    city: descriptor.city.clone(),
+                    reference: descriptor.reference.clone(),
+                });
+
+        let request = Self {
+            source: source_var,
+            amount: item.router_data.request.minor_amount,
+            currency: item.router_data.request.currency.to_string(),
+            processing_channel_id,
+            three_ds,
+            return_url,
+            capture,
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            metadata,
+            payment_type,
+            merchant_initiated,
+            previous_payment_id,
+            store_for_future_use,
+            partial_authorization,
+            payment_ip,
+            billing_descriptor,
+        };
+
+        Ok(request)
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        CheckoutRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for PaymentsRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: CheckoutRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let payment_type = if matches!(
+            item.router_data.request.payment_channel,
+            Some(
+                common_enums::PaymentChannel::MailOrder
+                    | common_enums::PaymentChannel::TelephoneOrder
+            )
+        ) {
+            CheckoutPaymentType::Moto
+        } else {
+            CheckoutPaymentType::Unscheduled
+        };
+
+        let billing_details = Some(CheckoutAddress {
+            city: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_city(),
+            address_line1: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_line1(),
+            address_line2: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_line2(),
+            state: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_state(),
+            zip: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_zip(),
+            country: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_country(),
+        });
+
+        let (
+            source_var,
+            previous_payment_id,
+            merchant_initiated,
+            payment_type,
+            store_for_future_use,
+        ) = match item.router_data.request.payment_method_data.clone() {
+            PaymentMethodData::Card(ccard) => {
+                let (first_name, last_name) = split_account_holder_name(ccard.card_holder_name);
+
+                let payment_source = PaymentSource::Card(CardSource {
+                    source_type: CheckoutSourceTypes::Card,
+                    number: ccard.card_number.clone(),
+                    expiry_month: ccard.card_exp_month.clone(),
+                    expiry_year: ccard.card_exp_year.clone(),
+                    cvv: Some(ccard.card_cvc),
+                    billing_address: billing_details,
+                    account_holder: Some(CheckoutAccountHolderDetails {
+                        first_name,
+                        last_name,
+                    }),
+                });
+                Ok((payment_source, None, Some(false), payment_type, Some(true)))
+            }
+            _ => Err(errors::ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("checkout"),
+            )),
+        }?;
+
+        let three_ds = match item.router_data.resource_common_data.auth_type {
+            common_enums::AuthenticationType::ThreeDs => CheckoutThreeDS {
+                enabled: true,
+                force_3ds: true,
+                eci: None,
+                cryptogram: None,
+                xid: None,
+                version: None,
+                challenge_indicator: CheckoutChallengeIndicator::ChallengeRequestedMandate,
+            },
+            common_enums::AuthenticationType::NoThreeDs => CheckoutThreeDS {
+                enabled: false,
+                force_3ds: false,
+                eci: None,
+                cryptogram: None,
+                xid: None,
+                version: None,
+                challenge_indicator: CheckoutChallengeIndicator::NoPreference,
+            },
+        };
+
+        let return_url = ReturnUrl {
+            success_url: item
+                .router_data
+                .request
+                .router_return_url
+                .as_ref()
+                .map(|return_url| format!("{return_url}?status=success")),
+            failure_url: item
+                .router_data
+                .request
+                .router_return_url
+                .as_ref()
+                .map(|return_url| format!("{return_url}?status=failure")),
+        };
+
+        let connector_auth = &item.router_data.connector_auth_type;
+        let auth_type: CheckoutAuthType = connector_auth.try_into()?;
+        let processing_channel_id = auth_type.processing_channel_id;
+
+        let partial_authorization = item.router_data.request.enable_partial_authorization.map(
+            |enable_partial_authorization| CheckoutPartialAuthorization {
+                enabled: enable_partial_authorization,
+            },
+        );
+
+        let payment_ip = item.router_data.request.get_ip_address_as_optional();
+
+        let billing_descriptor =
+            item.router_data
+                .request
+                .billing_descriptor
+                .as_ref()
+                .map(|descriptor| CheckoutBillingDescriptor {
+                    name: descriptor.name.clone(),
+                    city: descriptor.city.clone(),
+                    reference: descriptor.statement_descriptor.clone(),
+                });
+
+        let request = Self {
+            source: source_var,
+            amount: MinorUnit::new(0),
+            currency: item.router_data.request.currency.to_string(),
+            processing_channel_id,
+            three_ds,
+            return_url,
+            capture: true,
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            metadata: None,
+            payment_type,
             merchant_initiated,
             previous_payment_id,
             store_for_future_use,
@@ -874,6 +1234,122 @@ impl<
     }
 }
 
+impl
+    TryFrom<
+        ResponseRouterData<
+            PaymentsResponse,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        >,
+    > for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<
+            PaymentsResponse,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let status = get_attempt_status_cap((
+            item.response.status,
+            item.router_data.request.capture_method,
+        ));
+
+        if status == common_enums::AttemptStatus::Failure {
+            let error_response = ErrorResponse {
+                status_code: item.http_code,
+                code: item
+                    .response
+                    .response_code
+                    .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
+                message: item
+                    .response
+                    .response_summary
+                    .clone()
+                    .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
+                reason: item.response.response_summary,
+                attempt_status: None,
+                connector_transaction_id: Some(item.response.id.clone()),
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+            };
+
+            return Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status,
+                    ..item.router_data.resource_common_data
+                },
+                response: Err(error_response),
+                ..item.router_data
+            });
+        }
+
+        let connector_meta =
+            get_connector_meta(item.router_data.request.capture_method.unwrap_or_default())?;
+
+        let redirection_data = item
+            .response
+            .links
+            .redirect
+            .map(|href| RedirectForm::from((href.redirection_url, Method::Get)));
+
+        let mandate_reference = item
+            .response
+            .source
+            .as_ref()
+            .and_then(|src| src.id.clone())
+            .map(|id| MandateReference {
+                connector_mandate_id: Some(id),
+                payment_method_id: None,
+                connector_mandate_request_reference_id: Some(item.response.id.clone()),
+            });
+
+        let additional_information =
+            convert_to_additional_payment_method_connector_response(item.response.source.as_ref())
+                .map(ConnectorResponseData::with_additional_payment_method_data);
+
+        let payments_response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
+            redirection_data: redirection_data.map(Box::new),
+            mandate_reference: mandate_reference.map(Box::new),
+            connector_metadata: Some(connector_meta),
+            network_txn_id: item.response.scheme_id.clone(),
+            connector_response_reference_id: Some(
+                item.response.reference.unwrap_or(item.response.id),
+            ),
+            incremental_authorization_allowed: None,
+            status_code: item.http_code,
+        };
+
+        let (amount_captured, minor_amount_capturable) =
+            match item.router_data.request.capture_method {
+                Some(common_enums::CaptureMethod::Manual)
+                | Some(common_enums::CaptureMethod::ManualMultiple) => (None, item.response.amount),
+                _ => (item.response.amount.map(MinorUnit::get_amount_as_i64), None),
+            };
+
+        let minor_amount_authorized = item
+            .router_data
+            .request
+            .enable_partial_authorization
+            .filter(|flag| *flag)
+            .and(item.response.amount);
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                connector_response: additional_information,
+                minor_amount_authorized,
+                amount_captured,
+                minor_amount_capturable,
+                ..item.router_data.resource_common_data
+            },
+            response: Ok(payments_response_data),
+            ..item.router_data
+        })
+    }
+}
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -1001,13 +1477,24 @@ impl<F> TryFrom<ResponseRouterData<PaymentsResponse, Self>>
             .links
             .redirect
             .map(|href| RedirectForm::from((href.redirection_url, Method::Get)));
-        let checkout_meta: CheckoutMeta = to_connector_meta(
-            item.router_data
-                .request
-                .connector_metadata
-                .clone()
-                .map(|m| m.expose()),
-        )?;
+
+        let checkout_meta: CheckoutMeta = match item.router_data.request.capture_method {
+            Some(common_enums::CaptureMethod::Automatic)
+            | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(CheckoutMeta {
+                psync_flow: CheckoutPaymentIntent::Capture,
+            }),
+            Some(common_enums::CaptureMethod::Manual)
+            | Some(common_enums::CaptureMethod::ManualMultiple) => Ok(CheckoutMeta {
+                psync_flow: CheckoutPaymentIntent::Authorize,
+            }),
+            Some(common_enums::CaptureMethod::Scheduled) => {
+                Err(errors::ConnectorError::CaptureMethodNotSupported)
+            }
+            None => Err(errors::ConnectorError::MissingRequiredField {
+                field_name: "capture_method",
+            }),
+        }?;
+
         let status = get_attempt_status_intent((item.response.status, checkout_meta.psync_flow));
         let error_response = if status == common_enums::AttemptStatus::Failure {
             Some(ErrorResponse {

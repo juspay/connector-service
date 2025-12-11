@@ -1630,7 +1630,7 @@ where
 
         // Check if this is a multiple capture sync flow
         let is_multiple_capture_psync_flow = match value.router_data.request.sync_type {
-            SyncRequestType::MultipleCaptureSync(_) => true,
+            SyncRequestType::MultipleCaptureSync => true,
             SyncRequestType::SinglePaymentSync => false,
         };
 
