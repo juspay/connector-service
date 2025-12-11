@@ -148,7 +148,7 @@ pub struct PaymePaymentResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub price: Option<MinorUnit>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub payme_signature: Option<String>,
+    pub payme_signature: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payme_transaction_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
