@@ -67,14 +67,14 @@ pub struct JpmorganCaptureRequest {
     pub capture_method: Option<CapMethod>,
     pub amount: MinorUnit,
     pub currency: Option<common_enums::Currency>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_amount_final: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganVoidRequest {
-    pub is_void: Option<bool>,
+    /// As per the docs, this is not a required field
+    /// Since we always pass `true` in `isVoid` only during the void call, it makes more sense to have it required field
+    pub is_void: bool,
 }
 
 #[derive(Debug, Serialize)]
