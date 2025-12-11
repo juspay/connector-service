@@ -2328,6 +2328,9 @@ message PaymentServiceRegisterResponse {
 
   // Raw Request
   optional SecretString raw_connector_request = 13; // Raw request to the connector for debugging
+
+  // Metadata
+  map<string, string> connector_metadata = 16; // Connector-specific metadata for the transaction
 }
 
 // Request message for repeat payment (MIT - Merchant Initiated Transaction).

@@ -6170,7 +6170,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
             PaymentsResponseData::TransactionResponse {
                 resource_id,
                 redirection_data,
-                connector_metadata: _,
+                connector_metadata,
                 network_txn_id,
                 connector_response_reference_id,
                 incremental_authorization_allowed,
@@ -6243,6 +6243,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                     state,
                     raw_connector_request,
                     connector_response,
+                    connector_metadata: convert_connector_metadata_to_hashmap(connector_metadata),
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -6276,6 +6277,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
             state,
             raw_connector_request,
             connector_response: None,
+            connector_metadata: HashMap::new(),
         },
     };
     Ok(response)
