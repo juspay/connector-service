@@ -841,7 +841,8 @@ fn get_payment_source<
         | BankRedirectData::Trustly { .. }
         | BankRedirectData::OnlineBankingFpx { .. }
         | BankRedirectData::OnlineBankingThailand { .. }
-        | BankRedirectData::LocalBankRedirect {} => Err(errors::ConnectorError::NotImplemented(
+        | BankRedirectData::LocalBankRedirect {}
+        | BankRedirectData::OpenBanking {} => Err(errors::ConnectorError::NotImplemented(
             utils::get_unimplemented_payment_method_error_message("Paypal"),
         ))?,
     }

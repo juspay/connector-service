@@ -879,6 +879,7 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::OnlineBankingPoland
             | common_enums::PaymentMethodType::OnlineBankingSlovakia
             | common_enums::PaymentMethodType::OpenBankingUk
+            | common_enums::PaymentMethodType::OpenBanking
             | common_enums::PaymentMethodType::OpenBankingPIS
             | common_enums::PaymentMethodType::PagoEfectivo
             | common_enums::PaymentMethodType::PayBright
@@ -1162,7 +1163,8 @@ impl TryFrom<&BankRedirectData> for StripePaymentMethodType {
             | BankRedirectData::OnlineBankingThailand { .. }
             | BankRedirectData::OpenBankingUk { .. }
             | BankRedirectData::Trustly { .. }
-            | BankRedirectData::LocalBankRedirect {} => Err(ConnectorError::NotImplemented(
+            | BankRedirectData::LocalBankRedirect {}
+            | BankRedirectData::OpenBanking {} => Err(ConnectorError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )),
         }
@@ -1781,7 +1783,8 @@ impl<
             | BankRedirectData::OpenBankingUk { .. }
             | BankRedirectData::Sofort { .. }
             | BankRedirectData::Trustly { .. }
-            | BankRedirectData::LocalBankRedirect {} => Err(ConnectorError::NotImplemented(
+            | BankRedirectData::LocalBankRedirect {}
+            | BankRedirectData::OpenBanking {} => Err(ConnectorError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )
             .into()),
