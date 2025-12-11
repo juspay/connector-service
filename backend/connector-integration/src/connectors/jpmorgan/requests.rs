@@ -64,9 +64,9 @@ pub enum CapMethod {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganCaptureRequest {
-    pub capture_method: Option<CapMethod>,
+    pub capture_method: CapMethod,
     pub amount: MinorUnit,
-    pub currency: Option<common_enums::Currency>,
+    pub currency: common_enums::Currency,
 }
 
 #[derive(Debug, Serialize)]
