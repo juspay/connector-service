@@ -4,6 +4,27 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.11.1
+
+### Bug Fixes
+
+- **connector:** [paysafe] make payment method token calls work for authorizeonly flow ([#346](https://github.com/juspay/connector-service/pull/346)) ([`e2cb5b7`](https://github.com/juspay/connector-service/commit/e2cb5b7004642e6d2e784ac391981ea2f9851ec4))
+- Status handling to use router_data.status during error case 2xx ([#363](https://github.com/juspay/connector-service/pull/363)) ([`350a6e4`](https://github.com/juspay/connector-service/commit/350a6e46d1ae5a9ebf631b11f10302025f8bbe3a))
+
+**Full Changelog:** [`2025.12.11.0...2025.12.11.1`](https://github.com/juspay/connector-service/compare/2025.12.11.0...2025.12.11.1)
+
+- - -
+
+## 2025.12.11.0
+
+### Features
+
+- Setupmandate and repeat payment flow for paypal ([#355](https://github.com/juspay/connector-service/pull/355)) ([`3930b82`](https://github.com/juspay/connector-service/commit/3930b827af6483d6a46daafe89051a231e8c9d24))
+
+**Full Changelog:** [`2025.12.10.1...2025.12.11.0`](https://github.com/juspay/connector-service/compare/2025.12.10.1...2025.12.11.0)
+
+- - -
+
 ## 2025.12.10.1
 
 ### Features
