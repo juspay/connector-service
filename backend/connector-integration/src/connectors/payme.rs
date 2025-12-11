@@ -878,14 +878,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: response
-                .status_error_code
-                .map(|c| c.to_string())
-                .unwrap_or_else(|| "UNKNOWN_ERROR".to_string()),
-            message: response
-                .status_error_details
-                .unwrap_or_else(|| "Unknown error occurred".to_string()),
-            reason: response.payme_status,
+            code: response.status_error_code.to_string(),
+            message: response.status_error_details.clone(),
+            reason: None,
             attempt_status: None,
             connector_transaction_id: None,
             network_decline_code: None,

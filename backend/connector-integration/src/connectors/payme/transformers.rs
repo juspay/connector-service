@@ -52,12 +52,12 @@ impl TryFrom<&ConnectorAuthType> for PaymeAuthType {
 }
 
 // ===== ERROR RESPONSE =====
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct PaymeErrorResponse {
-    pub status_code: Option<i32>,
-    pub payme_status: Option<String>,
-    pub status_error_code: Option<i32>,
-    pub status_error_details: Option<String>,
+    pub status_code: u16,
+    pub status_error_details: String,
+    pub status_additional_info: serde_json::Value,
+    pub status_error_code: u32,
 }
 
 // ===== SALE STATUS ENUM =====
