@@ -328,16 +328,29 @@ pub enum UpiData {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "snake_case")]
-pub struct UpiCollectData {
-    pub vpa_id: Option<Secret<String, UpiVpaMaskingStrategy>>,
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum UpiSource {
+    UpiCc,      // UPI Credit Card (RuPay credit on UPI)
+    UpiCl,      // UPI Credit Line
+    UpiAccount, // UPI Bank Account (Savings)
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
-pub struct UpiIntentData {}
+#[serde(rename_all = "snake_case")]
+pub struct UpiCollectData {
+    pub vpa_id: Option<Secret<String, UpiVpaMaskingStrategy>>,
+    pub upi_source: Option<UpiSource>,
+}
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
-pub struct UpiQrData {}
+pub struct UpiIntentData {
+    pub upi_source: Option<UpiSource>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct UpiQrData {
+    pub upi_source: Option<UpiSource>,
+}
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub enum RealTimePaymentData {

@@ -344,18 +344,23 @@ impl<
                 ) => Ok(PaymentMethodData::Upi(
                     payment_method_data::UpiData::UpiCollect(payment_method_data::UpiCollectData {
                         vpa_id: upi_collect.vpa_id.map(|vpa| vpa.expose().into()),
+                        upi_source: None,
                     }),
                 )),
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(_upi_intent) => {
                     Ok(PaymentMethodData::Upi(
                         payment_method_data::UpiData::UpiIntent(
-                            payment_method_data::UpiIntentData {},
+                            payment_method_data::UpiIntentData {
+                                upi_source: None,
+                            },
                         ),
                     ))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiQr(_upi_qr) => Ok(
                     PaymentMethodData::Upi(crate::payment_method_data::UpiData::UpiQr(
-                        crate::payment_method_data::UpiQrData {},
+                        crate::payment_method_data::UpiQrData {
+                            upi_source: None,
+                        },
                     )),
                 ),
                 // ============================================================================

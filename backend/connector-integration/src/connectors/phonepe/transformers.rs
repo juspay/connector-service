@@ -61,6 +61,8 @@ struct PhonepePaymentRequestPayload {
     payment_instrument: PhonepePaymentInstrument,
     #[serde(rename = "deviceContext", skip_serializing_if = "Option::is_none")]
     device_context: Option<PhonepeDeviceContext>,
+    #[serde(rename = "paymentMode", skip_serializing_if = "Option::is_none")]
+    payment_mode: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -77,6 +79,8 @@ struct PhonepePaymentInstrument {
     target_app: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     vpa: Option<Secret<String>>,
+    #[serde(rename = "upiSource", skip_serializing_if = "Option::is_none")]
+    upi_source: Option<String>,
 }
 
 // ===== SYNC REQUEST STRUCTURES =====
@@ -173,6 +177,12 @@ pub struct PhonepeSyncResponseData {
     response_code: Option<String>,
     #[serde(rename = "paymentInstrument", skip_serializing_if = "Option::is_none")]
     payment_instrument: Option<serde_json::Value>,
+    #[serde(rename = "cardNetwork", skip_serializing_if = "Option::is_none")]
+    card_network: Option<String>,
+    #[serde(rename = "accountType", skip_serializing_if = "Option::is_none")]
+    account_type: Option<String>,
+    #[serde(rename = "upiCreditLine", skip_serializing_if = "Option::is_none")]
+    upi_credit_line: Option<bool>,
 }
 
 // ===== REQUEST BUILDING =====
@@ -233,15 +243,17 @@ impl<
         // Create payment instrument based on payment method data
         let payment_instrument = match &router_data.request.payment_method_data {
             PaymentMethodData::Upi(upi_data) => match upi_data {
-                UpiData::UpiIntent(_) => PhonepePaymentInstrument {
+                UpiData::UpiIntent(intent_data) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_INTENT.to_string(),
                     target_app: None, // Could be extracted from payment method details if needed
                     vpa: None,
+                    upi_source: upi_source_to_string(intent_data.upi_source.as_ref()),
                 },
-                UpiData::UpiQr(_) => PhonepePaymentInstrument {
+                UpiData::UpiQr(qr_data) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_QR.to_string(),
                     target_app: None,
                     vpa: None,
+                    upi_source: upi_source_to_string(qr_data.upi_source.as_ref()),
                 },
                 UpiData::UpiCollect(collect_data) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_COLLECT.to_string(),
@@ -250,6 +262,7 @@ impl<
                         .vpa_id
                         .as_ref()
                         .map(|vpa| Secret::new(vpa.peek().to_string())),
+                    upi_source: upi_source_to_string(collect_data.upi_source.as_ref()),
                 },
             },
             _ => {
@@ -285,6 +298,18 @@ impl<
             _ => None,
         };
 
+        // Calculate payment_mode from upi_source
+        // UPI_CC/UPI_CL -> "ALL", UPI_ACCOUNT -> "ACCOUNT"
+        let upi_source_enum = match &router_data.request.payment_method_data {
+            PaymentMethodData::Upi(upi_data) => match upi_data {
+                UpiData::UpiIntent(intent_data) => intent_data.upi_source.as_ref(),
+                UpiData::UpiQr(qr_data) => qr_data.upi_source.as_ref(),
+                UpiData::UpiCollect(collect_data) => collect_data.upi_source.as_ref(),
+            },
+            _ => None,
+        };
+        let payment_mode = get_payment_mode_from_upi_source(upi_source_enum);
+
         // Build payload
         let payload = PhonepePaymentRequestPayload {
             merchant_id: auth.merchant_id.clone(),
@@ -302,6 +327,7 @@ impl<
             mobile_number,
             payment_instrument,
             device_context,
+            payment_mode
         };
 
         // Convert to JSON and encode
@@ -311,8 +337,13 @@ impl<
         // Base64 encode the payload
         let base64_payload = base64::engine::general_purpose::STANDARD.encode(&json_payload);
 
-        // Generate checksum
-        let api_path = format!("/{}", constants::API_PAY_ENDPOINT);
+        // Generate checksum - use merchant-based endpoint if merchant is IRCTC
+        let api_endpoint = if is_irctc_merchant(auth.merchant_id.peek()) {
+            constants::API_IRCTC_PAY_ENDPOINT
+        } else {
+            constants::API_PAY_ENDPOINT
+        };
+        let api_path = format!("/{}", api_endpoint);
         let checksum =
             generate_phonepe_checksum(&base64_payload, &api_path, &auth.salt_key, &auth.key_index)?;
 
@@ -379,15 +410,17 @@ impl<
         // Create payment instrument based on payment method data
         let payment_instrument = match &router_data.request.payment_method_data {
             PaymentMethodData::Upi(upi_data) => match upi_data {
-                UpiData::UpiIntent(_) => PhonepePaymentInstrument {
+                UpiData::UpiIntent(intent_data) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_INTENT.to_string(),
                     target_app: None, // Could be extracted from payment method details if needed
                     vpa: None,
+                    upi_source: upi_source_to_string(intent_data.upi_source.as_ref()),
                 },
-                UpiData::UpiQr(_) => PhonepePaymentInstrument {
+                UpiData::UpiQr(qr_data) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_QR.to_string(),
                     target_app: None,
                     vpa: None,
+                    upi_source: upi_source_to_string(qr_data.upi_source.as_ref()),
                 },
                 UpiData::UpiCollect(collect_data) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_COLLECT.to_string(),
@@ -396,6 +429,7 @@ impl<
                         .vpa_id
                         .as_ref()
                         .map(|vpa| Secret::new(vpa.peek().to_string())),
+                    upi_source: upi_source_to_string(collect_data.upi_source.as_ref()),
                 },
             },
             _ => {
@@ -431,6 +465,18 @@ impl<
             _ => None,
         };
 
+        // Calculate payment_mode from upi_source
+        // UPI_CC/UPI_CL -> "ALL", UPI_ACCOUNT -> "ACCOUNT"
+        let upi_source_enum = match &router_data.request.payment_method_data {
+            PaymentMethodData::Upi(upi_data) => match upi_data {
+                UpiData::UpiIntent(intent_data) => intent_data.upi_source.as_ref(),
+                UpiData::UpiQr(qr_data) => qr_data.upi_source.as_ref(),
+                UpiData::UpiCollect(collect_data) => collect_data.upi_source.as_ref(),
+            },
+            _ => None,
+        };
+        let payment_mode = get_payment_mode_from_upi_source(upi_source_enum);
+
         // Build payload
         let payload = PhonepePaymentRequestPayload {
             merchant_id: auth.merchant_id.clone(),
@@ -448,6 +494,7 @@ impl<
             mobile_number,
             payment_instrument,
             device_context,
+            payment_mode
         };
 
         // Convert to JSON and encode
@@ -457,8 +504,13 @@ impl<
         // Base64 encode the payload
         let base64_payload = base64::engine::general_purpose::STANDARD.encode(&json_payload);
 
-        // Generate checksum
-        let api_path = format!("/{}", constants::API_PAY_ENDPOINT);
+        // Generate checksum - use merchant-based endpoint if merchant is IRCTC
+        let api_endpoint = if is_irctc_merchant(auth.merchant_id.peek()) {
+            constants::API_IRCTC_PAY_ENDPOINT
+        } else {
+            constants::API_PAY_ENDPOINT
+        };
+        let api_path = format!("/{}", api_endpoint);
         let checksum =
             generate_phonepe_checksum(&base64_payload, &api_path, &auth.salt_key, &auth.key_index)?;
 
@@ -667,6 +719,38 @@ impl TryFrom<&ConnectorAuthType> for PhonepeAuthType {
 
 // ===== HELPER FUNCTIONS =====
 
+// Check if merchant ID corresponds to IRCTC (merchant-based endpoints)
+// This should be called with the merchant_id from X-MERCHANT-ID auth header
+pub fn is_irctc_merchant(merchant_id: &str) -> bool {
+    merchant_id == "irctc"
+}
+
+// Convert UpiSource enum to string for API
+fn upi_source_to_string(upi_source: Option<&domain_types::payment_method_data::UpiSource>) -> Option<String> {
+    use domain_types::payment_method_data::UpiSource;
+
+    upi_source.map(|source| {
+        match source {
+            UpiSource::UpiCc => "UPI_CC".to_string(),
+            UpiSource::UpiCl => "UPI_CL".to_string(),
+            UpiSource::UpiAccount => "UPI_ACCOUNT".to_string(),
+        }
+    })
+}
+
+// Determine payment mode based on UPI source
+// Maps: UPI_CC/UPI_CL -> "ALL", UPI_ACCOUNT -> "ACCOUNT"
+fn get_payment_mode_from_upi_source(upi_source: Option<&domain_types::payment_method_data::UpiSource>) -> Option<String> {
+    use domain_types::payment_method_data::UpiSource;
+
+    upi_source.map(|source| {
+        match source {
+            UpiSource::UpiCc | UpiSource::UpiCl => "ALL".to_string(),
+            UpiSource::UpiAccount => "ACCOUNT".to_string(),
+        }
+    })
+}
+
 fn generate_phonepe_checksum(
     base64_payload: &str,
     api_path: &str,
@@ -728,10 +812,15 @@ impl<
             .resource_common_data
             .connector_request_reference_id;
 
-        // Generate checksum for status API
+        // Generate checksum for status API - use IRCTC endpoint if merchant is IRCTC
+        let api_endpoint = if is_irctc_merchant(auth.merchant_id.peek()) {
+            constants::API_IRCTC_STATUS_ENDPOINT
+        } else {
+            constants::API_STATUS_ENDPOINT
+        };
         let api_path = format!(
             "/{}/{}/{}",
-            constants::API_STATUS_ENDPOINT,
+            api_endpoint,
             auth.merchant_id.peek(),
             merchant_transaction_id
         );
@@ -775,10 +864,15 @@ impl<
             .resource_common_data
             .connector_request_reference_id;
 
-        // Generate checksum for status API
+        // Generate checksum for status API - use IRCTC endpoint if merchant is IRCTC
+        let api_endpoint = if is_irctc_merchant(auth.merchant_id.peek()) {
+            constants::API_IRCTC_STATUS_ENDPOINT
+        } else {
+            constants::API_STATUS_ENDPOINT
+        };
         let api_path = format!(
             "/{}/{}/{}",
-            constants::API_STATUS_ENDPOINT,
+            api_endpoint,
             auth.merchant_id.peek(),
             merchant_transaction_id
         );
