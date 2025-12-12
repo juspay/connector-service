@@ -577,7 +577,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             merchant_order_data: None,
             upcoming_payment_data: None,
             redirect_url: router_data.request.router_return_url.clone(),
-            statement_descriptor_suffix: router_data.request.statement_descriptor_suffix.clone(),
+            statement_descriptor_suffix: router_data
+                .request
+                .billing_descriptor
+                .as_ref()
+                .and_then(|bd| bd.statement_descriptor_suffix.clone()),
         })
     }
 }
