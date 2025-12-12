@@ -498,6 +498,7 @@ impl<
                     true => Some(Box::new(MandateReference {
                         connector_mandate_id: Some(response.payment_method.id.expose()),
                         payment_method_id: None,
+                        connector_mandate_request_reference_id: None,
                     })),
                     false => None,
                 },
