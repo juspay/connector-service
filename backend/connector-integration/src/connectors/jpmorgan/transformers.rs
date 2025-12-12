@@ -44,14 +44,7 @@ impl TryFrom<&ConnectorAuthType> for JpmorganAuthType {
 }
 
 // OAuth 2.0 transformers
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         JpmorganRouterData<
             RouterDataV2<
@@ -115,14 +108,7 @@ fn map_capture_method(
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         JpmorganRouterData<
             RouterDataV2<
@@ -212,14 +198,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         JpmorganRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -250,14 +229,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         JpmorganRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -276,14 +248,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         JpmorganRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -337,7 +302,7 @@ fn map_transaction_state_to_attempt_status(
 impl TryFrom<&responses::JpmorganPaymentsResponse> for PaymentsResponseData {
     type Error = Error;
     fn try_from(item: &responses::JpmorganPaymentsResponse) -> Result<Self, Self::Error> {
-        Ok(PaymentsResponseData::TransactionResponse {
+        Ok(Self::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(item.transaction_id.clone()),
             redirection_data: None,
             mandate_reference: None,
@@ -369,7 +334,7 @@ impl TryFrom<&responses::JpmorganRefundResponse> for RefundsResponseData {
         ))
         .into();
 
-        Ok(RefundsResponseData {
+        Ok(Self {
             connector_refund_id: item.transaction_id.clone(),
             refund_status,
             status_code: item.response_code.parse::<u16>().unwrap_or(0),

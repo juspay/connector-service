@@ -12,19 +12,18 @@ use common_enums::CurrencyUnit;
 use common_utils::{consts, errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
-        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, RSync, Refund, RepeatPayment,
-        SdkSessionToken, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken,
+        DefendDispute, PSync, RSync, Refund, RepeatPayment, SdkSessionToken, SetupMandate,
+        SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData,
+        DisputeFlowData, DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -320,7 +319,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: responses::JpmorganErrorResponse = res
+        let response: JpmorganErrorResponse = res
             .response
             .parse_struct("JpmorganErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
@@ -759,10 +758,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
-        CreateConnectorCustomer,
+        domain_types::connector_flow::CreateConnectorCustomer,
         PaymentFlowData,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
+        domain_types::connector_types::ConnectorCustomerData,
+        domain_types::connector_types::ConnectorCustomerResponse,
     > for Jpmorgan<T>
 {
 }
@@ -809,10 +808,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
-        PaymentMethodToken,
+        domain_types::connector_flow::PaymentMethodToken,
         PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
+        domain_types::connector_types::PaymentMethodTokenizationData<T>,
+        domain_types::connector_types::PaymentMethodTokenResponse,
     > for Jpmorgan<T>
 {
 }
