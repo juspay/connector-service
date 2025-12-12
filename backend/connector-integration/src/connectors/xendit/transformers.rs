@@ -14,7 +14,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors::{self, ConnectorError},
+    errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -45,12 +45,7 @@ pub struct ChannelProperties {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CardInformation<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     pub card_number: RawCardNumber<T>,
     pub expiry_month: Secret<String>,
@@ -62,14 +57,8 @@ pub struct CardInformation<
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct CardInfo<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> {
+pub struct CardInfo<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+{
     pub channel_properties: ChannelProperties,
     pub card_information: CardInformation<T>,
 }
@@ -89,23 +78,13 @@ pub enum PaymentMethodType {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum PaymentMethod<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     Card(CardPaymentRequest<T>),
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CardPaymentRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     #[serde(rename = "type")]
     pub payment_type: PaymentMethodType,
@@ -160,13 +139,13 @@ pub struct XenditAuthType {
 }
 
 impl TryFrom<&ConnectorAuthType> for XenditAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
     }
 }
@@ -174,15 +153,10 @@ impl TryFrom<&ConnectorAuthType> for XenditAuthType {
 // Basic Request Structure from Hyperswitch Xendit
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct XenditPaymentsRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     pub amount: FloatMajorUnit,
-    pub currency: common_enums::Currency,
+    pub currency: Currency,
     pub capture_method: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_method: Option<PaymentMethod<T>>,
@@ -268,12 +242,7 @@ pub struct XenditErrorResponse {
 }
 
 fn is_auto_capture<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 >(
     data: &PaymentsAuthorizeData<T>,
 ) -> Result<bool, ConnectorError> {
@@ -314,26 +283,17 @@ fn map_payment_response_to_attempt_status(
 impl From<PaymentStatus> for common_enums::AttemptStatus {
     fn from(status: PaymentStatus) -> Self {
         match status {
-            PaymentStatus::Failed => common_enums::AttemptStatus::Failure,
-            PaymentStatus::Succeeded | PaymentStatus::Verified => {
-                common_enums::AttemptStatus::Charged
-            }
-            PaymentStatus::Pending => common_enums::AttemptStatus::Pending,
-            PaymentStatus::RequiresAction => common_enums::AttemptStatus::AuthenticationPending,
-            PaymentStatus::AwaitingCapture => common_enums::AttemptStatus::Authorized,
+            PaymentStatus::Failed => Self::Failure,
+            PaymentStatus::Succeeded | PaymentStatus::Verified => Self::Charged,
+            PaymentStatus::Pending => Self::Pending,
+            PaymentStatus::RequiresAction => Self::AuthenticationPending,
+            PaymentStatus::AwaitingCapture => Self::Authorized,
         }
     }
 }
 
 // Transformer for Request: RouterData -> XenditPaymentsRequest
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         XenditRouterData<
             RouterDataV2<
@@ -404,7 +364,7 @@ impl<
         }));
         let payment_method_id = None;
         let channel_properties = None;
-        Ok(XenditPaymentsRequest {
+        Ok(Self {
             amount,
             currency,
             capture_method,
@@ -415,15 +375,8 @@ impl<
     }
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -601,14 +554,7 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         XenditRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -713,19 +659,11 @@ pub struct XenditRefundRequest {
     pub reason: String,
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<XenditRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
     for XenditRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: XenditRouterData<
             RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -831,12 +769,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
 }
 
 fn is_mandate_payment<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 >(
     item: &PaymentsAuthorizeData<T>,
 ) -> bool {

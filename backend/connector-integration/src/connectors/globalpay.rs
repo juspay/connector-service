@@ -125,7 +125,7 @@ macros::create_all_prerequisites!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {}", access_token).into_masked(),
+                    format!("Bearer {access_token}").into_masked(),
                 ),
             ])
         }
@@ -149,7 +149,7 @@ macros::create_all_prerequisites!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {}", access_token).into_masked(),
+                    format!("Bearer {access_token}").into_masked(),
                 ),
             ])
         }
@@ -176,7 +176,7 @@ macros::create_all_prerequisites!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {}", access_token).into_masked(),
+                    format!("Bearer {access_token}").into_masked(),
                 ),
             ])
         }
@@ -199,7 +199,7 @@ macros::create_all_prerequisites!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {}", access_token).into_masked(),
+                    format!("Bearer {access_token}").into_masked(),
                 ),
             ])
         }
@@ -676,7 +676,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = &req.resource_common_data.connectors.globalpay.base_url;
-        Ok(format!("{}/accesstoken", base_url))
+        Ok(format!("{base_url}/accesstoken"))
     }
 
     fn get_request_body(

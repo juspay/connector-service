@@ -6,7 +6,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors::{self, ConnectorError},
+    errors::ConnectorError,
     payment_address::AddressDetails,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
@@ -28,14 +28,7 @@ pub struct Payer {
 }
 
 #[derive(Debug, Default, Eq, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Card<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> {
+pub struct Card<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     pub holder_name: Secret<String>,
     pub number: RawCardNumber<T>,
     pub cvv: Secret<String>,
@@ -68,12 +61,7 @@ pub enum PaymentMethodFlow {
 
 #[derive(Default, Debug, Serialize, Eq, PartialEq)]
 pub struct DlocalPaymentsRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     pub amount: MinorUnit,
     pub currency: common_enums::Currency,
@@ -88,14 +76,7 @@ pub struct DlocalPaymentsRequest<
     pub description: Option<String>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         DlocalRouterData<
             RouterDataV2<
@@ -210,7 +191,7 @@ impl<
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(errors::ConnectorError::NotImplemented(
+                Err(ConnectorError::NotImplemented(
                     crate::utils::get_unimplemented_payment_method_error_message("Dlocal"),
                 ))?
             }
@@ -242,7 +223,7 @@ pub struct DlocalPaymentsSyncRequest {
 impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
     for DlocalPaymentsSyncRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
@@ -251,7 +232,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?),
+                .change_context(ConnectorError::MissingConnectorTransactionID)?),
         })
     }
 }
@@ -263,7 +244,7 @@ pub struct DlocalPaymentsCancelRequest {
 impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>
     for DlocalPaymentsCancelRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
@@ -281,14 +262,7 @@ pub struct DlocalPaymentsCaptureRequest {
     pub order_id: String,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         DlocalRouterData<
             RouterDataV2<
@@ -319,7 +293,7 @@ impl<
                     .request
                     .connector_transaction_id
                     .get_connector_transaction_id()
-                    .change_context(errors::ConnectorError::MissingConnectorTransactionID)?,
+                    .change_context(ConnectorError::MissingConnectorTransactionID)?,
             ),
             amount: item.router_data.request.amount_to_capture,
             currency: item.router_data.request.currency.to_string(),
@@ -339,7 +313,7 @@ pub struct DlocalAuthType {
 }
 
 impl TryFrom<&ConnectorAuthType> for DlocalAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         if let ConnectorAuthType::SignatureKey {
             api_key,
@@ -353,7 +327,7 @@ impl TryFrom<&ConnectorAuthType> for DlocalAuthType {
                 secret: api_secret.to_owned(),
             })
         } else {
-            Err(errors::ConnectorError::FailedToObtainAuthType.into())
+            Err(ConnectorError::FailedToObtainAuthType.into())
         }
     }
 }
@@ -539,19 +513,11 @@ pub struct DlocalRefundRequest {
     pub id: String,
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<DlocalRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
     for DlocalRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: DlocalRouterData<
             RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -621,7 +587,7 @@ pub struct DlocalRefundsSyncRequest {
 impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>
     for DlocalRefundsSyncRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
