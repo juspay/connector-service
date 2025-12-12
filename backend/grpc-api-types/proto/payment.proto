@@ -2343,6 +2343,9 @@ message PaymentServiceRepeatEverythingRequest {
   optional ConnectorState state = 22; // State data for access token storage and other connector-specific state
 
   optional RecurringMandatePaymentData recurring_mandate_payment_data = 9; // Mandate payment details
+  
+  // Shipping Cost
+  optional int64 shipping_cost = 34; // Shipping cost in minor units (e.g., cents)
 }
 
 // Container for recurring mandate payment data
@@ -3048,6 +3051,9 @@ message PaymentServiceCreatePaymentMethodTokenRequest {
 
   // Additional Metadata
   map<string, string> metadata = 12; // Additional metadata for the connector
+
+  // URLs for Redirection
+  optional string return_url = 13; // URL to redirect after payment method token creation
 }
 
 // Response message for creating a payment method token.
