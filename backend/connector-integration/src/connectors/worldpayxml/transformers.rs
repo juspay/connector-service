@@ -9,7 +9,7 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, WalletData},
+    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
@@ -18,7 +18,7 @@ use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::Serialize;
 
 use super::{
-    requests,
+    requests::{self, WorldpayxmlAction},
     responses::{self, WorldpayxmlLastEvent},
     WorldpayxmlRouterData,
 };
@@ -86,6 +86,7 @@ fn get_currency_exponent(currency: common_enums::Currency) -> String {
 fn get_worldpayxml_payment_method<T>(
     payment_method_data: &PaymentMethodData<T>,
     card: &Card<T>,
+    billing_address: Option<&requests::WorldpayxmlBillingAddress>,
 ) -> Result<requests::WorldpayxmlPaymentMethod, error_stack::Report<errors::ConnectorError>>
 where
     T: PaymentMethodDataTypes,
@@ -100,6 +101,33 @@ where
                 card.card_exp_year.clone()
             };
 
+            // Use card_holder_name from card data, or construct from billing address, or use a default
+            let card_holder_name = if let Some(ref holder_name) = card.card_holder_name {
+                holder_name.clone()
+            } else if let Some(billing_addr) = billing_address {
+                // Construct from billing address first_name and last_name
+                let first_name = billing_addr
+                    .address
+                    .first_name
+                    .as_ref()
+                    .map(|n| n.peek().clone())
+                    .unwrap_or_default();
+                let last_name = billing_addr
+                    .address
+                    .last_name
+                    .as_ref()
+                    .map(|n| n.peek().clone())
+                    .unwrap_or_default();
+
+                if !first_name.is_empty() || !last_name.is_empty() {
+                    Secret::new(format!("{} {}", first_name, last_name).trim().to_string())
+                } else {
+                    Secret::new("Card Holder".to_string())
+                }
+            } else {
+                Secret::new("Card Holder".to_string())
+            };
+
             let card_data = requests::WorldpayxmlCard {
                 card_number: Secret::new(card.card_number.peek().to_string()),
                 expiry_date: requests::WorldpayxmlExpiryDate {
@@ -108,10 +136,7 @@ where
                         year: formatted_year,
                     },
                 },
-                card_holder_name: card
-                    .card_holder_name
-                    .clone()
-                    .unwrap_or_else(|| Secret::new("CARDHOLDER".to_string())),
+                card_holder_name: Some(card_holder_name),
                 cvc: card.card_cvc.clone(),
             };
 
@@ -128,27 +153,6 @@ where
                 },
                 None => Ok(requests::WorldpayxmlPaymentMethod::Card(card_data)),
             }
-        }
-        PaymentMethodData::Wallet(WalletData::GooglePay(google_pay_data)) => {
-            // For Google Pay, we use the token data as the signed message
-            // The tokenization_data enum contains the encrypted payment data
-            let token = match &google_pay_data.tokenization_data {
-                domain_types::payment_method_data::GpayTokenizationData::Encrypted(encrypted) => {
-                    encrypted.token.clone() // token is already a String
-                }
-                domain_types::payment_method_data::GpayTokenizationData::Decrypted(_) => {
-                    // For decrypted data, we don't have the token string
-                    // This case might not be used for Worldpayxml
-                    String::new()
-                }
-            };
-            Ok(requests::WorldpayxmlPaymentMethod::Paywithgoogle(
-                requests::WorldpayxmlGooglePay {
-                    protocol_version: "ECv1".to_string(), // Default protocol version
-                    signature: String::new(),             // Signature is part of the token
-                    signed_message: token,
-                },
-            ))
         }
         _ => Err(errors::ConnectorError::NotSupported {
             message: "Selected payment method".to_string(),
@@ -192,45 +196,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let is_manual_capture = router_data.request.capture_method == Some(CaptureMethod::Manual)
             || router_data.request.capture_method == Some(CaptureMethod::ManualMultiple);
 
-        // Get payment method
-        let payment_method = match &router_data.request.payment_method_data {
-            PaymentMethodData::Card(card) => {
-                get_worldpayxml_payment_method(&router_data.request.payment_method_data, card)?
-            }
-            PaymentMethodData::Wallet(WalletData::GooglePay(_)) => {
-                // For Google Pay, we don't need actual card data, just pass the payment method data
-                // The function will handle the Google Pay case separately
-                get_worldpayxml_payment_method(
-                    &router_data.request.payment_method_data,
-                    // Dummy card data - won't be used for Google Pay
-                    &Card::<T> {
-                        card_number: domain_types::payment_method_data::RawCardNumber(
-                            <T as PaymentMethodDataTypes>::Inner::default(),
-                        ),
-                        card_exp_month: Secret::new(String::new()),
-                        card_exp_year: Secret::new(String::new()),
-                        card_holder_name: Some(Secret::new("CARDHOLDER".to_string())),
-                        card_cvc: Secret::new(String::new()),
-                        card_issuer: None,
-                        card_network: None,
-                        card_type: None,
-                        card_issuing_country: None,
-                        bank_code: None,
-                        nick_name: None,
-                        co_badged_card_data: None,
-                    },
-                )?
-            }
-            _ => {
-                return Err(errors::ConnectorError::NotSupported {
-                    message: "Selected payment method".to_string(),
-                    connector: "worldpayxml",
-                }
-                .into())
-            }
-        };
-
-        // Extract billing address
+        // Extract billing address first (needed for payment method)
         let billing_address = router_data
             .resource_common_data
             .address
@@ -253,6 +219,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         },
                     })
             });
+
+        // Get payment method
+        let payment_method = match &router_data.request.payment_method_data {
+            PaymentMethodData::Card(card) => {
+                get_worldpayxml_payment_method(&router_data.request.payment_method_data, card, billing_address.as_ref())?
+            }
+            _ => {
+                return Err(errors::ConnectorError::NotSupported {
+                    message: "Selected payment method".to_string(),
+                    connector: "worldpayxml",
+                }
+                .into())
+            }
+        };
 
         // Convert amount using the connector's amount converter
         let converted_amount = super::WorldpayxmlAmountConvertor::convert(
@@ -280,15 +260,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         .clone()
                         .unwrap_or_else(|| "Payment".to_string()),
                     amount: requests::WorldpayxmlAmount {
-                        value: converted_amount.to_string(),
-                        currency_code: router_data.request.currency.to_string(),
+                        value: converted_amount,
+                        currency_code: router_data.request.currency,
                         exponent: get_currency_exponent(router_data.request.currency),
                     },
                     payment_details: requests::WorldpayxmlPaymentDetails {
                         action: if is_manual_capture {
-                            "AUTHORISE".to_string()
+                            WorldpayxmlAction::Authorise
                         } else {
-                            "SALE".to_string()
+                            WorldpayxmlAction::Sale
                         },
                         payment_method,
                     },
@@ -359,8 +339,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     order_code: connector_transaction_id.clone(),
                     capture: requests::WorldpayxmlCapture {
                         amount: requests::WorldpayxmlAmount {
-                            value: converted_amount.to_string(),
-                            currency_code: router_data.request.currency.to_string(),
+                            value: converted_amount,
+                            currency_code: router_data.request.currency,
                             exponent: get_currency_exponent(router_data.request.currency),
                         },
                     },
@@ -443,8 +423,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     order_code: connector_transaction_id,
                     refund: requests::WorldpayxmlRefund {
                         amount: requests::WorldpayxmlAmount {
-                            value: converted_amount.to_string(),
-                            currency_code: router_data.request.currency.to_string(),
+                            value: converted_amount,
+                            currency_code: router_data.request.currency,
                             exponent: get_currency_exponent(router_data.request.currency),
                         },
                     },
@@ -482,7 +462,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
 
         Ok(Self {
-            version: "1.4".to_string(),
+            version: API_VERSION.to_string(),
             merchant_code: auth.merchant_code,
             inquiry: requests::WorldpayxmlInquiry {
                 order_inquiry: requests::WorldpayxmlOrderInquiry {
@@ -518,7 +498,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let order_code = router_data.request.connector_refund_id.clone();
 
         Ok(Self {
-            version: "1.4".to_string(),
+            version: API_VERSION.to_string(),
             merchant_code: auth.merchant_code,
             inquiry: requests::WorldpayxmlInquiry {
                 order_inquiry: requests::WorldpayxmlOrderInquiry { order_code },
@@ -570,21 +550,8 @@ fn map_worldpayxml_refund_status(last_event: &WorldpayxmlLastEvent) -> RefundSta
 
 // Helper function to parse string last_event from webhook/JSON responses
 fn parse_last_event(event_str: &str) -> Result<WorldpayxmlLastEvent, errors::ConnectorError> {
-    match event_str {
-        "AUTHORISED" => Ok(WorldpayxmlLastEvent::Authorised),
-        "REFUSED" => Ok(WorldpayxmlLastEvent::Refused),
-        "CANCELLED" => Ok(WorldpayxmlLastEvent::Cancelled),
-        "CAPTURED" | "SETTLED" => Ok(WorldpayxmlLastEvent::Captured),
-        "SENT_FOR_REFUND"
-        | "REFUND_REQUESTED"
-        | "SENT_FOR_FAST_REFUND"
-        | "REFUNDED_BY_MERCHANT" => Ok(WorldpayxmlLastEvent::SentForRefund),
-        "REFUNDED" => Ok(WorldpayxmlLastEvent::Refunded),
-        "REFUND_FAILED" => Ok(WorldpayxmlLastEvent::RefundFailed),
-        "EXPIRED" => Ok(WorldpayxmlLastEvent::Expired),
-        "ERROR" => Ok(WorldpayxmlLastEvent::Error),
-        _ => Err(errors::ConnectorError::ResponseDeserializationFailed),
-    }
+    serde_json::from_str(&format!("\"{}\"", event_str))
+        .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)
 }
 
 // Response transformers - Authorize

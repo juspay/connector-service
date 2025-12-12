@@ -1,7 +1,22 @@
+use common_utils::StringMinorUnit;
 use hyperswitch_masking::Secret;
 use serde::Serialize;
 
 use super::super::macros::GetSoapXml;
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum WorldpayxmlAction {
+    Authorise,
+    Sale,
+    Cancel,
+}
+fn generate_soap_xml<T: Serialize>(request: &T) -> String {
+    format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n{}",
+        quick_xml::se::to_string(request).unwrap_or_default()
+    )
+}
 
 #[derive(Debug, Serialize)]
 #[serde(rename = "paymentService")]
@@ -15,10 +30,7 @@ pub struct WorldpayxmlPaymentsRequest {
 
 impl GetSoapXml for WorldpayxmlPaymentsRequest {
     fn to_soap_xml(&self) -> String {
-        format!(
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n{}",
-            quick_xml::se::to_string(self).unwrap_or_default()
-        )
+        generate_soap_xml(self)
     }
 }
 
@@ -45,9 +57,9 @@ pub struct WorldpayxmlOrder {
 #[derive(Debug, Serialize)]
 pub struct WorldpayxmlAmount {
     #[serde(rename = "@value")]
-    pub value: String,
+    pub value: StringMinorUnit,
     #[serde(rename = "@currencyCode")]
-    pub currency_code: String,
+    pub currency_code: common_enums::Currency,
     #[serde(rename = "@exponent")]
     pub exponent: String,
 }
@@ -55,7 +67,7 @@ pub struct WorldpayxmlAmount {
 #[derive(Debug, Serialize)]
 pub struct WorldpayxmlPaymentDetails {
     #[serde(rename = "@action")]
-    pub action: String,
+    pub action: WorldpayxmlAction,
     #[serde(rename = "$value")]
     pub payment_method: WorldpayxmlPaymentMethod,
 }
@@ -69,19 +81,15 @@ pub enum WorldpayxmlPaymentMethod {
     Visa(WorldpayxmlCard),
     #[serde(rename = "ECMC-SSL")]
     Ecmc(WorldpayxmlCard),
-    #[serde(rename = "PAYWITHGOOGLE-SSL")]
-    Paywithgoogle(WorldpayxmlGooglePay),
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WorldpayxmlCard {
-    #[serde(rename = "cardNumber")]
     pub card_number: Secret<String>,
-    #[serde(rename = "expiryDate")]
     pub expiry_date: WorldpayxmlExpiryDate,
-    #[serde(rename = "cardHolderName")]
-    pub card_holder_name: Secret<String>,
-    #[serde(rename = "cvc")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_holder_name: Option<Secret<String>>,
     pub cvc: Secret<String>,
 }
 
@@ -98,14 +106,6 @@ pub struct WorldpayxmlDate {
     pub year: Secret<String>,
 }
 
-#[derive(Debug, Serialize)]
-pub struct WorldpayxmlGooglePay {
-    #[serde(rename = "protocolVersion")]
-    pub protocol_version: String,
-    pub signature: String,
-    #[serde(rename = "signedMessage")]
-    pub signed_message: String,
-}
 
 #[derive(Debug, Serialize)]
 pub struct WorldpayxmlShopper {
