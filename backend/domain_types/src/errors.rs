@@ -1,3 +1,5 @@
+#![allow(unused_variables, unused_assignments)]
+
 use common_utils::errors::ErrorSwitch;
 // use api_models::errors::types::{ Extra};
 use strum::Display;
@@ -96,6 +98,7 @@ pub enum ErrorType {
 // WE	Webhook Error	Errors related to Webhooks
 #[derive(Debug, Clone, router_derive::ApiError)]
 #[error(error_type_enum = ErrorType)]
+#[allow(unused_variables, unused_assignments)]
 pub enum ApiErrorResponse {
     #[error(error_type = ErrorType::ConnectorError, code = "CE_00", message = "{code}: {message}", ignore = "status_code")]
     ExternalConnectorError {

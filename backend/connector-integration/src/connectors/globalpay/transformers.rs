@@ -225,21 +225,13 @@ pub struct GlobalpayAccessTokenResponse {
     pub seconds_to_expire: i64,
 }
 
-impl<F, T>
-    TryFrom<
-        ResponseRouterData<
-            GlobalpayAccessTokenResponse,
-            RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>,
-        >,
-    > for RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>
+impl<F, T> TryFrom<ResponseRouterData<GlobalpayAccessTokenResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            GlobalpayAccessTokenResponse,
-            RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>,
-        >,
+        item: ResponseRouterData<GlobalpayAccessTokenResponse, Self>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(AccessTokenResponseData {
@@ -338,14 +330,7 @@ pub struct GlobalpayCard<T: PaymentMethodDataTypes> {
     pub cvv_indicator: Option<String>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GlobalpayRouterData<
             RouterDataV2<
@@ -464,14 +449,7 @@ pub struct GlobalpayCaptureRequest {
     pub reference: Option<String>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GlobalpayRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -549,31 +527,13 @@ pub struct GlobalpayCardResponse {
     pub masked_number_last4: Option<String>,
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            GlobalpayPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            GlobalpayPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<GlobalpayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::from(item.response.status.clone());
 
@@ -649,21 +609,13 @@ impl<T: PaymentMethodDataTypes>
 }
 
 // PSync flow - reuses the same GlobalpayPaymentsResponse structure
-impl
-    TryFrom<
-        ResponseRouterData<
-            GlobalpayPaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            GlobalpayPaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<GlobalpayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::from(item.response.status.clone());
 
@@ -739,21 +691,13 @@ impl
 }
 
 // Capture flow - reuses the same GlobalpayPaymentsResponse structure
-impl
-    TryFrom<
-        ResponseRouterData<
-            GlobalpayPaymentsResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            GlobalpayPaymentsResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<GlobalpayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::from(item.response.status.clone());
 
@@ -833,14 +777,7 @@ pub struct GlobalpayRefundRequest {
     pub amount: StringMinorUnit,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GlobalpayRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -879,21 +816,13 @@ pub struct GlobalpayRefundResponse {
     pub currency: Option<common_enums::Currency>,
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            GlobalpayRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<GlobalpayRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            GlobalpayRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<GlobalpayRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let refund_status = RefundStatus::from(item.response.status.clone());
 
@@ -909,21 +838,13 @@ impl
 }
 
 // RSync Response - Reuses the same GlobalpayRefundResponse structure
-impl
-    TryFrom<
-        ResponseRouterData<
-            GlobalpayRefundResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<GlobalpayRefundResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            GlobalpayRefundResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<GlobalpayRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let refund_status = RefundStatus::from(item.response.status.clone());
 
@@ -946,14 +867,7 @@ pub struct GlobalpayVoidRequest {
     pub amount: Option<StringMinorUnit>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GlobalpayRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -994,21 +908,13 @@ impl<
 
 // Void Response - Reuses GlobalpayPaymentsResponse structure
 // The response is similar to transaction response with REVERSED status
-impl
-    TryFrom<
-        ResponseRouterData<
-            GlobalpayPaymentsResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            GlobalpayPaymentsResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<GlobalpayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map GlobalPay void statuses to UCS AttemptStatus
         // Void flow uses VoidFailed instead of generic Failure for failed void attempts
