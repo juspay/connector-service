@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.12.12.0
+
+### Features
+
+- **connector:** [BAMBORA] Connector Integration ([#352](https://github.com/juspay/connector-service/pull/352)) ([`ca406f9`](https://github.com/juspay/connector-service/commit/ca406f94ba865a2552c5f429d31c688a4576636c))
+
+**Full Changelog:** [`2025.12.11.1...2025.12.12.0`](https://github.com/juspay/connector-service/compare/2025.12.11.1...2025.12.12.0)
+
+- - -
+
 ## 2025.12.11.1
 
 ### Bug Fixes

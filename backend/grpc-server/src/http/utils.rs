@@ -42,7 +42,7 @@ pub fn http_headers_to_grpc_metadata(
     // Process required headers - fail if missing
     for header_name in required_headers {
         let header_value = http_headers.get(header_name).ok_or_else(|| {
-            tonic::Status::invalid_argument(format!("Missing required header: {}", header_name))
+            tonic::Status::invalid_argument(format!("Missing required header: {header_name}"))
         })?;
 
         let metadata_value = convert_header_to_metadata(header_name, header_value)?;
@@ -68,15 +68,13 @@ fn convert_header_to_metadata(
         .to_str()
         .map_err(|e| {
             Box::new(tonic::Status::invalid_argument(format!(
-                "Invalid header value for {}: {}",
-                header_name, e
+                "Invalid header value for {header_name}: {e}"
             )))
         })
         .and_then(|s| {
             MetadataValue::try_from(s).map_err(|e| {
                 Box::new(tonic::Status::invalid_argument(format!(
-                    "Cannot convert header {} to metadata: {}",
-                    header_name, e
+                    "Cannot convert header {header_name} to metadata: {e}"
                 )))
             })
         })

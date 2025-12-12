@@ -15,7 +15,7 @@ use domain_types::{
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
-    errors::{self, ConnectorError},
+    errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorAuthType, ErrorResponse, PaymentMethodToken as PaymentMethodTokenFlow},
     router_data_v2::RouterDataV2,
@@ -53,12 +53,7 @@ pub enum BillwerkStrongAuthRule {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BillwerkTokenRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     number: RawCardNumber<T>,
     month: Secret<String>,
@@ -148,14 +143,7 @@ pub type BillwerkRefundResponse = RefundResponse;
 
 pub type BillwerkRSyncResponse = RefundResponse;
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BillwerkRouterData<
             RouterDataV2<
@@ -168,7 +156,7 @@ impl<
         >,
     > for BillwerkTokenRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: BillwerkRouterData<
@@ -214,7 +202,7 @@ impl<
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(errors::ConnectorError::NotImplemented(
+                Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("billwerk"),
                 )
                 .into())
@@ -223,14 +211,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + serde::Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BillwerkRouterData<
             RouterDataV2<
@@ -243,7 +224,7 @@ impl<
         >,
     > for BillwerkPaymentsRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: BillwerkRouterData<
@@ -257,7 +238,7 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         if item.router_data.resource_common_data.is_three_ds() {
-            return Err(errors::ConnectorError::NotImplemented(
+            return Err(ConnectorError::NotImplemented(
                 "Three_ds payments through Billwerk".to_string(),
             )
             .into());
@@ -268,7 +249,7 @@ impl<
             .get_payment_method_token()?
         {
             PaymentMethodTokenFlow::Token(pm_token) => Ok(pm_token),
-            _ => Err(errors::ConnectorError::MissingRequiredField {
+            _ => Err(ConnectorError::MissingRequiredField {
                 field_name: "payment_method_token",
             }),
         }?;
@@ -315,18 +296,7 @@ impl<
     }
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            BillwerkTokenResponse,
-            RouterDataV2<
-                PaymentMethodToken,
-                PaymentFlowData,
-                PaymentMethodTokenizationData<T>,
-                PaymentMethodTokenResponse,
-            >,
-        >,
-    >
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BillwerkTokenResponse, Self>>
     for RouterDataV2<
         PaymentMethodToken,
         PaymentFlowData,
@@ -334,18 +304,10 @@ impl<T: PaymentMethodDataTypes>
         PaymentMethodTokenResponse,
     >
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            BillwerkTokenResponse,
-            RouterDataV2<
-                PaymentMethodToken,
-                PaymentFlowData,
-                PaymentMethodTokenizationData<T>,
-                PaymentMethodTokenResponse,
-            >,
-        >,
+        item: ResponseRouterData<BillwerkTokenResponse, Self>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(PaymentMethodTokenResponse {
@@ -423,26 +385,19 @@ impl From<BillwerkPaymentState> for common_enums::AttemptStatus {
 }
 
 impl TryFrom<&ConnectorAuthType> for BillwerkAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
                 api_key: api_key.to_owned(),
                 public_api_key: key1.to_owned(),
             }),
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BillwerkRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -464,20 +419,12 @@ impl<
     }
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BillwerkRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for BillwerkRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: BillwerkRouterData<
             RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -505,7 +452,7 @@ impl From<RefundState> for common_enums::RefundStatus {
 impl<F> TryFrom<RefundsResponseRouterData<F, RefundResponse>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: RefundsResponseRouterData<F, RefundResponse>) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(RefundsResponseData {
@@ -518,22 +465,12 @@ impl<F> TryFrom<RefundsResponseRouterData<F, RefundResponse>>
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            RefundResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<RefundResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            RefundResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.id.to_string(),
