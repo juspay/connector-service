@@ -333,7 +333,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         item.router_data.request.minor_amount,
                         item.router_data.request.currency,
                     )
-                    .change_context(ConnectorError::AmountConversionFailed)?,
+                    .change_context(ConnectorError::AmountConversionFailed)
+                    .attach_printable("Failed to convert amount to required type")?,
                 payment_method: Some(PaymentMethod::Card(CardPaymentRequest {
                     payment_type: PaymentMethodType::CARD,
                     reference_id: Secret::new(
