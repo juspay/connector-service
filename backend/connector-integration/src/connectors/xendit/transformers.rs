@@ -364,7 +364,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             cardholder_name: card_data.get_cardholder_name().or(item
                                 .router_data
                                 .resource_common_data
-                                .get_billing_full_name())?,
+                                .get_payment_billing_full_name())?,
                             cardholder_email: item
                                 .router_data
                                 .resource_common_data
