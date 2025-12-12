@@ -42,7 +42,7 @@ const CONNECTOR_CUSTOMER_ID: &str = "abc123";
 // Test card data - Updated to match new JSON payload
 const TEST_AMOUNT: i64 = 10000000000; // 10 trillion from new payload
 const TEST_MINOR_AMOUNT: i64 = 10000000000; // Minor amount from new payload
-const TEST_CARD_NUMBER: &str = "4111111111111111"; // Valid test card for Xendit
+const TEST_CARD_NUMBER: &str = "4000000000001091"; // Valid test card for Xendit
 const TEST_CARD_EXP_MONTH: &str = "10";
 const TEST_CARD_EXP_YEAR: &str = "2027"; // Full year format
 const TEST_CARD_CVC: &str = "123";
