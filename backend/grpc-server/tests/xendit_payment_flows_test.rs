@@ -128,7 +128,15 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             "http://localhost:8080/webhooks/merchant_1753672298/mca_8rIwEeXmFvrIA59fMH75".to_string(),
         ),
         email: Some(TEST_EMAIL.to_string().into()),
-        address: Some(grpc_api_types::payments::PaymentAddress::default()),
+        address: Some(grpc_api_types::payments::PaymentAddress {
+            billing_address: Some(grpc_api_types::payments::Address {
+                phone_number: Some(Secret::new("9123456789".to_string())),
+                phone_country_code: Some("+91".to_string()),
+                email: Some(Secret::new("kalo@hul.com".to_string())),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(TEST_REQUEST_REF_ID.to_string())),
