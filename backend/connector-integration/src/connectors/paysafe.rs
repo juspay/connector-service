@@ -304,7 +304,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .and_then(|f| f.first().map(|fe| fe.error.clone()));
 
         let reason = match (detail_message, field_error_message) {
-            (Some(detail), Some(field)) => Some(format!("{}, {}", detail, field)),
+            (Some(detail), Some(field)) => Some(format!("{detail}, {field}")),
             (Some(detail), None) => Some(detail),
             (None, Some(field)) => Some(field),
             (None, None) => Some(response.error.message.clone()),

@@ -103,12 +103,7 @@ pub struct NuveiUrlDetails {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NuveiPaymentRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     pub session_token: Option<String>,
     pub merchant_id: Secret<String>,
@@ -133,12 +128,7 @@ pub struct NuveiPaymentRequest<
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NuveiPaymentOption<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     pub card: NuveiCard<T>,
 }
@@ -146,12 +136,7 @@ pub struct NuveiPaymentOption<
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NuveiCard<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     pub card_number: RawCardNumber<T>,
     pub card_holder_name: Secret<String>,
@@ -419,14 +404,7 @@ pub struct NuveiErrorResponse {
 }
 
 // Session Token Request Transformation
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NuveiRouterData<
             RouterDataV2<
@@ -482,18 +460,7 @@ impl<
 }
 
 // Session Token Response Transformation
-impl
-    TryFrom<
-        ResponseRouterData<
-            NuveiSessionTokenResponse,
-            RouterDataV2<
-                domain_types::connector_flow::CreateSessionToken,
-                PaymentFlowData,
-                domain_types::connector_types::SessionTokenRequestData,
-                domain_types::connector_types::SessionTokenResponseData,
-            >,
-        >,
-    >
+impl TryFrom<ResponseRouterData<NuveiSessionTokenResponse, Self>>
     for RouterDataV2<
         domain_types::connector_flow::CreateSessionToken,
         PaymentFlowData,
@@ -504,15 +471,7 @@ impl
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            NuveiSessionTokenResponse,
-            RouterDataV2<
-                domain_types::connector_flow::CreateSessionToken,
-                PaymentFlowData,
-                domain_types::connector_types::SessionTokenRequestData,
-                domain_types::connector_types::SessionTokenResponseData,
-            >,
-        >,
+        item: ResponseRouterData<NuveiSessionTokenResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
@@ -571,14 +530,7 @@ impl
 }
 
 // Sync Request Transformation
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NuveiRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -635,14 +587,7 @@ impl<
 }
 
 // Request Transformation
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NuveiRouterData<
             RouterDataV2<
@@ -858,39 +803,13 @@ impl<
 }
 
 // Response Transformation
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        ResponseRouterData<
-            NuveiPaymentResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<NuveiPaymentResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            NuveiPaymentResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<NuveiPaymentResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
 
@@ -977,14 +896,7 @@ impl<
 }
 
 // Capture Request Transformation
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NuveiRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -1063,22 +975,12 @@ impl<
 }
 
 // PSync Response Transformation
-impl
-    TryFrom<
-        ResponseRouterData<
-            NuveiSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<NuveiSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            NuveiSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<NuveiSyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
 
@@ -1176,22 +1078,12 @@ impl
 }
 
 // Capture Response Transformation
-impl
-    TryFrom<
-        ResponseRouterData<
-            NuveiCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<NuveiCaptureResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            NuveiCaptureResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<NuveiCaptureResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
 
@@ -1268,14 +1160,7 @@ impl
 }
 
 // Refund Request Transformation
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NuveiRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for NuveiRefundRequest
@@ -1345,14 +1230,7 @@ impl<
 }
 
 // Refund Sync Request Transformation
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NuveiRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
@@ -1409,22 +1287,12 @@ impl<
 }
 
 // Refund Response Transformation
-impl
-    TryFrom<
-        ResponseRouterData<
-            NuveiRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<NuveiRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            NuveiRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<NuveiRefundResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
 
@@ -1496,21 +1364,13 @@ impl
 }
 
 // Refund Sync Response Transformation
-impl
-    TryFrom<
-        ResponseRouterData<
-            NuveiRefundSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<NuveiRefundSyncResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            NuveiRefundSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<NuveiRefundSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
@@ -1583,14 +1443,7 @@ impl
 }
 
 // Void Request Transformation
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NuveiRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -1677,22 +1530,12 @@ impl<
 }
 
 // Void Response Transformation
-impl
-    TryFrom<
-        ResponseRouterData<
-            NuveiVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<NuveiVoidResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<
-            NuveiVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<NuveiVoidResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
 

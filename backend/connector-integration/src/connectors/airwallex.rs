@@ -254,7 +254,7 @@ macros::create_all_prerequisites!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {}", access_token).into(),
+                    format!("Bearer {access_token}").into(),
                 ),
             ]
         }

@@ -1,4 +1,9 @@
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
+#[allow(clippy::expect_used)]
+#[allow(clippy::panic)]
+#[allow(clippy::indexing_slicing)]
+#[allow(clippy::print_stdout)]
 mod tests {
 
     use cards::CardNumber;
@@ -644,7 +649,7 @@ mod tests {
                     enrolled_for_3ds: false,
                     related_transaction_id: None,
                     payment_experience: None,
-                    payment_method_type: Some(common_enums::PaymentMethodType::Card),
+                    payment_method_type: Some(PaymentMethodType::Card),
                     customer_id: None,
                     request_incremental_authorization: false,
                     metadata: None,
@@ -1274,7 +1279,7 @@ mod tests {
                     connector_http_status_code: None,
                     external_latency: None,
                     raw_connector_response: None,
-                    connectors: domain_types::types::Connectors {
+                    connectors: Connectors {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
@@ -1628,8 +1633,8 @@ mod tests {
                 connector_customer: None,
                 payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                status: common_enums::AttemptStatus::Pending,
-                payment_method: common_enums::PaymentMethod::Card,
+                status: AttemptStatus::Pending,
+                payment_method: PaymentMethod::Card,
                 description: None,
                 return_url: None,
                 address: PaymentAddress::new(
@@ -1645,7 +1650,7 @@ mod tests {
                     None,
                     None,
                 ),
-                auth_type: common_enums::AuthenticationType::NoThreeDs,
+                auth_type: AuthenticationType::NoThreeDs,
                 connector_meta_data: None,
                 amount_captured: None,
                 minor_amount_captured: None,
@@ -1755,8 +1760,8 @@ mod tests {
                 connector_customer: None,
                 payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                status: common_enums::AttemptStatus::Pending,
-                payment_method: common_enums::PaymentMethod::Card,
+                status: AttemptStatus::Pending,
+                payment_method: PaymentMethod::Card,
                 description: None,
                 return_url: None,
                 address: PaymentAddress::new(
@@ -1772,7 +1777,7 @@ mod tests {
                     None,
                     None,
                 ),
-                auth_type: common_enums::AuthenticationType::NoThreeDs,
+                auth_type: AuthenticationType::NoThreeDs,
                 connector_meta_data: None,
                 amount_captured: None,
                 minor_amount_captured: None,
@@ -1871,8 +1876,8 @@ mod tests {
                 connector_customer: None,
                 payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                status: common_enums::AttemptStatus::Pending,
-                payment_method: common_enums::PaymentMethod::Card,
+                status: AttemptStatus::Pending,
+                payment_method: PaymentMethod::Card,
                 description: None,
                 return_url: None,
                 address: PaymentAddress::new(
@@ -1888,7 +1893,7 @@ mod tests {
                     None,
                     None,
                 ),
-                auth_type: common_enums::AuthenticationType::NoThreeDs,
+                auth_type: AuthenticationType::NoThreeDs,
                 connector_meta_data: None,
                 amount_captured: None,
                 minor_amount_captured: None,
@@ -1989,7 +1994,7 @@ mod tests {
         let result =
             <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
                 domain_types::connector_flow::CreateOrder,
-                domain_types::connector_types::PaymentFlowData,
+                PaymentFlowData,
                 domain_types::connector_types::PaymentCreateOrderData,
                 domain_types::connector_types::PaymentCreateOrderResponse,
             >>::get_error_response_v2(&**connector, http_response, None)
@@ -2023,7 +2028,7 @@ mod tests {
         let result =
             <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
                 domain_types::connector_flow::CreateOrder,
-                domain_types::connector_types::PaymentFlowData,
+                PaymentFlowData,
                 domain_types::connector_types::PaymentCreateOrderData,
                 domain_types::connector_types::PaymentCreateOrderResponse,
             >>::get_error_response_v2(&**connector, http_response, None);
@@ -2048,7 +2053,7 @@ mod tests {
         let result =
             <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
                 domain_types::connector_flow::CreateOrder,
-                domain_types::connector_types::PaymentFlowData,
+                PaymentFlowData,
                 domain_types::connector_types::PaymentCreateOrderData,
                 domain_types::connector_types::PaymentCreateOrderResponse,
             >>::get_error_response_v2(&**connector, http_response, None)

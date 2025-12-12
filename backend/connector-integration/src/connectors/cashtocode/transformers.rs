@@ -7,7 +7,7 @@ use common_utils::{
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
-    errors::{self, ConnectorError},
+    errors::ConnectorError,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -40,29 +40,22 @@ fn get_mid(
     connector_auth_type: &ConnectorAuthType,
     payment_method_type: Option<common_enums::PaymentMethodType>,
     currency: common_enums::Currency,
-) -> Result<Secret<String>, errors::ConnectorError> {
+) -> Result<Secret<String>, ConnectorError> {
     match CashtocodeAuth::try_from((connector_auth_type, &currency)) {
         Ok(cashtocode_auth) => match payment_method_type {
             Some(common_enums::PaymentMethodType::ClassicReward) => Ok(cashtocode_auth
                 .merchant_id_classic
-                .ok_or(errors::ConnectorError::FailedToObtainAuthType)?),
+                .ok_or(ConnectorError::FailedToObtainAuthType)?),
             Some(common_enums::PaymentMethodType::Evoucher) => Ok(cashtocode_auth
                 .merchant_id_evoucher
-                .ok_or(errors::ConnectorError::FailedToObtainAuthType)?),
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType),
+                .ok_or(ConnectorError::FailedToObtainAuthType)?),
+            _ => Err(ConnectorError::FailedToObtainAuthType),
         },
-        Err(_) => Err(errors::ConnectorError::FailedToObtainAuthType)?,
+        Err(_) => Err(ConnectorError::FailedToObtainAuthType)?,
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CashtocodeRouterData<
             RouterDataV2<
@@ -119,7 +112,7 @@ impl<
                 email: item.router_data.request.email.clone(),
                 mid,
             }),
-            _ => Err(errors::ConnectorError::NotImplemented("Payment methods".to_string()).into()),
+            _ => Err(ConnectorError::NotImplemented("Payment methods".to_string()).into()),
         }
     }
 }
@@ -140,7 +133,7 @@ pub struct CashtocodeAuth {
 }
 
 impl TryFrom<&ConnectorAuthType> for CashtocodeAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>; // Assuming ErrorStack is the appropriate error type
+    type Error = error_stack::Report<ConnectorError>; // Assuming ErrorStack is the appropriate error type
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
@@ -151,7 +144,7 @@ impl TryFrom<&ConnectorAuthType> for CashtocodeAuthType {
                         let cashtocode_auth = identity_auth_key
                             .to_owned()
                             .parse_value::<CashtocodeAuth>("CashtocodeAuth")
-                            .change_context(errors::ConnectorError::InvalidDataFormat {
+                            .change_context(ConnectorError::InvalidDataFormat {
                                 field_name: "auth_key_map",
                             })?;
 
@@ -163,13 +156,13 @@ impl TryFrom<&ConnectorAuthType> for CashtocodeAuthType {
                     auths: transformed_auths,
                 })
             }
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
     }
 }
 
 impl TryFrom<(&ConnectorAuthType, &common_enums::Currency)> for CashtocodeAuth {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(value: (&ConnectorAuthType, &common_enums::Currency)) -> Result<Self, Self::Error> {
         let (auth_type, currency) = value;
@@ -179,17 +172,17 @@ impl TryFrom<(&ConnectorAuthType, &common_enums::Currency)> for CashtocodeAuth {
                 let cashtocode_auth: Self = identity_auth_key
                     .to_owned()
                     .parse_value("CashtocodeAuth")
-                    .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+                    .change_context(ConnectorError::FailedToObtainAuthType)?;
                 Ok(cashtocode_auth)
             } else {
-                Err(errors::ConnectorError::CurrencyNotSupported {
+                Err(ConnectorError::CurrencyNotSupported {
                     message: currency.to_string(),
                     connector: "CashToCode",
                 }
                 .into())
             }
         } else {
-            Err(errors::ConnectorError::FailedToObtainAuthType.into())
+            Err(ConnectorError::FailedToObtainAuthType.into())
         }
     }
 }
@@ -242,7 +235,7 @@ pub struct CashtocodePaymentsSyncResponse {
 fn get_redirect_form_data(
     payment_method_type: common_enums::PaymentMethodType,
     response_data: CashtocodePaymentsResponseData,
-) -> CustomResult<RedirectForm, errors::ConnectorError> {
+) -> CustomResult<RedirectForm, ConnectorError> {
     match payment_method_type {
         common_enums::PaymentMethodType::ClassicReward => Ok(RedirectForm::Form {
             //redirect form is manually constructed because the connector for this pm type expects query params in the url
@@ -256,7 +249,7 @@ fn get_redirect_form_data(
             method: Method::Get,
             form_fields: Default::default(),
         }),
-        _ => Err(errors::ConnectorError::NotImplemented(
+        _ => Err(ConnectorError::NotImplemented(
             utils::get_unimplemented_payment_method_error_message("CashToCode"),
         ))?,
     }
@@ -264,13 +257,7 @@ fn get_redirect_form_data(
 
 impl<
         F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize
-            + Serialize,
+        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize,
     > TryFrom<ResponseRouterData<CashtocodePaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
@@ -302,7 +289,7 @@ impl<
                 let payment_method_type = router_data
                     .request
                     .payment_method_type
-                    .ok_or(errors::ConnectorError::MissingPaymentMethodType)?;
+                    .ok_or(ConnectorError::MissingPaymentMethodType)?;
                 let redirection_data = get_redirect_form_data(payment_method_type, response_data)?;
                 (
                     common_enums::AttemptStatus::AuthenticationPending,
