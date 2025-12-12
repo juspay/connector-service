@@ -82,6 +82,7 @@ mod tests {
                     key1: Secret::new(key1),
                 },
                 request: PaymentsAuthorizeData {
+                    payment_channel: None,
                     authentication_data: None,
                     connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(
@@ -267,6 +268,7 @@ mod tests {
                     key1: Secret::new(key1),
                 },
                 request: PaymentsAuthorizeData {
+                    payment_channel: None,
                     authentication_data: None,
                     connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Default::default()),

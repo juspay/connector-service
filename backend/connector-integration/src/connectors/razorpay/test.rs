@@ -112,6 +112,7 @@ mod tests {
                     key1: "dummy_key1".to_string().into(),
                 },
                 request: PaymentsAuthorizeData {
+                    payment_channel: None,
                     authentication_data: None,
                     connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
@@ -295,6 +296,7 @@ mod tests {
                     key1: "dummy_key1".to_string().into(),
                 },
                 request: PaymentsAuthorizeData {
+                    payment_channel: None,
                     authentication_data: None,
                     connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
@@ -429,6 +431,7 @@ mod tests {
                     key1: "dummy_key1".to_string().into(),
                 },
                 request: PaymentsAuthorizeData {
+                    payment_channel: None,
                     authentication_data: None,
                     connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
@@ -585,6 +588,7 @@ mod tests {
                     key1: "dummy_key1".to_string().into(),
                 },
                 request: PaymentsAuthorizeData {
+                    payment_channel: None,
                     authentication_data: None,
                     connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {
@@ -912,6 +916,7 @@ mod tests {
                 key1: "dummy_key1".to_string().into(),
             },
             request: PaymentsAuthorizeData {
+                payment_channel: None,
                 authentication_data: None,
                 connector_testing_data: None,
                 payment_method_data: PaymentMethodData::Card(Card {
@@ -1102,6 +1107,7 @@ mod tests {
                 key1: "dummy_key1".to_string().into(),
             },
             request: PaymentsAuthorizeData {
+                payment_channel: None,
                 authentication_data: None,
                 connector_testing_data: None,
                 payment_method_data: PaymentMethodData::Card(Card {
@@ -1527,6 +1533,7 @@ mod tests {
                     key1: "invalid_key1".to_string().into(),
                 },
                 request: PaymentsAuthorizeData {
+                    payment_channel: None,
                     authentication_data: None,
                     connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Card {

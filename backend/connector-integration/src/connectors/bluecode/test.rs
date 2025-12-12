@@ -103,6 +103,7 @@ mod tests {
                     api_key: Secret::new(api_key),
                 },
                 request: PaymentsAuthorizeData {
+                    payment_channel: None,
                     authentication_data: None,
                     connector_testing_data: None,
                     access_token: None,
@@ -253,6 +254,7 @@ mod tests {
                     api_key: Secret::new(api_key),
                 },
                 request: PaymentsAuthorizeData {
+                    payment_channel: None,
                     authentication_data: None,
                     connector_testing_data: None,
                     access_token: None,
