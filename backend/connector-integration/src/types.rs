@@ -71,6 +71,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Cybersource => Box::new(connectors::Cybersource::new()),
             ConnectorEnum::Worldpay => Box::new(connectors::Worldpay::new()),
             ConnectorEnum::Worldpayvantiv => Box::new(connectors::Worldpayvantiv::new()),
+            ConnectorEnum::Worldpayxml => Box::new(connectors::Worldpayxml::new()),
             ConnectorEnum::Payload => Box::new(connectors::Payload::new()),
             ConnectorEnum::Paysafe => Box::new(connectors::Paysafe::new()),
             ConnectorEnum::Paypal => Box::new(connectors::Paypal::new()),
