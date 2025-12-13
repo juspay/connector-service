@@ -49,6 +49,9 @@ fn convert_merchant_metadata_to_json(metadata: &HashMap<String, String>) -> serd
         .fold(serde_json::Map::new(), |mut map, (key, value)| {
             // Try to parse the value as JSON first, if it fails, treat it as a plain string
             let json_value = serde_json::from_str::<serde_json::Value>(value)
+                .inspect_err(|e| {
+                    tracing::debug!("Failed to parse metadata as JSON for key `{}`: {}", key, e);
+                })
                 .unwrap_or_else(|_| serde_json::Value::String(value.clone()));
             map.insert(key.clone(), json_value);
             map
@@ -3273,20 +3276,11 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
 
         let encoded_data = value.encoded_data;
 
-        let connector_metadata = if value.connector_metadata.is_empty() {
-            None
-        } else {
-            Some(common_utils::pii::SecretSerdeValue::new(
-                serde_json::to_value(&value.connector_metadata).change_context(
-                    ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Failed to serialize connector metadata".to_owned(),
-                        error_object: None,
-                    }),
-                )?,
+        let connector_metadata = (!value.connector_metadata.is_empty()).then(|| {
+            common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
+                &value.merchant_account_metadata,
             ))
-        };
+        });
 
         Ok(Self {
             connector_transaction_id,
@@ -5533,21 +5527,11 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: if value.merchant_account_metadata.is_empty() {
-                None
-            } else {
-                Some(common_utils::pii::SecretSerdeValue::new(
-                    serde_json::to_value(&value.merchant_account_metadata).change_context(
-                        ApplicationErrorResponse::BadRequest(ApiError {
-                            sub_code: "INVALID_MERCHANT_ACCOUNT_METADATA".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Failed to serialize merchant account metadata"
-                                .to_owned(),
-                            error_object: None,
-                        }),
-                    )?,
+            connector_meta_data: (!value.merchant_account_metadata.is_empty()).then(|| {
+                common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
+                    &value.merchant_account_metadata,
                 ))
-            },
+            }),
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
