@@ -172,3 +172,6 @@ pub use self::powertranz::Powertranz;
 
 pub mod bambora;
 pub use self::bambora::Bambora;
+
+pub mod payme;
+pub use self::payme::Payme;
