@@ -264,7 +264,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             payment_method_details,
             card_holder_info,
             transaction_fraud_info: Some(TransactionFraudInfo {
-                fraud_session_id: router_data.resource_common_data.payment_id.clone(),
+                fraud_session_id: router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
             }),
             merchant_transaction_id: Some(
                 router_data
