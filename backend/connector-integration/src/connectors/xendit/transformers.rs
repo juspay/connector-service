@@ -28,6 +28,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     connectors::xendit::{XenditAmountConvertor, XenditRouterData},
     types::ResponseRouterData,
+    utils::get_unimplemented_payment_method_error_message,
 };
 
 pub trait ForeignTryFrom<F>: Sized {
@@ -38,8 +39,8 @@ pub trait ForeignTryFrom<F>: Sized {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ChannelProperties {
-    pub success_return_url: Option<String>,
-    pub failure_return_url: Option<String>,
+    pub success_return_url: String,
+    pub failure_return_url: String,
     pub skip_three_d_secure: bool,
 }
 
@@ -50,10 +51,10 @@ pub struct CardInformation<
     pub card_number: RawCardNumber<T>,
     pub expiry_month: Secret<String>,
     pub expiry_year: Secret<String>,
-    pub cvv: Secret<String>,
-    pub cardholder_name: Option<Secret<String>>,
-    pub cardholder_email: Option<pii::Email>,
-    pub cardholder_phone_number: Option<Secret<String>>,
+    pub cvv: Option<Secret<String>>,
+    pub cardholder_name: Secret<String>,
+    pub cardholder_email: pii::Email,
+    pub cardholder_phone_number: Secret<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -318,60 +319,76 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let card_data = match &item.router_data.request.payment_method_data {
-            PaymentMethodData::Card(card) => Ok(card),
-            _ => Err(ConnectorError::RequestEncodingFailed),
-        }?;
-        let capture_method = match is_auto_capture(&item.router_data.request)? {
-            true => "AUTOMATIC".to_string(),
-            false => "MANUAL".to_string(),
-        };
-
-        let router_data = &item.router_data;
-
-        let currency = item.router_data.request.currency;
-        let amount = XenditAmountConvertor::convert(
-            router_data.request.minor_amount,
-            router_data.request.currency,
-        )
-        .change_context(ConnectorError::RequestEncodingFailed)?;
-
-        let payment_method = Some(PaymentMethod::Card(CardPaymentRequest {
-            payment_type: PaymentMethodType::CARD,
-            reference_id: Secret::new(
-                item.router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
-            ),
-            card: CardInfo {
-                channel_properties: ChannelProperties {
-                    success_return_url: item.router_data.request.router_return_url.clone(),
-                    failure_return_url: item.router_data.request.router_return_url.clone(),
-                    skip_three_d_secure: !item.router_data.request.enrolled_for_3ds,
+        match item.router_data.request.payment_method_data.clone() {
+            PaymentMethodData::Card(card_data) => Ok(Self {
+                capture_method: match item.router_data.request.is_auto_capture()? {
+                    true => "AUTOMATIC".to_string(),
+                    false => "MANUAL".to_string(),
                 },
-                card_information: CardInformation {
-                    card_number: card_data.card_number.clone(),
-                    expiry_month: card_data.card_exp_month.clone(),
-                    expiry_year: card_data.card_exp_year.clone(),
-                    cvv: card_data.card_cvc.clone(),
-                    cardholder_email: None,
-                    cardholder_name: None,
-                    cardholder_phone_number: None,
-                },
-            },
-            reusability: TransactionType::OneTimeUse,
-        }));
-        let payment_method_id = None;
-        let channel_properties = None;
-        Ok(Self {
-            amount,
-            currency,
-            capture_method,
-            payment_method,
-            payment_method_id,
-            channel_properties,
-        })
+                currency: item.router_data.request.currency,
+                amount: item
+                    .connector
+                    .amount_converter
+                    .convert(
+                        item.router_data.request.minor_amount,
+                        item.router_data.request.currency,
+                    )
+                    .change_context(ConnectorError::AmountConversionFailed)
+                    .attach_printable("Failed to convert amount to required type")?,
+                payment_method: Some(PaymentMethod::Card(CardPaymentRequest {
+                    payment_type: PaymentMethodType::CARD,
+                    reference_id: Secret::new(
+                        item.router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                    ),
+                    card: CardInfo {
+                        channel_properties: ChannelProperties {
+                            success_return_url: item.router_data.request.get_router_return_url()?,
+                            failure_return_url: item.router_data.request.get_router_return_url()?,
+                            skip_three_d_secure: !item
+                                .router_data
+                                .resource_common_data
+                                .is_three_ds(),
+                        },
+                        card_information: CardInformation {
+                            card_number: card_data.card_number.clone(),
+                            expiry_month: card_data.card_exp_month.clone(),
+                            expiry_year: card_data.get_expiry_year_4_digit(),
+                            cvv: if card_data.card_cvc.clone().expose().is_empty() {
+                                None
+                            } else {
+                                Some(card_data.card_cvc.clone())
+                            },
+                            cardholder_name: card_data.get_cardholder_name().or(item
+                                .router_data
+                                .resource_common_data
+                                .get_payment_billing_full_name())?,
+                            cardholder_email: item
+                                .router_data
+                                .resource_common_data
+                                .get_billing_email()
+                                .or(item.router_data.request.get_email())?,
+                            cardholder_phone_number: item
+                                .router_data
+                                .resource_common_data
+                                .get_billing_phone_number()?,
+                        },
+                    },
+                    reusability: match item.router_data.request.is_mandate_payment() {
+                        true => TransactionType::MultipleUse,
+                        false => TransactionType::OneTimeUse,
+                    },
+                })),
+                payment_method_id: None,
+                channel_properties: None,
+            }),
+            _ => Err(ConnectorError::NotImplemented(
+                get_unimplemented_payment_method_error_message("xendit"),
+            )
+            .into()),
+        }
     }
 }
 

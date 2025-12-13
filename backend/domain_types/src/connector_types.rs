@@ -861,6 +861,13 @@ impl PaymentFlowData {
             .and_then(|billing_details| billing_details.address.as_ref())
             .and_then(|billing_address| billing_address.get_optional_full_name())
     }
+
+    pub fn get_payment_billing_full_name(&self) -> Result<Secret<String>, Error> {
+        self.get_optional_payment_billing()
+            .and_then(|billing_details| billing_details.address.as_ref())
+            .and_then(|billing_address| billing_address.get_optional_full_name())
+            .ok_or_else(missing_field_err("address.billing first_name & last_name"))
+    }
 }
 
 impl RawConnectorRequestResponse for PaymentFlowData {
