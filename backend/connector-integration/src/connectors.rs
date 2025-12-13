@@ -164,6 +164,9 @@ pub use self::nexixpay::Nexixpay;
 pub mod airwallex;
 pub use self::airwallex::Airwallex;
 
+pub mod tsys;
+pub use self::tsys::Tsys;
+
 pub mod bankofamerica;
 pub use self::bankofamerica::Bankofamerica;
 
