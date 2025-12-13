@@ -102,6 +102,7 @@ pub enum ConnectorEnum {
     Airwallex,
     Bankofamerica,
     Powertranz,
+    Jpmorgan,
     Bambora,
 }
 
@@ -168,6 +169,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Airwallex => Ok(Self::Airwallex),
             grpc_api_types::payments::Connector::Bankofamerica => Ok(Self::Bankofamerica),
             grpc_api_types::payments::Connector::Powertranz => Ok(Self::Powertranz),
+            grpc_api_types::payments::Connector::Jpmorgan => Ok(Self::Jpmorgan),
             grpc_api_types::payments::Connector::Bambora => Ok(Self::Bambora),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -1501,6 +1503,7 @@ pub struct RefundsResponseData {
 
 #[derive(Debug, Clone)]
 pub struct RefundFlowData {
+    pub merchant_id: common_utils::id_type::MerchantId,
     pub status: common_enums::RefundStatus,
     pub refund_id: Option<String>,
     pub connectors: Connectors,
