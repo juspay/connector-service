@@ -525,8 +525,8 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(req.request.metadata.clone().map(|m| m.expose()))?;
+        ) -> CustomResult<String, ConnectorError> {
+            let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(req.request.connector_metadata.clone().map(|m| m.expose()))?;
         match req.resource_common_data.payment_method {
             common_enums::PaymentMethod::Wallet | common_enums::PaymentMethod::BankRedirect => Ok(format!(
                 "{}v2/checkout/orders/{}",
@@ -609,7 +609,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorError> {
             let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(req.request.metadata.clone().map(|m| m.expose()))?;
             let authorize_id = paypal_meta.authorize_id.ok_or(
                 ConnectorError::RequestEncodingFailedWithReason(
@@ -659,7 +659,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorError> {
             let connector_metadata_value = req.request.metadata.clone().map(|secret| secret.expose());
             let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(connector_metadata_value)?;
             let authorize_id = paypal_meta.authorize_id.ok_or(
