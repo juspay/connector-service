@@ -3278,7 +3278,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
 
         let connector_metadata = (!value.connector_metadata.is_empty()).then(|| {
             common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
-                &value.merchant_account_metadata,
+                &value.connector_metadata,
             ))
         });
 
