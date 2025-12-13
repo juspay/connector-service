@@ -908,6 +908,7 @@ pub struct PaymentVoidData {
     pub amount: Option<MinorUnit>,
     pub currency: Option<Currency>,
     pub connector_metadata: Option<SecretSerdeValue>,
+    pub metadata: Option<SecretSerdeValue>,
 }
 
 impl PaymentVoidData {
@@ -2087,6 +2088,7 @@ pub struct PaymentsCaptureData {
     pub integrity_object: Option<CaptureIntegrityObject>,
     pub browser_info: Option<BrowserInformation>,
     pub capture_method: Option<common_enums::CaptureMethod>,
+    pub metadata: Option<SecretSerdeValue>,
 }
 
 impl PaymentsCaptureData {
