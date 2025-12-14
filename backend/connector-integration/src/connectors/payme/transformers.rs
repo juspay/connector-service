@@ -20,6 +20,9 @@ extern crate cards;
 
 const LANGUAGE: &str = "en";
 
+// Type alias for PaymeRouterData to avoid repetition
+type PaymeRouterData<RD, T> = crate::connectors::payme::PaymeRouterData<RD, T>;
+
 // ===== AUTHENTICATION TYPE =====
 #[derive(Debug, Clone)]
 pub struct PaymeAuthType {
@@ -247,7 +250,7 @@ impl<T: PaymentMethodDataTypes>
 // This is what the macro actually needs
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
     TryFrom<
-        crate::connectors::payme::PaymeRouterData<
+        PaymeRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -261,7 +264,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: crate::connectors::payme::PaymeRouterData<
+        item: PaymeRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -332,7 +335,7 @@ impl<T: PaymentMethodDataTypes>
                 .clone()
                 .unwrap_or_else(|| "Payment failed".to_string());
 
-            return Ok(Self {
+            Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status: AttemptStatus::Failure,
                     ..item.router_data.resource_common_data.clone()
@@ -349,36 +352,36 @@ impl<T: PaymentMethodDataTypes>
                     network_error_message: None,
                 }),
                 ..item.router_data.clone()
-            });
+            })
+        } else {
+            // Map PayMe sale status to AttemptStatus using SaleStatus enum
+            let status = response
+                .sale_status
+                .clone()
+                .map(AttemptStatus::from)
+                .unwrap_or(AttemptStatus::Pending);
+
+            // Build success response
+            let payments_response_data = PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(response.payme_sale_id.clone()),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: response.payme_transaction_id.clone(),
+                connector_response_reference_id: response.transaction_id.clone(),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            };
+
+            Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status,
+                    ..item.router_data.resource_common_data.clone()
+                },
+                response: Ok(payments_response_data),
+                ..item.router_data.clone()
+            })
         }
-
-        // Map PayMe sale status to AttemptStatus using SaleStatus enum
-        let status = response
-            .sale_status
-            .clone()
-            .map(AttemptStatus::from)
-            .unwrap_or(AttemptStatus::Pending);
-
-        // Build success response
-        let payments_response_data = PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(response.payme_sale_id.clone()),
-            redirection_data: None,
-            mandate_reference: None,
-            connector_metadata: None,
-            network_txn_id: response.payme_transaction_id.clone(),
-            connector_response_reference_id: response.transaction_id.clone(),
-            incremental_authorization_allowed: None,
-            status_code: item.http_code,
-        };
-
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data.clone()
-            },
-            response: Ok(payments_response_data),
-            ..item.router_data.clone()
-        })
     }
 }
 
@@ -399,7 +402,7 @@ pub struct PaymeSyncResponse {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PaymeSyncItem {
-    pub seller_payme_id: String,
+    pub seller_payme_id: Secret<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub seller_id: Option<String>,
     pub sale_payme_id: String,
@@ -455,7 +458,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
 // Implementation for the macro-generated PaymeRouterData wrapper type
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
     TryFrom<
-        crate::connectors::payme::PaymeRouterData<
+        PaymeRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             T,
         >,
@@ -464,7 +467,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: crate::connectors::payme::PaymeRouterData<
+        item: PaymeRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             T,
         >,
@@ -498,7 +501,7 @@ impl
             let error_code = response.status_code.to_string();
             let error_message = "Failed to retrieve sale information".to_string();
 
-            return Ok(Self {
+            Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status: AttemptStatus::Failure,
                     ..router_data.resource_common_data.clone()
@@ -515,42 +518,42 @@ impl
                     network_error_message: None,
                 }),
                 ..router_data.clone()
-            });
+            })
+        } else {
+            // Get the first sale item from the items array
+            let sale_item = response
+                .items
+                .first()
+                .ok_or_else(|| errors::ConnectorError::ResponseDeserializationFailed)?;
+
+            // Map PayMe sale status to AttemptStatus using SaleStatus enum
+            let status = sale_item
+                .sale_status
+                .clone()
+                .map(AttemptStatus::from)
+                .unwrap_or(AttemptStatus::Pending);
+
+            // Build success response
+            let payments_response_data = PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(sale_item.sale_payme_id.clone()),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: sale_item.transaction_id.clone(),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            };
+
+            Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status,
+                    ..router_data.resource_common_data.clone()
+                },
+                response: Ok(payments_response_data),
+                ..router_data.clone()
+            })
         }
-
-        // Get the first sale item from the items array
-        let sale_item = response
-            .items
-            .first()
-            .ok_or_else(|| errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        // Map PayMe sale status to AttemptStatus using SaleStatus enum
-        let status = sale_item
-            .sale_status
-            .clone()
-            .map(AttemptStatus::from)
-            .unwrap_or(AttemptStatus::Pending);
-
-        // Build success response
-        let payments_response_data = PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(sale_item.sale_payme_id.clone()),
-            redirection_data: None,
-            mandate_reference: None,
-            connector_metadata: None,
-            network_txn_id: None,
-            connector_response_reference_id: sale_item.transaction_id.clone(),
-            incremental_authorization_allowed: None,
-            status_code: item.http_code,
-        };
-
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                ..router_data.resource_common_data.clone()
-            },
-            response: Ok(payments_response_data),
-            ..router_data.clone()
-        })
     }
 }
 
@@ -596,7 +599,7 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
 // Implementation for the macro-generated PaymeRouterData wrapper type
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
     TryFrom<
-        crate::connectors::payme::PaymeRouterData<
+        PaymeRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
             T,
         >,
@@ -605,7 +608,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: crate::connectors::payme::PaymeRouterData<
+        item: PaymeRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
             T,
         >,
@@ -646,7 +649,7 @@ impl
                 .clone()
                 .unwrap_or_else(|| "Capture failed".to_string());
 
-            return Ok(Self {
+            Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status: AttemptStatus::Failure,
                     ..item.router_data.resource_common_data.clone()
@@ -663,36 +666,36 @@ impl
                     network_error_message: None,
                 }),
                 ..item.router_data.clone()
-            });
+            })
+        } else {
+            // Map PayMe sale status to AttemptStatus using SaleStatus enum
+            let status = response
+                .sale_status
+                .clone()
+                .map(AttemptStatus::from)
+                .unwrap_or(AttemptStatus::Pending);
+
+            // Build success response
+            let payments_response_data = PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(response.payme_sale_id.clone()),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: response.payme_transaction_id.clone(),
+                connector_response_reference_id: response.transaction_id.clone(),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            };
+
+            Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status,
+                    ..item.router_data.resource_common_data.clone()
+                },
+                response: Ok(payments_response_data),
+                ..item.router_data.clone()
+            })
         }
-
-        // Map PayMe sale status to AttemptStatus using SaleStatus enum
-        let status = response
-            .sale_status
-            .clone()
-            .map(AttemptStatus::from)
-            .unwrap_or(AttemptStatus::Pending);
-
-        // Build success response
-        let payments_response_data = PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(response.payme_sale_id.clone()),
-            redirection_data: None,
-            mandate_reference: None,
-            connector_metadata: None,
-            network_txn_id: response.payme_transaction_id.clone(),
-            connector_response_reference_id: response.transaction_id.clone(),
-            incremental_authorization_allowed: None,
-            status_code: item.http_code,
-        };
-
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data.clone()
-            },
-            response: Ok(payments_response_data),
-            ..item.router_data.clone()
-        })
     }
 }
 
@@ -750,16 +753,13 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
 // Implementation for the macro-generated PaymeRouterData wrapper type
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
     TryFrom<
-        crate::connectors::payme::PaymeRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        PaymeRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for PaymeRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: crate::connectors::payme::PaymeRouterData<
+        item: PaymeRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
             T,
         >,
@@ -798,7 +798,7 @@ impl
                 .clone()
                 .unwrap_or_else(|| "Refund failed".to_string());
 
-            return Ok(Self {
+            Ok(Self {
                 response: Err(domain_types::router_data::ErrorResponse {
                     code: error_code,
                     message: error_message.clone(),
@@ -811,34 +811,34 @@ impl
                     network_error_message: None,
                 }),
                 ..item.router_data.clone()
-            });
+            })
+        } else {
+            // Map PayMe refund status to RefundStatus using SaleStatus enum
+            let refund_status = response
+                .refund_status
+                .clone()
+                .and_then(|s| RefundStatus::try_from(s).ok())
+                .unwrap_or(RefundStatus::Pending);
+
+            // Extract refund ID - use payme_refund_id if available, otherwise payme_sale_id
+            let connector_refund_id = response
+                .payme_refund_id
+                .clone()
+                .or_else(|| response.payme_sale_id.clone())
+                .unwrap_or_else(|| "unknown".to_string());
+
+            // Build success response
+            let refunds_response_data = RefundsResponseData {
+                connector_refund_id,
+                refund_status,
+                status_code: item.http_code,
+            };
+
+            Ok(Self {
+                response: Ok(refunds_response_data),
+                ..item.router_data.clone()
+            })
         }
-
-        // Map PayMe refund status to RefundStatus using SaleStatus enum
-        let refund_status = response
-            .refund_status
-            .clone()
-            .and_then(|s| RefundStatus::try_from(s).ok())
-            .unwrap_or(RefundStatus::Pending);
-
-        // Extract refund ID - use payme_refund_id if available, otherwise payme_sale_id
-        let connector_refund_id = response
-            .payme_refund_id
-            .clone()
-            .or_else(|| response.payme_sale_id.clone())
-            .unwrap_or_else(|| "unknown".to_string());
-
-        // Build success response
-        let refunds_response_data = RefundsResponseData {
-            connector_refund_id,
-            refund_status,
-            status_code: item.http_code,
-        };
-
-        Ok(Self {
-            response: Ok(refunds_response_data),
-            ..item.router_data.clone()
-        })
     }
 }
 
@@ -889,7 +889,7 @@ impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsRespons
 // Implementation for the macro-generated PaymeRouterData wrapper type
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
     TryFrom<
-        crate::connectors::payme::PaymeRouterData<
+        PaymeRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
             T,
         >,
@@ -898,7 +898,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: crate::connectors::payme::PaymeRouterData<
+        item: PaymeRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
             T,
         >,
@@ -1003,7 +1003,7 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
 // Implementation for the macro-generated PaymeRouterData wrapper type
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
     TryFrom<
-        crate::connectors::payme::PaymeRouterData<
+        PaymeRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
             T,
         >,
@@ -1012,7 +1012,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: crate::connectors::payme::PaymeRouterData<
+        item: PaymeRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
             T,
         >,
@@ -1051,7 +1051,7 @@ impl
                 .clone()
                 .unwrap_or_else(|| "Void failed".to_string());
 
-            return Ok(Self {
+            Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status: AttemptStatus::VoidFailed,
                     ..item.router_data.resource_common_data.clone()
@@ -1068,38 +1068,38 @@ impl
                     network_error_message: None,
                 }),
                 ..item.router_data.clone()
-            });
+            })
+        } else {
+            // Map PayMe sale status to AttemptStatus for void
+            // Successful void should return "voided" status
+            let status = match response.payme_sale_status.as_deref() {
+                Some("voided") => AttemptStatus::Voided,
+                Some("pending") => AttemptStatus::Pending,
+                Some("failed") => AttemptStatus::VoidFailed,
+                _ => AttemptStatus::Voided, // Default to Voided for success response
+            };
+
+            // Build success response
+            let payments_response_data = PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(response.payme_sale_id.clone()),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: response.payme_transaction_id.clone(),
+                connector_response_reference_id: response.transaction_id.clone(),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            };
+
+            Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status,
+                    ..item.router_data.resource_common_data.clone()
+                },
+                response: Ok(payments_response_data),
+                ..item.router_data.clone()
+            })
         }
-
-        // Map PayMe sale status to AttemptStatus for void
-        // Successful void should return "voided" status
-        let status = match response.payme_sale_status.as_deref() {
-            Some("voided") => AttemptStatus::Voided,
-            Some("pending") => AttemptStatus::Pending,
-            Some("failed") => AttemptStatus::VoidFailed,
-            _ => AttemptStatus::Voided, // Default to Voided for success response
-        };
-
-        // Build success response
-        let payments_response_data = PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(response.payme_sale_id.clone()),
-            redirection_data: None,
-            mandate_reference: None,
-            connector_metadata: None,
-            network_txn_id: response.payme_transaction_id.clone(),
-            connector_response_reference_id: response.transaction_id.clone(),
-            incremental_authorization_allowed: None,
-            status_code: item.http_code,
-        };
-
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data.clone()
-            },
-            response: Ok(payments_response_data),
-            ..item.router_data.clone()
-        })
     }
 }
 
@@ -1192,7 +1192,7 @@ impl<
             + serde::Serialize,
     >
     TryFrom<
-        crate::connectors::payme::PaymeRouterData<
+        PaymeRouterData<
             RouterDataV2<
                 CreateOrder,
                 PaymentFlowData,
@@ -1206,7 +1206,7 @@ impl<
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: crate::connectors::payme::PaymeRouterData<
+        item: PaymeRouterData<
             RouterDataV2<
                 CreateOrder,
                 PaymentFlowData,
@@ -1262,7 +1262,7 @@ impl
                 response.status_code
             );
 
-            return Ok(Self {
+            Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status: AttemptStatus::Failure,
                     ..item.router_data.resource_common_data.clone()
@@ -1279,22 +1279,22 @@ impl
                     network_error_message: None,
                 }),
                 ..item.router_data.clone()
-            });
+            })
+        } else {
+            // Success response
+            let order_response = PaymentCreateOrderResponse {
+                order_id: response.payme_sale_id.clone(),
+            };
+
+            Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status: AttemptStatus::Pending,
+                    reference_id: Some(response.payme_sale_id), // Store payme_sale_id for subsequent Authorize call
+                    ..item.router_data.resource_common_data.clone()
+                },
+                response: Ok(order_response),
+                ..item.router_data.clone()
+            })
         }
-
-        // Success response
-        let order_response = PaymentCreateOrderResponse {
-            order_id: response.payme_sale_id.clone(),
-        };
-
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status: AttemptStatus::Pending,
-                reference_id: Some(response.payme_sale_id), // Store payme_sale_id for subsequent Authorize call
-                ..item.router_data.resource_common_data.clone()
-            },
-            response: Ok(order_response),
-            ..item.router_data.clone()
-        })
     }
 }
