@@ -222,12 +222,7 @@ pub struct CashfreePayloadData {
 // ============================================================================
 
 fn get_cashfree_payment_method_data<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 >(
     payment_method_data: &PaymentMethodData<T>,
 ) -> Result<CashfreePaymentMethod, ConnectorError> {
@@ -293,14 +288,7 @@ fn get_cashfree_payment_method_data<
 // ============================================================================
 
 // TryFrom implementation for macro-generated CashfreeRouterData wrapper
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         crate::connectors::cashfree::CashfreeRouterData<
             RouterDataV2<
@@ -328,6 +316,7 @@ impl<
     ) -> Result<Self, Self::Error> {
         // Convert MinorUnit to FloatMajorUnit properly
         let amount_i64 = wrapper.router_data.request.amount.get_amount_as_i64();
+        #[allow(clippy::as_conversions)]
         let converted_amount = common_utils::types::FloatMajorUnit(amount_i64 as f64 / 100.0);
         Self::try_from((converted_amount, &wrapper.router_data))
     }
@@ -356,6 +345,7 @@ impl
     ) -> Result<Self, Self::Error> {
         // Convert MinorUnit to FloatMajorUnit properly
         let amount_i64 = item.request.amount.get_amount_as_i64();
+        #[allow(clippy::as_conversions)]
         let converted_amount = common_utils::types::FloatMajorUnit(amount_i64 as f64 / 100.0);
         Self::try_from((converted_amount, item))
     }
@@ -451,14 +441,7 @@ impl
 }
 
 // TryFrom implementation for macro-generated CashfreeRouterData wrapper
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         crate::connectors::cashfree::CashfreeRouterData<
             RouterDataV2<
@@ -489,14 +472,7 @@ impl<
 }
 
 // Keep original TryFrom implementation for backward compatibility
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     > for CashfreePaymentRequest
@@ -544,18 +520,7 @@ impl TryFrom<CashfreeOrderCreateResponse> for PaymentCreateOrderResponse {
 }
 
 // Add the missing TryFrom implementation for macro compatibility
-impl
-    TryFrom<
-        ResponseRouterData<
-            CashfreeOrderCreateResponse,
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
-        >,
-    >
+impl TryFrom<ResponseRouterData<CashfreeOrderCreateResponse, Self>>
     for RouterDataV2<
         CreateOrder,
         PaymentFlowData,
@@ -566,15 +531,7 @@ impl
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            CashfreeOrderCreateResponse,
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
-        >,
+        item: ResponseRouterData<CashfreeOrderCreateResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
         let order_response = PaymentCreateOrderResponse::try_from(response)?;
@@ -596,38 +553,14 @@ impl
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        ResponseRouterData<
-            CashfreePaymentResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<CashfreePaymentResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            CashfreePaymentResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<CashfreePaymentResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
 

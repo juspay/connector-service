@@ -8,9 +8,8 @@ use crate::utils::MerchantDefinedInformation;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BarclaycardPaymentsRequest<
-    T: PaymentMethodDataTypes + std::marker::Sync + std::marker::Send + 'static + Serialize,
-> {
+pub struct BarclaycardPaymentsRequest<T: PaymentMethodDataTypes + Sync + Send + 'static + Serialize>
+{
     pub processing_information: ProcessingInformation,
     pub payment_information: PaymentInformation<T>,
     pub order_information: OrderInformationWithBill,
@@ -32,25 +31,19 @@ pub struct ProcessingInformation {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CardPaymentInformation<
-    T: PaymentMethodDataTypes + std::marker::Sync + std::marker::Send + 'static + Serialize,
-> {
+pub struct CardPaymentInformation<T: PaymentMethodDataTypes + Sync + Send + 'static + Serialize> {
     pub card: Card<T>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
-pub enum PaymentInformation<
-    T: PaymentMethodDataTypes + std::marker::Sync + std::marker::Send + 'static + Serialize,
-> {
+pub enum PaymentInformation<T: PaymentMethodDataTypes + Sync + Send + 'static + Serialize> {
     Cards(Box<CardPaymentInformation<T>>),
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Card<
-    T: PaymentMethodDataTypes + std::marker::Sync + std::marker::Send + 'static + Serialize,
-> {
+pub struct Card<T: PaymentMethodDataTypes + Sync + Send + 'static + Serialize> {
     pub number: RawCardNumber<T>,
     pub expiration_month: Secret<String>,
     pub expiration_year: Secret<String>,
