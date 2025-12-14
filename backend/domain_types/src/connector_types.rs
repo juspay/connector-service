@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use common_enums::{
-    AttemptStatus, AuthenticationType, Currency, DisputeStatus, EventClass, PaymentMethod,
-    PaymentMethodType,
+    AttemptStatus, AuthenticationType, Currency, DisputeStatus, EventClass, PaymentChannel,
+    PaymentMethod, PaymentMethodType,
 };
 use common_utils::{
     errors,

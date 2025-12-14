@@ -330,14 +330,7 @@ fn build_metadata<
     Some(Secret::new(metadata_json))
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CheckoutRouterData<
             RouterDataV2<
@@ -536,14 +529,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CheckoutRouterData<
             RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
@@ -616,7 +602,7 @@ impl<
                 };
                 Ok((mandate_source, previous_id, Some(true), p_type, None))
             }
-            _ => Err(errors::ConnectorError::NotImplemented(
+            _ => Err(ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("checkout"),
             )),
         }?;
@@ -709,14 +695,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CheckoutRouterData<
             RouterDataV2<
@@ -804,7 +783,7 @@ impl<
                 });
                 Ok((payment_source, None, Some(false), payment_type, Some(true)))
             }
-            _ => Err(errors::ConnectorError::NotImplemented(
+            _ => Err(ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("checkout"),
             )),
         }?;
@@ -1188,137 +1167,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            PaymentsResponse,
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<PaymentsResponse, Self>>
+    for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<
-            PaymentsResponse,
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let status = get_attempt_status_cap((
-            item.response.status,
-            item.router_data.request.capture_method,
-        ));
-
-        if status == common_enums::AttemptStatus::Failure {
-            let error_response = ErrorResponse {
-                status_code: item.http_code,
-                code: item
-                    .response
-                    .response_code
-                    .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
-                message: item
-                    .response
-                    .response_summary
-                    .clone()
-                    .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
-                reason: item.response.response_summary,
-                attempt_status: None,
-                connector_transaction_id: Some(item.response.id.clone()),
-                network_advice_code: None,
-                network_decline_code: None,
-                network_error_message: None,
-            };
-
-            return Ok(Self {
-                resource_common_data: PaymentFlowData {
-                    status,
-                    ..item.router_data.resource_common_data
-                },
-                response: Err(error_response),
-                ..item.router_data
-            });
-        }
-
-        let connector_meta =
-            get_connector_meta(item.router_data.request.capture_method.unwrap_or_default())?;
-
-        let redirection_data = item
-            .response
-            .links
-            .redirect
-            .map(|href| RedirectForm::from((href.redirection_url, Method::Get)));
-
-        let mandate_reference = item
-            .response
-            .source
-            .as_ref()
-            .and_then(|src| src.id.clone())
-            .map(|id| MandateReference {
-                connector_mandate_id: Some(id),
-                payment_method_id: None,
-                connector_mandate_request_reference_id: Some(item.response.id.clone()),
-            });
-
-        let additional_information =
-            convert_to_additional_payment_method_connector_response(item.response.source.as_ref())
-                .map(ConnectorResponseData::with_additional_payment_method_data);
-
-        let payments_response_data = PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
-            redirection_data: redirection_data.map(Box::new),
-            mandate_reference: mandate_reference.map(Box::new),
-            connector_metadata: Some(connector_meta),
-            network_txn_id: item.response.scheme_id.clone(),
-            connector_response_reference_id: Some(
-                item.response.reference.unwrap_or(item.response.id),
-            ),
-            incremental_authorization_allowed: None,
-            status_code: item.http_code,
-        };
-
-        let (amount_captured, minor_amount_capturable) =
-            match item.router_data.request.capture_method {
-                Some(common_enums::CaptureMethod::Manual)
-                | Some(common_enums::CaptureMethod::ManualMultiple) => (None, item.response.amount),
-                _ => (item.response.amount.map(MinorUnit::get_amount_as_i64), None),
-            };
-
-        let minor_amount_authorized = item
-            .router_data
-            .request
-            .enable_partial_authorization
-            .filter(|flag| *flag)
-            .and(item.response.amount);
-
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                connector_response: additional_information,
-                minor_amount_authorized,
-                amount_captured,
-                minor_amount_capturable,
-                ..item.router_data.resource_common_data
-            },
-            response: Ok(payments_response_data),
-            ..item.router_data
-        })
-    }
-}
-
-impl
-    TryFrom<
-        ResponseRouterData<
-            PaymentsResponse,
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<
-            PaymentsResponse,
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<PaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let status = get_attempt_status_cap((
             item.response.status,
             item.router_data.request.capture_method,
@@ -1531,9 +1384,9 @@ impl<F> TryFrom<ResponseRouterData<PaymentsResponse, Self>>
                 psync_flow: CheckoutPaymentIntent::Authorize,
             }),
             Some(common_enums::CaptureMethod::Scheduled) => {
-                Err(errors::ConnectorError::CaptureMethodNotSupported)
+                Err(ConnectorError::CaptureMethodNotSupported)
             }
-            None => Err(errors::ConnectorError::MissingRequiredField {
+            None => Err(ConnectorError::MissingRequiredField {
                 field_name: "capture_method",
             }),
         }?;
