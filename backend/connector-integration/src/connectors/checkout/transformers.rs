@@ -607,25 +607,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )),
         }?;
 
-        let three_ds = match item.router_data.resource_common_data.auth_type {
-            common_enums::AuthenticationType::ThreeDs => CheckoutThreeDS {
-                enabled: true,
-                force_3ds: true,
-                eci: None,
-                cryptogram: None,
-                xid: None,
-                version: None,
-                challenge_indicator: CheckoutChallengeIndicator::ChallengeRequestedMandate,
-            },
-            common_enums::AuthenticationType::NoThreeDs => CheckoutThreeDS {
-                enabled: false,
-                force_3ds: false,
-                eci: None,
-                cryptogram: None,
-                xid: None,
-                version: None,
-                challenge_indicator: CheckoutChallengeIndicator::NoPreference,
-            },
+        let three_ds = CheckoutThreeDS {
+            enabled: false,
+            force_3ds: false,
+            eci: None,
+            cryptogram: None,
+            xid: None,
+            version: None,
+            challenge_indicator: CheckoutChallengeIndicator::NoPreference,
         };
 
         let return_url = ReturnUrl {
