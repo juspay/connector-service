@@ -1820,9 +1820,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector_request_reference_id
             .clone();
 
+        // Extract report_group from merchant_account_metadata (connector_meta_data)
+        let report_group =
+            extract_report_group(&item.router_data.resource_common_data.connector_meta_data)
+                .unwrap_or_else(|| "rtpGrp".to_string());
+
         let capture = CaptureRequest {
             id: format!("{}_{}", OperationId::Capture, merchant_txn_id),
-            report_group: "Default".to_string(),
+            report_group,
             cnp_txn_id,
             amount: item.router_data.request.minor_amount_to_capture,
             enhanced_data: None,
@@ -1937,9 +1942,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector_request_reference_id
             .clone();
 
+        // Extract report_group from merchant_account_metadata
+        let report_group = item
+            .router_data
+            .request
+            .merchant_account_metadata
+            .as_ref()
+            .and_then(|metadata| {
+                extract_report_group(&Some(metadata.clone()))
+            })
+            .unwrap_or_else(|| "rtpGrp".to_string());
+
         let credit = RefundRequest {
             id: format!("{}_{}", OperationId::Refund, merchant_txn_id),
-            report_group: "Default".to_string(),
+            report_group,
             cnp_txn_id,
             amount: item.router_data.request.minor_refund_amount,
         };
@@ -2152,9 +2168,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector_request_reference_id
             .clone();
 
+        // Extract report_group from merchant_account_metadata (connector_meta_data)
+        let report_group =
+            extract_report_group(&item.router_data.resource_common_data.connector_meta_data)
+                .unwrap_or_else(|| "rtpGrp".to_string());
+
         let capture = CaptureRequest {
             id: format!("{}_{}", OperationId::Capture, merchant_txn_id),
-            report_group: "Default".to_string(),
+            report_group,
             cnp_txn_id,
             amount: item.router_data.request.minor_amount_to_capture,
             enhanced_data: None,
@@ -2285,9 +2306,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector_request_reference_id
             .clone();
 
+        // Extract report_group from merchant_account_metadata (connector_meta_data)
+        let report_group =
+            extract_report_group(&item.router_data.resource_common_data.connector_meta_data)
+                .unwrap_or_else(|| "rtpGrp".to_string());
+
         let void = VoidRequest {
             id: format!("{}_{}", OperationId::Void, merchant_txn_id),
-            report_group: "Default".to_string(),
+            report_group,
             cnp_txn_id,
         };
 
