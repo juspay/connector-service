@@ -2084,7 +2084,7 @@ pub struct PaymentsCaptureData {
     pub currency: Currency,
     pub connector_transaction_id: ResponseId,
     pub multiple_capture_data: Option<MultipleCaptureRequestData>,
-    pub connector_metadata: Option<serde_json::Value>,
+    pub connector_metadata: Option<SecretSerdeValue>,
     pub integrity_object: Option<CaptureIntegrityObject>,
     pub browser_info: Option<BrowserInformation>,
     pub capture_method: Option<common_enums::CaptureMethod>,

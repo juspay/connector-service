@@ -3276,10 +3276,13 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
 
         let encoded_data = value.encoded_data;
 
-        let connector_metadata = (!value.connector_metadata.is_empty()).then(|| {
-            common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
-                &value.connector_metadata,
-            ))
+        let connector_metadata = value.connector_metadata.as_ref().and_then(|metadata| {
+            let exposed = metadata.clone().expose();
+            (!exposed.is_empty()).then(|| {
+                common_utils::pii::SecretSerdeValue::new(serde_json::Value::String(
+                    exposed.to_string(),
+                ))
+            })
         });
 
         Ok(Self {
@@ -4742,7 +4745,15 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
             integrity_object: None,
             amount,
             currency,
-            connector_metadata: None,
+            connector_metadata: (!value.connector_metadata.is_empty()).then(|| {
+                Secret::new(serde_json::Value::Object(
+                    value
+                        .connector_metadata
+                        .into_iter()
+                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .collect(),
+                ))
+            }),
         })
     }
 }
@@ -5368,7 +5379,15 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
                 .transpose()?,
             integrity_object: None,
             capture_method,
-            connector_metadata: None,
+            connector_metadata: (!value.connector_metadata.is_empty()).then(|| {
+                Secret::new(serde_json::Value::Object(
+                    value
+                        .connector_metadata
+                        .into_iter()
+                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .collect(),
+                ))
+            }),
         })
     }
 }
@@ -5527,11 +5546,17 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: (!value.merchant_account_metadata.is_empty()).then(|| {
-                common_utils::pii::SecretSerdeValue::new(convert_merchant_metadata_to_json(
-                    &value.merchant_account_metadata,
-                ))
-            }),
+            connector_meta_data: value
+                .merchant_account_metadata
+                .as_ref()
+                .and_then(|metadata| {
+                    let exposed = metadata.clone().expose();
+                    (!exposed.is_empty()).then(|| {
+                        common_utils::pii::SecretSerdeValue::new(serde_json::Value::String(
+                            exposed.to_string(),
+                        ))
+                    })
+                }),
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
