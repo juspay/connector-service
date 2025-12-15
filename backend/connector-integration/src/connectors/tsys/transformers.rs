@@ -21,6 +21,142 @@ use crate::types::ResponseRouterData;
 use super::TsysRouterData;
 
 // ============================================================================
+// Card Data Source Enum
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum TsysCardDataSource {
+    #[default]
+    #[serde(rename = "INTERNET")]
+    Internet,
+    #[serde(rename = "SWIPE")]
+    Swipe,
+    #[serde(rename = "NFC")]
+    Nfc,
+    #[serde(rename = "EMV")]
+    Emv,
+    #[serde(rename = "EMV_CONTACTLESS")]
+    EmvContactless,
+    #[serde(rename = "BAR_CODE")]
+    BarCode,
+    #[serde(rename = "MANUAL")]
+    Manual,
+    #[serde(rename = "PHONE")]
+    Phone,
+    #[serde(rename = "MAIL")]
+    Mail,
+    #[serde(rename = "FALLBACK_SWIPE")]
+    FallbackSwipe,
+}
+
+// ============================================================================
+// Terminal Capability Enum
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum TsysTerminalCapability {
+    #[default]
+    #[serde(rename = "NO_TERMINAL_MANUAL")]
+    NoTerminalManual,
+    #[serde(rename = "UNKNOWN")]
+    Unknown,
+    #[serde(rename = "MAGSTRIPE_READ_ONLY")]
+    MagstripeReadOnly,
+    #[serde(rename = "OCR")]
+    Ocr,
+    #[serde(rename = "ICC_CHIP_READ_ONLY")]
+    IccChipReadOnly,
+    #[serde(rename = "KEYED_ENTRY_ONLY")]
+    KeyedEntryOnly,
+    #[serde(rename = "MAGSTRIPE_CONTACTLESS_ONLY")]
+    MagstripeContactlessOnly,
+    #[serde(rename = "MAGSTRIPE_KEYED_ENTRY_ONLY")]
+    MagstripeKeyedEntryOnly,
+    #[serde(rename = "MAGSTRIPE_ICC_KEYED_ENTRY_ONLY")]
+    MagstripeIccKeyedEntryOnly,
+    #[serde(rename = "MAGSTRIPE_ICC_ONLY")]
+    MagstripeIccOnly,
+    #[serde(rename = "ICC_KEYED_ENTRY_ONLY")]
+    IccKeyedEntryOnly,
+    #[serde(rename = "ICC_CHIP_CONTACT_CONTACTLESS")]
+    IccChipContactContactless,
+    #[serde(rename = "ICC_CONTACTLESS_ONLY")]
+    IccContactlessOnly,
+    #[serde(rename = "OTHER_CAPABILITY_FOR_MASTERCARD")]
+    OtherCapabilityForMastercard,
+    #[serde(rename = "MAGSTRIPE_SIGNATURE_FOR_AMEX_ONLY")]
+    MagstripeSignatureForAmexOnly,
+}
+
+// ============================================================================
+// Terminal Operating Environment Enum
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum TsysTerminalOperatingEnvironment {
+    #[default]
+    #[serde(rename = "NO_TERMINAL")]
+    NoTerminal,
+    #[serde(rename = "ON_MERCHANT_PREMISES_ATTENDED")]
+    OnMerchantPremisesAttended,
+    #[serde(rename = "ON_MERCHANT_PREMISES_UNATTENDED")]
+    OnMerchantPremisesUnattended,
+    #[serde(rename = "OFF_MERCHANT_PREMISES_ATTENDED")]
+    OffMerchantPremisesAttended,
+    #[serde(rename = "OFF_MERCHANT_PREMISES_UNATTENDED")]
+    OffMerchantPremisesUnattended,
+    #[serde(rename = "ON_CUSTOMER_PREMISES_UNATTENDED")]
+    OnCustomerPremisesUnattended,
+    #[serde(rename = "UNKNOWN")]
+    Unknown,
+    #[serde(rename = "ELECTRONIC_DELIVERY_AMEX")]
+    ElectronicDeliveryAmex,
+    #[serde(rename = "PHYSICAL_DELIVERY_AMEX")]
+    PhysicalDeliveryAmex,
+    #[serde(rename = "OFF_MERCHANT_PREMISES_MPOS")]
+    OffMerchantPremisesMpos,
+    #[serde(rename = "ON_MERCHANT_PREMISES_MPOS")]
+    OnMerchantPremisesMpos,
+    #[serde(rename = "OFF_MERCHANT_PREMISES_CUSTOMER_POS")]
+    OffMerchantPremisesCustomerPos,
+    #[serde(rename = "ON_MERCHANT_PREMISES_CUSTOMER_POS")]
+    OnMerchantPremisesCustomerPos,
+    #[serde(rename = "OFF_CUSTOMER_PREMISES_UNATTENDED")]
+    OffCustomerPremisesUnattended,
+}
+
+// ============================================================================
+// Cardholder Authentication Method Enum
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum TsysCardholderAuthenticationMethod {
+    #[default]
+    #[serde(rename = "NOT_AUTHENTICATED")]
+    NotAuthenticated,
+    #[serde(rename = "PIN")]
+    Pin,
+    #[serde(rename = "ELECTRONIC_SIGNATURE_ANALYSIS")]
+    ElectronicSignatureAnalysis,
+    #[serde(rename = "MANUAL_SIGNATURE")]
+    ManualSignature,
+    #[serde(rename = "MANUAL_OTHER")]
+    ManualOther,
+    #[serde(rename = "UNKNOWN")]
+    Unknown,
+    #[serde(rename = "SYSTEMATIC_OTHER")]
+    SystematicOther,
+    #[serde(rename = "E_TICKET_ENV_AMEX")]
+    ETicketEnvAmex,
+    #[serde(rename = "OFFLINE_PIN")]
+    OfflinePin,
+}
+
+// ============================================================================
 // Authentication Type
 // ============================================================================
 
@@ -62,22 +198,22 @@ pub enum TsysPaymentsRequest<T: PaymentMethodDataTypes> {
     Sale(TsysPaymentAuthSaleRequest<T>),
 }
 
-#[derive(Default, Debug, Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TsysPaymentAuthSaleRequest<T: PaymentMethodDataTypes> {
     #[serde(rename = "deviceID")]
     device_id: Secret<String>,
     transaction_key: Secret<String>,
-    card_data_source: String,
+    card_data_source: TsysCardDataSource,
     transaction_amount: StringMinorUnit,
     currency_code: common_enums::enums::Currency,
     card_number: RawCardNumber<T>,
     expiration_date: Secret<String>,
     cvv2: Secret<String>,
     order_number: String,
-    terminal_capability: String,
-    terminal_operating_environment: String,
-    cardholder_authentication_method: String,
+    terminal_capability: TsysTerminalCapability,
+    terminal_operating_environment: TsysTerminalOperatingEnvironment,
+    cardholder_authentication_method: TsysCardholderAuthenticationMethod,
     #[serde(rename = "developerID")]
     developer_id: Secret<String>,
 }
@@ -131,7 +267,7 @@ impl<
                 let auth_data = TsysPaymentAuthSaleRequest {
                     device_id: auth.device_id,
                     transaction_key: auth.transaction_key,
-                    card_data_source: "INTERNET".to_string(),
+                    card_data_source: TsysCardDataSource::Internet,
                     transaction_amount: item_data
                         .connector
                         .amount_converter
@@ -149,9 +285,9 @@ impl<
                         .resource_common_data
                         .connector_request_reference_id
                         .clone(),
-                    terminal_capability: "ICC_CHIP_READ_ONLY".to_string(),
-                    terminal_operating_environment: "ON_MERCHANT_PREMISES_ATTENDED".to_string(),
-                    cardholder_authentication_method: "NOT_AUTHENTICATED".to_string(),
+                    terminal_capability: TsysTerminalCapability::NoTerminalManual,
+                    terminal_operating_environment: TsysTerminalOperatingEnvironment::NoTerminal,
+                    cardholder_authentication_method: TsysCardholderAuthenticationMethod::NotAuthenticated,
                     developer_id: auth.developer_id,
                 };
 
@@ -274,20 +410,52 @@ impl<T: PaymentMethodDataTypes>
         let TsysAuthorizeResponse(response_data) = item.response;
         let (response, status) = match response_data {
             TsysPaymentsResponse::AuthResponse(resp) => match resp {
-                TsysResponseTypes::SuccessResponse(auth_response) => (
-                    Ok(get_payments_response(auth_response, item.http_code)),
-                    AttemptStatus::Authorized,
-                ),
+                TsysResponseTypes::SuccessResponse(auth_response) => {
+                    // Check if the status is actually PASS or FAIL
+                    match auth_response.status {
+                        TsysPaymentStatus::Pass => (
+                            Ok(get_payments_response(auth_response, item.http_code)),
+                            AttemptStatus::Authorized,
+                        ),
+                        TsysPaymentStatus::Fail => {
+                            let error_resp = TsysErrorResponse {
+                                status: auth_response.status,
+                                response_code: auth_response.response_code,
+                                response_message: auth_response.response_message,
+                            };
+                            (
+                                Err(get_error_response(&error_resp, item.http_code)),
+                                AttemptStatus::AuthorizationFailed,
+                            )
+                        }
+                    }
+                }
                 TsysResponseTypes::ErrorResponse(error_response) => (
                     Err(get_error_response(&error_response, item.http_code)),
                     AttemptStatus::AuthorizationFailed,
                 ),
             },
             TsysPaymentsResponse::SaleResponse(resp) => match resp {
-                TsysResponseTypes::SuccessResponse(sale_response) => (
-                    Ok(get_payments_response(sale_response, item.http_code)),
-                    AttemptStatus::Charged,
-                ),
+                TsysResponseTypes::SuccessResponse(sale_response) => {
+                    // Check if the status is actually PASS or FAIL
+                    match sale_response.status {
+                        TsysPaymentStatus::Pass => (
+                            Ok(get_payments_response(sale_response, item.http_code)),
+                            AttemptStatus::Charged,
+                        ),
+                        TsysPaymentStatus::Fail => {
+                            let error_resp = TsysErrorResponse {
+                                status: sale_response.status,
+                                response_code: sale_response.response_code,
+                                response_message: sale_response.response_message,
+                            };
+                            (
+                                Err(get_error_response(&error_resp, item.http_code)),
+                                AttemptStatus::Failure,
+                            )
+                        }
+                    }
+                }
                 TsysResponseTypes::ErrorResponse(error_response) => (
                     Err(get_error_response(&error_response, item.http_code)),
                     AttemptStatus::Failure,
@@ -337,10 +505,26 @@ impl
         let TsysCaptureResponse(response_data) = item.response;
         let (response, status) = match response_data {
             TsysPaymentsResponse::CaptureResponse(resp) => match resp {
-                TsysResponseTypes::SuccessResponse(capture_response) => (
-                    Ok(get_payments_response(capture_response, item.http_code)),
-                    AttemptStatus::Charged,
-                ),
+                TsysResponseTypes::SuccessResponse(capture_response) => {
+                    // Check if the status is actually PASS or FAIL
+                    match capture_response.status {
+                        TsysPaymentStatus::Pass => (
+                            Ok(get_payments_response(capture_response, item.http_code)),
+                            AttemptStatus::Charged,
+                        ),
+                        TsysPaymentStatus::Fail => {
+                            let error_resp = TsysErrorResponse {
+                                status: capture_response.status,
+                                response_code: capture_response.response_code,
+                                response_message: capture_response.response_message,
+                            };
+                            (
+                                Err(get_error_response(&error_resp, item.http_code)),
+                                AttemptStatus::CaptureFailed,
+                            )
+                        }
+                    }
+                }
                 TsysResponseTypes::ErrorResponse(error_response) => (
                     Err(get_error_response(&error_response, item.http_code)),
                     AttemptStatus::CaptureFailed,
@@ -390,10 +574,26 @@ impl
         let TsysVoidResponse(response_data) = item.response;
         let (response, status) = match response_data {
             TsysPaymentsResponse::VoidResponse(resp) => match resp {
-                TsysResponseTypes::SuccessResponse(void_response) => (
-                    Ok(get_payments_response(void_response, item.http_code)),
-                    AttemptStatus::Voided,
-                ),
+                TsysResponseTypes::SuccessResponse(void_response) => {
+                    // Check if the status is actually PASS or FAIL
+                    match void_response.status {
+                        TsysPaymentStatus::Pass => (
+                            Ok(get_payments_response(void_response, item.http_code)),
+                            AttemptStatus::Voided,
+                        ),
+                        TsysPaymentStatus::Fail => {
+                            let error_resp = TsysErrorResponse {
+                                status: void_response.status,
+                                response_code: void_response.response_code,
+                                response_message: void_response.response_message,
+                            };
+                            (
+                                Err(get_error_response(&error_resp, item.http_code)),
+                                AttemptStatus::VoidFailed,
+                            )
+                        }
+                    }
+                }
                 TsysResponseTypes::ErrorResponse(error_response) => (
                     Err(get_error_response(&error_response, item.http_code)),
                     AttemptStatus::VoidFailed,
@@ -754,8 +954,6 @@ pub struct TsysReturnRequest {
     transaction_amount: StringMinorUnit,
     #[serde(rename = "transactionID")]
     transaction_id: String,
-    #[serde(rename = "developerID")]
-    developer_id: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -801,7 +999,6 @@ impl<
                 )
                 .change_context(errors::ConnectorError::AmountConversionFailed)?,
             transaction_id: item.request.connector_transaction_id.clone(),
-            developer_id: auth.developer_id,
         };
 
         Ok(Self { return_request })
