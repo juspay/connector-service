@@ -114,10 +114,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let card_type = match card_data.card_network.clone() {
                     Some(network) => WorldpayvativCardType::try_from(network)?,
                     None => {
-                        return Err(ConnectorError::MissingRequiredField {
-                            field_name: "card_network",
-                        }
-                        .into());
+                        // Fallback to BIN-based card issuer detection
+                        let card_issuer = domain_types::utils::get_card_issuer(
+                            card_data.card_number.peek(),
+                        )?;
+                        WorldpayvativCardType::try_from(&card_issuer)?
                     }
                 };
 
@@ -504,6 +505,25 @@ impl TryFrom<common_enums::CardNetwork> for WorldpayvativCardType {
     }
 }
 
+impl TryFrom<&domain_types::utils::CardIssuer> for WorldpayvativCardType {
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(card_issuer: &domain_types::utils::CardIssuer) -> Result<Self, Self::Error> {
+        match card_issuer {
+            domain_types::utils::CardIssuer::Visa => Ok(Self::Visa),
+            domain_types::utils::CardIssuer::Master => Ok(Self::MasterCard),
+            domain_types::utils::CardIssuer::AmericanExpress => Ok(Self::AmericanExpress),
+            domain_types::utils::CardIssuer::Discover => Ok(Self::Discover),
+            domain_types::utils::CardIssuer::DinersClub => Ok(Self::DinersClub),
+            domain_types::utils::CardIssuer::JCB => Ok(Self::JCB),
+            _ => Err(ConnectorError::NotSupported {
+                message: "Card network".to_string(),
+                connector: "worldpayvantiv",
+            }
+            .into()),
+        }
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum OrderSource {
@@ -541,11 +561,15 @@ pub struct BillToAddress {
     pub company: Option<String>,
     pub address_line1: Option<Secret<String>>,
     pub address_line2: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address_line3: Option<Secret<String>>,
     pub city: Option<Secret<String>>,
     pub state: Option<Secret<String>>,
     pub zip: Option<Secret<String>>,
     pub country: Option<CountryAlpha2>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<common_utils::pii::Email>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub phone: Option<Secret<String>>,
 }
 
@@ -557,11 +581,15 @@ pub struct ShipToAddress {
     pub company: Option<String>,
     pub address_line1: Option<Secret<String>>,
     pub address_line2: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address_line3: Option<Secret<String>>,
     pub city: Option<Secret<String>>,
     pub state: Option<Secret<String>>,
     pub zip: Option<Secret<String>>,
     pub country: Option<CountryAlpha2>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<common_utils::pii::Email>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub phone: Option<Secret<String>>,
 }
 
@@ -1473,11 +1501,11 @@ where
             let card_type = match card_data.card_network.clone() {
                 Some(network) => WorldpayvativCardType::try_from(network)?,
                 None => {
-                    // Determine from card number if network not provided
-                    return Err(ConnectorError::MissingRequiredField {
-                        field_name: "card_network",
-                    }
-                    .into());
+                    // Fallback to BIN-based card issuer detection
+                    let card_issuer = domain_types::utils::get_card_issuer(
+                        card_data.card_number.peek(),
+                    )?;
+                    WorldpayvativCardType::try_from(&card_issuer)?
                 }
             };
 
@@ -1661,6 +1689,10 @@ fn get_billing_address(
             .address
             .as_ref()
             .and_then(|a| a.line2.as_ref().map(|l| Secret::new(l.peek().to_string()))),
+        address_line3: addr
+            .address
+            .as_ref()
+            .and_then(|a| a.line3.as_ref().map(|l| Secret::new(l.peek().to_string()))),
         city: addr.address.as_ref().and_then(|a| a.city.clone()),
         state: addr
             .address
@@ -1696,6 +1728,10 @@ fn get_shipping_address(
             .address
             .as_ref()
             .and_then(|a| a.line2.as_ref().map(|l| Secret::new(l.peek().to_string()))),
+        address_line3: addr
+            .address
+            .as_ref()
+            .and_then(|a| a.line3.as_ref().map(|l| Secret::new(l.peek().to_string()))),
         city: addr.address.as_ref().and_then(|a| a.city.clone()),
         state: addr
             .address
