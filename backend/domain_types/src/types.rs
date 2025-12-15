@@ -4743,15 +4743,8 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
                     _ => None,
                 })
                 .unwrap_or_default(),
-            connector_metadata: (!value.connector_metadata.is_empty()).then(|| {
-                Secret::new(serde_json::Value::Object(
-                    value
-                        .connector_metadata
-                        .into_iter()
-                        .map(|(k, v)| (k, serde_json::Value::String(v)))
-                        .collect(),
-                ))
-            }),
+            connector_metadata: (!value.connector_metadata.is_empty())
+                .then(|| Secret::new(convert_metadata_to_json(&value.connector_metadata))),
             cancellation_reason: value.cancellation_reason,
             raw_connector_response: None,
             integrity_object: None,
@@ -5367,15 +5360,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
             currency: common_enums::Currency::foreign_try_from(value.currency())?,
             connector_transaction_id,
             multiple_capture_data,
-            connector_metadata: (!value.connector_metadata.is_empty()).then(|| {
-                serde_json::Value::Object(
-                    value
-                        .connector_metadata
-                        .into_iter()
-                        .map(|(k, v)| (k, serde_json::Value::String(v)))
-                        .collect(),
-                )
-            }),
+            connector_metadata: (!value.connector_metadata.is_empty())
+                .then(|| convert_metadata_to_json(&value.connector_metadata)),
             browser_info: value
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)

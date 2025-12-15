@@ -1,5 +1,5 @@
 use super::PaypalRouterData;
-use crate::types::ResponseRouterData;
+use crate::{types::ResponseRouterData, utils::to_connector_meta};
 use base64::Engine;
 use cards;
 use common_enums;
@@ -2103,7 +2103,7 @@ impl TryFrom<ResponseRouterData<PaypalCaptureResponse, Self>>
             }
         };
         let connector_payment_id: PaypalMeta =
-            item.router_data.resource_common_data.to_connector_meta()?;
+            to_connector_meta(item.router_data.request.connector_metadata.clone())?;
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
